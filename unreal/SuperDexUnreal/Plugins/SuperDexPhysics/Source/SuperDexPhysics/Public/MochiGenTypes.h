@@ -1381,6 +1381,47 @@ SUPERDEXPHYSICS_API mochi::AsyncStepParams ToMochi(FMochiAsyncStepParams const& 
 SUPERDEXPHYSICS_API FMochiAsyncStepParams ToUnreal(mochi::AsyncStepParams const& Value);
 
 /**
+ * Blending data for one source shape within a soft skinned mesh.
+ *
+ * @see BlendingDataView
+ */
+USTRUCT(BlueprintType)
+struct SUPERDEXPHYSICS_API FMochiBlendingData {
+  GENERATED_BODY()
+
+  /** Name of the soft source shape. */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  FString SourceShape{};
+
+  /**
+   * Nested-soft source vertex indices for each target vertex.
+   *
+   * Entry `i` identifies the vertex in the nested soft shape for target vertex `i`. The index is
+   *   ignored when `weights[i]` is zero. The size equals the number of target vertices.
+   */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  TArray<int32> Indices{};
+
+  /**
+   * Nested-soft blend weights for each target vertex.
+   *
+   * Entry `i` is in `[0, 1]`, where zero is purely articulated and one is fully nested-soft. The
+   *   size equals the number of target vertices.
+   */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  TArray<float> Weights{};
+
+  /** Initializes all fields from native Mochi defaults. */
+  FMochiBlendingData();
+};
+
+/** Returns the native Mochi representation of Value. */
+SUPERDEXPHYSICS_API mochi::BlendingData ToMochi(FMochiBlendingData const& Value);
+
+/** Returns the Unreal representation of Value. */
+SUPERDEXPHYSICS_API FMochiBlendingData ToUnreal(mochi::BlendingData const& Value);
+
+/**
  * Parameters for subsampling boundary integrals such as contact.
  *
  * Subsampling reduces the number of boundary sample points used for contact and other boundary
@@ -1411,6 +1452,100 @@ SUPERDEXPHYSICS_API mochi::BoundarySubsamplingParams ToMochi(FMochiBoundarySubsa
 
 /** Returns the Unreal representation of Value. */
 SUPERDEXPHYSICS_API FMochiBoundarySubsamplingParams ToUnreal(mochi::BoundarySubsamplingParams const& Value);
+
+/** Oriented box represented by center, half extents, and rotation. */
+USTRUCT(BlueprintType)
+struct SUPERDEXPHYSICS_API FMochiBox {
+  GENERATED_BODY()
+
+  /** Center position [m]. */
+  UPROPERTY(EditAnywhere, Category = "Mochi")
+  FVector3f Center{};
+
+  /** Half-size along each local axis [m]. */
+  UPROPERTY(EditAnywhere, Category = "Mochi")
+  FVector3f HalfExtents{};
+
+  /** Orientation of the box local frame. */
+  UPROPERTY(EditAnywhere, Category = "Mochi")
+  FQuat4f Rotation{};
+
+  /** Initializes all fields from native Mochi defaults. */
+  FMochiBox();
+};
+
+/** Returns the native Mochi representation of Value. */
+SUPERDEXPHYSICS_API mochi::Box ToMochi(FMochiBox const& Value);
+
+/** Returns the Unreal representation of Value. */
+SUPERDEXPHYSICS_API FMochiBox ToUnreal(mochi::Box const& Value);
+
+/**
+ * Data for a precomputed signed-distance-field grid.
+ *
+ * @see GridSdfDataView
+ */
+USTRUCT(BlueprintType)
+struct SUPERDEXPHYSICS_API FMochiGridSdfData {
+  GENERATED_BODY()
+
+  /** Dimensions of the SDF grid in X, Y, and Z. */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  FIntVector Dims{};
+
+  /** Signed distance values [m]. Size must be dims[0] * dims[1] * dims[2]. */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  TArray<float> Values{};
+
+  /** Spatial bounds of the SDF grid. Values are distributed uniformly within this volume. */
+  UPROPERTY(EditAnywhere, Category = "Mochi")
+  FBox3f Bounds{};
+
+  /**
+   * Spatial bounds of the portion of the SDF grid with negative values.
+   *
+   * @note This is generally the bounds of the mesh for which the SDF grid was computed, while the
+   *   overall grid bounds may be larger due to padding for penalty fall-off distance.
+   */
+  UPROPERTY(EditAnywhere, Category = "Mochi")
+  FBox3f NegativeValueBounds{};
+
+  /**
+   * Optional parent-from-grid per-axis scale to apply at runtime.
+   *
+   * @note Applied order is scale, then rotation, then translation.
+   * @note Typically set when a transform is baked into the containing model.
+   */
+  UPROPERTY(EditAnywhere, Category = "Mochi")
+  TOptional<FVector3f> Scale{};
+
+  /**
+   * Optional parent-from-grid rotation to apply at runtime.
+   *
+   * @note Applied order is scale, then rotation, then translation.
+   * @note Typically set when a transform is baked into the containing model.
+   */
+  UPROPERTY(EditAnywhere, Category = "Mochi")
+  TOptional<FQuat4f> Rotation{};
+
+  /**
+   * Optional parent-from-grid translation [m] to apply at runtime.
+   *
+   * @note Applied order is scale, then rotation, then translation.
+   * @note Typically set when a transform is baked into the containing model.
+   */
+  UPROPERTY(EditAnywhere, Category = "Mochi")
+  TOptional<FVector3f> Translation{};
+
+  /** Initializes all fields from native Mochi defaults. */
+  FMochiGridSdfData();
+};
+
+/** Returns the native Mochi representation of Value. */
+SUPERDEXPHYSICS_API mochi::GridSdfData ToMochi(FMochiGridSdfData const& Value);
+
+/** Returns the Unreal representation of Value. */
+SUPERDEXPHYSICS_API FMochiGridSdfData ToUnreal(mochi::GridSdfData const& Value);
 
 /**
  * Parameters controlling the resolution of grid-based Signed Distance Fields (SDF).
@@ -1487,6 +1622,93 @@ SUPERDEXPHYSICS_API mochi::GridSdfParams ToMochi(FMochiGridSdfParams const& Valu
 
 /** Returns the Unreal representation of Value. */
 SUPERDEXPHYSICS_API FMochiGridSdfParams ToUnreal(mochi::GridSdfParams const& Value);
+
+/**
+ * Parameters controlling IK solver behavior.
+ *
+ * These parameters configure the Newton solver used for inverse kinematics optimization. The solver
+ *   finds quasistatic (time-invariant) configurations that satisfy position and rotation target
+ *   constraints for articulated bodies.
+ */
+USTRUCT(BlueprintType)
+struct SUPERDEXPHYSICS_API FMochiIKSolverParams {
+  GENERATED_BODY()
+
+  /**
+   * Maximum Newton solver iterations. Higher values allow convergence over larger distances.
+   *
+   * @see FMochiNonLinearSolverParams::MaxIter
+   */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  int32 MaxIter{};
+
+  /**
+   * Verbosity level passed to the Newton solver.
+   *
+   * @see FMochiNonLinearSolverParams::Verbosity
+   */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  EMochiVerbosityLevel Verbosity{};
+
+  /**
+   * Absolute residual-norm tolerance for Newton solver convergence.
+   *
+   * @note IK convergence should be primarily driven by absolute tolerance (not relative tolerance).
+   *
+   * @see FMochiNonLinearSolverParams::AbsTol
+   */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  float AbsTol{};
+
+  /**
+   * Relative error tolerance for Newton solver convergence.
+   *
+   * @note IK convergence should be primarily driven by absolute tolerance (not relative tolerance).
+   *
+   * @see FMochiNonLinearSolverParams::RelTol
+   */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  float RelTol{};
+
+  /** Position error threshold [m] for determining if IK targets are reachable. */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  float PositionErrorThres{};
+
+  /** Rotation error threshold [radians] for determining if IK targets are reachable. */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  float RotationErrorThres{};
+
+  /**
+   * Maximum line search iterations per Newton step.
+   *
+   * @see FMochiNonLinearSolverParams::LineSearchMaxIter
+   */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  int32 LineSearchMaxIter{};
+
+  /**
+   * Maximum elapsed wall-clock time [s] before the solver stops.
+   *
+   * When set to a positive value, the solver will stop after this many seconds have elapsed,
+   *   regardless of convergence. Useful for real-time applications where a time budget must be
+   *   enforced.
+   *
+   * @note A value of 0 (default) means no time limit.
+   *
+   * @see FMochiNonLinearSolverParams::MaxElapsedTimeSeconds
+   */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  double MaxElapsedTimeSeconds{};
+
+  /** Initializes all fields from native Mochi defaults. */
+  FMochiIKSolverParams();
+};
+
+/** Returns the native Mochi representation of Value. */
+SUPERDEXPHYSICS_API mochi::experimental::IKSolverParams ToMochi(FMochiIKSolverParams const& Value);
+
+/** Returns the Unreal representation of Value. */
+SUPERDEXPHYSICS_API FMochiIKSolverParams ToUnreal(mochi::experimental::IKSolverParams const& Value);
 
 /** Parameters for linear solves. */
 USTRUCT(BlueprintType)
@@ -1771,6 +1993,96 @@ SUPERDEXPHYSICS_API mochi::NonLinearSolverParams ToMochi(FMochiNonLinearSolverPa
 SUPERDEXPHYSICS_API FMochiNonLinearSolverParams ToUnreal(mochi::NonLinearSolverParams const& Value);
 
 /**
+ * Per-element soft material data for heterogeneous materials.
+ *
+ * @see PerElementSoftMaterialDataView
+ */
+USTRUCT(BlueprintType)
+struct SUPERDEXPHYSICS_API FMochiPerElementSoftMaterialData {
+  GENERATED_BODY()
+
+  /** Material constitutive model. */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  EMochiSoftMaterialType Type{};
+
+  /**
+   * Strategy for ensuring positive semi-definite Hessian matrices.
+   *
+   * @see EMochiMaterialPsdStrategy
+   */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  EMochiMaterialPsdStrategy PsdStrategy{};
+
+  /** Young's modulus [Pa]. 1 per element. */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  TArray<float> YoungsModulus{};
+
+  /** Poisson's ratio (dimensionless). 1 per element. */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  TArray<float> PoissonRatio{};
+
+  /** Anisotropic stiffness (α) [Pa]. 1 per element. */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  TArray<float> AnisoAlpha{};
+
+  /** Anisotropic reference length (dimensionless). 1 per element. */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  TArray<float> AnisoLength{};
+
+  /** Fiber azimuthal angle (θ) [rad]. 1 per element. */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  TArray<float> AnisoTheta{};
+
+  /** Fiber elevation angle (φ) [rad]. 1 per element. */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  TArray<float> AnisoPhi{};
+
+  /** ARAP stiffness (μ) [Pa]. 1 per element. */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  TArray<float> ArapStiffness{};
+
+  /**
+   * Shape target tensor offset in flat symmetric upper-triangle layout.
+   *
+   * Six values per element. Defines S_t = I + [[s0, s1, s2], [s1, s3, s4], [s2, s4, s5]].
+   */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  TArray<float> ShapeTargetTensor{};
+
+  /** Initializes all fields from native Mochi defaults. */
+  FMochiPerElementSoftMaterialData();
+};
+
+/** Returns the native Mochi representation of Value. */
+SUPERDEXPHYSICS_API mochi::PerElementSoftMaterialData ToMochi(FMochiPerElementSoftMaterialData const& Value);
+
+/** Returns the Unreal representation of Value. */
+SUPERDEXPHYSICS_API FMochiPerElementSoftMaterialData ToUnreal(mochi::PerElementSoftMaterialData const& Value);
+
+/** Plane represented by a unit normal and signed distance from the origin. */
+USTRUCT(BlueprintType)
+struct SUPERDEXPHYSICS_API FMochiPlane {
+  GENERATED_BODY()
+
+  /** Unit normal vector. */
+  UPROPERTY(EditAnywhere, Category = "Mochi")
+  FVector3f Normal{};
+
+  /** Signed distance from the origin [m]. */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  float Distance{};
+
+  /** Initializes all fields from native Mochi defaults. */
+  FMochiPlane();
+};
+
+/** Returns the native Mochi representation of Value. */
+SUPERDEXPHYSICS_API mochi::Plane ToMochi(FMochiPlane const& Value);
+
+/** Returns the Unreal representation of Value. */
+SUPERDEXPHYSICS_API FMochiPlane ToUnreal(mochi::Plane const& Value);
+
+/**
  * [Experimental] Controls whether force-saturation terms use a fitted quadratic Hessian
  *   independently for each saturation pathway.
  *
@@ -1811,6 +2123,60 @@ SUPERDEXPHYSICS_API mochi::SaturationHessianParams ToMochi(FMochiSaturationHessi
 
 /** Returns the Unreal representation of Value. */
 SUPERDEXPHYSICS_API FMochiSaturationHessianParams ToUnreal(mochi::SaturationHessianParams const& Value);
+
+/**
+ * Skinning data for a SuperDex mesh.
+ *
+ * @see SkinningDataView
+ */
+USTRUCT(BlueprintType)
+struct SUPERDEXPHYSICS_API FMochiSkinningData {
+  GENERATED_BODY()
+
+  /** Number of weights and indices per skinned node. */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  int32 WeightsPerNode{};
+
+  /** Indices for each node. Size is numNodes * weightsPerNode. */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  TArray<int32> Indices{};
+
+  /** Weights for each node. Size is numNodes * weightsPerNode. */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  TArray<float> Weights{};
+
+  /** Initializes all fields from native Mochi defaults. */
+  FMochiSkinningData();
+};
+
+/** Returns the native Mochi representation of Value. */
+SUPERDEXPHYSICS_API mochi::SkinningData ToMochi(FMochiSkinningData const& Value);
+
+/** Returns the Unreal representation of Value. */
+SUPERDEXPHYSICS_API FMochiSkinningData ToUnreal(mochi::SkinningData const& Value);
+
+/** Sphere represented by center and radius. */
+USTRUCT(BlueprintType)
+struct SUPERDEXPHYSICS_API FMochiSphere {
+  GENERATED_BODY()
+
+  /** Center position [m]. */
+  UPROPERTY(EditAnywhere, Category = "Mochi")
+  FVector3f Center{};
+
+  /** Radius [m]. */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  float Radius{};
+
+  /** Initializes all fields from native Mochi defaults. */
+  FMochiSphere();
+};
+
+/** Returns the native Mochi representation of Value. */
+SUPERDEXPHYSICS_API mochi::Sphere ToMochi(FMochiSphere const& Value);
+
+/** Returns the Unreal representation of Value. */
+SUPERDEXPHYSICS_API FMochiSphere ToUnreal(mochi::Sphere const& Value);
 
 /**
  * [Experimental] Evaluation settings common to the full scene.
@@ -1943,5 +2309,154 @@ SUPERDEXPHYSICS_API mochi::ExperimentalEvalParams ToMochi(FMochiExperimentalEval
 
 /** Returns the Unreal representation of Value. */
 SUPERDEXPHYSICS_API FMochiExperimentalEvalParams ToUnreal(mochi::ExperimentalEvalParams const& Value);
+
+/**
+ * Mesh data for a SuperDex actor or model file.
+ *
+ * @see MeshDataView
+ */
+USTRUCT(BlueprintType)
+struct SUPERDEXPHYSICS_API FMochiMeshData {
+  GENERATED_BODY()
+
+  /**
+   * Number of nodes (vertices) per element.
+   *
+   * @note 2 for polyline meshes, 3 for triangle meshes, 4 for tetrahedral meshes.
+   */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  int32 NodesPerElement{};
+
+  /**
+   * Flat array of node coordinate values [m].
+   *
+   * @note Size must be a multiple of 3.
+   */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  TArray<float> Coordinates{};
+
+  /**
+   * Flat array of node indices forming the elements.
+   *
+   * @note Size must be a multiple of FMochiMeshData::NodesPerElement.
+   */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  TArray<int32> Connectivity{};
+
+  /** Optional skinning data. */
+  UPROPERTY(EditAnywhere, Category = "Mochi")
+  TOptional<FMochiSkinningData> Skinning{};
+
+  /** Initializes all fields from native Mochi defaults. */
+  FMochiMeshData();
+};
+
+/** Returns the native Mochi representation of Value. */
+SUPERDEXPHYSICS_API mochi::MeshData ToMochi(FMochiMeshData const& Value);
+
+/** Returns the Unreal representation of Value. */
+SUPERDEXPHYSICS_API FMochiMeshData ToUnreal(mochi::MeshData const& Value);
+
+/** Wraps array storage for use in reflected containers. */
+USTRUCT(BlueprintType)
+struct SUPERDEXPHYSICS_API FMochiBlendingDataArray {
+  GENERATED_BODY()
+
+  /** Elements of the wrapped array. */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  TArray<FMochiBlendingData> Values{};
+};
+
+/** Wraps array storage for use in reflected containers. */
+USTRUCT(BlueprintType)
+struct SUPERDEXPHYSICS_API FMochiInt32Array {
+  GENERATED_BODY()
+
+  /** Elements of the wrapped array. */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  TArray<int32> Values{};
+};
+
+/** Wraps array storage for use in reflected containers. */
+USTRUCT(BlueprintType)
+struct SUPERDEXPHYSICS_API FMochiFloatArray {
+  GENERATED_BODY()
+
+  /** Elements of the wrapped array. */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  TArray<float> Values{};
+};
+
+/**
+ * Contents of a SuperDex model file.
+ *
+ * @see ModelDataView
+ */
+USTRUCT(BlueprintType)
+struct SUPERDEXPHYSICS_API FMochiModelData {
+  GENERATED_BODY()
+
+  UPROPERTY(EditAnywhere, Category = "Mochi")
+  TOptional<FMochiMeshData> Mesh{};
+
+  UPROPERTY(EditAnywhere, Category = "Mochi")
+  TOptional<FMochiMeshData> VisualMesh{};
+
+  /**
+   * Optional triangular mesh exposed through the contact-skin queries and, when selected as a
+   *   deformable actor's contact geometry, for contact quadrature.
+   *
+   * Skinning data is required. For triangular and tetrahedral primary meshes, it is a node-based
+   *   linear embedding whose indices reference primary-mesh nodes. For polylines, the indices
+   *   reference primary-mesh elements and define the rod's element-based embedding. Every
+   *   contact-skin node must be referenced by at least one triangle.
+   */
+  UPROPERTY(EditAnywhere, Category = "Mochi")
+  TOptional<FMochiMeshData> ContactSkinMesh{};
+
+  UPROPERTY(EditAnywhere, Category = "Mochi")
+  TOptional<FMochiBlendingDataArray> Blending{};
+
+  /** Indices of mesh nodes that are constrained. */
+  UPROPERTY(EditAnywhere, Category = "Mochi")
+  TOptional<FMochiInt32Array> ConstrainedNodes{};
+
+  /**
+   * Per-element reference frame axes for polyline meshes.
+   *
+   * Flat array of unit vectors (3 reals per element), each orthogonal to its element's tangent.
+   *   Only valid when the mesh is a polyline with FMochiMeshData::NodesPerElement equal to 2.
+   */
+  UPROPERTY(EditAnywhere, Category = "Mochi")
+  TOptional<FMochiFloatArray> ElementFrameAxes{};
+
+  UPROPERTY(EditAnywhere, Category = "Mochi")
+  TOptional<FMochiBox> Box{};
+
+  UPROPERTY(EditAnywhere, Category = "Mochi")
+  TOptional<FMochiPlane> Plane{};
+
+  UPROPERTY(EditAnywhere, Category = "Mochi")
+  TOptional<FMochiSphere> Sphere{};
+
+  UPROPERTY(EditAnywhere, Category = "Mochi")
+  TOptional<FMochiGridSdfData> Sdf{};
+
+  UPROPERTY(EditAnywhere, Category = "Mochi")
+  TOptional<FMochiPerElementSoftMaterialData> Material{};
+
+  /** True if a loaded model contained unsupported experimental data. */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Transient, Category = "Mochi")
+  bool bExperimentalDataDetected{};
+
+  /** Initializes all fields from native Mochi defaults. */
+  FMochiModelData();
+};
+
+/** Returns the native Mochi representation of Value. */
+SUPERDEXPHYSICS_API mochi::ModelData ToMochi(FMochiModelData const& Value);
+
+/** Returns the Unreal representation of Value. */
+SUPERDEXPHYSICS_API FMochiModelData ToUnreal(mochi::ModelData const& Value);
 
 // clang-format on

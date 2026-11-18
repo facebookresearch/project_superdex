@@ -20,7 +20,7 @@
 #include "Misc/AutomationTest.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
-#include "MochiModelData.h"
+#include "MochiGenTypes.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
 

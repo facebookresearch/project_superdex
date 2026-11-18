@@ -1560,7 +1560,7 @@ bool FSuperDexBotIKJointCouplingTest::RunTest(const FString&) {
   auto Bad = Legacy;
   Bad.JointAName = TEXT("missing_joint");
   FMochiIKSolverParams SolverParams;
-  SolverParams.FromMochi(Config->CreateParams.ToNative().solverParams);
+  SolverParams = ::ToUnreal(Config->CreateParams.ToNative().solverParams);
   TStrongObjectPtr<USuperDexIKSolverObject> LegacySolver(
       USuperDexIKSolverObject::CreateIKSolver(
           GetTransientPackage(),

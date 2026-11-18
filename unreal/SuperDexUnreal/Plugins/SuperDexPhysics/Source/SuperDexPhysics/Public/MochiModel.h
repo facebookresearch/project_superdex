@@ -20,7 +20,7 @@
 #include "EditorFramework/AssetImportData.h"
 #include "Materials/MaterialInterface.h"
 #include "MochiAssets.h"
-#include "MochiModelData.h"
+#include "MochiGenTypes.h"
 #include "Serialization/BulkData.h"
 #include "UObject/Object.h"
 
@@ -159,7 +159,7 @@ class SUPERDEXPHYSICS_API UMochiModel : public UObject {
 #endif
 
  private:
-  // Moves ModelData.Sdf->Values in and out of SdfValues, which is where it lives on disk.
+  // Bulk-backed ModelData.Sdf->Values; the reflected array is empty during property saves.
   void SerializeSdfValues(FArchive& Ar);
 
   UPROPERTY(EditAnywhere, Category = "Import")

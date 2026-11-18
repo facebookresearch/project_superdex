@@ -348,7 +348,7 @@ USuperDexIKSolverObject* USuperDexIKSolverObject::CreateIKSolver(
     superdex::robotics::BotIKCreateParams Params;
     Params.fixedBase = bFixedBase;
     Params.excludeCollisionShapes = bExcludeCollisionShapes;
-    Params.solverParams = IKSolverParams.ToMochi();
+    Params.solverParams = ::ToMochi(IKSolverParams);
     FSuperDexBotLoader Loader;
     mochi::Error Error;
     ikSolverObj->NativeIK = superdex::robotics::BotIK::Create(
@@ -613,7 +613,7 @@ USuperDexIKSolverObject* USuperDexIKSolverObject::CreateIKSolver(
     check(mochiContext);
     ikSolverObj->IKSolver =
         mochi::experimental::CreateIKSolver(SyncScene, mochiContext, mochi::ErrorAssert{});
-    mochi::experimental::IKSolverParams params = IKSolverParams.ToMochi();
+    mochi::experimental::IKSolverParams params = ::ToMochi(IKSolverParams);
     ikSolverObj->IKSolver->SetSolverParams(params);
     check(ikSolverObj->IKSolver);
   });

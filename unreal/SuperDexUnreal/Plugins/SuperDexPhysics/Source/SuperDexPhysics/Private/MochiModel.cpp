@@ -18,7 +18,12 @@
 
 #include "MochiActorObject.h"
 #include "MochiConversions.h"
+#include "MochiLegacyBounds.h"
 #include "MochiPhysicsModule.h"
+#include "Serialization/ArchiveProxy.h"
+#include "Serialization/StructuredArchiveAdapters.h"
+#include "UObject/ObjectVersion.h"
+#include "UObject/UnrealType.h"
 
 #include <mochi_core/geometry/mesh_data_utils.h>
 #include <mochi_core/geometry/model_data.h>
@@ -62,6 +67,224 @@ inline mochi::VMatrix4x4r UnrealToMatrix(const FVector& S, const FTransform& RT)
   return srt;
 }
 
+bool HasModelGeometry(const FMochiModelData& Data) {
+  return Data.Mesh.IsSet() || Data.VisualMesh.IsSet() || Data.ContactSkinMesh.IsSet() ||
+      Data.Box.IsSet() || Data.Plane.IsSet() || Data.Sphere.IsSet() || Data.Sdf.IsSet();
+}
+
+class FLegacyBoundsPayloadArchive final : public FArchiveProxy {
+ public:
+  FLegacyBoundsPayloadArchive(FArchive& Archive, int64 Begin, int64 End)
+      : FArchiveProxy(Archive), Begin(Begin), End(End) {}
+
+  using FArchiveProxy::operator<<;
+
+  virtual void Serialize(void* Data, int64 NumBytes) override {
+    if (!CanRead(NumBytes)) {
+      Fail();
+      return;
+    }
+    InnerArchive.Serialize(Data, NumBytes);
+  }
+
+  virtual FArchive& operator<<(FName& Name) override {
+    // Only indexed package names are admitted by the enclosing tag observer.
+    if (!CanRead(2 * sizeof(int32))) {
+      Fail();
+      return *this;
+    }
+    const int64 before = Tell();
+    InnerArchive << Name;
+    if (Tell() > End || Tell() - before != 2 * sizeof(int32)) {
+      Fail();
+    }
+    return *this;
+  }
+
+  virtual void Seek(int64 Position) override {
+    if (Position < Begin || Position > End) {
+      Fail();
+      return;
+    }
+    InnerArchive.Seek(Position);
+  }
+
+ private:
+  bool CanRead(int64 NumBytes) {
+    const int64 position = Tell();
+    return NumBytes >= 0 && position >= Begin && position <= End && NumBytes <= End - position;
+  }
+
+  void Fail() {
+    SetError();
+    InnerArchive.SetError();
+  }
+
+  const int64 Begin;
+  const int64 End;
+};
+
+// TODO: After affected UMochiModel packages are resaved in the native-generated
+// layout and validated without this reader, remove it, the private legacy schema,
+// and the legacy-load branch in UMochiModel::Serialize.
+class FLegacyModelBoundsArchive final : public FArchiveProxy {
+ public:
+  explicit FLegacyModelBoundsArchive(FArchive& Archive) : FArchiveProxy(Archive) {}
+
+  using FArchiveProxy::operator<<;
+
+  virtual void Serialize(void* Data, int64 NumBytes) override {
+    const int64 before = Tell();
+    InnerArchive.Serialize(Data, NumBytes);
+    if (NumBytes != sizeof(int32) || HeaderSizePosition >= 0 || !IsModelSdfScope()) {
+      return;
+    }
+    if (InnerArchive.UEVer() < EUnrealEngineObjectUE5Version::PROPERTY_TAG_COMPLETE_TYPE_NAME) {
+      if (State == ETagState::StructType) {
+        HeaderSizePosition = before;
+      }
+    } else if (State == ETagState::LegacyOwner) {
+      if (!bReadLeafInnerCount) {
+        int32 innerCount;
+        FMemory::Memcpy(&innerCount, Data, sizeof(innerCount));
+        if (innerCount != 0) {
+          State = ETagState::None;
+          return;
+        }
+        bReadLeafInnerCount = true;
+      } else {
+        HeaderSizePosition = before;
+      }
+    }
+  }
+
+  virtual bool ShouldSkipProperty(const FProperty* InProperty) const override {
+    const bool bSkip = InnerArchive.ShouldSkipProperty(InProperty);
+    if (!bSkip) {
+      const_cast<FLegacyModelBoundsArchive*>(this)->RecoverMatchedBounds(InProperty);
+    }
+    return bSkip;
+  }
+
+  virtual FArchive& operator<<(FName& Name) override {
+    const int64 before = Tell();
+    InnerArchive << Name;
+    if (!IsModelSdfScope() || Tell() - before != 2 * sizeof(int32)) {
+      State = ETagState::None;
+      return *this;
+    }
+    if (Name == TEXT("Bounds") || Name == TEXT("NegativeValueBounds")) {
+      bNegativeBounds = Name == TEXT("NegativeValueBounds");
+      HeaderSizePosition = INDEX_NONE;
+      bReadLeafInnerCount = false;
+      State = ETagState::BoundsName;
+    } else if (State == ETagState::BoundsName && Name == NAME_StructProperty) {
+      State = ETagState::StructType;
+    } else if (State == ETagState::StructType && Name == TEXT("MochiAabb")) {
+      State = ETagState::LegacyType;
+    } else if (State == ETagState::LegacyType && Name == TEXT("/Script/SuperDexPhysics")) {
+      State = ETagState::LegacyOwner;
+    } else {
+      State = ETagState::None;
+    }
+    return *this;
+  }
+
+  void Apply(FMochiModelData& Data) const {
+    if (!Data.Sdf.IsSet()) {
+      return;
+    }
+    if (Bounds.IsSet()) {
+      Data.Sdf->Bounds = Bounds.GetValue();
+    }
+    if (NegativeValueBounds.IsSet()) {
+      Data.Sdf->NegativeValueBounds = NegativeValueBounds.GetValue();
+    }
+  }
+
+ private:
+  enum class ETagState : uint8 { None, BoundsName, StructType, LegacyType, LegacyOwner };
+
+  bool IsModelSdfScope() {
+    PropertyChain.Reset();
+    GetSerializedPropertyChain(PropertyChain);
+    return PropertyChain.Num() == 2 && PropertyChain[0]->GetFName() == TEXT("Sdf") &&
+        PropertyChain[0]->GetOwnerStruct() == FMochiModelData::StaticStruct() &&
+        PropertyChain[1]->GetFName() == TEXT("ModelData") &&
+        PropertyChain[1]->GetOwnerStruct() == UMochiModel::StaticClass();
+  }
+
+  void RecoverMatchedBounds(const FProperty* Property) {
+    const bool bLegacyShortType =
+        InnerArchive.UEVer() < EUnrealEngineObjectUE5Version::PROPERTY_TAG_COMPLETE_TYPE_NAME &&
+        State == ETagState::LegacyType;
+    if ((State != ETagState::LegacyOwner && !bLegacyShortType) || HeaderSizePosition < 0 ||
+        !Property || Property->GetOwnerStruct() != FMochiGridSdfData::StaticStruct() ||
+        Property->GetFName() != (bNegativeBounds ? TEXT("NegativeValueBounds") : TEXT("Bounds")) ||
+        !IsModelSdfScope()) {
+      return;
+    }
+
+    // This matched-property callback runs after the tag and before conversion or
+    // unknown-property tracking consumes its body. A peek must restore that cursor.
+    const int64 begin = Tell();
+    const int64 sizePosition = HeaderSizePosition;
+    const bool bRecoverNegativeBounds = bNegativeBounds;
+    State = ETagState::None;
+    HeaderSizePosition = INDEX_NONE;
+    constexpr int64 kSizeFieldBytes = sizeof(int32);
+    if (begin < kSizeFieldBytes || sizePosition > begin - kSizeFieldBytes) {
+      Fail();
+      return;
+    }
+    InnerArchive.Seek(sizePosition);
+    FLegacyBoundsPayloadArchive sizeArchive(
+        InnerArchive, sizePosition, sizePosition + kSizeFieldBytes);
+    int32 payloadSize = 0;
+    sizeArchive << payloadSize;
+    const bool bBadSize =
+        sizeArchive.IsError() || sizeArchive.Tell() != sizePosition + kSizeFieldBytes;
+    InnerArchive.Seek(begin);
+    constexpr int32 kMaxLegacyBoundsPayloadBytes = 4096;
+    const int64 totalSize = InnerArchive.TotalSize();
+    if (bBadSize || payloadSize <= 0 || payloadSize > kMaxLegacyBoundsPayloadBytes ||
+        totalSize < begin || payloadSize > totalSize - begin) {
+      Fail();
+      return;
+    }
+    const int64 end = begin + payloadSize;
+    FMochiLegacyBounds old;
+    FLegacyBoundsPayloadArchive payload(InnerArchive, begin, end);
+    FMochiLegacyBounds::StaticStruct()->SerializeTaggedProperties(
+        FStructuredArchiveFromArchive(payload).GetSlot(),
+        reinterpret_cast<uint8*>(&old),
+        FMochiLegacyBounds::StaticStruct(),
+        nullptr);
+    const bool bBadPayload = payload.IsError() || payload.Tell() != end;
+    InnerArchive.Seek(begin);
+    if (bBadPayload) {
+      Fail();
+    } else if (bRecoverNegativeBounds) {
+      NegativeValueBounds = FBox3f(old.Min, old.Max);
+    } else {
+      Bounds = FBox3f(old.Min, old.Max);
+    }
+  }
+
+  void Fail() {
+    SetError();
+    InnerArchive.SetError();
+  }
+
+  ETagState State = ETagState::None;
+  bool bNegativeBounds = false;
+  bool bReadLeafInnerCount = false;
+  int64 HeaderSizePosition = INDEX_NONE;
+  TArray<FProperty*> PropertyChain;
+  TOptional<FBox3f> Bounds;
+  TOptional<FBox3f> NegativeValueBounds;
+};
+
 constexpr int64 kBytesPerFloat = sizeof(float);
 
 // Regroups a float array so that every first byte precedes every second byte, and so on.
@@ -92,7 +315,27 @@ void UnshuffleFloatBytes(const uint8* Src, float* Dst, int64 NumElements) {
 
 void UMochiModel::Serialize(FArchive& Ar) {
   Ar.UsingCustomVersion(FMochiObjectVersion::GUID);
-  Super::Serialize(Ar);
+  const int32 modelVersion = Ar.CustomVer(FMochiObjectVersion::GUID);
+  const bool bLegacyBounds = Ar.IsLoading() && Ar.IsPersistent() && !Ar.IsTransacting() &&
+      !Ar.UseUnversionedPropertySerialization() &&
+      modelVersion >= FMochiObjectVersion::TypedModelData &&
+      modelVersion < FMochiObjectVersion::NativeGeneratedStructs;
+  if (bLegacyBounds) {
+    FLegacyModelBoundsArchive legacy(Ar);
+    Super::Serialize(legacy);
+    if (Ar.IsError()) {
+      return;
+    }
+    legacy.Apply(ModelData);
+  } else if (Ar.IsSaving() && ModelData.Sdf.IsSet()) {
+    // The reflected array must stay out of the int32-sized tagged property payload.
+    // Its contents are restored before the 64-bit bulk serializer reads them.
+    TArray<float> values = MoveTemp(ModelData.Sdf->Values);
+    Super::Serialize(Ar);
+    ModelData.Sdf->Values = MoveTemp(values);
+  } else {
+    Super::Serialize(Ar);
+  }
 
   if (Ar.CustomVer(FMochiObjectVersion::GUID) >= FMochiObjectVersion::TypedModelData) {
     SerializeSdfValues(Ar);
@@ -159,7 +402,7 @@ void UMochiModel::PostLoad() {
   }
 #endif
 
-  if (ModelData.IsEmpty()) {
+  if (!HasModelGeometry(ModelData)) {
     UE_LOG(
         LogMochiPhysics,
         Error,
@@ -246,7 +489,7 @@ mochi::ShapeHandle UMochiModel::GetMochiShape_Raw(const mochi::VMatrix4x4r& Bake
   const auto mochiWorld = IMochiPhysicsModule::Get()->GetMochiContext();
   auto [bakeScale, bakeTransformRT] = mochi::DecomposeMatrixTransform(BakeMatrix);
 
-  if (ModelData.IsEmpty()) {
+  if (!HasModelGeometry(ModelData)) {
     UE_LOG(
         LogMochiPhysics,
         Warning,
@@ -260,7 +503,7 @@ mochi::ShapeHandle UMochiModel::GetMochiShape_Raw(const mochi::VMatrix4x4r& Bake
   // bake-aware overload upstream would remove one of the two. It also runs AutoCorrect and
   // Validate, which LoadShapeFromBytes did not, so a model Mochi considers malformed now
   // fails here instead of loading and simulating badly.
-  mochi::ModelData baked = ModelData.ToMochi();
+  mochi::ModelData baked = ::ToMochi(ModelData);
   mochi::model_utils::BakeTransform(baked, bakeScale, bakeTransformRT, e);
   MOCHI_ERROR_RETURN(e, {});
   const auto shape = mochiWorld->CreateModelShape(baked, e);
@@ -269,16 +512,16 @@ mochi::ShapeHandle UMochiModel::GetMochiShape_Raw(const mochi::VMatrix4x4r& Bake
 }
 
 bool UMochiModel::IsValid() const {
-  return !ModelData.IsEmpty();
+  return HasModelGeometry(ModelData);
 }
 
 mochi::ModelData UMochiModel::GetMochiModelData(mochi::Error& error) const {
   MOCHI_ERROR_RETURN(error, {});
-  if (ModelData.IsEmpty()) {
+  if (!HasModelGeometry(ModelData)) {
     MOCHI_ERROR_SET(error, "UMochiModel::GetMochiModelData called on asset with no data");
     return {};
   }
-  mochi::ModelData modelData = ModelData.ToMochi();
+  mochi::ModelData modelData = ::ToMochi(ModelData);
 
   // Bake the same import/space transform the shape-loading path applies (GetMochiShape ->
   // GetMochiShape_Raw, which bakes before CreateModelShape). With no explicit bake,
@@ -615,7 +858,7 @@ bool UMochiModel::ImportFromFilename(const FString& InFilename) {
 }
 
 bool UMochiModel::ExportToFilename(const FString& InFilename) const {
-  if (ModelData.IsEmpty()) {
+  if (!HasModelGeometry(ModelData)) {
     UE_LOG(
         LogMochiPhysics,
         Error,
@@ -625,7 +868,7 @@ bool UMochiModel::ExportToFilename(const FString& InFilename) const {
   }
   mochi::Error error;
   mochi::model_utils::SaveToFile(
-      ModelData.ToMochi(), std::string{TCHAR_TO_ANSI(*InFilename)}, mochi::FileFormat::H5, error);
+      ::ToMochi(ModelData), std::string{TCHAR_TO_ANSI(*InFilename)}, mochi::FileFormat::H5, error);
   if (!error.IsOK()) {
     UE_LOG(
         LogMochiPhysics,
@@ -645,7 +888,7 @@ bool UMochiModel::ApplyModelData(const mochi::ModelData& Data) {
   // that a failed import or bake leaves the asset as it was rather than half-replaced.
   // Moving is cheap, and RefreshMeshCounts writes no counts unless it succeeds.
   FMochiModelData previous = MoveTemp(ModelData);
-  ModelData.FromMochi(Data);
+  ModelData = ::ToUnreal(Data);
   if (!RefreshMeshCounts()) {
     ModelData = MoveTemp(previous);
     return false;
@@ -705,7 +948,7 @@ bool UMochiModel::RefreshMeshCounts() {
 }
 
 bool UMochiModel::ConvertTetMeshToSurfaceMesh() {
-  if (ModelData.IsEmpty()) {
+  if (!HasModelGeometry(ModelData)) {
     UE_LOG(LogMochiPhysics, Error, TEXT("[UMochiModel] No model data to process."));
     return false;
   }
@@ -713,7 +956,7 @@ bool UMochiModel::ConvertTetMeshToSurfaceMesh() {
   mochi::Error error;
   auto const mochiContext = IMochiPhysicsModule::Get()->GetMochiContext();
 
-  auto model = ModelData.ToMochi();
+  auto model = ::ToMochi(ModelData);
 
   // early-out if no mesh or not a tetrahedral mesh
   if (!model.mesh.has_value() || model.mesh->nodesPerElement != 4) {
@@ -790,13 +1033,13 @@ bool UMochiModel::ConvertTetMeshToSurfaceMesh() {
 }
 
 bool UMochiModel::BakeSdf(const FMochiGridSdfParams* SdfParams) {
-  if (ModelData.IsEmpty()) {
+  if (!HasModelGeometry(ModelData)) {
     UE_LOG(LogMochiPhysics, Error, TEXT("[UMochiModel] No model data to process."));
     return false;
   }
 
   mochi::Error error;
-  mochi::ModelData modelData = ModelData.ToMochi();
+  mochi::ModelData modelData = ::ToMochi(ModelData);
 
   // Check if this has a mesh
   if (!modelData.mesh.has_value()) {

@@ -407,9 +407,31 @@ void AssignFromMochi(FMochiAsyncStepParams& Out, mochi::AsyncStepParams const& S
   Out.TimeStepCallback = Src.timeStepCallback;
 }
 
+void AssignFromMochi(FMochiBlendingData& Out, mochi::BlendingData const& Src) {
+  Out.SourceShape = ToUnrealString(Src.sourceShape);
+  Out.Indices = ToUnrealArray<int32>(Src.indices);
+  Out.Weights = ToUnrealArray<float>(Src.weights);
+}
+
 void AssignFromMochi(FMochiBoundarySubsamplingParams& Out, mochi::BoundarySubsamplingParams const& Src) {
   Out.SubsamplingDensity = static_cast<float>(Src.subsamplingDensity);
   Out.Strategy = ToUnreal(Src.strategy);
+}
+
+void AssignFromMochi(FMochiBox& Out, mochi::Box const& Src) {
+  Out.Center = ToUnrealReal3<FVector3f>(Src.center);
+  Out.HalfExtents = ToUnrealReal3<FVector3f>(Src.halfExtents);
+  Out.Rotation = ToUnrealQuaternion(Src.rotation);
+}
+
+void AssignFromMochi(FMochiGridSdfData& Out, mochi::GridSdfData const& Src) {
+  Out.Dims = FIntVector(Src.dims[0], Src.dims[1], Src.dims[2]);
+  Out.Values = ToUnrealArray<float>(Src.values);
+  Out.Bounds = ToUnrealAabb(Src.bounds);
+  Out.NegativeValueBounds = ToUnrealAabb(Src.negativeValueBounds);
+  Out.Scale = ToUnrealOptional<FVector3f>(Src.scale, [](auto const& Value) { return ToUnrealReal3<FVector3f>(Value); });
+  Out.Rotation = ToUnrealOptional<FQuat4f>(Src.rotation, [](auto const& Value) { return ToUnrealQuaternion(Value); });
+  Out.Translation = ToUnrealOptional<FVector3f>(Src.translation, [](auto const& Value) { return ToUnrealReal3<FVector3f>(Value); });
 }
 
 void AssignFromMochi(FMochiGridSdfParams& Out, mochi::GridSdfParams const& Src) {
@@ -417,6 +439,17 @@ void AssignFromMochi(FMochiGridSdfParams& Out, mochi::GridSdfParams const& Src) 
   Out.ResolutionDelta = ToUnrealReal3<FVector3f>(Src.resolutionDelta);
   Out.BoundaryPaddingDist = static_cast<float>(Src.boundaryPaddingDist);
   Out.MinGridResolution = FIntVector(Src.minGridResolution[0], Src.minGridResolution[1], Src.minGridResolution[2]);
+}
+
+void AssignFromMochi(FMochiIKSolverParams& Out, mochi::experimental::IKSolverParams const& Src) {
+  Out.MaxIter = static_cast<int32>(Src.maxIter);
+  Out.Verbosity = ToUnreal(Src.verbosity);
+  Out.AbsTol = static_cast<float>(Src.absTol);
+  Out.RelTol = static_cast<float>(Src.relTol);
+  Out.PositionErrorThres = static_cast<float>(Src.positionErrorThres);
+  Out.RotationErrorThres = static_cast<float>(Src.rotationErrorThres);
+  Out.LineSearchMaxIter = static_cast<int32>(Src.lineSearchMaxIter);
+  Out.MaxElapsedTimeSeconds = static_cast<double>(Src.maxElapsedTimeSeconds);
 }
 
 void AssignFromMochi(FMochiLinearSolverParams& Out, mochi::LinearSolverParams const& Src) {
@@ -456,10 +489,39 @@ void AssignFromMochi(FMochiNonLinearSolverParams& Out, mochi::NonLinearSolverPar
   Out.Verbosity = ToUnreal(Src.verbosity);
 }
 
+void AssignFromMochi(FMochiPerElementSoftMaterialData& Out, mochi::PerElementSoftMaterialData const& Src) {
+  Out.Type = ToUnreal(Src.type);
+  Out.PsdStrategy = ToUnreal(Src.psdStrategy);
+  Out.YoungsModulus = ToUnrealArray<float>(Src.youngsModulus);
+  Out.PoissonRatio = ToUnrealArray<float>(Src.poissonRatio);
+  Out.AnisoAlpha = ToUnrealArray<float>(Src.anisoAlpha);
+  Out.AnisoLength = ToUnrealArray<float>(Src.anisoLength);
+  Out.AnisoTheta = ToUnrealArray<float>(Src.anisoTheta);
+  Out.AnisoPhi = ToUnrealArray<float>(Src.anisoPhi);
+  Out.ArapStiffness = ToUnrealArray<float>(Src.arapStiffness);
+  Out.ShapeTargetTensor = ToUnrealArray<float>(Src.shapeTargetTensor);
+}
+
+void AssignFromMochi(FMochiPlane& Out, mochi::Plane const& Src) {
+  Out.Normal = ToUnrealReal3<FVector3f>(Src.normal);
+  Out.Distance = static_cast<float>(Src.distance);
+}
+
 void AssignFromMochi(FMochiSaturationHessianParams& Out, mochi::SaturationHessianParams const& Src) {
   Out.bContactFriction = static_cast<bool>(Src.contactFriction);
   Out.bJointFriction = static_cast<bool>(Src.jointFriction);
   Out.bConstraintSaturation = static_cast<bool>(Src.constraintSaturation);
+}
+
+void AssignFromMochi(FMochiSkinningData& Out, mochi::SkinningData const& Src) {
+  Out.WeightsPerNode = static_cast<int32>(Src.weightsPerNode);
+  Out.Indices = ToUnrealArray<int32>(Src.indices);
+  Out.Weights = ToUnrealArray<float>(Src.weights);
+}
+
+void AssignFromMochi(FMochiSphere& Out, mochi::Sphere const& Src) {
+  Out.Center = ToUnrealReal3<FVector3f>(Src.center);
+  Out.Radius = static_cast<float>(Src.radius);
 }
 
 void AssignFromMochi(FMochiExperimentalEvalParams& Out, mochi::ExperimentalEvalParams const& Src) {
@@ -473,7 +535,210 @@ void AssignFromMochi(FMochiExperimentalEvalParams& Out, mochi::ExperimentalEvalP
   Out.ConsistencyResNormStep = static_cast<float>(Src.consistencyResNormStep);
 }
 
+void AssignFromMochi(FMochiMeshData& Out, mochi::MeshData const& Src) {
+  Out.NodesPerElement = static_cast<int32>(Src.nodesPerElement);
+  Out.Coordinates = ToUnrealArray<float>(Src.coordinates);
+  Out.Connectivity = ToUnrealArray<int32>(Src.connectivity);
+  Out.Skinning = ToUnrealOptional<FMochiSkinningData>(Src.skinning, [](auto const& Value) { return ToUnreal(Value); });
+}
+
+void AssignFromMochi(FMochiModelData& Out, mochi::ModelData const& Src) {
+  Out.Mesh = ToUnrealOptional<FMochiMeshData>(Src.mesh, [](auto const& Value) { return ToUnreal(Value); });
+  Out.VisualMesh = ToUnrealOptional<FMochiMeshData>(Src.visualMesh, [](auto const& Value) { return ToUnreal(Value); });
+  Out.ContactSkinMesh = ToUnrealOptional<FMochiMeshData>(Src.contactSkinMesh, [](auto const& Value) { return ToUnreal(Value); });
+  Out.Blending = ToUnrealOptional<FMochiBlendingDataArray>(Src.blending, [](auto const& Value) { FMochiBlendingDataArray Out{}; Out.Values = ToUnrealArray<FMochiBlendingData>(Value, [](auto const& Value) { return ToUnreal(Value); }); return Out; });
+  Out.ConstrainedNodes = ToUnrealOptional<FMochiInt32Array>(Src.constrainedNodes, [](auto const& Value) { FMochiInt32Array Out{}; Out.Values = ToUnrealArray<int32>(Value); return Out; });
+  Out.ElementFrameAxes = ToUnrealOptional<FMochiFloatArray>(Src.elementFrameAxes, [](auto const& Value) { FMochiFloatArray Out{}; Out.Values = ToUnrealArray<float>(Value); return Out; });
+  Out.Box = ToUnrealOptional<FMochiBox>(Src.box, [](auto const& Value) { return ToUnreal(Value); });
+  Out.Plane = ToUnrealOptional<FMochiPlane>(Src.plane, [](auto const& Value) { return ToUnreal(Value); });
+  Out.Sphere = ToUnrealOptional<FMochiSphere>(Src.sphere, [](auto const& Value) { return ToUnreal(Value); });
+  Out.Sdf = ToUnrealOptional<FMochiGridSdfData>(Src.sdf, [](auto const& Value) { return ToUnreal(Value); });
+  Out.Material = ToUnrealOptional<FMochiPerElementSoftMaterialData>(Src.material, [](auto const& Value) { return ToUnreal(Value); });
+  Out.bExperimentalDataDetected = static_cast<bool>(Src.experimentalDataDetected);
+}
+
 } // namespace
+
+FMochiSkinningData::FMochiSkinningData() {
+  AssignFromMochi(*this, mochi::SkinningData{});
+}
+
+mochi::SkinningData ToMochi(FMochiSkinningData const& Src) {
+  mochi::SkinningData Out{};
+  Out.weightsPerNode = static_cast<int>(Src.WeightsPerNode);
+  Out.indices = ToMochiArray<int>(Src.Indices);
+  Out.weights = ToMochiArray<mochi::real>(Src.Weights);
+  return Out;
+}
+
+FMochiSkinningData ToUnreal(mochi::SkinningData const& Src) {
+  FMochiSkinningData Out{};
+  AssignFromMochi(Out, Src);
+  return Out;
+}
+
+FMochiMeshData::FMochiMeshData() {
+  AssignFromMochi(*this, mochi::MeshData{});
+}
+
+mochi::MeshData ToMochi(FMochiMeshData const& Src) {
+  mochi::MeshData Out{};
+  Out.nodesPerElement = static_cast<int>(Src.NodesPerElement);
+  Out.coordinates = ToMochiArray<mochi::real>(Src.Coordinates);
+  Out.connectivity = ToMochiArray<int>(Src.Connectivity);
+  Out.skinning = ToMochiOptional<mochi::SkinningData>(Src.Skinning, [](auto const& Value) { return ToMochi(Value); });
+  return Out;
+}
+
+FMochiMeshData ToUnreal(mochi::MeshData const& Src) {
+  FMochiMeshData Out{};
+  AssignFromMochi(Out, Src);
+  return Out;
+}
+
+FMochiBlendingData::FMochiBlendingData() {
+  AssignFromMochi(*this, mochi::BlendingData{});
+}
+
+mochi::BlendingData ToMochi(FMochiBlendingData const& Src) {
+  mochi::BlendingData Out{};
+  Out.sourceShape = ToMochiString(Src.SourceShape);
+  Out.indices = ToMochiArray<int>(Src.Indices);
+  Out.weights = ToMochiArray<mochi::real>(Src.Weights);
+  return Out;
+}
+
+FMochiBlendingData ToUnreal(mochi::BlendingData const& Src) {
+  FMochiBlendingData Out{};
+  AssignFromMochi(Out, Src);
+  return Out;
+}
+
+FMochiBox::FMochiBox() {
+  AssignFromMochi(*this, mochi::Box{});
+}
+
+mochi::Box ToMochi(FMochiBox const& Src) {
+  mochi::Box Out{};
+  Out.center = ToMochiReal3(Src.Center);
+  Out.halfExtents = ToMochiReal3(Src.HalfExtents);
+  Out.rotation = ToMochiQuaternion(Src.Rotation);
+  return Out;
+}
+
+FMochiBox ToUnreal(mochi::Box const& Src) {
+  FMochiBox Out{};
+  AssignFromMochi(Out, Src);
+  return Out;
+}
+
+FMochiPlane::FMochiPlane() {
+  AssignFromMochi(*this, mochi::Plane{});
+}
+
+mochi::Plane ToMochi(FMochiPlane const& Src) {
+  mochi::Plane Out{};
+  Out.normal = ToMochiReal3(Src.Normal);
+  Out.distance = static_cast<mochi::real>(Src.Distance);
+  return Out;
+}
+
+FMochiPlane ToUnreal(mochi::Plane const& Src) {
+  FMochiPlane Out{};
+  AssignFromMochi(Out, Src);
+  return Out;
+}
+
+FMochiSphere::FMochiSphere() {
+  AssignFromMochi(*this, mochi::Sphere{});
+}
+
+mochi::Sphere ToMochi(FMochiSphere const& Src) {
+  mochi::Sphere Out{};
+  Out.center = ToMochiReal3(Src.Center);
+  Out.radius = static_cast<mochi::real>(Src.Radius);
+  return Out;
+}
+
+FMochiSphere ToUnreal(mochi::Sphere const& Src) {
+  FMochiSphere Out{};
+  AssignFromMochi(Out, Src);
+  return Out;
+}
+
+FMochiGridSdfData::FMochiGridSdfData() {
+  AssignFromMochi(*this, mochi::GridSdfData{});
+}
+
+mochi::GridSdfData ToMochi(FMochiGridSdfData const& Src) {
+  mochi::GridSdfData Out{};
+  Out.dims = mochi::Int3{int(Src.Dims.X), int(Src.Dims.Y), int(Src.Dims.Z)};
+  Out.values = ToMochiArray<mochi::real>(Src.Values);
+  Out.bounds = ToMochiAabb(Src.Bounds);
+  Out.negativeValueBounds = ToMochiAabb(Src.NegativeValueBounds);
+  Out.scale = ToMochiOptional<mochi::Real3>(Src.Scale, [](auto const& Value) { return ToMochiReal3(Value); });
+  Out.rotation = ToMochiOptional<mochi::Quaternion>(Src.Rotation, [](auto const& Value) { return ToMochiQuaternion(Value); });
+  Out.translation = ToMochiOptional<mochi::Real3>(Src.Translation, [](auto const& Value) { return ToMochiReal3(Value); });
+  return Out;
+}
+
+FMochiGridSdfData ToUnreal(mochi::GridSdfData const& Src) {
+  FMochiGridSdfData Out{};
+  AssignFromMochi(Out, Src);
+  return Out;
+}
+
+FMochiPerElementSoftMaterialData::FMochiPerElementSoftMaterialData() {
+  AssignFromMochi(*this, mochi::PerElementSoftMaterialData{});
+}
+
+mochi::PerElementSoftMaterialData ToMochi(FMochiPerElementSoftMaterialData const& Src) {
+  mochi::PerElementSoftMaterialData Out{};
+  Out.type = ToMochi(Src.Type);
+  Out.psdStrategy = ToMochi(Src.PsdStrategy);
+  Out.youngsModulus = ToMochiArray<mochi::real>(Src.YoungsModulus);
+  Out.poissonRatio = ToMochiArray<mochi::real>(Src.PoissonRatio);
+  Out.anisoAlpha = ToMochiArray<mochi::real>(Src.AnisoAlpha);
+  Out.anisoLength = ToMochiArray<mochi::real>(Src.AnisoLength);
+  Out.anisoTheta = ToMochiArray<mochi::real>(Src.AnisoTheta);
+  Out.anisoPhi = ToMochiArray<mochi::real>(Src.AnisoPhi);
+  Out.arapStiffness = ToMochiArray<mochi::real>(Src.ArapStiffness);
+  Out.shapeTargetTensor = ToMochiArray<mochi::real>(Src.ShapeTargetTensor);
+  return Out;
+}
+
+FMochiPerElementSoftMaterialData ToUnreal(mochi::PerElementSoftMaterialData const& Src) {
+  FMochiPerElementSoftMaterialData Out{};
+  AssignFromMochi(Out, Src);
+  return Out;
+}
+
+FMochiModelData::FMochiModelData() {
+  AssignFromMochi(*this, mochi::ModelData{});
+}
+
+mochi::ModelData ToMochi(FMochiModelData const& Src) {
+  mochi::ModelData Out{};
+  Out.mesh = ToMochiOptional<mochi::MeshData>(Src.Mesh, [](auto const& Value) { return ToMochi(Value); });
+  Out.visualMesh = ToMochiOptional<mochi::MeshData>(Src.VisualMesh, [](auto const& Value) { return ToMochi(Value); });
+  Out.contactSkinMesh = ToMochiOptional<mochi::MeshData>(Src.ContactSkinMesh, [](auto const& Value) { return ToMochi(Value); });
+  Out.blending = ToMochiOptional<mochi::DynamicArray<mochi::BlendingData>>(Src.Blending, [](auto const& Value) { return ToMochiArray<mochi::BlendingData>(Value.Values, [](auto const& Value) { return ToMochi(Value); }); });
+  Out.constrainedNodes = ToMochiOptional<mochi::DynamicArray<int>>(Src.ConstrainedNodes, [](auto const& Value) { return ToMochiArray<int>(Value.Values); });
+  Out.elementFrameAxes = ToMochiOptional<mochi::DynamicArray<mochi::real>>(Src.ElementFrameAxes, [](auto const& Value) { return ToMochiArray<mochi::real>(Value.Values); });
+  Out.box = ToMochiOptional<mochi::Box>(Src.Box, [](auto const& Value) { return ToMochi(Value); });
+  Out.plane = ToMochiOptional<mochi::Plane>(Src.Plane, [](auto const& Value) { return ToMochi(Value); });
+  Out.sphere = ToMochiOptional<mochi::Sphere>(Src.Sphere, [](auto const& Value) { return ToMochi(Value); });
+  Out.sdf = ToMochiOptional<mochi::GridSdfData>(Src.Sdf, [](auto const& Value) { return ToMochi(Value); });
+  Out.material = ToMochiOptional<mochi::PerElementSoftMaterialData>(Src.Material, [](auto const& Value) { return ToMochi(Value); });
+  Out.experimentalDataDetected = static_cast<bool>(Src.bExperimentalDataDetected);
+  return Out;
+}
+
+FMochiModelData ToUnreal(mochi::ModelData const& Src) {
+  FMochiModelData Out{};
+  AssignFromMochi(Out, Src);
+  return Out;
+}
 
 FMochiBoundarySubsamplingParams::FMochiBoundarySubsamplingParams() {
   AssignFromMochi(*this, mochi::BoundarySubsamplingParams{});
@@ -629,6 +894,29 @@ mochi::ExperimentalEvalParams ToMochi(FMochiExperimentalEvalParams const& Src) {
 
 FMochiExperimentalEvalParams ToUnreal(mochi::ExperimentalEvalParams const& Src) {
   FMochiExperimentalEvalParams Out{};
+  AssignFromMochi(Out, Src);
+  return Out;
+}
+
+FMochiIKSolverParams::FMochiIKSolverParams() {
+  AssignFromMochi(*this, mochi::experimental::IKSolverParams{});
+}
+
+mochi::experimental::IKSolverParams ToMochi(FMochiIKSolverParams const& Src) {
+  mochi::experimental::IKSolverParams Out{};
+  Out.maxIter = static_cast<int>(Src.MaxIter);
+  Out.verbosity = ToMochi(Src.Verbosity);
+  Out.absTol = static_cast<mochi::real>(Src.AbsTol);
+  Out.relTol = static_cast<mochi::real>(Src.RelTol);
+  Out.positionErrorThres = static_cast<mochi::real>(Src.PositionErrorThres);
+  Out.rotationErrorThres = static_cast<mochi::real>(Src.RotationErrorThres);
+  Out.lineSearchMaxIter = static_cast<int>(Src.LineSearchMaxIter);
+  Out.maxElapsedTimeSeconds = static_cast<double>(Src.MaxElapsedTimeSeconds);
+  return Out;
+}
+
+FMochiIKSolverParams ToUnreal(mochi::experimental::IKSolverParams const& Src) {
+  FMochiIKSolverParams Out{};
   AssignFromMochi(Out, Src);
   return Out;
 }

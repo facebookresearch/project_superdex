@@ -52,6 +52,8 @@ struct SUPERDEXPHYSICS_API FMochiObjectVersion {
     BeforeCustomVersionWasAdded = 0,
     // UMochiModel holds an FMochiModelData, with the SDF values in bulk data
     TypedModelData,
+    // Native-shaped generated structs replace the legacy bounds and IK tolerance formats.
+    NativeGeneratedStructs,
     // -----<new versions can be added above this line>-----
     VersionPlusOne,
     LatestVersion = VersionPlusOne - 1,
@@ -591,42 +593,6 @@ struct FMochiArticulationContactOverride {
   // Whether contact between the links is enabled.
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
   bool bEnable = false;
-};
-
-// Kept here rather than in SuperDexRobotics: the wrapped mochi::experimental::IKSolverParams
-// is owned by mochi_physics, so this needs no superdex_robotics. Only the solver object does.
-USTRUCT(BlueprintType)
-struct SUPERDEXPHYSICS_API FMochiIKSolverParams {
-  GENERATED_BODY()
-  // Maximum Newton solver iterations
-  UPROPERTY(EditAnywhere, BlueprintReadOnly)
-  int MaxIter;
-  // Absolute error tolerance for Newton solver convergence
-  UPROPERTY(EditAnywhere, BlueprintReadOnly)
-  double AbsTol;
-  // Relative error tolerance for Newton solver convergence (scaled by RelTolScalar).
-  // Actual relTol = RelTol / RelTolScalar
-  UPROPERTY(EditAnywhere, BlueprintReadOnly)
-  double RelTol;
-  // Scalar applied to RelTol for UI display. Actual relTol = RelTol / RelTolScalar
-  UPROPERTY(EditAnywhere, BlueprintReadOnly)
-  double RelTolScalar;
-  // Position error threshold for determining if IK targets are reachable [m]
-  UPROPERTY(EditAnywhere, BlueprintReadOnly)
-  double PositionErrorThres;
-  // Rotation error threshold for determining if IK targets are reachable [radians]
-  UPROPERTY(EditAnywhere, BlueprintReadOnly)
-  double RotationErrorThres;
-  // Maximum number of line search iterations per Newton step
-  UPROPERTY(EditAnywhere, BlueprintReadOnly)
-  int LineSearchMaxIter;
-  // Maximum elapsed wall-clock time [seconds] before the solver stops. 0 means no time limit.
-  UPROPERTY(EditAnywhere, BlueprintReadOnly)
-  double MaxElapsedTimeSeconds;
-
-  FMochiIKSolverParams();
-  mochi::experimental::IKSolverParams ToMochi() const;
-  void FromMochi(const mochi::experimental::IKSolverParams& Mochi);
 };
 
 // Couples two single-dof joints of one articulation so that

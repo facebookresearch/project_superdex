@@ -63,33 +63,6 @@ void FMochiShapeTargetTensor::FromMochi(const mochi::Real6& Mochi) {
   ZZ = Mochi[5];
 }
 
-FMochiIKSolverParams::FMochiIKSolverParams() {
-  FromMochi(mochi::experimental::IKSolverParams{});
-}
-
-mochi::experimental::IKSolverParams FMochiIKSolverParams::ToMochi() const {
-  mochi::experimental::IKSolverParams Out;
-  Out.maxIter = MaxIter;
-  Out.absTol = static_cast<mochi::real>(AbsTol);
-  Out.relTol = static_cast<mochi::real>(RelTol / RelTolScalar);
-  Out.positionErrorThres = static_cast<mochi::real>(PositionErrorThres);
-  Out.rotationErrorThres = static_cast<mochi::real>(RotationErrorThres);
-  Out.lineSearchMaxIter = LineSearchMaxIter;
-  Out.maxElapsedTimeSeconds = MaxElapsedTimeSeconds;
-  return Out;
-}
-
-void FMochiIKSolverParams::FromMochi(const mochi::experimental::IKSolverParams& Mochi) {
-  MaxIter = Mochi.maxIter;
-  AbsTol = static_cast<double>(Mochi.absTol);
-  RelTolScalar = 1e6;
-  RelTol = static_cast<double>(Mochi.relTol) * RelTolScalar;
-  PositionErrorThres = static_cast<double>(Mochi.positionErrorThres);
-  RotationErrorThres = static_cast<double>(Mochi.rotationErrorThres);
-  LineSearchMaxIter = Mochi.lineSearchMaxIter;
-  MaxElapsedTimeSeconds = Mochi.maxElapsedTimeSeconds;
-}
-
 //------------------------------------------------------------------------------
 // CONTACT HANDLING
 //------------------------------------------------------------------------------

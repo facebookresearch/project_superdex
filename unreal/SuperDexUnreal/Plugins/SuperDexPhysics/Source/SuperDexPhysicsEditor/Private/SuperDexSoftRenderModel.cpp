@@ -19,7 +19,7 @@
 #include "Algo/AnyOf.h"
 #include "GLTFAsset.h"
 #include "GLTFReader.h"
-#include "MochiModelData.h"
+#include "MochiGenTypes.h"
 
 namespace SuperDexSoftRenderModel {
 
