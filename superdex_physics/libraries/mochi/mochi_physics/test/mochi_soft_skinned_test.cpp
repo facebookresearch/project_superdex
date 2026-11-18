@@ -201,3 +201,37 @@ TEST_F(CreateSoftSkinnedActorNameTest, UsesFallbackParentNameForUnnamedNestedSof
   }
   EXPECT_STREQ("unnamed_articulation/soft_0", _scene->GetActor(softActors[0])->GetName());
 }
+
+// Nested soft actor nodes are posed by skinning, which deformable node constraints do not model.
+TEST_F(CreateSoftSkinnedActorNameTest, DeformableNodeConstraintsRejectNestedSoftActors) {
+  Actor* parent = _scene->CreateSoftSkinnedActor(MakeParams({"soft"}), test::ExpectOK{});
+  ActorHandle const nested = parent->GetNestedSoftActors(test::ExpectOK{})[0];
+  ActorHandle const link = parent->GetNestedLinkActors(test::ExpectOK{})[0];
+  SoftActorParams standaloneParams;
+  standaloneParams.shape = test::CreateUnitCubeTetMeshShape(_mochiContext);
+  ActorHandle const standalone =
+      _scene->CreateSoftActor(standaloneParams, test::ExpectOK{})->GetHandle();
+
+  // Each constraint is valid on the standalone soft actor and fails on the nested one.
+  auto const expectRejectsNested = [&](auto const& create) {
+    int const numConstraints = _scene->GetNumConstraints();
+    EXPECT_EQ(nullptr, create(nested, test::ExpectNotOK{}));
+    EXPECT_EQ(numConstraints, _scene->GetNumConstraints());
+    EXPECT_NE(nullptr, create(standalone, test::ExpectOK{}));
+  };
+  expectRejectsNested([&](ActorHandle actor, Error& error) {
+    return _scene->CreateDeformableNodePositionConstraint({.nodeIndex = 1, .actor = actor}, error);
+  });
+  expectRejectsNested([&](ActorHandle actor, Error& error) {
+    return _scene->CreateDeformableNodeToDeformableNodeConstraint(
+        {.nodeIndexA = 1, .nodeIndexB = 2, .actorA = actor, .actorB = standalone}, error);
+  });
+  expectRejectsNested([&](ActorHandle actor, Error& error) {
+    return _scene->CreateDeformableNodeToDeformableNodeConstraint(
+        {.nodeIndexA = 1, .nodeIndexB = 2, .actorA = standalone, .actorB = actor}, error);
+  });
+  expectRejectsNested([&](ActorHandle actor, Error& error) {
+    return _scene->CreateDeformableNodeToRigidConstraint(
+        {.deformableNodeIndex = 1, .rigidActor = link, .deformableActor = actor}, error);
+  });
+}

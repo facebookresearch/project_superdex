@@ -15098,6 +15098,10 @@ class Scene:
         Raises:
             :class:`~superdex.physics.Error`: If an error occurs.
 
+        Note:
+            Not supported on nested soft actors (see
+            :meth:`~superdex.physics.Actor.get_nested_soft_actors`).
+
         See Also:
             :class:`DEFORMABLE_NODE_POSITION <superdex.physics.ConstraintType>`,
             :class:`~superdex.physics.DeformableNodePositionConstraintParams`,
@@ -15131,6 +15135,10 @@ class Scene:
 
         Raises:
             :class:`~superdex.physics.Error`: If an error occurs.
+
+        Note:
+            Not supported on nested soft actors (see
+            :meth:`~superdex.physics.Actor.get_nested_soft_actors`).
 
         See Also:
             :class:`DEFORMABLE_NODE_TO_DEFORMABLE_NODE
@@ -15168,6 +15176,10 @@ class Scene:
 
         Raises:
             :class:`~superdex.physics.Error`: If an error occurs.
+
+        Note:
+            Not supported on nested soft actors (see
+            :meth:`~superdex.physics.Actor.get_nested_soft_actors`).
 
         See Also:
             :class:`DEFORMABLE_NODE_TO_RIGID <superdex.physics.ConstraintType>`,

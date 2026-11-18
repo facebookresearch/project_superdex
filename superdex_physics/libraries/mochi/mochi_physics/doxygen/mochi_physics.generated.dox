@@ -7885,6 +7885,8 @@
 /// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
 /// @return Pointer to the created @ref mochi::Constraint "Constraint", or nullptr on error.
 ///
+/// @note Not supported on nested soft actors (see @ref mochi::Actor::GetNestedSoftActors "Actor::GetNestedSoftActors").
+///
 /// @see @ref mochi::ConstraintType::DeformableNodePosition "ConstraintType::DeformableNodePosition", @ref mochi::DeformableNodePositionConstraintParams "DeformableNodePositionConstraintParams", @ref mochi::Scene::DestroyConstraint "DestroyConstraint"
 ///
 
@@ -7896,6 +7898,8 @@
 /// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
 /// @return Pointer to the created @ref mochi::Constraint "Constraint", or nullptr on error.
 ///
+/// @note Not supported on nested soft actors (see @ref mochi::Actor::GetNestedSoftActors "Actor::GetNestedSoftActors").
+///
 /// @see @ref mochi::ConstraintType::DeformableNodeToDeformableNode "ConstraintType::DeformableNodeToDeformableNode", @ref mochi::DeformableNodeToDeformableNodeConstraintParams "DeformableNodeToDeformableNodeConstraintParams", @ref mochi::Scene::DestroyConstraint "DestroyConstraint"
 ///
 
@@ -7906,6 +7910,8 @@
 /// @param[in] params Parameters defining the deformable-node-to-rigid constraint.
 /// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
 /// @return Pointer to the created @ref mochi::Constraint "Constraint", or nullptr on error.
+///
+/// @note Not supported on nested soft actors (see @ref mochi::Actor::GetNestedSoftActors "Actor::GetNestedSoftActors").
 ///
 /// @see @ref mochi::ConstraintType::DeformableNodeToRigid "ConstraintType::DeformableNodeToRigid", @ref mochi::DeformableNodeToRigidConstraintParams "DeformableNodeToRigidConstraintParams", @ref mochi::Scene::DestroyConstraint "DestroyConstraint"
 ///

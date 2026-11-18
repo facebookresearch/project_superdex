@@ -52,11 +52,16 @@ using namespace mochi;
       "to disable saturation or a positive value to enable it.");                     \
   MOCHI_ERROR_RETURN(error);
 
-#define MOCHI_VALIDATE_DEFORMABLE_ACTOR(reg, e, error)              \
-  MOCHI_ERROR_IF(                                                   \
-      !((reg).any_of<TagSoftActor, TagShellActor, TagRodActor>(e)), \
-      error,                                                        \
-      "Invalid actor type. Expected a soft, shell, or rod actor.");
+#define MOCHI_VALIDATE_DEFORMABLE_ACTOR(reg, e, error)                                        \
+  MOCHI_ERROR_IF(                                                                             \
+      !((reg).any_of<TagSoftActor, TagShellActor, TagRodActor>(e)),                           \
+      error,                                                                                  \
+      "Invalid actor type. Expected a soft, shell, or rod actor.");                           \
+  MOCHI_ERROR_IF(                                                                             \
+      (reg).any_of<TagNestedSoftActor>(e),                                                    \
+      error,                                                                                  \
+      "Deformable node constraints are not supported on nested soft actors, whose nodes are " \
+      "posed by skinning.");
 
 static int DofsPerNode(entt::registry const& reg, entt::entity e) {
   if (reg.any_of<TagSoftActor, TagShellActor>(e)) {

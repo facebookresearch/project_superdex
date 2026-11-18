@@ -603,6 +603,8 @@ class Scene [no_init, no_destruct] {
   //
   // @return Pointer to the created @ref Constraint, or nullptr on error.
   //
+  // @note Not supported on nested soft actors (see @ref Actor::GetNestedSoftActors).
+  //
   // @see ConstraintType::DeformableNodePosition, DeformableNodePositionConstraintParams,
   // DestroyConstraint
   fn CreateDeformableNodePositionConstraint(DeformableNodePositionConstraintParams const& params) -> Constraint* [pure, virtual, mochi_error, expand_struct_params, nullable];
@@ -613,6 +615,8 @@ class Scene [no_init, no_destruct] {
   //
   // @return Pointer to the created @ref Constraint, or nullptr on error.
   //
+  // @note Not supported on nested soft actors (see @ref Actor::GetNestedSoftActors).
+  //
   // @see ConstraintType::DeformableNodeToDeformableNode,
   // DeformableNodeToDeformableNodeConstraintParams, DestroyConstraint
   fn CreateDeformableNodeToDeformableNodeConstraint(DeformableNodeToDeformableNodeConstraintParams const& params) -> Constraint* [pure, virtual, mochi_error, expand_struct_params, nullable];
@@ -622,6 +626,8 @@ class Scene [no_init, no_destruct] {
   // @param[in] params Parameters defining the deformable-node-to-rigid constraint.
   //
   // @return Pointer to the created @ref Constraint, or nullptr on error.
+  //
+  // @note Not supported on nested soft actors (see @ref Actor::GetNestedSoftActors).
   //
   // @see ConstraintType::DeformableNodeToRigid, DeformableNodeToRigidConstraintParams,
   // DestroyConstraint
