@@ -471,8 +471,9 @@ SUPERDEXPHYSICS_API EMochiNonLinearSolverConvergenceMode ToUnreal(mochi::NonLine
  * @note The line searches EMochiLineSearchType::Simple, EMochiLineSearchType::Armijo,
  *   EMochiLineSearchType::WolfeWeak and EMochiLineSearchType::WolfeStrong test a merit: the
  *   objective, except that terms without a potential may count their work along the step instead of
- *   their energy. A step that fails the test but changes the merit by no more than an estimate of
- *   its rounding error is tested on the slope of the merit along the step instead.
+ *   their energy. A step that fails the test is tested on the slope of the merit along the step
+ *   instead if its merit change is within an estimate of the merit's rounding error or the step is
+ *   so short that rounding error can dominate the change.
  */
 UENUM(BlueprintType)
 enum class EMochiLineSearchType : uint8 {
@@ -1964,8 +1965,9 @@ struct SUPERDEXPHYSICS_API FMochiNonLinearSolverParams {
    * Maximum relative increase in the merit to accept the step.
    *
    * @note Only applies to EMochiLineSearchType::Simple.
-   * @note An increase beyond this maximum but within an estimate of the merit's rounding error is
-   *   tested on the slope of the merit along the step instead (see EMochiLineSearchType).
+   * @note An increase beyond this maximum is tested on the slope of the merit along the step
+   *   instead if it is within an estimate of the merit's rounding error or the step is so short
+   *   that rounding error can dominate the increase (see EMochiLineSearchType).
    */
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   float LineSearchMaxRelIncrease{};
