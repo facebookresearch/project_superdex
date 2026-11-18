@@ -18,11 +18,13 @@
 
 #include <mochi_core/mochi_config.h>
 #include <mochi_core/utils/basic_utils.h>
+#include <mochi_core/utils/concepts.h>
 #include <mochi_core/utils/constants.h>
 #include <mochi_core/utils/debug.h>
 #include <mochi_core/utils/simd.h>
 
 #include <cmath>
+#include <limits>
 
 namespace mochi {
 
@@ -91,38 +93,37 @@ MOCHI_FORCE_INLINE T SoftClamp(T value, T alpha, T* outDClampedValue = nullptr) 
 /**
   @brief: PolyReLU - A smoothed ReLU activation function.
 
-  Evaluates a polynomial in y = (x - shift) / t, in factored form to stay accurate near its triple
-  root at y = -1:
+  A C2-continuous approximation to max(0, x - t) that equals it outside the transition interval
+  (0, 2t):
 
-    f(x) = t/16 * (1 + y)^3 * (3 - y)
+    f(x) = max(0, x - t) + t/16 * n^3 * (4 - n),  n = max(0, min(x, 2t - x)) / t
 
   such that
 
-    f(shift-t) = 0; f'(shift-t) = 0; f(shift+t) = t; f'(shift+t) = 1; f''(shift+t) = 0
+    f(0) = 0; f'(0) = 0; f''(0) = 0; f(2t) = t; f'(2t) = 1; f''(2t) = 0
 
-  Effectively it's a C2-continuous approximation to ReLU centered at `shift`,
-  transitioning smoothly from 0 to linear over the interval (shift-t, shift+t).
+  n, the distance to the nearer end of the interval over t, has a numerator that is exact near that
+  end, so f, f' and f'' keep full relative precision near both ends. By construction, f >= 0,
+  0 <= f' <= 1 and f'' >= 0. For t = 0, f is the ReLU max(0, x).
 
   @param[in] x the coordinate where to evaluate the PolyReLU
-  @param[in] t the half-width of the transition zone
-  @param[in] shift the center of the transition zone
+  @param[in] t the half-width of the transition interval
   @param[out] f function value
   @param[out] df first derivative
   @param[out] ddf second derivative
  */
 template <class T>
-MOCHI_FORCE_INLINE void PolyReLU(T x, T t, T shift, T& f, T& df, T& ddf) {
-  x -= shift;
+MOCHI_FORCE_INLINE void PolyReLU(T x, T t, T& f, T& df, T& ddf) {
   T const zero = 0, one = 1;
-  T const y = x / t;
-  T const a = one + y;
-  T const a2 = a * a;
-  auto const mask = (t <= zero) | (Abs(x) > t);
-  // Linear factors in the form c0 - c1 * y, one FMA each, except ddf's, which subtracts first to
-  // stay accurate near its root at y = 1 without FMA.
-  f = Max(zero, Select(mask, x, (a2 * a) * (T(3.0 / 16.0) - T(1.0 / 16.0) * y) * t));
-  df = Clamp(Select(mask, Select(x < zero, zero, one), a2 * (T(0.5) - T(0.25) * y)), zero, one);
-  ddf = Max(zero, Select(mask, zero, a * (T(0.75) * (one - y)) / t));
+  T const invT = Select(t >= T(std::numeric_limits<ScalarType<T>>::min()), one / t, zero);
+  T const xs = x - t;
+  auto const lower = xs < zero;
+  T const n = Max(zero, Select(lower, x, t - xs)) * invT;
+  T const n2 = n * n;
+  T const h = n2 * (T(0.75) - T(0.25) * n);
+  f = Max(zero, xs) + n2 * n * (T(0.25) * t - T(1.0 / 16.0) * t * n);
+  df = Select(lower, h, one - h);
+  ddf = n * (T(2) - n) * (T(0.75) * invT);
 }
 
 /**************************************************************************************************
@@ -152,7 +153,8 @@ MOCHI_FORCE_INLINE void IPCstepC1(T const& x, T const& t, T& f, T& df, T& ddf, T
   MOCHI_ASSERT_VERBOSE(AllTrue(x >= T(0)), "IPCstepC1 only supported for non-negative values.");
   MOCHI_ASSERT_VERBOSE(AllTrue(t >= T(0)), "Falloff distance must be non-negative.");
   T zero = T{0}, one = T{1}, two = T{2}, oneThird = (T{1} / T{3});
-  T x_t = x / t;
+  T const invT = one / t;
+  T const x_t = x * invT;
   auto const mask = (x >= t);
   auto const isZero = [&]() {
     if constexpr (IsSimd<T>) {
@@ -162,8 +164,9 @@ MOCHI_FORCE_INLINE void IPCstepC1(T const& x, T const& t, T& f, T& df, T& ddf, T
     }
   }();
   f = Select(mask, x - oneThird * t, x * x_t * (one - oneThird * x_t));
-  ddf = Select(mask, zero, two * (one - x_t) / t);
-  df_x = Select(mask, Select(isZero, zero, one / x), (two - x_t) / t);
+  // From t - x, exact near x = t, so that ddf keeps full relative precision where it vanishes.
+  ddf = Select(mask, zero, two * ((t - x) * invT) * invT);
+  df_x = Select(mask, Select(isZero, zero, one / x), (two - x_t) * invT);
   df = Select(mask, one, x * df_x);
 }
 

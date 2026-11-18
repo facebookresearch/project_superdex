@@ -574,9 +574,10 @@ TEST(ContactPenalties, Friction_DegenerateNormalsKeepFullStrength) {
   EXPECT_NEAR_EQ((Real3{unfadedForce[0], 0_r, 0_r}), collidingNormalForce);
 }
 
-// Response of one contact at a penetration of 1 mm and a tangential slip of 1 mm along x, whose
-// colliding normal has the given alignment with the collider normal (z), and the parts of its
-// energy and force reported as non-potential (zero without non-potential terms).
+// Response of one contact at the given distance (a penetration of 1 mm by default) and a tangential
+// slip of 1 mm along x, whose colliding normal has the given alignment with the collider normal
+// (z), and the parts of its energy and force reported as non-potential (zero without non-potential
+// terms).
 struct AlignedContactResponse {
   double energy = 0.0;
   Real3 force;
@@ -588,8 +589,9 @@ struct AlignedContactResponse {
 static AlignedContactResponse EvaluateAlignedContact(
     real alignment,
     ContactParams const& params,
-    ContactEvalConfig const& config) {
-  real const distance[1] = {-0.001_r};
+    ContactEvalConfig const& config,
+    real distance = -0.001_r) {
+  real const distances[1] = {distance};
   Real3 const distanceGrad[1] = {Real3{0_r, 0_r, 1_r}};
   Real3 const normalColliding[1] = {Real3{Sqrt(1_r - Sqr(alignment)), 0_r, alignment}};
   Real3 const posColliding[1] = {Real3{0_r, 0_r, 0_r}};
@@ -604,7 +606,7 @@ static AlignedContactResponse EvaluateAlignedContact(
       MakeSpan(energy),
       MakeSpan(force),
       MakeSpan(dForce),
-      MakeConstSpan(distance),
+      MakeConstSpan(distances),
       MakeConstSpan(distanceGrad),
       {} /* distanceStageStart */,
       {} /* distanceGradStageStart */,
@@ -628,6 +630,50 @@ static AlignedContactResponse EvaluateAlignedContact(
       .dForce = dForce[0],
       .reportedEnergy = reportedEnergy[0],
       .reportedForce = reportedForce[0]};
+}
+
+// The penalty starts exactly at the penalty threshold, for any threshold and smoothing width t,
+// with full relative precision near onset: at a penetration a * t past the threshold, the energy,
+// and the stage-start normal load and its derivative that dissipation uses, are those of
+// f = t/16 * a^3 * (4 - a), with a from the exact penetration.
+TEST(ContactPenalties, PenaltyOnsetAtThreshold) {
+  ContactParams params;
+  params.coulombFrictionCoefficient = 0_r;
+  params.viscousFrictionCoefficient = 0_r;
+  params.normalViscousDampingCoefficient = 0_r;
+  real constexpr kRelTol = 32_r * std::numeric_limits<real>::epsilon();
+  for (real const t : {0.005_r, 0.0013_r}) {
+    params.penaltySmoothingHalfDistance = t;
+    for (real const threshold : {-0.002_r, 0_r, 0.001_r, 0.004_r, 0.3_r}) {
+      params.penaltyThresholdDefault = threshold;
+      for (real const depth : {0_r, 1e-3_r, 1e-2_r, 0.1_r}) {
+        real const distance = threshold - depth * t;
+        double const energy =
+            EvaluateAlignedContact(-1_r, params, ContactEvalConfig{}, distance).energy;
+        BatchReal<1> load, dLoad;
+        ComputeBatchContactPenaltyForceNormDForceNorm<1>(
+            load,
+            dLoad,
+            BatchReal<1>{distance},
+            BatchReal<1>{1_r} /* alignmentWeight */,
+            BatchReal<1>{1_r} /* alignmentFactor */,
+            params,
+            ContactEvalConfig{},
+            true /* assemDForceNorm */);
+        double const k = params.penaltyCoefficient;
+        double const a = (double(threshold) - distance) / t;
+        double const f = t / 16.0 * a * a * a * (4.0 - a);
+        double const df = a * a * (3.0 - a) / 4.0;
+        double const ddf = 0.75 * a * (2.0 - a) / t;
+        double const energyRef = 0.5 * k * f * f;
+        double const loadRef = k * f * df;
+        double const dLoadRef = k * (df * df + f * ddf);
+        EXPECT_NEAR(energyRef, energy, kRelTol * energyRef);
+        EXPECT_NEAR(loadRef, load[0], kRelTol * loadRef);
+        EXPECT_NEAR(dLoadRef, dLoad[0], kRelTol * dLoadRef);
+      }
+    }
+  }
 }
 
 // Smoothstep x^2 (3 - 2x).

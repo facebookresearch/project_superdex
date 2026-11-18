@@ -27,57 +27,62 @@ using Scalar = real;
 
 template <typename T>
 static void TestPolyReLU() {
-  T const kTol = 1e-2;
   // Forward-difference step, relative to t, that balances truncation (∝ h) and rounding (∝ ε / h)
   // errors, and a tolerance of 10x their √ε scale, relative to the derivatives' scales: 1 for f'
   // and 1 / t for f''.
   Scalar const kSqrtEps = Sqrt(std::numeric_limits<Scalar>::epsilon());
   T const kFdTol = Scalar(10) * kSqrtEps;
-  for (T s = 0; AllTrue(s <= Scalar(1)); s += Scalar(0.1)) {
-    for (T t = 1e-3; AllTrue(t < Scalar(1)); t += Scalar(1e-2)) {
-      T const epst = kSqrtEps * t;
-      T f{}, df{}, ddf{};
-      PolyReLU<T>(-t + s * t, t, s * t, f, df, ddf);
-      EXPECT_NEAR_TOL(T(0), f, kTol);
-      EXPECT_NEAR_TOL(T(0), df, kTol);
-      EXPECT_NEAR_TOL(T(0), ddf, kTol);
-      PolyReLU<T>(t + s * t, t, s * t, f, df, ddf);
-      EXPECT_NEAR_TOL(t, f, kTol);
-      EXPECT_NEAR_TOL(T(1), df, kTol);
-      EXPECT_NEAR_TOL(T(0), ddf, kTol);
+  for (T t = 1e-3; AllTrue(t < Scalar(1)); t += Scalar(1e-2)) {
+    // f, f' and f'' are exact at both ends of the interval, for any width.
+    T f{}, df{}, ddf{};
+    PolyReLU<T>(T(0), t, f, df, ddf);
+    EXPECT_TRUE(AllTrue(f == T(0)) && AllTrue(df == T(0)) && AllTrue(ddf == T(0)));
+    PolyReLU<T>(Scalar(2) * t, t, f, df, ddf);
+    EXPECT_TRUE(AllTrue(f == t) && AllTrue(df == T(1)) && AllTrue(ddf == T(0)));
 
-      for (T x = -t / 2; AllTrue(x < t / Scalar(2)); x += (Scalar(2) * t / Scalar(20))) {
-        PolyReLU<T>(x, t, s * t, f, df, ddf);
-        T f_eps{}, df_eps{}, ddf_eps{};
-        PolyReLU<T>(x + epst, t, s * t, f_eps, df_eps, ddf_eps);
-        EXPECT_NEAR_TOL((f_eps - f) / epst, df, kFdTol * (T(1) + Abs(df)));
-        EXPECT_NEAR_TOL((df_eps - df) / epst, ddf, kFdTol * (T(1) / t + Abs(ddf)));
-      }
+    // One step straddles the center of the interval.
+    T const epst = kSqrtEps * t;
+    for (T x = t / Scalar(10) - epst / Scalar(2); AllTrue(x < Scalar(2) * t); x += t / Scalar(10)) {
+      PolyReLU<T>(x, t, f, df, ddf);
+      T f_eps{}, df_eps{}, ddf_eps{};
+      PolyReLU<T>(x + epst, t, f_eps, df_eps, ddf_eps);
+      EXPECT_NEAR_TOL((f_eps - f) / epst, df, kFdTol * (T(1) + Abs(df)));
+      EXPECT_NEAR_TOL((df_eps - df) / epst, ddf, kFdTol * (T(1) / t + Abs(ddf)));
     }
   }
 
-  // f, f' and f'' are exact at the top of the interval, for any width.
-  for (Scalar const tTop : {Scalar(1e-3), Scalar(0.0123), Scalar(0.7)}) {
-    T f{}, df{}, ddf{};
-    PolyReLU<T>(T(tTop), T(tTop), T(0), f, df, ddf);
-    EXPECT_TRUE(AllTrue(f == T(tTop)) && AllTrue(df == T(1)) && AllTrue(ddf == T(0)));
+  // The ReLU max(0, x - t) outside the interval, and everywhere for a zero or subnormal width.
+  for (Scalar const t :
+       {Scalar(0), -Scalar(0), std::numeric_limits<Scalar>::denorm_min(), Scalar(1e-4)}) {
+    for (Scalar const x : {Scalar(-1e-3), Scalar(0), Scalar(1e-3)}) {
+      T f{}, df{}, ddf{};
+      PolyReLU<T>(T(x), T(t), f, df, ddf);
+      EXPECT_TRUE(
+          AllTrue(f == T(Max(Scalar(0), x - t))) &&
+          AllTrue(df == T(x < t ? Scalar(0) : Scalar(1))) && AllTrue(ddf == T(0)));
+    }
   }
 
-  // Full relative precision near the triple root at y = -1 (contact onset) and near the root of f''
-  // at y = 1. x = y * t with a power-of-two t keeps y exact, so the double reference uses the same
-  // y. The tolerance covers a few roundings in PolyReLU and, in FP64, as many in the reference.
+  // Full relative precision near both ends, the contact onset at x = 0 and the root of f'' at
+  // x = 2t, for power-of-two and other widths, against a double reference evaluated from the
+  // distances to both ends, x and 2t - x, each exact near its end. The tolerance covers a few
+  // roundings in PolyReLU and, in FP64, as many in the reference.
   Scalar const kRelTol = Scalar(16) * std::numeric_limits<Scalar>::epsilon();
-  auto const t = Scalar(1.0 / 256.0);
-  for (Scalar const y : {Scalar(-0.9), Scalar(-0.99), Scalar(-0.999), Scalar(0.999)}) {
-    double const a = 1.0 + y;
-    auto const fRef = Scalar(t / 16.0 * a * a * a * (3.0 - y));
-    auto const dfRef = Scalar(a * a * (2.0 - y) / 4.0);
-    auto const ddfRef = Scalar(0.75 * a * (1.0 - y) / t);
-    T f{}, df{}, ddf{};
-    PolyReLU<T>(T(y * t), T(t), T(0), f, df, ddf);
-    EXPECT_NEAR_TOL(T(fRef), f, T(kRelTol * fRef));
-    EXPECT_NEAR_TOL(T(dfRef), df, T(kRelTol * dfRef));
-    EXPECT_NEAR_TOL(T(ddfRef), ddf, T(kRelTol * ddfRef));
+  for (Scalar const t : {Scalar(1.0 / 256.0), Scalar(0.005)}) {
+    for (Scalar const n : {Scalar(0.1), Scalar(0.01), Scalar(0.001)}) {
+      for (Scalar const x : {n * t, (Scalar(2) - n) * t}) {
+        double const a = double(x) / t;
+        double const b = (2.0 * t - x) / t;
+        auto const fRef = Scalar(t / 16.0 * a * a * a * (2.0 + b));
+        auto const dfRef = Scalar(a * a * (1.0 + b) / 4.0);
+        auto const ddfRef = Scalar(0.75 * a * b / t);
+        T f{}, df{}, ddf{};
+        PolyReLU<T>(T(x), T(t), f, df, ddf);
+        EXPECT_NEAR_TOL(T(fRef), f, T(kRelTol * fRef));
+        EXPECT_NEAR_TOL(T(dfRef), df, T(kRelTol * dfRef));
+        EXPECT_NEAR_TOL(T(ddfRef), ddf, T(kRelTol * ddfRef));
+      }
+    }
   }
 }
 
@@ -114,6 +119,17 @@ static void TestIPCStepC1() {
         }
       }
     }
+  }
+
+  // ddf keeps full relative precision near the top of the interval, where it vanishes.
+  Scalar const kRelTol = Scalar(16) * std::numeric_limits<Scalar>::epsilon();
+  auto const t = Scalar(0.005);
+  for (Scalar const b : {Scalar(0.1), Scalar(0.01), Scalar(0.001)}) {
+    Scalar const x = (Scalar(1) - b) * t;
+    auto const ddfRef = Scalar(2.0 * (double(t) - x) / (double(t) * t));
+    T f{}, df{}, ddf{}, df_x{};
+    IPCstepC1<T>(T(x), T(t), f, df, ddf, df_x);
+    EXPECT_NEAR_TOL(T(ddfRef), ddf, T(kRelTol * ddfRef));
   }
 }
 

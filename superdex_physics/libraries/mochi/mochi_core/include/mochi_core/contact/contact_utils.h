@@ -744,7 +744,7 @@ MOCHI_FORCE_INLINE void ComputeBatchContactPenaltyForceDForce(
   V penalty MOCHI_NO_INIT;
   V dPenalty MOCHI_NO_INIT;
   V ddPenalty MOCHI_NO_INIT;
-  PolyReLU<V>(-d, penaltyFalloff, penaltyFalloff - penaltyThr, penalty, dPenalty, ddPenalty);
+  PolyReLU<V>(penaltyThr - d, penaltyFalloff, penalty, dPenalty, ddPenalty);
 
   // Output energy
   if (assemEnergy) {
@@ -815,7 +815,7 @@ MOCHI_FORCE_INLINE void ComputeBatchContactPenaltyForceNormDForceNorm(
   V penalty MOCHI_NO_INIT;
   V dPenalty MOCHI_NO_INIT;
   V ddPenalty MOCHI_NO_INIT;
-  PolyReLU<V>(-d, penaltyFalloff, penaltyFalloff - penaltyThr, penalty, dPenalty, ddPenalty);
+  PolyReLU<V>(penaltyThr - d, penaltyFalloff, penalty, dPenalty, ddPenalty);
 
   // Output force norm
   V forceNorm = penaltyCoeff * penalty * dPenalty;
@@ -1506,9 +1506,10 @@ MOCHI_FORCE_INLINE
   bool const useAlignmentFading =
       config.fadeFriction && config.validCollidingNormals && params.maxAlignmentNormals > -1_r;
   // Compute alignment fading for dissipation, which ends where the penalty force does.
-  V const cutoff{AlignmentGateCutoff(params, config)};
-  V const alignmentFactor =
-      useAlignmentFading ? Max(V{0_r}, (cutoff - alignmentNormals) / (cutoff + 1_r)) : V{1_r};
+  real const cutoff = AlignmentGateCutoff(params, config);
+  V const alignmentFactor = useAlignmentFading
+      ? Max(V{0_r}, (V{cutoff} - alignmentNormals) * V{1_r / (cutoff + 1_r)})
+      : V{1_r};
 
   // Compute penalty force with current data.
   bool constexpr kAssemPenalty =
