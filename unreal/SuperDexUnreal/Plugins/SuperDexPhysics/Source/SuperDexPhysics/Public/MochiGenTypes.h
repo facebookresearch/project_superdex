@@ -1318,7 +1318,7 @@ struct SUPERDEXPHYSICS_API FMochiAsyncStepParams {
    *
    * @see FMochiAsyncStepParams::FixedTimeStepSeconds, FMochiAsyncStepParams::TimeStepCallback
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   bool bUseFixedTimeStep{};
 
   /**
@@ -1334,7 +1334,7 @@ struct SUPERDEXPHYSICS_API FMochiAsyncStepParams {
    * @see AsyncScene::RequestStepThenPause, FMochiAsyncStepParams::bUseFixedTimeStep,
    *   FMochiAsyncStepParams::TimeStepCallback
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   double FixedTimeStepSeconds{};
 
   /**
@@ -1345,7 +1345,7 @@ struct SUPERDEXPHYSICS_API FMochiAsyncStepParams {
    * @note Must be finite. Negative values are clamped to zero. Values greater than
    *   FMochiAsyncStepParams::DynamicTimeStepMaxSeconds are clamped down to that maximum.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   double DynamicTimeStepMinSeconds{};
 
   /**
@@ -1355,7 +1355,7 @@ struct SUPERDEXPHYSICS_API FMochiAsyncStepParams {
    *   FMochiAsyncStepParams::TimeStepCallback either is not set or returns a negative value.
    * @note Must be finite. Negative values are clamped to zero.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   double DynamicTimeStepMaxSeconds{};
 
   /**
@@ -1390,7 +1390,7 @@ struct SUPERDEXPHYSICS_API FMochiBlendingData {
   GENERATED_BODY()
 
   /** Name of the soft source shape. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   FString SourceShape{};
 
   /**
@@ -1399,7 +1399,7 @@ struct SUPERDEXPHYSICS_API FMochiBlendingData {
    * Entry `i` identifies the vertex in the nested soft shape for target vertex `i`. The index is
    *   ignored when `weights[i]` is zero. The size equals the number of target vertices.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   TArray<int32> Indices{};
 
   /**
@@ -1408,7 +1408,7 @@ struct SUPERDEXPHYSICS_API FMochiBlendingData {
    * Entry `i` is in `[0, 1]`, where zero is purely articulated and one is fully nested-soft. The
    *   size equals the number of target vertices.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   TArray<float> Weights{};
 
   /** Initializes all fields from native Mochi defaults. */
@@ -1436,11 +1436,11 @@ struct SUPERDEXPHYSICS_API FMochiBoundarySubsamplingParams {
    *
    * @note 0 means no sample points are used. 1 means all sample points are used.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   float SubsamplingDensity{};
 
   /** Strategy for determining which sample points to use. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   EMochiBoundarySubsamplingStrategy Strategy{};
 
   /** Initializes all fields from native Mochi defaults. */
@@ -1459,15 +1459,15 @@ struct SUPERDEXPHYSICS_API FMochiBox {
   GENERATED_BODY()
 
   /** Center position [m]. */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   FVector3f Center{};
 
   /** Half-size along each local axis [m]. */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   FVector3f HalfExtents{};
 
   /** Orientation of the box local frame. */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   FQuat4f Rotation{};
 
   /** Initializes all fields from native Mochi defaults. */
@@ -1490,15 +1490,15 @@ struct SUPERDEXPHYSICS_API FMochiGridSdfData {
   GENERATED_BODY()
 
   /** Dimensions of the SDF grid in X, Y, and Z. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   FIntVector Dims{};
 
   /** Signed distance values [m]. Size must be dims[0] * dims[1] * dims[2]. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   TArray<float> Values{};
 
   /** Spatial bounds of the SDF grid. Values are distributed uniformly within this volume. */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   FBox3f Bounds{};
 
   /**
@@ -1507,7 +1507,7 @@ struct SUPERDEXPHYSICS_API FMochiGridSdfData {
    * @note This is generally the bounds of the mesh for which the SDF grid was computed, while the
    *   overall grid bounds may be larger due to padding for penalty fall-off distance.
    */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   FBox3f NegativeValueBounds{};
 
   /**
@@ -1516,7 +1516,7 @@ struct SUPERDEXPHYSICS_API FMochiGridSdfData {
    * @note Applied order is scale, then rotation, then translation.
    * @note Typically set when a transform is baked into the containing model.
    */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   TOptional<FVector3f> Scale{};
 
   /**
@@ -1525,7 +1525,7 @@ struct SUPERDEXPHYSICS_API FMochiGridSdfData {
    * @note Applied order is scale, then rotation, then translation.
    * @note Typically set when a transform is baked into the containing model.
    */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   TOptional<FQuat4f> Rotation{};
 
   /**
@@ -1534,7 +1534,7 @@ struct SUPERDEXPHYSICS_API FMochiGridSdfData {
    * @note Applied order is scale, then rotation, then translation.
    * @note Typically set when a transform is baked into the containing model.
    */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   TOptional<FVector3f> Translation{};
 
   /** Initializes all fields from native Mochi defaults. */
@@ -1563,7 +1563,7 @@ struct SUPERDEXPHYSICS_API FMochiGridSdfParams {
    *
    * @see FMochiGridSdfParams::ResolutionDelta
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   EMochiGridSdfResolutionMode ResolutionMode{};
 
   /**
@@ -1581,7 +1581,7 @@ struct SUPERDEXPHYSICS_API FMochiGridSdfParams {
    *
    * @see FMochiGridSdfParams::ResolutionMode
    */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   FVector3f ResolutionDelta{};
 
   /**
@@ -1601,7 +1601,7 @@ struct SUPERDEXPHYSICS_API FMochiGridSdfParams {
    *
    * @see kGridSdfDefaultBoundaryPadding
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   float BoundaryPaddingDist{};
 
   /**
@@ -1610,7 +1610,7 @@ struct SUPERDEXPHYSICS_API FMochiGridSdfParams {
    * @note This may override the voxel count (and voxel size) computed using
    *   FMochiGridSdfParams::ResolutionMode and FMochiGridSdfParams::ResolutionDelta.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   FIntVector MinGridResolution{};
 
   /** Initializes all fields from native Mochi defaults. */
@@ -1639,7 +1639,7 @@ struct SUPERDEXPHYSICS_API FMochiIKSolverParams {
    *
    * @see FMochiNonLinearSolverParams::MaxIter
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   int32 MaxIter{};
 
   /**
@@ -1647,7 +1647,7 @@ struct SUPERDEXPHYSICS_API FMochiIKSolverParams {
    *
    * @see FMochiNonLinearSolverParams::Verbosity
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   EMochiVerbosityLevel Verbosity{};
 
   /**
@@ -1657,7 +1657,7 @@ struct SUPERDEXPHYSICS_API FMochiIKSolverParams {
    *
    * @see FMochiNonLinearSolverParams::AbsTol
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   float AbsTol{};
 
   /**
@@ -1667,15 +1667,15 @@ struct SUPERDEXPHYSICS_API FMochiIKSolverParams {
    *
    * @see FMochiNonLinearSolverParams::RelTol
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   float RelTol{};
 
   /** Position error threshold [m] for determining if IK targets are reachable. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   float PositionErrorThres{};
 
   /** Rotation error threshold [radians] for determining if IK targets are reachable. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   float RotationErrorThres{};
 
   /**
@@ -1683,7 +1683,7 @@ struct SUPERDEXPHYSICS_API FMochiIKSolverParams {
    *
    * @see FMochiNonLinearSolverParams::LineSearchMaxIter
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   int32 LineSearchMaxIter{};
 
   /**
@@ -1697,7 +1697,7 @@ struct SUPERDEXPHYSICS_API FMochiIKSolverParams {
    *
    * @see FMochiNonLinearSolverParams::MaxElapsedTimeSeconds
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   double MaxElapsedTimeSeconds{};
 
   /** Initializes all fields from native Mochi defaults. */
@@ -1716,7 +1716,7 @@ struct SUPERDEXPHYSICS_API FMochiLinearSolverParams {
   GENERATED_BODY()
 
   /** Linear solver type. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   EMochiLinearSolverType SolverType{};
 
   /**
@@ -1724,7 +1724,7 @@ struct SUPERDEXPHYSICS_API FMochiLinearSolverParams {
    *
    * @note Applies only to iterative solvers.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   EMochiPreconditionerType PreconditionerType{};
 
   /**
@@ -1732,7 +1732,7 @@ struct SUPERDEXPHYSICS_API FMochiLinearSolverParams {
    *
    * @note Applies only to the solvers documented in EMochiLinearSolverConvergenceNorm.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   EMochiLinearSolverConvergenceNorm NormType{};
 
   /**
@@ -1753,7 +1753,7 @@ struct SUPERDEXPHYSICS_API FMochiLinearSolverParams {
    *   FMochiNonLinearSolverParams::AbsTol is 0 and either FMochiNonLinearSolverParams::RelTol or
    *   the initial residual of an actor or the island is 0, which leaves only the relative test.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   float AbsTol{};
 
   /**
@@ -1764,7 +1764,7 @@ struct SUPERDEXPHYSICS_API FMochiLinearSolverParams {
    * @note Ignored when using EMochiLinearToleranceStrategy::EisenstatWalker1 or
    *   EMochiLinearToleranceStrategy::EisenstatWalker2 in the non-linear solver.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   float RelTol{};
 
   /**
@@ -1773,7 +1773,7 @@ struct SUPERDEXPHYSICS_API FMochiLinearSolverParams {
    *
    * @note Applies only to iterative solvers.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   float RelDivTol{};
 
   /**
@@ -1784,7 +1784,7 @@ struct SUPERDEXPHYSICS_API FMochiLinearSolverParams {
    * @note kAutoLinearSolverMaxIter lets Mochi select the maximum number of iterations based on the
    *   problem.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   int32 MaxIter{};
 
   /**
@@ -1793,7 +1793,7 @@ struct SUPERDEXPHYSICS_API FMochiLinearSolverParams {
    * @note Applies only to GMRES solvers (e.g., EMochiLinearSolverType::GMRES,
    *   EMochiLinearSolverType::CudaGMRES).
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   int32 RestartSize{};
 
   /**
@@ -1802,11 +1802,11 @@ struct SUPERDEXPHYSICS_API FMochiLinearSolverParams {
    * @note Applies only to iterative SPD solvers (e.g., EMochiLinearSolverType::CG,
    *   EMochiLinearSolverType::CudaCG, EMochiLinearSolverType::AugmentedCG).
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   bool bAbortIfNotSpd{};
 
   /** Verbosity level for logging output. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   EMochiVerbosityLevel Verbosity{};
 
   /** Initializes all fields from native Mochi defaults. */
@@ -1825,7 +1825,7 @@ struct SUPERDEXPHYSICS_API FMochiNonLinearSolverParams {
   GENERATED_BODY()
 
   /** Non-linear solver type. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   EMochiNonLinearSolverType SolverType{};
 
   /**
@@ -1835,11 +1835,11 @@ struct SUPERDEXPHYSICS_API FMochiNonLinearSolverParams {
    * @note For quasi-Newton methods (e.g., BFGS, SR1), it must be >1 and indicates every how many
    *   iterations to restart the algorithm with the actual dresidual.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   int32 DResidualAssemblyPeriod{};
 
   /** Maximum number of non-linear iterations. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   int32 MaxIter{};
 
   /**
@@ -1848,7 +1848,7 @@ struct SUPERDEXPHYSICS_API FMochiNonLinearSolverParams {
    * @note The solve terminates if the elapsed time exceeds this threshold.
    * @note 0 means no time limit.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   double MaxElapsedTimeSeconds{};
 
   /**
@@ -1856,7 +1856,7 @@ struct SUPERDEXPHYSICS_API FMochiNonLinearSolverParams {
    *
    * @note Applies to FMochiNonLinearSolverParams::AbsTol and FMochiNonLinearSolverParams::RelTol.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   EMochiNonLinearSolverConvergenceMode ConvergenceMode{};
 
   /**
@@ -1867,7 +1867,7 @@ struct SUPERDEXPHYSICS_API FMochiNonLinearSolverParams {
    * @note With a negative FMochiLinearSolverParams::AbsTol, it also determines the linear solver's
    *   absolute tolerance where supported (see FMochiLinearSolverParams::AbsTol).
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   float AbsTol{};
 
   /**
@@ -1877,7 +1877,7 @@ struct SUPERDEXPHYSICS_API FMochiNonLinearSolverParams {
    *   absolute tolerance where supported (see FMochiLinearSolverParams::AbsTol).
    * @note 0 disables this criterion.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   float RelTol{};
 
   /**
@@ -1888,21 +1888,21 @@ struct SUPERDEXPHYSICS_API FMochiNonLinearSolverParams {
    * @note 0 disables this criterion.
    * @note Default is kDefaultRelStepTol.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   float RelStepTol{};
 
   /**
    * Stop the solve if the line search figure of merit does not improve from the previous iteration.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   bool bStopIfNoImprovement{};
 
   /** Positive Semi-Definite (PSD) projection mode for the dresidual matrix. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   EMochiPsdProjectionMode PsdProjMode{};
 
   /** Enable heuristic explosion prevention. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   bool bExplosionControl{};
 
   /**
@@ -1911,7 +1911,7 @@ struct SUPERDEXPHYSICS_API FMochiNonLinearSolverParams {
    * @note Triggers explosion control if residual norm exceeds this value.
    * @note Used only if FMochiNonLinearSolverParams::bExplosionControl is true.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   float AbsDivTol{};
 
   /**
@@ -1920,7 +1920,7 @@ struct SUPERDEXPHYSICS_API FMochiNonLinearSolverParams {
    * @note Triggers explosion control if relative residual norm exceeds this value.
    * @note Used only if FMochiNonLinearSolverParams::bExplosionControl is true.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   float RelDivTol{};
 
   /**
@@ -1929,7 +1929,7 @@ struct SUPERDEXPHYSICS_API FMochiNonLinearSolverParams {
    * @note Must be >= 1 unless FMochiNonLinearSolverParams::LineSearchType is
    *   EMochiLineSearchType::None.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   int32 LineSearchMaxIter{};
 
   /**
@@ -1937,7 +1937,7 @@ struct SUPERDEXPHYSICS_API FMochiNonLinearSolverParams {
    *
    * @note Must be in (0, 1).
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   float LineSearchAlpha{};
 
   /**
@@ -1947,7 +1947,7 @@ struct SUPERDEXPHYSICS_API FMochiNonLinearSolverParams {
    * @note Used only by EMochiLineSearchType::Armijo, EMochiLineSearchType::WolfeWeak, and
    *   EMochiLineSearchType::WolfeStrong line search types.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   float LineSearchWolfe1{};
 
   /**
@@ -1957,7 +1957,7 @@ struct SUPERDEXPHYSICS_API FMochiNonLinearSolverParams {
    * @note Used only by EMochiLineSearchType::WolfeWeak and EMochiLineSearchType::WolfeStrong line
    *   search types.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   float LineSearchWolfe2{};
 
   /**
@@ -1967,19 +1967,19 @@ struct SUPERDEXPHYSICS_API FMochiNonLinearSolverParams {
    * @note An increase beyond this maximum but within an estimate of the merit's rounding error is
    *   tested on the slope of the merit along the step instead (see EMochiLineSearchType).
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   float LineSearchMaxRelIncrease{};
 
   /** Line search type. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   EMochiLineSearchType LineSearchType{};
 
   /** Strategy for adaptive linear solver tolerance (forcing term). */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   EMochiLinearToleranceStrategy LinearToleranceStrategy{};
 
   /** Verbosity level for logging output. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   EMochiVerbosityLevel Verbosity{};
 
   /** Initializes all fields from native Mochi defaults. */
@@ -2002,7 +2002,7 @@ struct SUPERDEXPHYSICS_API FMochiPerElementSoftMaterialData {
   GENERATED_BODY()
 
   /** Material constitutive model. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   EMochiSoftMaterialType Type{};
 
   /**
@@ -2010,35 +2010,35 @@ struct SUPERDEXPHYSICS_API FMochiPerElementSoftMaterialData {
    *
    * @see EMochiMaterialPsdStrategy
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   EMochiMaterialPsdStrategy PsdStrategy{};
 
   /** Young's modulus [Pa]. 1 per element. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   TArray<float> YoungsModulus{};
 
   /** Poisson's ratio (dimensionless). 1 per element. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   TArray<float> PoissonRatio{};
 
   /** Anisotropic stiffness (α) [Pa]. 1 per element. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   TArray<float> AnisoAlpha{};
 
   /** Anisotropic reference length (dimensionless). 1 per element. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   TArray<float> AnisoLength{};
 
   /** Fiber azimuthal angle (θ) [rad]. 1 per element. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   TArray<float> AnisoTheta{};
 
   /** Fiber elevation angle (φ) [rad]. 1 per element. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   TArray<float> AnisoPhi{};
 
   /** ARAP stiffness (μ) [Pa]. 1 per element. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   TArray<float> ArapStiffness{};
 
   /**
@@ -2046,7 +2046,7 @@ struct SUPERDEXPHYSICS_API FMochiPerElementSoftMaterialData {
    *
    * Six values per element. Defines S_t = I + [[s0, s1, s2], [s1, s3, s4], [s2, s4, s5]].
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   TArray<float> ShapeTargetTensor{};
 
   /** Initializes all fields from native Mochi defaults. */
@@ -2065,11 +2065,11 @@ struct SUPERDEXPHYSICS_API FMochiPlane {
   GENERATED_BODY()
 
   /** Unit normal vector. */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   FVector3f Normal{};
 
   /** Signed distance from the origin [m]. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   float Distance{};
 
   /** Initializes all fields from native Mochi defaults. */
@@ -2103,15 +2103,15 @@ struct SUPERDEXPHYSICS_API FMochiSaturationHessianParams {
   GENERATED_BODY()
 
   /** Use fitted Hessian for contact-friction saturation. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   bool bContactFriction{};
 
   /** Use fitted Hessian for joint-friction saturation. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   bool bJointFriction{};
 
   /** Use fitted Hessian for constraint saturation. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   bool bConstraintSaturation{};
 
   /** Initializes all fields from native Mochi defaults. */
@@ -2134,15 +2134,15 @@ struct SUPERDEXPHYSICS_API FMochiSkinningData {
   GENERATED_BODY()
 
   /** Number of weights and indices per skinned node. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   int32 WeightsPerNode{};
 
   /** Indices for each node. Size is numNodes * weightsPerNode. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   TArray<int32> Indices{};
 
   /** Weights for each node. Size is numNodes * weightsPerNode. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   TArray<float> Weights{};
 
   /** Initializes all fields from native Mochi defaults. */
@@ -2161,11 +2161,11 @@ struct SUPERDEXPHYSICS_API FMochiSphere {
   GENERATED_BODY()
 
   /** Center position [m]. */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   FVector3f Center{};
 
   /** Radius [m]. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   float Radius{};
 
   /** Initializes all fields from native Mochi defaults. */
@@ -2203,7 +2203,7 @@ struct SUPERDEXPHYSICS_API FMochiExperimentalEvalParams {
    *   guarantees of the Newton solve, but may be less stable due to the explicit treatment.
    * @note A differentiable scene requires explicitNormals = true.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   bool bExplicitNormals{};
 
   /**
@@ -2219,7 +2219,7 @@ struct SUPERDEXPHYSICS_API FMochiExperimentalEvalParams {
    *
    * @see ContactParams::maxAlignmentNormals
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   bool bFadeFriction{};
 
   /**
@@ -2238,7 +2238,7 @@ struct SUPERDEXPHYSICS_API FMochiExperimentalEvalParams {
    *   effective coefficient of restitution at a given time step size.
    * @note A differentiable scene requires implicitNormalForceForDissipation = false.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   bool bImplicitNormalForceForDissipation{};
 
   /**
@@ -2249,7 +2249,7 @@ struct SUPERDEXPHYSICS_API FMochiExperimentalEvalParams {
    * @note For any flag set to false, the solver will try first with the true Hessian. See
    *   FMochiSaturationHessianParams for when it switches to fitted Hessians.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   FMochiSaturationHessianParams FittedSaturationHessian{};
 
   /**
@@ -2260,7 +2260,7 @@ struct SUPERDEXPHYSICS_API FMochiExperimentalEvalParams {
    *
    * @note FMochiExperimentalEvalParams::bElastoPlasticFriction requires C1Regularized.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   EMochiCoulombFrictionModel FrictionModel{};
 
   /**
@@ -2284,7 +2284,7 @@ struct SUPERDEXPHYSICS_API FMochiExperimentalEvalParams {
    * @note Changing this setting changes the content of the scene state, so states captured before
    *   the change cannot be restored after it.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   bool bElastoPlasticFriction{};
 
   /**
@@ -2293,11 +2293,11 @@ struct SUPERDEXPHYSICS_API FMochiExperimentalEvalParams {
    *
    * @note This operation is expensive and should only be used for debugging.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   bool bConsistencyResNorm{};
 
   /** Step size for finite-difference consistency check. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   float ConsistencyResNormStep{};
 
   /** Initializes all fields from native Mochi defaults. */
@@ -2324,7 +2324,7 @@ struct SUPERDEXPHYSICS_API FMochiMeshData {
    *
    * @note 2 for polyline meshes, 3 for triangle meshes, 4 for tetrahedral meshes.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   int32 NodesPerElement{};
 
   /**
@@ -2332,7 +2332,7 @@ struct SUPERDEXPHYSICS_API FMochiMeshData {
    *
    * @note Size must be a multiple of 3.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   TArray<float> Coordinates{};
 
   /**
@@ -2340,11 +2340,11 @@ struct SUPERDEXPHYSICS_API FMochiMeshData {
    *
    * @note Size must be a multiple of FMochiMeshData::NodesPerElement.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   TArray<int32> Connectivity{};
 
   /** Optional skinning data. */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   TOptional<FMochiSkinningData> Skinning{};
 
   /** Initializes all fields from native Mochi defaults. */
@@ -2363,7 +2363,7 @@ struct SUPERDEXPHYSICS_API FMochiBlendingDataArray {
   GENERATED_BODY()
 
   /** Elements of the wrapped array. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   TArray<FMochiBlendingData> Values{};
 };
 
@@ -2373,7 +2373,7 @@ struct SUPERDEXPHYSICS_API FMochiInt32Array {
   GENERATED_BODY()
 
   /** Elements of the wrapped array. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   TArray<int32> Values{};
 };
 
@@ -2383,7 +2383,7 @@ struct SUPERDEXPHYSICS_API FMochiFloatArray {
   GENERATED_BODY()
 
   /** Elements of the wrapped array. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   TArray<float> Values{};
 };
 
@@ -2396,10 +2396,10 @@ USTRUCT(BlueprintType)
 struct SUPERDEXPHYSICS_API FMochiModelData {
   GENERATED_BODY()
 
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   TOptional<FMochiMeshData> Mesh{};
 
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   TOptional<FMochiMeshData> VisualMesh{};
 
   /**
@@ -2411,14 +2411,14 @@ struct SUPERDEXPHYSICS_API FMochiModelData {
    *   reference primary-mesh elements and define the rod's element-based embedding. Every
    *   contact-skin node must be referenced by at least one triangle.
    */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   TOptional<FMochiMeshData> ContactSkinMesh{};
 
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   TOptional<FMochiBlendingDataArray> Blending{};
 
   /** Indices of mesh nodes that are constrained. */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   TOptional<FMochiInt32Array> ConstrainedNodes{};
 
   /**
@@ -2427,26 +2427,26 @@ struct SUPERDEXPHYSICS_API FMochiModelData {
    * Flat array of unit vectors (3 reals per element), each orthogonal to its element's tangent.
    *   Only valid when the mesh is a polyline with FMochiMeshData::NodesPerElement equal to 2.
    */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   TOptional<FMochiFloatArray> ElementFrameAxes{};
 
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   TOptional<FMochiBox> Box{};
 
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   TOptional<FMochiPlane> Plane{};
 
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   TOptional<FMochiSphere> Sphere{};
 
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   TOptional<FMochiGridSdfData> Sdf{};
 
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   TOptional<FMochiPerElementSoftMaterialData> Material{};
 
   /** True if a loaded model contained unsupported experimental data. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Transient, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Transient, Category = "SuperDex Physics")
   bool bExperimentalDataDetected{};
 
   /** Initializes all fields from native Mochi defaults. */
