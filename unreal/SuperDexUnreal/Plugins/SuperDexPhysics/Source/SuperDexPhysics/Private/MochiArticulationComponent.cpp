@@ -222,8 +222,8 @@ void UMochiArticulationComponent::OnRegister() {
 FBoxSphereBounds UMochiArticulationComponent::CalcBounds(const FTransform& LocalToWorld) const {
   if (Articulation) {
     FBoxSphereBounds localBounds;
-    if (Articulation->ComputeVisualBoundsFromLinkTransforms(
-            BoneSpaceTransforms, EMochiArticulationLinkTransformSpace::LinkToParent, localBounds)) {
+    if (Articulation->ComputeVisualBoundsFromLinkToParentTransforms(
+            BoneSpaceTransforms, localBounds)) {
       return localBounds.TransformBy(LocalToWorld);
     }
   }
@@ -255,8 +255,8 @@ void UMochiArticulationComponent::CreateArticulatedActor() {
     return;
   }
   TArray<FTransform> rootFromLinks;
-  if (!Articulation->ComputeLinkTransformsFromJointPositions(
-          InitialJointPositions, rootFromLinks, EMochiArticulationLinkTransformSpace::LinkToRoot)) {
+  if (!Articulation->ComputeLinkToArticulationRootTransforms(
+          InitialJointPositions, rootFromLinks)) {
     UE_LOG(
         LogMochiPhysics,
         Error,
@@ -454,8 +454,7 @@ void UMochiArticulationComponent::PoseMeshFromJointPositions(
   if (Articulation) {
     ensure(InJointPositions.Num() == Articulation->GetDefaultJointPositions().Num());
     TArray<FTransform> transforms;
-    if (Articulation->ComputeLinkTransformsFromJointPositions(
-            InJointPositions, transforms, EMochiArticulationLinkTransformSpace::LinkToParent)) {
+    if (Articulation->ComputeLinkToParentTransforms(InJointPositions, transforms)) {
       for (int iLink = 0; iLink < transforms.Num(); ++iLink) {
         const int32 boneIndex = GetBoneIndex(Articulation->GetLinks()[iLink].Name);
         if (boneIndex >= 0 && boneIndex < BoneSpaceTransforms.Num()) {

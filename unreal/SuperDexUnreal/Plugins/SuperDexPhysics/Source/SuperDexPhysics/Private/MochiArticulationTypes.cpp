@@ -205,7 +205,7 @@ mochi::ArticulatedJointParams FMochiArticulatedJoint::ToMochi(
   const double sign = PseudovectorSign(Type, U2M.FlipsHandedness());
   mochi::ArticulatedJointParams params;
   params.name = TCHAR_TO_ANSI(*Name.ToString());
-  params.type = static_cast<mochi::ArticulatedJointType>(Type);
+  params.type = ::ToMochi(Type);
   params.parentLinkFromJoint = U2M.TransformToMochi_RT(ParentLinkFromJoint);
   if (Type == EMochiArticulatedJointType::Prismatic ||
       Type == EMochiArticulatedJointType::Revolute) {
@@ -243,7 +243,7 @@ void FMochiArticulatedJoint::FromMochi(
     const mochi::ArticulatedJointParams& Mochi,
     const FMochiToUnrealConverter& M2U) {
   Name = FName(UTF8_TO_TCHAR(Mochi.name.c_str()));
-  Type = static_cast<EMochiArticulatedJointType>(Mochi.type);
+  Type = ::ToUnreal(Mochi.type);
   const double sign = PseudovectorSign(Type, M2U.FlipsHandedness());
   ParentLinkFromJoint = M2U.TransformToUnreal(Mochi.parentLinkFromJoint);
   if (Type == EMochiArticulatedJointType::Prismatic ||
@@ -293,7 +293,7 @@ mochi::ArticulatedLinkParams FMochiArticulatedLink::ToMochi(
   params.parentJointFromLink = U2M.TransformToMochi_RT(ParentJointFromLink);
   params.shape = InShape;
   params.layer = TCHAR_TO_ANSI(*(Layer.IsNone() ? DefaultLayer : Layer).ToString());
-  params.colliderType = static_cast<mochi::ColliderType>(ColliderType);
+  params.colliderType = ::ToMochi(ColliderType);
   params.contact = ContactParams ? ContactParams->ToMochi() : DefaultContact;
   params.hasGravity = bHasGravity && bInHasGravity;
   if (bOverrideDensity) {
@@ -308,9 +308,7 @@ mochi::ArticulatedLinkParams FMochiArticulatedLink::ToMochi(
   if (bOverrideMomentOfInertia) {
     params.momentOfInertia = U2M.InertiaToMochi(MomentOfInertia);
   }
-  if (const auto boundaryElementType = ::ToMochi(BoundaryElementType)) {
-    params.boundaryElementType = *boundaryElementType;
-  }
+  params.boundaryElementType = ::ToMochi(BoundaryElementType);
   if (bEnableBoundarySubsampling) {
     params.boundarySubsampling = ::ToMochi(BoundarySubsampling);
   }
@@ -330,7 +328,7 @@ void FMochiArticulatedLink::FromMochi(
   RenderModelRotation = M2U.RotationToUnreal(Mochi.renderModelRotation);
   RenderModelTranslation = M2U.TranslationToUnreal(Mochi.renderModelTranslation);
   Layer = Mochi.layer.empty() ? NAME_None : FName(UTF8_TO_TCHAR(Mochi.layer.c_str()));
-  ColliderType = static_cast<EMochiColliderType>(Mochi.colliderType);
+  ColliderType = ::ToUnreal(Mochi.colliderType);
   bHasGravity = Mochi.hasGravity;
   bOverrideDensity = Mochi.density.has_value();
   Density = Mochi.density.value_or(0);
@@ -342,7 +340,7 @@ void FMochiArticulatedLink::FromMochi(
   bOverrideMomentOfInertia = Mochi.momentOfInertia.has_value();
   MomentOfInertia = bOverrideMomentOfInertia ? M2U.InertiaToUnreal(*Mochi.momentOfInertia)
                                              : FMochiMomentOfInertia{};
-  BoundaryElementType = ::FromMochi(Mochi.boundaryElementType);
+  BoundaryElementType = ::ToUnreal(Mochi.boundaryElementType);
   bEnableBoundarySubsampling = Mochi.boundarySubsampling.has_value();
   BoundarySubsampling = bEnableBoundarySubsampling ? ::FromMochi(*Mochi.boundarySubsampling)
                                                    : FMochiBoundarySubsamplingParams{};
@@ -360,9 +358,7 @@ mochi::ArticulatedSkinParams FMochiArticulatedSkin::ToMochi(
   params.shape = InShape;
   params.layer = TCHAR_TO_ANSI(*(Layer.IsNone() ? DefaultLayer : Layer).ToString());
   params.contact = ContactParams ? ContactParams->ToMochi() : DefaultContact;
-  if (const auto boundaryElementType = ::ToMochi(BoundaryElementType)) {
-    params.boundaryElementType = *boundaryElementType;
-  }
+  params.boundaryElementType = ::ToMochi(BoundaryElementType);
   if (bEnableBoundarySubsampling) {
     params.boundarySubsampling = ::ToMochi(BoundarySubsampling);
   }
@@ -379,7 +375,7 @@ mochi::ArticulatedSkinParams FMochiArticulatedSkin::ToMochi(
 
 void FMochiArticulatedSkin::FromMochi(const mochi::prefab::ArticulatedSkinPrefab& Mochi) {
   Layer = Mochi.layer.empty() ? NAME_None : FName(UTF8_TO_TCHAR(Mochi.layer.c_str()));
-  BoundaryElementType = ::FromMochi(Mochi.boundaryElementType);
+  BoundaryElementType = ::ToUnreal(Mochi.boundaryElementType);
   bEnableBoundarySubsampling = Mochi.boundarySubsampling.has_value();
   BoundarySubsampling = bEnableBoundarySubsampling ? ::FromMochi(*Mochi.boundarySubsampling)
                                                    : FMochiBoundarySubsamplingParams{};

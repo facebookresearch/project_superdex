@@ -843,6 +843,17 @@ UMochiArticulation* FSuperDexPrefabImporter::ImportArticulation(
   TArray<FMochiArticulatedJoint> joints;
   for (int i = 0; i < static_cast<int>(Actor.joints.size()); ++i) {
     mochi::ArticulatedJointParams joint = Actor.joints[i];
+    if (joint.type < mochi::ArticulatedJointType::Free ||
+        joint.type >= mochi::ArticulatedJointType::Count) {
+      UE_LOG(
+          LogMochiPhysicsEditor,
+          Error,
+          TEXT("[%s] Articulation %s joint %d has an invalid, missing, or out-of-range type."),
+          *Context.PrefabName,
+          *ActorName,
+          i);
+      return nullptr;
+    }
     joint.parentLinkFromJoint = scaleTranslation(joint.parentLinkFromJoint);
     if (joint.type == mochi::ArticulatedJointType::Prismatic) {
       if (joint.minLimit) {
@@ -1346,8 +1357,8 @@ void FSuperDexPrefabImporter::AddRigidActor(
   if (!Actor.layer.empty()) {
     component->Layer = FName(ToFString(Actor.layer));
   }
-  component->ColliderType = static_cast<EMochiColliderType>(Actor.colliderType);
-  component->BoundaryElementType = FromMochi(Actor.boundaryElementType);
+  component->ColliderType = ToUnreal(Actor.colliderType);
+  component->BoundaryElementType = ToUnreal(Actor.boundaryElementType);
   component->bEnableBoundarySubsampling = Actor.boundarySubsampling.has_value();
   if (Actor.boundarySubsampling) {
     component->BoundarySubsamplingParams = FromMochi(*Actor.boundarySubsampling);
@@ -1445,8 +1456,8 @@ void FSuperDexPrefabImporter::AddSoftActor(
   if (!Actor.layer.empty()) {
     component->Layer = FName(ToFString(Actor.layer));
   }
-  component->ColliderType = static_cast<EMochiColliderType>(Actor.colliderType);
-  component->BoundaryElementType = FromMochi(Actor.boundaryElementType);
+  component->ColliderType = ToUnreal(Actor.colliderType);
+  component->BoundaryElementType = ToUnreal(Actor.boundaryElementType);
   component->bUseContactSkin = Actor.useContactSkin;
   component->bUseRecentering = Actor.useRecentering;
   UMochiMaterialParams* candidate = NewObject<UMochiMaterialParams>(GetTransientPackage());
@@ -1494,6 +1505,9 @@ void FSuperDexPrefabImporter::AddArticulatedActor(
     const mochi::prefab::ArticulatedActorPrefab& Actor,
     const FString& ActorName) {
   UMochiArticulation* articulation = ImportArticulation(Context, Actor, ActorName);
+  if (!articulation) {
+    return;
+  }
   UMochiArticulationComponent* component = CastChecked<UMochiArticulationComponent>(
       Output.AddActor(UMochiArticulationComponent::StaticClass(), ActorName));
   component->SetRelativeTransform(

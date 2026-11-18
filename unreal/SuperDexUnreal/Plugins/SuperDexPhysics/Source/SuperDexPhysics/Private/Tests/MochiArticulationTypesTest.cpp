@@ -296,9 +296,7 @@ bool FMochiArticulationForwardKinematicsTest::RunTest(const FString& Parameters)
   const double q = 0.9;
   TArray<FTransform> linkToRoot;
   if (!TestTrue(
-          TEXT("FK"),
-          articulation->ComputeLinkTransformsFromJointPositions(
-              {q}, linkToRoot, EMochiArticulationLinkTransformSpace::LinkToRoot))) {
+          TEXT("FK"), articulation->ComputeLinkToArticulationRootTransforms({q}, linkToRoot))) {
     return false;
   }
 
@@ -351,10 +349,7 @@ bool FMochiArticulationSphericalForwardKinematicsTest::RunTest(const FString& Pa
       EMochiArticulatedJointType::Hard, EMochiArticulatedJointType::Spherical};
   ConvertArticulatedDofsToUnreal(types, true, q, kStudioToUnreal);
   TArray<FTransform> linkToRoot;
-  if (!TestTrue(
-          TEXT("FK"),
-          articulation->ComputeLinkTransformsFromJointPositions(
-              q, linkToRoot, EMochiArticulationLinkTransformSpace::LinkToRoot))) {
+  if (!TestTrue(TEXT("FK"), articulation->ComputeLinkToArticulationRootTransforms(q, linkToRoot))) {
     return false;
   }
 
@@ -407,18 +402,20 @@ bool FMochiArticulationJointPositionsFromLinkTransformsTest::RunTest(const FStri
   }
 
   const TArray<double> q = {0.9, 0.04, 0.3, -0.2, 0.5}; // [rad], [m], spherical rotation vector
-  for (const EMochiArticulationLinkTransformSpace space :
-       {EMochiArticulationLinkTransformSpace::LinkToParent,
-        EMochiArticulationLinkTransformSpace::LinkToRoot}) {
+  for (const bool bArticulationRoot : {false, true}) {
     TArray<FTransform> linkTransforms;
     TArray<double> recovered;
-    if (!TestTrue(
-            TEXT("FK"),
-            articulation->ComputeLinkTransformsFromJointPositions(q, linkTransforms, space)) ||
-        !TestTrue(
-            TEXT("Inverse"),
-            articulation->ComputeJointPositionsFromLinkTransforms(
-                linkTransforms, recovered, space)) ||
+    const bool bForward = bArticulationRoot
+        ? articulation->ComputeLinkToArticulationRootTransforms(q, linkTransforms)
+        : articulation->ComputeLinkToParentTransforms(q, linkTransforms);
+    if (!TestTrue(TEXT("FK"), bForward)) {
+      return false;
+    }
+    const bool bInverse = bArticulationRoot
+        ? articulation->ComputeJointPositionsFromLinkToArticulationRootTransforms(
+              linkTransforms, recovered)
+        : articulation->ComputeJointPositionsFromLinkToParentTransforms(linkTransforms, recovered);
+    if (!TestTrue(TEXT("Inverse"), bInverse) ||
         !TestEqual(TEXT("Joint position count"), recovered.Num(), q.Num())) {
       return false;
     }

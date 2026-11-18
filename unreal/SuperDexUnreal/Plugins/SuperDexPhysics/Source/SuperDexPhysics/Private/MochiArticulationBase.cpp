@@ -15,7 +15,56 @@
  */
 
 #include "MochiArticulationBase.h"
-#include "MochiTypes.h"
+
+bool UMochiArticulationBase::ComputeLinkToParentTransforms(
+    const TArray<double>& JointPositions,
+    TArray<FTransform>& OutLinkTransforms,
+    double AngleScale,
+    double LengthScale,
+    int FinalLinkIndex) const {
+  return ComputeLinkTransformsInternal(
+      JointPositions, OutLinkTransforms, false, AngleScale, LengthScale, FinalLinkIndex);
+}
+
+bool UMochiArticulationBase::ComputeLinkToArticulationRootTransforms(
+    const TArray<double>& JointPositions,
+    TArray<FTransform>& OutLinkTransforms,
+    double AngleScale,
+    double LengthScale,
+    int FinalLinkIndex) const {
+  return ComputeLinkTransformsInternal(
+      JointPositions, OutLinkTransforms, true, AngleScale, LengthScale, FinalLinkIndex);
+}
+
+bool UMochiArticulationBase::ComputeJointPositionsFromLinkToParentTransforms(
+    const TArray<FTransform>& LinkTransforms,
+    TArray<double>& OutJointPositions,
+    double AngleScale,
+    double LengthScale) const {
+  return ComputeJointPositionsInternal(
+      LinkTransforms, OutJointPositions, false, AngleScale, LengthScale);
+}
+
+bool UMochiArticulationBase::ComputeJointPositionsFromLinkToArticulationRootTransforms(
+    const TArray<FTransform>& LinkTransforms,
+    TArray<double>& OutJointPositions,
+    double AngleScale,
+    double LengthScale) const {
+  return ComputeJointPositionsInternal(
+      LinkTransforms, OutJointPositions, true, AngleScale, LengthScale);
+}
+
+bool UMochiArticulationBase::ComputeVisualBoundsFromLinkToParentTransforms(
+    const TArray<FTransform>& LinksToParent,
+    FBoxSphereBounds& OutBounds) const {
+  return ComputeVisualBoundsInternal(LinksToParent, false, OutBounds);
+}
+
+bool UMochiArticulationBase::ComputeVisualBoundsFromLinkToArticulationRootTransforms(
+    const TArray<FTransform>& LinksToArticulationRoot,
+    FBoxSphereBounds& OutBounds) const {
+  return ComputeVisualBoundsInternal(LinksToArticulationRoot, true, OutBounds);
+}
 
 bool UMochiArticulationBase::ComputeVisualBoundsFromJointPositions(
     const TArray<double>& JointPositions,
@@ -23,14 +72,9 @@ bool UMochiArticulationBase::ComputeVisualBoundsFromJointPositions(
     double AngleScale,
     double LengthScale) const {
   thread_local TArray<FTransform> sLinksToRoot;
-  if (ComputeLinkTransformsFromJointPositions(
-          JointPositions,
-          sLinksToRoot,
-          EMochiArticulationLinkTransformSpace::LinkToRoot,
-          AngleScale,
-          LengthScale)) {
-    return ComputeVisualBoundsFromLinkTransforms(
-        sLinksToRoot, EMochiArticulationLinkTransformSpace::LinkToRoot, OutBounds);
+  if (ComputeLinkToArticulationRootTransforms(
+          JointPositions, sLinksToRoot, AngleScale, LengthScale)) {
+    return ComputeVisualBoundsFromLinkToArticulationRootTransforms(sLinksToRoot, OutBounds);
   }
   return false;
 }

@@ -49,8 +49,7 @@ void UMochiArticulationPreviewComponent::SetJointPositions(
     JointPositions = NewJointPositions;
     TArray<FTransform> transforms;
     auto names = Articulation->GetLinkNames();
-    if (Articulation->ComputeLinkTransformsFromJointPositions(
-            JointPositions, transforms, EMochiArticulationLinkTransformSpace::LinkToParent)) {
+    if (Articulation->ComputeLinkToParentTransforms(JointPositions, transforms)) {
       for (int iLink = 0; iLink < transforms.Num(); ++iLink) {
         SetBoneLocalTransformByName(names[iLink], transforms[iLink]);
       }

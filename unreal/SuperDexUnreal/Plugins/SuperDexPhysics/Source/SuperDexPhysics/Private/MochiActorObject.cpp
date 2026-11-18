@@ -80,10 +80,7 @@ mochi::RigidActorParams CreateRigidActorParams(
     actorParams.centerOfMass = u2m.TranslationToMochi(*CenterOfMassOverride);
     actorParams.momentOfInertia = u2m.InertiaToMochi(*MomentOfInertiaOverride);
   }
-  const auto ActorBoundaryElementType = ToMochi(BoundaryElementType);
-  if (ActorBoundaryElementType) {
-    actorParams.boundaryElementType = *ActorBoundaryElementType;
-  }
+  actorParams.boundaryElementType = ToMochi(BoundaryElementType);
   if (BoundarySubsampling) {
     actorParams.boundarySubsampling = ToMochi(*BoundarySubsampling);
   }
@@ -115,10 +112,7 @@ static mochi::SoftActorParams CreateSoftActorParams(
   if (ContactParams) {
     actorParams.contact = ContactParams->ToMochi();
   }
-  const auto ActorBoundaryElementType = ToMochi(BoundaryElementType);
-  if (ActorBoundaryElementType) {
-    actorParams.boundaryElementType = *ActorBoundaryElementType;
-  }
+  actorParams.boundaryElementType = ToMochi(BoundaryElementType);
   return actorParams;
 }
 
@@ -153,10 +147,7 @@ mochi::experimental::ShellActorParams CreateShellActorParams(
   if (PointCloudParams) {
     shellParams.pointCloudCollider = *PointCloudParams;
   }
-  const auto ActorContactElementType = ToMochi(ContactElementType);
-  if (ActorContactElementType) {
-    shellParams.contactElementType = *ActorContactElementType;
-  }
+  shellParams.contactElementType = ToMochi(ContactElementType);
   return shellParams;
 }
 
@@ -192,14 +183,8 @@ mochi::RodActorParams CreateRodActorParams(
   if (PointCloudParams) {
     rodParams.pointCloudCollider = *PointCloudParams;
   }
-  const auto ActorContactElementType = ToMochi(ContactElementType);
-  if (ActorContactElementType) {
-    rodParams.contactElementType = *ActorContactElementType;
-  }
-  const auto ActorContactSkinElementType = ToMochi(ContactSkinElementType);
-  if (ActorContactSkinElementType) {
-    rodParams.contactSkinElementType = *ActorContactSkinElementType;
-  }
+  rodParams.contactElementType = ToMochi(ContactElementType);
+  rodParams.contactSkinElementType = ToMochi(ContactSkinElementType);
   return rodParams;
 }
 

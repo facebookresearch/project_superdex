@@ -524,19 +524,17 @@ TArray<bool> GetPrismaticDofs(const superdex::robotics::BotPrefab& BotPrefab) {
   return PrismaticDofs;
 }
 
-superdex::robotics::LinkTransformSpace ToBotLinkTransformSpace(
-    EMochiArticulationLinkTransformSpace TransformSpace) {
-  return TransformSpace == EMochiArticulationLinkTransformSpace::LinkToParent
-      ? superdex::robotics::LinkTransformSpace::ParentFromLink
-      : superdex::robotics::LinkTransformSpace::RootFromParent;
+superdex::robotics::LinkTransformSpace ToBotLinkTransformSpace(bool bArticulationRoot) {
+  return bArticulationRoot ? superdex::robotics::LinkTransformSpace::RootFromParent
+                           : superdex::robotics::LinkTransformSpace::ParentFromLink;
 }
 
 } // namespace
 
-bool USuperDexBot::ComputeLinkTransformsFromJointPositions(
+bool USuperDexBot::ComputeLinkTransformsInternal(
     const TArray<double>& JointPositions,
     TArray<FTransform>& OutLinkTransforms,
-    EMochiArticulationLinkTransformSpace TransformSpace,
+    bool bToArticulationRoot,
     double AngleScale,
     double LengthScale,
     int FinalLinkIndex) const {
@@ -568,7 +566,7 @@ bool USuperDexBot::ComputeLinkTransformsFromJointPositions(
       CachedBotPrefab,
       Pose,
       MochiTransforms,
-      ToBotLinkTransformSpace(TransformSpace),
+      ToBotLinkTransformSpace(bToArticulationRoot),
       e,
       FinalLinkIndex);
   if (!e.IsOK()) {
@@ -590,10 +588,10 @@ bool USuperDexBot::ComputeLinkTransformsFromJointPositions(
   return true;
 }
 
-bool USuperDexBot::ComputeJointPositionsFromLinkTransforms(
+bool USuperDexBot::ComputeJointPositionsInternal(
     const TArray<FTransform>& LinkTransforms,
     TArray<double>& OutJointPositions,
-    EMochiArticulationLinkTransformSpace TransformSpace,
+    bool bFromArticulationRoot,
     double AngleScale,
     double LengthScale) const {
   if (!EnsureBotPrefabCached()) {
@@ -621,7 +619,7 @@ bool USuperDexBot::ComputeJointPositionsFromLinkTransforms(
   mochi::DynamicArray<mochi::real> Pose;
   mochi::ErrorLog e{};
   superdex::robotics::ComputePoseFromLinkTransforms(
-      CachedBotPrefab, MochiTransforms, Pose, ToBotLinkTransformSpace(TransformSpace), e);
+      CachedBotPrefab, MochiTransforms, Pose, ToBotLinkTransformSpace(bFromArticulationRoot), e);
   if (!e.IsOK()) {
     UE_LOG(
         LogMochiPhysics,
@@ -642,9 +640,9 @@ bool USuperDexBot::ComputeJointPositionsFromLinkTransforms(
   return true;
 }
 
-bool USuperDexBot::ComputeVisualBoundsFromLinkTransforms(
+bool USuperDexBot::ComputeVisualBoundsInternal(
     const TArray<FTransform>& LinksToTransformSpace,
-    EMochiArticulationLinkTransformSpace TransformSpace,
+    bool bToArticulationRoot,
     FBoxSphereBounds& OutBounds) const {
   if (!EnsureBotPrefabCached()) {
     return false;
@@ -656,7 +654,7 @@ bool USuperDexBot::ComputeVisualBoundsFromLinkTransforms(
     return false;
   }
   TArray<FTransform> LinksToRoot;
-  if (TransformSpace == EMochiArticulationLinkTransformSpace::LinkToParent) {
+  if (!bToArticulationRoot) {
     LinksToRoot.SetNum(NumLinks);
     for (int32 i = 0; i < NumLinks; ++i) {
       int32 iParent = CachedBotPrefab.links[i].parentLink;
@@ -668,8 +666,7 @@ bool USuperDexBot::ComputeVisualBoundsFromLinkTransforms(
     }
   }
   const TArray<FTransform>& LinkToRootTransforms =
-      TransformSpace == EMochiArticulationLinkTransformSpace::LinkToRoot ? LinksToTransformSpace
-                                                                         : LinksToRoot;
+      bToArticulationRoot ? LinksToTransformSpace : LinksToRoot;
   TMochiToUnrealConverter<double> Converter(kSuperDexSpace, kUnrealCentimetersSpace);
   FBox CompositeBox(ForceInit);
   for (int32 i = 0; i < NumLinks; ++i) {

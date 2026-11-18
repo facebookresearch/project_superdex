@@ -132,7 +132,7 @@ static bool MakeSkinnedPart(
 // Grow each link's visual bounds (in the link's frame) to contain every skin vertex it influences.
 // A skinned vertex is a weighted average of its rest position carried by each influencing link, so
 // in any pose it lies in the box enclosing those links' posed bounds, which is what
-// USuperDexBot::ComputeVisualBoundsFromLinkTransforms builds. A single link's bounds need not
+// USuperDexBot::ComputeVisualBoundsInternal builds. A single link's bounds need not
 // contain it.
 static void AddSkinToLinkBounds(
     const FMochiArticulationSkinnedPart& Part,

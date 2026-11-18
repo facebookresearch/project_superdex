@@ -172,23 +172,22 @@ struct FKinematicsChecker {
   const UMochiArticulationBase& Articulation;
   const TArray<int> FirstDof = FirstDofIndices();
 
-  TArray<FTransform> Forward(
-      const TArray<double>& JointPositions,
-      EMochiArticulationLinkTransformSpace Space) const {
+  TArray<FTransform> Forward(const TArray<double>& JointPositions, bool bArticulationRoot) const {
     TArray<FTransform> transforms;
-    Test.TestTrue(
-        TEXT("Forward"),
-        Articulation.ComputeLinkTransformsFromJointPositions(JointPositions, transforms, Space));
+    const bool bSucceeded = bArticulationRoot
+        ? Articulation.ComputeLinkToArticulationRootTransforms(JointPositions, transforms)
+        : Articulation.ComputeLinkToParentTransforms(JointPositions, transforms);
+    Test.TestTrue(TEXT("Forward"), bSucceeded);
     return transforms;
   }
 
-  TArray<double> Inverse(
-      const TArray<FTransform>& Transforms,
-      EMochiArticulationLinkTransformSpace Space) const {
+  TArray<double> Inverse(const TArray<FTransform>& Transforms, bool bArticulationRoot) const {
     TArray<double> jointPositions;
-    Test.TestTrue(
-        TEXT("Inverse"),
-        Articulation.ComputeJointPositionsFromLinkTransforms(Transforms, jointPositions, Space));
+    const bool bSucceeded = bArticulationRoot
+        ? Articulation.ComputeJointPositionsFromLinkToArticulationRootTransforms(
+              Transforms, jointPositions)
+        : Articulation.ComputeJointPositionsFromLinkToParentTransforms(Transforms, jointPositions);
+    Test.TestTrue(TEXT("Inverse"), bSucceeded);
     return jointPositions;
   }
 
@@ -225,8 +224,7 @@ struct FKinematicsChecker {
     auto random3 = [&](double Magnitude) {
       return FVector(unit(Rng), unit(Rng), unit(Rng)) * Magnitude;
     };
-    TArray<FTransform> transforms =
-        Forward(RandomJointPositions(Rng), EMochiArticulationLinkTransformSpace::LinkToParent);
+    TArray<FTransform> transforms = Forward(RandomJointPositions(Rng), false);
     for (int i = 1; i < transforms.Num(); ++i) {
       transforms[i] =
           FTransform(FQuat::MakeFromRotationVector(random3(0.7)), random3(1.2)) * transforms[i];
@@ -238,8 +236,7 @@ struct FKinematicsChecker {
   // controls: the link rotation for rotational joints [rad], the joint frame's origin (the link's
   // transform without ParentJointFromLink) for prismatic ones [cm].
   double JointError(const TArray<double>& JointPositions, int I, const FTransform& Target) const {
-    const FTransform link =
-        Forward(JointPositions, EMochiArticulationLinkTransformSpace::LinkToParent)[I];
+    const FTransform link = Forward(JointPositions, false)[I];
     if (kChain[I].Type != mochi::ArticulatedJointType::Prismatic) {
       return RotationDistance(link.GetRotation(), Target.GetRotation());
     }
@@ -307,8 +304,8 @@ struct FKinematicsChecker {
   }
 
   void Run() const {
-    const auto parentSpace = EMochiArticulationLinkTransformSpace::LinkToParent;
-    const auto rootSpace = EMochiArticulationLinkTransformSpace::LinkToRoot;
+    const auto parentSpace = false;
+    const auto rootSpace = true;
     std::mt19937 rng(17);
 
     // Transforms from joint positions round-trip.
@@ -413,7 +410,7 @@ struct FKinematicsChecker {
     TArray<double> out = sentinel;
     Test.TestFalse(
         TEXT("Wrong transform count rejected"),
-        Articulation.ComputeJointPositionsFromLinkTransforms(shortTransforms, out, parentSpace));
+        Articulation.ComputeJointPositionsFromLinkToParentTransforms(shortTransforms, out));
     Test.TestEqual(TEXT("Output unchanged"), out, sentinel);
   }
 };
@@ -449,9 +446,7 @@ bool FSuperDexBotKinematicsTest::RunTest(const FString& Parameters) {
   // USuperDexBot and UMochiArticulation agree, in both directions, on and off axis.
   std::mt19937 rng(23);
   const FKinematicsChecker botChecker{*this, *bot};
-  for (const auto space :
-       {EMochiArticulationLinkTransformSpace::LinkToParent,
-        EMochiArticulationLinkTransformSpace::LinkToRoot}) {
+  for (const auto space : {false, true}) {
     const TArray<double> jointPositions = botChecker.RandomJointPositions(rng);
     const TArray<FTransform> botLinks = botChecker.Forward(jointPositions, space);
     const TArray<FTransform> articulationLinks = articulationChecker.Forward(jointPositions, space);
@@ -464,8 +459,8 @@ bool FSuperDexBotKinematicsTest::RunTest(const FString& Parameters) {
     }
     const TArray<FTransform> targets = botChecker.RandomOffAxisLinksToParent(rng);
     botChecker.ExpectSameJointPositions(
-        botChecker.Inverse(targets, EMochiArticulationLinkTransformSpace::LinkToParent),
-        articulationChecker.Inverse(targets, EMochiArticulationLinkTransformSpace::LinkToParent),
+        botChecker.Inverse(targets, false),
+        articulationChecker.Inverse(targets, false),
         TEXT("Off-axis inverse"));
   }
   AddInfo(TEXT("USuperDexBot"));

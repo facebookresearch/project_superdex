@@ -46,14 +46,14 @@ UMochiMaterialParams::UMochiMaterialParams() {
 mochi::SoftMaterialParams UMochiMaterialParams::ToMochi() const {
   constexpr float k_MPaToPa = 1e6;
   mochi::SoftMaterialParams result;
-  result.type = mochi::SoftMaterialType(MaterialType);
+  result.type = ::ToMochi(MaterialType);
   result.density = mochi::real(Density);
   result.massDampingCoefficient = mochi::real(MassDampingCoefficient);
   result.stiffnessDampingCoefficient = mochi::real(StiffnessDampingCoefficient);
 
   auto const ym = mochi::real(YoungsModulus * k_MPaToPa);
   auto const pr = mochi::real(PoissonRatio);
-  auto const psd = mochi::MaterialPsdStrategy(PsdStrategy);
+  auto const psd = ::ToMochi(PsdStrategy);
   auto const arapStiffness = mochi::real(ArapStiffness);
   switch (result.type) {
     case mochi::SoftMaterialType::NeoHookean:
@@ -98,7 +98,7 @@ mochi::SoftMaterialParams UMochiMaterialParams::ToMochi() const {
 
 void UMochiMaterialParams::FromMochi(const mochi::SoftMaterialParams& Mochi) {
   constexpr mochi::real k_PaToMPa = 1e-6;
-  MaterialType = EMochiSoftMaterialType(Mochi.type);
+  MaterialType = ToUnreal(Mochi.type);
   Density = Mochi.density;
   MassDampingCoefficient = Mochi.massDampingCoefficient;
   StiffnessDampingCoefficient = Mochi.stiffnessDampingCoefficient;
@@ -120,12 +120,12 @@ void UMochiMaterialParams::FromMochi(const mochi::SoftMaterialParams& Mochi) {
     case mochi::SoftMaterialType::NeoHookean:
       YoungsModulus = Mochi.neoHookean.youngsModulus * k_PaToMPa;
       PoissonRatio = Mochi.neoHookean.poissonRatio;
-      PsdStrategy = EMochiMaterialPsdStrategy(Mochi.neoHookean.psdStrategy);
+      PsdStrategy = ToUnreal(Mochi.neoHookean.psdStrategy);
       break;
     case mochi::SoftMaterialType::StVenantKirchhoff:
       YoungsModulus = Mochi.stVenantKirchhoff.youngsModulus * k_PaToMPa;
       PoissonRatio = Mochi.stVenantKirchhoff.poissonRatio;
-      PsdStrategy = EMochiMaterialPsdStrategy(Mochi.stVenantKirchhoff.psdStrategy);
+      PsdStrategy = ToUnreal(Mochi.stVenantKirchhoff.psdStrategy);
       break;
     case mochi::SoftMaterialType::LinearElastic:
       // Linear elastic has a constant, already-PSD Hessian and so no strategy to mirror.
@@ -135,14 +135,14 @@ void UMochiMaterialParams::FromMochi(const mochi::SoftMaterialParams& Mochi) {
     case mochi::SoftMaterialType::ActiveNeoHookean:
       YoungsModulus = Mochi.activeNeoHookean.passiveIsotropic.youngsModulus * k_PaToMPa;
       PoissonRatio = Mochi.activeNeoHookean.passiveIsotropic.poissonRatio;
-      PsdStrategy = EMochiMaterialPsdStrategy(Mochi.activeNeoHookean.passiveIsotropic.psdStrategy);
+      PsdStrategy = ToUnreal(Mochi.activeNeoHookean.passiveIsotropic.psdStrategy);
       break;
     case mochi::SoftMaterialType::ActiveShapeTargetingArap:
       ArapStiffness = Mochi.activeShapeTargetingArap.stiffness;
-      PsdStrategy = EMochiMaterialPsdStrategy(Mochi.activeShapeTargetingArap.psdStrategy);
+      PsdStrategy = ToUnreal(Mochi.activeShapeTargetingArap.psdStrategy);
       break;
     case mochi::SoftMaterialType::Arap:
-      PsdStrategy = EMochiMaterialPsdStrategy(Mochi.arap.psdStrategy);
+      PsdStrategy = ToUnreal(Mochi.arap.psdStrategy);
       break;
     case mochi::SoftMaterialType::Count:
       checkNoEntry();
@@ -386,7 +386,7 @@ void FMochiNonLinearSolverParams::FromMochi(const mochi::NonLinearSolverParams& 
 
   LsMaxIter = Mochi.lineSearchMaxIter;
   LsAlpha = Mochi.lineSearchAlpha;
-  LsType = EMochiLsType(Mochi.lineSearchType);
+  LsType = EMochiLineSearchType(Mochi.lineSearchType);
 
   Verbosity = static_cast<EMochiVerbosityLevel>(Mochi.verbosity);
 }
@@ -441,14 +441,14 @@ void FMochiExperimentalEvalParams::FromMochi(const mochi::ExperimentalEvalParams
 
 UMochiSolverParams::UMochiSolverParams() {
   auto mochi = mochi::SolverParams{};
-  IntegrationMethod = EMochiIntegrationMethod(mochi.integrationMethod);
+  IntegrationMethod = ::ToUnreal(mochi.integrationMethod);
 }
 
 mochi::SolverParams UMochiSolverParams::ToMochi() const {
   mochi::SolverParams result;
   result.nonLinearSolver = NonLinearSolverParams.ToMochi();
   result.linearSolver = LinearSolverParams.ToMochi();
-  result.integrationMethod = (mochi::IntegrationMethod)IntegrationMethod;
+  result.integrationMethod = ::ToMochi(IntegrationMethod);
   result.experimentalEval = ExperimentalEvalParams.ToMochi();
   return result;
 }
@@ -456,6 +456,6 @@ mochi::SolverParams UMochiSolverParams::ToMochi() const {
 void UMochiSolverParams::FromMochi(const mochi::SolverParams& Mochi) {
   NonLinearSolverParams.FromMochi(Mochi.nonLinearSolver);
   LinearSolverParams.FromMochi(Mochi.linearSolver);
-  IntegrationMethod = static_cast<EMochiIntegrationMethod>(Mochi.integrationMethod);
+  IntegrationMethod = ::ToUnreal(Mochi.integrationMethod);
   ExperimentalEvalParams.FromMochi(Mochi.experimentalEval);
 }

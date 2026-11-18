@@ -39,7 +39,7 @@ void ConvertArticulatedActorDofs(
   TArray<EMochiArticulatedJointType, TInlineAllocator<64>> types;
   bool bNeedsConversion = false;
   for (const mochi::ArticulatedJointType type : shapeInfo.jointTypes) {
-    types.Add(static_cast<EMochiArticulatedJointType>(type));
+    types.Add(::ToUnreal(type));
     bNeedsConversion |= type == mochi::ArticulatedJointType::Spherical ||
         (type == mochi::ArticulatedJointType::Free && types.Num() > 1);
   }

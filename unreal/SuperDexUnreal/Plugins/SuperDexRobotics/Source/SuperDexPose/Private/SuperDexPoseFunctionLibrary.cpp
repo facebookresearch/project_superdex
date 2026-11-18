@@ -58,8 +58,7 @@ bool USuperDexPoseFunctionLibrary::ComputeSuperDexPoseFromJointPositions(
     FSuperDexPose& OutPose) {
   TArray<FTransform> LinkToParent;
   if (Articulation == nullptr ||
-      !Articulation->ComputeLinkTransformsFromJointPositions(
-          JointPositions, LinkToParent, EMochiArticulationLinkTransformSpace::LinkToParent)) {
+      !Articulation->ComputeLinkToParentTransforms(JointPositions, LinkToParent)) {
     return false;
   }
   OutPose.BoneRotations.SetNum(LinkToParent.Num());

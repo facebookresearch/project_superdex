@@ -167,7 +167,10 @@ void UMochiRodMeshComponent::CreateMochiActor() {
   pointCloudParams.radius = mochi::real(PointCloudRadius);
   pointCloudParams.selfContact = bPointCloudSelfContact;
   pointCloudParams.selfContactExclusionRatio = mochi::real(PointCloudSelfContactExclusionRatio);
-  pointCloudParams.colliderSegmentElementType = ToMochi(ColliderSegmentElementType);
+  if (PointCloudColliderSegmentElementType.IsSet()) {
+    pointCloudParams.colliderSegmentElementType =
+        ToMochi(PointCloudColliderSegmentElementType.GetValue());
+  }
 
   MochiActorObject = UMochiActorObject::CreateRod(
       this,

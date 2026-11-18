@@ -624,8 +624,7 @@ void FMochiArticulationEditorViewportClient::DrawArticulation(
   const auto& links = Articulation->GetLinks();
   const auto& jointPos = Articulation->GetDefaultJointPositions();
   TArray<FTransform> linkTransforms;
-  if (!Articulation->ComputeLinkTransformsFromJointPositions(
-          jointPos, linkTransforms, EMochiArticulationLinkTransformSpace::LinkToRoot)) {
+  if (!Articulation->ComputeLinkToArticulationRootTransforms(jointPos, linkTransforms)) {
     return;
   }
   auto rootToWorld = PreviewMeshComponent->GetComponentTransform();
@@ -781,8 +780,7 @@ void FMochiArticulationEditorViewportClient::DrawCanvasArticulation(
   const auto& joints = Articulation->GetJoints();
   const auto& jointPos = Articulation->GetDefaultJointPositions();
   TArray<FTransform> transforms;
-  if (!Articulation->ComputeLinkTransformsFromJointPositions(
-          jointPos, transforms, EMochiArticulationLinkTransformSpace::LinkToRoot)) {
+  if (!Articulation->ComputeLinkToArticulationRootTransforms(jointPos, transforms)) {
     return;
   }
   auto rootToWorld = PreviewMeshComponent->GetComponentTransform();

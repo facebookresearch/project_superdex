@@ -22,8 +22,7 @@
 #include <mochi_physics/mochi_physics.h>
 #include <mochi_physics/mochi_physics_experimental.h>
 
-#include <optional>
-
+#include "MochiGenTypes.h"
 #include "MochiTypes.generated.h"
 
 //------------------------------------------------------------------------------
@@ -176,142 +175,6 @@ FORCEINLINE constexpr mochi::CoordinateSpace ToMochiCoordinateSpace(
 // ENUMS
 //------------------------------------------------------------------------------
 
-// This UEnum matches mochi::ActorType from mochi_physics.h
-UENUM(BlueprintType)
-enum class EMochiActorType : uint8 { None, Rigid, Soft, Articulated, Shell, Rod };
-
-UENUM(BlueprintType)
-enum class EMochiColliderType : uint8 { None, Auto, Sphere, Box, Mesh, Plane, Sdf, PointCloud };
-
-UENUM(BlueprintType)
-enum class EMochiSoftMaterialType : uint8 {
-  // WARNING: If supporting new material types, please update UMochiMaterialParams::ToMochi
-  // and UMochiMaterialParams::FromMochi.
-  NeoHookean = 0,
-  StVenantKirchhoff = 1,
-  LinearElastic = 2,
-  ActiveNeoHookean = 3,
-  ActiveShapeTargetingArap = 4,
-  Arap = 5,
-};
-
-UENUM(BlueprintType)
-enum class EMochiMaterialPsdStrategy : uint8 {
-  MaterialDefault = static_cast<uint8>(mochi::MaterialPsdStrategy::MaterialDefault),
-  None = static_cast<uint8>(mochi::MaterialPsdStrategy::None),
-  Projection = static_cast<uint8>(mochi::MaterialPsdStrategy::Projection),
-  Fast = static_cast<uint8>(mochi::MaterialPsdStrategy::Fast),
-  AbsEigenProjection = static_cast<uint8>(mochi::MaterialPsdStrategy::AbsEigenProjection),
-  PerTermProjection = static_cast<uint8>(mochi::MaterialPsdStrategy::PerTermProjection),
-};
-
-UENUM(BlueprintType)
-enum class EMochiPsdProjectionMode : uint8 {
-  Never,
-  Always,
-  IfFailRetry,
-  IfFailAlways,
-  Default = static_cast<uint8>(mochi::PsdProjectionMode::Default),
-};
-
-UENUM(BlueprintType)
-enum class EMochiNonLinearSolverType : uint8 {
-  Newton,
-  Default = static_cast<uint8>(mochi::NonLinearSolverType::Default),
-};
-
-UENUM(BlueprintType)
-enum class EMochiLsType : uint8 {
-  None,
-  Simple,
-  Armijo,
-  WolfeWeak,
-  WolfeStrong,
-  ResidualNorm,
-  Default = static_cast<uint8>(mochi::LineSearchType::Default),
-};
-
-UENUM(BlueprintType)
-enum class EMochiLinearSolverType : uint8 {
-  CG,
-  GMRes,
-  CudaCG,
-  CudaGMRes,
-  AugmentedPCG,
-  LDLt,
-  LU,
-  AsyncCG,
-  ParallelCG,
-  Default = static_cast<uint8>(mochi::LinearSolverType::Default),
-};
-
-UENUM(BlueprintType)
-enum class EMochiPreconditionerType : uint8 {
-  None,
-  Jacobi,
-  BlockJacobi,
-  SSOR,
-  BlockSSOR,
-  LU,
-  AMG,
-  SymInverse,
-  LDLt,
-  ILU0,
-  IChol0,
-  PerActor,
-  AdaptivePerActor = static_cast<uint8>(mochi::PreconditionerType::AdaptivePerActor),
-  Default = static_cast<uint8>(mochi::PreconditionerType::Default),
-};
-
-UENUM(BlueprintType)
-enum class EMochiLinearSolverConvergenceNorm : uint8 {
-  L2Norm,
-  L2NormPreconditioned,
-  L2NormPerActorWeighted =
-      static_cast<uint8>(mochi::LinearSolverConvergenceNorm::ResidualPerActorWeighted),
-  Default = static_cast<uint8>(mochi::LinearSolverConvergenceNorm::Default),
-};
-
-UENUM(BlueprintType)
-enum class EMochiIntegrationMethod : uint8 {
-  BackwardEuler,
-  BDF2,
-  Default = static_cast<uint8>(mochi::IntegrationMethod::Default),
-};
-
-UENUM(BlueprintType)
-enum class EMochiCoulombFrictionModel : uint8 {
-  C1Regularized,
-  CinfRegularized,
-  Default = static_cast<uint8>(mochi::CoulombFrictionModel::Default),
-};
-
-UENUM(BlueprintType)
-enum class EMochiVerbosityLevel : uint8 {
-  Silent,
-  Error,
-  Warning,
-  Verbose,
-};
-
-UENUM(BlueprintType)
-enum class EMochiGridSdfResolutionMode : uint8 {
-  // Aabb dependent
-  LargestAxis,
-  // Aabb dependent
-  SmallestAxis,
-  // Aabb dependent
-  MeanAxis,
-  // Edge length dependent
-  LargestEdge,
-  // Edge length dependent
-  SmallestEdge,
-  // Edge length dependent
-  MeanEdge,
-  // User provided
-  Explicit UMETA(Hidden)
-};
-
 UENUM(BlueprintType)
 enum class EMochiImplicitShape : uint8 { Plane, Sphere };
 
@@ -342,76 +205,6 @@ enum class EMochiContactDirection : uint8 {
   OtherContactsThis
 };
 
-// Matches mochi::ArticulatedJointType
-UENUM(Blueprintable)
-enum class EMochiArticulatedJointType : uint8 { Free, Prismatic, Revolute, Spherical, Hard, Cycle };
-
-// Tracking constraint type, replica of Mochi's TrackingConstraintType
-UENUM(BlueprintType)
-enum class EMochiTrackingConstraintType : uint8 {
-  Joint = 0, // Joint tracking constraint
-  BoneTranslation = 1, // Bone translation tracking constraint
-  BoneRotation = 2, // Bone rotation tracking constraint
-  Count = 3 UMETA(Hidden),
-  Any = 100,
-  Invalid = 255 UMETA(Hidden)
-};
-
-UENUM(BlueprintType)
-enum class EMochiArticulationLinkTransformSpace : uint8 { LinkToParent, LinkToRoot };
-
-// One-dimensional discretization element types for segment (polyline) elements
-// used by rod point-cloud colliders. Mirrors mochi::ActorSegmentElementType
-// with an extra "Nodal" sentinel representing std::nullopt (no quadrature
-// collider - one contact point per node, weighted by lumped segment lengths).
-UENUM(BlueprintType)
-enum class EMochiActorSegmentElementType : uint8 {
-  // No quadrature collider: one contact point per node, weighted by lumped
-  // segment lengths. Maps to std::nullopt on the Mochi side.
-  Nodal,
-  // Linear elements (P1), Gauss-Legendre quadrature with 1 point (Q1).
-  P1Q1,
-  // Linear elements (P1), Gauss-Legendre quadrature with 2 points (Q2).
-  P1Q2,
-  // Linear elements (P1), Gauss-Legendre quadrature with 3 points (Q3).
-  P1Q3,
-  Default = P1Q3,
-};
-
-// Convert an EMochiActorSegmentElementType to the corresponding Mochi value.
-// Returns std::nullopt for Nodal (the per-node, no-quadrature collider).
-std::optional<mochi::ActorSegmentElementType> ToMochi(EMochiActorSegmentElementType Type);
-
-// Two-dimensional discretization element types for triangle (surface) elements
-// used by shell point-cloud colliders. Mirrors mochi::ActorBoundaryElementType
-// with an extra "Nodal" sentinel representing std::nullopt (no quadrature
-// collider - one contact point per node, weighted by lumped triangle areas).
-UENUM(BlueprintType)
-enum class EMochiActorBoundaryElementType : uint8 {
-  // No quadrature collider: one contact point per node, weighted by lumped
-  // triangle areas. Maps to std::nullopt on the Mochi side.
-  Nodal,
-  // Linear elements (P1), Dunavant quadrature with 1 point (Q1).
-  P1Q1,
-  // Linear elements (P1), Dunavant quadrature with 3 points (Q3).
-  P1Q3,
-  // Linear elements (P1), Dunavant quadrature with 6 points (Q6).
-  P1Q6,
-  Default = P1Q3,
-};
-
-// Convert an EMochiActorBoundaryElementType to the corresponding Mochi value.
-// Returns std::nullopt for Nodal (the per-node, no-quadrature collider).
-std::optional<mochi::ActorBoundaryElementType> ToMochi(EMochiActorBoundaryElementType Type);
-// Convert a Mochi boundary element type to the closest EMochiActorBoundaryElementType.
-SUPERDEXPHYSICS_API EMochiActorBoundaryElementType FromMochi(mochi::ActorBoundaryElementType Type);
-
-UENUM(BlueprintType)
-enum class EMochiBoundarySubsamplingStrategy : uint8 {
-  UniformProbability,
-  AreaProportional,
-};
-
 USTRUCT(BlueprintType)
 struct SUPERDEXPHYSICS_API FMochiBoundarySubsamplingParams {
   GENERATED_BODY()
@@ -427,6 +220,13 @@ struct SUPERDEXPHYSICS_API FMochiBoundarySubsamplingParams {
   EMochiBoundarySubsamplingStrategy Strategy =
       EMochiBoundarySubsamplingStrategy::UniformProbability;
 };
+/**
+ * Legacy ABI-compatible boundary-element conversion.
+ *
+ * Maps P1Q1, P1Q3, and P1Q6 directly. Experimental values and Count map to Default. Prefer
+ * ToUnreal for the complete generated mapping.
+ */
+SUPERDEXPHYSICS_API EMochiActorBoundaryElementType FromMochi(mochi::ActorBoundaryElementType Type);
 
 mochi::BoundarySubsamplingParams ToMochi(const FMochiBoundarySubsamplingParams& Params);
 SUPERDEXPHYSICS_API FMochiBoundarySubsamplingParams

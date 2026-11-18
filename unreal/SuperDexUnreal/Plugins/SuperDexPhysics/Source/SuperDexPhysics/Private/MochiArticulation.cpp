@@ -427,10 +427,10 @@ USkeletalMesh* UMochiArticulation::GetSkeletalMesh() const {
   return SkeletalMesh;
 }
 
-bool UMochiArticulation::ComputeLinkTransformsFromJointPositions(
+bool UMochiArticulation::ComputeLinkTransformsInternal(
     const TArray<double>& JointPositions,
     TArray<FTransform>& OutLinkTransforms,
-    EMochiArticulationLinkTransformSpace TransformSpace,
+    bool bToArticulationRoot,
     double AngleScale,
     double LengthScale,
     int FinalLinkIndex) const {
@@ -454,18 +454,17 @@ bool UMochiArticulation::ComputeLinkTransformsFromJointPositions(
     const auto& joint = Joints[iLink];
     const FTransform motion = GetJointMotion(joint, JointPositions, iDof, AngleScale, LengthScale);
     OutLinkTransforms[iLink] = link.ParentJointFromLink * motion * joint.ParentLinkFromJoint;
-    if (TransformSpace == EMochiArticulationLinkTransformSpace::LinkToRoot &&
-        link.ParentLink != INDEX_NONE) {
+    if (bToArticulationRoot && link.ParentLink != INDEX_NONE) {
       OutLinkTransforms[iLink] = OutLinkTransforms[iLink] * OutLinkTransforms[link.ParentLink];
     }
   }
   return true;
 }
 
-bool UMochiArticulation::ComputeJointPositionsFromLinkTransforms(
+bool UMochiArticulation::ComputeJointPositionsInternal(
     const TArray<FTransform>& LinkTransforms,
     TArray<double>& OutJointPositions,
-    EMochiArticulationLinkTransformSpace TransformSpace,
+    bool bFromArticulationRoot,
     double AngleScale,
     double LengthScale) const {
   if (Links.Num() == 0 || Joints.Num() != Links.Num() || RestLinksToParent.Num() != Links.Num()) {
@@ -480,8 +479,7 @@ bool UMochiArticulation::ComputeJointPositionsFromLinkTransforms(
             "[UMochiArticulation] Number of provided LinkTransforms is not equal to number of links!"));
     return false;
   }
-  // The DOFs ComputeLinkTransformsFromJointPositions reads, which must fit the joint position
-  // layout.
+  // The motion DOFs must fit the joint position layout.
   int numMotionDofs = 0;
   for (const auto& joint : Joints) {
     numMotionDofs += GetNumMotionDofs(joint);
@@ -495,12 +493,10 @@ bool UMochiArticulation::ComputeJointPositionsFromLinkTransforms(
   for (int iLink = 0; iLink < Links.Num(); ++iLink) {
     const auto& link = Links[iLink];
     FTransform linkToParent = LinkTransforms[iLink];
-    if (TransformSpace == EMochiArticulationLinkTransformSpace::LinkToRoot &&
-        link.ParentLink != INDEX_NONE) {
+    if (bFromArticulationRoot && link.ParentLink != INDEX_NONE) {
       linkToParent = LinkTransforms[iLink] * LinkTransforms[link.ParentLink].Inverse();
     }
-    // ComputeLinkTransformsFromJointPositions: LinkToParent = ParentJointFromLink * Motion *
-    // ParentLinkFromJoint.
+    // LinkToParent = ParentJointFromLink * Motion * ParentLinkFromJoint.
     const FTransform motion = link.ParentJointFromLink.Inverse() * linkToParent *
         Joints[iLink].ParentLinkFromJoint.Inverse();
     SetJointPositionsFromMotion(
@@ -520,28 +516,23 @@ bool UMochiArticulation::ForwardKinematics(
     return false;
   }
   thread_local TArray<FTransform> sLinkTransforms;
-  if (ComputeLinkTransformsFromJointPositions(
-          JointPositions,
-          sLinkTransforms,
-          EMochiArticulationLinkTransformSpace::LinkToRoot,
-          AngleScale,
-          LengthScale,
-          iLink)) {
+  if (ComputeLinkToArticulationRootTransforms(
+          JointPositions, sLinkTransforms, AngleScale, LengthScale, iLink)) {
     OutLinkTransform = sLinkTransforms[iLink];
     return true;
   }
   return false;
 }
 
-bool UMochiArticulation::ComputeVisualBoundsFromLinkTransforms(
+bool UMochiArticulation::ComputeVisualBoundsInternal(
     const TArray<FTransform>& LinksToTransformSpace,
-    EMochiArticulationLinkTransformSpace TransformSpace,
+    bool bToArticulationRoot,
     FBoxSphereBounds& OutBounds) const {
   if (LinksToTransformSpace.Num() != Links.Num()) {
     return false;
   }
   TArray<FTransform> linksToRoot;
-  if (TransformSpace == EMochiArticulationLinkTransformSpace::LinkToParent) {
+  if (!bToArticulationRoot) {
     linksToRoot.SetNum(Links.Num());
     for (int i = 0; i < Links.Num(); ++i) {
       const int iParent = Links[i].ParentLink;
@@ -553,8 +544,7 @@ bool UMochiArticulation::ComputeVisualBoundsFromLinkTransforms(
     }
   }
   const TArray<FTransform>& linkToRootTransforms =
-      TransformSpace == EMochiArticulationLinkTransformSpace::LinkToRoot ? LinksToTransformSpace
-                                                                         : linksToRoot;
+      bToArticulationRoot ? LinksToTransformSpace : linksToRoot;
   FBox compositeBox(EForceInit::ForceInit);
   for (int i = 0; i < Links.Num(); ++i) {
     if (Links[i].RenderModel) {
@@ -713,7 +703,7 @@ mochi::ArticulatedActorParams UMochiArticulation::GetArticulatedActorParams(
   for (int i = 0; i < Links.Num(); ++i) {
     mochi::ArticulatedJointParams jointParams = Joints[i].ToMochi(u2m);
     if (i == 0) {
-      jointParams.type = static_cast<mochi::ArticulatedJointType>(rootType);
+      jointParams.type = ::ToMochi(rootType);
     }
     params.joints.push_back(std::move(jointParams));
     params.links.push_back(

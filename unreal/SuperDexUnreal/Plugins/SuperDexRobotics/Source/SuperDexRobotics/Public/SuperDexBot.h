@@ -165,23 +165,6 @@ class SUPERDEXROBOTICS_API USuperDexBot : public UMochiArticulationBase {
   virtual const FString& GetArticulationName() const override;
   virtual int GetNumDofs() const override;
   virtual const TArray<double>& GetDefaultJointPositions() const override;
-  virtual bool ComputeLinkTransformsFromJointPositions(
-      const TArray<double>& JointPositions,
-      TArray<FTransform>& OutLinkTransforms,
-      EMochiArticulationLinkTransformSpace TransformSpace,
-      double AngleScale = 1.0,
-      double LengthScale = 100.0,
-      int FinalLinkIndex = -1) const override;
-  virtual bool ComputeJointPositionsFromLinkTransforms(
-      const TArray<FTransform>& LinkTransforms,
-      TArray<double>& OutJointPositions,
-      EMochiArticulationLinkTransformSpace TransformSpace,
-      double AngleScale = 1.0,
-      double LengthScale = 100.0) const override;
-  virtual bool ComputeVisualBoundsFromLinkTransforms(
-      const TArray<FTransform>& LinksToTransformSpace,
-      EMochiArticulationLinkTransformSpace TransformSpace,
-      FBoxSphereBounds& OutBounds) const override;
   virtual TArray<FName> GetLinkNames() const override;
   virtual TArray<FName> GetJointNames() const override;
   /// Returns the index of a joint's first DOF among the bot's DOFs (the order of joint positions,
@@ -219,6 +202,26 @@ class SUPERDEXROBOTICS_API USuperDexBot : public UMochiArticulationBase {
       bool bShowJoints) const override;
 
  protected:
+  virtual bool ComputeLinkTransformsInternal(
+      const TArray<double>& JointPositions,
+      TArray<FTransform>& OutLinkTransforms,
+      bool bToArticulationRoot,
+      double AngleScale,
+      double LengthScale,
+      int FinalLinkIndex) const override;
+
+  virtual bool ComputeJointPositionsInternal(
+      const TArray<FTransform>& LinkTransforms,
+      TArray<double>& OutJointPositions,
+      bool bFromArticulationRoot,
+      double AngleScale,
+      double LengthScale) const override;
+
+  virtual bool ComputeVisualBoundsInternal(
+      const TArray<FTransform>& LinksToTransformSpace,
+      bool bToArticulationRoot,
+      FBoxSphereBounds& OutBounds) const override;
+
   friend class USuperDexBotFactory;
   friend class UReimportSuperDexBotFactory;
   friend class FSuperDexBotEditorToolkit;

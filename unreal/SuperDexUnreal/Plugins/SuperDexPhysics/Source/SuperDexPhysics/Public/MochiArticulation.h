@@ -217,28 +217,8 @@ class SUPERDEXPHYSICS_API UMochiArticulation : public UMochiArticulationBase {
   virtual TArray<FName> GetJointNames() const override;
   // Get the SkeletalMesh to use with this articulation.
   virtual USkeletalMesh* GetSkeletalMesh() const override;
-  // Compute link transforms for a given joint configuration. AngleScale and LengthScale
-  // should convert your JointPositions units to radians/centimeters. The default values
-  // assume JointPositions is defined in radians/meters. FinalLinkIndex can be used to
-  // minimize unnecessary computations; a value of -1 will compute all link transforms.
-  // LinkToRoot transforms are relative to the articulation root frame (the frame the root
-  // joint attaches to), not the root link.
-  virtual bool ComputeLinkTransformsFromJointPositions(
-      const TArray<double>& JointPositions,
-      TArray<FTransform>& OutLinkTransforms,
-      EMochiArticulationLinkTransformSpace TransformSpace,
-      double AngleScale = 1.0,
-      double LengthScale = 100.0,
-      int FinalLinkIndex = -1) const override;
-  virtual bool ComputeJointPositionsFromLinkTransforms(
-      const TArray<FTransform>& LinkTransforms,
-      TArray<double>& OutJointPositions,
-      EMochiArticulationLinkTransformSpace TransformSpace,
-      double AngleScale = 1.0,
-      double LengthScale = 100.0) const override;
-  // Convenience wrapper around ComputeLinkTransformsFromJointPositions to compute the
-  // forward kinematics for a single link. Prefer ComputeVisualBoundsFromLinkTransforms
-  // with LinksToTransformSpace if you need to compute forward kinematics for multiple links.
+  // Compute forward kinematics for a single link in the articulation root frame.
+  // Prefer ComputeLinkToArticulationRootTransforms when computing multiple links.
   UFUNCTION(BlueprintCallable, Category = "Mochi|Articulation")
   bool ForwardKinematics(
       FName LinkName,
@@ -246,13 +226,6 @@ class SUPERDEXPHYSICS_API UMochiArticulation : public UMochiArticulationBase {
       FTransform& OutLinkTransform,
       double AngleScale = 1.0,
       double LengthScale = 100.0) const;
-  // Compute the bounds of the articulation from an array of LinksToTransformSpace transforms. This
-  // can be used as a replacement for USkeletalMesh::GetBounds() which in contrast does not change
-  // with pose.
-  virtual bool ComputeVisualBoundsFromLinkTransforms(
-      const TArray<FTransform>& LinksToTransformSpace,
-      EMochiArticulationLinkTransformSpace TransformSpace,
-      FBoxSphereBounds& OutBounds) const override;
   // Clamp joint DOF positions between their lower and upper limits.
   UFUNCTION(BlueprintCallable, Category = "Mochi|Articulation")
   void ClampJointPositions(TArray<double>& JointPositions) const;
@@ -305,6 +278,26 @@ class SUPERDEXPHYSICS_API UMochiArticulation : public UMochiArticulationBase {
   TArray<TArray<int>> ChildLinkIndices;
 
  protected:
+  virtual bool ComputeLinkTransformsInternal(
+      const TArray<double>& JointPositions,
+      TArray<FTransform>& OutLinkTransforms,
+      bool bToArticulationRoot,
+      double AngleScale,
+      double LengthScale,
+      int FinalLinkIndex) const override;
+
+  virtual bool ComputeJointPositionsInternal(
+      const TArray<FTransform>& LinkTransforms,
+      TArray<double>& OutJointPositions,
+      bool bFromArticulationRoot,
+      double AngleScale,
+      double LengthScale) const override;
+
+  virtual bool ComputeVisualBoundsInternal(
+      const TArray<FTransform>& LinksToTransformSpace,
+      bool bToArticulationRoot,
+      FBoxSphereBounds& OutBounds) const override;
+
   // Find link returning pointer; non-const and const versions.
   FMochiArticulatedLink* FindLink(FName LinkName);
   const FMochiArticulatedLink* FindLink(FName LinkName) const;

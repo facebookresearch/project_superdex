@@ -505,7 +505,7 @@ struct SUPERDEXPHYSICS_API FMochiNonLinearSolverParams {
   float LsAlpha;
   // Type of line-search to use.
   UPROPERTY(EditAnywhere, Category = "Nonlinear Solver")
-  EMochiLsType LsType;
+  EMochiLineSearchType LsType;
 
   // Verbosity level for solver output.
   UPROPERTY(EditAnywhere, Category = "Nonlinear Solver")

@@ -763,8 +763,7 @@ void USuperDexBotComponent::PoseMeshFromJointPositions(const TArray<double>& InJ
     ensure(InJointPositions.Num() == Bot->GetDefaultJointPositions().Num());
     TArray<FTransform> transforms;
     auto linkNames = Bot->GetLinkNames();
-    if (Bot->ComputeLinkTransformsFromJointPositions(
-            InJointPositions, transforms, EMochiArticulationLinkTransformSpace::LinkToParent)) {
+    if (Bot->ComputeLinkToParentTransforms(InJointPositions, transforms)) {
       for (int iLink = 0; iLink < transforms.Num(); ++iLink) {
         const int32 boneIndex = GetBoneIndex(linkNames[iLink]);
         if (boneIndex >= 0 && boneIndex < BoneSpaceTransforms.Num()) {
@@ -862,8 +861,7 @@ void USuperDexBotComponent::OnUnregister() {
 FBoxSphereBounds USuperDexBotComponent::CalcBounds(const FTransform& LocalToWorld) const {
   if (Bot) {
     FBoxSphereBounds localBounds;
-    if (Bot->ComputeVisualBoundsFromLinkTransforms(
-            BoneSpaceTransforms, EMochiArticulationLinkTransformSpace::LinkToParent, localBounds)) {
+    if (Bot->ComputeVisualBoundsFromLinkToParentTransforms(BoneSpaceTransforms, localBounds)) {
       return localBounds.TransformBy(LocalToWorld);
     }
   }

@@ -46,7 +46,10 @@ void UMochiShellMeshComponent::CreateMochiActor() {
   pointCloudParams.radius = mochi::real(PointCloudRadius);
   pointCloudParams.selfContact = bPointCloudSelfContact;
   pointCloudParams.selfContactExclusionRatio = mochi::real(PointCloudSelfContactExclusionRatio);
-  pointCloudParams.colliderTriangleElementType = ToMochi(ColliderTriangleElementType);
+  if (PointCloudColliderTriangleElementType.IsSet()) {
+    pointCloudParams.colliderTriangleElementType =
+        ToMochi(PointCloudColliderTriangleElementType.GetValue());
+  }
 
   MochiActorObject = UMochiActorObject::CreateShell(
       this,

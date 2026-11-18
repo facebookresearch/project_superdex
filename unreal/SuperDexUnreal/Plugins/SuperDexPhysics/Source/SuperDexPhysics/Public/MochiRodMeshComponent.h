@@ -95,11 +95,9 @@ class SUPERDEXPHYSICS_API UMochiRodMeshComponent : public UMochiDeformableMeshCo
       Category = "Mochi|Point Cloud Collider",
       meta = (EditCondition = "bPointCloudSelfContact"))
   float PointCloudSelfContactExclusionRatio = 1.5f;
-  // Discretization element type for the rod's point-cloud collider. Nodal (the
-  // default) corresponds to one-contact-per-node. P1Q1/P1Q2/P1Q3 enable denser, quadrature-based
-  // contact sampling on linear segments.
+  // Unset uses one collider point per node; a value selects quadrature-based placement.
   UPROPERTY(EditAnywhere, Category = "Mochi|Point Cloud Collider")
-  EMochiActorSegmentElementType ColliderSegmentElementType = EMochiActorSegmentElementType::Nodal;
+  TOptional<EMochiActorSegmentElementType> PointCloudColliderSegmentElementType;
 
  public:
   // Begin IMochiMeshComponentInterface

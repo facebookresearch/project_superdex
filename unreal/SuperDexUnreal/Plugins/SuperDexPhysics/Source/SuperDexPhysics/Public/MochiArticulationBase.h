@@ -20,7 +20,6 @@
 
 #include "MochiArticulationBase.generated.h"
 
-enum class EMochiArticulationLinkTransformSpace : uint8;
 class USkeletalMesh;
 class FSceneView;
 class FViewport;
@@ -47,35 +46,54 @@ class SUPERDEXPHYSICS_API UMochiArticulationBase : public UObject {
   UFUNCTION(BlueprintPure, Category = "Mochi|Articulation")
   virtual const TArray<double>& GetDefaultJointPositions() const PURE_VIRTUAL(
       UMochiArticulationBase::GetDefaultJointPositions, static TArray<double> empty; return empty;);
-  /// Compute link transforms for a given joint configuration. AngleScale and LengthScale
-  /// convert JointPositions units to radians/centimeters. Defaults assume radians/meters.
-  /// FinalLinkIndex can minimize unnecessary computations; -1 computes all link transforms.
+  /// Compute each link relative to its parent. The root entry retains the asset's root
+  /// convention: UMochiArticulation includes its root-joint transform; USuperDexBot uses identity.
+  /// AngleScale and LengthScale convert joint units to radians/centimeters (default: rad/m).
+  /// FinalLinkIndex limits computation; -1 computes all link transforms.
   UFUNCTION(BlueprintCallable, Category = "Mochi|Articulation")
-  virtual bool ComputeLinkTransformsFromJointPositions(
+  bool ComputeLinkToParentTransforms(
       const TArray<double>& JointPositions,
       TArray<FTransform>& OutLinkTransforms,
-      EMochiArticulationLinkTransformSpace TransformSpace,
       double AngleScale = 1.0,
       double LengthScale = 100.0,
-      int FinalLinkIndex = -1) const
-      PURE_VIRTUAL(UMochiArticulationBase::ComputeLinkTransformsFromJointPositions, return false;);
-  /// Compute the joint configuration of given link transforms (one per link): the inverse of
-  /// ComputeLinkTransformsFromJointPositions, with the same TransformSpace and scales (the output
-  /// is divided by AngleScale/LengthScale). Each joint is read from its link's transform relative
-  /// to the link's parent as given (in either space), limited to what the joint can do: a revolute
-  /// angle is the twist of the joint motion about the axis (the nearest rotation about it, in
-  /// [-pi, pi]), a prismatic position is the joint motion's translation along the axis, and a
-  /// spherical joint is the rotation vector of the joint motion. Anything else, such as swing off a
-  /// revolute axis, is discarded, so transforms from ComputeLinkTransformsFromJointPositions
-  /// round-trip and an error in one link's transform only affects its own joint.
+      int FinalLinkIndex = -1) const;
+
+  /// Compute accumulated link transforms in the asset's articulation root frame.
+  /// For UMochiArticulation this is the frame its root joint attaches to, not the root link;
+  /// for USuperDexBot this is the native bot's root link (whose transform remains identity).
+  /// AngleScale and LengthScale convert joint units to radians/centimeters (default: rad/m).
+  /// FinalLinkIndex limits computation; -1 computes all link transforms.
   UFUNCTION(BlueprintCallable, Category = "Mochi|Articulation")
-  virtual bool ComputeJointPositionsFromLinkTransforms(
+  bool ComputeLinkToArticulationRootTransforms(
+      const TArray<double>& JointPositions,
+      TArray<FTransform>& OutLinkTransforms,
+      double AngleScale = 1.0,
+      double LengthScale = 100.0,
+      int FinalLinkIndex = -1) const;
+
+  /// Compute OutJointPositions from one parent-relative transform per link.
+  /// Inverts ComputeLinkToParentTransforms, dividing joint motion by AngleScale/LengthScale.
+  /// Revolute motion is projected onto its axis (the nearest twist in [-pi, pi]); prismatic
+  /// motion onto its axis; spherical motion becomes a rotation vector. Unsupported motion
+  /// is discarded, and a link's error only affects its own joint.
+  UFUNCTION(BlueprintCallable, Category = "Mochi|Articulation")
+  bool ComputeJointPositionsFromLinkToParentTransforms(
       const TArray<FTransform>& LinkTransforms,
       TArray<double>& OutJointPositions,
-      EMochiArticulationLinkTransformSpace TransformSpace,
       double AngleScale = 1.0,
-      double LengthScale = 100.0) const
-      PURE_VIRTUAL(UMochiArticulationBase::ComputeJointPositionsFromLinkTransforms, return false;);
+      double LengthScale = 100.0) const;
+
+  /// Compute OutJointPositions from one articulation-root-relative transform per link.
+  /// Inverts ComputeLinkToArticulationRootTransforms with the same scales and joint-motion
+  /// projection as ComputeJointPositionsFromLinkToParentTransforms. The articulation root
+  /// frame follows each asset's convention, as in the forward method.
+  UFUNCTION(BlueprintCallable, Category = "Mochi|Articulation")
+  bool ComputeJointPositionsFromLinkToArticulationRootTransforms(
+      const TArray<FTransform>& LinkTransforms,
+      TArray<double>& OutJointPositions,
+      double AngleScale = 1.0,
+      double LengthScale = 100.0) const;
+
   /// Get the SkeletalMesh associated with this articulation.
   UFUNCTION(BlueprintPure, Category = "Mochi|Articulation")
   virtual USkeletalMesh* GetSkeletalMesh() const
@@ -88,15 +106,22 @@ class SUPERDEXPHYSICS_API UMochiArticulationBase : public UObject {
   UFUNCTION(BlueprintPure, Category = "Mochi|Articulation")
   virtual TArray<FName> GetJointNames() const
       PURE_VIRTUAL(UMochiArticulationBase::GetJointNames, return {};);
-  // Compute the bounds of the articulation from an array of LinksToTransformSpace transforms. This
-  // can be used as a replacement for USkeletalMesh::GetBounds() which in contrast does not change
-  // with pose.
+  /// Compute pose-dependent visual bounds by accumulating link-to-parent transforms.
+  /// OutBounds uses the asset's articulation root frame, as in
+  /// ComputeLinkToArticulationRootTransforms.
   UFUNCTION(BlueprintCallable, Category = "Mochi|Articulation")
-  virtual bool ComputeVisualBoundsFromLinkTransforms(
-      const TArray<FTransform>& LinksToTransformSpace,
-      EMochiArticulationLinkTransformSpace TransformSpace,
-      FBoxSphereBounds& OutBounds) const
-      PURE_VIRTUAL(UMochiArticulationBase::ComputeVisualBoundsFromLinkTransforms, return false;);
+  bool ComputeVisualBoundsFromLinkToParentTransforms(
+      const TArray<FTransform>& LinksToParent,
+      FBoxSphereBounds& OutBounds) const;
+
+  /// Compute pose-dependent visual bounds from already accumulated articulation-root transforms.
+  /// OutBounds uses the asset's articulation root frame, as in
+  /// ComputeLinkToArticulationRootTransforms.
+  UFUNCTION(BlueprintCallable, Category = "Mochi|Articulation")
+  bool ComputeVisualBoundsFromLinkToArticulationRootTransforms(
+      const TArray<FTransform>& LinksToArticulationRoot,
+      FBoxSphereBounds& OutBounds) const;
+
   // Whether ToUrdfXml can export the articulation.
   virtual bool SupportsUrdfExport() const {
     return false;
@@ -158,6 +183,29 @@ class SUPERDEXPHYSICS_API UMochiArticulationBase : public UObject {
       bool bShowJoints) const {}
 
  protected:
+  virtual bool ComputeLinkTransformsInternal(
+      const TArray<double>& JointPositions,
+      TArray<FTransform>& OutLinkTransforms,
+      bool bToArticulationRoot,
+      double AngleScale,
+      double LengthScale,
+      int FinalLinkIndex) const
+      PURE_VIRTUAL(UMochiArticulationBase::ComputeLinkTransformsInternal, return false;);
+
+  virtual bool ComputeJointPositionsInternal(
+      const TArray<FTransform>& LinkTransforms,
+      TArray<double>& OutJointPositions,
+      bool bFromArticulationRoot,
+      double AngleScale,
+      double LengthScale) const
+      PURE_VIRTUAL(UMochiArticulationBase::ComputeJointPositionsInternal, return false;);
+
+  virtual bool ComputeVisualBoundsInternal(
+      const TArray<FTransform>& LinksToTransformSpace,
+      bool bToArticulationRoot,
+      FBoxSphereBounds& OutBounds) const
+      PURE_VIRTUAL(UMochiArticulationBase::ComputeVisualBoundsInternal, return false;);
+
   // Hook for FMochiArticulationEditorToolkit which needs to know when the SKM data
   // changes but doesn't necessarily result in a change of pointer address.
   TFunction<void(USkeletalMesh*)> OnSkeletalMeshRegenerated;
