@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.12"
 
 [[package]]
@@ -517,7 +517,7 @@ wheels = [
 
 [[package]]
 name = "superdex-dev"
-version = "1.0.1"
+version = "1.1.0"
 source = { virtual = "." }
 
 [package.optional-dependencies]
@@ -588,7 +588,7 @@ provides-extras = ["build", "core", "double", "fp64", "gui"]
 
 [[package]]
 name = "superdex-lab"
-version = "1.0.1"
+version = "1.1.0"
 source = { editable = "superdex_lab" }
 dependencies = [
     { name = "gymnasium" },
@@ -603,18 +603,18 @@ requires-dist = [
     { name = "gymnasium", specifier = ">=1.1.1" },
     { name = "h5py", specifier = ">=3.11.0" },
     { name = "numpy", specifier = ">=1.26.4" },
-    { name = "superdex-physics", specifier = "==1.0.1" },
-    { name = "superdex-robotics", specifier = "==1.0.1" },
+    { name = "superdex-physics", specifier = "==1.1.0" },
+    { name = "superdex-robotics", specifier = "==1.1.0" },
 ]
 
 [[package]]
 name = "superdex-mesh-cli"
-version = "1.0.1"
+version = "1.1.0"
 source = { editable = "superdex_mesh_cli" }
 
 [[package]]
 name = "superdex-physics"
-version = "1.0.1"
+version = "1.1.0"
 source = { editable = "superdex_physics/wheels/superdex-physics" }
 dependencies = [
     { name = "imageio", extra = ["ffmpeg"] },
@@ -638,8 +638,8 @@ requires-dist = [
     { name = "pyre-extensions" },
     { name = "rerun-sdk", specifier = "==0.33.0" },
     { name = "scipy" },
-    { name = "superdex-physics-fp64", marker = "extra == 'double'", specifier = "==1.0.1" },
-    { name = "superdex-physics-fp64", marker = "extra == 'fp64'", specifier = "==1.0.1" },
+    { name = "superdex-physics-fp64", marker = "extra == 'double'", specifier = "==1.1.0" },
+    { name = "superdex-physics-fp64", marker = "extra == 'fp64'", specifier = "==1.1.0" },
     { name = "tabulate" },
     { name = "trimesh" },
     { name = "typing-extensions" },
@@ -648,23 +648,23 @@ provides-extras = ["double", "fp64"]
 
 [[package]]
 name = "superdex-physics-debugger"
-version = "1.0.1"
+version = "1.1.0"
 source = { editable = "superdex_physics_debugger" }
 
 [[package]]
 name = "superdex-physics-fp64"
-version = "1.0.1"
+version = "1.1.0"
 source = { editable = "superdex_physics/wheels/superdex-physics-fp64" }
 dependencies = [
     { name = "superdex-physics" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "superdex-physics", specifier = "==1.0.1" }]
+requires-dist = [{ name = "superdex-physics", specifier = "==1.1.0" }]
 
 [[package]]
 name = "superdex-robotics"
-version = "1.0.1"
+version = "1.1.0"
 source = { editable = "superdex_robotics/wheels/superdex-robotics" }
 dependencies = [
     { name = "superdex-physics" },
@@ -672,15 +672,15 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "superdex-physics", specifier = "==1.0.1" },
-    { name = "superdex-robotics-fp64", marker = "extra == 'double'", specifier = "==1.0.1" },
-    { name = "superdex-robotics-fp64", marker = "extra == 'fp64'", specifier = "==1.0.1" },
+    { name = "superdex-physics", specifier = "==1.1.0" },
+    { name = "superdex-robotics-fp64", marker = "extra == 'double'", specifier = "==1.1.0" },
+    { name = "superdex-robotics-fp64", marker = "extra == 'fp64'", specifier = "==1.1.0" },
 ]
 provides-extras = ["double", "fp64"]
 
 [[package]]
 name = "superdex-robotics-fp64"
-version = "1.0.1"
+version = "1.1.0"
 source = { editable = "superdex_robotics/wheels/superdex-robotics-fp64" }
 dependencies = [
     { name = "superdex-physics-fp64" },
@@ -689,20 +689,20 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "superdex-physics-fp64", specifier = "==1.0.1" },
-    { name = "superdex-robotics", specifier = "==1.0.1" },
+    { name = "superdex-physics-fp64", specifier = "==1.1.0" },
+    { name = "superdex-robotics", specifier = "==1.1.0" },
 ]
 
 [[package]]
 name = "superdex-studio"
-version = "1.0.1"
+version = "1.1.0"
 source = { editable = "superdex_studio" }
 dependencies = [
     { name = "superdex-mesh-cli" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "superdex-mesh-cli", specifier = "==1.0.1" }]
+requires-dist = [{ name = "superdex-mesh-cli", specifier = "==1.1.0" }]
 
 [[package]]
 name = "tabulate"

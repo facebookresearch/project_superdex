@@ -18,14 +18,14 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "superdex-studio"
-version = "1.0.1"
+version = "1.1.0"
 requires-python = ">=3.12"
 authors = [{name = "SuperDex Team"}]
 description = "Interactive scene and mesh authoring application for SuperDex"
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE", "thirdparty_licenses/**/*"]
-dependencies = ["superdex-mesh-cli==1.0.1"]
+dependencies = ["superdex-mesh-cli==1.1.0"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Environment :: X11 Applications",

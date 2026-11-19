@@ -18,7 +18,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "superdex"
-version = "1.0.1"
+version = "1.1.0"
 requires-python = ">=3.12"
 authors = [{name = "SuperDex Team"}]
 description = "Umbrella package for the public SuperDex Python distributions"
@@ -26,13 +26,13 @@ readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
 dependencies = [
-    "superdex-lab==1.0.1",
-    "superdex-physics==1.0.1",
-    "superdex-physics-debugger==1.0.1",
-    "superdex-physics-fp64==1.0.1",
-    "superdex-robotics==1.0.1",
-    "superdex-robotics-fp64==1.0.1",
-    "superdex-studio==1.0.1",
+    "superdex-lab==1.1.0",
+    "superdex-physics==1.1.0",
+    "superdex-physics-debugger==1.1.0",
+    "superdex-physics-fp64==1.1.0",
+    "superdex-robotics==1.1.0",
+    "superdex-robotics-fp64==1.1.0",
+    "superdex-studio==1.1.0",
 ]
 classifiers = [
     "Development Status :: 5 - Production/Stable",

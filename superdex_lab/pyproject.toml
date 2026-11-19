@@ -18,7 +18,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "superdex-lab"
-version = "1.0.1"
+version = "1.1.0"
 requires-python = ">=3.12"
 authors = [{name = "SuperDex Team"}]
 description = "Gymnasium-based environment and benchmarking surfaces for SuperDex"
@@ -26,8 +26,8 @@ readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
 dependencies = [
-    "superdex-physics==1.0.1",
-    "superdex-robotics==1.0.1",
+    "superdex-physics==1.1.0",
+    "superdex-robotics==1.1.0",
     "gymnasium>=1.1.1",
     "h5py>=3.11.0",
     "numpy>=1.26.4",
