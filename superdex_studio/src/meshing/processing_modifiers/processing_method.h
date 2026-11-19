@@ -55,11 +55,12 @@ namespace superdex::studio {
 // What a mesh embedded in another is for: the fields of mochi::ModelData it is exported as.
 enum class EmbeddedMeshRole { ContactSkin, VisualMesh };
 
-// Triangle meshes embedded in a stage's mesh, each by skinning that gives its nodes as weighted
-// combinations of that mesh's nodes. They are valid only for the exact mesh they were embedded in,
-// so they pass down the stack from the Embed modifier that made them only through stages that
-// accept them (see MeshProcessingMethod::AcceptsEmbeddedMeshes). Named after, and exported as, the
-// mochi::ModelData fields of the same names.
+// Triangle meshes embedded in a stage's mesh. Skinning references that mesh's nodes for triangular
+// and tetrahedral hosts, or its elements for polylines (see mochi::ModelData::contactSkinMesh).
+// They are valid only for the exact mesh they were embedded in, so they pass down the stack from
+// the Embed modifier that made them only through stages that accept them (see
+// MeshProcessingMethod::AcceptsEmbeddedMeshes). Named after, and exported as, the mochi::ModelData
+// fields of the same names.
 struct EmbeddedMeshes {
   std::optional<mochi::MeshData> contactSkinMesh;
   std::optional<mochi::MeshData> visualMesh;
@@ -178,13 +179,14 @@ struct ModifierGuiContext {
   bool exportPathCollides = false;
 };
 
-// Size of a triangle mesh embedded in a tetrahedral mesh, and how far its nodes reach outside the
-// tetrahedra (mochi::model::MaxAuxiliaryMeshExtrapolation, in element heights).
+// Size of a triangle mesh embedded in a stage's mesh and, when that is a tetrahedral mesh, how far
+// its nodes reach outside the tetrahedra (mochi::model::MaxAuxiliaryMeshExtrapolation, in element
+// heights).
 struct EmbeddedMeshStats {
   EmbeddedMeshRole role = EmbeddedMeshRole::ContactSkin;
   int nodes = 0;
   int triangles = 0;
-  double maxExtrapolation = 0.0;
+  std::optional<double> maxExtrapolation;
 };
 
 // Statistics shown in a mesh's viz "Stats" block. `base` is the geometry-derived summary (verts /

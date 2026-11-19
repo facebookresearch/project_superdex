@@ -1231,3 +1231,125 @@ TEST_F(ProcessCommandTest, APolylineFailsAStageThatTakesOnlySurfaces) {
   EXPECT_FALSE(report.stages[1].succeeded);
   EXPECT_NE(report.stages[1].error.find("polyline"), std::string::npos) << report.stages[1].error;
 }
+
+TEST_F(ProcessCommandTest, APolylineModelGetsATubularContactSkinAndVisualMesh) {
+  constexpr char const* kTubeContactSkin =
+      R"({"modifier": "Embed Contact Skin", "method": "Tube", "enabled": true, "collapsed": true,
+          "properties": {"radius": 0.005, "numCrossSectionSegments": 8}})";
+  constexpr char const* kTubeVisualMesh =
+      R"({"modifier": "Embed Visual Mesh", "method": "Tube", "enabled": true, "collapsed": true,
+          "properties": {"radius": 0.005, "numCrossSectionSegments": 16}})";
+  mochi::ModelData const rod = RodModel();
+  fs::path const modelPath = _root / "rod.mochi.h5";
+  mochi::model_utils::SaveToFile(
+      rod, modelPath.string(), mochi::FileFormat::H5, mochi::test::ExpectOK{});
+  fs::path const pipeline = _root / "intermediates" / "rod.StudioProcessing.json";
+  WriteModifiers(
+      pipeline, {kMochiSourceFromModelViewer, kTubeContactSkin, kTubeVisualMesh, kNoSdfExport});
+
+  mochi::Error error;
+  ProcessReport const report = RunProcessingPipeline(
+      {.pipelinePath = pipeline.string(), .slots = {.mochiPath = modelPath.string()}}, error);
+
+  ASSERT_TRUE(error.IsOK()) << error.GetDescription();
+  ASSERT_TRUE(report.succeeded);
+  ASSERT_EQ(report.stages.size(), 4u);
+  fs::path const exportedPath = report.stages[3].exportedPath;
+  mochi::ModelData const model = mochi::model_utils::LoadFromFile(exportedPath.string(), error);
+  ASSERT_TRUE(error.IsOK()) << error.GetDescription();
+  ASSERT_TRUE(model.mesh.has_value());
+  EXPECT_EQ(model.mesh->nodesPerElement, 2);
+  EXPECT_EQ(model.mesh->GetNumNodes(), 3);
+  EXPECT_SPAN_EQ(model.mesh->coordinates, rod.mesh->coordinates);
+  EXPECT_EQ(model.mesh->connectivity, rod.mesh->connectivity);
+  ASSERT_TRUE(model.elementFrameAxes.has_value());
+  EXPECT_SPAN_EQ(*model.elementFrameAxes, *rod.elementFrameAxes);
+  // Two element rings, two end rings, and two cap nodes.
+  ASSERT_TRUE(model.contactSkinMesh.has_value());
+  EXPECT_EQ(model.contactSkinMesh->GetNumNodes(), 8 * 4 + 2);
+  ASSERT_TRUE(model.visualMesh.has_value());
+  EXPECT_EQ(model.visualMesh->GetNumNodes(), 16 * 4 + 2);
+  mochi::Real3 const firstTubeNode{0.0f, 0.0f, 0.005f};
+  EXPECT_NEAR_EQ(NodePosition(*model.contactSkinMesh, 0), firstTubeNode);
+  EXPECT_NEAR_EQ(NodePosition(*model.visualMesh, 0), firstTubeNode);
+  EXPECT_FALSE(model.sdf.has_value());
+
+  mochi::Context* const context = mochi::CreateContext(0);
+  MOCHI_DEFER(mochi::DestroyContext(context));
+  mochi::Scene* const scene = context->CreateScene("rod_tube_export");
+  MOCHI_DEFER(context->DestroyScene(scene));
+  mochi::RodActorParams params;
+  params.shape = context->LoadShapeFromFile(exportedPath.string(), error);
+  ASSERT_TRUE(error.IsOK()) << error.GetDescription();
+  MOCHI_DEFER(context->ReleaseShape(params.shape));
+  params.useContactSkin = true;
+  EXPECT_NE(scene->CreateRodActor(params, error), nullptr);
+  EXPECT_TRUE(error.IsOK()) << error.GetDescription();
+  EXPECT_EQ(context->GetShapeVisualMesh(params.shape, error).GetNumNodes(), 16 * 4 + 2);
+}
+
+// Tube embeds only in a polyline, and Upstream Surface only in a tetrahedral mesh.
+TEST_F(ProcessCommandTest, EachEmbedMethodNeedsItsKindOfMesh) {
+  constexpr char const* kTubeContactSkin =
+      R"({"modifier": "Embed Contact Skin", "method": "Tube", "enabled": true, "collapsed": true,
+          "properties": {"radius": 0.01}})";
+  WriteCubeStl(_root / "cad" / "cube.stl");
+  fs::path const surfacePipeline = _root / "intermediates" / "cube.StudioProcessing.json";
+  WriteModifiers(surfacePipeline, {kSourceFromModelViewer, kTubeContactSkin});
+  fs::path const polylinePipeline = _root / "rods" / "intermediates" / "rod.StudioProcessing.json";
+  fs::path const source = _root / "rods" / "rod.mochi.h5";
+  mochi::model_utils::SaveToFile(
+      RodModel(), source.string(), mochi::FileFormat::H5, mochi::test::ExpectOK{});
+  WriteModifiers(polylinePipeline, {kMochiSourceFromModelViewer, kEmbedSourceAsContactSkin});
+
+  mochi::Error surfaceError;
+  ProcessReport const surface =
+      RunProcessingPipeline({.pipelinePath = surfacePipeline.string()}, surfaceError);
+  mochi::Error polylineError;
+  ProcessReport const polyline = RunProcessingPipeline(
+      {.pipelinePath = polylinePipeline.string(), .slots = {.mochiPath = source.string()}},
+      polylineError);
+
+  ASSERT_TRUE(surfaceError.IsOK()) << surfaceError.GetDescription();
+  ASSERT_EQ(surface.stages.size(), 2u);
+  EXPECT_FALSE(surface.stages[1].succeeded);
+  EXPECT_NE(surface.stages[1].error.find("polyline"), std::string::npos) << surface.stages[1].error;
+  ASSERT_TRUE(polylineError.IsOK()) << polylineError.GetDescription();
+  ASSERT_EQ(polyline.stages.size(), 2u);
+  EXPECT_FALSE(polyline.stages[1].succeeded);
+  EXPECT_NE(polyline.stages[1].error.find("Tube"), std::string::npos) << polyline.stages[1].error;
+}
+
+// Around a closed loop, the tube has a ring per element and no caps.
+TEST_F(ProcessCommandTest, ATubeAroundAClosedLoopHasARingPerElement) {
+  constexpr char const* kTubeContactSkin =
+      R"({"modifier": "Embed Contact Skin", "method": "Tube", "enabled": true, "collapsed": true,
+          "properties": {"radius": 0.01, "numCrossSectionSegments": 6}})";
+  mochi::ModelData rod;
+  rod.mesh.emplace();
+  rod.mesh->nodesPerElement = 2;
+  rod.mesh->coordinates = {0, 0, 0, 0.1f, 0, 0, 0.1f, 0.1f, 0, 0, 0.1f, 0};
+  rod.mesh->connectivity = {0, 1, 1, 2, 2, 3, 3, 0};
+  rod.elementFrameAxes = mochi::DynamicArray<mochi::real>{0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1};
+  fs::path const modelPath = _root / "ring.mochi.h5";
+  mochi::model_utils::SaveToFile(
+      rod, modelPath.string(), mochi::FileFormat::H5, mochi::test::ExpectOK{});
+  fs::path const pipeline = _root / "intermediates" / "ring.StudioProcessing.json";
+  WriteModifiers(pipeline, {kMochiSourceFromModelViewer, kTubeContactSkin, kNoSdfExport});
+
+  mochi::Error error;
+  ProcessReport const report = RunProcessingPipeline(
+      {.pipelinePath = pipeline.string(), .slots = {.mochiPath = modelPath.string()}}, error);
+
+  ASSERT_TRUE(error.IsOK()) << error.GetDescription();
+  ASSERT_TRUE(report.succeeded);
+  ASSERT_EQ(report.stages.size(), 3u);
+  mochi::ModelData const model =
+      mochi::model_utils::LoadFromFile(report.stages[2].exportedPath, error);
+  ASSERT_TRUE(error.IsOK()) << error.GetDescription();
+  ASSERT_TRUE(model.mesh.has_value());
+  EXPECT_EQ(model.mesh->GetNumElements(), 4);
+  ASSERT_TRUE(model.contactSkinMesh.has_value());
+  EXPECT_EQ(model.contactSkinMesh->GetNumNodes(), 6 * 4);
+  EXPECT_EQ(model.contactSkinMesh->GetNumElements(), 2 * 6 * 4);
+}

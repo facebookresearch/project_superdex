@@ -362,8 +362,11 @@ void ComposeStats(MeshStats& stats) {
   if (stats.embeddedMesh.has_value()) {
     EmbeddedMeshStats const& mesh = *stats.embeddedMesh;
     out << EmbeddedMeshStatsHeading(mesh.role) << mesh.nodes << " nodes, " << mesh.triangles
-        << " tris, max extrapolation " << std::fixed << std::setprecision(2)
-        << mesh.maxExtrapolation << "\n";
+        << " tris";
+    if (mesh.maxExtrapolation.has_value()) {
+      out << ", max extrapolation " << std::fixed << std::setprecision(2) << *mesh.maxExtrapolation;
+    }
+    out << "\n";
   }
   out << stats.base;
   if (stats.hausdorff >= 0.0) {
@@ -2722,7 +2725,7 @@ void ModelEditor::RunGenerationCascade(
           mod.output.stats.fileSizeLabel = "Est. File Size";
           mod.output.stats.tetMesh = shownEmbedded != nullptr ? std::nullopt : TetCounts(output);
           mod.output.stats.embeddedMesh = shownEmbedded != nullptr
-              ? std::optional{MeasureEmbeddedMesh(*embeddedRole, *shownEmbedded)}
+              ? std::optional{MeasureEmbeddedMesh(*embeddedRole, *shownEmbedded, output)}
               : std::nullopt;
           mod.output.stats.sdfGrid = std::nullopt;
           // Let the modifier contribute output-specific stats (e.g. the baked SDF grid), then

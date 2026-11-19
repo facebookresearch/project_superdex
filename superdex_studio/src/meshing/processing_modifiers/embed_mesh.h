@@ -16,11 +16,10 @@
 
 #pragma once
 
-// "Embed Contact Skin" and "Embed Visual Mesh" modifiers: each passes its input mesh on unchanged
-// with one more triangle mesh embedded in it, the soft actor's contact skin or visual mesh, which
-// Export Mochi Model writes alongside it (see EmbeddedMeshes). Their methods are the ways of making
-// that mesh, and each checks that it supports the kind of mesh it embeds in. The editor shows the
-// embedded mesh as the stage's output.
+// "Embed Contact Skin" and "Embed Visual Mesh" pass their input mesh on unchanged with an embedded
+// triangle mesh: a soft or rod actor's contact skin or visual mesh, which Export Mochi Model writes
+// alongside it (see EmbeddedMeshes). Each method checks the kind of mesh it embeds in. The editor
+// shows the embedded mesh as the stage's output.
 
 #include "meshing/processing_modifiers/processing_modifier.h"
 
@@ -31,7 +30,10 @@ namespace superdex::studio {
 ModifierRegistryEntry MakeEmbedContactSkinEntry();
 ModifierRegistryEntry MakeEmbedVisualMeshEntry();
 
-// The stats of @p mesh, embedded as @p role, for the stage that embedded it.
-EmbeddedMeshStats MeasureEmbeddedMesh(EmbeddedMeshRole role, mochi::MeshData const& mesh);
+// The stats of @p mesh, embedded as @p role in @p host, for the stage that embedded it.
+EmbeddedMeshStats MeasureEmbeddedMesh(
+    EmbeddedMeshRole role,
+    mochi::MeshData const& mesh,
+    mochi::MeshData const& host);
 
 } // namespace superdex::studio

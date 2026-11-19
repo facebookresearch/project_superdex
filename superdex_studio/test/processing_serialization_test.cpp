@@ -22,6 +22,7 @@
 
 #include <mochi_core/test/mochi_test_helpers.h>
 #include <mochi_core/utils/file_utils.h>
+#include <mochi_core/utils/nd_array_utils.h>
 
 #include <picojson/picojson.h>
 
@@ -216,4 +217,84 @@ TEST_F(ProcessingSerializationTest, ListsValuesOfTheWrongType) {
       "modifiers[0] (Source from CAD Model: From Model Viewer): 1 unreadable property",
   };
   EXPECT_EQ(loaded.issues, expected);
+}
+
+TEST_F(ProcessingSerializationTest, TubeEmbeddingRejectsMalformedPolyline) {
+  for (char const* role : {"Embed Contact Skin", "Embed Visual Mesh"}) {
+    SCOPED_TRACE(role);
+    LoadedPipeline const loaded = Load(
+        std::string{R"({"version": 1, "modifiers": [{"modifier": ")"} + role +
+        R"(", "method": "Tube", "enabled": true, "properties": {}}]})");
+    ASSERT_EQ(loaded.modifiers.size(), 1);
+    StageMesh input;
+    input.mesh.nodesPerElement = 2;
+    input.mesh.coordinates = {0, 0, 0, 1};
+    input.mesh.connectivity = {0, 1};
+    mochi::Error error;
+
+    StageMesh const output = loaded.modifiers.front()->Run(input, {}, error);
+
+    EXPECT_FALSE(error.IsOK());
+    EXPECT_NE(std::string{error.GetDescription()}.find("multiple of three"), std::string::npos);
+    EXPECT_TRUE(output.mesh.coordinates.empty());
+    EXPECT_TRUE(output.embedded.IsEmpty());
+
+    input.mesh.coordinates = {0, 0, 0, 1, 0, 0};
+    StageMesh const missingAxes =
+        loaded.modifiers.front()->Run(input, {}, mochi::test::ExpectNotOK{});
+    EXPECT_TRUE(missingAxes.mesh.coordinates.empty());
+    EXPECT_TRUE(missingAxes.embedded.IsEmpty());
+
+    input.elementFrameAxes = mochi::DynamicArray<mochi::real>{0, 1, 0, 0};
+    StageMesh const malformedAxes =
+        loaded.modifiers.front()->Run(input, {}, mochi::test::ExpectNotOK{});
+    EXPECT_TRUE(malformedAxes.mesh.coordinates.empty());
+    EXPECT_TRUE(malformedAxes.embedded.IsEmpty());
+  }
+}
+
+TEST_F(ProcessingSerializationTest, TubeEmbeddingFollowsTransformedFrameAxes) {
+  for (char const* role : {"Embed Contact Skin", "Embed Visual Mesh"}) {
+    SCOPED_TRACE(role);
+    LoadedPipeline const loaded = Load(std::string{R"({"version": 1, "modifiers": [
+          {"modifier": "Apply SRT Transformation", "method": "SRT Transform", "enabled": true,
+           "properties": {"rotation": [0.5, 0.5, 0.5, 0.5]}},
+          {"modifier": ")"} + role + R"(", "method": "Tube", "enabled": true,
+           "properties": {"radius": 0.125, "numCrossSectionSegments": 4}}]})");
+    ASSERT_EQ(loaded.modifiers.size(), 2);
+    StageMesh input;
+    input.mesh.nodesPerElement = 2;
+    input.mesh.coordinates = {0, 0, 0, 1, 0, 0, 2, 0, 0};
+    input.mesh.connectivity = {0, 1, 1, 2};
+    input.elementFrameAxes = mochi::DynamicArray<mochi::real>{0, 1, 0, 0, 0, 1};
+    StageMesh const transformed = loaded.modifiers[0]->Run(input, {}, mochi::test::ExpectOK{});
+    mochi::DynamicArray<mochi::real> const expectedAxes = {0, 0, 1, 1, 0, 0};
+    ASSERT_TRUE(transformed.elementFrameAxes.has_value());
+    EXPECT_SPAN_EQ(*transformed.elementFrameAxes, expectedAxes);
+
+    for (StageMesh const& polyline : {input, transformed}) {
+      StageMesh const output = loaded.modifiers[1]->Run(polyline, {}, mochi::test::ExpectOK{});
+      EmbeddedMeshRole const meshRole = std::string{role} == "Embed Contact Skin"
+          ? EmbeddedMeshRole::ContactSkin
+          : EmbeddedMeshRole::VisualMesh;
+      auto const& tube = output.embedded.Mesh(meshRole);
+      ASSERT_TRUE(tube.has_value());
+      ASSERT_TRUE(output.elementFrameAxes.has_value());
+      EXPECT_SPAN_EQ(*output.elementFrameAxes, *polyline.elementFrameAxes);
+      auto const nodes =
+          mochi::Unflatten<mochi::Real3 const>(mochi::MakeConstSpan(polyline.mesh.coordinates));
+      auto const axes =
+          mochi::Unflatten<mochi::Real3 const>(mochi::MakeConstSpan(*polyline.elementFrameAxes));
+      auto const positions =
+          mochi::Unflatten<mochi::Real3 const>(mochi::MakeConstSpan(tube->coordinates));
+      ASSERT_EQ(tube->GetNumNodes(), 18);
+      for (int ring = 0; ring < 4; ++ring) {
+        int const element = ring < 2 ? 0 : 1;
+        mochi::Real3 const center = ring == 0 ? nodes[0]
+            : ring == 3                       ? nodes[2]
+                        : mochi::real{0.5} * (nodes[element] + nodes[element + 1]);
+        EXPECT_NEAR_EQ(positions[4 * ring], center + mochi::real{0.125} * axes[element]);
+      }
+    }
+  }
 }

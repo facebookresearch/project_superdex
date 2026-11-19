@@ -20,9 +20,12 @@
 
 #include <imgui.h>
 
-#include <mochi_core/geometry/model_utils.h> // MaxAuxiliaryMeshExtrapolation, ValidateSkinning
+#include <mochi_core/geometry/mesh_data_utils.h> // IsPolylineClosedLoop
+#include <mochi_core/geometry/model_utils.h> // GenerateTubularSkinMesh, MaxAuxiliaryMeshExtrapolation, ValidateSkinning
+#include <mochi_core/utils/array_utils.h>
 #include <mochi_physics/utils/mochi_model_utils.h> // EmbedInTetrahedralMesh
 
+#include <algorithm>
 #include <memory>
 #include <optional>
 #include <utility>
@@ -33,14 +36,16 @@ namespace superdex::studio {
 namespace {
 
 // Base of the Embed modifiers' methods: passes the input on with one more mesh embedded in it, in
-// the role its modifier embeds. Embedding is invariant under the rotation from the stack's renderer
-// space to Mochi space, so it is done in the stack's space and Export Mochi Model converts both.
+// the role its modifier embeds.
 template <typename Props>
 class EmbedMethod : public ReflectedMethod<Props> {
  public:
   explicit EmbedMethod(EmbeddedMeshRole role) : _role(role) {}
 
   [[nodiscard]] bool AcceptsTetrahedralInput() const override {
+    return true;
+  }
+  [[nodiscard]] bool AcceptsPolylineInput() const override {
     return true;
   }
   [[nodiscard]] bool AcceptsEmbeddedMeshes() const override {
@@ -64,15 +69,18 @@ class EmbedMethod : public ReflectedMethod<Props> {
         "Embed: an Embed modifier above has already embedded a mesh in this role. Remove one of "
         "the two.");
     MOCHI_ERROR_RETURN(error, {});
-    mochi::MeshData embedded = Embed(input.mesh, ctx, error);
+    mochi::MeshData embedded = Embed(input, ctx, error);
     MOCHI_ERROR_RETURN(error, {});
     // Checked here so an invalid embedding fails the stage that made it, not the export.
     if (!embedded.skinning.has_value()) {
       MOCHI_ERROR_SET(error, "Embed: the embedded mesh has no skinning.");
       return {};
     }
+    // A polyline's embeddings skin to its elements, any other mesh's to its nodes.
+    int const numSkinningSources =
+        input.mesh.nodesPerElement == 2 ? input.mesh.GetNumElements() : input.mesh.GetNumNodes();
     mochi::model::ValidateSkinning(
-        *embedded.skinning, embedded.GetNumNodes(), input.mesh.GetNumNodes(), error);
+        *embedded.skinning, embedded.GetNumNodes(), numSkinningSources, error);
     MOCHI_ERROR_RETURN(error, {});
     StageMesh output = input;
     output.embedded.Mesh(_role) = std::move(embedded);
@@ -80,18 +88,19 @@ class EmbedMethod : public ReflectedMethod<Props> {
   }
 
  protected:
-  // The mesh to embed in @p mesh, with the skinning that embeds it there.
+  // The mesh to embed in @p input, with the skinning that embeds it there.
   virtual mochi::MeshData
-  Embed(mochi::MeshData const& mesh, ModifierRunContext const& ctx, mochi::Error& error) const = 0;
+  Embed(StageMesh const& input, ModifierRunContext const& ctx, mochi::Error& error) const = 0;
 
   // What the embedded mesh is for, shown above each method's parameters.
   [[nodiscard]] char const* RoleSummary() const {
     switch (_role) {
       case EmbeddedMeshRole::ContactSkin:
-        return "A soft actor with Use Contact Skin on takes its contact samples from its contact "
-               "skin instead of its tetrahedral mesh's boundary.";
+        return "A soft or rod actor with Use Contact Skin on takes its contact samples from its "
+               "contact skin instead of its tetrahedral mesh's boundary or its centerline.";
       case EmbeddedMeshRole::VisualMesh:
-        return "Renderers draw a soft actor by its visual mesh, which deforms with the simulation.";
+        return "Renderers draw a soft or rod actor by its visual mesh, which deforms with the "
+               "simulation.";
     }
     return "";
   }
@@ -141,10 +150,14 @@ class UpstreamSurfaceMethod : public EmbedMethod<UpstreamSurfaceProps> {
   }
 
  protected:
-  mochi::MeshData Embed(
-      mochi::MeshData const& mesh,
-      ModifierRunContext const& ctx,
-      mochi::Error& error) const override {
+  mochi::MeshData Embed(StageMesh const& input, ModifierRunContext const& ctx, mochi::Error& error)
+      const override {
+    mochi::MeshData const& mesh = input.mesh;
+    MOCHI_ERROR_IF(
+        mesh.nodesPerElement == 2,
+        error,
+        "Embed: Upstream Surface embeds in a tetrahedral mesh. Choose the Tube method to embed in a "
+        "polyline.");
     MOCHI_ERROR_IF(
         mesh.nodesPerElement != 4,
         error,
@@ -162,10 +175,78 @@ class UpstreamSurfaceMethod : public EmbedMethod<UpstreamSurfaceProps> {
   }
 };
 
+struct TubeProps {
+  double radius = 0.005; // [m]
+  int numCrossSectionSegments = 8;
+
+  MOCHI_STRUCT_BEGIN(superdex::studio::TubeProps)
+  MOCHI_FIELD(radius)
+  MOCHI_FIELD(numCrossSectionSegments)
+  MOCHI_STRUCT_END()
+};
+
+class TubeMethod : public EmbedMethod<TubeProps> {
+ public:
+  using EmbedMethod::EmbedMethod;
+
+  [[nodiscard]] char const* Name() const override {
+    return "Tube";
+  }
+  [[nodiscard]] char const* Description() const override {
+    return "Embed a tube of circular cross-section around a polyline, skinned to its elements.";
+  }
+
+  void ShowParams(ModifierGuiContext const& gui) override {
+    ImGui::TextWrapped("%s", RoleSummary());
+    if (ImGui::InputDouble("Radius (m)", &_props.radius, 0.0, 0.0, "%.4f")) {
+      _props.radius = std::max(_props.radius, 0.0);
+    }
+    gui.tooltip("The tube's radius, in meters.");
+    if (ImGui::InputInt("Segments", &_props.numCrossSectionSegments)) {
+      _props.numCrossSectionSegments = std::max(_props.numCrossSectionSegments, 3);
+    }
+    gui.tooltip(
+        "The number of nodes around each of the tube's rings. A ring sits around each element's "
+        "midpoint (and each end of an open polyline, which is capped), skinned to that element.");
+  }
+
+ protected:
+  mochi::MeshData Embed(
+      StageMesh const& input,
+      ModifierRunContext const& /*ctx*/,
+      mochi::Error& error) const override {
+    MOCHI_ERROR_IF(
+        input.mesh.nodesPerElement != 2,
+        error,
+        "Embed: Tube embeds in a polyline. Place this modifier below a polyline source.");
+    MOCHI_ERROR_RETURN(error, {});
+    MOCHI_ERROR_IF(
+        input.mesh.coordinates.size() % 3 != 0,
+        error,
+        "Coordinates array size must be a multiple of three.");
+    MOCHI_ERROR_IF(
+        !input.elementFrameAxes.has_value(), error, "Embed: Tube requires polyline frame axes.");
+    MOCHI_ERROR_RETURN(error, {});
+    MOCHI_ERROR_IF(
+        input.elementFrameAxes->size() % 3 != 0,
+        error,
+        "Element frame axes array size must be a multiple of three.");
+    MOCHI_ERROR_RETURN(error, {});
+    return mochi::model::GenerateTubularSkinMesh(
+        mochi::Unflatten<mochi::Real3 const>(mochi::MakeConstSpan(input.mesh.coordinates)),
+        mochi::Unflatten<mochi::Real3 const>(mochi::MakeConstSpan(*input.elementFrameAxes)),
+        mochi::IsPolylineClosedLoop(input.mesh),
+        static_cast<mochi::real>(_props.radius),
+        _props.numCrossSectionSegments,
+        error);
+  }
+};
+
 ModifierRegistryEntry MakeEmbedEntry(char const* name, EmbeddedMeshRole role) {
   return ModifierRegistryEntry{name, ModifierKind::Transform, [role]() {
                                  std::vector<std::unique_ptr<MeshProcessingMethod>> methods;
                                  methods.push_back(std::make_unique<UpstreamSurfaceMethod>(role));
+                                 methods.push_back(std::make_unique<TubeMethod>(role));
                                  return methods;
                                }};
 }
@@ -180,14 +261,16 @@ ModifierRegistryEntry MakeEmbedVisualMeshEntry() {
   return MakeEmbedEntry("Embed Visual Mesh", EmbeddedMeshRole::VisualMesh);
 }
 
-EmbeddedMeshStats MeasureEmbeddedMesh(EmbeddedMeshRole role, mochi::MeshData const& mesh) {
-  return {
-      .role = role,
-      .nodes = mesh.GetNumNodes(),
-      .triangles = mesh.GetNumElements(),
-      .maxExtrapolation = mesh.skinning.has_value()
-          ? mochi::model::MaxAuxiliaryMeshExtrapolation(*mesh.skinning)
-          : 0.0};
+EmbeddedMeshStats MeasureEmbeddedMesh(
+    EmbeddedMeshRole role,
+    mochi::MeshData const& mesh,
+    mochi::MeshData const& host) {
+  EmbeddedMeshStats stats{
+      .role = role, .nodes = mesh.GetNumNodes(), .triangles = mesh.GetNumElements()};
+  if (host.nodesPerElement == 4 && mesh.skinning.has_value()) {
+    stats.maxExtrapolation = mochi::model::MaxAuxiliaryMeshExtrapolation(*mesh.skinning);
+  }
+  return stats;
 }
 
 } // namespace superdex::studio
