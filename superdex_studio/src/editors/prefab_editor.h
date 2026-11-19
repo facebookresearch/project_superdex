@@ -74,6 +74,7 @@ class PrefabEditor : public AssetEditor {
       ArticulatedLink,
       NestedPrefab,
       Soft,
+      Rod,
       Constraint
     };
     Kind kind = Kind::None;
@@ -87,6 +88,7 @@ class PrefabEditor : public AssetEditor {
   struct HierarchyEdits {
     int rigidToDelete = -1;
     int softToDelete = -1;
+    int rodToDelete = -1;
     int articulatedActorToDelete = -1;
     int nestedToDelete = -1;
     int addLinkActor = -1;
@@ -100,6 +102,7 @@ class PrefabEditor : public AssetEditor {
     bool deleteSelection = false;
     bool createRigid = false;
     bool createSoft = false;
+    bool createRod = false;
     bool createArticulated = false;
     bool createNested = false;
     bool pasteRequested = false;
@@ -132,9 +135,9 @@ class PrefabEditor : public AssetEditor {
   // The staged actor itself, or null.
   StagedActor const*
   StagedActorForSource(StagedActorSource source, int actorIndex, int linkIndex = -1) const;
-  // A soft actor's Rendering section: which mesh it is drawn with, and why its render model is not
-  // drawn.
-  void ShowDeformableRendering(int softIndex);
+  // A soft or rod actor's Rendering section: which mesh it is drawn with, and why a soft actor's
+  // render model is not drawn.
+  void ShowDeformableRendering(StagedActorSource source, int actorIndex);
 
   //------------------------------------------------------------------------------------------------
   // Viewport
@@ -193,6 +196,7 @@ class PrefabEditor : public AssetEditor {
   void ShowScenePrefabDetails();
   void ShowRigidActorDetails(int rigidIndex);
   void ShowSoftActorDetails(int softIndex);
+  void ShowRodActorDetails(int rodIndex);
   void ShowArticulatedActorDetails(int actorIndex);
   void ShowArticulatedLinkDetails(int actorIndex, int linkIndex);
   void ShowNestedPrefabDetails(int prefabIndex);
@@ -257,6 +261,7 @@ class PrefabEditor : public AssetEditor {
 
   void CreateRigidActor();
   void CreateSoftActor();
+  void CreateRodActor();
   void CreateArticulatedActor();
   void CreateNestedPrefab();
 

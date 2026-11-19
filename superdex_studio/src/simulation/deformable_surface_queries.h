@@ -17,6 +17,7 @@
 #pragma once
 
 #include "rendering/deformable_surface.h"
+#include "rendering/rod_visualization.h"
 
 #include <mochi_core/utils/coordinate_space_converter.h>
 #include <mochi_physics/mochi_physics.h>
@@ -41,5 +42,16 @@ void ReadDeformableSurfaceNodes(
     std::vector<float>& outPositions,
     std::vector<float>& outNormals,
     mochi::Error& error);
+
+// Reads a rod actor's deformed pose: its rest nodes plus pose displacements, and its frame axes,
+// in the actor's local frame. @p outPose is resized in place.
+void ReadRodPose(mochi::Actor const& actor, RodPose& outPose, mochi::Error& error);
+
+// Converts @p pose's nodes into a flat renderer-space buffer like ReadDeformableSurfaceNodes's
+// positions (resized in place), for a rod's centerline.
+void ConvertRodPoseNodes(
+    RodPose const& pose,
+    mochi::CoordinateSpaceConverter const& converter,
+    std::vector<float>& outPositions);
 
 } // namespace superdex::studio

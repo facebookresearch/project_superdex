@@ -139,14 +139,6 @@ uint64_t SectionsChangeStamp(std::vector<mochi_renderer::MeshSection> const& sec
   return stamp;
 }
 
-// True for an actor whose rendered surface deforms per-vertex while simulating: a soft actor (its
-// dynamic solid/wireframe meshes) or an articulated skin (its GPU-skinned surface, plus the
-// simulation-driven one that stands in for it during a run).
-bool DeformsDuringSimulation(StagedActor const& actor) {
-  return actor.dynamicSolidMesh != nullptr || actor.dynamicWireframeMesh != nullptr ||
-      actor.shapeSkinnedSurface != nullptr || actor.shapeSimSurface != nullptr;
-}
-
 // Change stamp for the staged pose: the actor count plus every actor's world transform
 uint64_t StagedPoseStamp(SceneStage const& stage) {
   uint64_t stamp = 1469598103934665603ull;
@@ -253,7 +245,7 @@ void CollectSceneStageMeasureTargets(
     bool excludeDeformable,
     std::vector<MeasureTarget>& out) {
   for (StagedActor const& actor : stage.GetActors()) {
-    if (excludeDeformable && DeformsDuringSimulation(actor)) {
+    if (excludeDeformable && HasDeformingSurface(actor)) {
       continue;
     }
     auto add = [&](StagedActor::Instance const& instance, MeasureTargetKind kind) {

@@ -83,4 +83,33 @@ TEST(DeformableSurfaceTest, AnUnembeddedVisualMeshFallsBack) {
           .rendered = DeformableSurface::Visual, .collision = DeformableSurface::ContactSkin}));
 }
 
+TEST(DeformableSurfaceTest, ARodIsDrawnLikeASoftActorWithItsCenterlineForTheBoundary) {
+  EXPECT_EQ(
+      ChooseRodSurfaces(/*hasVisualMesh=*/true, /*hasContactSkin=*/true, /*useContactSkin=*/true),
+      (DeformableSurfaces{
+          .rendered = DeformableSurface::Visual, .collision = DeformableSurface::ContactSkin}));
+  EXPECT_EQ(
+      ChooseRodSurfaces(/*hasVisualMesh=*/true, /*hasContactSkin=*/true, /*useContactSkin=*/false),
+      (DeformableSurfaces{
+          .rendered = DeformableSurface::Visual, .collision = DeformableSurface::Centerline}));
+  EXPECT_EQ(
+      ChooseRodSurfaces(/*hasVisualMesh=*/false, /*hasContactSkin=*/true, /*useContactSkin=*/false),
+      (DeformableSurfaces{
+          .rendered = DeformableSurface::ContactSkin, .collision = DeformableSurface::Centerline}));
+  EXPECT_EQ(
+      ChooseRodSurfaces(/*hasVisualMesh=*/false, /*hasContactSkin=*/false, /*useContactSkin=*/true),
+      (DeformableSurfaces{
+          .rendered = DeformableSurface::Centerline, .collision = DeformableSurface::Centerline}));
+}
+
+TEST(DeformableSurfaceTest, ARodDrawsItsVisualMeshWithoutSkinning) {
+  mochi::ModelData model;
+  model.visualMesh.emplace();
+
+  EXPECT_EQ(
+      ChooseRodSurfaces(model, /*useContactSkin=*/true),
+      (DeformableSurfaces{
+          .rendered = DeformableSurface::Visual, .collision = DeformableSurface::Centerline}));
+}
+
 } // namespace

@@ -17,6 +17,7 @@
 #pragma once
 
 #include "rendering/deformable_surface.h"
+#include "rendering/rod_visualization.h"
 
 #include <superdex_robotics/scene/bot_scene.h>
 #include <superdex_robotics/superdex_robotics.h>
@@ -47,6 +48,7 @@ struct ScenePrefab;
 
 namespace mochi_renderer {
 class DeformableModelInstance;
+class LineSegmentMesh;
 class Scene;
 class SceneObject;
 class Mesh;
@@ -75,6 +77,7 @@ enum class StagedActorSource {
   Rigid,
   Articulated,
   Soft,
+  Rod,
 };
 
 struct StagedActor {
@@ -97,6 +100,9 @@ struct StagedActor {
     // flat-lit material, render models keep their (smooth) glb materials. The highlight clone picks
     // a matching flat/smooth material so it shades like the base it stands in for.
     bool flatShaded = false;
+    // True if this representation is a rod's centerline (a line mesh), whose highlight clone needs
+    // the unlit polyline material rather than a lit one.
+    bool isPolyline = false;
     // Tinted stand-in shown while this representation is highlighted. Created lazily on first
     // highlight and then cached (shown/hidden by UpdateHighlights, not recreated) so a rapidly
     // changing hover doesn't churn scene objects; destroyed only with its base on rebuild/Clear. A
@@ -155,6 +161,13 @@ struct StagedActor {
   // changes).
   mochi_renderer::Mesh* dynamicSolidMesh = nullptr;
   mochi_renderer::WireframeMesh* dynamicWireframeMesh = nullptr;
+  // Rod actors only: the deforming centerline (DeformableSurface::Centerline) in the render slot
+  // when `deformableSurfaces.rendered` is the centerline, and in the shape slot when
+  // `deformableSurfaces.collision` is, in place of the solid and wireframe above. Non-owning
+  // back-pointers like those.
+  mochi_renderer::LineSegmentMesh* dynamicRenderCenterline = nullptr;
+  mochi_renderer::LineSegmentMesh* dynamicShapeCenterline = nullptr;
+  bool rodIsClosedLoop = false;
   // Soft actors whose render model is linked to their visual mesh (see CheckRenderModelLink): the
   // render model, drawn in the render slot instead of the solid and deformed by the visual mesh's
   // updates. A non-owning back-pointer like dynamicSolidMesh; null otherwise.
@@ -216,12 +229,14 @@ struct ResolvedTaskSpawn {
   mochi::TransformRT worldFromSpawn = {};
 };
 
-// A per-frame deformation update for one soft actor's dynamic meshes: produced by the simulation
-// post-step callback and consumed by SceneStage::ApplyDeformableMeshUpdates. Position/normal
-// buffers are flat (3 floats per vertex) in renderer space: `positions`/`normals` for the solid
-// mesh (StagedActor::deformableSurfaces.rendered) and `collisionPositions`/`collisionNormals` for
-// the wireframe (deformableSurfaces.collision), left empty when the two are the same mesh.
-// `worldTransform` is the soft actor's root transform (Mochi space, converted on apply). Matched to
+// A per-frame deformation update for one deformable actor's dynamic meshes: produced by the
+// simulation post-step callback and consumed by SceneStage::ApplyDeformableMeshUpdates.
+// Position/normal buffers are flat (3 floats per vertex) in renderer space: `positions`/`normals`
+// for the render slot's mesh (StagedActor::deformableSurfaces.rendered) and
+// `collisionPositions`/`collisionNormals` for the shape slot's (deformableSurfaces.collision), left
+// empty when the two are the same mesh. A centerline has positions but no normals. `rodPose` is a
+// rod's deformed pose (empty for other actors), which its centerline positions are converted from.
+// `worldTransform` is the actor's root transform (Mochi space, converted on apply). Matched to
 // the staged actor at `stagedIndex`, or by `name` when it is negative.
 struct DeformableMeshUpdate {
   std::string name;
@@ -230,6 +245,7 @@ struct DeformableMeshUpdate {
   std::vector<float> normals;
   std::vector<float> collisionPositions;
   std::vector<float> collisionNormals;
+  RodPose rodPose;
   mochi::TransformRT worldTransform = {};
 };
 
@@ -254,6 +270,11 @@ struct SkinnedPoseUpdate {
 [[nodiscard]] std::string SkinStagedName(std::string_view articulatedActorName);
 // Whether `stagedName` is a SkinStagedName.
 [[nodiscard]] bool IsSkinStagedName(std::string_view stagedName);
+
+// True for a staged actor whose surface deforms per vertex while simulating: a soft or rod actor
+// (its deforming meshes) or an articulated skin (its GPU-skinned surface, and the simulation
+// surface that stands in for it during a run).
+[[nodiscard]] bool HasDeformingSurface(StagedActor const& actor);
 
 // A single resolved staging instruction produced by traversing a prefab tree. Carries both the
 // render and shape representations (either file may be empty) plus which is visible for the
@@ -282,6 +303,7 @@ struct StageRequest {
   // meshes' node counts, used to detect topology changes for the reuse check. No ordinary
   // shape/render instance is loaded.
   bool isDeformable = false;
+  bool rodIsClosedLoop = false;
   mochi::Real3 deformableBakeScale = {mochi::real(1), mochi::real(1), mochi::real(1)};
   mochi::TransformRT deformableShapeTransform = {};
   DeformableSurfaces deformableSurfaces;
@@ -338,8 +360,9 @@ struct SceneStage {
   // pose. Rigid (and nested-rigid) poses are computed analytically; articulated actors are expanded
   // to their nested link actors, whose world transforms come from Mochi forward kinematics on a
   // scratch scene. Staging follows prefab::AddToScene order (nested prefabs, then articulated, then
-  // rigid; soft skipped) so the staged list aligns with the physics actors created during
-  // simulation. Reuses existing objects when the actor set and active model files are unchanged;
+  // rigid, soft and rod actors) so the staged list aligns with the physics actors created during
+  // simulation. Soft and rod actors stage at their rest shape (an authored initial pose is not
+  // shown). Reuses existing objects when the actor set and active model files are unchanged;
   // otherwise rebuilds. No-op if no scene is bound. `rootPath` resolves non-"./" model file
   // references.
   // Returns true if the staged objects were rebuilt (pointers invalidated), false if existing
@@ -511,12 +534,11 @@ struct SceneStage {
       mochi::Span<ResolvedTaskSpawn const> const* taskSpawns,
       StageType stageType);
 
-  // Create the opaque, tinted, shadowless stand-in clone of `base` (parented to it, tagged into the
-  // highlight overlay pass). Returns nullptr if no instance could be allocated.
+  // Create the opaque, tinted, shadowless stand-in clone of `base`'s scene object (parented to it,
+  // tagged into the highlight overlay pass). Returns nullptr if no instance could be allocated.
   mochi_renderer::SceneObject* CreateHighlightClone(
-      mochi_renderer::SceneObject* base,
-      filament::math::float3 color,
-      bool flatShaded) const;
+      StagedActor::Instance const& base,
+      filament::math::float3 color) const;
 
   SuperDexStudio* _studio = nullptr;
   mochi::Scene* _scene = nullptr;

@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include "rendering/deformable_surface.h"
 #include "rendering/scene_stage.h"
 
 #include <mochi_core/utils/coordinate_space_converter.h>
@@ -70,7 +71,8 @@ class PrefabSimSync {
   };
   // Per-soft-actor query registration held while simulating: the node queries of the staged solid's
   // mesh (`surfaces.rendered`), and of the wireframe's (`surfaces.collision`) when that is a
-  // different mesh. `name` matches the staged actor for the per-frame mesh update.
+  // different mesh. `name` matches the staged actor for the per-frame mesh update. A rod's
+  // centerline needs no query: it is read from the rod's pose.
   struct DeformableQueryState {
     mochi::ActorHandle actor;
     DeformableSurfaces surfaces;
@@ -79,6 +81,7 @@ class PrefabSimSync {
     mochi::QueryHandle collisionPositions;
     mochi::QueryHandle collisionNormals;
     std::string name;
+    bool isRod = false;
 
     // Cancels the queries registered on `owner`; unregistered (invalid) handles are ignored.
     void CancelQueries(mochi::Actor& owner) const;

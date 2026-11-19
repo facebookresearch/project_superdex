@@ -77,6 +77,9 @@ std::vector<int> StagedIndicesFor(SceneStage const& stage, PrefabHierarchyItem c
     case Kind::Soft:
       source = StagedActorSource::Soft;
       break;
+    case Kind::Rod:
+      source = StagedActorSource::Rod;
+      break;
     case Kind::ArticulatedActor:
     case Kind::ArticulatedLink:
       source = StagedActorSource::Articulated;
@@ -166,8 +169,8 @@ void PrefabHierarchy::Show(
     Callbacks const& callbacks) {
   _rows.clear();
   _rows.reserve(
-      prefab.actors.rigid.size() + prefab.actors.soft.size() + prefab.actors.articulated.size() +
-      prefab.prefabs.size());
+      prefab.actors.rigid.size() + prefab.actors.soft.size() + prefab.actors.rod.size() +
+      prefab.actors.articulated.size() + prefab.prefabs.size());
   for (int i = 0; i < static_cast<int>(prefab.actors.rigid.size()); ++i) {
     _rows.push_back(
         {FallbackName(kRigidPrefix, prefab.actors.rigid[i].name, i), "Rigid", {Kind::Rigid, i}});
@@ -175,6 +178,10 @@ void PrefabHierarchy::Show(
   for (int i = 0; i < static_cast<int>(prefab.actors.soft.size()); ++i) {
     _rows.push_back(
         {FallbackName(kSoftPrefix, prefab.actors.soft[i].name, i), "Soft", {Kind::Soft, i}});
+  }
+  for (int i = 0; i < static_cast<int>(prefab.actors.rod.size()); ++i) {
+    _rows.push_back(
+        {FallbackName(kRodPrefix, prefab.actors.rod[i].name, i), "Rod", {Kind::Rod, i}});
   }
   for (int i = 0; i < static_cast<int>(prefab.actors.articulated.size()); ++i) {
     _rows.push_back(

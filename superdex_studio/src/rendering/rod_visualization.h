@@ -41,6 +41,13 @@ inline constexpr mochi::real kFrameAxisGlyphLengthFraction = static_cast<mochi::
 // Frame-axis arrow shaft radius as a fraction of the arrow length.
 inline constexpr mochi::real kFrameAxisGlyphRadiusFraction = static_cast<mochi::real>(0.04);
 
+// A rod's deformed centerline nodes and element frame axes in its local frame (Mochi space), 3
+// values per node and per element.
+struct RodPose {
+  std::vector<mochi::real> nodes;
+  std::vector<mochi::real> frameAxes;
+};
+
 // The node pairs of a polyline's elements: `connectivity` itself, or for an empty one the open
 // polyline through its `numNodes` nodes in order.
 std::vector<mochi::Int2> PolylineElements(int numNodes, mochi::Span<int const> connectivity);

@@ -44,15 +44,19 @@ bool PrefabSimSync::Track(mochi::Span<mochi::Actor* const> actors) {
   for (auto* actor : actors) {
     // Soft actors expose their deforming meshes; articulated actors expose a surface only when they
     // carry a skin (folded into the compound entity, sharing the actor's handle). Both are read the
-    // same way and emitted as DeformableMeshUpdates each step, so they share this query list.
+    // same way and emitted as DeformableMeshUpdates each step, so they share this query list. Rod
+    // actors too: their visual mesh or contact skin through the same queries, their centerline from
+    // their pose.
     bool const isSoft = actor->GetType() == mochi::ActorType::Soft;
+    bool const isRod = actor->GetType() == mochi::ActorType::Rod;
     bool const isSkinnedArticulated =
         actor->GetType() == mochi::ActorType::Articulated && !actor->GetSurfaceMesh().IsEmpty();
-    if (!isSoft && !isSkinnedArticulated) {
+    if (!isSoft && !isRod && !isSkinnedArticulated) {
       continue;
     }
     DeformableQueryState state;
     state.actor = actor->GetHandle();
+    state.isRod = isRod;
     char const* const name = actor->GetName();
     std::string const actorName = name ? name : "";
     // The skin has no independent actor, so it is identified by its skin staged name to match the
@@ -107,9 +111,9 @@ void PrefabSimSync::Produce(mochi::Scene* scene) {
   data.actorNames.clear();
   data.skinnedPoseUpdates.clear();
   // Build the ordered transform list to match StagePrefab's staged-actor order: articulated
-  // actors expand to their nested link transforms; rigid and soft actors push their root
-  // transform. Soft actors are included here so their world transform is applied by name and
-  // their row appears in the Render Scene Stage debug view; their deformed surface mesh is
+  // actors expand to their nested link transforms; rigid, soft and rod actors push their root
+  // transform. Soft and rod actors are included here so their world transform is applied by name
+  // and their row appears in the Render Scene Stage debug view; their deformed meshes are
   // additionally applied via the per-vertex mesh-update channel below (ApplyDeformableMeshUpdates).
   for (auto const& handle : _actors) {
     auto* actor = scene->GetActor(handle);
@@ -140,7 +144,8 @@ void PrefabSimSync::Produce(mochi::Scene* scene) {
         data.skinnedPoseUpdates.push_back(std::move(poseUpdate));
       }
     } else if (
-        actor->GetType() == mochi::ActorType::Rigid || actor->GetType() == mochi::ActorType::Soft) {
+        actor->GetType() == mochi::ActorType::Rigid || actor->GetType() == mochi::ActorType::Soft ||
+        actor->GetType() == mochi::ActorType::Rod) {
       data.actorTransforms.push_back(actor->GetRootTransform());
       char const* const name = actor->GetName();
       data.actorNames.emplace_back(name ? name : "");
@@ -174,6 +179,22 @@ void PrefabSimSync::Produce(mochi::Scene* scene) {
     } else {
       update.collisionPositions.clear();
       update.collisionNormals.clear();
+    }
+    if (state.isRod) {
+      // Its own error: a failure elsewhere this step must not drop the rod's pose.
+      mochi::ErrorLog rodError;
+      ReadRodPose(*actor, update.rodPose, rodError);
+      // A centerline has no node queries, so its slot's positions come from the pose. Only a rod
+      // without a visual mesh or contact skin draws its centerline in the render slot, and then
+      // also in the shape slot.
+      if (state.surfaces.rendered == DeformableSurface::Centerline) {
+        ConvertRodPoseNodes(update.rodPose, _editorToRenderer, update.positions);
+      } else if (state.surfaces.collision == DeformableSurface::Centerline) {
+        ConvertRodPoseNodes(update.rodPose, _editorToRenderer, update.collisionPositions);
+      }
+    } else {
+      update.rodPose.nodes.clear();
+      update.rodPose.frameAxes.clear();
     }
   }
   // Trim any trailing entries left over from soft actors that were missing this step (rare;

@@ -20,12 +20,13 @@
 
 namespace superdex::studio {
 
-// One of a deformable actor's triangle meshes. Mochi reports each one's deformed nodes through its
-// own pair of position/normal queries.
+// One of a deformable actor's meshes. Mochi reports each triangle mesh's deformed nodes through its
+// own pair of position/normal queries; a rod's centerline comes from its pose instead.
 enum class DeformableSurface {
   Visual, // ModelData::visualMesh (VisualNodePositions / VisualNodeNormals)
   ContactSkin, // ModelData::contactSkinMesh (ContactSkinNodePositions / ContactSkinNodeNormals)
   Surface, // the boundary of the actor's mesh (SurfaceNodePositions / SurfaceNodeNormals)
+  Centerline, // a rod's polyline mesh (Actor::GetMesh plus Actor::GetRodPose), drawn as lines
 };
 
 // The meshes a staged deformable actor shows: `rendered` in the render slot and `collision` in the
@@ -62,6 +63,25 @@ constexpr DeformableSurfaces ChooseSoftSurfaces(
       hasDeformableVisualMesh, model.contactSkinMesh.has_value(), useContactSkin);
 }
 
+// A rod actor is drawn like a soft actor, with its centerline in place of the boundary: its visual
+// mesh, else its contact skin, else its centerline. The Collision Only view shows its contact skin
+// when it has one and RodActorParams::useContactSkin is on, else its centerline.
+constexpr DeformableSurfaces
+ChooseRodSurfaces(bool hasVisualMesh, bool hasContactSkin, bool useContactSkin) {
+  DeformableSurfaces const soft = ChooseSoftSurfaces(hasVisualMesh, hasContactSkin, useContactSkin);
+  auto const rod = [](DeformableSurface surface) {
+    return surface == DeformableSurface::Surface ? DeformableSurface::Centerline : surface;
+  };
+  return {.rendered = rod(soft.rendered), .collision = rod(soft.collision)};
+}
+
+// Unlike a soft actor's, a rod's visual mesh needs no skinning: Mochi embeds it in the rod's
+// elements when the actor is created.
+constexpr DeformableSurfaces ChooseRodSurfaces(mochi::ModelData const& model, bool useContactSkin) {
+  return ChooseRodSurfaces(
+      model.visualMesh.has_value(), model.contactSkinMesh.has_value(), useContactSkin);
+}
+
 constexpr char const* DeformableSurfaceLabel(DeformableSurface surface) {
   switch (surface) {
     case DeformableSurface::Visual:
@@ -70,6 +90,8 @@ constexpr char const* DeformableSurfaceLabel(DeformableSurface surface) {
       return "Contact skin";
     case DeformableSurface::Surface:
       return "Surface";
+    case DeformableSurface::Centerline:
+      return "Centerline";
   }
   return "";
 }

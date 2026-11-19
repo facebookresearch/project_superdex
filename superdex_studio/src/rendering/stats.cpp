@@ -70,6 +70,7 @@ struct PrefabCounts {
   int links = 0;
   int jointDofs = 0;
   int soft = 0;
+  int rod = 0;
   int nestedPrefabs = 0;
   int constraints = 0;
   int controllers = 0;
@@ -88,6 +89,7 @@ void CountPrefab(mochi::prefab::ScenePrefab const& prefab, PrefabCounts& counts)
     }
   }
   counts.soft += mochi::isize(actors.soft) + mochi::isize(actors.softSkinned);
+  counts.rod += mochi::isize(actors.rod);
   ForEachConstraintArray(prefab.constraints, [&](mochi::ConstraintType, auto const& array) {
     counts.constraints += mochi::isize(array);
   });
@@ -195,11 +197,12 @@ StatsText& StatsText::AddPrefabs(std::span<mochi::prefab::ScenePrefab const* con
   }
   Add("Actors",
       FormatBreakdown(
-          c.rigid + c.articulated + c.soft,
+          c.rigid + c.articulated + c.soft + c.rod,
           {{c.rigid - c.staticRigid, "Dynamic"},
            {c.staticRigid, "Static"},
            {c.articulated, "Articulated"},
-           {c.soft, "Soft"}}));
+           {c.soft, "Soft"},
+           {c.rod, "Rod"}}));
   Add("Links", c.links);
   Add("DOFs", c.jointDofs);
   Add("Constraints", c.constraints);

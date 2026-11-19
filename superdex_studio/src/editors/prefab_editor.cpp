@@ -539,6 +539,8 @@ PrefabEditor::Selection PrefabEditor::ToSelection(PrefabHierarchyItem const& ite
       return {Selection::Kind::Rigid, item.actorIndex, -1};
     case Kind::Soft:
       return {Selection::Kind::Soft, item.actorIndex, -1};
+    case Kind::Rod:
+      return {Selection::Kind::Rod, item.actorIndex, -1};
     case Kind::ArticulatedActor:
       return {Selection::Kind::ArticulatedActor, item.actorIndex, -1};
     case Kind::ArticulatedLink:
@@ -565,6 +567,8 @@ PrefabEditor::Selection PrefabEditor::SelectionForObject(SceneObject* object) co
       return {Selection::Kind::Rigid, staged.sourceActorIndex, -1};
     case StagedActorSource::Soft:
       return {Selection::Kind::Soft, staged.sourceActorIndex, -1};
+    case StagedActorSource::Rod:
+      return {Selection::Kind::Rod, staged.sourceActorIndex, -1};
     case StagedActorSource::Articulated:
       return {Selection::Kind::ArticulatedLink, staged.sourceActorIndex, staged.sourceLinkIndex};
     case StagedActorSource::NestedPrefab:
@@ -634,6 +638,11 @@ void PrefabEditor::SyncViewportSelection() {
         break;
       case Selection::Kind::Soft:
         if (auto* o = StagedObjectForSource(StagedActorSource::Soft, sel.actorIndex)) {
+          objects.push_back(o);
+        }
+        break;
+      case Selection::Kind::Rod:
+        if (auto* o = StagedObjectForSource(StagedActorSource::Rod, sel.actorIndex)) {
           objects.push_back(o);
         }
         break;
@@ -711,7 +720,7 @@ void PrefabEditor::HandleTopLevelRowClick(int rowIndex, Selection const& sel) {
 std::optional<std::pair<mochi::TransformRT, mochi::Real3>> PrefabEditor::GetTransformGizmoTarget()
     const {
   auto const& prefab = _prefabAsset->GetPrefab();
-  // Per-axis-scale target (rigid/soft): authored transform + the actor's Real3 scale.
+  // Per-axis-scale target (rigid/soft/rod): authored transform + the actor's Real3 scale.
   auto perAxis = [](mochi::Quaternion const& rotation,
                     mochi::Real3 const& translation,
                     mochi::Real3 const& scale) {
@@ -735,13 +744,21 @@ std::optional<std::pair<mochi::TransformRT, mochi::Real3>> PrefabEditor::GetTran
         auto const& actor = rigid[sel.actorIndex];
         return perAxis(actor.rotation, actor.translation, actor.scale);
       }
-      // Soft actors expose their authored transform and per-axis scale (like rigid).
+      // Soft and rod actors expose their authored transform and per-axis scale (like rigid).
       case Selection::Kind::Soft: {
         auto const& soft = prefab.actors.soft;
         if (sel.actorIndex < 0 || sel.actorIndex >= static_cast<int>(soft.size())) {
           return std::nullopt;
         }
         auto const& actor = soft[sel.actorIndex];
+        return perAxis(actor.rotation, actor.translation, actor.scale);
+      }
+      case Selection::Kind::Rod: {
+        auto const& rod = prefab.actors.rod;
+        if (sel.actorIndex < 0 || sel.actorIndex >= static_cast<int>(rod.size())) {
+          return std::nullopt;
+        }
+        auto const& actor = rod[sel.actorIndex];
         return perAxis(actor.rotation, actor.translation, actor.scale);
       }
       // Articulated actors expose only their root transform for gizmo editing, whether the actor
@@ -818,6 +835,14 @@ void PrefabEditor::OnGizmoTransformDelta(
       if (pivotSel.actorIndex >= 0 &&
           pivotSel.actorIndex < static_cast<int>(prefab.actors.soft.size())) {
         auto const& actor = prefab.actors.soft[pivotSel.actorIndex];
+        pivotRotation = actor.rotation;
+        pivotPosition = actor.translation;
+      }
+      break;
+    case Selection::Kind::Rod:
+      if (pivotSel.actorIndex >= 0 &&
+          pivotSel.actorIndex < static_cast<int>(prefab.actors.rod.size())) {
+        auto const& actor = prefab.actors.rod[pivotSel.actorIndex];
         pivotRotation = actor.rotation;
         pivotPosition = actor.translation;
       }
@@ -923,6 +948,21 @@ void PrefabEditor::OnGizmoTransformDelta(
           break;
         }
         auto& actor = soft[sel.actorIndex];
+        mochi::Quaternion const originalRotation = mochi::Normalize(actor.rotation);
+        applyRT(actor.rotation, actor.translation);
+        mochi::Real3 const newScale = scaledReal3(actor.scale, originalRotation);
+        if (actor.scale != newScale) {
+          actor.scale = newScale;
+          actor.shape = {};
+        }
+        break;
+      }
+      case Selection::Kind::Rod: {
+        auto& rod = prefab.actors.rod;
+        if (sel.actorIndex < 0 || sel.actorIndex >= static_cast<int>(rod.size())) {
+          break;
+        }
+        auto& actor = rod[sel.actorIndex];
         mochi::Quaternion const originalRotation = mochi::Normalize(actor.rotation);
         applyRT(actor.rotation, actor.translation);
         mochi::Real3 const newScale = scaledReal3(actor.scale, originalRotation);
@@ -1272,6 +1312,8 @@ void PrefabEditor::ShowHierarchyRowMenu(Selection const& item, HierarchyEdits& e
         edits.rigidToDelete = item.actorIndex;
       } else if (item.kind == Selection::Kind::Soft) {
         edits.softToDelete = item.actorIndex;
+      } else if (item.kind == Selection::Kind::Rod) {
+        edits.rodToDelete = item.actorIndex;
       } else if (item.kind == Selection::Kind::ArticulatedActor) {
         edits.articulatedActorToDelete = item.actorIndex;
       } else if (item.kind == Selection::Kind::NestedPrefab) {
@@ -1444,6 +1486,12 @@ void PrefabEditor::ShowPrefabHierarchyWindow(bool* open) {
     prefab.actors.soft.erase(prefab.actors.soft.begin() + edits.softToDelete);
     applyDeferredEdit();
   } else if (
+      edits.rodToDelete >= 0 && edits.rodToDelete < static_cast<int>(prefab.actors.rod.size())) {
+    RemoveConstraintsReferencingActor(
+        prefab.constraints, std::string_view(prefab.actors.rod[edits.rodToDelete].name));
+    prefab.actors.rod.erase(prefab.actors.rod.begin() + edits.rodToDelete);
+    applyDeferredEdit();
+  } else if (
       edits.articulatedActorToDelete >= 0 &&
       edits.articulatedActorToDelete < static_cast<int>(prefab.actors.articulated.size())) {
     RemoveConstraintsReferencingActor(
@@ -1479,6 +1527,8 @@ void PrefabEditor::ShowPrefabHierarchyWindow(bool* open) {
     CreateRigidActor();
   } else if (edits.createSoft) {
     CreateSoftActor();
+  } else if (edits.createRod) {
+    CreateRodActor();
   } else if (edits.createArticulated) {
     CreateArticulatedActor();
   } else if (edits.createNested) {
@@ -1504,13 +1554,16 @@ std::vector<std::string> PrefabEditor::CollectTopLevelNames() const {
   auto const& prefab = _prefabAsset->GetPrefab();
   std::vector<std::string> names;
   names.reserve(
-      prefab.actors.rigid.size() + prefab.actors.soft.size() + prefab.actors.articulated.size() +
-      prefab.prefabs.size());
+      prefab.actors.rigid.size() + prefab.actors.soft.size() + prefab.actors.rod.size() +
+      prefab.actors.articulated.size() + prefab.prefabs.size());
   for (int i = 0; i < static_cast<int>(prefab.actors.rigid.size()); ++i) {
     names.push_back(FallbackName(kRigidPrefix, prefab.actors.rigid[i].name, i));
   }
   for (int i = 0; i < static_cast<int>(prefab.actors.soft.size()); ++i) {
     names.push_back(FallbackName(kSoftPrefix, prefab.actors.soft[i].name, i));
+  }
+  for (int i = 0; i < static_cast<int>(prefab.actors.rod.size()); ++i) {
+    names.push_back(FallbackName(kRodPrefix, prefab.actors.rod[i].name, i));
   }
   for (int i = 0; i < static_cast<int>(prefab.actors.articulated.size()); ++i) {
     names.push_back(FallbackName(kArticulatedPrefix, prefab.actors.articulated[i].name, i));
@@ -1559,6 +1612,18 @@ void PrefabEditor::CreateSoftActor() {
   actor.name = mochi::DynamicString{MakeUniquePrefabActorName("Soft")};
   prefab.actors.soft.push_back(std::move(actor));
   _selections = {{Selection::Kind::Soft, static_cast<int>(prefab.actors.soft.size()) - 1, -1}};
+  _selectionAnchorRow = -1;
+  RestagePrefab();
+  _prefabAsset->SetDirty(true);
+  GetUndoStack().PushNow();
+}
+
+void PrefabEditor::CreateRodActor() {
+  auto& prefab = _prefabAsset->GetPrefab();
+  mochi::prefab::RodActorPrefab actor;
+  actor.name = mochi::DynamicString{MakeUniquePrefabActorName("Rod")};
+  prefab.actors.rod.push_back(std::move(actor));
+  _selections = {{Selection::Kind::Rod, static_cast<int>(prefab.actors.rod.size()) - 1, -1}};
   _selectionAnchorRow = -1;
   RestagePrefab();
   _prefabAsset->SetDirty(true);
@@ -1624,6 +1689,12 @@ std::string PrefabEditor::BuildActorClipboardBlock(Selection::Kind kind, int act
       if (actorIndex >= 0 && actorIndex < static_cast<int>(prefab.actors.soft.size())) {
         tag = "soft";
         json = SReflect::ToJsonString(prefab.actors.soft[actorIndex], true);
+      }
+      break;
+    case Selection::Kind::Rod:
+      if (actorIndex >= 0 && actorIndex < static_cast<int>(prefab.actors.rod.size())) {
+        tag = "rod";
+        json = SReflect::ToJsonString(prefab.actors.rod[actorIndex], true);
       }
       break;
     case Selection::Kind::ArticulatedActor:
@@ -1700,6 +1771,17 @@ std::optional<PrefabEditor::Selection> PrefabEditor::DuplicateActorNoCommit(
           MakeUniquePrefabActorName(copy.name.empty() ? "Soft" : std::string(copy.name))};
       soft.push_back(std::move(copy));
       return Selection{Selection::Kind::Soft, static_cast<int>(soft.size()) - 1, -1};
+    }
+    case Selection::Kind::Rod: {
+      auto& rod = prefab.actors.rod;
+      if (actorIndex < 0 || actorIndex >= static_cast<int>(rod.size())) {
+        return std::nullopt;
+      }
+      mochi::prefab::RodActorPrefab copy = rod[actorIndex];
+      copy.name = mochi::DynamicString{
+          MakeUniquePrefabActorName(copy.name.empty() ? "Rod" : std::string(copy.name))};
+      rod.push_back(std::move(copy));
+      return Selection{Selection::Kind::Rod, static_cast<int>(rod.size()) - 1, -1};
     }
     case Selection::Kind::ArticulatedActor:
     case Selection::Kind::ArticulatedLink: {
@@ -1828,7 +1910,7 @@ bool PrefabEditor::DeleteSelection() {
 
   // Otherwise delete every selected top-level actor. Gather per-array indices and erase in
   // descending order so earlier erases don't invalidate later indices.
-  std::vector<int> rigidIdx, softIdx, articulatedIdx, nestedIdx;
+  std::vector<int> rigidIdx, softIdx, rodIdx, articulatedIdx, nestedIdx;
   for (Selection const& sel : _selections) {
     switch (sel.kind) {
       case Selection::Kind::Rigid:
@@ -1836,6 +1918,9 @@ bool PrefabEditor::DeleteSelection() {
         break;
       case Selection::Kind::Soft:
         softIdx.push_back(sel.actorIndex);
+        break;
+      case Selection::Kind::Rod:
+        rodIdx.push_back(sel.actorIndex);
         break;
       case Selection::Kind::ArticulatedActor:
       case Selection::Kind::ArticulatedLink:
@@ -1849,7 +1934,8 @@ bool PrefabEditor::DeleteSelection() {
         break;
     }
   }
-  if (rigidIdx.empty() && softIdx.empty() && articulatedIdx.empty() && nestedIdx.empty()) {
+  if (rigidIdx.empty() && softIdx.empty() && rodIdx.empty() && articulatedIdx.empty() &&
+      nestedIdx.empty()) {
     return false;
   }
   auto eraseDescending = [&](auto& array, std::vector<int>& indices) {
@@ -1865,6 +1951,7 @@ bool PrefabEditor::DeleteSelection() {
   };
   eraseDescending(prefab.actors.rigid, rigidIdx);
   eraseDescending(prefab.actors.soft, softIdx);
+  eraseDescending(prefab.actors.rod, rodIdx);
   eraseDescending(prefab.actors.articulated, articulatedIdx);
   eraseDescending(prefab.prefabs, nestedIdx);
 
@@ -1919,6 +2006,16 @@ void PrefabEditor::PasteFromClipboard() {
           MakeUniquePrefabActorName(actor.name.empty() ? "Soft" : std::string(actor.name))};
       prefab.actors.soft.push_back(std::move(actor));
       return {Selection::Kind::Soft, static_cast<int>(prefab.actors.soft.size()) - 1, -1};
+    }
+    if (tag == "rod") {
+      mochi::prefab::RodActorPrefab actor;
+      if (!SReflect::FromJsonString(actor, json, flags)) {
+        return {};
+      }
+      actor.name = mochi::DynamicString{
+          MakeUniquePrefabActorName(actor.name.empty() ? "Rod" : std::string(actor.name))};
+      prefab.actors.rod.push_back(std::move(actor));
+      return {Selection::Kind::Rod, static_cast<int>(prefab.actors.rod.size()) - 1, -1};
     }
     if (tag == "articulated") {
       mochi::prefab::ArticulatedActorPrefab actor;
@@ -2042,6 +2139,12 @@ void PrefabEditor::ShowDetailsWindow(bool* open) {
           ShowSoftActorDetails(primary->actorIndex);
         }
         break;
+      case Selection::Kind::Rod:
+        if (primary->actorIndex >= 0 &&
+            primary->actorIndex < static_cast<int>(prefab.actors.rod.size())) {
+          ShowRodActorDetails(primary->actorIndex);
+        }
+        break;
       case Selection::Kind::ArticulatedActor:
         if (primary->actorIndex >= 0 &&
             primary->actorIndex < static_cast<int>(prefab.actors.articulated.size())) {
@@ -2087,6 +2190,7 @@ std::string PrefabEditor::SelectedActorDisplayName() const {
   auto const& prefab = _prefabAsset->GetPrefab();
   auto const& rigid = prefab.actors.rigid;
   auto const& soft = prefab.actors.soft;
+  auto const& rod = prefab.actors.rod;
   auto const& articulated = prefab.actors.articulated;
   switch (primary->kind) {
     case Selection::Kind::None:
@@ -2103,6 +2207,11 @@ std::string PrefabEditor::SelectedActorDisplayName() const {
         return {};
       }
       return FallbackName(kSoftPrefix, soft[primary->actorIndex].name, primary->actorIndex);
+    case Selection::Kind::Rod:
+      if (primary->actorIndex < 0 || primary->actorIndex >= static_cast<int>(rod.size())) {
+        return {};
+      }
+      return FallbackName(kRodPrefix, rod[primary->actorIndex].name, primary->actorIndex);
     case Selection::Kind::ArticulatedActor:
     case Selection::Kind::ArticulatedLink: {
       if (primary->actorIndex < 0 || primary->actorIndex >= static_cast<int>(articulated.size())) {
@@ -2594,7 +2703,7 @@ void PrefabEditor::ShowSoftActorDetails(int softIndex) {
   // The actor scale and shape offset are baked into the surface geometry at load, so an edit to
   // either model invalidates the cached shape and rebuilds the meshes.
   bool const modelEdited = ShowActorModelEditors(_studio, assetManager, *actor, modelChanged);
-  ShowDeformableRendering(softIndex);
+  ShowDeformableRendering(StagedActorSource::Soft, softIndex);
 
   changed |= ShowSoftMaterialEditor(actor->material);
 
@@ -2627,14 +2736,104 @@ void PrefabEditor::ShowSoftActorDetails(int softIndex) {
   }
 }
 
-void PrefabEditor::ShowDeformableRendering(int softIndex) {
-  StagedActor const* const staged = StagedActorForSource(StagedActorSource::Soft, softIndex);
+void PrefabEditor::ShowRodActorDetails(int rodIndex) {
+  auto* actor = &_prefabAsset->GetPrefab().actors.rod[rodIndex];
+  AssetManager const& assetManager = _studio->GetAssetManager();
+
+  // As for soft actors, only geometry/pose edits need a restage.
+  bool changed = false;
+  bool restage = false;
+  bool modelChanged = false;
+
+  ImGui::SeparatorText("General");
+  ImGui::LabelText("Type", "%s", "Rod");
+  bool const nameCollides = TopLevelNameCollides(FallbackName(kRodPrefix, actor->name, rodIndex));
+  bool const renamed = ImGui::NameInputWithCollisionCheck("Name", actor->name, nameCollides);
+  changed |= RenameActorInConstraints(std::string_view(actor->name), nameCollides);
+  if (renamed) {
+    changed = true;
+    // The staged actor is keyed by name (used for simulation sync), so a rename must restage.
+    restage = true;
+  }
+  changed |= ImGui::InputText("Layer", &actor->layer, ImGuiInputTextFlags_CharsNoBlank);
+  changed |= ImGui::Checkbox("Has Gravity", &actor->hasGravity);
+
+  ImGui::SeparatorText("Transform");
+  if (ImGui::DragTransformRT("World From Local", actor->rotation, actor->translation)) {
+    changed = true;
+    restage = true;
+  }
+
+  // External rod render models are not drawn yet, so the model editors are not linked.
+  bool const modelEdited = ImGui::ModelEditor(
+      "Mochi Model",
+      _studio,
+      AssetType::MochiModel,
+      actor->shapeFile,
+      actor->scale,
+      actor->shapeRotation,
+      actor->shapeTranslation,
+      nullptr,
+      nullptr,
+      nullptr,
+      assetManager,
+      true,
+      modelChanged);
+  if (actor->pose.has_value()) {
+    ImGui::TextDisabled("Has an initial pose, applied in simulation (shown at rest here).");
+  }
+  ShowDeformableRendering(StagedActorSource::Rod, rodIndex);
+
+  ImGui::SeparatorText("Material");
+  changed |= ImGui::SimpleReflectionStruct(actor->material);
+
+  ImGui::SeparatorText("Collision / Contact");
+  changed |= ImGui::SimpleReflectionEnum("Collider Type", actor->colliderType);
+  changed |= ImGui::SimpleReflectionStruct(
+      actor->pointCloudCollider, [](char const*, SReflect::FieldTypeInfo const& field, void*) {
+        return std::strcmp(field._name, "colliderTriangleElementType") == 0;
+      });
+  ImGui::TextDisabled("Unchecked segment element type: nodal collider.");
+  ImGui::ItemTooltipWrapped(
+      "Leaving Collider Segment Element Type unchecked places one collider point per rod node. "
+      "Checking it uses quadrature points from the selected segment element type.");
+  changed |= ImGui::SimpleReflectionStruct(actor->contact);
+  changed |= ImGui::SimpleReflectionEnum("Contact Element Type", actor->contactElementType);
+  // Restages because the Collision Only view shows the contact skin only when it is used.
+  if (ImGui::Checkbox("Use Contact Skin", &actor->useContactSkin)) {
+    changed = true;
+    restage = true;
+  }
+  changed |=
+      ImGui::SimpleReflectionEnum("Contact Skin Element Type", actor->contactSkinElementType);
+
+  if (modelEdited) {
+    // Invalidate the cached shape so the stage rebuilds geometry with the new model/scale/offset.
+    actor->shape = {};
+    changed = true;
+    restage = true;
+  }
+  if (modelChanged) {
+    _studio->GetAssetManager().ResyncReferencer(_prefabAsset);
+  }
+
+  if (changed) {
+    if (restage) {
+      RestagePrefab();
+    }
+    _prefabAsset->SetDirty(true);
+    GetUndoStack().MarkEdited();
+  }
+}
+
+void PrefabEditor::ShowDeformableRendering(StagedActorSource source, int actorIndex) {
+  StagedActor const* const staged = StagedActorForSource(source, actorIndex);
   if (staged == nullptr) {
     return;
   }
   ImGui::SeparatorText("Rendering");
-  // Which of the model's meshes the actor is drawn with (see ChooseSoftSurfaces), or the render
-  // model linked to its visual mesh (see CheckRenderModelLink).
+  // Which of the model's meshes the actor is drawn with (see ChooseSoftSurfaces and
+  // ChooseRodSurfaces), or the render model linked to its visual mesh (see CheckRenderModelLink).
   ImGui::LabelText(
       "Rendered As",
       "%s",

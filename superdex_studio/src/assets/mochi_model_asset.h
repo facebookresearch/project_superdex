@@ -91,14 +91,17 @@ class MochiModelAsset : public Asset {
 
   // Soft Dynamic Mesh Utils
   int GetSoftSurfaceVertexCount();
-  // Node count of one of the shape's triangle meshes, regardless of element type, or 0 if the shape
-  // has no such mesh. DeformableSurface::Surface is the tetrahedral boundary or the triangle
-  // surface itself.
+  // Node count of one of the shape's meshes, regardless of element type, or 0 if the shape has no
+  // such mesh. DeformableSurface::Surface is the tetrahedral boundary or the triangle surface
+  // itself; DeformableSurface::Centerline is a polyline itself.
   int GetSurfaceVertexCount(DeformableSurface surface);
   // The meshes a soft actor of this model is drawn with (see ChooseSoftSurfaces).
   DeformableSurfaces GetSoftSurfaces(bool useContactSkin) const;
+  // The meshes a rod actor of this model is drawn with (see ChooseRodSurfaces).
+  DeformableSurfaces GetRodSurfaces(bool useContactSkin) const;
   // A wireframe of `surfaces.collision`, plus a solid mesh of `surfaces.rendered` when
-  // @p createSolid is true, both deformable.
+  // @p createSolid is true, both deformable. A DeformableSurface::Centerline surface gets no mesh
+  // here; a rod's centerline is a CreateCenterlineMesh line instead.
   bool CreateDeformableMeshes(
       DeformableSurfaces const& surfaces,
       mochi::Real3 const& bakeScale,
@@ -111,6 +114,16 @@ class MochiModelAsset : public Asset {
       DeformableSurfaces const& surfaces,
       mochi_renderer::Mesh* solid,
       mochi_renderer::WireframeMesh* wireframe,
+      mochi::Real3 const& bakeScale,
+      mochi::TransformRT const& shapeTransform);
+  // A deformable line mesh of a polyline model's centerline, baked like CreateDeformableMeshes;
+  // null if the model is not a polyline.
+  std::unique_ptr<mochi_renderer::LineSegmentMesh> CreateCenterlineMesh(
+      mochi::Real3 const& bakeScale,
+      mochi::TransformRT const& shapeTransform);
+  // Restores a CreateCenterlineMesh line to its rest pose.
+  void UpdateCenterlineMesh(
+      mochi_renderer::LineSegmentMesh& centerline,
       mochi::Real3 const& bakeScale,
       mochi::TransformRT const& shapeTransform);
   // Sets @p renderModel, a render model linked to this model's visual mesh (see
@@ -185,11 +198,11 @@ class MochiModelAsset : public Asset {
       AssetManager* manager,
       mochi_renderer::ResourceManager& resourceManager);
 
-  // Load one of the shape's triangle meshes (native, unbaked). DeformableSurface::Surface is the
-  // tetrahedral boundary for a tet mesh, or the triangle surface itself for a surface mesh. Vertex
-  // ordering matches the physics engine's node queries for that mesh (e.g. SurfaceNodePositions),
-  // so the same buffer can be updated in place during simulation. Empty if the shape has no such
-  // mesh.
+  // Load one of the shape's meshes (native, unbaked). DeformableSurface::Surface is the tetrahedral
+  // boundary for a tet mesh, or the triangle surface itself for a surface mesh;
+  // DeformableSurface::Centerline is the shape's own (polyline) mesh. Vertex ordering matches the
+  // physics engine's node data for that mesh (e.g. SurfaceNodePositions), so the same buffer can be
+  // updated in place during simulation. Empty if the shape has no such mesh.
   mochi::MeshDataView GetNativeSurfaceMesh(DeformableSurface surface, mochi::Error& error);
   // Load the model's tetrahedral boundary surface (native, unbaked); empty view + one warning if
   // the model is not a tetrahedral mesh.
@@ -204,6 +217,18 @@ class MochiModelAsset : public Asset {
       std::vector<float>& positions,
       std::vector<float>& normals,
       std::vector<int>& indices);
+  // Bakes @p mesh's nodes for `bakeScale` + `shapeTransform` into flat renderer-space positions.
+  void BakeNodePositions(
+      mochi::MeshDataView const& mesh,
+      mochi::Real3 const& bakeScale,
+      mochi::TransformRT const& shapeTransform,
+      std::vector<float>& positions) const;
+  // The native centerline of a polyline model, with its nodes baked into @p positions like
+  // BakeNodePositions; empty if the model is not a polyline.
+  mochi::MeshDataView BakeCenterline(
+      mochi::Real3 const& bakeScale,
+      mochi::TransformRT const& shapeTransform,
+      std::vector<float>& positions);
   // Read the (surface-aligned) skinning from the native surface mesh into per-node bone indices and
   // weights (numNodes * weightsPerNode each, in the same node order as BakeDeformableSurface).
   // Returns false if the shape carries no surface skinning. `outMaxBoneIndex` is the largest bone

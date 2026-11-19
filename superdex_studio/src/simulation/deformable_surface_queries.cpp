@@ -35,6 +35,8 @@ std::pair<mochi::QueryHandle, mochi::QueryHandle> RegisterDeformableSurfaceQueri
       return registerPair(QueryType::ContactSkinNodePositions, QueryType::ContactSkinNodeNormals);
     case DeformableSurface::Surface:
       return registerPair(QueryType::SurfaceNodePositions, QueryType::SurfaceNodeNormals);
+    case DeformableSurface::Centerline:
+      break; // read from the rod's pose (ReadRodPose), not a query
   }
   return {};
 }
@@ -62,6 +64,8 @@ void ReadDeformableSurfaceNodes(
       positions = actor.GetSurfaceMeshNodePositionsLocal(error);
       normals = actor.GetSurfaceMeshNodeNormalsLocal(error);
       break;
+    case DeformableSurface::Centerline:
+      break; // no triangles; see ReadRodPose and ConvertRodPoseNodes
   }
   int const numNodes = isize(positions) / 3;
   int const numNormals = isize(normals) / 3;
@@ -85,6 +89,42 @@ void ReadDeformableSurfaceNodes(
     outNormals[3 * n + 0] = nm[0];
     outNormals[3 * n + 1] = nm[1];
     outNormals[3 * n + 2] = nm[2];
+  }
+}
+
+void ReadRodPose(mochi::Actor const& actor, RodPose& outPose, mochi::Error& error) {
+  using namespace mochi;
+  MeshDataView const mesh = actor.GetMesh();
+  int const numNodes = mesh.GetNumNodes();
+  int const numElements = mesh.connectivity.empty() ? Max(0, numNodes - 1) : mesh.GetNumElements();
+  // The displacements land in `nodes` and get the rest nodes added in place.
+  outPose.nodes.resize(static_cast<size_t>(numNodes) * 3);
+  outPose.frameAxes.resize(static_cast<size_t>(numElements) * 3);
+  actor.GetRodPose(MakeSpan(outPose.nodes), MakeSpan(outPose.frameAxes), error);
+  if (!error.IsOK()) {
+    outPose.nodes.clear();
+    outPose.frameAxes.clear();
+    return;
+  }
+  for (int i = 0; i < isize(outPose.nodes); ++i) {
+    outPose.nodes[i] += mesh.coordinates[i];
+  }
+}
+
+void ConvertRodPoseNodes(
+    RodPose const& pose,
+    mochi::CoordinateSpaceConverter const& converter,
+    std::vector<float>& outPositions) {
+  using namespace mochi;
+  int const numNodes = isize(pose.nodes) / 3;
+  outPositions.resize(static_cast<size_t>(numNodes) * 3);
+  for (int n = 0; n < numNodes; ++n) {
+    auto const p = converter.TranslationToOutput(
+        StaticCast<Float3>(
+            Real3{pose.nodes[3 * n + 0], pose.nodes[3 * n + 1], pose.nodes[3 * n + 2]}));
+    outPositions[3 * n + 0] = p[0];
+    outPositions[3 * n + 1] = p[1];
+    outPositions[3 * n + 2] = p[2];
   }
 }
 

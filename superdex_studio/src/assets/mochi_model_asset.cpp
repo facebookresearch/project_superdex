@@ -228,6 +228,8 @@ mochi::MeshDataView MochiModelAsset::GetNativeSurfaceMesh(
       return context->GetShapeContactSkinMesh(shape, error);
     case DeformableSurface::Surface:
       return context->GetShapeSurfaceMesh(shape, error);
+    case DeformableSurface::Centerline:
+      return context->GetShapeMesh(shape, error);
   }
   return {};
 }
@@ -244,6 +246,29 @@ mochi::MeshDataView MochiModelAsset::GetNativeSoftSurface(mochi::Error& error) {
   return GetNativeSurfaceMesh(DeformableSurface::Surface, error);
 }
 
+void MochiModelAsset::BakeNodePositions(
+    mochi::MeshDataView const& mesh,
+    mochi::Real3 const& bakeScale,
+    mochi::TransformRT const& shapeTransform,
+    std::vector<float>& positions) const {
+  using namespace mochi;
+  // Bake scale then the shape offset into the rest positions on the CPU (topology is
+  // scale-independent) rather than baking a new physics shape per scale, which would create and
+  // cache a shape on every frame of a scale drag.
+  auto const& converter = _manager->GetStudio()->GetEditorToRendererSpaceConverter();
+  int const numNodes = mesh.GetNumNodes();
+  positions.resize(static_cast<size_t>(numNodes) * 3);
+  for (int n = 0; n < numNodes; ++n) {
+    Real3 const native{
+        mesh.coordinates[3 * n + 0], mesh.coordinates[3 * n + 1], mesh.coordinates[3 * n + 2]};
+    Real3 const baked = shapeTransform.TransformPoint(bakeScale * native);
+    auto const p = StaticCast<Float3>(converter.TranslationToOutput(baked));
+    positions[3 * n + 0] = p[0];
+    positions[3 * n + 1] = p[1];
+    positions[3 * n + 2] = p[2];
+  }
+}
+
 bool MochiModelAsset::BakeDeformableSurface(
     DeformableSurface surfaceKind,
     mochi::Real3 const& bakeScale,
@@ -252,31 +277,62 @@ bool MochiModelAsset::BakeDeformableSurface(
     std::vector<float>& normals,
     std::vector<int>& indices) {
   using namespace mochi;
+  MOCHI_ASSERT_VERBOSE(
+      surfaceKind != DeformableSurface::Centerline, "A centerline has no triangles.");
   ErrorLog e;
   MeshDataView const surface = GetNativeSurfaceMesh(surfaceKind, e);
   if (!e.IsOK() || surface.IsEmpty()) {
     return false;
   }
-  // Bake scale then the shape offset into the rest positions on the CPU (topology is
-  // scale-independent) rather than baking a new physics shape per scale, which would create and
-  // cache a shape on every frame of a scale drag.
-  auto const& converter = _manager->GetStudio()->GetEditorToRendererSpaceConverter();
-  int const numNodes = surface.GetNumNodes();
-  positions.resize(static_cast<size_t>(numNodes) * 3);
-  for (int n = 0; n < numNodes; ++n) {
-    Real3 const native{
-        surface.coordinates[3 * n + 0],
-        surface.coordinates[3 * n + 1],
-        surface.coordinates[3 * n + 2]};
-    Real3 const baked = shapeTransform.TransformPoint(bakeScale * native);
-    auto const p = StaticCast<Float3>(converter.TranslationToOutput(baked));
-    positions[3 * n + 0] = p[0];
-    positions[3 * n + 1] = p[1];
-    positions[3 * n + 2] = p[2];
-  }
+  BakeNodePositions(surface, bakeScale, shapeTransform, positions);
   indices.assign(surface.connectivity.begin(), surface.connectivity.end());
   ComputeVertexNormalsAreaWeighted(positions, indices, normals);
   return true;
+}
+
+mochi::MeshDataView MochiModelAsset::BakeCenterline(
+    mochi::Real3 const& bakeScale,
+    mochi::TransformRT const& shapeTransform,
+    std::vector<float>& positions) {
+  mochi::ErrorLog error;
+  mochi::MeshDataView const mesh = GetNativeSurfaceMesh(DeformableSurface::Centerline, error);
+  if (!error.IsOK() || mesh.nodesPerElement != 2 || mesh.GetNumNodes() < 2) {
+    return {};
+  }
+  BakeNodePositions(mesh, bakeScale, shapeTransform, positions);
+  return mesh;
+}
+
+std::unique_ptr<LineSegmentMesh> MochiModelAsset::CreateCenterlineMesh(
+    mochi::Real3 const& bakeScale,
+    mochi::TransformRT const& shapeTransform) {
+  std::vector<float> positions;
+  mochi::MeshDataView const mesh = BakeCenterline(bakeScale, shapeTransform, positions);
+  if (mesh.IsEmpty()) {
+    return nullptr;
+  }
+  auto const implicitConnectivity = mesh.connectivity.empty()
+      ? mochi::MakeSequentialPolylineConnectivity(mesh.GetNumNodes(), /*isClosedLoop=*/false)
+      : mochi::DynamicArray<int>{};
+  auto const indices =
+      mesh.connectivity.empty() ? mochi::MakeConstSpan(implicitConnectivity) : mesh.connectivity;
+  ResourceManager& rm = _manager->GetStudio()->GetResourceManager();
+  return LineSegmentMesh::CreateLineSegmentMesh(
+      rm.GetEngine(),
+      mochi::MakeConstSpan(positions),
+      indices,
+      CreatePolylineMaterial(rm, _color),
+      /*isDynamic=*/true);
+}
+
+void MochiModelAsset::UpdateCenterlineMesh(
+    LineSegmentMesh& centerline,
+    mochi::Real3 const& bakeScale,
+    mochi::TransformRT const& shapeTransform) {
+  std::vector<float> positions;
+  if (!BakeCenterline(bakeScale, shapeTransform, positions).IsEmpty()) {
+    centerline.Update(mochi::MakeConstSpan(positions));
+  }
 }
 
 int MochiModelAsset::GetSoftSurfaceVertexCount() {
@@ -295,6 +351,10 @@ DeformableSurfaces MochiModelAsset::GetSoftSurfaces(bool useContactSkin) const {
   return ChooseSoftSurfaces(_modelData, useContactSkin);
 }
 
+DeformableSurfaces MochiModelAsset::GetRodSurfaces(bool useContactSkin) const {
+  return ChooseRodSurfaces(_modelData, useContactSkin);
+}
+
 bool MochiModelAsset::CreateDeformableMeshes(
     DeformableSurfaces const& surfaces,
     mochi::Real3 const& bakeScale,
@@ -308,8 +368,10 @@ bool MochiModelAsset::CreateDeformableMeshes(
   ResourceManager& rm = _manager->GetStudio()->GetResourceManager();
   // Solid: opaque, deforming; a visual mesh is smooth-lit like a render model, the collision
   // geometry flat-lit like the rest of the shape views. Wireframe: shaded surface (surface color) +
-  // edge overlay (wireframe color), deforming. Both share the actor's hashed colors.
-  if (createSolid) {
+  // edge overlay (wireframe color), deforming. Both share the actor's hashed colors. A centerline
+  // gets neither (see CreateCenterlineMesh).
+  bool const createsSolid = createSolid && surfaces.rendered != DeformableSurface::Centerline;
+  if (createsSolid) {
     if (!BakeDeformableSurface(
             surfaces.rendered, bakeScale, shapeTransform, positions, normals, indices)) {
       return false;
@@ -324,7 +386,10 @@ bool MochiModelAsset::CreateDeformableMeshes(
         /*isDynamic=*/true,
         /*isClosed=*/true);
   }
-  if ((!createSolid || surfaces.collision != surfaces.rendered) &&
+  if (surfaces.collision == DeformableSurface::Centerline) {
+    return true;
+  }
+  if ((!createsSolid || surfaces.collision != surfaces.rendered) &&
       !BakeDeformableSurface(
           surfaces.collision, bakeScale, shapeTransform, positions, normals, indices)) {
     return false;

@@ -331,6 +331,18 @@ TEST(PrefabConstraintsTest, DeformableConstraintsNeedNodesOrFindClosest) {
   EXPECT_FALSE(ValidateConstraint(prefab, actors, toRigid).empty());
 }
 
+TEST(PrefabConstraintsTest, RodsAreDeformableConstraintActors) {
+  ScenePrefab prefab = MakePrefab();
+  prefab.actors.rod.emplace_back();
+  prefab.actors.rod.back().name = DynamicString{"rope"};
+  auto& lists = prefab.constraints;
+  ConstraintRef const pin = AppendConstraint(lists, ConstraintType::DeformableNodePosition);
+  lists.deformableNodePosition[0].actorName = DynamicString{"rope"};
+  lists.deformableNodePosition[0].nodeIndex = 0;
+
+  EXPECT_TRUE(ValidateConstraint(prefab, BuildConstraintActorIndex(prefab, {}), pin).empty());
+}
+
 TEST(PrefabConstraintsTest, MetricScaleComposesNestedAndArticulatedScales) {
   auto inner = std::make_shared<ScenePrefab>(MakePrefab());
   inner->actors.articulated[0].scale = 2.0f;

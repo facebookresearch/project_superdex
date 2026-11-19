@@ -34,6 +34,7 @@ class Viewport;
 // collision checks all resolve the same names.
 inline constexpr std::string_view kRigidPrefix = "Rigid_";
 inline constexpr std::string_view kSoftPrefix = "Soft_";
+inline constexpr std::string_view kRodPrefix = "Rod_";
 inline constexpr std::string_view kArticulatedPrefix = "Articulated_";
 inline constexpr std::string_view kLinkPrefix = "Link_";
 inline constexpr std::string_view kNestedPrefix = "Nested_";
@@ -43,7 +44,7 @@ std::string FallbackName(std::string_view prefix, mochi::DynamicString const& na
 
 // One row of a prefab hierarchy: a top-level actor, a nested prefab, or an articulated link.
 struct PrefabHierarchyItem {
-  enum class Kind { None, Rigid, ArticulatedActor, ArticulatedLink, NestedPrefab, Soft };
+  enum class Kind { None, Rigid, ArticulatedActor, ArticulatedLink, NestedPrefab, Soft, Rod };
   Kind kind = Kind::None;
   int actorIndex = -1;
   int linkIndex = -1; // articulated link index (ArticulatedLink only)
@@ -55,10 +56,10 @@ struct PrefabHierarchyItem {
 // (its links and skin) or a nested prefab stages.
 std::vector<int> StagedIndicesFor(SceneStage const& stage, PrefabHierarchyItem const& item);
 
-// The actor table of a scene prefab: its rigid, soft and articulated actors (with their link trees)
-// and nested prefabs, sortable by name and type. Hovering a row highlights what it covers in the
-// viewport, and an eye on each row hides or shows it. Shared by the Prefab Editor, which edits the
-// prefab through the callbacks, and the Asset Tuner, which only shows it.
+// The actor table of a scene prefab: its rigid, soft, rod and articulated actors (with their link
+// trees) and nested prefabs, sortable by name and type. Hovering a row highlights what it covers in
+// the viewport, and an eye on each row hides or shows it. Shared by the Prefab Editor, which edits
+// the prefab through the callbacks, and the Asset Tuner, which only shows it.
 class PrefabHierarchy {
  public:
   // A top-level row: an actor or nested prefab, its display name and type.
@@ -78,9 +79,9 @@ class PrefabHierarchy {
     std::function<void(PrefabHierarchyItem const&)> rowMenu;
     // Fills the right-click menu of the table's empty space.
     std::function<void()> emptySpaceMenu;
-    // Extra rows an editor lists under a rigid, soft or nested-prefab row, or under a link before
-    // its child links, such as the constraints naming it. `hasChildRows` makes the row a tree node;
-    // `showChildRows` draws them (one table row each) while it is open.
+    // Extra rows an editor lists under a rigid, soft, rod or nested-prefab row, or under a link
+    // before its child links, such as the constraints naming it. `hasChildRows` makes the row a
+    // tree node; `showChildRows` draws them (one table row each) while it is open.
     std::function<bool(PrefabHierarchyItem const&)> hasChildRows;
     std::function<void(PrefabHierarchyItem const&)> showChildRows;
   };

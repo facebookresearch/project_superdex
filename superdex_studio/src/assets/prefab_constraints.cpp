@@ -476,6 +476,11 @@ ConstraintActorIndex BuildConstraintActorIndex(
       index.deformable.emplace_back(actor.name);
     }
   }
+  for (auto const& actor : prefab.actors.rod) {
+    if (!actor.name.empty()) {
+      index.deformable.emplace_back(actor.name);
+    }
+  }
   for (auto const& actor : prefab.actors.articulated) {
     if (actor.name.empty()) {
       continue;

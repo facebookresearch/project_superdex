@@ -584,6 +584,9 @@ void PrefabEditor::ShowCreateActorMenuItems(HierarchyEdits& edits) {
   if (ImGui::Selectable("Create Soft")) {
     edits.createSoft = true;
   }
+  if (ImGui::Selectable("Create Rod")) {
+    edits.createRod = true;
+  }
   if (ImGui::Selectable("Create Articulated")) {
     edits.createArticulated = true;
   }
@@ -602,6 +605,7 @@ void PrefabEditor::ShowCreateConstraintMenuItems(Selection const& context, Hiera
       case Selection::Kind::Rigid:
         return category != ConstraintCategory::ArticulatedJoint;
       case Selection::Kind::Soft:
+      case Selection::Kind::Rod:
         return category == ConstraintCategory::Deformable;
       case Selection::Kind::NestedPrefab:
       case Selection::Kind::Constraint:
@@ -671,7 +675,7 @@ void PrefabEditor::ShowHierarchyToolbar(
     if (ImGui::Button(ICON_FA_PLUS " Actor")) {
       ImGui::OpenPopup("CreateActorPopup");
     }
-    ImGui::SetItemTooltip("Create a rigid, soft, articulated or nested prefab actor.");
+    ImGui::SetItemTooltip("Create a rigid, soft, rod, articulated or nested prefab actor.");
     ImGui::SameLine();
   }
   if (ImGui::Button(ICON_FA_PLUS " Constraint")) {
@@ -708,6 +712,8 @@ std::string_view PrefabEditor::PrefabActorName(Selection::Kind kind, int index) 
       return nameAt(prefab.actors.rigid);
     case Selection::Kind::Soft:
       return nameAt(prefab.actors.soft);
+    case Selection::Kind::Rod:
+      return nameAt(prefab.actors.rod);
     case Selection::Kind::ArticulatedActor:
     case Selection::Kind::ArticulatedLink:
       return nameAt(prefab.actors.articulated);
@@ -901,6 +907,11 @@ void PrefabEditor::CreateConstraint(ConstraintType type, Selection const& contex
           addUnique(targets.deformable, prefab.actors.soft[s.actorIndex].name);
         }
         break;
+      case Selection::Kind::Rod:
+        if (s.actorIndex >= 0 && s.actorIndex < static_cast<int>(prefab.actors.rod.size())) {
+          addUnique(targets.deformable, prefab.actors.rod[s.actorIndex].name);
+        }
+        break;
       case Selection::Kind::ArticulatedActor:
       case Selection::Kind::ArticulatedLink:
         if (targets.articulatedActor.empty() && s.actorIndex >= 0 &&
@@ -920,6 +931,9 @@ void PrefabEditor::CreateConstraint(ConstraintType type, Selection const& contex
     addUnique(targets.rigid, actor.name);
   }
   for (auto const& actor : prefab.actors.soft) {
+    addUnique(targets.deformable, actor.name);
+  }
+  for (auto const& actor : prefab.actors.rod) {
     addUnique(targets.deformable, actor.name);
   }
   if (targets.articulatedActor.empty() && !prefab.actors.articulated.empty()) {
