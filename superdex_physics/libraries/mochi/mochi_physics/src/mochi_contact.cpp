@@ -18,6 +18,7 @@
 
 #include "mochi_articulated_body.h"
 #include "mochi_blended.h"
+#include "mochi_capture.h"
 #include "mochi_contact_anchors.h"
 #include "mochi_contact_filter.h"
 #include "mochi_deformable.h"
@@ -5304,6 +5305,11 @@ void InitializeOnce(entt::registry& reg) {
   ecs::RegisterComponent<CSdfMapping<TimeStep::StageStart>>(reg);
   ecs::RegisterComponent<CContactSampleBonePoints>(reg);
   ecs::RegisterComponent<CSphereCollider>(reg);
+
+  // A restore changes the friction anchors without indexing them.
+  capture::RegisterPostRestoreSystem(
+      +[](CFrictionAnchorIndex<AnchorSet::Active>& outIndex) { outIndex.anchorsChanged = true; },
+      reg);
 
   // Global Context
   reg.set<CContactFilterTable>();

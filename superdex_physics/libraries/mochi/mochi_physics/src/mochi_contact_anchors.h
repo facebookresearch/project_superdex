@@ -122,9 +122,11 @@ struct CFrictionAnchors : NoCopy {
  * follow, and in PrepareBackPropagation, before back-propagating a step. It is valid until the
  * anchors change: the rebuild of the pending anchors, which uses it as scratch, or a restore (such
  * as the restore of the old state at the end of BackPropagate) leave it stale, until the next step
- * or PrepareBackPropagation derives it again. AnchorSet::Pending exists only in differentiable
- * scenes with elasto-plastic friction: it is derived in PrepareBackPropagation too, for the
- * back-propagation of the anchor advance, which looks up the Pending anchors.
+ * or PrepareBackPropagation derives it again. Each of these changes sets anchorsChanged, so that
+ * the next step start promotes and indexes again only the actors whose anchors changed, which
+ * skips the actors asleep since the last step start. AnchorSet::Pending exists only in
+ * differentiable scenes with elasto-plastic friction: it is derived in PrepareBackPropagation too,
+ * for the back-propagation of the anchor advance, which looks up the Pending anchors.
  */
 template <AnchorSet kSet>
 struct CFrictionAnchorIndex : private DynamicArray<int>, public NoCopy {
@@ -135,6 +137,11 @@ struct CFrictionAnchorIndex : private DynamicArray<int>, public NoCopy {
 
   using DynamicArray<int>::operator[];
   using DynamicArray<int>::size;
+
+  // Only for AnchorSet::Active: whether the anchors may have changed since the last step start,
+  // which then promoted Pending into Active and indexed Active. Set by the rebuild of the pending
+  // anchors, the clear requests and restores.
+  bool anchorsChanged = true;
 };
 
 /**
@@ -249,7 +256,8 @@ void IndexFrictionAnchors(
 // Prepares the friction anchors at the start of a step, before collision detection fills the
 // anchor offsets: promotes Pending into Active if promotePending (false for a solve-free assembly,
 // which keeps the Active anchors the last step used), applies the queued clear requests to both
-// sets, and indexes Active.
+// sets, and indexes Active. Only the actors whose anchors changed are promoted and indexed (see
+// CFrictionAnchorIndex::anchorsChanged).
 void PrepareFrictionAnchors(entt::registry& reg, bool promotePending);
 
 // Building blocks of PrepareFrictionAnchors, declared for tests that drive single actors.

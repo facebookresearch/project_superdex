@@ -59,6 +59,8 @@ void mochi::UpdateFrictionAnchors(
     CActiveCollisions</*kIsSync*/ true, TimeStep::Current> const& syncCollisions,
     CFrictionAnchors<AnchorSet::Pending>& outNext,
     CFrictionAnchorIndex<AnchorSet::Active>& outIndex) {
+  outIndex.anchorsChanged = true;
+
   // A stopped solve is accepted. A divergence, at any stage, resets the actor's state, which the
   // anchors no longer match: release them.
   if (convergence && convergence->stepStatus == ConvergenceStatus::Diverged) {
@@ -197,6 +199,9 @@ void mochi::ApplyFrictionAnchorClearRequests(entt::registry& reg) {
     if (auto* pending = reg.try_get<CFrictionAnchors<AnchorSet::Pending>>(e)) {
       pending->anchors.clear();
     }
+    if (auto* index = reg.try_get<CFrictionAnchorIndex<AnchorSet::Active>>(e)) {
+      index->anchorsChanged = true;
+    }
     if (HasFrictionAnchors(reg, e)) {
       entities[numColliders++] = entities[i];
     }
@@ -208,13 +213,13 @@ void mochi::ApplyFrictionAnchorClearRequests(entt::registry& reg) {
   SortAndRemoveDuplicates(entities);
 
   // Drop the anchors of all actors on the requested colliders. The stable compaction keeps the
-  // anchors of each sample contiguous.
+  // anchors of each sample contiguous. Returns whether any anchor was dropped.
   auto const isRequested = [&](uint32_t collider) {
     return std::ranges::binary_search(entities, collider);
   };
   auto const dropRequested = [&](DynamicArray<FrictionAnchor>& anchors) {
     if (anchors.empty()) {
-      return;
+      return false;
     }
     // Consecutive anchors often share a collider: search only when it changes.
     uint32_t lastCollider = anchors[0].collider;
@@ -232,11 +237,18 @@ void mochi::ApplyFrictionAnchorClearRequests(entt::registry& reg) {
       }
     }
     anchors.resize(numKept);
+    return numKept < numAnchors;
   };
-  auto view = reg.view<CFrictionAnchors<AnchorSet::Active>, CFrictionAnchors<AnchorSet::Pending>>();
-  for (auto&& [e, active, pending] : view.each()) {
-    dropRequested(active.anchors);
-    dropRequested(pending.anchors);
+  auto view = reg.view<
+      CFrictionAnchors<AnchorSet::Active>,
+      CFrictionAnchors<AnchorSet::Pending>,
+      CFrictionAnchorIndex<AnchorSet::Active>>();
+  for (auto&& [e, active, pending, index] : view.each()) {
+    bool const droppedActive = dropRequested(active.anchors);
+    bool const droppedPending = dropRequested(pending.anchors);
+    if (droppedActive || droppedPending) {
+      index.anchorsChanged = true;
+    }
   }
   entities.clear();
 }
@@ -252,12 +264,19 @@ void mochi::PrepareFrictionAnchors(entt::registry& reg, bool promotePending) {
     auto const& pending = reg.storage<CFrictionAnchors<AnchorSet::Pending>>();
     ParallelForEach(
         "PromotePendingFrictionAnchors", actors, kMinActorsPerTask, [&](entt::entity e) {
-          PromotePendingFrictionAnchors(pending.get(e), active.get(e));
+          if (indices.get(e).anchorsChanged) {
+            PromotePendingFrictionAnchors(pending.get(e), active.get(e));
+          }
         });
   }
   ApplyFrictionAnchorClearRequests(reg);
+  // A solve-free assembly keeps the flags: the promotion is still owed.
   ParallelForEach("IndexFrictionAnchors", actors, kMinActorsPerTask, [&](entt::entity e) {
-    IndexFrictionAnchors(active.get(e), indices.get(e));
+    auto& index = indices.get(e);
+    if (index.anchorsChanged) {
+      IndexFrictionAnchors(active.get(e), index);
+      index.anchorsChanged = !promotePending;
+    }
   });
 }
 

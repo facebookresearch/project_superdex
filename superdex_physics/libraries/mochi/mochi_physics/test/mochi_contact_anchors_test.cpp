@@ -454,6 +454,30 @@ class FrictionAnchors : public test::MochiSceneTestBase {
     return relativeX() - x0;
   }
 
+  bool IsAwake(Actor* actor) {
+    auto const& reg = GetRegistry();
+    return sleep::IsIslandAwake(reg, reg.get<CIslandMemberInfo const>(GetEntity(actor)).island);
+  }
+
+  // Enables sleeping, and returns a cube resting under half the Coulomb limit, damped so that it
+  // falls asleep.
+  Actor* CreateCubeThatSleeps() {
+    experimental::SetSleepParams(
+        _scene, experimental::SleepParams{.canSleep = true}, test::ExpectOK{});
+    return CreateCubeUnderTangentialLoad(0.5_r, /*normalDamping [s/m]*/ 100_r);
+  }
+
+  // Steps until the actor's island falls asleep, and one more step, after which the step start
+  // skips the actor's unchanged anchors.
+  void StepUntilAsleep(Actor* actor) {
+    for (int i = 0; i < 500 && IsAwake(actor); ++i) {
+      Step(1);
+    }
+    ASSERT_FALSE(IsAwake(actor)) << "The actor should fall asleep.";
+    Step(1);
+    ASSERT_FALSE(GetIndex(actor).anchorsChanged);
+  }
+
   static constexpr real kGravity = 9.81_r;
   Actor* _plane = nullptr;
 };
@@ -684,9 +708,12 @@ TEST_F(FrictionAnchors, PlacingColliderShiftsRemainingAnchorGroups) {
   Actor* colliding = CreateRigidCube();
   RebuildInterleavedAnchors(plane, GetEntity(collider), GetAnchors(colliding), GetIndex(colliding));
   GetPendingAnchors(colliding) = GetAnchors(colliding);
+  // As for an actor asleep since the last step start, which skips its unchanged anchors.
+  GetIndex(colliding).anchorsChanged = false;
 
   Place(collider);
   ApplyClearRequests();
+  EXPECT_TRUE(GetIndex(colliding).anchorsChanged);
   auto const& anchors = GetAnchors(colliding);
   auto const& index = GetIndex(colliding);
   EXPECT_EQ(2, isize(anchors));
@@ -1492,6 +1519,68 @@ INSTANTIATE_TEST_SUITE_P(
     [](::testing::TestParamInfo<bool> const& info) {
       return info.param ? "StaticCollider" : "Actor";
     });
+
+// A sleeping actor keeps its anchors and index without promoting and indexing them at each step
+// start. Waking up with a changed load, it starts from the preload of its last solved step.
+TEST_F(FrictionAnchors, SleepingActorSkipsUnchangedAnchors) {
+  Actor* cube = CreateCubeThatSleeps();
+  StepUntilAsleep(cube);
+  DynamicArray<FrictionAnchor> const anchors = GetPendingAnchors(cube);
+  ASSERT_FALSE(anchors.empty());
+  for (int i = 0; i < 3; ++i) {
+    Step(1);
+    EXPECT_FALSE(GetIndex(cube).anchorsChanged);
+    ExpectAnchors(anchors, GetAnchors(cube));
+  }
+
+  SetTangentialLoad(-0.5_r);
+  Step(1);
+  EXPECT_TRUE(IsAwake(cube));
+  ExpectAnchors(anchors, GetAnchors(cube));
+  EXPECT_TRUE(GetIndex(cube).anchorsChanged);
+}
+
+// A query refresh of a sleeping island applies a pending clear request to its evaluation, which
+// reports the friction without preload, and then restores the anchors and the request, so the next
+// step promotes and indexes them again and applies the request.
+TEST_F(FrictionAnchors, QueryRefreshOfSleepingActorAppliesClearRequest) {
+  Actor* cube = CreateCubeThatSleeps();
+  cube->RegisterQuery(QueryType::TotalContactForce, test::ExpectOK{});
+  StepUntilAsleep(cube);
+  DynamicArray<FrictionAnchor> const anchors = GetAnchors(cube);
+  Real3 const held = cube->GetContactForceWorld(test::ExpectOK{});
+  ASSERT_GT(Abs(held[0]), 0_r);
+
+  Place(cube);
+  _scene->UpdateQueries(test::ExpectOK{});
+  EXPECT_FALSE(IsAwake(cube));
+  EXPECT_LT(Abs(cube->GetContactForceWorld(test::ExpectOK{})[0]), 0.1_r * Abs(held[0]));
+  ExpectAnchors(anchors, GetAnchors(cube));
+  EXPECT_FALSE(GetRegistry().ctx<CFrictionAnchorClearRequests>().entities.empty());
+  EXPECT_TRUE(GetIndex(cube).anchorsChanged);
+
+  Step(1);
+  EXPECT_TRUE(IsAwake(cube));
+  EXPECT_TRUE(GetAnchors(cube).empty());
+  EXPECT_FALSE(GetPendingAnchors(cube).empty());
+}
+
+// Restoring a state into a sleeping island changes the anchors that its step starts skipped: the
+// next step promotes and indexes the restored anchors.
+TEST_F(FrictionAnchors, RestoreIntoSleepingActorPromotesRestoredAnchors) {
+  Actor* cube = CreateCubeThatSleeps();
+  Step(1);
+  DynamicArray<FrictionAnchor> const pending = GetPendingAnchors(cube);
+  ASSERT_FALSE(pending.empty());
+  ASSERT_TRUE(GetAnchors(cube).empty());
+  StateHandle const awake = _scene->CaptureState(test::ExpectOK{});
+  StepUntilAsleep(cube);
+
+  _scene->RestoreState(awake, /*releaseImmediately=*/true, test::ExpectOK{});
+  EXPECT_TRUE(GetIndex(cube).anchorsChanged);
+  Step(1);
+  ExpectAnchors(pending, GetAnchors(cube));
+}
 
 // Both anchor sets restore bit for bit. Query refresh reproduces the completed step's forces
 // from Active without consuming Pending, which the next advancing step then uses. The index is not
