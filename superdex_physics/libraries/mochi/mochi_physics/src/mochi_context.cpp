@@ -199,7 +199,7 @@ static void GenerateMissingPolylineFrameAxes(ModelData& model) {
   if (!model.mesh || model.mesh->nodesPerElement != 2 || model.elementFrameAxes) {
     return;
   }
-  DynamicArray<Real3> const axes = GenerateDiscreteBishopFrame(
+  DynamicArray<Real3> const axes = model::GenerateDiscreteBishopFrame(
       Unflatten<Real3 const>(model.mesh->coordinates), IsPolylineClosedLoop(*model.mesh));
   Span<real const> const flatAxes = Flatten(MakeConstSpan(axes));
   model.elementFrameAxes.emplace(flatAxes.begin(), flatAxes.end());

@@ -1021,85 +1021,6 @@ void mochi::rod::ResolveContactSkinningJacobian(
   }
 }
 
-DynamicArray<Real3> mochi::GenerateDiscreteBishopFrame(Span<Real3 const> nodes, bool isClosedLoop) {
-  int const numNodes = isize(nodes);
-  MOCHI_ASSERT(numNodes >= 2, "At least two nodes are required to generate a discrete frame.");
-  int const numElements = isClosedLoop ? numNodes : numNodes - 1;
-  DynamicArray<Real3> elementFrameAxes(numElements);
-
-  // Compute unit tangent for first element
-  Real3 const edge0 = nodes[1] - nodes[0];
-  real const length0 = Norm(edge0);
-  Real3 const tangent0 = edge0 / length0;
-
-  // Choose the element frame axis for the first element by finding the largest-norm
-  // cross product of the tangent with one of the standard unit basis vectors.
-  // This ensures we get a well-conditioned orthogonal axis even when the tangent
-  // is nearly aligned with one of the basis vectors.
-  Real3 axis0;
-  real maxNormSq = 0_r;
-  for (int i = 0; i < 3; ++i) {
-    Real3 basisVec = {};
-    basisVec[i] = 1_r;
-    Real3 const cross = Cross(tangent0, basisVec);
-    real const normSq = NormSqr(cross);
-    if (normSq > maxNormSq) {
-      maxNormSq = normSq;
-      axis0 = Normalize(cross);
-    }
-  }
-  elementFrameAxes[0] = axis0;
-
-  // Transport the axis from each element to the next using minimal rotations
-  Vec4r prevTangent = ToSimd(tangent0);
-  Vec4r prevAxis = ToSimd(axis0);
-  real totalLength = length0;
-  for (int i = 1; i < numElements; ++i) {
-    Real3 const edge = nodes[(i + 1) % numNodes] - nodes[i];
-    real const length = Norm(edge);
-    totalLength += length;
-    Vec4r const currTangent = ToSimd(edge / length);
-
-    // ParallelTransportOperator computes the minimal rotation from prevTangent to currTangent
-    VMatrix3x3r const P = fem::ParallelTransportOperator(prevTangent, currTangent);
-    Vec4r const currAxis = DotMatVec3x3(P, prevAxis);
-    elementFrameAxes[i] = ToReal3(currAxis);
-
-    prevTangent = currTangent;
-    prevAxis = currAxis;
-  }
-
-  // Holonomy correction for closed-loop rods: Distribute holonomy evenly along rod for closed-loop
-  // frame axes with minimal twisting energy.
-  if (isClosedLoop && numElements >= 2) {
-    Vec4r const t0 = ToSimd(tangent0);
-    VMatrix3x3r const Pclosing = fem::ParallelTransportOperator(prevTangent, t0);
-    Vec4r const transportedAxis = DotMatVec3x3(Pclosing, prevAxis);
-
-    Vec4r const d0 = ToSimd(elementFrameAxes[0]);
-    Vec4r const b0 = Cross3(t0, d0);
-    real const sinAngle = Dot(transportedAxis, b0);
-    real const cosAngle = Dot(transportedAxis, d0);
-    real const holonomyAngle = ATan2(sinAngle, cosAngle);
-
-    if (Abs(holonomyAngle) > kDefaultNearEqualEpsilon<real>) {
-      real const invTotalLength = 1_r / totalLength;
-      real cumulativeLength = length0;
-      for (int i = 1; i < numElements; ++i) {
-        Real3 const edge = nodes[(i + 1) % numNodes] - nodes[i];
-        real const length = Norm(edge);
-        cumulativeLength += length;
-        real const alpha = -cumulativeLength * holonomyAngle * invTotalLength;
-        Real3 const t = edge / length;
-        Real3 const d = elementFrameAxes[i];
-        elementFrameAxes[i] = Cos(alpha) * d + Sin(alpha) * Cross(t, d);
-      }
-    }
-  }
-
-  return elementFrameAxes;
-}
-
 ModelData mochi::experimental::GenerateTubularRodModelData(
     Span<Real3 const> nodes,
     Span<Real3 const> elementFrameAxes,
@@ -1107,219 +1028,34 @@ ModelData mochi::experimental::GenerateTubularRodModelData(
     int numCrossSectionSegments,
     bool isClosedLoop,
     Error& error) {
-  if (isClosedLoop) {
-    MOCHI_ERROR_IF_NOT(isize(nodes) >= 3, error, "Must have at least 3 nodes for a closed loop.");
-  } else {
-    MOCHI_ERROR_IF_NOT(isize(nodes) >= 2, error, "Must have at least 2 nodes.");
-  }
-  MOCHI_ERROR_IF_NOT(
-      radius > 0_r && IsFinite(radius), error, "Radius must be positive and finite.");
-  MOCHI_ERROR_IF_NOT(
-      numCrossSectionSegments >= 3, error, "numCrossSectionSegments must be at least 3.");
+  model::ValidateTubularSkinMeshParameters(
+      nodes, isClosedLoop, radius, numCrossSectionSegments, error);
   MOCHI_ERROR_RETURN(error, {});
-
-  // Validate that the polyline has well-defined element tangents (nonzero edge lengths and no
-  // 180-degree consecutive tangent rotations) before invoking GenerateDiscreteBishopFrame, which
-  // would otherwise fail with a division by zero or undefined parallel-transport rotation axis.
-  mochi::model::ValidatePolylineGeometry(nodes, isClosedLoop, error);
-  MOCHI_ERROR_RETURN(error, {});
-
   // Validate caller-supplied frame axes (if any). Empty means auto-generate via Bishop frame.
   if (!elementFrameAxes.empty()) {
-    mochi::model::ValidatePolylineElementFrameAxes(elementFrameAxes, nodes, isClosedLoop, error);
+    model::ValidatePolylineElementFrameAxes(elementFrameAxes, nodes, isClosedLoop, error);
     MOCHI_ERROR_RETURN(error, {});
   }
-
-  int const numNodes = isize(nodes);
-  int const numElements = isClosedLoop ? numNodes : numNodes - 1;
-
-  // Compute a discrete Bishop frame for twist-free cross-section orientation. Note that these axes
-  // are intentionally independent of the rod's material frame axes, to minimize distortion of the
-  // tubular contact skin in the reference configuration, even if the material frame axes have some
-  // nontrivial twist.
-  DynamicArray<Real3> const bishopAxes = GenerateDiscreteBishopFrame(nodes, isClosedLoop);
-
-  // Use the provided element frame axes, or default to the Bishop frame if not provided
+  DynamicArray<Real3> bishopAxes;
+  if (elementFrameAxes.empty()) {
+    bishopAxes = model::GenerateDiscreteBishopFrame(nodes, isClosedLoop);
+  }
   Span<Real3 const> const frameAxes =
       elementFrameAxes.empty() ? MakeConstSpan(bishopAxes) : elementFrameAxes;
+  MeshData contactSkin = model::GenerateTubularSkinMesh(
+      nodes, frameAxes, isClosedLoop, radius, numCrossSectionSegments);
 
-  if (isClosedLoop) {
-    // Closed loop: one ring per element midpoint, no boundary rings, no end caps.
-    int const numRings = numElements;
-    int const numSurfaceNodes = numCrossSectionSegments * numRings;
-    DynamicArray<real> surfaceNodePositions;
-    surfaceNodePositions.reserve(3 * numSurfaceNodes);
-    real const invSeg = 1_r / static_cast<real>(numCrossSectionSegments);
-    for (int r = 0; r < numRings; ++r) {
-      Int2 const en = {r, (r + 1) % numNodes};
-      Real3 const center = 0.5_r * (nodes[en[0]] + nodes[en[1]]);
-      Real3 const tangent = Normalize(nodes[en[1]] - nodes[en[0]]);
-      Real3 const binormal = Cross(tangent, bishopAxes[r]);
-      for (int s = 0; s < numCrossSectionSegments; ++s) {
-        real const angle = 2_r * kPI * static_cast<real>(s) * invSeg;
-        Real3 const pos = center + radius * (Cos(angle) * bishopAxes[r] + Sin(angle) * binormal);
-        surfaceNodePositions.append(MakeConstSpan(pos));
-      }
-    }
-    DynamicArray<int> surfaceTriangles;
-    surfaceTriangles.reserve(3 * 2 * numCrossSectionSegments * numRings);
-    for (int i = 0; i < numRings; ++i) {
-      int const nextRing = (i + 1) % numRings;
-      for (int c = 0; c < numCrossSectionSegments; ++c) {
-        int const c1 = (c + 1) % numCrossSectionSegments;
-        int const v00 = i * numCrossSectionSegments + c;
-        int const v01 = i * numCrossSectionSegments + c1;
-        int const v10 = nextRing * numCrossSectionSegments + c;
-        int const v11 = nextRing * numCrossSectionSegments + c1;
-        Int3 const tri0{v00, v01, v11};
-        surfaceTriangles.append(MakeConstSpan(tri0));
-        Int3 const tri1{v00, v11, v10};
-        surfaceTriangles.append(MakeConstSpan(tri1));
-      }
-    }
-    int constexpr kWeightsPerNode = 1;
-    DynamicArray<int> embeddingElementIndices;
-    embeddingElementIndices.reserve(kWeightsPerNode * numSurfaceNodes);
-    for (int r = 0; r < numRings; ++r) {
-      for (int s = 0; s < numCrossSectionSegments; ++s) {
-        embeddingElementIndices.push_back(r);
-      }
-    }
-    DynamicArray<real> embeddingWeights(numSurfaceNodes, 1_r);
-    ModelData model;
-    model.mesh.emplace(MeshData{});
-    model.mesh->nodesPerElement = 2;
-    model.mesh->coordinates = Flatten(nodes);
-    // Closed-loop polyline: connectivity must include the wrap-around segment.
-    model.mesh->connectivity = MakeSequentialPolylineConnectivity(numNodes, /*isClosedLoop=*/true);
-    model.elementFrameAxes = Flatten(frameAxes);
-    model.contactSkinMesh.emplace(MeshData{});
-    model.contactSkinMesh->nodesPerElement = 3;
-    model.contactSkinMesh->coordinates = std::move(surfaceNodePositions);
-    model.contactSkinMesh->connectivity = std::move(surfaceTriangles);
-    model.contactSkinMesh->skinning.emplace(SkinningData{});
-    model.contactSkinMesh->skinning->weightsPerNode = kWeightsPerNode;
-    model.contactSkinMesh->skinning->indices = std::move(embeddingElementIndices);
-    model.contactSkinMesh->skinning->weights = std::move(embeddingWeights);
-    return model;
-  }
-
-  // --- Open polyline path ---
-
-  // Cross-section rings are placed at element midpoints, with boundary rings at the first and last
-  // nodes. Each ring uses the Bishop frame of its associated element directly (no averaging).
-  int const numRings = numElements + 2;
-  DynamicArray<Real3> ringD, ringB;
-  ringD.resize_noinit(numRings);
-  ringB.resize_noinit(numRings);
-  for (int r = 0; r < numRings; ++r) {
-    int const elem = Min(Max(r - 1, 0), numElements - 1);
-    Real3 const tangent = Normalize(nodes[elem + 1] - nodes[elem]);
-    Real3 const d = bishopAxes[elem];
-    ringD[r] = d;
-    ringB[r] = Cross(tangent, d);
-  }
-
-  // Surface nodes: numCrossSectionSegments vertices per ring, plus 2 cap-center vertices
-  int const numSurfaceNodes = numCrossSectionSegments * numRings + 2;
-  DynamicArray<real> surfaceNodePositions;
-  surfaceNodePositions.reserve(3 * numSurfaceNodes);
-  real const invNumCrossSectionSegments = 1_r / static_cast<real>(numCrossSectionSegments);
-  for (int r = 0; r < numRings; ++r) {
-    Real3 center;
-    if (r == 0) {
-      center = nodes[0];
-    } else if (r == numRings - 1) {
-      center = nodes[numNodes - 1];
-    } else {
-      center = 0.5_r * (nodes[r - 1] + nodes[r]);
-    }
-    for (int s = 0; s < numCrossSectionSegments; ++s) {
-      real const angle = 2_r * kPI * static_cast<real>(s) * invNumCrossSectionSegments;
-      Real3 const pos = center + radius * (Cos(angle) * ringD[r] + Sin(angle) * ringB[r]);
-      surfaceNodePositions.append(MakeConstSpan(pos));
-    }
-  }
-  surfaceNodePositions.append(MakeConstSpan(nodes[0]));
-  surfaceNodePositions.append(MakeConstSpan(nodes[numNodes - 1]));
-
-  // Triangles: quad strips between consecutive rings + triangle-fan end caps
-  int const numQuadStrips = numRings - 1;
-  DynamicArray<int> surfaceTriangles;
-  surfaceTriangles.reserve(
-      3 * (2 * numCrossSectionSegments * numQuadStrips + 2 * numCrossSectionSegments));
-  for (int i = 0; i < numQuadStrips; ++i) {
-    for (int c = 0; c < numCrossSectionSegments; ++c) {
-      int const c1 = (c + 1) % numCrossSectionSegments;
-      int const v00 = i * numCrossSectionSegments + c;
-      int const v01 = i * numCrossSectionSegments + c1;
-      int const v10 = (i + 1) * numCrossSectionSegments + c;
-      int const v11 = (i + 1) * numCrossSectionSegments + c1;
-      Int3 const tri0{v00, v01, v11};
-      surfaceTriangles.append(MakeConstSpan(tri0));
-      Int3 const tri1{v00, v11, v10};
-      surfaceTriangles.append(MakeConstSpan(tri1));
-    }
-  }
-  // Start cap
-  int const startCapCenter = numCrossSectionSegments * numRings;
-  for (int s = 0; s < numCrossSectionSegments; ++s) {
-    int const s1 = (s + 1) % numCrossSectionSegments;
-    Int3 const tri{startCapCenter, s1, s};
-    surfaceTriangles.append(MakeConstSpan(tri));
-  }
-  // End cap
-  int const endCapCenter = startCapCenter + 1;
-  int const lastRingStart = (numRings - 1) * numCrossSectionSegments;
-  for (int s = 0; s < numCrossSectionSegments; ++s) {
-    int const s1 = (s + 1) % numCrossSectionSegments;
-    Int3 const tri{endCapCenter, lastRingStart + s, lastRingStart + s1};
-    surfaceTriangles.append(MakeConstSpan(tri));
-  }
-
-  // Embedding: each surface vertex is assigned to exactly one element
-  int constexpr kWeightsPerNode = 1;
-  DynamicArray<int> embeddingElementIndices;
-  DynamicArray<real> embeddingWeights;
-  embeddingElementIndices.reserve(kWeightsPerNode * numSurfaceNodes);
-  embeddingWeights.reserve(kWeightsPerNode * numSurfaceNodes);
-  for (int r = 0; r < numRings; ++r) {
-    int const elem = Min(Max(r - 1, 0), numElements - 1);
-    for (int s = 0; s < numCrossSectionSegments; ++s) {
-      embeddingElementIndices.push_back(elem);
-      embeddingWeights.push_back(1_r);
-    }
-  }
-  // Cap center vertices
-  embeddingElementIndices.push_back(0);
-  embeddingWeights.push_back(1_r);
-  embeddingElementIndices.push_back(numElements - 1);
-  embeddingWeights.push_back(1_r);
-
-  // Construct ModelData
   ModelData model;
-
-  // Polyline mesh (simulation mesh)
   model.mesh.emplace(MeshData{});
   model.mesh->nodesPerElement = 2;
   model.mesh->coordinates = Flatten(nodes);
-  // Open polyline: emit explicit sequential connectivity to make the topology
-  // self-describing through the public API.
-  model.mesh->connectivity = MakeSequentialPolylineConnectivity(numNodes, /*isClosedLoop=*/false);
+  // Emit explicit sequential connectivity to make the topology self-describing through the public
+  // API (a closed loop needs it for its wrap-around segment).
+  model.mesh->connectivity = MakeSequentialPolylineConnectivity(isize(nodes), isClosedLoop);
   model.elementFrameAxes = Flatten(frameAxes);
-
-  // Contact skin (triangular tube)
-  model.contactSkinMesh.emplace(MeshData{});
-  model.contactSkinMesh->nodesPerElement = 3;
-  model.contactSkinMesh->coordinates = std::move(surfaceNodePositions);
-  model.contactSkinMesh->connectivity = std::move(surfaceTriangles);
-
-  // Skinning data
-  model.contactSkinMesh->skinning.emplace(SkinningData{});
-  model.contactSkinMesh->skinning->weightsPerNode = kWeightsPerNode;
-  model.contactSkinMesh->skinning->indices = std::move(embeddingElementIndices);
-  model.contactSkinMesh->skinning->weights = std::move(embeddingWeights);
-
+  model.contactSkinMesh = std::move(contactSkin);
+  mochi::model::Validate(model, error);
+  MOCHI_ERROR_RETURN(error, {});
   return model;
 }
 

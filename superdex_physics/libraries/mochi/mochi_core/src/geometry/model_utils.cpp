@@ -17,6 +17,7 @@
 #include "model_utils_hdf5.h"
 #include "model_utils_meshio.h"
 
+#include <mochi_core/element_operations/fem_rod.h>
 #include <mochi_core/geometry/bvh_tree.h>
 #include <mochi_core/geometry/geometry_utils.h>
 #include <mochi_core/geometry/grid_sdf.h>
@@ -45,6 +46,8 @@
 #include <mochi_core/utils/vmatrix.h>
 
 #include <algorithm>
+#include <climits>
+#include <cstdint>
 #include <filesystem>
 #include <memory>
 
@@ -392,6 +395,9 @@ void mochi::model::ValidatePolylineGeometry(
     bool isClosedLoop,
     Error& error) {
   MOCHI_ERROR_RETURN(error);
+  MOCHI_ERROR_IF(
+      nodes.size() > INT_MAX, error, "Polyline node count exceeds what Mochi currently supports.");
+  MOCHI_ERROR_RETURN(error);
   int const numNodes = isize(nodes);
   MOCHI_ERROR_IF(numNodes < 2, error, "Polyline must have at least 2 nodes");
   // It is topologically-possible to form a loop with just two nodes, but it would necessarily
@@ -413,6 +419,7 @@ void mochi::model::ValidatePolylineGeometry(
   for (int i = 0; i < numEdges; ++i) {
     Real3 const edge = nodes[(i + 1) % numNodes] - nodes[i];
     real const edgeLength = Norm(edge);
+    MOCHI_ERROR_IF_NOT(IsFinite(edgeLength), error, "Polyline elements must have finite lengths.");
     MOCHI_ERROR_IF(
         edgeLength < kLengthTolerance,
         error,
@@ -701,6 +708,233 @@ void mochi::model::ValidatePolylineElementFrameAxes(
         error,
         "Element frame axes must be orthogonal to elements");
   }
+}
+
+DynamicArray<Real3> mochi::model::GenerateDiscreteBishopFrame(
+    Span<Real3 const> nodes,
+    bool isClosedLoop) {
+  int const numNodes = isize(nodes);
+  MOCHI_ASSERT(numNodes >= 2, "At least two nodes are required to generate a discrete frame.");
+  int const numElements = isClosedLoop ? numNodes : numNodes - 1;
+  DynamicArray<Real3> elementFrameAxes(numElements);
+
+  // Compute unit tangent for first element
+  Real3 const edge0 = nodes[1] - nodes[0];
+  real const length0 = Norm(edge0);
+  Real3 const tangent0 = edge0 / length0;
+
+  // Choose the element frame axis for the first element by finding the largest-norm
+  // cross product of the tangent with one of the standard unit basis vectors.
+  // This ensures we get a well-conditioned orthogonal axis even when the tangent
+  // is nearly aligned with one of the basis vectors.
+  Real3 axis0;
+  real maxNormSq = 0_r;
+  for (int i = 0; i < 3; ++i) {
+    Real3 basisVec = {};
+    basisVec[i] = 1_r;
+    Real3 const cross = Cross(tangent0, basisVec);
+    real const normSq = NormSqr(cross);
+    if (normSq > maxNormSq) {
+      maxNormSq = normSq;
+      axis0 = Normalize(cross);
+    }
+  }
+  elementFrameAxes[0] = axis0;
+
+  // Transport the axis from each element to the next using minimal rotations
+  Vec4r prevTangent = ToSimd(tangent0);
+  Vec4r prevAxis = ToSimd(axis0);
+  real totalLength = length0;
+  for (int i = 1; i < numElements; ++i) {
+    Real3 const edge = nodes[(i + 1) % numNodes] - nodes[i];
+    real const length = Norm(edge);
+    totalLength += length;
+    Vec4r const currTangent = ToSimd(edge / length);
+
+    // ParallelTransportOperator computes the minimal rotation from prevTangent to currTangent
+    VMatrix3x3r const P = fem::ParallelTransportOperator(prevTangent, currTangent);
+    Vec4r const currAxis = DotMatVec3x3(P, prevAxis);
+    elementFrameAxes[i] = ToReal3(currAxis);
+
+    prevTangent = currTangent;
+    prevAxis = currAxis;
+  }
+
+  // Holonomy correction for closed-loop rods: Distribute holonomy evenly along rod for closed-loop
+  // frame axes with minimal twisting energy.
+  if (isClosedLoop && numElements >= 2) {
+    Vec4r const t0 = ToSimd(tangent0);
+    VMatrix3x3r const Pclosing = fem::ParallelTransportOperator(prevTangent, t0);
+    Vec4r const transportedAxis = DotMatVec3x3(Pclosing, prevAxis);
+
+    Vec4r const d0 = ToSimd(elementFrameAxes[0]);
+    Vec4r const b0 = Cross3(t0, d0);
+    real const sinAngle = Dot(transportedAxis, b0);
+    real const cosAngle = Dot(transportedAxis, d0);
+    real const holonomyAngle = ATan2(sinAngle, cosAngle);
+
+    if (Abs(holonomyAngle) > kDefaultNearEqualEpsilon<real>) {
+      real const invTotalLength = 1_r / totalLength;
+      real cumulativeLength = length0;
+      for (int i = 1; i < numElements; ++i) {
+        Real3 const edge = nodes[(i + 1) % numNodes] - nodes[i];
+        real const length = Norm(edge);
+        cumulativeLength += length;
+        real const alpha = -cumulativeLength * holonomyAngle * invTotalLength;
+        Real3 const t = edge / length;
+        Real3 const d = elementFrameAxes[i];
+        elementFrameAxes[i] = Cos(alpha) * d + Sin(alpha) * Cross(t, d);
+      }
+    }
+  }
+
+  return elementFrameAxes;
+}
+
+void mochi::model::ValidateTubularSkinMeshParameters(
+    Span<Real3 const> nodes,
+    bool isClosedLoop,
+    real radius,
+    int numCrossSectionSegments,
+    Error& error) {
+  MOCHI_ERROR_RETURN(error);
+  MOCHI_ERROR_IF_NOT(
+      radius > 0_r && IsFinite(radius), error, "Tube radius must be positive and finite.");
+  MOCHI_ERROR_IF_NOT(
+      numCrossSectionSegments >= 3, error, "Tube must have at least 3 cross-section segments.");
+  ValidatePolylineGeometry(nodes, isClosedLoop, error);
+  MOCHI_ERROR_RETURN(error);
+
+  int64_t const numRings = static_cast<int64_t>(isize(nodes)) + (isClosedLoop ? 0 : 1);
+  int64_t const numRingNodes = numRings * numCrossSectionSegments;
+  MOCHI_ERROR_IF(
+      numRingNodes > INT_MAX / 6,
+      error,
+      "Tube mesh connectivity array is larger than what Mochi currently supports.");
+}
+
+MeshData mochi::model::GenerateTubularSkinMesh(
+    Span<Real3 const> nodes,
+    Span<Real3 const> elementFrameAxes,
+    bool isClosedLoop,
+    real radius,
+    int numCrossSectionSegments,
+    Error& error) {
+  ValidateTubularSkinMeshParameters(nodes, isClosedLoop, radius, numCrossSectionSegments, error);
+  MOCHI_ERROR_RETURN(error, {});
+  ValidatePolylineElementFrameAxes(elementFrameAxes, nodes, isClosedLoop, error);
+  MOCHI_ERROR_RETURN(error, {});
+  MeshData mesh = GenerateTubularSkinMesh(
+      nodes, elementFrameAxes, isClosedLoop, radius, numCrossSectionSegments);
+  MOCHI_ERROR_IF_NOT(
+      IsFinite(MakeConstSpan(mesh.coordinates)),
+      error,
+      "Generated tube mesh coordinates must be finite.");
+  MOCHI_ERROR_RETURN(error, {});
+  return mesh;
+}
+
+MeshData mochi::model::GenerateTubularSkinMesh(
+    Span<Real3 const> nodes,
+    Span<Real3 const> elementFrameAxes,
+    bool isClosedLoop,
+    real radius,
+    int numCrossSectionSegments) {
+  MOCHI_ASSERT_VERBOSE(radius > 0_r && IsFinite(radius));
+  MOCHI_ASSERT_VERBOSE(numCrossSectionSegments >= 3);
+
+  int const numNodes = isize(nodes);
+  int const numElements = isClosedLoop ? numNodes : numNodes - 1;
+  MOCHI_ASSERT_VERBOSE(isize(elementFrameAxes) == numElements);
+
+  // One ring per element midpoint, plus one per end node of an open polyline. Each ring is
+  // oriented by, and skinned to, a single element.
+  int const numRings = isClosedLoop ? numElements : numElements + 2;
+  auto const ringElement = [&](int ring) {
+    return isClosedLoop ? ring : Clamp(ring - 1, 0, numElements - 1);
+  };
+  auto const ringCenter = [&](int ring) -> Real3 {
+    if (!isClosedLoop && ring == 0) {
+      return nodes[0];
+    }
+    if (!isClosedLoop && ring == numRings - 1) {
+      return nodes[numNodes - 1];
+    }
+    int const element = ringElement(ring);
+    return 0.5_r * (nodes[element] + nodes[(element + 1) % numNodes]);
+  };
+  int const numCapNodes = isClosedLoop ? 0 : 2;
+  int const numRingNodes = numCrossSectionSegments * numRings;
+  int const numSurfaceNodes = numRingNodes + numCapNodes;
+
+  MeshData mesh;
+  mesh.nodesPerElement = 3;
+  mesh.coordinates.reserve(3 * numSurfaceNodes);
+  real const invNumCrossSectionSegments = 1_r / static_cast<real>(numCrossSectionSegments);
+  for (int r = 0; r < numRings; ++r) {
+    int const element = ringElement(r);
+    Real3 const center = ringCenter(r);
+    Real3 const tangent = Normalize(nodes[(element + 1) % numNodes] - nodes[element]);
+    Real3 const& axis = elementFrameAxes[element];
+    Real3 const binormal = Cross(tangent, axis);
+    for (int s = 0; s < numCrossSectionSegments; ++s) {
+      real const angle = 2_r * kPI * static_cast<real>(s) * invNumCrossSectionSegments;
+      Real3 const position = center + radius * (Cos(angle) * axis + Sin(angle) * binormal);
+      mesh.coordinates.append(MakeConstSpan(position));
+    }
+  }
+  if (!isClosedLoop) {
+    mesh.coordinates.append(MakeConstSpan(nodes[0]));
+    mesh.coordinates.append(MakeConstSpan(nodes[numNodes - 1]));
+  }
+
+  // Triangle strips between consecutive rings, wrapping around a closed loop, plus triangle-fan end
+  // caps for an open polyline.
+  int const numStrips = isClosedLoop ? numRings : numRings - 1;
+  int const numTriangles =
+      2 * numCrossSectionSegments * numStrips + (isClosedLoop ? 0 : 2 * numCrossSectionSegments);
+  mesh.connectivity.reserve(3 * numTriangles);
+  for (int i = 0; i < numStrips; ++i) {
+    int const ring0 = i * numCrossSectionSegments;
+    int const ring1 = ((i + 1) % numRings) * numCrossSectionSegments;
+    for (int c = 0; c < numCrossSectionSegments; ++c) {
+      int const c1 = (c + 1) % numCrossSectionSegments;
+      Int3 const tri0{ring0 + c, ring0 + c1, ring1 + c1};
+      mesh.connectivity.append(MakeConstSpan(tri0));
+      Int3 const tri1{ring0 + c, ring1 + c1, ring1 + c};
+      mesh.connectivity.append(MakeConstSpan(tri1));
+    }
+  }
+  if (!isClosedLoop) {
+    int const startCapNode = numRingNodes;
+    int const endCapNode = numRingNodes + 1;
+    int const lastRing = (numRings - 1) * numCrossSectionSegments;
+    for (int s = 0; s < numCrossSectionSegments; ++s) {
+      int const s1 = (s + 1) % numCrossSectionSegments;
+      Int3 const tri{startCapNode, s1, s};
+      mesh.connectivity.append(MakeConstSpan(tri));
+    }
+    for (int s = 0; s < numCrossSectionSegments; ++s) {
+      int const s1 = (s + 1) % numCrossSectionSegments;
+      Int3 const tri{endCapNode, lastRing + s, lastRing + s1};
+      mesh.connectivity.append(MakeConstSpan(tri));
+    }
+  }
+
+  SkinningData& skinning = mesh.skinning.emplace();
+  skinning.weightsPerNode = 1;
+  skinning.indices.reserve(numSurfaceNodes);
+  for (int r = 0; r < numRings; ++r) {
+    for (int s = 0; s < numCrossSectionSegments; ++s) {
+      skinning.indices.push_back(ringElement(r));
+    }
+  }
+  if (!isClosedLoop) {
+    skinning.indices.push_back(0);
+    skinning.indices.push_back(numElements - 1);
+  }
+  skinning.weights = DynamicArray<real>(numSurfaceNodes, 1_r);
+  return mesh;
 }
 
 static void ValidateElementFrameAxes(

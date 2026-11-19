@@ -163,17 +163,6 @@ struct CRodExportParams : NoCopy {
     int numNodes,
     bool isClosedLoop);
 
-// Generates a discrete Bishop frame for a polyline defined by the given nodes.
-// Returns an array of element frame axes (one per edge) computed via parallel transport.
-// The first axis is chosen to be well-conditioned (perpendicular to the first edge),
-// and subsequent axes are transported using minimal rotations between consecutive tangents.
-// For closed-loop polylines, any nonzero holonomy (i.e., angular deviation of the frame axis from
-// its initial value caused by parallel transport around a non-planar closed curve) is redistributed
-// evenly with respect to arc length, minimizing peak rate of twist.
-[[nodiscard]] DynamicArray<Real3> GenerateDiscreteBishopFrame(
-    Span<Real3 const> nodes,
-    bool isClosedLoop);
-
 // Initialize a rod actor in the ECS registry from its actor params and shape.
 void InitRodActor(
     entt::registry& reg,

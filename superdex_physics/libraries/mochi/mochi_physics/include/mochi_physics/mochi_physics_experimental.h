@@ -868,6 +868,7 @@ MOCHI_API Actor* CreateShellActor(Scene* scene, ShellActorParams const& params, 
 
 // Generate a @ref ModelData with a polyline simulation mesh and a tubular contact skin for use
 // with rod actors. The returned @ref ModelData can be passed to @ref Context::CreateModelShape.
+// Each contact-skin ring is oriented by its polyline element's frame axis.
 // @param[in] nodes Node positions [m] defining the polyline centerline. Must have at least 2.
 // @param[in] elementFrameAxes Unit vectors perpendicular to each element's tangent direction.
 //            If empty, these will be auto-generated using parallel transport.

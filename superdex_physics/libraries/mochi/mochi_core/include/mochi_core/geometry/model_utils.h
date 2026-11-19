@@ -18,6 +18,7 @@
 
 #include <mochi_core/geometry/grid_sdf_params.h>
 #include <mochi_core/geometry/model_data.h>
+#include <mochi_core/utils/dynamic_array.h>
 #include <mochi_core/utils/dynamic_string.h>
 #include <mochi_core/utils/error.h>
 #include <mochi_core/utils/nd_array.h>
@@ -162,10 +163,10 @@ void ValidateSkinning(
 /**
  * @brief Validate that a polyline has well-defined element tangents.
  *
- * @details Checks two geometric preconditions required to compute element tangents and a
+ * @details Checks geometric preconditions required to compute element tangents and a
  * discrete Bishop frame via parallel transport:
- *   1. Every edge has nonzero length (no coincident consecutive nodes), so the unit tangent
- *      is defined.
+ *   1. Every edge has finite, nonzero length (finite nodes and no coincident consecutive nodes),
+ *      so the unit tangent is defined.
  *   2. No two consecutive element tangents are 180-degree rotations of each other, so the
  *      rotation axis of the parallel-transport step is defined.
  * For a closed loop the wrap-around edge participates in both checks. Iterates over
@@ -199,6 +200,98 @@ void ValidatePolylineElementFrameAxes(
     Span<Real3 const> nodes,
     bool isClosedLoop,
     Error& error);
+
+/**
+ * @brief Generate the frame axes of a polyline's discrete Bishop frame.
+ *
+ * @details The first element's axis is the unit cross product of its tangent with whichever
+ * coordinate axis gives the largest cross product. Each subsequent axis is the previous one
+ * parallel-transported by the minimal rotation between consecutive element tangents. For a closed
+ * loop, any holonomy (the angle by which transport around a non-planar loop fails to return the
+ * first axis to itself) is distributed evenly with respect to arc length, minimizing the peak rate
+ * of twist.
+ *
+ * @param[in] nodes Polyline centerline node positions [m]. Caller must ensure they pass
+ *            @ref ValidatePolylineGeometry.
+ * @param[in] isClosedLoop If true, the last element wraps around to the first node.
+ * @return One unit axis per element, orthogonal to the element's tangent: `numNodes - 1` axes for
+ *         an open polyline, or `numNodes` for a closed loop.
+ */
+[[nodiscard]] DynamicArray<Real3> GenerateDiscreteBishopFrame(
+    Span<Real3 const> nodes,
+    bool isClosedLoop);
+
+/**
+ * @brief Validate polyline geometry and tube dimensions for @ref GenerateTubularSkinMesh.
+ *
+ * @details Checks @ref ValidatePolylineGeometry, a positive finite radius, at least three
+ * cross-section segments, and that the generated mesh fits Mochi's array-size limits.
+ *
+ * @param[in] nodes Polyline centerline node positions [m].
+ * @param[in] isClosedLoop If true, the last element wraps around to the first node.
+ * @param[in] radius Tube radius [m].
+ * @param[in] numCrossSectionSegments Number of nodes in each ring.
+ * @param[in,out] error Error status. Check @ref Error::IsOK for success.
+ */
+void ValidateTubularSkinMeshParameters(
+    Span<Real3 const> nodes,
+    bool isClosedLoop,
+    real radius,
+    int numCrossSectionSegments,
+    Error& error);
+
+/**
+ * @brief Generate a tubular triangle mesh around a polyline, skinned to the polyline's elements.
+ *
+ * @details Places a ring of @p numCrossSectionSegments nodes at distance @p radius around each
+ * element's midpoint, in the plane spanned by its @p elementFrameAxes axis and binormal, and joins
+ * consecutive rings by triangle strips.
+ * An open polyline also gets a ring around each end node, closed by a triangle fan around a cap
+ * node at that end node. Each node is skinned with weight 1 to the element its ring belongs to (the
+ * first or last element for the end rings and caps), which makes the mesh valid as either the
+ * @ref ModelData::contactSkinMesh or the @ref ModelData::visualMesh of a polyline model.
+ *
+ * @param[in] nodes Polyline centerline node positions [m]. Must pass
+ *            @ref ValidatePolylineGeometry.
+ * @param[in] elementFrameAxes One unit axis per element, orthogonal to its tangent. Must pass
+ *            @ref ValidatePolylineElementFrameAxes. Generate defaults with
+ *            @ref GenerateDiscreteBishopFrame before calling if needed.
+ * @param[in] isClosedLoop If true, the last element wraps around to the first node.
+ * @param[in] radius Tube radius [m]. Must be positive and finite.
+ * @param[in] numCrossSectionSegments Number of nodes in each ring. Must be at least 3.
+ * @param[in,out] error Error status. Check @ref Error::IsOK for success.
+ * @return Triangle mesh with @ref MeshData::skinning whose indices refer to polyline elements, or
+ *         an empty mesh on error.
+ */
+[[nodiscard]] MeshData GenerateTubularSkinMesh(
+    Span<Real3 const> nodes,
+    Span<Real3 const> elementFrameAxes,
+    bool isClosedLoop,
+    real radius,
+    int numCrossSectionSegments,
+    Error& error);
+
+/**
+ * @brief Generate a tubular skin mesh from validated inputs.
+ *
+ * @details Uses the same construction as the overload taking @ref Error. Caller must ensure
+ * @ref ValidateTubularSkinMeshParameters and @ref ValidatePolylineElementFrameAxes succeed before
+ * calling this overload. Generated coordinates can still overflow; validate the resulting mesh
+ * before exposing it through a public API.
+ *
+ * @param[in] nodes Validated polyline centerline node positions [m].
+ * @param[in] elementFrameAxes Validated per-element frame axes.
+ * @param[in] isClosedLoop If true, the last element wraps around to the first node.
+ * @param[in] radius Validated tube radius [m].
+ * @param[in] numCrossSectionSegments Validated number of nodes in each ring.
+ * @return Triangle mesh with element-indexed @ref MeshData::skinning.
+ */
+[[nodiscard]] MeshData GenerateTubularSkinMesh(
+    Span<Real3 const> nodes,
+    Span<Real3 const> elementFrameAxes,
+    bool isClosedLoop,
+    real radius,
+    int numCrossSectionSegments);
 
 /**
  * @brief Apply automatic in-place fixes to the model data, such as normalizing vectors and weights.

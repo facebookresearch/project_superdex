@@ -548,7 +548,7 @@ PolylineShape::PolylineShape(
   // via model::Validate.
   mochi::model::ValidatePolylineGeometry(MakeConstSpan(_nodes), _isClosedLoop, ErrorAssert{});
   if (_elementFrameAxes.empty()) {
-    _elementFrameAxes = mochi::GenerateDiscreteBishopFrame(_nodes, _isClosedLoop);
+    _elementFrameAxes = model::GenerateDiscreteBishopFrame(_nodes, _isClosedLoop);
   } else {
     mochi::model::ValidatePolylineElementFrameAxes(
         MakeConstSpan(_elementFrameAxes), MakeConstSpan(_nodes), _isClosedLoop, ErrorAssert{});

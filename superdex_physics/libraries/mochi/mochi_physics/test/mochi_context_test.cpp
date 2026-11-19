@@ -28,7 +28,6 @@
 #include <mochi_physics/src/mochi_context.h>
 #include <mochi_physics/src/mochi_pose_controller.h>
 #include <mochi_physics/src/mochi_rigid.h>
-#include <mochi_physics/src/mochi_rod.h>
 #include <mochi_physics/src/mochi_shape.h>
 #include <mochi_physics/src/mochi_soft.h>
 #include <mochi_physics/src/mochi_soft_rom_systems.h>
@@ -3336,7 +3335,7 @@ TEST_P(MochiContextTest, GetShapeElementFrameAxes_GeneratesBishopFrameWhenUnfram
     ShapeHandle const shape = _mochiContext->CreateModelShape(model, ExpectOK{});
     MeshDataView const mesh = _mochiContext->GetShapeMesh(shape, ExpectOK{});
     Span<real const> const axes = _mochiContext->GetShapeElementFrameAxes(shape, ExpectOK{});
-    DynamicArray<Real3> const bishop = GenerateDiscreteBishopFrame(
+    DynamicArray<Real3> const bishop = model::GenerateDiscreteBishopFrame(
         Unflatten<Real3 const>(MakeConstSpan(model.mesh->coordinates)), isClosedLoop);
     EXPECT_EQ(3 * mesh.GetNumElements(), isize(axes));
     EXPECT_SPAN_EQ(Flatten(MakeConstSpan(bishop)), axes);
@@ -3361,7 +3360,7 @@ TEST_P(MochiContextTest, GetShapeElementFrameAxes_IncludesBakeTransform) {
 
     ModelData baked = model;
     if (!framed) {
-      DynamicArray<Real3> const bishop = GenerateDiscreteBishopFrame(
+      DynamicArray<Real3> const bishop = model::GenerateDiscreteBishopFrame(
           Unflatten<Real3 const>(MakeConstSpan(model.mesh->coordinates)), false);
       baked.elementFrameAxes = DynamicArray<real>{Flatten(MakeConstSpan(bishop))};
     }

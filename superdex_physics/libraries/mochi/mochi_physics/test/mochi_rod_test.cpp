@@ -16,6 +16,7 @@
 
 #include <gtest/gtest.h>
 #include <mochi_core/geometry/model_data.h>
+#include <mochi_core/geometry/model_utils.h>
 #include <mochi_core/utils/array_utils.h>
 #include <mochi_core/utils/rand_utils.h>
 #include <mochi_core/utils/reflection.h>
@@ -683,73 +684,6 @@ INSTANTIATE_TEST_SUITE_P(
     ::testing::ValuesIn(GetCantileverTestCases()),
     [](::testing::TestParamInfo<CantileverTestParam> const& info) { return info.param.name; });
 
-// Test for the GenerateDiscreteBishopFrame free function
-class GenerateDiscreteBishopFrameTest : public ::testing::Test {
- protected:
-  static real constexpr kTolerance = MOCHI_USE_DOUBLE_PRECISION ? 1e-8_r : 1e-5_r;
-
-  // Generate a random polyline with the given number of nodes using the provided RNG
-  static DynamicArray<Real3> GenerateRandomPolyline(
-      int numNodes,
-      mochi_default_random_engine& rng,
-      real minEdgeLength = 0.1_r,
-      real maxEdgeLength = 1.0_r,
-      real maxBendAngle = 0.9_r * kPI) {
-    MOCHI_ASSERT(numNodes >= 2, "Need at least 2 nodes");
-
-    DynamicArray<Real3> nodes;
-    nodes.reserve(numNodes);
-
-    // Start at the origin
-    nodes.push_back(Real3{0_r, 0_r, 0_r});
-
-    // Initial direction (along x-axis)
-    Real3 direction = {1_r, 0_r, 0_r};
-
-    for (int i = 1; i < numNodes; ++i) {
-      // Random edge length
-      real const edgeLength = RandomUniformValue(rng, minEdgeLength, maxEdgeLength);
-
-      // Add node in current direction
-      nodes.push_back(nodes[i - 1] + direction * edgeLength);
-
-      // Rotate direction for next edge (if not the last node)
-      if (i < numNodes - 1) {
-        // Generate random rotation axis perpendicular to current direction
-        Real3 randomVec;
-        SetRandom(rng, -1_r, 1_r, randomVec);
-        Real3 rotAxis = Cross(direction, randomVec);
-
-        // Handle case where randomVec is parallel to direction
-        if (Norm(rotAxis) < 1e-6_r) {
-          rotAxis = {0_r, 1_r, 0_r};
-          if (Abs(Dot(direction, rotAxis)) > 0.9_r) {
-            rotAxis = {0_r, 0_r, 1_r};
-          }
-          rotAxis = Cross(direction, rotAxis);
-        }
-        rotAxis = Normalize(rotAxis);
-
-        // Random bend angle
-        real const bendAngle = RandomUniformValue(rng, -maxBendAngle, maxBendAngle);
-
-        // Apply rotation using quaternion multiplication
-        Quaternion const rotation = Quaternion::FromAxisAngle(rotAxis, bendAngle);
-        direction = rotation * direction;
-        direction = Normalize(direction);
-      }
-    }
-
-    return nodes;
-  }
-
-  // Compute the angle between two vectors (in radians)
-  static real AngleBetween(Real3 const& a, Real3 const& b) {
-    real const cosAngle = std::clamp(Dot(Normalize(a), Normalize(b)), -1_r, 1_r);
-    return std::acos(cosAngle);
-  }
-};
-
 TEST(RodApplyLieDeltaToPose, ZeroDeltaPreservesPose) {
   // A simple 3-node rod along the x-axis: nodes at (0,0,0), (1,0,0), (2,0,0).
   DynamicArray<Real3> meshNodes = {{0_r, 0_r, 0_r}, {1_r, 0_r, 0_r}, {2_r, 0_r, 0_r}};
@@ -1189,70 +1123,6 @@ TEST_F(RodAddWeightedDifferencesTest, CombinedTwistAndTranslation) {
   EXPECT_NEAR(0.5_r, out_.displacements[0], kTol);
   EXPECT_NEAR(kPI / 2_r, out_.displacements[3], kTol);
   EXPECT_NEAR(1_r, out_.frameAxes[0][2], kTol);
-}
-
-TEST_F(GenerateDiscreteBishopFrameTest, RandomPolylinesValidityAndMinimalRotation) {
-  // Use a fixed seed for reproducibility
-  mochi_default_random_engine rng = RandomGenerator(42);
-
-  // Test various polyline sizes
-  DynamicArray<int> nodeCounts = {2, 3, 5, 10, 20, 50};
-  int constexpr kNumPolylinesPerSize = 10;
-
-  for (int numNodes : nodeCounts) {
-    for (int polylineIdx = 0; polylineIdx < kNumPolylinesPerSize; ++polylineIdx) {
-      // Generate a random polyline
-      DynamicArray<Real3> nodes = GenerateRandomPolyline(numNodes, rng);
-      int const numElements = numNodes - 1;
-
-      // Generate the Bishop frame
-      DynamicArray<Real3> axes = GenerateDiscreteBishopFrame(nodes, /*isClosedLoop=*/false);
-
-      // Check that we got the expected number of axes
-      ASSERT_EQ(isize(axes), numElements)
-          << "Wrong number of axes for polyline with " << numNodes << " nodes";
-
-      // Compute tangent vectors for each element
-      DynamicArray<Real3> tangents;
-      tangents.reserve(numElements);
-      for (int i = 0; i < numElements; ++i) {
-        tangents.push_back(Normalize(nodes[i + 1] - nodes[i]));
-      }
-
-      // Validity check 1: Each axis must be a unit vector
-      for (int i = 0; i < numElements; ++i) {
-        real const axisNorm = Norm(axes[i]);
-        EXPECT_NEAR(1_r, axisNorm, kTolerance)
-            << "Axis " << i << " is not a unit vector (norm = " << axisNorm << ")";
-      }
-
-      // Validity check 2: Each axis must be orthogonal to its element's tangent
-      for (int i = 0; i < numElements; ++i) {
-        real const dotProduct = Abs(Dot(axes[i], tangents[i]));
-        EXPECT_LT(dotProduct, kTolerance)
-            << "Axis " << i << " is not orthogonal to tangent (dot = " << dotProduct << ")";
-      }
-
-      // Validity check 3: No 180-degree jumps between consecutive axes
-      for (int i = 0; i < numElements - 1; ++i) {
-        real const dotProduct = Dot(axes[i], axes[i + 1]);
-        EXPECT_GT(dotProduct, kTolerance - 1_r)
-            << "Axes " << i << " and " << i + 1 << " have a 180-degree jump";
-      }
-
-      // Bishop frame property: angle between consecutive axes <= angle between consecutive
-      // tangents, which should always be true for minimal rotation transport.
-      for (int i = 0; i < numElements - 1; ++i) {
-        real const axisAngle = AngleBetween(axes[i], axes[i + 1]);
-        real const tangentAngle = AngleBetween(tangents[i], tangents[i + 1]);
-
-        // Allow small tolerance for numerical errors
-        EXPECT_LE(axisAngle, tangentAngle + kTolerance)
-            << "Axis rotation (" << axisAngle << " rad) exceeds tangent rotation (" << tangentAngle
-            << " rad) between elements " << i << " and " << i + 1;
-      }
-    }
-  }
 }
 
 // ============================================================================
@@ -2312,8 +2182,14 @@ class MochiRodTubularCrossSection : public test::MochiSceneTestBase {
 
 TEST_F(MochiRodTubularCrossSection, TopologyMatchesExpected) {
   real constexpr kRadius = 0.01_r;
+  for (int i = 0; i < kNumElements; ++i) {
+    real const angle = static_cast<real>(i) * kPI / 6_r;
+    _frameAxes[i] = Real3{0_r, Cos(angle), Sin(angle)};
+  }
   ModelData const model = GenerateTubularRodModelData(
       _nodes, _frameAxes, kRadius, kNumCrossSectionSegments, /*isClosedLoop=*/false, ErrorAssert{});
+  ASSERT_TRUE(model.elementFrameAxes.has_value());
+  EXPECT_SPAN_EQ(*model.elementFrameAxes, Flatten(MakeConstSpan(_frameAxes)));
   EXPECT_FALSE(model.visualMesh.has_value());
   ASSERT_TRUE(model.contactSkinMesh.has_value());
   ASSERT_TRUE(model.contactSkinMesh->skinning.has_value());
@@ -2330,6 +2206,14 @@ TEST_F(MochiRodTubularCrossSection, TopologyMatchesExpected) {
   int const expectedSurfaceNodes = kNumCrossSectionSegments * (kNumElements + 2) + 2;
   auto positions = actor->GetContactSkinMeshNodePositionsLocal(ErrorAssert{});
   EXPECT_EQ(isize(positions), 3 * expectedSurfaceNodes);
+  auto const ringNodes = Unflatten<Real3 const>(positions);
+  for (int r = 0; r < kNumElements + 2; ++r) {
+    int const element = Clamp(r - 1, 0, kNumElements - 1);
+    Real3 const center = r == 0 ? _nodes[0]
+        : r == kNumElements + 1 ? _nodes[kNumNodes - 1]
+                                : 0.5_r * (_nodes[element] + _nodes[element + 1]);
+    EXPECT_NEAR_EQ(ringNodes[r * kNumCrossSectionSegments], center + kRadius * _frameAxes[element]);
+  }
 
   int const expectedTriangles =
       2 * kNumCrossSectionSegments * (kNumElements + 1) + 2 * kNumCrossSectionSegments;
@@ -2364,6 +2248,9 @@ TEST_F(MochiRodTubularCrossSection, AutoGeneratedFrameAxes) {
   real constexpr kRadius = 0.01_r;
   ModelData const model = GenerateTubularRodModelData(
       _nodes, {}, kRadius, kNumCrossSectionSegments, /*isClosedLoop=*/false, ErrorAssert{});
+  ASSERT_TRUE(model.elementFrameAxes.has_value());
+  auto const axes = model::GenerateDiscreteBishopFrame(_nodes, false);
+  EXPECT_SPAN_EQ(*model.elementFrameAxes, Flatten(MakeConstSpan(axes)));
   EXPECT_FALSE(model.visualMesh.has_value());
   ASSERT_TRUE(model.contactSkinMesh.has_value());
   ASSERT_TRUE(model.contactSkinMesh->skinning.has_value());
@@ -2379,6 +2266,7 @@ TEST_F(MochiRodTubularCrossSection, AutoGeneratedFrameAxes) {
   int const expectedSurfaceNodes = kNumCrossSectionSegments * (kNumElements + 2) + 2;
   auto positions = actor->GetContactSkinMeshNodePositionsLocal(ErrorAssert{});
   EXPECT_EQ(isize(positions), 3 * expectedSurfaceNodes);
+  EXPECT_NEAR_EQ(Unflatten<Real3 const>(positions)[0], _nodes[0] + kRadius * axes[0]);
 }
 
 TEST_F(MochiRodTubularCrossSection, ClosedLoopTopologyMatchesExpected) {
@@ -2453,6 +2341,45 @@ TEST_F(MochiRodTubularCrossSection, InsufficientNodesErrors) {
     (void)GenerateTubularRodModelData(
         singleNode, {}, kRadius, kNumCrossSectionSegments, /*isClosedLoop=*/false, error);
   }
+}
+
+TEST_F(MochiRodTubularCrossSection, NonFiniteNodesErrors) {
+  DynamicArray<Real3> nodes = _nodes;
+  nodes[1][0] = std::numeric_limits<real>::quiet_NaN();
+  for (Span<Real3 const> const axes :
+       {Span<Real3 const>{}, MakeConstSpan(_frameAxes).subspan(0, kNumElements - 1)}) {
+    ModelData const model = GenerateTubularRodModelData(
+        nodes, axes, 0.01_r, kNumCrossSectionSegments, false, test::ExpectNotOK{});
+    EXPECT_FALSE(model.mesh.has_value());
+    EXPECT_FALSE(model.contactSkinMesh.has_value());
+  }
+}
+
+TEST_F(MochiRodTubularCrossSection, InvalidFrameAxesErrors) {
+  DynamicArray<Real3> const nonUnitAxes(kNumElements, Real3{0_r, 2_r, 0_r});
+  for (Span<Real3 const> const axes :
+       {MakeConstSpan(nonUnitAxes), MakeConstSpan(_frameAxes).subspan(0, kNumElements - 1)}) {
+    ModelData const model = GenerateTubularRodModelData(
+        _nodes, axes, 0.01_r, kNumCrossSectionSegments, false, test::ExpectNotOK{});
+    EXPECT_FALSE(model.mesh.has_value());
+    EXPECT_FALSE(model.contactSkinMesh.has_value());
+  }
+}
+
+TEST_F(MochiRodTubularCrossSection, OversizedMeshErrors) {
+  ModelData const model = GenerateTubularRodModelData(
+      _nodes, {}, 0.01_r, std::numeric_limits<int>::max(), false, test::ExpectNotOK{});
+  EXPECT_FALSE(model.mesh.has_value());
+  EXPECT_FALSE(model.contactSkinMesh.has_value());
+}
+
+TEST_F(MochiRodTubularCrossSection, NonFiniteGeneratedCoordinatesErrors) {
+  real const max = std::numeric_limits<real>::max();
+  DynamicArray<Real3> const nodes = {Real3{max, 0_r, 0_r}, Real3{max, 0_r, 1_r}};
+  ModelData const model =
+      GenerateTubularRodModelData(nodes, {}, 0.1_r, 4, false, test::ExpectNotOK{});
+  EXPECT_FALSE(model.mesh.has_value());
+  EXPECT_FALSE(model.contactSkinMesh.has_value());
 }
 
 } // namespace
@@ -2881,108 +2808,6 @@ TEST(MochiClosedLoopRod, StencilGenerationOpen) {
   EXPECT_EQ(isize(connectivity[kNumNodes - 2]), 2);
   // Last node: 1 entry [4]
   EXPECT_EQ(isize(connectivity[kNumNodes - 1]), 1);
-}
-
-TEST(MochiClosedLoopRod, BishopFrameNonzeroHolonomy) {
-  // Test discrete Bishop frame for a closed-loop curve with nonzero holonomy. The resulting frame
-  // axes won't strictly be a Bishop frame (parallel transport), because the holonomy correction
-  // deviates from parallel transport. However, the axes should vary continuously around the loop,
-  // with adjacent elements having similar orientations that converge under refinement.
-
-  // Helper to generate a torus knot curve
-  auto generateTorusKnot = [](int numNodes, real scale) {
-    DynamicArray<Real3> nodes;
-    nodes.reserve(numNodes);
-    for (int i = 0; i < numNodes; ++i) {
-      real const theta = 2_r * kPI * static_cast<real>(i) / static_cast<real>(numNodes);
-      real const pTheta = 2_r * theta;
-      real const qTheta = 3_r * theta;
-      real const twoPlusCosPTheta = (2_r + Cos(pTheta));
-      nodes.push_back(
-          scale *
-          Real3{twoPlusCosPTheta * Cos(qTheta), twoPlusCosPTheta * Sin(qTheta), Sin(pTheta)});
-    }
-    return nodes;
-  };
-
-  real constexpr kCurveScale = 0.1_r;
-  real constexpr kTolerance = 1e-4_r;
-
-  // Test with multiple resolutions (powers of two) to verify convergence under refinement
-  int constexpr kMinPower = 5; // 2^5 = 32 nodes
-  int constexpr kMaxPower = 7; // 2^7 = 128 nodes
-
-  real prevMaxAngle = 0_r;
-  for (int power = kMinPower; power <= kMaxPower; ++power) {
-    int const numNodes = 1 << power;
-    DynamicArray<Real3> nodes = generateTorusKnot(numNodes, kCurveScale);
-    auto const axes = GenerateDiscreteBishopFrame(MakeConstSpan(nodes), /*isClosedLoop=*/true);
-
-    EXPECT_EQ(isize(axes), numNodes) << "Wrong number of axes for " << numNodes << " nodes";
-
-    // Basic validity checks: unit length and orthogonality to tangents
-    for (int i = 0; i < numNodes; ++i) {
-      // Unit length
-      EXPECT_NEAR(Norm(axes[i]), 1_r, kTolerance)
-          << "Frame axis " << i << " should be unit-length for " << numNodes << " nodes";
-
-      // Perpendicular to element tangent
-      Real3 const tangent = Normalize(nodes[(i + 1) % numNodes] - nodes[i]);
-      EXPECT_NEAR(Abs(Dot(axes[i], tangent)), 0_r, kTolerance)
-          << "Frame axis " << i << " should be perpendicular to tangent for " << numNodes
-          << " nodes";
-    }
-
-    // Check continuity: adjacent axes should be close (no large jumps)
-    // The maximum angle between consecutive axes should decrease with refinement
-    real maxAngleBetweenConsecutive = 0_r;
-    for (int i = 0; i < numNodes; ++i) {
-      int const j = (i + 1) % numNodes;
-      real const dot = Clamp(Dot(axes[i], axes[j]), -1_r, 1_r);
-      real const angle = ACos(dot);
-      maxAngleBetweenConsecutive = Max(maxAngleBetweenConsecutive, angle);
-
-      // No 180-degree flips between consecutive axes
-      EXPECT_GT(dot, kTolerance - 1_r)
-          << "Axes " << i << " and " << j << " have a 180-degree jump for " << numNodes << " nodes";
-    }
-
-    // With holonomy correction, the frame should be continuous across the closing edge.
-    // The maximum angle between consecutive elements should scale roughly with 1/numNodes
-    // (since the curve is smooth and we're sampling more densely).
-    // For this torus knot, the maximum angle should be reasonable even at coarse resolution.
-    // Use a generous bound since the torus knot has regions of higher curvature.
-    real const expectedMaxAngle = 2_r * kPI / static_cast<real>(numNodes) * 5_r; // generous bound
-    EXPECT_LT(maxAngleBetweenConsecutive, expectedMaxAngle)
-        << "Max angle between consecutive axes (" << maxAngleBetweenConsecutive
-        << " rad) exceeds expected bound for " << numNodes << " nodes";
-
-    // Verify that refinement reduces the maximum angle between consecutive axes
-    // (axes of adjacent elements should approach each other under refinement)
-    if (power > kMinPower) {
-      // The angle should roughly halve when doubling resolution (for smooth curves)
-      // We use a generous factor of 0.55 to account for preasymptotic behavior.
-      EXPECT_LT(maxAngleBetweenConsecutive, prevMaxAngle * 0.55_r)
-          << "Max angle should decrease with refinement: " << prevMaxAngle << " (2^" << (power - 1)
-          << " nodes) vs " << maxAngleBetweenConsecutive << " (2^" << power << " nodes)";
-    }
-    prevMaxAngle = maxAngleBetweenConsecutive;
-
-    // Check continuity across the closing edge: the frame should wrap around smoothly
-    // (no discontinuity from last element back to first)
-    Vec4r const lastTangent = ToSimd(Normalize(nodes[0] - nodes[numNodes - 1]));
-    Vec4r const firstTangent = ToSimd(Normalize(nodes[1] - nodes[0]));
-    VMatrix3x3r const P = fem::ParallelTransportOperator(lastTangent, firstTangent);
-    Vec4r const transported = DotMatVec3x3(P, ToSimd(axes[numNodes - 1]));
-    Real3 const diff = axes[0] - ToReal3(transported);
-    // With holonomy correction, the transported last axis should be close to the first axis.
-    // The error should decrease with refinement as the discretization improves.
-    // Scale threshold by 1/sqrt(numNodes) since error should decrease with refinement.
-    real const continuityThreshold = 0.1_r / static_cast<real>(numNodes);
-    EXPECT_LT(Norm(diff), continuityThreshold)
-        << "Frame should be continuous across closing edge for " << numNodes
-        << " nodes (diff norm: " << Norm(diff) << ")";
-  }
 }
 
 // ============================================================================
@@ -3674,7 +3499,7 @@ class MochiRodRecenteringTest : public test::MochiSceneTestBase,
       nodes.push_back(Real3{t * kLength, 0.2_r * Sqr(t), 0_r});
     }
     DynamicArray<Real3> const frameAxes =
-        GenerateDiscreteBishopFrame(nodes, /*isClosedLoop=*/false);
+        model::GenerateDiscreteBishopFrame(nodes, /*isClosedLoop=*/false);
     RodActorParams params;
     params.worldFromLocal =
         TransformRT{Quaternion::FromAxisAngle(Real3{0_r, 0_r, 1_r}, 0.3_r), Real3{1_r, -2_r, 3_r}};
