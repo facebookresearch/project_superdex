@@ -71,7 +71,7 @@ BotPrefab LoadFR3WithPrismatic(int& outPrismaticJoint) {
     joint.friction.viscous = 0.3_r;
     joint.friction.coulomb = 0.2_r;
     joint.friction.stictionExtra = 0.1_r;
-    joint.friction.falloffVel = 0.01_r;
+    joint.friction.preslidingDisplacement = 0.01_r;
     joint.friction.stribeckVel = 0.02_r;
     joint.inertia = 0.05_r;
     joint.limitStiffness = 200_r;
@@ -247,12 +247,12 @@ TEST_F(BotScaleTest, ScalesJointsForDynamicSimilarity) {
     bool const prismatic = a.type == ArticulatedJointType::Prismatic;
     real const gain = prismatic ? Pow(s, 3) : Pow(s, 5);
     real const effort = prismatic ? Pow(s, 4) : Pow(s, 5);
-    real const velocity = prismatic ? s : 1_r;
+    real const linear = prismatic ? s : 1_r;
     EXPECT_NEAR(b.friction.viscous, a.friction.viscous * gain, tol);
     EXPECT_NEAR(b.friction.coulomb, a.friction.coulomb * effort, tol);
     EXPECT_NEAR(b.friction.stictionExtra, a.friction.stictionExtra * effort, tol);
-    EXPECT_NEAR(b.friction.falloffVel, a.friction.falloffVel * velocity, tol);
-    EXPECT_NEAR(b.friction.stribeckVel, a.friction.stribeckVel * velocity, tol);
+    EXPECT_NEAR(b.friction.preslidingDisplacement, a.friction.preslidingDisplacement * linear, tol);
+    EXPECT_NEAR(b.friction.stribeckVel, a.friction.stribeckVel * linear, tol);
     EXPECT_NEAR(*b.inertia, *a.inertia * gain, tol);
     EXPECT_NEAR(b.limitStiffness, a.limitStiffness * gain, 1e-3_r);
     EXPECT_NEAR(b.limitDamping, a.limitDamping * gain, tol);

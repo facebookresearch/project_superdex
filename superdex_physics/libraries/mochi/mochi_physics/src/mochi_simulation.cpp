@@ -22,6 +22,7 @@
 #include "mochi_ecs_utils.h"
 #include "mochi_integration.h"
 #include "mochi_island.h"
+#include "mochi_joint_friction.h"
 #include "mochi_rigid.h"
 #include "mochi_soft.h"
 #include "mochi_solve.h"
@@ -60,7 +61,7 @@ void mochi::GetIslandNewtonParams(
   // Retries
   outNewtonParams.psdProjMode = simParams.nonLinearSolver.psdProjMode;
   outNewtonParams.fittedSaturationHessian = simParams.experimentalEval.fittedSaturationHessian;
-  if (!articulated::ReadsJointFrictionHessianChoice(reg, descendants.compoundActors)) {
+  if (!articulated::HasJointDryFriction(reg, descendants.compoundActors)) {
     // Mark the joint-friction pathway fitted where nothing reads it, so it doesn't trigger
     // Newton retries.
     outNewtonParams.fittedSaturationHessian.jointFriction = true;

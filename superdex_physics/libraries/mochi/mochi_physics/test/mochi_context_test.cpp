@@ -1709,7 +1709,7 @@ TEST_P(MochiContextTest, CreateIKSolver_DisablesArticulatedRateDependentTerms) {
               {
                   .viscous = 1_r,
                   .coulomb = 1_r,
-                  .falloffVel = 1_r,
+                  .preslidingDisplacement = 1_r,
                   .stictionExtra = 1_r,
                   .stribeckVel = 1_r,
               },
@@ -1753,7 +1753,7 @@ TEST_P(MochiContextTest, CreateIKSolver_DisablesArticulatedRateDependentTerms) {
     EXPECT_EQ(0_r, params.coulomb);
     EXPECT_EQ(0_r, params.stictionExtra);
   }
-  EXPECT_EQ(1_r, frictionParams[1].falloffVel);
+  EXPECT_EQ(1_r, frictionParams[1].preslidingDisplacement);
   EXPECT_EQ(1_r, frictionParams[1].stribeckVel);
   for (real const value : actor->GetArticulatedJointInertiaParams(ExpectOK{})) {
     EXPECT_EQ(0_r, value);

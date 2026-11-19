@@ -56,11 +56,14 @@ class NewtonEulerTest : public test::MochiSceneTestBase {
   }
 
  protected:
+  // The FR3 arm, with the given friction on its revolute and prismatic joints. Without friction by
+  // default, so that a Mochi step reproduces its Newton-Euler terms, which exclude joint friction.
   static Actor* CreateFr3Actor(
       Context* mochiContext,
       Scene* scene,
       ColliderType colliderType = ColliderType::None,
-      bool collapseLinks = false) {
+      bool collapseLinks = false,
+      ArticulatedJointFrictionParams const& friction = {}) {
     // Load the prefab
     auto const prefabPath = test::GetAssetPath("franka_arm/fr3/fr3.mochi_prefab");
     auto const assetsDir = test::GetAssetPath("");
@@ -70,6 +73,12 @@ class NewtonEulerTest : public test::MochiSceneTestBase {
 
     // Fix the base joint
     actorPrefab.joints[0].type = ArticulatedJointType::Hard;
+    for (auto& joint : actorPrefab.joints) {
+      if (joint.type == ArticulatedJointType::Revolute ||
+          joint.type == ArticulatedJointType::Prismatic) {
+        joint.friction = friction;
+      }
+    }
 
     for (auto& link : actorPrefab.links) {
       link.colliderType = colliderType;
@@ -216,18 +225,14 @@ TEST_IF_F(MOCHI_HDF5_AND_DOUBLE_AND_NOT_DEBUG, NewtonEulerTest, CompareWithMochi
   }
 }
 
-TEST_IF_F(MOCHI_USE_HDF5, NewtonEulerTest, ComputeIgnoresContact) {
-  auto* referenceRobot = CreateFr3Actor(_mochiContext, _scene, ColliderType::None, true);
+// Expects the Newton-Euler terms of two robots with the same DoFs and links to agree at a fixed
+// moving state.
+static void ExpectSameNewtonEulerTerms(Context* context, Actor* referenceRobot, Actor* otherRobot) {
   auto* referenceTerms =
-      experimental::CreateNewtonEulerTerms(referenceRobot, _mochiContext, test::ExpectOK{});
-  MOCHI_DEFER(
-      experimental::DestroyNewtonEulerTerms(referenceTerms, _mochiContext, test::ExpectOK{}));
-
-  auto* colliderRobot = CreateFr3Actor(_mochiContext, _scene, ColliderType::Box, true);
-  auto* colliderTerms =
-      experimental::CreateNewtonEulerTerms(colliderRobot, _mochiContext, test::ExpectOK{});
-  MOCHI_DEFER(
-      experimental::DestroyNewtonEulerTerms(colliderTerms, _mochiContext, test::ExpectOK{}));
+      experimental::CreateNewtonEulerTerms(referenceRobot, context, test::ExpectOK{});
+  MOCHI_DEFER(experimental::DestroyNewtonEulerTerms(referenceTerms, context, test::ExpectOK{}));
+  auto* otherTerms = experimental::CreateNewtonEulerTerms(otherRobot, context, test::ExpectOK{});
+  MOCHI_DEFER(experimental::DestroyNewtonEulerTerms(otherTerms, context, test::ExpectOK{}));
 
   auto const referenceLinks = referenceRobot->GetNestedLinkActors(test::ExpectOK{});
 
@@ -257,10 +262,29 @@ TEST_IF_F(MOCHI_USE_HDF5, NewtonEulerTest, ComputeIgnoresContact) {
   };
 
   auto const reference = compute(referenceTerms);
-  auto const collider = compute(colliderTerms);
+  auto const other = compute(otherTerms);
   EXPECT_GT(reference.M.Norm(), 0_r);
-  EXPECT_TRUE(test::NearEqualMatrices(reference.M, collider.M));
-  EXPECT_TRUE(test::NearEqualMatrices(reference.C, collider.C));
-  EXPECT_TRUE(test::NearEqualMatrices(reference.J, collider.J));
-  EXPECT_TRUE(test::NearEqualMatrices(reference.JtF, collider.JtF));
+  EXPECT_TRUE(test::NearEqualMatrices(reference.M, other.M));
+  EXPECT_TRUE(test::NearEqualMatrices(reference.C, other.C));
+  EXPECT_TRUE(test::NearEqualMatrices(reference.J, other.J));
+  EXPECT_TRUE(test::NearEqualMatrices(reference.JtF, other.JtF));
+}
+
+TEST_IF_F(MOCHI_USE_HDF5, NewtonEulerTest, ComputeIgnoresContact) {
+  ExpectSameNewtonEulerTerms(
+      _mochiContext,
+      CreateFr3Actor(_mochiContext, _scene, ColliderType::None, true),
+      CreateFr3Actor(_mochiContext, _scene, ColliderType::Box, true));
+}
+
+TEST_IF_F(MOCHI_USE_HDF5, NewtonEulerTest, ComputeIgnoresJointFriction) {
+  ExpectSameNewtonEulerTerms(
+      _mochiContext,
+      CreateFr3Actor(_mochiContext, _scene, ColliderType::None, true),
+      CreateFr3Actor(
+          _mochiContext,
+          _scene,
+          ColliderType::None,
+          true,
+          {.viscous = 10_r, .coulomb = 5_r, .stictionExtra = 2_r, .stribeckVel = 0.1_r}));
 }

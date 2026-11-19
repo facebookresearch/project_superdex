@@ -1346,15 +1346,22 @@ struct ContactParams [equality(default), from_mochi_core] {
 //
 // @details Viscous and dry friction force/torque contributions are added together.
 // - Viscous friction force/torque is proportional to velocity with coefficient @ref viscous.
-// - The static-friction peak/breakaway force/torque is given by @ref coulomb + @ref stictionExtra.
-//   Static friction is regularized to allow slight slippage at speeds of up to @ref falloffVel.
-// - Above the smoothing threshold @code |v| @endcode > @ref falloffVel, dynamic dry friction
-//   force/torque (excluding additional viscous friction) has magnitude
-//   @ref coulomb + @ref stictionExtra * exp(-pow((@code |v| @endcode - @ref falloffVel) / @ref
-//   stribeckVel, 2)) when @ref stribeckVel is positive. If it is zero, the Stribeck term is omitted
-//   and the magnitude is @ref coulomb. Here @code |v| @endcode is the magnitude of the relative
-//   (linear or angular) velocity. This causes friction to decrease smoothly from the peak static
-//   value to @ref coulomb at high velocities.
+// - Dry friction is elasto-plastic. Each joint keeps a friction anchor, and its dry friction
+//   force/torque grows with the (linear or angular) displacement of the joint from the anchor, up to
+//   the static peak @ref coulomb + @ref stictionExtra at @ref preslidingDisplacement. A load below
+//   the static peak is held at the displacement from the anchor that balances it. Beyond the
+//   presliding displacement, the joint slides, and its anchor follows it.
+// - While the joint slides, dry friction force/torque (excluding additional viscous friction) has
+//   magnitude @ref coulomb + @ref stictionExtra * exp(-pow(@code |v| @endcode / @ref stribeckVel,
+//   2)) when @ref stribeckVel is positive, with @code |v| @endcode the magnitude of the (linear or
+//   angular) sliding velocity. If it is zero, the Stribeck term is omitted and the magnitude is
+//   @ref coulomb. This causes friction to decrease smoothly from the peak static value to
+//   @ref coulomb at high velocities.
+//
+// @note The friction anchors are part of the actor history. Setting the joint positions resets
+// them; other setters keep them.
+// @note Units are [N] and [m] for translation DoFs (prismatic joints), and [N·m] and [rad] for
+// rotation DoFs (revolute and spherical joints).
 struct ArticulatedJointFrictionParams [from_mochi_core, equality(default)] {
   // @brief Viscous friction coefficient [N·s/m or N·m·s/rad].
   //
@@ -1364,13 +1371,20 @@ struct ArticulatedJointFrictionParams [from_mochi_core, equality(default)] {
   //
   // @note Default is zero (no Coulomb friction).
   real coulomb = 0.0;
-  // @brief Velocity threshold for dry friction smoothing [m/s or rad/s].
+  // @brief Displacement of a joint from its friction anchor [m or rad] at which dry friction
+  // reaches its static peak.
   //
-  // @details The dry friction force/torque smoothly transitions from 0 to the peak value as
-  // (linear or angular) velocity increases from 0 to @ref falloffVel.
+  // @details Below it, dry friction force/torque grows smoothly from zero with the displacement,
+  // which is elastic: the joint returns towards its anchor when the load drops. Beyond it, the joint
+  // slides.
   //
-  // @note Smaller velocity thresholds improve physical accuracy but may degrade stability.
-  real falloffVel = 1e-3;
+  // @note Must be positive. Smaller values hold loads more stiffly, but may degrade convergence.
+  real preslidingDisplacement = 1e-4;
+  // @brief [Deprecated] Ignored. Dry friction no longer uses a velocity threshold: it is
+  // elasto-plastic, with @ref preslidingDisplacement.
+  //
+  // @warning Deprecated: will be removed in a future release. Setting it logs a warning.
+  Optional<real> falloffVel;
   // @brief [Experimental] Extra stiction force/torque [N or N·m] representing the difference
   // between static and dynamic friction.
   //
@@ -1384,7 +1398,7 @@ struct ArticulatedJointFrictionParams [from_mochi_core, equality(default)] {
   // @note Defaults to zero (no difference between static and dynamic friction).
   real stictionExtra = 0.0;
   // @brief [Experimental] Stribeck velocity [m/s or rad/s] governing how sharply friction
-  // transitions from static to dynamic coefficients as velocity increases.
+  // transitions from static to dynamic coefficients as the sliding velocity increases.
   //
   // @warning This is an experimental feature. It may be changed or removed in the future. Use at
   // your own risk.
@@ -1394,6 +1408,8 @@ struct ArticulatedJointFrictionParams [from_mochi_core, equality(default)] {
   // @note Must not be negative. A smaller value means a sharper transition.
   // @note Defaults to zero.
   // @note This has no effect if @ref stictionExtra is zero.
+  // @note The sliding velocity is the slip since the start of the step divided by the time since
+  // then, so higher-order integrators may be only first-order accurate while the joint slides.
   real stribeckVel = 0.0;
 }
 
@@ -1442,9 +1458,10 @@ enum LogChannel [from_mochi_core] {
 //
 // @note When a flag is `false`, the solver will try first with the true Hessian for that pathway.
 // If a Newton attempt fails, the solver retries with fitted Hessians for all pathways and keeps
-// them for the rest of that nonlinear solve. With the exact contact-friction Hessian and a line
-// search, it also switches to them when an iteration starts with an elasto-plastic contact at or
-// past reverse presliding yield. Each solve starts from these flags.
+// them for the rest of that nonlinear solve. With the exact contact-friction or joint-friction
+// Hessian and a line search, it also switches to them when an iteration starts with an
+// elasto-plastic contact or joint at or past reverse presliding yield. Each solve starts from
+// these flags.
 struct SaturationHessianParams [equality(default), from_mochi_core] {
   // @brief Use fitted Hessian for contact-friction saturation.
   bool contactFriction = true;

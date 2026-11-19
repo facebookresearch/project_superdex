@@ -113,6 +113,7 @@ struct TimeIntegratorState {
 
   void Set(TimeIntegratorParams const& params, int iStage, real dt) {
     dtStage = static_cast<real>(params.beta * params.A(iStage, iStage) * dt);
+    dtFromStepStart = static_cast<real>(params.c(iStage) * dt);
     currentStage = iStage;
     numStages = params.numStages;
     numSteps = params.numSteps;
@@ -126,6 +127,7 @@ struct TimeIntegratorState {
   }
 
   real dtStage = -1_r; // Time increment in the current stage.
+  real dtFromStepStart = -1_r; // Time from the start of the step to the current stage, c_i dt.
   int currentStage = 0; // Current stage, in the range 0, 1, ..., numStages - 1.
   int numSteps = 0; // Number of steps. >1 for multi-step methods.
   RowVector<real> alpha = {}; // 'alpha' coefficients for multi-step methods.

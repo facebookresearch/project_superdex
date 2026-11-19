@@ -20,6 +20,7 @@
 #include "mochi_articulated_body.h"
 #include "mochi_constraint.h"
 #include "mochi_contact_anchors.h"
+#include "mochi_joint_friction.h"
 #include "mochi_rigid.h"
 #include "mochi_simulation.h"
 #include "mochi_solve.h"
@@ -682,21 +683,25 @@ static void BackPropagationSolveIslandAsync(
         stepCounter);
   }
 
-  // The friction anchor adjoints (PropagateFrictionAnchorAdjoints) need the contact geometry and
-  // the link force gradients at the solution, but finite-difference Hessian-vector products leave
-  // actor and contact data at the last perturbation. They are nonzero only for the anchors that the
-  // step read, and nothing else reads the link force gradients, so they are set only in islands
-  // whose step read anchors, after restoring the data at the solution. A zero solve adjoint gives
-  // zero gradients, whatever the data.
-  bool const readsAnchors = std::ranges::any_of(descendants.actors, [&](entt::entity e) {
+  // The friction anchor adjoints (PropagateFrictionAnchorAdjoints and
+  // AccumulateJointFrictionAnchorSolveAdjoints) need the actor data at the solution, but
+  // finite-difference Hessian-vector products leave it at the last perturbation. They are nonzero
+  // only for the anchors that the step read, so the data is restored only in islands whose step
+  // read anchors. A zero solve adjoint gives zero gradients, whatever the data. Joint anchors only
+  // need the joint poses. Contact anchors also need the contact geometry and the link force
+  // gradients, which nothing else reads.
+  bool const readsContactAnchors = std::ranges::any_of(descendants.actors, [&](entt::entity e) {
     auto const* anchors = reg.try_get<CFrictionAnchors<AnchorSet::Active> const>(e);
     return anchors && !anchors->anchors.empty();
   });
-  if (readsAnchors) {
-    if (!IsZero(zSolve)) {
-      solver::PostNewSolutionLocalPipeline(reg, island, problemForward.solution);
+  bool const readsJointAnchors = articulated::HasJointDryFriction(reg, descendants.compoundActors);
+  if ((readsContactAnchors || readsJointAnchors) && !IsZero(zSolve)) {
+    solver::PostNewSolutionLocalPipeline(reg, island, problemForward.solution);
+    if (readsContactAnchors) {
       solver::UpdateDerivedStateBeforeAssembly(reg, island, GradTarget::Current, descendants);
     }
+  }
+  if (readsContactAnchors) {
     ecs::InvokeForEach<ecs::policy::AllowReadWriteSameComponent>(
         &SetLinkForceContainer, reg, descendants.articulatedLinkActors);
   }
@@ -815,6 +820,10 @@ void mochi::ResetFrictionAnchorAdjoints(
   pending.grads.clear();
 }
 
+void mochi::ResetJointFrictionAnchorAdjoints(CDiffJointFrictionAnchorGrad& anchorGrad) {
+  anchorGrad.grads.Resize(0);
+}
+
 void mochi::PrepareContactForceAdjoints(
     CQueryActorContactForces const& /*queryActorContactForces*/,
     [[maybe_unused]] CRequiresFarSdfEvaluation const* farSdfEval,
@@ -867,6 +876,7 @@ void InitializeOnce(entt::registry& reg) {
   ecs::RegisterComponent<CDiffContactGrad<GradTarget::Previous>>(reg);
   ecs::RegisterComponent<CDiffFrictionAnchorGrad<AnchorSet::Active>>(reg);
   ecs::RegisterComponent<CDiffFrictionAnchorGrad<AnchorSet::Pending>>(reg);
+  ecs::RegisterComponent<CDiffJointFrictionAnchorGrad>(reg);
   ecs::RegisterComponent<CIslandBackPropSolverStats>(reg);
 }
 } // namespace mochi::differentiable

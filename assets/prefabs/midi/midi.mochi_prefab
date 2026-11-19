@@ -47,8 +47,7 @@
             },
             "friction": {
               "viscous": 0.002,
-              "coulomb": 0.002,
-              "falloffVel": 0.01
+              "coulomb": 0.002
             },
             "limitStiffness": 1000.0,
             "limitDamping": 1.0
@@ -80,8 +79,7 @@
             },
             "friction": {
               "viscous": 0.002,
-              "coulomb": 0.002,
-              "falloffVel": 0.01
+              "coulomb": 0.002
             },
             "limitStiffness": 1000.0,
             "limitDamping": 1.0
@@ -113,8 +111,7 @@
             },
             "friction": {
               "viscous": 0.002,
-              "coulomb": 0.002,
-              "falloffVel": 0.01
+              "coulomb": 0.002
             },
             "limitStiffness": 1000.0,
             "limitDamping": 1.0
@@ -146,8 +143,7 @@
             },
             "friction": {
               "viscous": 0.002,
-              "coulomb": 0.002,
-              "falloffVel": 0.01
+              "coulomb": 0.002
             },
             "limitStiffness": 1000.0,
             "limitDamping": 1.0
@@ -179,8 +175,7 @@
             },
             "friction": {
               "viscous": 0.002,
-              "coulomb": 0.002,
-              "falloffVel": 0.01
+              "coulomb": 0.002
             },
             "limitStiffness": 1000.0,
             "limitDamping": 1.0
@@ -212,8 +207,7 @@
             },
             "friction": {
               "viscous": 0.002,
-              "coulomb": 0.002,
-              "falloffVel": 0.01
+              "coulomb": 0.002
             },
             "limitStiffness": 1000.0,
             "limitDamping": 1.0
@@ -245,8 +239,7 @@
             },
             "friction": {
               "viscous": 0.002,
-              "coulomb": 0.002,
-              "falloffVel": 0.01
+              "coulomb": 0.002
             },
             "limitStiffness": 1000.0,
             "limitDamping": 1.0
@@ -278,8 +271,7 @@
             },
             "friction": {
               "viscous": 0.002,
-              "coulomb": 0.002,
-              "falloffVel": 0.01
+              "coulomb": 0.002
             },
             "limitStiffness": 1000.0,
             "limitDamping": 1.0
@@ -311,8 +303,7 @@
             },
             "friction": {
               "viscous": 0.002,
-              "coulomb": 0.002,
-              "falloffVel": 0.01
+              "coulomb": 0.002
             },
             "limitStiffness": 1000.0,
             "limitDamping": 1.0
@@ -344,8 +335,7 @@
             },
             "friction": {
               "viscous": 0.002,
-              "coulomb": 0.002,
-              "falloffVel": 0.01
+              "coulomb": 0.002
             },
             "limitStiffness": 1000.0,
             "limitDamping": 1.0
@@ -377,8 +367,7 @@
             },
             "friction": {
               "viscous": 0.002,
-              "coulomb": 0.002,
-              "falloffVel": 0.01
+              "coulomb": 0.002
             },
             "limitStiffness": 1000.0,
             "limitDamping": 1.0
@@ -410,8 +399,7 @@
             },
             "friction": {
               "viscous": 0.002,
-              "coulomb": 0.002,
-              "falloffVel": 0.01
+              "coulomb": 0.002
             },
             "limitStiffness": 1000.0,
             "limitDamping": 1.0
@@ -443,8 +431,7 @@
             },
             "friction": {
               "viscous": 0.002,
-              "coulomb": 0.002,
-              "falloffVel": 0.01
+              "coulomb": 0.002
             },
             "limitStiffness": 1000.0,
             "limitDamping": 1.0
@@ -476,8 +463,7 @@
             },
             "friction": {
               "viscous": 0.002,
-              "coulomb": 0.002,
-              "falloffVel": 0.01
+              "coulomb": 0.002
             },
             "limitStiffness": 1000.0,
             "limitDamping": 1.0
@@ -509,8 +495,7 @@
             },
             "friction": {
               "viscous": 0.002,
-              "coulomb": 0.002,
-              "falloffVel": 0.01
+              "coulomb": 0.002
             },
             "limitStiffness": 1000.0,
             "limitDamping": 1.0
@@ -542,8 +527,7 @@
             },
             "friction": {
               "viscous": 0.002,
-              "coulomb": 0.002,
-              "falloffVel": 0.01
+              "coulomb": 0.002
             },
             "limitStiffness": 1000.0,
             "limitDamping": 1.0
@@ -575,8 +559,7 @@
             },
             "friction": {
               "viscous": 0.002,
-              "coulomb": 0.002,
-              "falloffVel": 0.01
+              "coulomb": 0.002
             },
             "limitStiffness": 1000.0,
             "limitDamping": 1.0
@@ -608,8 +591,7 @@
             },
             "friction": {
               "viscous": 0.002,
-              "coulomb": 0.002,
-              "falloffVel": 0.01
+              "coulomb": 0.002
             },
             "limitStiffness": 1000.0,
             "limitDamping": 1.0
@@ -641,8 +623,7 @@
             },
             "friction": {
               "viscous": 0.002,
-              "coulomb": 0.002,
-              "falloffVel": 0.01
+              "coulomb": 0.002
             },
             "limitStiffness": 1000.0,
             "limitDamping": 1.0
@@ -674,8 +655,7 @@
             },
             "friction": {
               "viscous": 0.002,
-              "coulomb": 0.002,
-              "falloffVel": 0.01
+              "coulomb": 0.002
             },
             "limitStiffness": 1000.0,
             "limitDamping": 1.0
@@ -707,8 +687,7 @@
             },
             "friction": {
               "viscous": 0.002,
-              "coulomb": 0.002,
-              "falloffVel": 0.01
+              "coulomb": 0.002
             },
             "limitStiffness": 1000.0,
             "limitDamping": 1.0
@@ -740,8 +719,7 @@
             },
             "friction": {
               "viscous": 0.002,
-              "coulomb": 0.002,
-              "falloffVel": 0.01
+              "coulomb": 0.002
             },
             "limitStiffness": 1000.0,
             "limitDamping": 1.0
@@ -773,8 +751,7 @@
             },
             "friction": {
               "viscous": 0.0015,
-              "coulomb": 0.0015,
-              "falloffVel": 0.01
+              "coulomb": 0.0015
             },
             "limitStiffness": 1000.0,
             "limitDamping": 1.0
@@ -806,8 +783,7 @@
             },
             "friction": {
               "viscous": 0.0015,
-              "coulomb": 0.0015,
-              "falloffVel": 0.01
+              "coulomb": 0.0015
             },
             "limitStiffness": 1000.0,
             "limitDamping": 1.0
@@ -839,8 +815,7 @@
             },
             "friction": {
               "viscous": 0.0015,
-              "coulomb": 0.0015,
-              "falloffVel": 0.01
+              "coulomb": 0.0015
             },
             "limitStiffness": 1000.0,
             "limitDamping": 1.0
@@ -872,8 +847,7 @@
             },
             "friction": {
               "viscous": 0.0015,
-              "coulomb": 0.0015,
-              "falloffVel": 0.01
+              "coulomb": 0.0015
             },
             "limitStiffness": 1000.0,
             "limitDamping": 1.0
@@ -905,8 +879,7 @@
             },
             "friction": {
               "viscous": 0.0015,
-              "coulomb": 0.0015,
-              "falloffVel": 0.01
+              "coulomb": 0.0015
             },
             "limitStiffness": 1000.0,
             "limitDamping": 1.0
@@ -938,8 +911,7 @@
             },
             "friction": {
               "viscous": 0.0015,
-              "coulomb": 0.0015,
-              "falloffVel": 0.01
+              "coulomb": 0.0015
             },
             "limitStiffness": 1000.0,
             "limitDamping": 1.0
@@ -971,8 +943,7 @@
             },
             "friction": {
               "viscous": 0.0015,
-              "coulomb": 0.0015,
-              "falloffVel": 0.01
+              "coulomb": 0.0015
             },
             "limitStiffness": 1000.0,
             "limitDamping": 1.0
@@ -1004,8 +975,7 @@
             },
             "friction": {
               "viscous": 0.0015,
-              "coulomb": 0.0015,
-              "falloffVel": 0.01
+              "coulomb": 0.0015
             },
             "limitStiffness": 1000.0,
             "limitDamping": 1.0
@@ -1037,8 +1007,7 @@
             },
             "friction": {
               "viscous": 0.0015,
-              "coulomb": 0.0015,
-              "falloffVel": 0.01
+              "coulomb": 0.0015
             },
             "limitStiffness": 1000.0,
             "limitDamping": 1.0
@@ -1070,8 +1039,7 @@
             },
             "friction": {
               "viscous": 0.0015,
-              "coulomb": 0.0015,
-              "falloffVel": 0.01
+              "coulomb": 0.0015
             },
             "limitStiffness": 1000.0,
             "limitDamping": 1.0
@@ -1103,8 +1071,7 @@
             },
             "friction": {
               "viscous": 0.0015,
-              "coulomb": 0.0015,
-              "falloffVel": 0.01
+              "coulomb": 0.0015
             },
             "limitStiffness": 1000.0,
             "limitDamping": 1.0
@@ -1136,8 +1103,7 @@
             },
             "friction": {
               "viscous": 0.0015,
-              "coulomb": 0.0015,
-              "falloffVel": 0.01
+              "coulomb": 0.0015
             },
             "limitStiffness": 1000.0,
             "limitDamping": 1.0
@@ -1169,8 +1135,7 @@
             },
             "friction": {
               "viscous": 0.0015,
-              "coulomb": 0.0015,
-              "falloffVel": 0.01
+              "coulomb": 0.0015
             },
             "limitStiffness": 1000.0,
             "limitDamping": 1.0
@@ -1202,8 +1167,7 @@
             },
             "friction": {
               "viscous": 0.0015,
-              "coulomb": 0.0015,
-              "falloffVel": 0.01
+              "coulomb": 0.0015
             },
             "limitStiffness": 1000.0,
             "limitDamping": 1.0
@@ -1235,8 +1199,7 @@
             },
             "friction": {
               "viscous": 0.0015,
-              "coulomb": 0.0015,
-              "falloffVel": 0.01
+              "coulomb": 0.0015
             },
             "limitStiffness": 1000.0,
             "limitDamping": 1.0
@@ -1274,8 +1237,7 @@
             },
             "friction": {
               "viscous": 0.0005,
-              "coulomb": 0.001,
-              "falloffVel": 0.02
+              "coulomb": 0.001
             },
             "limitStiffness": 1000.0,
             "limitDamping": 0.2
@@ -1313,8 +1275,7 @@
             },
             "friction": {
               "viscous": 0.0008,
-              "coulomb": 0.012,
-              "falloffVel": 0.02
+              "coulomb": 0.012
             },
             "limitStiffness": 1000.0,
             "limitDamping": 0.2
@@ -1347,8 +1308,7 @@
             },
             "friction": {
               "viscous": 0.0008,
-              "coulomb": 0.001,
-              "falloffVel": 0.02
+              "coulomb": 0.001
             },
             "limitStiffness": 1000.0,
             "limitDamping": 0.2
@@ -1376,8 +1336,7 @@
             },
             "friction": {
               "viscous": 0.0003,
-              "coulomb": 0.006,
-              "falloffVel": 0.02
+              "coulomb": 0.006
             }
           },
           {
@@ -1413,8 +1372,7 @@
             },
             "friction": {
               "viscous": 0.2,
-              "coulomb": 0.05,
-              "falloffVel": 0.005
+              "coulomb": 0.05
             },
             "limitStiffness": 100000.0,
             "limitDamping": 10.0
@@ -1452,8 +1410,7 @@
             },
             "friction": {
               "viscous": 0.2,
-              "coulomb": 0.05,
-              "falloffVel": 0.005
+              "coulomb": 0.05
             },
             "limitStiffness": 100000.0,
             "limitDamping": 10.0
@@ -1491,8 +1448,7 @@
             },
             "friction": {
               "viscous": 0.2,
-              "coulomb": 0.05,
-              "falloffVel": 0.005
+              "coulomb": 0.05
             },
             "limitStiffness": 100000.0,
             "limitDamping": 10.0
@@ -1530,8 +1486,7 @@
             },
             "friction": {
               "viscous": 0.2,
-              "coulomb": 0.05,
-              "falloffVel": 0.005
+              "coulomb": 0.05
             },
             "limitStiffness": 100000.0,
             "limitDamping": 10.0
@@ -1569,8 +1524,7 @@
             },
             "friction": {
               "viscous": 1.5,
-              "coulomb": 0.35,
-              "falloffVel": 0.0001
+              "coulomb": 0.35
             },
             "limitStiffness": 100000.0,
             "limitDamping": 10.0
@@ -1608,8 +1562,7 @@
             },
             "friction": {
               "viscous": 1.5,
-              "coulomb": 0.35,
-              "falloffVel": 0.0001
+              "coulomb": 0.35
             },
             "limitStiffness": 100000.0,
             "limitDamping": 10.0
@@ -1647,8 +1600,7 @@
             },
             "friction": {
               "viscous": 1.5,
-              "coulomb": 0.35,
-              "falloffVel": 0.0001
+              "coulomb": 0.35
             },
             "limitStiffness": 100000.0,
             "limitDamping": 10.0
@@ -1686,8 +1638,7 @@
             },
             "friction": {
               "viscous": 1.5,
-              "coulomb": 0.35,
-              "falloffVel": 0.0001
+              "coulomb": 0.35
             },
             "limitStiffness": 100000.0,
             "limitDamping": 10.0
@@ -1725,8 +1676,7 @@
             },
             "friction": {
               "viscous": 1.5,
-              "coulomb": 0.35,
-              "falloffVel": 0.0001
+              "coulomb": 0.35
             },
             "limitStiffness": 100000.0,
             "limitDamping": 10.0

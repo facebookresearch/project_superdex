@@ -50,9 +50,9 @@ struct SUPERDEXPHYSICS_API FMochiArticulatedJointFriction {
   // Coulomb friction coefficient [N or N*m].
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Friction")
   double Coulomb = 0;
-  // Velocity threshold for dry friction smoothing [m/s or rad/s].
+  // Displacement from the friction anchor at which dry friction reaches its static peak [m or rad].
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Friction")
-  double FalloffVel = 1e-3;
+  double PreslidingDisplacement = 1e-4;
   // [Experimental] Extra stiction force/torque [N or N*m].
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Friction", AdvancedDisplay)
   double StictionExtra = 0;

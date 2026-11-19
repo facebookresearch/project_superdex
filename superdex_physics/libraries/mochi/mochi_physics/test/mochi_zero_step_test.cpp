@@ -29,6 +29,7 @@
 #include <mochi_physics/src/mochi_capture.h>
 #include <mochi_physics/src/mochi_common_components.h>
 #include <mochi_physics/src/mochi_island.h>
+#include <mochi_physics/src/mochi_joint_friction.h>
 #include <mochi_physics/src/mochi_query.h>
 #include <mochi_physics/src/mochi_scene.h>
 #include <mochi_physics/src/mochi_solve.h>
@@ -908,6 +909,42 @@ TEST_F(ZeroStepContactQueryTest, ZeroStepReproducesMovingControllerTarget) {
   scene->Step(0.0);
   EXPECT_SPAN_EQ(expected, CopyControllerForce(actor));
 
+  _mochiContext->DestroyScene(scene);
+}
+
+// Step(0.0) reproduces the joint friction of a chain sliding behind a moving controller target,
+// with the anchors the reproduced step used, directly and after a restore.
+TEST_F(ZeroStepContactQueryTest, ZeroStepReproducesSlidingJointFriction) {
+  double constexpr kDt = 0.01;
+  auto* scene = _mochiContext->CreateScene("SlidingJointFriction");
+  scene->SetGravity(Real3{});
+  Actor* actor = AddControlledChain(scene);
+  DynamicArray<ArticulatedJointFrictionParams> const friction(
+      2,
+      ArticulatedJointFrictionParams{
+          .coulomb = 1_r,
+          .preslidingDisplacement = 1e-4_r,
+          .stictionExtra = 0.5_r,
+          .stribeckVel = 0.1_r});
+  actor->SetArticulatedJointFrictionParams(friction, test::ExpectOK{});
+  for (int i = 0; i < 5; ++i) {
+    AddToTargetPose(actor, 0.1_r);
+    scene->Step(kDt);
+  }
+  AddToTargetPose(actor, 0.1_r);
+  auto& reg = GetRegistry(scene);
+  auto const& anchors = reg.get<CArticulatedJointFrictionAnchors const>(
+                               GetEntity(reg, actor->GetHandle(), test::ExpectOK{}))
+                            .value;
+  ColumnVector<real> const previousAnchors = anchors.Duplicate();
+  SceneForces const expected = StepAndReadAssembledForces(scene, kDt);
+  ASSERT_FALSE(test::NearEqualMatrices(anchors, previousAnchors, 0_r)) << "The joints must slide";
+  StateHandle const state = scene->CaptureState(test::ExpectOK{});
+  CheckSameForces(expected, StepAndReadAssembledForces(scene, 0.0));
+
+  scene->Step(kDt);
+  scene->RestoreState(state, /*releaseImmediately*/ true, test::ExpectOK{});
+  CheckSameForces(expected, StepAndReadAssembledForces(scene, 0.0));
   _mochiContext->DestroyScene(scene);
 }
 

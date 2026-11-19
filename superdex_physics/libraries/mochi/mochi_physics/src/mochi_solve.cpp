@@ -29,6 +29,7 @@
 #include "mochi_discretization_components.h"
 #include "mochi_group.h"
 #include "mochi_island.h"
+#include "mochi_joint_friction.h"
 #include "mochi_point_cloud_contact.h"
 #include "mochi_rigid.h"
 #include "mochi_rod.h"

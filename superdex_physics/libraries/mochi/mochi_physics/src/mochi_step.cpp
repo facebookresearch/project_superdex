@@ -28,6 +28,7 @@
 #include "mochi_discretization_functions.h"
 #include "mochi_group.h"
 #include "mochi_island.h"
+#include "mochi_joint_friction.h"
 #include "mochi_linear_contact_skin.h"
 #include "mochi_pose_controller.h"
 #include "mochi_query.h"
@@ -254,6 +255,10 @@ void mochi::PreStepEcs(entt::registry& reg) {
     articulated::compound::ReconstructPreviousStepPipeline(reg);
     ecs::InvokeForEachGlobal(&skinned::EntityReconstructPreviousStep, reg);
   }
+
+  // Advance the joint friction anchors to the step-start pose, which the previous state now holds,
+  // or anchor the joints there without friction preload. A solve-free assembly keeps them.
+  ecs::InvokeForEachGlobal(&articulated::compound::PrepareJointFrictionAnchors, reg);
 
   // Wake islands swept by moving static actors. Must come BEFORE island::PreStep, which applies
   // wake requests. A solve-free assembly does not change the sleep state.

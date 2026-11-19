@@ -260,8 +260,10 @@ void mochi::ValidateFriction(
   MOCHI_ERROR_IF(friction.viscous < 0_r, error, "Joint friction viscous is negative.");
   MOCHI_ERROR_IF(!IsFinite(friction.coulomb), error, "Joint friction coulomb is not finite.");
   MOCHI_ERROR_IF(friction.coulomb < 0_r, error, "Joint friction coulomb is negative.");
-  MOCHI_ERROR_IF(!IsFinite(friction.falloffVel), error, "Joint friction falloffVel is not finite.");
-  MOCHI_ERROR_IF(friction.falloffVel < 0_r, error, "Joint friction falloffVel is negative.");
+  MOCHI_ERROR_IF(
+      !IsFinite(friction.preslidingDisplacement) || friction.preslidingDisplacement <= 0_r,
+      error,
+      "Joint friction preslidingDisplacement must be positive and finite.");
   MOCHI_ERROR_IF(
       !IsFinite(friction.stictionExtra), error, "Joint friction stictionExtra is not finite.");
   MOCHI_ERROR_IF(friction.stictionExtra < 0_r, error, "Joint friction stictionExtra is negative.");
@@ -273,6 +275,11 @@ void mochi::ValidateFriction(
           (friction.viscous != 0_r || friction.coulomb != 0_r || friction.stictionExtra != 0_r),
       error,
       "Joint friction must be zero for free joints.");
+  if (friction.falloffVel.has_value()) {
+    MOCHI_LOG_WARNING_ONCE(
+        "ArticulatedJointFrictionParams::falloffVel is deprecated and ignored: joint dry friction is "
+        "elasto-plastic. Use preslidingDisplacement instead.");
+  }
 }
 
 void mochi::ValidateInertia(real inertia, Error& error) {

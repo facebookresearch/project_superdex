@@ -812,7 +812,6 @@
       "effortLimit": 0.60000002384185791,
       "friction": {
         "coulomb": 0.0647008,
-        "falloffVel": 0.01,
         "stictionExtra": 0.00302989,
         "stribeckVel": 0.0711043,
         "viscous": 0.000289487
@@ -853,7 +852,6 @@
       "effortLimit": 0.60000002384185791,
       "friction": {
         "coulomb": 0.0871578,
-        "falloffVel": 0.01,
         "stictionExtra": 0.0488497,
         "stribeckVel": 0.219521,
         "viscous": 0.00176019
@@ -894,7 +892,6 @@
       "effortLimit": 0.30000001192092896,
       "friction": {
         "coulomb": 0.0135896,
-        "falloffVel": 0.01,
         "stictionExtra": 0.0105413,
         "stribeckVel": 0.953064,
         "viscous": 0.00671373
@@ -935,7 +932,6 @@
       "effortLimit": 0.30000001192092896,
       "friction": {
         "coulomb": 0.0196774,
-        "falloffVel": 0.01,
         "stictionExtra": 0.0166046,
         "stribeckVel": 0.356318,
         "viscous": 0.00279245
@@ -995,7 +991,6 @@
       "effortLimit": 2,
       "friction": {
         "coulomb": 0.053403,
-        "falloffVel": 0.01,
         "stictionExtra": 0.00908931,
         "stribeckVel": 0.829163,
         "viscous": 0.0028051
@@ -1036,7 +1031,6 @@
       "effortLimit": 0.20000000298023224,
       "friction": {
         "coulomb": 0.0168087,
-        "falloffVel": 0.01,
         "stictionExtra": 0.00605458,
         "stribeckVel": 0.0340193,
         "viscous": 5.49516e-05
@@ -1071,7 +1065,6 @@
       "effortLimit": 0.30000001192092896,
       "friction": {
         "coulomb": 0.0141665,
-        "falloffVel": 0.01,
         "stictionExtra": 0.000360722,
         "stribeckVel": 0.690816,
         "viscous": 0.00583775
@@ -1106,7 +1099,6 @@
       "effortLimit": 0.30000001192092896,
       "friction": {
         "coulomb": 0.017708,
-        "falloffVel": 0.01,
         "stictionExtra": 0.0011074,
         "stribeckVel": 1.4235,
         "viscous": 0.00211478
@@ -1160,7 +1152,6 @@
       "effortLimit": 2,
       "friction": {
         "coulomb": 0.0476891,
-        "falloffVel": 0.01,
         "stictionExtra": 0.0380599,
         "stribeckVel": 0.460706,
         "viscous": 0.00344242
@@ -1201,7 +1192,6 @@
       "effortLimit": 0.20000000298023224,
       "friction": {
         "coulomb": 0.0111264,
-        "falloffVel": 0.01,
         "stictionExtra": 0.0053113,
         "stribeckVel": 0.0342352,
         "viscous": 1.18521e-05
@@ -1236,7 +1226,6 @@
       "effortLimit": 0.30000001192092896,
       "friction": {
         "coulomb": 0.0114881,
-        "falloffVel": 0.01,
         "stictionExtra": 0.00830079,
         "stribeckVel": 1.82476,
         "viscous": 0.00503376
@@ -1271,7 +1260,6 @@
       "effortLimit": 0.30000001192092896,
       "friction": {
         "coulomb": 0.00988718,
-        "falloffVel": 0.01,
         "stictionExtra": 0.00313619,
         "stribeckVel": 0.0786972,
         "viscous": 0.0024279
@@ -1325,7 +1313,6 @@
       "effortLimit": 2,
       "friction": {
         "coulomb": 0.0412849,
-        "falloffVel": 0.01,
         "stictionExtra": 0.0480333,
         "stribeckVel": 0.280476,
         "viscous": 0.0086585
@@ -1366,7 +1353,6 @@
       "effortLimit": 0.20000000298023224,
       "friction": {
         "coulomb": 0.0243574,
-        "falloffVel": 0.01,
         "stictionExtra": 0.0037122,
         "stribeckVel": 2.93019,
         "viscous": 1.073e-05
@@ -1401,7 +1387,6 @@
       "effortLimit": 0.30000001192092896,
       "friction": {
         "coulomb": 0.0235359,
-        "falloffVel": 0.01,
         "stictionExtra": 0.00676629,
         "stribeckVel": 1.65794,
         "viscous": 0.00448521
@@ -1436,7 +1421,6 @@
       "effortLimit": 0.30000001192092896,
       "friction": {
         "coulomb": 0.0170592,
-        "falloffVel": 0.01,
         "stictionExtra": 0.00043784,
         "stribeckVel": 0.0378798,
         "viscous": 0.000125793
@@ -1490,7 +1474,6 @@
       "effortLimit": 2,
       "friction": {
         "coulomb": 0.0284792,
-        "falloffVel": 0.01,
         "stictionExtra": 0.00152996,
         "stribeckVel": 0.746555,
         "viscous": 0.0168291
@@ -1531,7 +1514,6 @@
       "effortLimit": 0.20000000298023224,
       "friction": {
         "coulomb": 0.0254664,
-        "falloffVel": 0.01,
         "stictionExtra": 0.00088198,
         "stribeckVel": 0.408964,
         "viscous": 1.07684e-05
@@ -1566,7 +1548,6 @@
       "effortLimit": 0.30000001192092896,
       "friction": {
         "coulomb": 0.013349,
-        "falloffVel": 0.01,
         "stictionExtra": 0.00303296,
         "stribeckVel": 1.20869,
         "viscous": 0.00202605
@@ -1601,7 +1582,6 @@
       "effortLimit": 0.30000001192092896,
       "friction": {
         "coulomb": 0.0112268,
-        "falloffVel": 0.01,
         "stictionExtra": 0.000632096,
         "stribeckVel": 2.12147,
         "viscous": 0.00366501

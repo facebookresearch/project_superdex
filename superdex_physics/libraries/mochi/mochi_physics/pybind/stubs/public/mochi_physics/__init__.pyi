@@ -3795,17 +3795,27 @@ class ArticulatedJointFrictionParams:
 
     Viscous and dry friction force/torque contributions are added together. -
     Viscous friction force/torque is proportional to velocity with coefficient
-    :attr:`viscous`. - The static-friction peak/breakaway force/torque is given by
-    :attr:`coulomb` + :attr:`stiction_extra`. Static friction is regularized to
-    allow slight slippage at speeds of up to :attr:`falloff_vel`. - Above the
-    smoothing threshold ``|v|`` > :attr:`falloff_vel`, dynamic dry friction
-    force/torque (excluding additional viscous friction) has magnitude
-    :attr:`coulomb` + :attr:`stiction_extra` * exp(-pow((``|v|`` -
-    :attr:`falloff_vel`) / :attr:`stribeck_vel`, 2)) when :attr:`stribeck_vel` is
-    positive. If it is zero, the Stribeck term is omitted and the magnitude is
-    :attr:`coulomb`. Here ``|v|`` is the magnitude of the relative (linear or
-    angular) velocity. This causes friction to decrease smoothly from the peak
-    static value to :attr:`coulomb` at high velocities.
+    :attr:`viscous`. - Dry friction is elasto-plastic. Each joint keeps a friction
+    anchor, and its dry friction force/torque grows with the (linear or angular)
+    displacement of the joint from the anchor, up to the static peak :attr:`coulomb`
+    + :attr:`stiction_extra` at :attr:`presliding_displacement`. A load below the
+    static peak is held at the displacement from the anchor that balances it. Beyond
+    the presliding displacement, the joint slides, and its anchor follows it. -
+    While the joint slides, dry friction force/torque (excluding additional viscous
+    friction) has magnitude :attr:`coulomb` + :attr:`stiction_extra` *
+    exp(-pow(``|v|`` / :attr:`stribeck_vel`, 2)) when :attr:`stribeck_vel` is
+    positive, with ``|v|`` the magnitude of the (linear or angular) sliding
+    velocity. If it is zero, the Stribeck term is omitted and the magnitude is
+    :attr:`coulomb`. This causes friction to decrease smoothly from the peak static
+    value to :attr:`coulomb` at high velocities.
+
+    Note:
+        The friction anchors are part of the actor history. Setting the joint
+        positions resets them; other setters keep them.
+
+    Note:
+        Units are [N] and [m] for translation DoFs (prismatic joints), and [N·m] and
+        [rad] for rotation DoFs (revolute and spherical joints).
     """
     viscous: float
     """Viscous friction coefficient [N·s/m or N·m·s/rad].
@@ -3819,16 +3829,25 @@ class ArticulatedJointFrictionParams:
     Note:
         Default is zero (no Coulomb friction).
     """
-    falloff_vel: float
-    """Velocity threshold for dry friction smoothing [m/s or rad/s].
+    presliding_displacement: float
+    """Displacement of a joint from its friction anchor [m or rad] at which dry
+    friction reaches its static peak.
 
-    The dry friction force/torque smoothly transitions from 0 to the peak value as
-    (linear or angular) velocity increases from 0 to
-    :attr:`~superdex.physics.ArticulatedJointFrictionParams.falloff_vel`.
+    Below it, dry friction force/torque grows smoothly from zero with the
+    displacement, which is elastic: the joint returns towards its anchor when the
+    load drops. Beyond it, the joint slides.
 
     Note:
-        Smaller velocity thresholds improve physical accuracy but may degrade
-        stability.
+        Must be positive. Smaller values hold loads more stiffly, but may degrade
+        convergence.
+    """
+    falloff_vel: Optional[float]
+    """[Deprecated] Ignored. Dry friction no longer uses a velocity threshold: it is
+    elasto-plastic, with
+    :attr:`~superdex.physics.ArticulatedJointFrictionParams.presliding_displacement`.
+
+    Warning:
+        Deprecated: will be removed in a future release. Setting it logs a warning.
     """
     stiction_extra: float
     """[Experimental] Extra stiction force/torque [N or N·m] representing the
@@ -3857,7 +3876,8 @@ class ArticulatedJointFrictionParams:
     """
     stribeck_vel: float
     """[Experimental] Stribeck velocity [m/s or rad/s] governing how sharply friction
-    transitions from static to dynamic coefficients as velocity increases.
+    transitions from static to dynamic coefficients as the sliding velocity
+    increases.
 
     Note:
         Must not be negative. A smaller value means a sharper transition.
@@ -3869,6 +3889,11 @@ class ArticulatedJointFrictionParams:
         This has no effect if
         :attr:`~superdex.physics.ArticulatedJointFrictionParams.stiction_extra` is
         zero.
+
+    Note:
+        The sliding velocity is the slip since the start of the step divided by the
+        time since then, so higher-order integrators may be only first-order
+        accurate while the joint slides.
 
     Warning:
         This is an experimental feature. It may be changed or removed in the future.
@@ -3889,7 +3914,8 @@ class ArticulatedJointFrictionParams:
         *,
         viscous: float = ...,
         coulomb: float = ...,
-        falloff_vel: float = ...,
+        presliding_displacement: float = ...,
+        falloff_vel: Optional[float] = ...,
         stiction_extra: float = ...,
         stribeck_vel: float = ...,
     ) -> None: ...
@@ -3951,9 +3977,10 @@ class SaturationHessianParams:
         When a flag is `false`, the solver will try first with the true Hessian for
         that pathway. If a Newton attempt fails, the solver retries with fitted
         Hessians for all pathways and keeps them for the rest of that nonlinear
-        solve. With the exact contact-friction Hessian and a line search, it also
-        switches to them when an iteration starts with an elasto-plastic contact at
-        or past reverse presliding yield. Each solve starts from these flags.
+        solve. With the exact contact-friction or joint-friction Hessian and a line
+        search, it also switches to them when an iteration starts with an
+        elasto-plastic contact or joint at or past reverse presliding yield. Each
+        solve starts from these flags.
 
     Warning:
         This is an experimental feature. It may be changed or removed in the future.
@@ -10168,12 +10195,17 @@ class Actor:
 
     The actor history is the state that an actor carries over from its previous time
     steps, besides its current state: the previous states of multi-step time
-    integrators, and, with
+    integrators, the friction preload of the joints of articulated actors (see
+    :class:`~superdex.physics.ArticulatedJointFrictionParams`), and, with
     :attr:`~superdex.physics.ExperimentalEvalParams.elasto_plastic_friction`, the
     friction preload of its contacts and of contacts on it. Setters that change the
     state discontinuously invalidate the actor history: in the next time step,
     multi-step time integrators restart (e.g. BDF2 falls back to backward Euler),
-    and the contacts restart without friction preload.
+    and the contacts restart without friction preload. Joints restart without
+    friction preload only when their positions are set
+    (:meth:`set_articulated_pose_from_joints`,
+    :meth:`set_articulated_pose_from_links`) or their dry friction is enabled
+    (:meth:`set_articulated_joint_friction_params`).
 
     Note:
         Every body in the simulation is an actor.
@@ -12501,14 +12533,20 @@ class Actor:
             friction (ArrayLikeArticulatedJointFrictionParams): Friction parameters, one
                 per joint. Must be of size equal to the number of joints (matching
                 :meth:`~superdex.physics.Actor.get_articulated_joint_friction_params`);
-                all values must be finite and non-negative, and free joints must have
-                zero friction.
+                all values must be finite and non-negative, presliding displacements
+                positive, and free joints must have zero friction.
 
         Raises:
             :class:`~superdex.physics.Error`: If an error occurs.
 
         Note:
             Only applicable to articulated actors.
+
+        Note:
+            Keeps the friction preload of the joints: each joint keeps its displacement
+            from its friction anchor under the previous parameters, and the new
+            parameters give its friction force. Joints whose dry friction it enables
+            start without preload.
 
         See Also:
             :meth:`~superdex.physics.Actor.get_articulated_joint_friction_params`,

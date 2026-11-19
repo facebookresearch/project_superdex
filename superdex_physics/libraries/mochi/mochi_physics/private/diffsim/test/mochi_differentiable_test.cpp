@@ -650,13 +650,41 @@ TEST_IF_P(
   RunGradientConsistencyTest(lossTerms, target, 10, params);
 }
 
-// An articulated body with joint friction.
+// An articulated body with joint friction, whose joints slide: their friction anchors are dragged.
 TEST_IF_P(
     MOCHI_TEST_ARTICULATED_DOUBLE,
     MochiDifferentiable,
     SingleArticulatedActorJointFriction_LastStepError) {
   auto* target = LoadScenePrefab(
       _scene, "articulated_actor_joint_friction.mochi_scene", "ArticulatedActor/Link2_Horizontal");
+  std::array<LossAndGradientEvalPair, 2> lossTerms = {
+      lastStepTranslationError, lastStepRotationError};
+  RunGradientConsistencyTest(lossTerms, target, 10, TestParams{.tol = 2e-2_r});
+}
+
+// Scales the dry friction of the joints of the articulated actors of a scene.
+static void ScaleJointDryFriction(Scene* scene, real scale) {
+  scene->ForEachActor([&](Actor* actor) {
+    if (actor->GetType() != ActorType::Articulated) {
+      return;
+    }
+    DynamicArray<ArticulatedJointFrictionParams> friction(
+        actor->GetArticulatedJointFrictionParams(test::ExpectOK{}));
+    for (auto& params : friction) {
+      params.coulomb *= scale;
+    }
+    actor->SetArticulatedJointFrictionParams(friction, test::ExpectOK{});
+  });
+}
+
+// An articulated body whose joints stick: their friction anchors never move.
+TEST_IF_P(
+    MOCHI_TEST_ARTICULATED_DOUBLE,
+    MochiDifferentiable,
+    SingleArticulatedActorStickingJointFriction_LastStepError) {
+  auto* target = LoadScenePrefab(
+      _scene, "articulated_actor_joint_friction.mochi_scene", "ArticulatedActor/Link2_Horizontal");
+  ScaleJointDryFriction(_scene, 1e3_r);
   std::array<LossAndGradientEvalPair, 2> lossTerms = {
       lastStepTranslationError, lastStepRotationError};
   RunGradientConsistencyTest(lossTerms, target, 10, TestParams{.tol = 2e-2_r});

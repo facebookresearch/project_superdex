@@ -1483,13 +1483,13 @@ class TestStructs(MochiTestBase):
         params_kw = mochi.ArticulatedJointFrictionParams(
             viscous=1.5,
             coulomb=2.5,
-            falloff_vel=0.01,
+            presliding_displacement=0.01,
             stiction_extra=0.3,
             stribeck_vel=0.05,
         )
         self.assertAlmostEqual(1.5, params_kw.viscous)
         self.assertAlmostEqual(2.5, params_kw.coulomb)
-        self.assertAlmostEqual(0.01, params_kw.falloff_vel)
+        self.assertAlmostEqual(0.01, params_kw.presliding_displacement)
         self.assertAlmostEqual(0.3, params_kw.stiction_extra)
         self.assertAlmostEqual(0.05, params_kw.stribeck_vel)
 
@@ -1497,7 +1497,7 @@ class TestStructs(MochiTestBase):
         params_copy = mochi.ArticulatedJointFrictionParams(
             viscous=1.5,
             coulomb=2.5,
-            falloff_vel=0.01,
+            presliding_displacement=0.01,
             stiction_extra=0.3,
             stribeck_vel=0.05,
         )
@@ -1507,12 +1507,12 @@ class TestStructs(MochiTestBase):
         # Assign every field
         params.viscous = 10.0
         params.coulomb = 20.0
-        params.falloff_vel = 0.1
+        params.presliding_displacement = 0.1
         params.stiction_extra = 5.0
         params.stribeck_vel = 3.0
         self.assertAlmostEqual(10.0, params.viscous)
         self.assertAlmostEqual(20.0, params.coulomb)
-        self.assertAlmostEqual(0.1, params.falloff_vel)
+        self.assertAlmostEqual(0.1, params.presliding_displacement)
         self.assertAlmostEqual(5.0, params.stiction_extra)
         self.assertAlmostEqual(3.0, params.stribeck_vel)
 

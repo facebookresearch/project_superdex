@@ -36,8 +36,7 @@
             ],
             "friction": {
               "viscous": 0.3,
-              "coulomb": 0.15,
-              "falloffVel": 0.02
+              "coulomb": 0.15
             },
             "limitStiffness": 3000.0,
             "limitDamping": 30.0
@@ -69,8 +68,7 @@
             ],
             "friction": {
               "viscous": 0.3,
-              "coulomb": 0.15,
-              "falloffVel": 0.02
+              "coulomb": 0.15
             },
             "limitStiffness": 3000.0,
             "limitDamping": 30.0

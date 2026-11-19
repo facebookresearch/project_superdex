@@ -30,15 +30,18 @@
 #include "mochi_group.h"
 #include "mochi_integration.h"
 #include "mochi_island.h"
+#include "mochi_joint_friction.h"
 #include "mochi_pose_controller.h"
 #include "mochi_simulation.h"
 #include "mochi_soft_skinned.h"
 
+#include <mochi_core/articulated_body/joint_friction.h>
 #include <mochi_core/contact/contact_partition.h>
 #include <mochi_core/geometry/geometry_utils.h>
 #include <mochi_core/geometry/model_utils.h>
 #include <mochi_core/linear_algebra/matrix.h>
 #include <mochi_core/memory/filo_allocator.h>
+#include <mochi_core/utils/container_utils.h>
 #include <mochi_core/utils/log.h>
 #include <mochi_core/utils/rigid_body_assembly.h>
 #include <mochi_core/utils/single_dof_assembly.h>
@@ -314,6 +317,7 @@ void articulated::compound::SetArticulatedPoseFromLinks(entt::registry& reg, ent
   // Recompute derived state and velocity from the projected reduced pose, snapping the links onto
   // the joint manifold so they stay consistent with it.
   SynchronizeAfterExternalPoseChange(reg, e);
+  ecs::InvokeOnEntity(&ClearJointFrictionAnchors, reg, e);
 }
 
 void articulated::compound::SetArticulatedBodyPose(
@@ -333,6 +337,7 @@ void articulated::compound::SetArticulatedBodyPose(
 
   // Recompute derived state and velocity from the reduced pose and velocity.
   SynchronizeAfterExternalPoseChange(reg, e);
+  ecs::InvokeOnEntity(&ClearJointFrictionAnchors, reg, e);
 }
 
 void articulated::compound::SetArticulatedRootTransform(
@@ -344,6 +349,8 @@ void articulated::compound::SetArticulatedRootTransform(
 
   // Recompute derived state and velocity from the reduced pose and velocity.
   SynchronizeAfterExternalPoseChange(reg, e);
+  // The joint friction anchors are joint positions, which the root transform does not change, so
+  // the joint friction preload is kept (see ClearJointFrictionAnchors).
 }
 
 void articulated::compound::GetLinkTransforms(
@@ -1701,7 +1708,9 @@ void mochi::articulated::compound::InitArticulatedBodyActor(
     jointFriction[i] = params.joints[i].friction;
     inertiaCoeffs[i] = params.joints[i].inertia.value_or(0_r);
   }
-  reg.emplace<CArticulatedJointFrictionParams>(e, std::move(jointFriction));
+  articulated::compound::StoreJointFrictionParams(
+      jointFriction, reg.emplace<CArticulatedJointFrictionParams>(e));
+  reg.emplace<CArticulatedJointFrictionAnchors>(e);
   reg.emplace<CArticulatedInertiaParams>(e, std::move(inertiaCoeffs));
 
   // Hierarchy info (contains parent for each link and other hierarchical data)
@@ -1855,6 +1864,9 @@ void mochi::articulated::compound::InitDifferentiableActor(
   // Emplace components needed for differentiable contact forces
   ecs::InvokeOnEntity<ecs::policy::AllowFullRegistryAccess>(
       &EmplaceDifferentiableContactComponents, reg, e);
+
+  // Emplace the adjoints of the joint friction anchors.
+  reg.emplace<CDiffJointFrictionAnchorGrad>(e);
 
   // If the actor has a pose controller, initialize it too
   if (reg.all_of<CControllerConstraints>(e)) {
@@ -2219,61 +2231,95 @@ void articulated::compound::AssembleFrictionForces(
     CArticulatedBodyShape const& bodyShape,
     CArticulatedJointPoseInfo const& poseInfo,
     CArticulatedJointFrictionParams const& frictionParams,
-    CArticulatedJointTransforms<TimeStep::Current> const& currJointTxs,
-    CArticulatedJointTransforms<TimeStep::StageStart> const& stageStartJointTxs,
-    CArticulatedReducedPose<TimeStep::Current> const& currPose,
+    CArticulatedJointFrictionAnchors const& frictionAnchors,
     CArticulatedReducedPose<TimeStep::StageStart> const& stageStartPose,
+    CArticulatedReducedPose<TimeStep::Current> const& currPose,
+    CDirichletBC<real> const& dirichlet,
     CTimeIntegratorState const& intState,
     CActorSnle& outCompoundSnle) {
+  MOCHI_ASSERT_VERBOSE(params.gradTarget == GradTarget::Current, "Invalid grad target.");
+  MOCHI_ASSERT_VERBOSE(
+      frictionAnchors.value.Rows() == currPose.value.Rows(),
+      "The joint friction anchors must be prepared before assembly.");
   auto const* joints = bodyShape.shape->GetJointsData();
   auto const jointTypes = joints->jointTypes;
   auto const dofInfo = joints->dofInfo;
-  auto frictionFuncRigidBody = params.gradTarget == GradTarget::Current
-      ? AddRigidBodyFriction<GradTarget::Current>
-      : AddRigidBodyFriction<GradTarget::Previous>;
+  bool const useFittedHessian = params.fittedSaturationHessian.jointFriction;
+  real const dtFromAnchor = intState.dtFromStepStart;
+  // Like contact friction (see ReportsContactTrustMargin), the objective and residual assemblies
+  // with the exact Hessian report the trust margin, except at joints whose DoFs are all fixed:
+  // their margin is constant in the solve, since the solver applies the boundary conditions to its
+  // first iterate, and a driven joint that reverses would only switch the solve to fitted Hessians.
+  // Joints with dry friction have a single DoF or a rotation, whose DoFs are all fixed or all free
+  // (AddBoundaryConditionDofsWorld rejects partial rotation conditions).
+  bool const reportsTrustMargin = (params.assemObj || params.assemRes) && !useFittedHessian;
+  auto const isFixed = [&](int i) { return Contains(dirichlet.dofIndices, dofInfo[i].offset); };
   auto assemblerRigidBody =
       [&](int i, double* energy, RigidGradient* gradient, RigidHessian* hessian) -> bool {
-    MOCHI_ASSERT_VERBOSE_FREE_OR_SPHERICAL(jointTypes[i]);
     auto const& fp = frictionParams[i];
     MOCHI_ASSERT_VERBOSE(
-        jointTypes[i] != ArticulatedJointType::Free ||
-            (fp.coulomb == 0_r && fp.stictionExtra == 0_r),
+        jointTypes[i] != ArticulatedJointType::Free || !HasDryFriction(fp),
         "Joint friction must be zero for free joints");
-    if (fp.coulomb + fp.stictionExtra == 0_r) {
+    if (!HasDryFriction(fp)) {
       return false;
     }
-    frictionFuncRigidBody(
-        params.fittedSaturationHessian.jointFriction,
+    int const rotOffset = poseInfo[i].GetRotOffset();
+    Quaternion const rot(Load<RigidSize::kRot, Vec4r>(&currPose.value[rotOffset]));
+    Quaternion const anchor(Load<RigidSize::kRot, Vec4r>(&frictionAnchors.value[rotOffset]));
+    Vec4r gradientRot{};
+    VMatrix3x3r hessianRot{};
+    AddRotationFriction(
+        useFittedHessian,
         params.psdDRes,
         fp,
-        intState.dtStage,
-        currJointTxs[i],
-        stageStartJointTxs[i],
+        dtFromAnchor,
+        rot,
+        anchor,
         energy,
-        gradient,
-        hessian);
+        gradient ? &gradientRot : nullptr,
+        hessian ? &hessianRot : nullptr);
+    if (reportsTrustMargin && !isFixed(i)) {
+      outCompoundSnle.trustMargin =
+          Min(outCompoundSnle.trustMargin,
+              RotationFrictionTrustMargin(
+                  Quaternion(Load<RigidSize::kRot, Vec4r>(&stageStartPose.value[rotOffset])),
+                  rot,
+                  anchor,
+                  fp.preslidingDisplacement));
+    }
+    if (gradient) {
+      Store<RigidSize::kDRot>(gradient->data() + RigidSize::kDTrans, gradientRot);
+    }
+    if (hessian) {
+      StoreSubmatrix<3, 3, 6, 6>(*hessian, Int2{3, 3}, hessianRot);
+    }
     return true;
   };
-  auto frictionFuncSingleDof = params.gradTarget == GradTarget::Current
-      ? AddSingleDofFriction<GradTarget::Current>
-      : AddSingleDofFriction<GradTarget::Previous>;
   auto assemblerSingleDof = [&](int i, double* energy, real* gradient, real* hessian) -> bool {
-    MOCHI_ASSERT_VERBOSE_REVOLUTE_OR_PRISMATIC(jointTypes[i]);
     auto const& fp = frictionParams[i];
-    if (fp.coulomb + fp.stictionExtra == 0_r) {
+    if (!HasDryFriction(fp)) {
       return false;
     }
     int const offset = poseInfo[i].offset;
-    frictionFuncSingleDof(
-        params.fittedSaturationHessian.jointFriction,
+    AddSingleDofFriction(
+        useFittedHessian,
         params.psdDRes,
         fp,
-        intState.dtStage,
+        dtFromAnchor,
         currPose.value[offset],
-        stageStartPose.value[offset],
+        frictionAnchors.value[offset],
         energy,
         gradient,
         hessian);
+    if (reportsTrustMargin && !isFixed(i)) {
+      outCompoundSnle.trustMargin =
+          Min(outCompoundSnle.trustMargin,
+              SingleDofFrictionTrustMargin(
+                  stageStartPose.value[offset],
+                  currPose.value[offset],
+                  frictionAnchors.value[offset],
+                  fp.preslidingDisplacement));
+    }
     return true;
   };
   AssembleJointForces(
@@ -2496,21 +2542,6 @@ static bool HasViscousDamping(CArticulatedJointFrictionParams const& friction) {
   return std::ranges::any_of(friction, [](auto const& fp) { return fp.viscous != 0_r; });
 }
 
-// Whether any joint has nonzero dry friction, requiring friction-force assembly.
-static bool HasDryFriction(CArticulatedJointFrictionParams const& friction) {
-  return std::ranges::any_of(
-      friction, [](auto const& fp) { return (fp.coulomb + fp.stictionExtra) != 0_r; });
-}
-
-bool articulated::ReadsJointFrictionHessianChoice(
-    entt::registry const& reg,
-    Span<entt::entity const> entities) {
-  return std::ranges::any_of(entities, [&](entt::entity e) {
-    auto const* friction = reg.try_get<CArticulatedJointFrictionParams>(e);
-    return friction && HasDryFriction(*friction);
-  });
-}
-
 // Whether any joint has nonzero joint inertia, requiring inertia-force assembly.
 static bool HasJointInertia(CArticulatedInertiaParams const& inertia) {
   return std::ranges::any_of(inertia, [](real value) { return value != 0_r; });
@@ -2662,11 +2693,13 @@ void articulated::compound::EntityAssemble(
     CTimeIntegratorState const& intState,
     CArticulatedInertiaParams const& inertiaParams,
     CArticulatedJointFrictionParams const& frictionParams,
+    CArticulatedJointFrictionAnchors const& frictionAnchors,
     CCompoundConstraintSnle const* constraintFullSnle,
     CExternalForces const& externalForces,
     CTransmissions const& transmissions,
     CArticulatedReducedPose<TimeStep::StageStart> const& stageStartPose,
     CArticulatedReducedPose<TimeStep::Current> const& currPose,
+    CDirichletBC<real> const& dirichlet,
     CArticulatedJointTransforms<TimeStep::StageStart> const& stageStartJointTxs,
     CArticulatedJointTransforms<TimeStep::Current> const& currJointTxs,
     CArticulatedLinkTransforms<TimeStep::StageStart> const& stageStartLinkTxs,
@@ -2827,18 +2860,18 @@ void articulated::compound::EntityAssemble(
         outCompoundSnle);
   }
 
-  // Add friction forces on joints.
+  // Add friction forces on joints. They depend on the current state and the friction anchors.
   if (HasDryFriction(frictionParams) &&
-      IsAssemblyNeeded(StateDependency::FirstOrder, false /*inputDependency*/, gradTarget)) {
+      IsAssemblyNeeded(StateDependency::ZeroOrder, false /*inputDependency*/, gradTarget)) {
     AssembleFrictionForces(
         params,
         bodyShape,
         poseInfo,
         frictionParams,
-        currJointTxs,
-        stageStartJointTxs,
-        currPose,
+        frictionAnchors,
         stageStartPose,
+        currPose,
+        dirichlet,
         intState,
         outCompoundSnle);
   }
@@ -3087,11 +3120,17 @@ static void HandleSolverDivergence(
     CArticulatedFullPose& outFullPose,
     CArticulatedJointTransforms<TimeStep::Current>& outJointTransforms,
     CArticulatedLinkTransforms<TimeStep::Current>& outLinkTransforms,
-    CArticulatedJointVels<TimeStep::Current>& outCurrJointVels) {
+    CArticulatedJointVels<TimeStep::Current>& outCurrJointVels,
+    CArticulatedJointFrictionAnchors& outFrictionAnchors) {
   if (convergence.stageStatus == ConvergenceStatus::Diverged) {
     // If the solver diverged, reset the DoFs at the previous time step. Do not reset them at the
     // beginning of the stage since there is no guarantee that's a safe state.
     outCurrReducedPose.value = prevReducedPose.value;
+
+    // Release the joint friction preload, as for contacts: anchor the joints at the reset pose.
+    if (outFrictionAnchors.value.Rows() > 0) {
+      outFrictionAnchors.value = prevReducedPose.value;
+    }
     auto const* joints = bodyShape.shape->GetJointsData();
     ComputeFullPose(
         joints->jointTypes,
@@ -3654,6 +3693,7 @@ void InitializeOnce(entt::registry& reg) {
   ecs::RegisterComponent<CArticulatedLinkTransforms<TimeStep::Current>>(reg);
   ecs::RegisterComponent<CArticulatedLinkTransforms<TimeStep::Previous>>(reg);
   ecs::RegisterComponent<CArticulatedLinkTransforms<TimeStep::StageStart>>(reg);
+  ecs::RegisterComponent<CArticulatedJointFrictionAnchors>(reg);
   ecs::RegisterComponent<CArticulatedProps>(reg);
   ecs::RegisterComponent<CArticulatedReducedPose<TimeStep::Current>>(reg);
   ecs::RegisterComponent<CArticulatedReducedPose<TimeStep::Previous>>(reg);

@@ -29,6 +29,7 @@
 #include "mochi_ecs_utils.h"
 #include "mochi_group.h"
 #include "mochi_integration.h"
+#include "mochi_joint_friction.h"
 #include "mochi_point_cloud_contact.h"
 #include "mochi_query.h"
 #include "mochi_rigid.h"
@@ -1198,12 +1199,16 @@ class ActorInterfaceImpl : public ActorInterface {
       ValidateFriction(jointTypes[i], friction[i], error);
     }
     MOCHI_ERROR_RETURN(error);
-    if (friction == MakeConstSpan(current)) {
-      return; // No change
+    DynamicArray<ArticulatedJointFrictionParams> const lastParams(current.begin(), current.end());
+    if (articulated::compound::StoreJointFrictionParams(friction, current)) {
+      articulated::compound::SettleJointFrictionAnchors(
+          lastParams,
+          reg.get<CArticulatedBodyShape const>(e),
+          reg.get<CArticulatedJointPoseInfo const>(e),
+          reg.get<CArticulatedReducedPose<TimeStep::Current> const>(e),
+          reg.get<CArticulatedJointFrictionAnchors>(e));
+      WakeUp();
     }
-
-    std::ranges::copy(friction, current.begin());
-    WakeUp();
   }
 
   Span<real const> GetArticulatedJointInertiaParams(Error& error) const override {

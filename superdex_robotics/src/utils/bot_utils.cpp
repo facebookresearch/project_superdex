@@ -1374,8 +1374,9 @@ void superdex::robotics::SortBotPrefab(BotPrefab& botPrefab, Error& error) {
 /* Scales joint friction, joint inertia, joint limit stiffness/damping and cycle stiffness so the
  * scaled bot responds like the nominal one on the same time scale (dynamic similarity).
  * Stiffness, damping and inertia scale by @ref details::JointGainScale, Coulomb and stiction
- * forces/torques by @ref details::JointEffortScale, and velocity thresholds of translational joints
- * by s. Free and hard joints are left unchanged; cycle stiffness scales by s^3. */
+ * forces/torques by @ref details::JointEffortScale, and presliding displacements and Stribeck
+ * velocities of translational joints by s. Free and hard joints are left unchanged; cycle stiffness
+ * scales by s^3. */
 static void ScaleJointDynamics(ArticulatedActorParams& params, real scale) {
   if (scale == 1_r) {
     return;
@@ -1393,7 +1394,7 @@ static void ScaleJointDynamics(ArticulatedActorParams& params, real scale) {
     joint.friction.coulomb *= effortScale;
     joint.friction.stictionExtra *= effortScale;
     if (translational) {
-      joint.friction.falloffVel *= scale;
+      joint.friction.preslidingDisplacement *= scale;
       joint.friction.stribeckVel *= scale;
     }
     if (joint.inertia.has_value()) {

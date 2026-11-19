@@ -188,6 +188,8 @@ struct CArticulatedInertiaParams : public std::vector<real>, NoCopy {};
 struct CArticulatedJointFrictionParams : public std::vector<ArticulatedJointFrictionParams>,
                                          NoCopy {};
 
+struct CArticulatedJointFrictionAnchors; // See mochi_joint_friction.h
+
 // Jacobian of the links wrt the joint DoFs.
 struct CArticulatedJacobian : public NoCopy {
   ArticulatedJacobian value;
@@ -636,18 +638,22 @@ void AssembleInertiaForces(
     CActorSnle& outCompoundSnle);
 
 /**
- * System to assemble the objective, residual and dresidual of the friction forces acting on joints
- * of the articulated body. Internally called by EntityAssemble.
+ * System to assemble the objective, residual and dresidual of the elasto-plastic dry friction
+ * forces acting on joints of the articulated body, measured from the friction anchors. For
+ * GradTarget::Current only: the anchors are not part of the state. With the exact joint friction
+ * Hessian, the objective and residual assemblies also lower the trust margin of the SNLE (see
+ * SingleDofFrictionTrustMargin) at the joints with some DoF not fixed by boundary conditions.
+ * Internally called by EntityAssemble.
  */
 void AssembleFrictionForces(
     AssemblyParams const& params,
     CArticulatedBodyShape const& bodyShape,
     CArticulatedJointPoseInfo const& poseInfo,
     CArticulatedJointFrictionParams const& frictionParams,
-    CArticulatedJointTransforms<TimeStep::Current> const& currJointTxs,
-    CArticulatedJointTransforms<TimeStep::StageStart> const& stageStartJointTxs,
-    CArticulatedReducedPose<TimeStep::Current> const& currPose,
+    CArticulatedJointFrictionAnchors const& frictionAnchors,
     CArticulatedReducedPose<TimeStep::StageStart> const& stageStartPose,
+    CArticulatedReducedPose<TimeStep::Current> const& currPose,
+    CDirichletBC<real> const& dirichlet,
     CTimeIntegratorState const& intState,
     CActorSnle& outCompoundSnle);
 
@@ -769,11 +775,13 @@ void EntityAssemble(
     CTimeIntegratorState const& intState,
     CArticulatedInertiaParams const& inertiaParams,
     CArticulatedJointFrictionParams const& frictionParams,
+    CArticulatedJointFrictionAnchors const& frictionAnchors,
     CCompoundConstraintSnle const* constraintFullSnle,
     CExternalForces const& externalForces,
     CTransmissions const& transmissions,
     CArticulatedReducedPose<TimeStep::StageStart> const& stageStartPose,
     CArticulatedReducedPose<TimeStep::Current> const& currPose,
+    CDirichletBC<real> const& dirichlet,
     CArticulatedJointTransforms<TimeStep::StageStart> const& stageStartJointTxs,
     CArticulatedJointTransforms<TimeStep::Current> const& currJointTxs,
     CArticulatedLinkTransforms<TimeStep::StageStart> const& stageStartLinkTxs,
@@ -1093,12 +1101,6 @@ void InitializeOnce(entt::registry& reg);
 
 // Get the mass of an articulated actor.
 [[nodiscard]] real GetActorMass(entt::registry const& reg, entt::entity actor);
-
-// Whether the assembly of any of the entities reads SaturationHessianParams::jointFriction. Only
-// articulated actors with joint dry friction do.
-[[nodiscard]] bool ReadsJointFrictionHessianChoice(
-    entt::registry const& reg,
-    Span<entt::entity const> entities);
 } // namespace articulated
 
 } // namespace mochi

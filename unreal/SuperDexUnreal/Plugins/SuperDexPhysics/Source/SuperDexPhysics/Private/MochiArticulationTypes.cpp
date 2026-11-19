@@ -150,7 +150,7 @@ mochi::ArticulatedJointFrictionParams FMochiArticulatedJointFriction::ToMochi() 
   mochi::ArticulatedJointFrictionParams params;
   params.viscous = Viscous;
   params.coulomb = Coulomb;
-  params.falloffVel = FalloffVel;
+  params.preslidingDisplacement = PreslidingDisplacement;
   params.stictionExtra = StictionExtra;
   params.stribeckVel = StribeckVel;
   return params;
@@ -159,7 +159,7 @@ mochi::ArticulatedJointFrictionParams FMochiArticulatedJointFriction::ToMochi() 
 void FMochiArticulatedJointFriction::FromMochi(const mochi::ArticulatedJointFrictionParams& Mochi) {
   Viscous = Mochi.viscous;
   Coulomb = Mochi.coulomb;
-  FalloffVel = Mochi.falloffVel;
+  PreslidingDisplacement = Mochi.preslidingDisplacement;
   StictionExtra = Mochi.stictionExtra;
   StribeckVel = Mochi.stribeckVel;
 }

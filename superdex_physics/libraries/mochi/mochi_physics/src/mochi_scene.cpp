@@ -38,6 +38,7 @@
 #include "mochi_hdf5.h"
 #include "mochi_integration.h"
 #include "mochi_island.h"
+#include "mochi_joint_friction.h"
 #include "mochi_query.h"
 #include "mochi_rigid.h"
 #include "mochi_rod.h"
@@ -1484,6 +1485,7 @@ static void WarnIfNotDifferentiabilitySettings(SceneImpl const& scene) {
 void SceneImpl::ResetBackPropagation() {
   ecs::InvokeForEachGlobal(&ResetBackPropagationContainers, _registry);
   ecs::InvokeForEachGlobal(&ResetFrictionAnchorAdjoints, _registry);
+  ecs::InvokeForEachGlobal(&ResetJointFrictionAnchorAdjoints, _registry);
   _registry.unset<TagBackPropagationPrepared>();
 }
 
@@ -1514,6 +1516,18 @@ void SceneImpl::PrepareBackPropagate(StateHandle stateNew, StateHandle stateOld,
         error,
         "Friction anchor adjoints do not match the recorded post-step state. "
         "ResetBackPropagation before starting a new forward rollout.");
+    MOCHI_ERROR_RETURN(error);
+  }
+  auto jointAnchors = _registry.view<
+      CArticulatedJointFrictionParams const,
+      CArticulatedJointFrictionAnchors const,
+      CArticulatedReducedPose<TimeStep::Current> const>();
+  for (auto [e, frictionParams, anchors, pose] : jointAnchors.each()) {
+    MOCHI_ERROR_IF(
+        articulated::HasDryFriction(frictionParams) && anchors.value.Rows() != pose.value.Rows(),
+        error,
+        "The recorded post-step state has no joint friction anchors: capture it right after a step, "
+        "before setting joint positions.");
     MOCHI_ERROR_RETURN(error);
   }
 
@@ -1595,8 +1609,11 @@ void SceneImpl::BackPropagate(Error& error) {
   auto& backPropStats = _registry.ctx<CBackPropagationSceneStats>();
   backPropStats.solveDurationSec = ToSeconds(timer.GetElapsed());
 
-  // Uses the solve's adjoint and the step's contacts, so it must precede restoring the old state.
+  // Uses the solve's adjoint and the step's contacts and poses, so it must precede restoring the
+  // old state.
   PropagateFrictionAnchorAdjoints(_registry);
+  ecs::InvokeForEachGlobal(
+      &articulated::compound::AccumulateJointFrictionAnchorSolveAdjoints, _registry);
 
   // Update the adjoints from the solve results.
   // λΔx_{k-1} = z * ∂r_k/∂Δx_{k-1}
@@ -1626,6 +1643,7 @@ void SceneImpl::BackPropagate(Error& error) {
       stateOld, /*releaseImmediately*/ false, excludeOldState, /*wakeAllIslands*/ true, error);
   MOCHI_ERROR_RETURN(error);
   ecs::InvokeForEachGlobal(&ReverseFrictionAnchorDropAdjoints, _registry);
+  ecs::InvokeForEachGlobal(&articulated::compound::HandOffJointFrictionAnchorAdjoints, _registry);
   // Then restore the old Active anchors too, so that the scene is left in the old state.
   if (_registry.ctx<CSimulationParams const>().experimentalEval.elastoPlasticFriction) {
     SReflect::TypeId excludeAdjoints[] = {attribute::HasAdjoint::GetTypeId()};

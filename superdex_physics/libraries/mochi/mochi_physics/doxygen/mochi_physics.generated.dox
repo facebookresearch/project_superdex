@@ -5325,7 +5325,7 @@
 ///
 /// @brief Represents a simulated body (actor) in a scene.
 ///
-/// @details The actor history is the state that an actor carries over from its previous time steps, besides its current state: the previous states of multi-step time integrators, and, with @ref mochi::ExperimentalEvalParams::elastoPlasticFriction "ExperimentalEvalParams::elastoPlasticFriction", the friction preload of its contacts and of contacts on it. Setters that change the state discontinuously invalidate the actor history: in the next time step, multi-step time integrators restart (e.g. BDF2 falls back to backward Euler), and the contacts restart without friction preload.
+/// @details The actor history is the state that an actor carries over from its previous time steps, besides its current state: the previous states of multi-step time integrators, the friction preload of the joints of articulated actors (see @ref mochi::ArticulatedJointFrictionParams "ArticulatedJointFrictionParams"), and, with @ref mochi::ExperimentalEvalParams::elastoPlasticFriction "ExperimentalEvalParams::elastoPlasticFriction", the friction preload of its contacts and of contacts on it. Setters that change the state discontinuously invalidate the actor history: in the next time step, multi-step time integrators restart (e.g. BDF2 falls back to backward Euler), and the contacts restart without friction preload. Joints restart without friction preload only when their positions are set (@ref mochi::Actor::SetArticulatedPoseFromJoints "SetArticulatedPoseFromJoints", @ref mochi::Actor::SetArticulatedPoseFromLinks "SetArticulatedPoseFromLinks") or their dry friction is enabled (@ref mochi::Actor::SetArticulatedJointFrictionParams "SetArticulatedJointFrictionParams").
 ///
 /// @note Every body in the simulation is an actor.
 /// @note Actors always belong to exactly one scene.
@@ -6519,10 +6519,11 @@
 ///
 /// @brief Set the per-joint friction parameters of the articulated actor.
 ///
-/// @param[in] friction Friction parameters, one per joint. Must be of size equal to the number of joints (matching @ref mochi::Actor::GetArticulatedJointFrictionParams "GetArticulatedJointFrictionParams"); all values must be finite and non-negative, and free joints must have zero friction.
+/// @param[in] friction Friction parameters, one per joint. Must be of size equal to the number of joints (matching @ref mochi::Actor::GetArticulatedJointFrictionParams "GetArticulatedJointFrictionParams"); all values must be finite and non-negative, presliding displacements positive, and free joints must have zero friction.
 /// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
 ///
 /// @note Only applicable to articulated actors.
+/// @note Keeps the friction preload of the joints: each joint keeps its displacement from its friction anchor under the previous parameters, and the new parameters give its friction force. Joints whose dry friction it enables start without preload.
 ///
 /// @see @ref mochi::Actor::GetArticulatedJointFrictionParams "GetArticulatedJointFrictionParams", @ref mochi::ArticulatedJointFrictionParams "ArticulatedJointFrictionParams"
 ///

@@ -36,6 +36,7 @@
 #include <mochi_physics/src/mochi_discretization_components.h>
 #include <mochi_physics/src/mochi_group.h>
 #include <mochi_physics/src/mochi_island.h>
+#include <mochi_physics/src/mochi_joint_friction.h>
 #include <mochi_physics/src/mochi_rigid.h>
 #include <mochi_physics/src/mochi_shape.h>
 #include <mochi_physics/src/mochi_snle.h>
@@ -937,7 +938,9 @@ class ArticulatedBodyDynamicsTest : public test::MochiSceneTestBase {
     std::vector<real> testVel = RandomVector(generator, numDofs);
 
     // Setup time integrator.
-    registry.get<CTimeIntegratorState>(entity).dtStage = kDt;
+    auto& intState = registry.get<CTimeIntegratorState>(entity);
+    intState.dtStage = kDt;
+    intState.dtFromStepStart = kDt;
 
     // Delta and pose vectors
     ColumnVector<real> delta(numDofs);
@@ -957,6 +960,14 @@ class ArticulatedBodyDynamicsTest : public test::MochiSceneTestBase {
       std::vector<real> refPose(testPose.size());
       actor->GetArticulatedPose(refPose, test::ExpectOK{});
 
+      // Pose setters drop the joint friction anchors of the step, so they are restored after each.
+      auto& frictionAnchors = registry.get<CArticulatedJointFrictionAnchors>(entity).value;
+      ColumnVector<real> const stepFrictionAnchors = frictionAnchors.Duplicate();
+      auto restoreFrictionAnchors = [&]() {
+        frictionAnchors.Resize(stepFrictionAnchors.Rows());
+        frictionAnchors = stepFrictionAnchors;
+      };
+
       // Evaluate gradient and Hessian at current state.
       actorSnle.objective = 0.0;
       actorSnle.reducedResidual.SetZero();
@@ -974,6 +985,7 @@ class ArticulatedBodyDynamicsTest : public test::MochiSceneTestBase {
       auto evaluate = [&]() {
         actor->AddArticulatedDeltaToPose(refPose, delta, perturbedPose, test::ExpectOK{});
         actor->SetArticulatedPoseFromJoints(perturbedPose, test::ExpectOK{});
+        restoreFrictionAnchors();
         actorSnle.objective = 0.0;
         actorSnle.reducedResidual.SetZero();
         ecs::InvokeOnEntity<ecs::policy::AllowFullRegistryAccess>(
@@ -1309,7 +1321,7 @@ TEST_IF_F(
     };
     auto const dResidual = assembleDResidual({});
     bool const readsJointFriction =
-        articulated::ReadsJointFrictionHessianChoice(reg, descendants.compoundActors);
+        articulated::HasJointDryFriction(reg, descendants.compoundActors);
     EXPECT_EQ(
         readsJointFriction,
         !test::NearEqualMatrices(dResidual, assembleDResidual({.jointFriction = true}), 0_r));
@@ -3184,6 +3196,14 @@ class ExternalPoseResetTest : public CreateBlendedActorTest,
     ASSERT_FALSE(reg.get<CConservativeStepBounds const>(nestedEntity).needsNextStepRelaxation);
     ASSERT_NE(ConvergenceStatus::None, reg.get<CConvergenceStatus const>(parentEntity).stepStatus);
     std::array const affected{parentEntity, linkEntity, nestedEntity};
+    // Seed joint friction anchors: setting the joint positions drops them, moving the root keeps
+    // them.
+    auto& jointAnchors = reg.get<CArticulatedJointFrictionAnchors>(parentEntity).value;
+    auto const& currentPose =
+        reg.get<CArticulatedReducedPose<TimeStep::Current> const>(parentEntity).value;
+    jointAnchors.Resize(currentPose.Rows());
+    jointAnchors = currentPose;
+    ColumnVector<real> const seededJointAnchors = jointAnchors.Duplicate();
     FrictionAnchor const seededAnchor{
         .sample = 0, .collider = entt::to_integral(linkEntity), .point = Real3{1_r, 0_r, 0_r}};
     if (elastoPlasticFriction) {
@@ -3245,6 +3265,11 @@ class ExternalPoseResetTest : public CreateBlendedActorTest,
     EXPECT_TRUE(reg.get<CConservativeStepBounds const>(linkEntity).needsNextStepRelaxation);
     EXPECT_TRUE(reg.get<CConservativeStepBounds const>(nestedEntity).needsNextStepRelaxation);
     EXPECT_EQ(ConvergenceStatus::None, reg.get<CConvergenceStatus const>(parentEntity).stepStatus);
+    if (route == Route::Root) {
+      EXPECT_TRUE(test::NearEqualMatrices(jointAnchors, seededJointAnchors, 0_r));
+    } else {
+      EXPECT_EQ(jointAnchors.Rows(), 0);
+    }
     if (elastoPlasticFriction) {
       auto const& requests = reg.ctx<CFrictionAnchorClearRequests>().entities;
       for (auto const actorEntity : affected) {

@@ -159,7 +159,7 @@ TEST(Prefab, ArticulatedActor_Serialization) {
               "friction": {
                 "viscous": 0.1,
                 "coulomb": 0.3,
-                "falloffVel": 0.001,
+                "preslidingDisplacement": 0.001,
                 "stictionExtra": 0.0,
                 "stribeckVel": 0.0
               },

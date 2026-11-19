@@ -144,8 +144,7 @@ struct LineSearch {
       SaturationHessianParams const& fittedSaturationHessian);
 
   // Shortest trial, as a fraction of the full step, that follows one with negative trust margin.
-  // Shorter ones would mostly creep along a contact that does reverse, which the fitted retry
-  // handles better. The value is empirical.
+  // Found empirically by benchmarking.
   static constexpr T kMinTrustMarginStep = T(0.125);
 
   /**

@@ -1275,6 +1275,8 @@ class OperationalSpaceController {
    *
    * @note Error is set when any of the size of dofs or vel is incorrect. They should be resized to
    * match the robot DOF.
+   * @note The model of the robot starts from the given pose without joint friction preload: the
+   * preload may balance loads the model does not have, such as contact.
    *
    * @param[in] dt the timestep size used for simulation or control signal update
    * @param[in] dofs the current joint pose
@@ -1342,7 +1344,8 @@ MOCHI_API bool IsValidOperationalSpaceController(
 ///
 /// These terms are derived from Mochi's implicit formulation, which uses a discrete-then-optimize
 /// paradigm rather than the classical Newton-Euler recursive approach. As a result, the extracted
-/// M and C are approximate and depend on the time step @p dt.
+/// M and C are approximate and depend on the time step @p dt. They exclude contact and joint
+/// friction forces.
 ///
 /// Create via @ref CreateNewtonEulerTerms. The object clones the robot into its own internal
 /// scene. The internal scene is destroyed when the object is destroyed.

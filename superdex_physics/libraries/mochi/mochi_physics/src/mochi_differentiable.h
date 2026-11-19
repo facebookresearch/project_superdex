@@ -132,7 +132,9 @@ struct CDiffDerivedStepGrad {
   MOCHI_FIELD(value);
   MOCHI_STRUCT_END();
 };
-// Component to store contact-force adjoints, templatized by GradTarget.
+// Component to store contact-force adjoints, templatized by GradTarget. With GradTarget::Previous,
+// it also takes the adjoint of the old pose from the joint friction anchors (see
+// HandOffJointFrictionAnchorAdjoints).
 template <GradTarget kGradTarget>
 struct CDiffContactGrad : public ColumnVector<real> {
   using ColumnVector<real>::ColumnVector;
@@ -181,6 +183,19 @@ struct CDiffFrictionAnchorGrad {
   MOCHI_ATTRIBUTE(HasAdjoint);
   MOCHI_FIELD(grads);
   MOCHI_TEMPLATE_END();
+};
+// Adjoint of the joint friction anchors of an articulated actor (CArticulatedJointFrictionAnchors),
+// in its reduced DoFs (left increments for rotations): that of the anchors that the step read,
+// carried from the back-propagation of the next step to that of the step before (see
+// HandOffJointFrictionAnchorAdjoints). Empty means zero.
+struct CDiffJointFrictionAnchorGrad {
+  ColumnVector<real> grads;
+
+  MOCHI_STRUCT_BEGIN(mochi::CDiffJointFrictionAnchorGrad);
+  MOCHI_ATTRIBUTE(CaptureState);
+  MOCHI_ATTRIBUTE(HasAdjoint);
+  MOCHI_FIELD(grads);
+  MOCHI_STRUCT_END();
 };
 
 /**************************************************************************
@@ -256,6 +271,9 @@ void ResetBackPropagationContainers(
 void ResetFrictionAnchorAdjoints(
     CDiffFrictionAnchorGrad<AnchorSet::Active>& active,
     CDiffFrictionAnchorGrad<AnchorSet::Pending>& pending);
+
+// System to reset the joint friction anchor adjoints of articulated actors between runs.
+void ResetJointFrictionAnchorAdjoints(CDiffJointFrictionAnchorGrad& anchorGrad);
 
 // System to reset contact force adjoints before running backward contact queries.
 void PrepareContactForceAdjoints(
