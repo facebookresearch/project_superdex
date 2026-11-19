@@ -639,6 +639,7 @@ class DMapTest : public testing::Test {
         // Test
         real normA = jacASelect.Norm();
         real normB = jacBSelect.Norm();
+        EXPECT_TRUE(IsFinite(normA));
         Matrix<real> diff = jacASelect - jacBSelect;
         real normDiff = diff.Norm();
         if (std::max(normA, normB) > 1e-9_r) {

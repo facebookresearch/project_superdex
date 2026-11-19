@@ -443,22 +443,16 @@ class DMapQuad final : public DMapImpl {
     // Initialize the output Jacobian
     int nDoFMultiplier = jacX.hasSharedDoFs ? 1 : ElementT::kNumNodes;
     outJacY.Resize(jacX.hasSharedDoFs, false, nDoFMultiplier * jacX.nDoFsState, isize(indsY));
+    MOCHI_ASSERT_VERBOSE(
+        jacX.nDoFsState == jacX.nDoFsInternal, "Internal and state Jacobian widths must match.");
+    // Unshared DoFs load and store each 3-row Jacobian column as a Vec4r.
+    static_assert(decltype(outJacY.Jac(0))::kIsColMajor, "Requires contiguous Jacobian columns");
 
     // Propagate partial derivatives wrt input. If the DoFs are shared, add the weighted input of
     // all ElementT::kNumNodes points, and transform the sum only once. If the DoFs are not shared,
-    // write the weighted input of each point to different columns. If both the incoming Jacobians
-    // and toColliderJacs are shared, compute their product only once.
-    int dstDelta = outJacY.hasSharedDoFs ? 0 : jacX.nDoFsInternal;
-    if (_toColliderJacs.size() == 1 && jacX.hasSharedJacs) {
-      Matrix<real, 3> jacProduct = AsMatrixView(_toColliderJacs[0]) * jacX.Jac(0);
-      outJacY.SetZero();
-      for (int i = 0; i < outJacY.nContacts; i++) {
-        NdArray<real, ElementT::kNumNodes> const weights = GetWeightInfo(_femElements, indsY[i]);
-        for (int k = 0, dst = 0; k < ElementT::kNumNodes; k++, dst += dstDelta) {
-          outJacY.Jac(i).MiddleCols(dst, jacX.nDoFsInternal) += weights[k] * jacProduct;
-        }
-      }
-    } else if (outJacY.hasSharedDoFs) {
+    // write the weighted input of each point to different columns, and compute the product of the
+    // incoming Jacobians and toColliderJacs only once if both are shared.
+    if (outJacY.hasSharedDoFs) {
       Matrix<real, 3> weightedJacX(3, jacX.nDoFsInternal);
       for (int i = 0, j = 0, l = 0, dl = (_toColliderJacs.size() == 1 ? 0 : 1);
            i < outJacY.nContacts;
@@ -470,15 +464,36 @@ class DMapQuad final : public DMapImpl {
         }
         outJacY.Jac(i) = AsMatrixView(_toColliderJacs[l]) * weightedJacX;
       }
+    } else if (_toColliderJacs.size() == 1 && jacX.hasSharedJacs) {
+      // Each point's columns are the product scaled by its weight.
+      Matrix<real, 3> const jacProduct = AsMatrixView(_toColliderJacs[0]) * jacX.Jac(0);
+      for (int i = 0; i < outJacY.nContacts; i++) {
+        NdArray<real, ElementT::kNumNodes> const weights = GetWeightInfo(_femElements, indsY[i]);
+        auto jacY = outJacY.Jac(i);
+        for (int k = 0, dst = 0; k < ElementT::kNumNodes; k++, dst += jacX.nDoFsInternal) {
+          Vec4r const weight(weights[k]);
+          for (int c = 0; c < jacX.nDoFsInternal; c++) {
+            jacY.Col(dst + c) =
+                AsColumnVectorView<3>(weight * Load<3, Vec4r>(jacProduct.Col(c).Data()));
+          }
+        }
+      }
     } else {
-      outJacY.SetZero();
+      // Each point's columns are its input columns transformed by the to-collider Jacobian scaled
+      // by its weight. Transposing the Jacobian once per contact allows the faster DotVecMat3x3.
       for (int i = 0, j = 0, l = 0, dl = (_toColliderJacs.size() == 1 ? 0 : 1);
            i < outJacY.nContacts;
            i++, l += dl) {
         NdArray<real, ElementT::kNumNodes> const weights = GetWeightInfo(_femElements, indsY[i]);
-        for (int k = 0, dst = 0; k < ElementT::kNumNodes; k++, j++, dst += dstDelta) {
-          outJacY.Jac(i).MiddleCols(dst, jacX.nDoFsInternal) +=
-              weights[k] * AsMatrixView(_toColliderJacs[l]) * jacX.Jac(indsX[j]);
+        VMatrix3x3r const toColliderT = Transpose3x3(_toColliderJacs[l]);
+        auto jacY = outJacY.Jac(i);
+        for (int k = 0, dst = 0; k < ElementT::kNumNodes; k++, j++, dst += jacX.nDoFsInternal) {
+          VMatrix3x3r const weightedToColliderT = toColliderT * weights[k];
+          auto const jacXk = jacX.Jac(indsX[j]);
+          for (int c = 0; c < jacX.nDoFsInternal; c++) {
+            jacY.Col(dst + c) = AsColumnVectorView<3>(
+                DotVecMat3x3(Load<3, Vec4r>(jacXk.Col(c).Data()), weightedToColliderT));
+          }
         }
       }
     }
