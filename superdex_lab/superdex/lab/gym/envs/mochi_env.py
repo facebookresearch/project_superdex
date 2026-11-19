@@ -986,7 +986,10 @@ class MochiEnv(abc.ABC, Env[ObservationSpace, ActionSpace]):
             # The interactive window is internal only: external/OSS builds ship neither
             # the internal package nor the GUI dependencies it needs.
             try:
-                from superdex.lab.gym.viewer.internal import InteractiveWindow
+                from superdex.lab.gym.viewer.internal import (
+                    InteractiveWindow,
+                    SimulationTime,
+                )
             except ImportError as e:
                 raise RuntimeError(
                     'render_mode="human" requires the internal interactive viewer '
@@ -998,6 +1001,12 @@ class MochiEnv(abc.ABC, Env[ObservationSpace, ActionSpace]):
             renderer_cfg.offscreen = True
             window = InteractiveWindow(renderer_cfg)
             window.add_info_tab("Environment", self._environment_info)
+            window.set_simulation_time_provider(
+                lambda: SimulationTime(
+                    seconds=self._step_count * self._control_dt,
+                    step_seconds=self._sim_dt,
+                )
+            )
             self._renderer = window
         else:
             renderer_cfg.offscreen = self.render_mode == "rgb_array"
