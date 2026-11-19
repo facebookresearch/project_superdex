@@ -292,9 +292,19 @@ void ValidateBotTaskPrefab(BotTaskPrefab const& params, Error& error) {
     }
   }
 
-  ValidateCriteriaGroup(params.terminationCriteria.success, "success", spawnNames, error);
+  // The scene objects the criteria name resolve as spawns do, by actor name in the live scene.
+  std::unordered_set<std::string> referable = spawnNames;
+  for (DynamicString const& object : params.terminationCriteria.sceneObjects) {
+    MOCHI_ERROR_IF(
+        object.empty() || spawnNames.contains(std::string(object)),
+        error,
+        "BotTaskPrefab: a scene object of the termination criteria is empty or a spawn's name");
+    MOCHI_ERROR_RETURN(error);
+    referable.insert(std::string(object));
+  }
+  ValidateCriteriaGroup(params.terminationCriteria.success, "success", referable, error);
   MOCHI_ERROR_RETURN(error);
-  ValidateCriteriaGroup(params.terminationCriteria.failure, "failure", spawnNames, error);
+  ValidateCriteriaGroup(params.terminationCriteria.failure, "failure", referable, error);
 }
 
 /* LEGACY ONLY: older tasks named the reset-state entries `spawns` (captured by
@@ -585,6 +595,11 @@ bool EvaluateOne(SphericalProximity const& c, TaskObjectPoseLookup const& poseLo
   auto const b = poseLookup(c.taskObjectB);
   if (!a.has_value() || !b.has_value()) {
     return false;
+  }
+  if (c.horizontal) {
+    Real3 const offset = a->position - b->position;
+    return CompareProximity(
+        c.comparator, std::sqrt(offset[0] * offset[0] + offset[1] * offset[1]), c.thresholdM);
   }
   Real3 const delta = a->position - b->position;
   return CompareProximity(c.comparator, std::sqrt(Dot(delta, delta)), c.thresholdM);

@@ -188,6 +188,10 @@ struct SphericalProximity {
   bool latch = false;
   /* @brief See @ref TerminationCriterion. */
   real evaluationRateS = 0.05_r;
+  /* @brief Measure the distance over the world's x and y axes only, the horizontal plane under a
+   * gravity along z: how far one center lies off a vertical line through the other (a knob off a
+   * stud's axis). */
+  bool horizontal = false;
 
   MOCHI_STRUCT_BEGIN(superdex::robotics::SphericalProximity)
   MOCHI_FIELD(taskObjectA)
@@ -196,6 +200,7 @@ struct SphericalProximity {
   MOCHI_FIELD(thresholdM) MOCHI_ATTRIBUTE(Units("m"));
   MOCHI_FIELD(latch) MOCHI_ATTRIBUTE(NoSerializeDefaults);
   MOCHI_FIELD(evaluationRateS) MOCHI_ATTRIBUTE(NoSerializeDefaults) MOCHI_ATTRIBUTE(Units("s"));
+  MOCHI_FIELD(horizontal) MOCHI_ATTRIBUTE(NoSerializeDefaults);
   MOCHI_STRUCT_END()
 };
 
@@ -321,9 +326,16 @@ struct TerminationCriteria {
    * disqualifying condition ends the episode. */
   CriteriaGroup failure{.combinator = CriteriaCombinator::Any};
 
+  /* @brief What the criteria may name besides the task's spawns: scene bots (`NIST_Board` for
+   * `NIST_Board.m8_screw`, one of its links) and base scenes (`scene` for `scene.Foam2___Actor`,
+   * one of its actors). A reference resolves by actor name in the live scene, as a spawn's does
+   * (see BotScene::ResolveTaskObjectPose). */
+  DynamicArray<DynamicString> sceneObjects;
+
   MOCHI_STRUCT_BEGIN(superdex::robotics::TerminationCriteria)
   MOCHI_FIELD(success) MOCHI_ATTRIBUTE(NoSerializeDefaults);
   MOCHI_FIELD(failure) MOCHI_ATTRIBUTE(NoSerializeDefaults);
+  MOCHI_FIELD(sceneObjects) MOCHI_ATTRIBUTE(NoSerializeDefaults);
   MOCHI_STRUCT_END()
 };
 
