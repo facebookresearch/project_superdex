@@ -21,18 +21,22 @@
 #include "ui/imgui_widgets.h" // HashStringToColor
 
 #include <mochi_core/geometry/mesh_data.h>
+#include <mochi_core/geometry/mesh_data_utils.h>
 #include <mochi_core/utils/reflection.h>
 #include <mochi_core/utils/string_utils.h>
 #include <mochi_mesh/isosurface_reconstruction.h>
 #include <mochi_physics/utils/mochi_model_utils.h>
 #include <mochi_renderer/deformable_model_instance.h>
 #include <mochi_renderer/mesh.h>
+#include <mochi_renderer/model_geometry.h>
 #include <mochi_renderer/resource_manager.h>
 #include <mochi_renderer/utils.h>
 
 #include <superdex_robotics/utils/file_utils.h>
 
 #include <imgui_internal.h>
+
+#include <filament/MaterialInstance.h>
 
 #include <algorithm>
 #include <cctype>
@@ -59,11 +63,8 @@ std::unique_ptr<MochiModelAsset> MochiModelAsset::Create(
   asset->_modelData = mochi::model_utils::LoadFromFile(path.ToString(), error);
   MOCHI_ERROR_RETURN(error, nullptr);
   // Validate the model has usable render geometry (replaces the old RenderModel load check).
-  std::vector<float> positions;
-  std::vector<float> normals;
-  std::vector<int> indices;
-  if (!BuildMochiModelGeometry(
-          asset->_modelData, resourceManager.GetSpaceConverter(), positions, normals, indices)) {
+  RenderGeometry geometry;
+  if (!BuildRenderGeometry(asset->_modelData, resourceManager.GetSpaceConverter(), geometry)) {
     MOCHI_LOG_ERROR("Failed to create MochiModelAsset: model has no usable render geometry.");
     return nullptr;
   }
@@ -86,30 +87,96 @@ std::unique_ptr<MochiModelAsset> MochiModelAsset::Create(
   ImVec4 const sdfColor = HashStringToColor(colorSeed + std::string(kSdfSurfaceColorRole));
   asset->_sdfColor = {sdfColor.x, sdfColor.y, sdfColor.z};
 
-  // Build the one and only flat-lit + wireframe mesh; GetRenderModelInstance() hands out instances.
-  asset->_renderModel = mochi_renderer::WireframeMesh::CreateWireframeMesh(
-      resourceManager.GetEngine(),
-      mochi::Span<float const>(positions.data(), positions.size()),
-      mochi::Span<float const>(normals.data(), normals.size()),
-      mochi::Span<int const>(indices.data(), indices.size()),
-      resourceManager.CreateWireframeMaterial(
-          {asset->_wireframeColor.x, asset->_wireframeColor.y, asset->_wireframeColor.z, 1.0f}),
-      resourceManager.CreateFlatLitOpaqueMaterial(asset->_color),
-      /*isClosed=*/true,
-      /*castShadows=*/true,
-      /*isDynamic=*/true);
-  if (asset->_renderModel == nullptr) {
+  // Build the one and only render mesh; GetRenderModelInstance() hands out instances.
+  if (!asset->InstallRenderGeometry(geometry, resourceManager)) {
     MOCHI_LOG_ERROR("Failed to create MochiModelAsset: could not build render mesh.");
     return nullptr;
   }
   return asset;
 }
 
+bool MochiModelAsset::BuildRenderGeometry(
+    mochi::ModelData const& model,
+    mochi::CoordinateSpaceConverter const* converter,
+    RenderGeometry& out) {
+  out.isPolyline = model.mesh && model.mesh->nodesPerElement == 2;
+  if (out.isPolyline) {
+    out.normals.clear();
+    return BuildMochiPolylineGeometry(*model.mesh, converter, out.positions, out.indices);
+  }
+  return BuildMochiModelGeometry(model, converter, out.positions, out.normals, out.indices);
+}
+
+bool MochiModelAsset::InstallRenderGeometry(
+    RenderGeometry const& geometry,
+    ResourceManager& resourceManager) {
+  auto const positions = mochi::MakeConstSpan(geometry.positions);
+  auto const normals = mochi::MakeConstSpan(geometry.normals);
+  auto const indices = mochi::MakeConstSpan(geometry.indices);
+  // A reload may switch between a polyline and a triangle model. The other kind's mesh is kept, so
+  // its live instances stay valid (showing the old geometry) until their owners rebuild.
+  if (geometry.isPolyline) {
+    if (_polylineRenderModel) {
+      return _polylineRenderModel->UpdateGeometry(positions, indices);
+    }
+    _polylineRenderModel = LineSegmentMesh::CreateLineSegmentMesh(
+        resourceManager.GetEngine(),
+        positions,
+        indices,
+        CreatePolylineMaterial(resourceManager, _color),
+        /*isDynamic=*/true);
+    return _polylineRenderModel != nullptr;
+  }
+  if (_renderModel) {
+    return _renderModel->UpdateGeometry(positions, normals, indices);
+  }
+  _renderModel = WireframeMesh::CreateWireframeMesh(
+      resourceManager.GetEngine(),
+      positions,
+      normals,
+      indices,
+      resourceManager.CreateWireframeMaterial(
+          {_wireframeColor.x, _wireframeColor.y, _wireframeColor.z, 1.0f}),
+      resourceManager.CreateFlatLitOpaqueMaterial(_color),
+      /*isClosed=*/true,
+      /*castShadows=*/true,
+      /*isDynamic=*/true);
+  return _renderModel != nullptr;
+}
+
 MochiModelAsset::~MochiModelAsset() = default;
 
+std::shared_ptr<MaterialInstance> CreatePolylineMaterial(
+    ResourceManager const& resourceManager,
+    filament::math::float3 color,
+    float opacity) {
+  auto material =
+      resourceManager.CreateUnlitSeeThroughMaterial({color.x, color.y, color.z, opacity});
+  material->Get()->setDepthCulling(false);
+  return material;
+}
+
+bool MochiModelAsset::IsPolyline() const {
+  return _modelData.mesh && _modelData.mesh->nodesPerElement == 2;
+}
+
+mochi::Span<mochi::real const> MochiModelAsset::GetElementFrameAxes() {
+  using namespace mochi;
+  if (!IsPolyline()) {
+    return {};
+  }
+  ErrorLog error;
+  ShapeHandle const shape = GetShape(Real3{1_r, 1_r, 1_r}, TransformRT::Identity(), error);
+  return _manager->GetStudio()->GetMochiContext()->GetShapeElementFrameAxes(shape, error);
+}
+
 std::unique_ptr<SceneObject> MochiModelAsset::GetRenderModelInstance() const {
+  if (IsPolyline()) {
+    return _polylineRenderModel ? _polylineRenderModel->GetInstance() : nullptr;
+  }
   return _renderModel ? _renderModel->GetInstance() : nullptr;
 }
+
 mochi::ShapeHandle MochiModelAsset::GetShape(
     mochi::Real3 const& bakeScale,
     mochi::TransformRT const& bakeTransform,
@@ -379,23 +446,16 @@ void MochiModelAsset::UpdateSoftRenderModel(
 }
 
 void MochiModelAsset::UpdateRenderModel() {
-  if (!_renderModel) {
-    return;
-  }
   ResourceManager& resourceManager = _manager->GetStudio()->GetResourceManager();
-  std::vector<float> positions;
-  std::vector<float> normals;
-  std::vector<int> indices;
-  if (!BuildMochiModelGeometry(
-          _modelData, resourceManager.GetSpaceConverter(), positions, normals, indices)) {
+  RenderGeometry geometry;
+  if (!BuildRenderGeometry(_modelData, resourceManager.GetSpaceConverter(), geometry)) {
     MOCHI_LOG_ERROR("Failed to rebuild MochiModelAsset render geometry.");
     return;
   }
   // Re-points the single mesh and all its live instances (e.g. open editors, staged scenes).
-  _renderModel->UpdateGeometry(
-      mochi::Span<float const>(positions.data(), positions.size()),
-      mochi::Span<float const>(normals.data(), normals.size()),
-      mochi::Span<int const>(indices.data(), indices.size()));
+  if (!InstallRenderGeometry(geometry, resourceManager)) {
+    MOCHI_LOG_ERROR("Failed to update MochiModelAsset render mesh.");
+  }
 }
 
 bool MochiModelAsset::ReloadFromDisk() {
@@ -406,12 +466,13 @@ bool MochiModelAsset::ReloadFromDisk() {
     return false;
   }
   ResourceManager& resourceManager = _manager->GetStudio()->GetResourceManager();
-  std::vector<float> positions;
-  std::vector<float> normals;
-  std::vector<int> indices;
-  if (!BuildMochiModelGeometry(
-          reloaded, resourceManager.GetSpaceConverter(), positions, normals, indices)) {
+  RenderGeometry geometry;
+  if (!BuildRenderGeometry(reloaded, resourceManager.GetSpaceConverter(), geometry)) {
     MOCHI_LOG_ERROR("Failed to reload MochiModelAsset: model has no usable render geometry.");
+    return false;
+  }
+  if (!InstallRenderGeometry(geometry, resourceManager)) {
+    MOCHI_LOG_ERROR("Failed to reload MochiModelAsset: could not install render geometry.");
     return false;
   }
   _modelData = std::move(reloaded);
@@ -419,14 +480,6 @@ bool MochiModelAsset::ReloadFromDisk() {
   // Physics shapes were baked from the previous model data; drop them everywhere they are cached so
   // consumers re-bake from the reloaded data on their next physics load.
   _manager->InvalidateShapeCachesForPath(_path);
-  // Re-point the single render mesh (and every live instance -- open editors, staged bot scenes) at
-  // the reloaded geometry.
-  if (_renderModel) {
-    _renderModel->UpdateGeometry(
-        mochi::Span<float const>(positions.data(), positions.size()),
-        mochi::Span<float const>(normals.data(), normals.size()),
-        mochi::Span<int const>(indices.data(), indices.size()));
-  }
   // A surface someone already asked for is likely on screen, so rebuild it now (re-pointing its
   // instances too); otherwise just forget it and let the next request rebuild it.
   bool const sdfWasBuilt = _sdfSurfaceBuilt;
@@ -604,6 +657,12 @@ void MochiModelAsset::StageThumbnailScene(mochi_renderer::Scene& scene) {
 
 void MochiModelAsset::ShowAssetTileTooltipItems() const {
   ImGui::Text("Elements: %d", _modelData.mesh ? _modelData.mesh->GetNumElements() : 0);
+  if (IsPolyline()) {
+    ImGui::Text(
+        "Polyline: %d nodes, %s",
+        _modelData.mesh->GetNumNodes(),
+        mochi::IsPolylineClosedLoop(*_modelData.mesh) ? "closed" : "open");
+  }
   if (_modelData.sdf) {
     auto const& dims = _modelData.sdf->dims;
     auto const size = static_cast<int>(_modelData.sdf->values.size());

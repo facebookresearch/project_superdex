@@ -25,6 +25,7 @@
 #include "meshing/processing_modifiers/processing_mesh_utils.h"
 #include "meshing/processing_modifiers/processing_serialization.h"
 #include "meshing/processing_modifiers/processing_stack.h"
+#include "rendering/arrow_glyph.h"
 #include "rendering/measure_tool.h"
 #include "rendering/stats.h"
 #include "ui/asset_browser.h"
@@ -36,8 +37,11 @@
 
 #include <superdex_robotics/utils/file_utils.h> // AssetRoleFolderForWrite / kIntermediatesSubdir
 
+#include <mochi_renderer/debug.h>
 #include <mochi_renderer/mesh.h>
+#include <mochi_renderer/model_geometry.h>
 #include <mochi_renderer/resource.h> // RenderModel, RenderModelFormat
+#include <mochi_renderer/type_conversions.h>
 #include <mochi_renderer/utils.h>
 
 #include <mochi_mesh/mesh_statistics.h>
@@ -48,6 +52,7 @@
 
 #include <mochi_core/geometry/aabb.h>
 #include <mochi_core/geometry/geometry_utils.h>
+#include <mochi_core/geometry/mesh_data_utils.h>
 #include <mochi_core/geometry/model_data.h>
 #include <mochi_core/geometry/model_utils.h>
 #include <mochi_core/utils/basic_utils.h>
@@ -69,6 +74,7 @@
 #include <functional>
 #include <initializer_list>
 #include <iomanip>
+#include <limits>
 #include <mutex>
 #include <optional>
 #include <span>
@@ -163,6 +169,35 @@ std::optional<mochi::Int2> TetCounts(mochi::MeshData const& mesh) {
     return std::nullopt;
   }
   return mochi::Int2{mesh.GetNumNodes(), mesh.GetNumElements()};
+}
+
+// The stats block of a polyline (rod) mesh: node / element counts, open or closed, total length,
+// element-length distribution and AABB size (coordinates are in meters).
+std::string FormatPolylineStats(mochi::MeshData const& mesh) {
+  auto const nodes = mochi::Unflatten<mochi::Real3 const>(mochi::MakeConstSpan(mesh.coordinates));
+  std::vector<mochi::Int2> const elements =
+      PolylineElements(mochi::isize(nodes), mochi::MakeConstSpan(mesh.connectivity));
+  if (elements.empty()) {
+    return "No mesh.";
+  }
+  mochi::real total = 0;
+  mochi::real shortest = std::numeric_limits<mochi::real>::max();
+  mochi::real longest = 0;
+  for (mochi::Int2 const& element : elements) {
+    mochi::real const length = mochi::Norm(nodes[element[1]] - nodes[element[0]]);
+    total += length;
+    shortest = std::min(shortest, length);
+    longest = std::max(longest, length);
+  }
+  mochi::Real3 const size = mochi::CalcAabb(nodes).GetSize();
+  std::ostringstream out;
+  out << "Polyline:     " << nodes.size() << " nodes, " << elements.size() << " elements, "
+      << (mochi::IsPolylineClosedLoop(mesh) ? "closed" : "open") << "\n";
+  out << std::fixed << std::setprecision(4) << "Length (m):   " << total << "\n"
+      << "Element (m):  mean " << total / static_cast<mochi::real>(elements.size()) << "  min "
+      << shortest << "  max " << longest << "\n"
+      << "AABB (m):     " << size[0] << " x " << size[1] << " x " << size[2];
+  return out.str();
 }
 
 // Concatenates all sections into flat positions/indices (offsetting each section's indices) and
@@ -358,14 +393,17 @@ void DrawMeshVizControls(
     ImFont* statsFont,
     std::function<void()> const& onShowSurface,
     std::function<void()> const& onShowWireframe,
-    std::function<void()> const& onOpacity) {
+    std::function<void()> const& onOpacity,
+    bool isPolyline = false) {
   ImGui::PushID(idScope);
-  if (ImGui::Checkbox("Surface", &showSurface)) {
+  if (ImGui::Checkbox(isPolyline ? "Polyline" : "Surface", &showSurface)) {
     onShowSurface();
   }
-  ImGui::SameLine();
-  if (ImGui::Checkbox("Wireframe", &showWireframe)) {
-    onShowWireframe();
+  if (!isPolyline) {
+    ImGui::SameLine();
+    if (ImGui::Checkbox("Wireframe", &showWireframe)) {
+      onShowWireframe();
+    }
   }
   ImGui::SameLine();
   ImGui::Checkbox("Stats", &showStats);
@@ -424,17 +462,75 @@ void DrawVizToggles(
     bool& showSurface,
     bool& showWireframe,
     std::function<void()> const& onShowSurface,
-    std::function<void()> const& onShowWireframe) {
+    std::function<void()> const& onShowWireframe,
+    bool isPolyline = false) {
   ImGui::PushID(idScope);
-  if (IconToggle(ICON_FA_CUBE, showSurface)) {
+  if (IconToggle(isPolyline ? ICON_FA_DRAW_POLYGON : ICON_FA_CUBE, showSurface)) {
     onShowSurface();
   }
-  HoverTooltip(("Show the " + std::string(what) + " surface.").c_str());
-  ImGui::SameLine();
-  if (IconToggle(ICON_FA_DRAW_POLYGON, showWireframe)) {
-    onShowWireframe();
+  HoverTooltip(
+      ("Show the " + std::string(what) + (isPolyline ? " polyline." : " surface.")).c_str());
+  if (!isPolyline) {
+    ImGui::SameLine();
+    if (IconToggle(ICON_FA_DRAW_POLYGON, showWireframe)) {
+      onShowWireframe();
+    }
+    HoverTooltip(("Show the " + std::string(what) + " wireframe.").c_str());
   }
-  HoverTooltip(("Show the " + std::string(what) + " wireframe.").c_str());
+  ImGui::PopID();
+}
+
+// Frame-axes / polyline icon toggles for a header row, a polyline's counterpart of DrawVizToggles,
+// mirroring its Frame Axes / Polyline checkboxes. @p what names the polyline in the tooltips; the
+// frame-axes toggle is disabled unless @p hasFrameAxes.
+void DrawPolylineVizToggles(
+    char const* idScope,
+    char const* what,
+    bool& showFrameAxes,
+    bool hasFrameAxes,
+    bool& showPolyline,
+    std::function<void()> const& onShowPolyline) {
+  ImGui::PushID(idScope);
+  ImGui::BeginDisabled(!hasFrameAxes);
+  IconToggle(ICON_FA_ARROW_RIGHT, showFrameAxes);
+  HoverTooltip(("Show the " + std::string(what) + "'s element frame axes.").c_str());
+  ImGui::EndDisabled();
+  ImGui::SameLine();
+  if (IconToggle(ICON_FA_DRAW_POLYGON, showPolyline)) {
+    onShowPolyline();
+  }
+  HoverTooltip(("Show the " + std::string(what) + ".").c_str());
+  ImGui::PopID();
+}
+
+// A polyline's counterpart of DrawMeshVizControls: Polyline / Frame Axes / Stats toggles on one
+// row and (when Stats is on) the read-only statistics block. The frame-axes toggle is disabled
+// unless @p hasFrameAxes.
+void DrawPolylineVizControls(
+    char const* idScope,
+    bool& showPolyline,
+    bool& showFrameAxes,
+    bool hasFrameAxes,
+    bool& showStats,
+    std::string const& statsText,
+    ImFont* statsFont,
+    std::function<void()> const& onShowPolyline) {
+  ImGui::PushID(idScope);
+  if (ImGui::Checkbox("Polyline", &showPolyline)) {
+    onShowPolyline();
+  }
+  ImGui::SameLine();
+  ImGui::BeginDisabled(!hasFrameAxes);
+  ImGui::Checkbox("Frame axes", &showFrameAxes);
+  ImGui::EndDisabled();
+  HoverTooltip(
+      "Draw each element's frame axis as an arrow from the element's midpoint, half the mean "
+      "element length long.");
+  ImGui::SameLine();
+  ImGui::Checkbox("Stats", &showStats);
+  if (showStats) {
+    DrawMeshStatsBlock("##stats", statsText, statsFont);
+  }
   ImGui::PopID();
 }
 
@@ -706,6 +802,7 @@ void ModelEditor::OnBeginFrame() {
 void ModelEditor::OnRender(Renderer const* renderer) {
   PumpReferenceCadTessellations();
   PumpHausdorffResults();
+  DrawFrameAxes();
   // Keep the drop-shadow ground plane at the lowest point of all meshes. The model editor runs no
   // physics sim, so a per-frame update is safe and robustly tracks async loads (CAD tessellation),
   // modifier cascades, reference-model edits, and hot-reloads without wiring every change site.
@@ -845,6 +942,7 @@ void ModelEditor::Shutdown() {
   _renderModelWireframeMesh = nullptr;
   _mochiModelSurfaceMesh = nullptr;
   _mochiModelWireframeMesh = nullptr;
+  _mochiPolylineMesh = nullptr;
   _sdfSurfaceMesh = nullptr;
   _sdfWireframeMesh = nullptr;
   for (StageBuffer* buffer : {&_contactSkinBuffer, &_visualMeshBuffer}) {
@@ -890,6 +988,7 @@ void ModelEditor::OnReopenedFor(Asset* asset) {
   _showRenderModelWireframe = false;
   _showMochiModelSurface = isMochi;
   _showMochiModelWireframe = isMochi; // a mochi origin shows its wireframe too (see Initialize)
+  _showFrameAxes = false;
   _showSdfSurface = false;
   _showSdfWireframe = false;
 
@@ -910,6 +1009,9 @@ void ModelEditor::OnReopenedFor(Asset* asset) {
   }
   if (_mochiModelWireframeMesh) {
     _mochiModelWireframeMesh->SetVisible(_showMochiModelWireframe);
+  }
+  if (_mochiPolylineMesh) {
+    _mochiPolylineMesh->SetVisible(_showMochiModelWireframe);
   }
   if (_sdfSurfaceMesh) {
     _sdfSurfaceMesh->SetVisible(_showSdfSurface);
@@ -1478,6 +1580,7 @@ void ModelEditor::UpdateMochiModel() {
   // The wireframe, SDF, contact skin and visual mesh derive from the mochi model, so tear them down
   // before swapping it.
   DestroyMochiModelWireframeMesh();
+  DestroyMochiPolylineMesh();
   DestroySdfMesh();
   DestroySdfWireframeMesh();
   for (StageBuffer* buffer : {&_contactSkinBuffer, &_visualMeshBuffer}) {
@@ -1491,6 +1594,7 @@ void ModelEditor::UpdateMochiModel() {
   }
   _mochiSections.clear();
   _mochiStats = {};
+  _frameAxisGlyphs.clear();
   _mochiModelAsset = _studio->GetAssetManager().FindAssetByPath<MochiModelAsset>(_mochiModelPath);
   _mochiModelMtime = FileMtimeOrDefault(_mochiModelPath);
   if (_mochiModelAsset) {
@@ -1505,6 +1609,7 @@ void ModelEditor::UpdateMochiModel() {
     _sdfColor = {sdfColor.x, sdfColor.y, sdfColor.z};
     _contactSkinColor = HashedMeshColor(colorSeed, kContactSkinColorRole);
     _visualMeshColor = HashedMeshColor(colorSeed, kVisualMeshColorRole);
+    _frameAxesColor = HashedMeshColor(colorSeed, kFrameAxesColorRole);
     // Working geometry backing (for future mesh processing). The surface/wireframe below are still
     // built from the model data directly.
     {
@@ -1529,14 +1634,22 @@ void ModelEditor::UpdateMochiModel() {
     _mochiStats.base = FormatMeshStats(_mochiSections);
     _mochiStats.fileSizeBytes = OnDiskFileSize(_mochiModelPath);
     _mochiStats.fileSizeLabel = "File Size";
-    if (_mochiModelAsset->GetModelData().mesh.has_value()) {
-      _mochiStats.tetMesh = TetCounts(*_mochiModelAsset->GetModelData().mesh);
+    mochi::ModelData const& modelData = _mochiModelAsset->GetModelData();
+    if (modelData.mesh.has_value()) {
+      _mochiStats.tetMesh = TetCounts(*modelData.mesh);
+    }
+    if (_mochiModelAsset->IsPolyline()) {
+      _mochiStats.base = FormatPolylineStats(*modelData.mesh);
+      _frameAxisGlyphs = ComputeFrameAxisGlyphs(
+          mochi::MakeConstSpan(modelData.mesh->coordinates),
+          mochi::MakeConstSpan(modelData.mesh->connectivity),
+          _mochiModelAsset->GetElementFrameAxes());
     }
     ComposeStats(_mochiStats);
     RebuildMochiModelSurfaceMesh();
     RebuildMochiModelWireframeMesh();
+    RebuildMochiPolylineMesh();
     RebuildSdfMeshes();
-    mochi::ModelData const& modelData = _mochiModelAsset->GetModelData();
     auto const& converter = _studio->GetEditorToRendererSpaceConverter();
     if (modelData.contactSkinMesh.has_value()) {
       _contactSkinBuffer.sections = {ModelMeshToSection(*modelData.contactSkinMesh, converter)};
@@ -1552,6 +1665,9 @@ void ModelEditor::UpdateMochiModel() {
     }
     if (_mochiModelWireframeMesh) {
       _mochiModelWireframeMesh->SetVisible(_showMochiModelWireframe);
+    }
+    if (_mochiPolylineMesh) {
+      _mochiPolylineMesh->SetVisible(_showMochiModelWireframe);
     }
     if (_sdfSurfaceMesh) {
       _sdfSurfaceMesh->SetVisible(_showSdfSurface);
@@ -1608,8 +1724,10 @@ StatsText ModelEditor::BuildStats() const {
   int64_t contactSkinTriangles = 0;
   int64_t visualMeshTriangles = 0;
   if (_mochiModelAsset) {
-    collision.Add(
-        _mochiModelAsset->GetStats(), EditorSpaceBounds(_mochiModelSurfaceMesh, converter));
+    // A polyline model has no surface; its centerline bounds it.
+    mochi_renderer::SceneObject const* const collisionMesh =
+        _mochiPolylineMesh != nullptr ? _mochiPolylineMesh : _mochiModelSurfaceMesh;
+    collision.Add(_mochiModelAsset->GetStats(), EditorSpaceBounds(collisionMesh, converter));
     mochi::ModelData const& model = _mochiModelAsset->GetModelData();
     if (model.sdf) {
       mochi::Int3 const& dims = model.sdf->dims;
@@ -1736,6 +1854,59 @@ void ModelEditor::DestroyMochiModelWireframeMesh() {
   }
 }
 
+void ModelEditor::RebuildMochiPolylineMesh() {
+  DestroyMochiPolylineMesh();
+  if (!_mochiModelAsset || !_mochiModelAsset->IsPolyline()) {
+    return;
+  }
+  std::vector<float> positions;
+  std::vector<int> indices;
+  if (!BuildMochiPolylineGeometry(
+          *_mochiModelAsset->GetModelData().mesh,
+          &_studio->GetEditorToRendererSpaceConverter(),
+          positions,
+          indices)) {
+    return;
+  }
+  auto line = mochi_renderer::LineSegmentMesh::CreateLineSegmentMesh(
+      _studio->GetEngine(),
+      mochi::MakeConstSpan(positions),
+      mochi::MakeConstSpan(indices),
+      CreatePolylineMaterial(_studio->GetResourceManager(), ToFloat3(_mochiColor)));
+  if (line) {
+    _mochiPolylineMesh = _viewport->GetRenderScene()->AddSceneObjectToScene(std::move(line));
+    ApplyModelTransform();
+  }
+}
+
+void ModelEditor::DestroyMochiPolylineMesh() {
+  if (_mochiPolylineMesh) {
+    _viewport->GetRenderScene()->DestroySceneObject(_mochiPolylineMesh);
+    _mochiPolylineMesh = nullptr;
+  }
+}
+
+void ModelEditor::DrawFrameAxes() {
+  mochi_renderer::DebugDraw* const debugDraw = _viewport->GetRenderScene()->GetDebugDraw();
+  if (!_showFrameAxes || _frameAxisGlyphs.empty() || debugDraw == nullptr) {
+    return;
+  }
+  auto const& converter = _studio->GetEditorToRendererSpaceConverter();
+  // The same scale-rotate-translate the slot meshes get (ApplyModelTransform).
+  auto const toRenderer = [&](mochi::Real3 const& local) {
+    return mochi_renderer::ToFilament<float>(
+        converter.TranslationToOutput(_modelRotation * (_modelScale * local) + _modelTranslation));
+  };
+  DrawFrameAxisGlyphs(
+      *debugDraw,
+      mochi::MakeConstSpan(_frameAxisGlyphs),
+      toRenderer,
+      {static_cast<float>(_frameAxesColor[0]),
+       static_cast<float>(_frameAxesColor[1]),
+       static_cast<float>(_frameAxesColor[2]),
+       1.0f});
+}
+
 void ModelEditor::RebuildSdfMeshes() {
   DestroySdfMesh();
   DestroySdfWireframeMesh();
@@ -1823,6 +1994,10 @@ void ModelEditor::ApplyModelTransform() {
   }
   if (_mochiModelWireframeMesh) {
     _mochiModelWireframeMesh->SetLocalTransform(
+        _modelRotation, _modelTranslation, _modelScale, converter);
+  }
+  if (_mochiPolylineMesh) {
+    _mochiPolylineMesh->SetLocalTransform(
         _modelRotation, _modelTranslation, _modelScale, converter);
   }
   if (_sdfSurfaceMesh) {
@@ -3034,6 +3209,9 @@ void ModelEditor::ShowModelViewerWindow(bool* open) {
     if (_mochiModelWireframeMesh) {
       _mochiModelWireframeMesh->SetVisible(_showMochiModelWireframe);
     }
+    if (_mochiPolylineMesh) {
+      _mochiPolylineMesh->SetVisible(_showMochiModelWireframe);
+    }
   };
   auto const showSdfSurface = [this] {
     if (_sdfSurfaceMesh) {
@@ -3230,16 +3408,27 @@ void ModelEditor::ShowModelViewerWindow(bool* open) {
   bool const mochiHasSdf = mochiModelData && mochiModelData->sdf.has_value();
   bool const mochiHasContactSkin = mochiModelData && mochiModelData->contactSkinMesh.has_value();
   bool const mochiHasVisualMesh = mochiModelData && mochiModelData->visualMesh.has_value();
+  bool const mochiIsPolyline = _mochiModelAsset && _mochiModelAsset->IsPolyline();
   bool const mochiOpen = CollapsingHeaderWithToggles(
       "Collision Model", "###CollisionModelHeader", flags, false, 4, [&] {
         ImGui::BeginDisabled(_mochiModelPath.empty());
-        DrawVizToggles(
-            "mochiHeaderViz",
-            "Mochi triangle mesh",
-            _showMochiModelSurface,
-            _showMochiModelWireframe,
-            showMochiSurface,
-            showMochiWireframe);
+        if (mochiIsPolyline) {
+          DrawPolylineVizToggles(
+              "mochiHeaderViz",
+              "Mochi polyline",
+              _showFrameAxes,
+              !_frameAxisGlyphs.empty(),
+              _showMochiModelWireframe,
+              showMochiWireframe);
+        } else {
+          DrawVizToggles(
+              "mochiHeaderViz",
+              "Mochi triangle mesh",
+              _showMochiModelSurface,
+              _showMochiModelWireframe,
+              showMochiSurface,
+              showMochiWireframe);
+        }
         ImGui::EndDisabled();
         SameLineAfterTogglePair();
         ImGui::BeginDisabled(!mochiHasSdf);
@@ -3273,10 +3462,13 @@ void ModelEditor::ShowModelViewerWindow(bool* open) {
         /*showClearButton=*/false);
     if (_mochiModelAsset) {
       auto applyMochiMaterial = [this]() {
+        auto& rm = _studio->GetResourceManager();
+        if (_mochiPolylineMesh) {
+          _mochiPolylineMesh->SetMaterial(CreatePolylineMaterial(rm, ToFloat3(_mochiColor)));
+        }
         if (!_mochiModelSurfaceMesh) {
           return;
         }
-        auto& rm = _studio->GetResourceManager();
         _mochiModelSurfaceMesh->SetMaterial(
             _mochiModelOpacity >= 1.0f
                 ? rm.CreateFlatLitOpaqueMaterial(ToFloat3(_mochiColor))
@@ -3295,17 +3487,29 @@ void ModelEditor::ShowModelViewerWindow(bool* open) {
       }
 
       ImGui::SeparatorText("Mochi Model Visualization");
-      DrawMeshVizControls(
-          "mochiViz",
-          _showMochiModelSurface,
-          _showMochiModelWireframe,
-          _showMochiModelStats,
-          _mochiModelOpacity,
-          _mochiStats.display,
-          _studio->GetFont("Roboto Mono"),
-          showMochiSurface,
-          showMochiWireframe,
-          [&applyMochiMaterial] { applyMochiMaterial(); });
+      if (mochiIsPolyline) {
+        DrawPolylineVizControls(
+            "mochiViz",
+            _showMochiModelWireframe,
+            _showFrameAxes,
+            !_frameAxisGlyphs.empty(),
+            _showMochiModelStats,
+            _mochiStats.display,
+            _studio->GetFont("Roboto Mono"),
+            showMochiWireframe);
+      } else {
+        DrawMeshVizControls(
+            "mochiViz",
+            _showMochiModelSurface,
+            _showMochiModelWireframe,
+            _showMochiModelStats,
+            _mochiModelOpacity,
+            _mochiStats.display,
+            _studio->GetFont("Roboto Mono"),
+            showMochiSurface,
+            showMochiWireframe,
+            [&applyMochiMaterial] { applyMochiMaterial(); });
+      }
 
       // Mochi models carry their own surface mesh + SDF; this section only visualizes them. To
       // alter the model or its SDF, apply modifiers to produce the mesh, build the SDF, and export
@@ -3431,7 +3635,8 @@ void ModelEditor::ShowReferenceModelsSection() {
               viz.showSurface,
               viz.showWireframe,
               showSurface,
-              showWireframe);
+              showWireframe,
+              rm.isPolyline);
           ImGui::EndDisabled();
         });
     window->WorkRect.Max.x = savedWorkRectMaxX;
@@ -3519,7 +3724,8 @@ void ModelEditor::ShowReferenceModelsSection() {
           [this, &rm] {
             RebuildReferenceMeshes(rm);
             _referenceModelsDirty = true;
-          });
+          },
+          rm.isPolyline);
 
       // A CAD STEP reference tessellates automatically (on drop and on disk change) via
       // PumpReferenceCadTessellations -- no manual Generate button. Show a hint while it is
@@ -3589,6 +3795,7 @@ void ModelEditor::DestroyReferenceModelMeshes(ReferenceModel& rm) {
 
 void ModelEditor::UpdateReferenceModel(ReferenceModel& rm, bool assignDefaultColor) {
   DestroyReferenceModelMeshes(rm);
+  rm.isPolyline = false;
   rm.sectionsOriginal.clear();
   rm.buffer.sections.clear();
   rm.buffer.stats = {};
@@ -3616,6 +3823,10 @@ void ModelEditor::UpdateReferenceModel(ReferenceModel& rm, bool assignDefaultCol
       break;
     case AssetType::MochiModel: {
       if (auto* mochiAsset = assetManager.FindAssetByPath<MochiModelAsset>(path)) {
+        rm.isPolyline = mochiAsset->IsPolyline();
+        if (rm.isPolyline) {
+          break;
+        }
         auto const& converter = _studio->GetEditorToRendererSpaceConverter();
         std::vector<float> positions;
         std::vector<float> normals;
@@ -3686,6 +3897,15 @@ void ModelEditor::ApplyReferenceModelTransform(ReferenceModel& rm) {
   rm.buffer.stats.tetMesh = std::nullopt;
   if (rm.type == AssetType::MochiModel) {
     if (auto* asset = _studio->GetAssetManager().FindAssetByPath<MochiModelAsset>(rm.path)) {
+      if (rm.isPolyline) {
+        mochi::MeshData mesh = *asset->GetModelData().mesh;
+        auto const& converter = _studio->GetEditorToRendererSpaceConverter();
+        mochi::TransformRT const transform{rm.rotation, rm.translation};
+        for (auto& node : mochi::Unflatten<mochi::Real3>(mochi::MakeSpan(mesh.coordinates))) {
+          node = transform.TransformPoint(rm.scale * converter.TranslationToOutput(node));
+        }
+        rm.buffer.stats.base = FormatPolylineStats(mesh);
+      }
       if (asset->GetModelData().sdf.has_value()) {
         rm.buffer.stats.sdfGrid = asset->GetModelData().sdf->dims;
       }
@@ -3703,6 +3923,27 @@ void ModelEditor::RebuildReferenceMeshes(ReferenceModel& rm) {
   DestroyReferenceModelMeshes(rm);
   StageVisualization const& viz = rm.buffer.viz;
   auto& resourceManager = _studio->GetResourceManager();
+
+  if (rm.isPolyline) {
+    auto* asset = _studio->GetAssetManager().FindAssetByPath<MochiModelAsset>(rm.path);
+    std::vector<float> positions;
+    std::vector<int> indices;
+    auto const& converter = _studio->GetEditorToRendererSpaceConverter();
+    if (asset &&
+        BuildMochiPolylineGeometry(*asset->GetModelData().mesh, &converter, positions, indices)) {
+      auto polyline = mochi_renderer::LineSegmentMesh::CreateLineSegmentMesh(
+          _studio->GetEngine(),
+          mochi::MakeConstSpan(positions),
+          mochi::MakeConstSpan(indices),
+          CreatePolylineMaterial(resourceManager, ToFloat3(rm.color), viz.opacity));
+      if (polyline) {
+        polyline->SetLocalTransform(rm.rotation, rm.translation, rm.scale, nullptr);
+        polyline->SetVisible(viz.showSurface);
+        rm.buffer.surfaceMesh = scene->AddSceneObjectToScene(std::move(polyline));
+      }
+    }
+    return;
+  }
 
   // Wireframe is always built from the transform-baked sections (a darker shade of the color).
   std::vector<float> positions;

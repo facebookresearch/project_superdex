@@ -19,6 +19,7 @@
 #include "app/app.h"
 #include "assets/mochi_prefab_asset.h"
 #include "assets/tuner_asset.h"
+#include "rendering/arrow_glyph.h"
 #include "rendering/debug_text.h"
 #include "rendering/measure_tool.h"
 #include "rendering/stats.h"
@@ -1859,10 +1860,10 @@ void TunerEditor::DrawLoadArrows() {
   float3 const cameraPos{
       static_cast<float>(camera.x), static_cast<float>(camera.y), static_cast<float>(camera.z)};
   constexpr float kThicknessPerDistance = 0.0035f; // shaft radius / camera distance
-  constexpr float kHeadLength = 5.0f; // x shaft radius
-  constexpr float kHeadRadius = 2.2f; // x shaft radius
+  constexpr float kHeadLength = kArrowHeadLength; // x shaft radius, as DrawArrow
+  constexpr float kHeadRadius = kArrowHeadRadius; // x shaft radius, as DrawArrow
   constexpr float kRingRadius = 7.0f; // x shaft radius
-  constexpr float kOverlayDepthOff = true;
+  constexpr bool kOverlayDepthOff = true;
   auto const thicknessAt = [&](float3 const& p) {
     return kThicknessPerDistance * std::max(length(cameraPos - p), 1e-4f);
   };
@@ -1913,28 +1914,8 @@ void TunerEditor::DrawLoadArrows() {
         float const distance = extent + kLabelGapPx;
         return ImVec2{-direction.x * distance, -direction.y * distance};
       };
-  // Straight arrow from `tail` to `tip`. The head keeps its proportions; an arrow too short for a
-  // full head shrinks as a whole so the head never exceeds half its length.
   auto const drawArrow = [&](float3 const& tail, float3 const& tip, float radius, float4 const& c) {
-    float3 const axis = tip - tail;
-    float const axisLength = length(axis);
-    if (axisLength < 1e-7f) {
-      return;
-    }
-    float3 const unit = axis / axisLength;
-    float const shrink = std::min(1.0f, 0.5f * axisLength / (kHeadLength * radius));
-    float const shaftRadius = radius * shrink;
-    float const headLength = kHeadLength * shaftRadius;
-    debugDraw->DrawSolidCylinder(
-        tail, unit * (axisLength - headLength), shaftRadius, c, 12, true, kOverlayDepthOff);
-    debugDraw->DrawSolidCone(
-        tail + unit * (axisLength - headLength),
-        unit * headLength,
-        kHeadRadius * shaftRadius,
-        c,
-        16,
-        true,
-        kOverlayDepthOff);
+    DrawArrow(*debugDraw, tail, tip, radius, c, kOverlayDepthOff);
   };
   // Curved arrow (a tube around 3/4 of a circle, plus a head) turning about `axisUnit` by the
   // right-hand rule.

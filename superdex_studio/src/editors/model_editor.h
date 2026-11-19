@@ -19,6 +19,7 @@
 #include "core/async_task.h"
 #include "editors/asset_editor.h"
 #include "meshing/processing_modifiers/processing_modifier.h"
+#include "rendering/rod_visualization.h"
 #include "rendering/viewport.h"
 #include "ui/reorderable_list.h"
 
@@ -66,6 +67,7 @@ struct MeasureTarget;
 struct ReferenceModel {
   AssetType type = AssetType::RenderModel;
   mochi::DynamicString path;
+  bool isPolyline = false;
   // Extra transform, applied the same way as the CAD Model transform regardless of slot type.
   mochi::Real3 scale = {1.0f, 1.0f, 1.0f};
   mochi::Quaternion rotation = {};
@@ -320,6 +322,11 @@ class ModelEditor : public AssetEditor {
   void RebuildMochiModelSurfaceMesh();
   void RebuildMochiModelWireframeMesh();
   void DestroyMochiModelWireframeMesh();
+  // A polyline (rod) model's centerline, drawn as lines instead of the surface and wireframe.
+  void RebuildMochiPolylineMesh();
+  void DestroyMochiPolylineMesh();
+  // Draws the polyline model's element frame axes as arrows this frame, when shown.
+  void DrawFrameAxes();
   // Builds both the SDF surface and wireframe meshes from the asset's cached SDF surface
   // (reconstructing it first if no viewport has yet).
   void RebuildSdfMeshes();
@@ -370,6 +377,8 @@ class ModelEditor : public AssetEditor {
   bool _showMochiModelWireframe = false;
   bool _showSdfSurface = false;
   bool _showSdfWireframe = false;
+  // A polyline model shows its centerline with _showMochiModelWireframe, plus its frame axes.
+  bool _showFrameAxes = false;
   // Show the read-only mesh statistics block for each fixed slot (stages/reference models keep this
   // in their StageVisualization).
   bool _showCadModelStats = false;
@@ -422,6 +431,11 @@ class ModelEditor : public AssetEditor {
   mochi_renderer::WireframeMesh* _renderModelWireframeMesh = nullptr;
   mochi_renderer::SceneObject* _mochiModelSurfaceMesh = nullptr;
   mochi_renderer::WireframeMesh* _mochiModelWireframeMesh = nullptr;
+  mochi_renderer::LineSegmentMesh* _mochiPolylineMesh = nullptr;
+  // A polyline model's frame-axis arrows in the model frame (Mochi space), before the model
+  // transform; empty for other models.
+  std::vector<FrameAxisGlyph> _frameAxisGlyphs;
+  mochi::Real3 _frameAxesColor = {1.0f, 0.0f, 0.0f};
   mochi_renderer::Mesh* _sdfSurfaceMesh = nullptr;
   mochi_renderer::WireframeMesh* _sdfWireframeMesh = nullptr;
   // working geometry backing per slot (created on open; drives wireframe and future mesh

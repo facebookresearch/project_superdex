@@ -38,7 +38,10 @@
 
 namespace mochi_renderer {
 class DeformableModelInstance;
+class LineSegmentMesh;
+class MaterialInstance;
 class Mesh;
+class ResourceManager;
 class WireframeMesh;
 } // namespace mochi_renderer
 
@@ -50,6 +53,14 @@ class AssetManager;
 // MochiModelAsset::GetSdfSurfaceColor), so SDF surfaces read alike everywhere they are shown.
 inline constexpr std::string_view kSdfSurfaceColorRole = " output SDF";
 
+// The material of a polyline (rod) centerline: unlit, and drawn over everything rather than depth
+// tested, since the centerline runs inside the rod's tube and a straight rod lying flat sits
+// exactly in the viewport's ground plane.
+std::shared_ptr<mochi_renderer::MaterialInstance> CreatePolylineMaterial(
+    mochi_renderer::ResourceManager const& resourceManager,
+    filament::math::float3 color,
+    float opacity = 1.0f);
+
 //--------------------------------------------------------------------------------------------------
 // MOCHI MODEL ASSET
 //--------------------------------------------------------------------------------------------------
@@ -57,7 +68,15 @@ inline constexpr std::string_view kSdfSurfaceColorRole = " output SDF";
 class MochiModelAsset : public Asset {
  public:
   ~MochiModelAsset() override;
+  // An instance of the model's shared render mesh: its centerline for a polyline (rod) model, else
+  // its flat-lit surface with a wireframe overlay.
   std::unique_ptr<mochi_renderer::SceneObject> GetRenderModelInstance() const;
+  // True if the model's mesh is a polyline (rod) mesh.
+  bool IsPolyline() const;
+  // The element frame axes of a polyline model as Mochi creates its shape: the authored axes, or
+  // else the discrete Bishop frame Mochi generates (3 values per element). Valid until the model is
+  // reloaded; empty if the model is not a polyline or its shape cannot be created.
+  mochi::Span<mochi::real const> GetElementFrameAxes();
   mochi::ShapeHandle GetShape(
       mochi::Real3 const& bakeScale,
       mochi::TransformRT const& bakeTransform,
@@ -198,8 +217,28 @@ class MochiModelAsset : public Asset {
   // instance) at it.
   void InstallSdfSurface(std::optional<SdfSurface> surface);
 
+  // Render geometry in renderer space: triangles with normals, or (for a polyline model) line
+  // segments with no normals.
+  struct RenderGeometry {
+    bool isPolyline = false;
+    std::vector<float> positions;
+    std::vector<float> normals;
+    std::vector<int> indices;
+  };
+  // Returns false if @p model has no usable render geometry.
+  static bool BuildRenderGeometry(
+      mochi::ModelData const& model,
+      mochi::CoordinateSpaceConverter const* converter,
+      RenderGeometry& out);
+  // Points the shared render mesh of @p geometry's kind (and so every live instance) at it,
+  // creating the mesh if needed.
+  bool InstallRenderGeometry(
+      RenderGeometry const& geometry,
+      mochi_renderer::ResourceManager& resourceManager);
+
  private:
   std::unique_ptr<mochi_renderer::WireframeMesh> _renderModel;
+  std::unique_ptr<mochi_renderer::LineSegmentMesh> _polylineRenderModel;
   std::unique_ptr<mochi_renderer::WireframeMesh> _sdfRenderModel;
   std::optional<SdfSurface> _sdfSurface;
   bool _sdfSurfaceBuilt = false;
