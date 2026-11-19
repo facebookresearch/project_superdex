@@ -3,13 +3,14 @@
     "articulated": [
       {
         "name": "SkinnedDoublePendulum",
+        "translation": [0, 0.4875, -0.0125],
         "jointVelocities": [4.2, 0.0],
         "joints": [
           {
             "name": "joint_0",
             "type": "Revolute",
             "axis": [0, 0, -1],
-            "parentLinkFromJoint": { "translation": [0, 0.5, 0] }
+            "parentLinkFromJoint": { "translation": [0, 0.0125, 0.0125] }
           },
           {
             "name": "joint_1",

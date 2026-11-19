@@ -1235,19 +1235,19 @@ static void EmplaceArticulatedSkinningData(
     SkinningData const& skinningData) {
   MOCHI_PROFILE_SCOPE();
 
-  // Fetch root-link-from-bone-CoM transforms while the rigid actors are in their reference pose.
-  // These encode each bone's reference orientation and center-of-mass offset from the root link.
+  // Fetch root-from-bone-CoM transforms while the rigid actors are in their reference pose. These
+  // encode each bone's reference orientation and center-of-mass offset in the local frame of the
+  // articulated actor, where the skin is defined.
   auto const& groupMembers = reg.get<CGroupMembers const>(articulated);
   int const numActors = isize(groupMembers.actors);
   DynamicArray<TransformRT> preTransforms;
   preTransforms.reserve(numActors);
-  TransformRT const rootLinkFromWorld =
-      Invert(reg.get<CRootTransform const>(groupMembers.actors[0]).worldFromLocal);
+  TransformRT const rootFromWorld =
+      Invert(reg.get<CRootTransform const>(articulated).worldFromLocal);
   for (entt::entity const actor : groupMembers.actors) {
     TransformRT const& worldFromBoneCenterOfMass =
         reg.get<CRigidState<TimeStep::Current> const>(actor).value;
-    TransformRT const rootLinkFromBoneCenterOfMass = rootLinkFromWorld * worldFromBoneCenterOfMass;
-    preTransforms.emplace_back(Invert(rootLinkFromBoneCenterOfMass));
+    preTransforms.emplace_back(Invert(rootFromWorld * worldFromBoneCenterOfMass));
   }
 
   // Emplace skinning data component

@@ -4,6 +4,11 @@
       {
         "skeletonParams": {
           "name": "SoftSkinnedDoublePendulum",
+          "translation": [
+            0,
+            0.4875,
+            -0.0125
+          ],
           "jointVelocities": [
             4.2,
             0.0
@@ -20,8 +25,8 @@
               "parentLinkFromJoint": {
                 "translation": [
                   0,
-                  0.5,
-                  0
+                  0.0125,
+                  0.0125
                 ]
               }
             },

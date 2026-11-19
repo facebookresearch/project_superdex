@@ -19,6 +19,9 @@
 #include <mochi_physics/mochi_physics.h>
 
 #include <gtest/gtest.h>
+#include <mochi_core/geometry/tetrahedral_mesh.h>
+#include <mochi_physics/src/mochi_articulated_body.h>
+#include <mochi_physics/src/mochi_common_components.h>
 #include <mochi_physics/src/mochi_context.h>
 #include <mochi_physics/src/mochi_ecs.h>
 #include <mochi_physics/src/mochi_shape.h>
@@ -28,6 +31,7 @@
 #include <memory>
 #include <string>
 #include <string_view>
+#include <utility>
 
 using namespace mochi;
 
@@ -234,4 +238,80 @@ TEST_F(CreateSoftSkinnedActorNameTest, DeformableNodeConstraintsRejectNestedSoft
     return _scene->CreateDeformableNodeToRigidConstraint(
         {.deformableNodeIndex = 1, .rigidActor = link, .deformableActor = actor}, error);
   });
+}
+
+// An articulated actor whose root link frame differs from its root frame. Skins are defined in the
+// root frame.
+class SkinReferenceFrameTest : public test::MochiSceneTestBase {
+ protected:
+  static inline TransformRT const kWorldFromRoot{
+      Quaternion::FromRotationVector(Real3{0.2_r, -0.4_r, 0.3_r}),
+      Real3{1_r, 2_r, -3_r}};
+
+  // Unit cube skinned to the root link, with a constrained node for nested soft actors.
+  ShapeHandle CreateSkinShape() {
+    auto&& [coords, connectivity] = test::CreateMinimalTetMeshUnitCube();
+    auto mesh = std::make_shared<TetrahedralMesh const>(coords, connectivity);
+    SkinningData skinning;
+    skinning.weightsPerNode = 1;
+    skinning.indices.resize(mesh->GetNumNodes(), 0);
+    skinning.weights.resize(mesh->GetNumNodes(), 1_r);
+    auto shape = std::make_shared<TetrahedralMeshShape>(
+        mesh,
+        std::make_shared<SkinningData const>(std::move(skinning)),
+        std::make_shared<ConstrainedNodesData const>(DynamicArray<int>{0}));
+    return assert_cast<ContextImpl*>(_mochiContext)->RegisterShape(shape, test::ExpectOK{});
+  }
+
+  ArticulatedActorParams MakeSkeletonParams() {
+    ArticulatedActorParams params;
+    params.worldFromRoot = kWorldFromRoot;
+    params.joints = {
+        {.name = "root",
+         .type = ArticulatedJointType::Free,
+         .parentLinkFromJoint = TransformRT{
+             Quaternion::FromRotationVector(Real3{0_r, 0_r, 0.5_r}), Real3{0.3_r, -0.2_r, 0.1_r}}}};
+    params.links = {
+        {.name = "root",
+         .parentLink = -1,
+         .shape = test::CreateUnitCubeTetMeshShape(_mochiContext),
+         .colliderType = ColliderType::None}};
+    return params;
+  }
+
+  // Expects the skin of entity e to be at its rest coordinates in the articulated root frame.
+  void ExpectSkinAtRestInRootFrame(entt::entity e) {
+    auto const& reg = GetRegistry();
+    auto const rest = Unflatten<Real3 const>(
+        MakeConstSpan(reg.get<CArticulatedSkinningData const>(e).restCoords));
+    auto const displacements = Unflatten<Real3 const>(MakeConstSpan(
+        reg.get<CDisplacementSlice<real, TimeStep::Current, DisplacementLayer::Skinned> const>(e)
+            .value));
+    TransformRT const& worldFromLocal = reg.get<CRootTransform const>(e).worldFromLocal;
+    for (int node = 0; node < isize(rest); ++node) {
+      EXPECT_NEAR_TOL(
+          worldFromLocal.TransformPoint(rest[node] + displacements[node]),
+          kWorldFromRoot.TransformPoint(rest[node]),
+          1e-5_r);
+    }
+  }
+};
+
+TEST_F(SkinReferenceFrameTest, ArticulatedSkinIsDefinedInRootFrame) {
+  ArticulatedActorParams params = MakeSkeletonParams();
+  params.skin.emplace();
+  params.skin->shape = CreateSkinShape();
+  Actor* actor = _scene->CreateArticulatedActor(params, test::ExpectOK{});
+  ExpectSkinAtRestInRootFrame(GetEntity(actor));
+}
+
+TEST_F(SkinReferenceFrameTest, NestedSoftSkinIsDefinedInRootFrame) {
+  SoftSkinnedActorParams params;
+  params.skeletonParams = MakeSkeletonParams();
+  SoftActorParams soft;
+  soft.shape = CreateSkinShape();
+  soft.hasGravity = false;
+  params.softParams.push_back(soft);
+  Actor* actor = _scene->CreateSoftSkinnedActor(params, test::ExpectOK{});
+  ExpectSkinAtRestInRootFrame(GetEntity(actor->GetNestedSoftActors(test::ExpectOK{})[0]));
 }
