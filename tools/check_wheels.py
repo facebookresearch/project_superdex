@@ -211,6 +211,25 @@ _ROBOTICS_THIRD_PARTY_LICENSE_FILES = _CORE_THIRD_PARTY_LICENSE_FILES + (
     "tinyxml2/LICENSE",
     "xxhash/LICENSE",
 )
+# What the recorder adds: the Rerun C++ SDK, the Arrow it builds with bundled mimalloc and xsimd,
+# and LZ4. The Rust crates in Rerun's C library are attributed in NOTICE.md.
+_RECORDER_LICENSE_FILES = (
+    "arrow/LICENSE.txt",
+    "arrow/NOTICE.txt",
+    "lz4/LICENSE",
+    "mimalloc/LICENSE",
+    "rerun/LICENSE-APACHE",
+    "rerun/LICENSE-MIT",
+    "xsimd/LICENSE",
+)
+_RECORDER_THIRD_PARTY_LICENSE_FILES = (
+    _CORE_THIRD_PARTY_LICENSE_FILES
+    + (
+        "nanobind/LICENSE",
+        "robin_map/LICENSE",
+    )
+    + _RECORDER_LICENSE_FILES
+)
 _RENDERER_THIRD_PARTY_LICENSE_FILES = _CORE_THIRD_PARTY_LICENSE_FILES + (
     "filament/LICENSE",
     "filament-basisu/APACHE-2.0.txt",
@@ -265,6 +284,8 @@ THIRD_PARTY_LICENSE_FILES = {
     "superdex_physics_fp64": ("NOTICE.md",) + _PHYSICS_THIRD_PARTY_LICENSE_FILES,
     "superdex_robotics": ("NOTICE.md",) + _ROBOTICS_THIRD_PARTY_LICENSE_FILES,
     "superdex_robotics_fp64": ("NOTICE.md",) + _ROBOTICS_THIRD_PARTY_LICENSE_FILES,
+    "superdex_recorder": ("NOTICE.md",) + _RECORDER_THIRD_PARTY_LICENSE_FILES,
+    "superdex_recorder_fp64": ("NOTICE.md",) + _RECORDER_THIRD_PARTY_LICENSE_FILES,
     "superdex_physics_debugger": ("NOTICE.md",) + _RENDERER_THIRD_PARTY_LICENSE_FILES,
     "superdex_studio": ("NOTICE.md",)
     + _RENDERER_THIRD_PARTY_LICENSE_FILES
@@ -274,7 +295,8 @@ THIRD_PARTY_LICENSE_FILES = {
         "miniz/LICENSE",
         "tinyfiledialogs/LICENSE",
         "xxhash/LICENSE",
-    ),
+    )
+    + _RECORDER_LICENSE_FILES,
 }
 
 THIRD_PARTY_LICENSE_REQUIRED_TEXT = {
