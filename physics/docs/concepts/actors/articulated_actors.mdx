@@ -199,35 +199,30 @@ The top-level parameters use `ArticulatedActorParams` ([C++](pathname:///generat
 
 ### Joint Friction and Damping
 
-Joint friction is configured per joint via [`ArticulatedJointParams::friction`](pathname:///generated/api/latest/cpp/structsuperdex_1_1ArticulatedJointParams.html) ([`ArticulatedJointFrictionParams`](pathname:///generated/api/latest/cpp/structsuperdex_1_1ArticulatedJointFrictionParams.html)), which supports viscous damping, Coulomb (dry) friction, and an experimental Stribeck effect.
+Joint friction is configured per joint via [`ArticulatedJointParams::friction`](pathname:///generated/api/latest/cpp/structsuperdex_1_1ArticulatedJointParams.html) ([`ArticulatedJointFrictionParams`](pathname:///generated/api/latest/cpp/structsuperdex_1_1ArticulatedJointFrictionParams.html)), which supports viscous damping, elasto-plastic Coulomb (dry) friction, and an experimental Stribeck effect.
 
 | Field | Default | Description |
 |-------|---------|-------------|
 | `viscous` | `0.0` | Viscous friction coefficient [N*s/m or N*m*s/rad]. Produces a force proportional to joint velocity. |
-| `coulomb` | `0.0` | Coulomb friction coefficient [N or N*m]. Constant opposing force once the joint is moving. |
-| `falloffVel` | `1e-3` | Velocity threshold [m/s or rad/s] for dry friction smoothing. Smaller values are more physical but may reduce stability. |
+| `coulomb` | `0.0` | Coulomb friction coefficient [N or N*m]. Opposing force once the joint slides. |
+| `preslidingDisplacement` | `1e-4` | Displacement [m or rad] of the joint from its friction anchor at which dry friction reaches its static peak. Smaller values hold loads more stiffly but may reduce convergence. |
+| `falloffVel` | unset | **(Deprecated)** Ignored. Setting it logs a warning. |
 | `stictionExtra` | `0.0` | **(Experimental)** Extra stiction force [N or N*m], representing the difference between peak static and dynamic friction. |
 | `stribeckVel` | `0.0` | **(Experimental)** Stribeck velocity [m/s or rad/s] governing the static-to-dynamic friction transition sharpness. |
 
-For a one-DoF joint, let $v_j$ be its tangent velocity, $\mu_v$ its [`viscous`](pathname:///generated/api/latest/cpp/structsuperdex_1_1ArticulatedJointFrictionParams.html) coefficient, $\mu_c$ its [`coulomb`](pathname:///generated/api/latest/cpp/structsuperdex_1_1ArticulatedJointFrictionParams.html) force, $\mu_s$ its [`stictionExtra`](pathname:///generated/api/latest/cpp/structsuperdex_1_1ArticulatedJointFrictionParams.html), $v_f$ its [`falloffVel`](pathname:///generated/api/latest/cpp/structsuperdex_1_1ArticulatedJointFrictionParams.html), and $v_s$ its [`stribeckVel`](pathname:///generated/api/latest/cpp/structsuperdex_1_1ArticulatedJointFrictionParams.html). When $\mu_0=\mu_c+\mu_s>0$, define $r=\mu_c/\mu_0$ and
+Dry friction is elasto-plastic: each joint keeps a friction anchor $a_j$, which stays fixed during a time step. For a one-DoF joint with coordinate $q_j$, let $z_j=q_j-a_j$ be its displacement from the anchor, $\mu_c$ its [`coulomb`](pathname:///generated/api/latest/cpp/structsuperdex_1_1ArticulatedJointFrictionParams.html) force, $\mu_s$ its [`stictionExtra`](pathname:///generated/api/latest/cpp/structsuperdex_1_1ArticulatedJointFrictionParams.html), $\delta$ its [`preslidingDisplacement`](pathname:///generated/api/latest/cpp/structsuperdex_1_1ArticulatedJointFrictionParams.html), $v_s$ its [`stribeckVel`](pathname:///generated/api/latest/cpp/structsuperdex_1_1ArticulatedJointFrictionParams.html), and $\tau$ the time since the start of the time step (at the integration stage). When $\mu_0=\mu_c+\mu_s>0$, define $r=\mu_c/\mu_0$ and $x_s=v_s\tau$, and
 
 $$
 \phi(x)=
 \begin{cases}
-\dfrac{x^2}{v_f}\left(1-\dfrac{x}{3v_f}\right), & x<v_f~, \\
-\dfrac{2v_f}{3}+r(x-v_f)+(1-r)v_s\dfrac{\sqrt{\pi}}{2}
-\operatorname{erf}\!\left(\dfrac{x-v_f}{v_s}\right), & x\ge v_f,\ v_s>0~, \\
-\dfrac{2v_f}{3}+r(x-v_f), & x\ge v_f,\ v_s=0~.
+\dfrac{x^2}{\delta}\left(1-\dfrac{x}{3\delta}\right), & x<\delta~, \\
+\dfrac{2\delta}{3}+r(x-\delta)+(1-r)x_s\dfrac{\sqrt{\pi}}{2}
+\operatorname{erf}\!\left(\dfrac{x-\delta}{x_s}\right), & x\ge \delta,\ v_s>0~, \\
+\dfrac{2\delta}{3}+r(x-\delta), & x\ge \delta,\ v_s=0~.
 \end{cases}
 $$
 
-The joint's dissipation potential is
-
-$$
-R_j(v_j)=\frac12\mu_v v_j^2+\mu_0\phi(|v_j|)~.
-$$
-
-The first branch smoothly increases the dry-friction magnitude from zero to the peak static value $\mu_0$; above $v_f$, it approaches the dynamic value $\mu_c$ according to the Gaussian Stribeck model. If $\mu_0=0$, the dry-friction term is omitted. For a spherical joint, the same construction uses the norm of its rotational tangent velocity. Its discretization follows the shared [incremental-potential formulation](../dynamics.md#incremental-potential-form). Friction is ignored for `Free` and `Hard` joints.
+The dry friction energy of the joint is $\mu_0\phi(|z_j|)$. Its [`viscous`](pathname:///generated/api/latest/cpp/structsuperdex_1_1ArticulatedJointFrictionParams.html) coefficient $\mu_v$ adds the energy $\frac12\mu_v v_j^2 h$ over an integration stage of length $h$ (the time step for backward Euler). The first branch smoothly increases the dry-friction magnitude from zero to the peak static value $\mu_0$ at the presliding displacement, so a load below $\mu_0$ is held at the displacement from the anchor that balances it. Beyond it, $|z_j|-\delta$ is the slip of the time step, and friction approaches the dynamic value $\mu_c$ with the slip velocity according to the Gaussian Stribeck model. After each time step, the anchor advances by radial return: it stays while $|z_j|\le\delta$, and follows the joint at distance $\delta$ beyond. For a spherical joint, the same construction uses the rotation vector of the joint rotation relative to its anchor rotation. If $\mu_0=0$, the dry-friction term is omitted. `Free` and `Hard` joints have no friction. The anchors are part of the actor history: setting the joint positions (`SetArticulatedPoseFromJoints`, `SetArticulatedPoseFromLinks`) resets them, and the joints restart without friction preload. Other setters, such as velocity and root transform setters, keep them.
 
 ### Joint Limits
 
