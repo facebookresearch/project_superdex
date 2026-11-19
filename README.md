@@ -5,8 +5,8 @@
 **Welcome to Project SuperDex.**
 
 SuperDex brings together a purpose-built physics engine, robotics authoring
-tools, and a scalable reinforcement learning interface in a unified simulation
-platform, with VR-based teleoperation and additional capabilities planned for
+tools, a scalable reinforcement learning interface, and VR-based teleoperation
+in a unified simulation platform, with additional capabilities planned for
 future releases.
 
 Visit the [Project SuperDex website](https://projectsuperdex.com/) for more.
@@ -29,12 +29,14 @@ Visit the [Project SuperDex website](https://projectsuperdex.com/) for more.
 - **SuperDex Lab** — The simulation harness that abstracts the Markov decision
   process and dynamics-constrained-optimization underpinning RL, MPC, and
   system-ID.
+- **SuperDex Teleop** — Unreal Engine 5 plugins and a ready-to-open project for
+  real-time virtual/physical teleoperation and data collection.
 
 ---
 
 ## Gallery
 
-The following videos were recorded in real-time using SuperDex Teleop (available in Q4 2026).
+The following videos were recorded in real-time using SuperDex Teleop.
 
 | Soft Sponge | Fruit Bag |
 | :-: | :-: |
@@ -70,13 +72,15 @@ Click to learn more about [SuperDex Lab](https://projectsuperdex.com/lab/).
 
 ---
 
-## Q4 2026: SuperDex Teleop
+## SuperDex Teleop (early preview)
 
-SuperDex Teleop is the next major module coming to Project SuperDex. Initial components for Unreal Engine 5 based virtual teleoperation will be available in Q4 2026.
+SuperDex Teleop brings SuperDex Physics and SuperDex Robotics into Unreal Engine 5 for real-time virtual/physical teleoperation and data collection. It ships as the SuperDexUnreal project and its plugins. It is currently in early preview and will receive substantial improvements.
+
+Click to learn more about [SuperDex Teleop](https://projectsuperdex.com/teleop/).
 
 ![Ben Virtual Teleop](https://github.com/user-attachments/assets/08a742a1-b7e5-4f77-a69a-8e24a761048e)
 
-SuperDex Teleop runs natively on-device on Quest 3. No remote PC, no streaming. Includes support for both hand tracking and controllers including mixed mode. Runs in pure C++ for low-latency, real-time, scalable virtual teleop.
+SuperDex Teleop can run natively on-device on Quest 3 (experimental). No remote PC, no streaming. Runs in pure C++ for low-latency, real-time, scalable virtual teleop.
 
 ![Android Teleop](https://github.com/user-attachments/assets/53639e05-5f6c-4cc6-b693-b3ae6e87ff2f)
 
@@ -86,6 +90,7 @@ SuperDex Teleop runs natively on-device on Quest 3. No remote PC, no streaming. 
 * **OS:** Linux (x86_64), Windows (x86_64), macOS (ARM)
 * **Python:** Standard (GIL-enabled) CPython 3.12 or newer
    - Native binding wheels use the stable `abi3` ABI from Python 3.12 onward.
+* **Unreal Engine (SuperDex Teleop):** Unreal Engine 5.5 on Windows (x86_64). Experimental Meta Quest standalone builds use Unreal Engine 5.8.
 
 ## Get the Source Code and Examples
 
@@ -109,6 +114,20 @@ Project SuperDex has first-class support for Python across the board. The quicke
     * Physics example: `uv run superdex_physics/examples/example_tendon_comparison.py`
     * Robotics example: `uv run superdex_robotics/examples/control/example_osc_jsc_control.py`
     * SuperDex Studio: `uv run superdex-studio`
+
+## Quick Start (Unreal)
+
+SuperDex Teleop ships as the ready-to-open SuperDexUnreal project. Windows is the supported platform.
+
+1. Install pre-requisites
+    * [Unreal Engine 5.5](https://www.unrealengine.com/download)
+    * Python 3.10 or newer
+    * The Windows C++ build pre-requisites from [Install Pre-requisites](#install-pre-requisites): CMake, Ninja, and the MSVC Build Tools with the ClangCL component
+2. `cd` into the `project_superdex/unreal/SuperDexUnreal` directory
+3. Build the native SuperDex libraries and stage them into the plugins: `py -3 hydrate_plugins.py`
+4. Open `SuperDexUnreal.uproject` in Unreal Engine 5.5, which compiles the plugin modules the first time the project opens
+
+See the [SuperDex Unreal README](/unreal/SuperDexUnreal/README.md) for packaging for Meta Quest and for using the plugins in another project.
 
 ## Building from Source
 
@@ -206,6 +225,7 @@ Documentation, getting started guides, and examples are available for all module
 * [SuperDex Robotics](https://projectsuperdex.com/robotics/docs/overview/)
 * [SuperDex Studio](https://projectsuperdex.com/studio/docs/overview/)
 * [SuperDex Lab](https://projectsuperdex.com/lab/docs/overview/)
+* [SuperDex Teleop](https://projectsuperdex.com/teleop/docs/overview/)
 
 ---
 
