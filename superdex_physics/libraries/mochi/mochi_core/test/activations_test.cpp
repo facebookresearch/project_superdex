@@ -121,12 +121,13 @@ static void TestIPCStepC1() {
     }
   }
 
-  // ddf keeps full relative precision near the top of the interval, where it vanishes.
+  // ddf keeps full relative precision near the top of the interval, where it vanishes, against a
+  // double reference from t - x, which is exact.
   Scalar const kRelTol = Scalar(16) * std::numeric_limits<Scalar>::epsilon();
   auto const t = Scalar(0.005);
   for (Scalar const b : {Scalar(0.1), Scalar(0.01), Scalar(0.001)}) {
     Scalar const x = (Scalar(1) - b) * t;
-    auto const ddfRef = Scalar(2.0 * (double(t) - x) / (double(t) * t));
+    auto const ddfRef = Scalar(2.0 * (t - x) / (double(t) * t));
     T f{}, df{}, ddf{}, df_x{};
     IPCstepC1<T>(T(x), T(t), f, df, ddf, df_x);
     EXPECT_NEAR_TOL(T(ddfRef), ddf, T(kRelTol * ddfRef));
