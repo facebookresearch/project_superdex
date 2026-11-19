@@ -17,6 +17,7 @@
 #pragma once
 
 #include "core/settings.h"
+#include "rendering/rod_visualization.h"
 #include "simulation/mochi_async_scene.h"
 
 #include <mochi_core/utils/coordinate_space_converter.h>
@@ -168,14 +169,16 @@ class PhysicsDragController {
   // is not torn down and rebuilt (a whole-scene mass scan, two passes over the soft nodes, and the
   // same error log) on every step for as long as the button is held.
   bool _simSetupFailed = false;
-  // True when the current grab is on a soft (deformable) actor; the spring targets a cluster of
-  // nodes near the pick.
+  // True when the current grab is on a soft or rod actor; the spring targets one or more nodes near
+  // the pick.
   bool _simSoft = false;
-  // The soft-body anchor node (nearest to the pick); drives the leash and debug gizmo. Valid only
-  // when _simSoft.
+  // The anchor node (nearest to the pick) of a soft or rod grab; drives the leash and debug gizmo.
+  // Valid only when _simSoft.
   int _simNodeIndex = -1;
-  // One position constraint per grabbed soft node, each offset from the anchor so the cluster
-  // translates rigidly with the drag (avoids pinching a single vertex).
+  // Storage for a grabbed rod's nodes, which a rod reads from its pose rather than a query.
+  RodPose _simRodPose;
+  // One position constraint per grabbed node, each offset from the anchor so the cluster translates
+  // rigidly with the drag (avoids pinching a single vertex).
   struct SoftNodeConstraint {
     mochi::ConstraintHandle handle;
     mochi::Real3 offset; // node's world offset from the anchor node at grab time

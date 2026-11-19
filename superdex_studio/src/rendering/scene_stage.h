@@ -32,6 +32,7 @@
 #include <math/vec3.h>
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -49,6 +50,7 @@ struct ScenePrefab;
 namespace mochi_renderer {
 class DeformableModelInstance;
 class LineSegmentMesh;
+struct PickResult;
 class Scene;
 class SceneObject;
 class Mesh;
@@ -78,6 +80,15 @@ enum class StagedActorSource {
   Articulated,
   Soft,
   Rod,
+};
+
+// A staged rod's centerline, in its local frame (Mochi space), 3 values per node.
+struct StagedRod {
+  // Two node indices per element.
+  std::vector<int> connectivity;
+  std::vector<mochi::real> restNodes;
+  // The rest nodes while editing, the simulated nodes while simulating.
+  std::vector<mochi::real> nodes;
 };
 
 struct StagedActor {
@@ -168,6 +179,8 @@ struct StagedActor {
   mochi_renderer::LineSegmentMesh* dynamicRenderCenterline = nullptr;
   mochi_renderer::LineSegmentMesh* dynamicShapeCenterline = nullptr;
   bool rodIsClosedLoop = false;
+  // Rod actors only: the centerline.
+  std::optional<StagedRod> rod;
   // Soft actors whose render model is linked to their visual mesh (see CheckRenderModelLink): the
   // render model, drawn in the render slot instead of the solid and deformed by the visual mesh's
   // updates. A non-owning back-pointer like dynamicSolidMesh; null otherwise.
@@ -313,6 +326,8 @@ struct StageRequest {
   // and if not, why (empty when there is no render model).
   bool softRenderModelLinked = false;
   std::string softRenderModelNotice;
+  // Rod actors only: the centerline at its rest pose.
+  std::optional<StagedRod> rod;
   // Skinned skin only: per-link WORLD transforms (Mochi space) in the GLB's joint order (== nested
   // link / link-declaration order), captured at build time. Populated for ANY articulated skin,
   // with a collision shape (then also `isDeformable`), a render GLB, or both, so either can be
@@ -447,6 +462,15 @@ struct SceneStage {
   // Get the ordered list of staged actors.
   StagedActors const& GetActors() const;
 
+  // The shown rod centerline (drawn as lines, which are too thin for the GPU pick to hit reliably)
+  // nearest the framebuffer pixel (@p pxX, @p pxY) (Filament's bottom-origin convention) within
+  // @p maxDistancePx, with the nearest point on it in renderer space; no hit if none.
+  [[nodiscard]] mochi_renderer::PickResult PickCenterline(
+      mochi_renderer::Scene const& renderScene,
+      float pxX,
+      float pxY,
+      float maxDistancePx) const;
+
   // The number of staged actors.
   int GetNumActors() const;
 
@@ -516,7 +540,7 @@ struct SceneStage {
   // StageBotScene.
   // Returns true if the staged objects were rebuilt (existing SceneObjects destroyed and recreated,
   // invalidating external pointers); false if existing objects were reused.
-  bool ApplyStageRequests(std::vector<StageRequest> const& requests, StageType stageType);
+  bool ApplyStageRequests(std::vector<StageRequest>& requests, StageType stageType);
 
   // Shows `actor`'s SDF surface in place of its collision model when the stage type asks for it
   // and the surface is built, creating the instance on first use; otherwise hides it. Updates the

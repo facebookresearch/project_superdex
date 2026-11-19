@@ -18,6 +18,8 @@
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
+#include <array>
 #include <vector>
 
 using namespace superdex::studio;
@@ -26,9 +28,9 @@ using mochi::Real3;
 
 namespace {
 
-void ExpectNear(Real3 const& actual, Real3 const& expected) {
+void ExpectNear(Real3 const& actual, Real3 const& expected, float tolerance = 1e-6f) {
   for (int i = 0; i < 3; ++i) {
-    EXPECT_NEAR(actual[i], expected[i], 1e-6f) << "component " << i;
+    EXPECT_NEAR(actual[i], expected[i], tolerance) << "component " << i;
   }
 }
 
@@ -77,6 +79,194 @@ TEST(RodVisualizationTest, MismatchedFrameAxesGiveNoGlyphs) {
 
   EXPECT_TRUE(ComputeFrameAxisGlyphs(mochi::MakeConstSpan(nodes), {}, mochi::MakeConstSpan(oneAxis))
                   .empty());
+}
+
+TEST(RodVisualizationTest, AGrabClusterIsTheNearestNodeThenItsNeighborsWithinTheRadius) {
+  // Ten nodes 0.1 apart: the diagonal is 0.9, so a 0.25 fraction reaches 0.225 from the grab.
+  std::vector<Real3> nodes;
+  nodes.reserve(10);
+  for (int i = 0; i < 10; ++i) {
+    nodes.emplace_back(0.1f * static_cast<real>(i), 0.0f, 0.0f);
+  }
+
+  std::vector<int> const cluster =
+      SelectGrabCluster(mochi::MakeConstSpan(nodes), {0.41f, 0.0f, 0.0f}, 0.25f, 10);
+
+  EXPECT_EQ(cluster, (std::vector<int>{4, 5, 3, 6, 2}));
+}
+
+TEST(RodVisualizationTest, AGrabClusterKeepsTheAnchorWhenCappedOrTheRadiusIsTooSmall) {
+  std::vector<Real3> const nodes = {{0.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {2.0f, 0.0f, 0.0f}};
+
+  EXPECT_EQ(
+      SelectGrabCluster(mochi::MakeConstSpan(nodes), {1.9f, 0.0f, 0.0f}, 0.0f, 10),
+      (std::vector<int>{2}));
+  EXPECT_EQ(
+      SelectGrabCluster(mochi::MakeConstSpan(nodes), {1.1f, 0.0f, 0.0f}, 1.0f, 2),
+      (std::vector<int>{1, 2}));
+  EXPECT_TRUE(SelectGrabCluster({}, {0.0f, 0.0f, 0.0f}, 1.0f, 10).empty());
+}
+
+constexpr mochi::Float2 kViewportSize{200.0f, 200.0f};
+
+ClipSegment ProjectSegment(Real3 const& a, Real3 const& b, bool perspective) {
+  // Camera at the origin looking along -z, with near=1, far=20 and unit x/y projection scale.
+  auto project = [perspective](Real3 const& p) -> mochi::Float4 {
+    if (perspective) {
+      return {p[0], p[1], -21.0f / 19.0f * p[2] - 40.0f / 19.0f, -p[2]};
+    }
+    return {p[0], p[1], -2.0f / 19.0f * p[2] - 21.0f / 19.0f, 1.0f};
+  };
+  return {project(a), project(b)};
+}
+
+ClipSegment SegmentAtPixels(mochi::Float2 a, mochi::Float2 b, float depthA, float depthB) {
+  a = a / kViewportSize * 2.0f - 1.0f;
+  b = b / kViewportSize * 2.0f - 1.0f;
+  return ProjectSegment({a[0], a[1], -depthA}, {b[0], b[1], -depthB}, false);
+}
+
+TEST(RodVisualizationTest, AScreenSegmentIsPickedWithinTheRadiusAtTheNearestPoint) {
+  std::vector<ClipSegment> const segments = {
+      SegmentAtPixels({0.0f, 0.0f}, {100.0f, 0.0f}, 1, 1),
+      SegmentAtPixels({0.0f, 50.0f}, {100.0f, 50.0f}, 1, 1)};
+
+  auto const hit =
+      PickNearestScreenSegment(mochi::MakeConstSpan(segments), {25.0f, 46.0f}, kViewportSize, 8);
+
+  ASSERT_TRUE(hit.has_value());
+  EXPECT_EQ(hit->segment, 1);
+  EXPECT_NEAR(hit->t, 0.25f, 1e-6f);
+  EXPECT_NEAR(hit->distancePx, 4.0f, 1e-5f);
+  EXPECT_FALSE(
+      PickNearestScreenSegment(mochi::MakeConstSpan(segments), {25.0f, 25.0f}, kViewportSize, 8)
+          .has_value());
+  EXPECT_FALSE(
+      PickNearestScreenSegment(mochi::MakeConstSpan(segments), {-20.0f, 0.0f}, kViewportSize, 8)
+          .has_value());
+  EXPECT_FALSE(PickNearestScreenSegment({}, {25.0f, 46.0f}, kViewportSize, 8).has_value());
+}
+
+TEST(RodVisualizationTest, PerspectivePickingReturnsTheCorrectWorldPointAndNearestNode) {
+  struct Case {
+    float nearDepth;
+    Real3 point;
+  };
+  std::array<Case, 2> const cases = {
+      Case{1.0f, {3.0f / 23.0f, 0.0f, -50.0f / 23.0f}},
+      Case{0.5f, {3.0f / 43.0f, 0.0f, -50.0f / 43.0f}}};
+  for (Case const& testCase : cases) {
+    for (bool reverse : {false, true}) {
+      std::array<Real3, 2> nodes = {
+          Real3{0.0f, 0.0f, -testCase.nearDepth}, Real3{1.0f, 0.0f, -10.0f}};
+      if (reverse) {
+        std::reverse(nodes.begin(), nodes.end());
+      }
+      std::array<ClipSegment, 1> const segments = {ProjectSegment(nodes[0], nodes[1], true)};
+
+      auto const hit = PickNearestScreenSegment(
+          mochi::MakeConstSpan(segments), {106.0f, 100.0f}, kViewportSize, 8);
+
+      ASSERT_TRUE(hit.has_value());
+      Real3 const point = nodes[0] + (nodes[1] - nodes[0]) * hit->t;
+      ExpectNear(point, testCase.point);
+      EXPECT_EQ(
+          SelectGrabCluster(mochi::MakeConstSpan(nodes), point, 0.0f, 1),
+          (std::vector<int>{reverse ? 1 : 0}));
+    }
+  }
+}
+
+TEST(RodVisualizationTest, PerspectiveCrossingsUseDepthAtTheProjectedHit) {
+  std::array<ClipSegment, 2> segments = {
+      ProjectSegment({0.0f, 0.0f, -1.0f}, {1.0f, 0.0f, -10.0f}, true),
+      ProjectSegment({0.0f, 0.0f, -3.0f}, {0.3f, 0.0f, -3.0f}, true)};
+  for (int order = 0; order < 2; ++order) {
+    auto const hit = PickNearestScreenSegment(
+        mochi::MakeConstSpan(segments), {106.0f, 100.0f}, kViewportSize, 8);
+
+    ASSERT_TRUE(hit.has_value());
+    EXPECT_EQ(hit->segment, order);
+    std::reverse(segments.begin(), segments.end());
+  }
+}
+
+TEST(RodVisualizationTest, OrthographicOverlapsUseViewDepth) {
+  std::array<ClipSegment, 2> segments = {
+      ProjectSegment({-0.5f, 0.0f, -5.0f}, {0.5f, 0.0f, -5.0f}, false),
+      ProjectSegment({-0.5f, 0.0f, -2.0f}, {0.5f, 0.0f, -2.0f}, false)};
+  for (int order = 0; order < 2; ++order) {
+    auto const hit = PickNearestScreenSegment(
+        mochi::MakeConstSpan(segments), {100.0f, 100.0f}, kViewportSize, 8);
+
+    ASSERT_TRUE(hit.has_value());
+    EXPECT_EQ(hit->segment, 1 - order);
+    std::reverse(segments.begin(), segments.end());
+  }
+}
+
+TEST(RodVisualizationTest, SegmentsBehindTheNearPlaneAreNotPickable) {
+  std::array<Real3, 2> const positions = {Real3{0.0f, 0.0f, 2.0f}, {0.0f, 0.0f, -0.5f}};
+  for (bool perspective : {false, true}) {
+    for (Real3 const& position : positions) {
+      std::array<ClipSegment, 1> const segments = {
+          ProjectSegment(position, position + Real3{0.1f, 0.0f, 0.0f}, perspective)};
+
+      EXPECT_FALSE(PickNearestScreenSegment(
+                       mochi::MakeConstSpan(segments), {100.0f, 100.0f}, kViewportSize, 8)
+                       .has_value())
+          << "perspective=" << perspective << ", depth=" << position[2];
+    }
+  }
+}
+
+TEST(RodVisualizationTest, NearPlaneClippingPreservesTheOriginalWorldParameter) {
+  for (bool perspective : {false, true}) {
+    for (bool reverse : {false, true}) {
+      std::array<Real3, 2> nodes = {Real3{0.0f, 0.0f, 2.0f}, Real3{0.0f, 0.0f, -30.0f}};
+      if (reverse) {
+        std::reverse(nodes.begin(), nodes.end());
+      }
+      std::array<ClipSegment, 1> const segments = {ProjectSegment(nodes[0], nodes[1], perspective)};
+
+      auto const hit = PickNearestScreenSegment(
+          mochi::MakeConstSpan(segments), {100.0f, 100.0f}, kViewportSize, 8);
+
+      ASSERT_TRUE(hit.has_value());
+      ExpectNear(nodes[0] + (nodes[1] - nodes[0]) * hit->t, {0.0f, 0.0f, -1.0f}, 4e-6f);
+    }
+  }
+}
+
+TEST(RodVisualizationTest, TheSmallestScreenDistanceWinsRegardlessOfDepthAndOrder) {
+  std::vector<ClipSegment> segments;
+  for (int i = 0; i < 9; ++i) {
+    float const offset = 0.9f * static_cast<float>(i);
+    float const depth = 9.0f - static_cast<float>(i);
+    segments.push_back(
+        SegmentAtPixels({50.0f, 100.0f + offset}, {150.0f, 100.0f + offset}, depth, depth));
+  }
+  ClipSegment const expected = segments[0];
+  for (int order = 0; order < 2; ++order) {
+    auto const hit = PickNearestScreenSegment(
+        mochi::MakeConstSpan(segments), {100.0f, 100.0f}, kViewportSize, 8);
+
+    ASSERT_TRUE(hit.has_value());
+    EXPECT_EQ(segments[hit->segment].a, expected.a);
+    EXPECT_NEAR(hit->distancePx, 0.0f, 1e-4f);
+    std::reverse(segments.begin(), segments.end());
+  }
+}
+
+TEST(RodVisualizationTest, ThePickAllowanceExtendsPastViewportEdges) {
+  std::array<ClipSegment, 1> const segments = {
+      SegmentAtPixels({-4.0f, 50.0f}, {-4.0f, 150.0f}, 2, 2)};
+
+  auto const hit =
+      PickNearestScreenSegment(mochi::MakeConstSpan(segments), {2.0f, 100.0f}, kViewportSize, 8);
+
+  ASSERT_TRUE(hit.has_value());
+  EXPECT_NEAR(hit->distancePx, 6.0f, 1e-5f);
 }
 
 } // namespace

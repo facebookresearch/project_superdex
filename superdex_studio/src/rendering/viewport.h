@@ -296,6 +296,14 @@ class Viewport {
   // @p renderHeight is the framebuffer height, needed for the bottom-origin pixel convention
   // Filament's picking uses.
   void HandleMeasureToolInput(bool canPick, int renderHeight, float fbScale);
+  // Picks the scene object under framebuffer pixel (@p pxX, @p pxY): the bound stage's rod
+  // centerline within a few pixels (see SceneStage::PickCenterline), reported to @p onPicked at
+  // once, else the GPU pick, reported when it resolves.
+  void PickSceneObject(
+      float pxX,
+      float pxY,
+      float fbScale,
+      std::function<void(mochi_renderer::PickResult const&)> const& onPicked);
   void DrawDebug();
   // Lazily creates, and resizes to (width, height), the highlight overlay target + view and the
   // fullscreen composite view. Called each frame a highlight is present.

@@ -17,8 +17,10 @@
 #include "simulation/physics_drag_controller.h"
 
 #include "rendering/debug_text.h"
+#include "rendering/rod_visualization.h"
 #include "rendering/scene_stage.h"
 #include "rendering/viewport.h"
+#include "simulation/deformable_surface_queries.h"
 
 #include <mochi_renderer/debug.h>
 #include <mochi_renderer/type_conversions.h>
@@ -27,6 +29,7 @@
 #include <mochi_core/utils/basic_utils.h>
 #include <mochi_core/utils/constants.h>
 #include <mochi_core/utils/math_utils.h>
+#include <mochi_core/utils/nd_array_utils.h>
 
 #include <algorithm>
 #include <array>
@@ -64,6 +67,23 @@ static mochi::Real3 ClampMagnitude(mochi::Real3 const& v, mochi::real maxLen) {
     return v * (maxLen / len);
   }
   return v;
+}
+
+// The deformed nodes of a grabbable deformable, in its local frame: a soft body's (from its
+// NodePositions query), or a rod's centerline (from its pose). Empty when unavailable. Sim thread.
+static mochi::Span<mochi::Real3 const> NodePositionsLocal(
+    mochi::Actor const& actor,
+    RodPose& rodPose) {
+  mochi::ErrorLog error;
+  if (actor.GetType() == mochi::ActorType::Rod) {
+    ReadRodPose(actor, rodPose, error);
+    return mochi::Unflatten<mochi::Real3 const>(mochi::MakeConstSpan(rodPose.nodes));
+  }
+  mochi::Span<mochi::real const> const local = actor.GetNodePositionsLocal(error);
+  if (!error.IsOK()) {
+    return {};
+  }
+  return mochi::Unflatten<mochi::Real3 const>(local);
 }
 
 // PhysicsDragSettings is reflected and persisted, so a hand-edited settings file can reach values
@@ -174,11 +194,17 @@ void PhysicsDragController::BuildActorMap(mochi::Scene* scene) {
         _nameToHandle[name] = actor->GetHandle();
       }
     } else if (type == mochi::ActorType::Soft) {
-      // Soft bodies are grabbable via a single-node constraint (chosen at grab time). Register a
+      // Soft bodies are grabbable via node constraints (chosen at grab time). Register a
       // NodePositions query so GetNodePositionsLocal() (used to find the nearest node and the
       // anchor) returns data during simulation; it's freed when the scene is destroyed on stop.
       mochi::Error queryError;
       actor->RegisterQuery(mochi::QueryType::NodePositions, queryError);
+      if (char const* name = actor->GetName()) {
+        _nameToHandle[name] = actor->GetHandle();
+      }
+    } else if (type == mochi::ActorType::Rod) {
+      // Rods are grabbed like soft bodies, by their centerline nodes, read from their pose (rods
+      // have no NodePositions query).
       if (char const* name = actor->GetName()) {
         _nameToHandle[name] = actor->GetHandle();
       }
@@ -403,17 +429,14 @@ void PhysicsDragController::OnPreStep(mochi::StepInfo const& info) {
     }
     return 0_r;
   };
-  // Current world position of the grab point: the tracked node for soft bodies, else the fixed
-  // local pivot on the (rigid/static) body.
+  // Current world position of the grab point: the tracked node for soft bodies and rods, else the
+  // fixed local pivot on the (rigid/static) body.
   auto currentAnchorWorld = [this](mochi::Actor* grabbed) -> mochi::Real3 {
     mochi::TransformRT const worldFromLocal = grabbed->GetRootTransform();
     if (_simSoft) {
-      mochi::Error error;
-      mochi::Span<mochi::real const> const local = grabbed->GetNodePositionsLocal(error);
-      int const base = _simNodeIndex * 3;
-      if (error.IsOK() && _simNodeIndex >= 0 && base + 2 < mochi::isize(local)) {
-        return worldFromLocal.TransformPoint(
-            mochi::Real3{local[base], local[base + 1], local[base + 2]});
+      auto const local = NodePositionsLocal(*grabbed, _simRodPose);
+      if (_simNodeIndex >= 0 && _simNodeIndex < mochi::isize(local)) {
+        return worldFromLocal.TransformPoint(local[_simNodeIndex]);
       }
       return _simTarget; // node unavailable; fall back to the target
     }
@@ -481,64 +504,32 @@ void PhysicsDragController::OnPreStep(mochi::StepInfo const& info) {
       // gizmo render gray as feedback.
       _simStatic = true;
       _simLocalPosition = worldFromLocal.TransformPointInverse(target);
-    } else if (grabbed->GetType() == mochi::ActorType::Soft) {
-      // Grab a cluster of nodes near the pick (soft bodies have no rigid pivot). A single node
-      // pinches, so spring every node within a radius and translate them rigidly with the drag.
-      mochi::Error nodeError;
-      mochi::Span<mochi::real const> const local = grabbed->GetNodePositionsLocal(nodeError);
-      if (!nodeError.IsOK() || local.size() < 3) {
+    } else if (
+        grabbed->GetType() == mochi::ActorType::Soft ||
+        grabbed->GetType() == mochi::ActorType::Rod) {
+      // Grab nodes near the pick (soft bodies and rods have no rigid pivot). A single soft node
+      // pinches the tet mesh, so soft grabs spring every node within a radius and translate them
+      // rigidly with the drag. A rod takes a point load fine, so it is grabbed by its nearest
+      // centerline node alone.
+      auto const nodesLocal = NodePositionsLocal(*grabbed, _simRodPose);
+      if (nodesLocal.empty()) {
         publishDebug(false, true, {}, {}, 0_r); // node data unavailable (query not ready)
         return;
       }
-      int const nodeCount = mochi::isize(local) / 3;
-      auto nodeWorldOf = [&](int i) {
-        return worldFromLocal.TransformPoint(
-            mochi::Real3{local[3 * i], local[3 * i + 1], local[3 * i + 2]});
-      };
-      // First pass: nearest node to the pick + the body's world bounds (for a scale-relative
-      // radius).
-      int anchor = -1;
-      mochi::real bestSq = std::numeric_limits<mochi::real>::max();
-      mochi::Real3 boundsMin = nodeWorldOf(0);
-      mochi::Real3 boundsMax = boundsMin;
-      for (int i = 0; i < nodeCount; ++i) {
-        mochi::Real3 const p = nodeWorldOf(i);
-        boundsMin = mochi::Min(boundsMin, p);
-        boundsMax = mochi::Max(boundsMax, p);
-        mochi::real const distSq = mochi::NormSqr(p - target);
-        if (distSq < bestSq) {
-          bestSq = distSq;
-          anchor = i;
-        }
-      }
-      if (anchor < 0) {
-        publishDebug(false, true, {}, {}, 0_r);
-        return;
-      }
+      std::vector<mochi::Real3> nodesWorld(nodesLocal.size());
+      std::ranges::transform(nodesLocal, nodesWorld.begin(), [&](mochi::Real3 const& node) {
+        return worldFromLocal.TransformPoint(node);
+      });
+      std::vector<int> const cluster = SelectGrabCluster(
+          mochi::MakeConstSpan(nodesWorld),
+          target,
+          settings.softGrabRadiusFraction,
+          grabbed->GetType() == mochi::ActorType::Rod ? 1 : settings.softGrabMaxNodes);
+      int const anchor = cluster.front();
       _simSoft = true;
       _simNodeIndex = anchor;
-      mochi::Real3 const anchorWorld = nodeWorldOf(anchor);
+      mochi::Real3 const anchorWorld = nodesWorld[anchor];
       _simTarget = anchorWorld; // virtual hand starts on the anchor node (no initial jump)
-
-      mochi::Real3 const extent = boundsMax - boundsMin;
-      mochi::real const radius = settings.softGrabRadiusFraction * mochi::Norm(extent);
-      mochi::real const radiusSq = mochi::Sqr(radius);
-
-      // Second pass: gather nodes within the radius of the pick, closest first (capped).
-      std::vector<std::pair<mochi::real, int>> within;
-      for (int i = 0; i < nodeCount; ++i) {
-        mochi::real const distSq = mochi::NormSqr(nodeWorldOf(i) - target);
-        if (distSq <= radiusSq) {
-          within.emplace_back(distSq, i);
-        }
-      }
-      if (within.empty()) {
-        within.emplace_back(bestSq, anchor); // radius too small; at least grab the anchor node
-      }
-      std::sort(within.begin(), within.end());
-      if (mochi::isize(within) > settings.softGrabMaxNodes) {
-        within.resize(settings.softGrabMaxNodes);
-      }
 
       mochi::Error massError;
       mochi::real softMass = grabbed->GetMass(massError);
@@ -547,12 +538,11 @@ void PhysicsDragController::OnPreStep(mochi::StepInfo const& info) {
       }
       // Split the total mass across the cluster so the combined authority matches a single
       // total-mass grab, just spread out to avoid pinching a single vertex.
-      mochi::real const perNodeMass = softMass / static_cast<mochi::real>(within.size());
+      mochi::real const perNodeMass = softMass / static_cast<mochi::real>(cluster.size());
       mochi::real const omega = kTwoPi * settings.responseFrequencyHz;
       mochi::real const omegaSq = omega * omega;
-      for (auto const& entry : within) {
-        int const i = entry.second;
-        mochi::Real3 const nodeWorld = nodeWorldOf(i);
+      for (int const i : cluster) {
+        mochi::Real3 const nodeWorld = nodesWorld[i];
         mochi::DeformableNodePositionConstraintParams params;
         params.actor = actor;
         params.nodeIndex = i;

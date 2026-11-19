@@ -126,6 +126,13 @@ class MochiModelAsset : public Asset {
       mochi_renderer::LineSegmentMesh& centerline,
       mochi::Real3 const& bakeScale,
       mochi::TransformRT const& shapeTransform);
+  // A polyline model's centerline nodes (3 values per node), baked like CreateCenterlineMesh but in
+  // Mochi space, and its element node pairs. Returns false if the model is not a polyline.
+  bool BakeRodRestNodes(
+      mochi::Real3 const& bakeScale,
+      mochi::TransformRT const& shapeTransform,
+      std::vector<mochi::real>& outNodes,
+      std::vector<int>& outConnectivity);
   // Sets @p renderModel, a render model linked to this model's visual mesh (see
   // CheckRenderModelLink), to the visual mesh's rest pose, baked like UpdateDeformableMeshes.
   void UpdateSoftRenderModel(

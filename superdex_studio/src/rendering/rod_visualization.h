@@ -16,11 +16,13 @@
 
 #pragma once
 
-// Rod (polyline) visualization helpers. Pure geometry (no renderer), so it runs anywhere.
+// Rod (polyline) visualization helpers, and the pure geometry of picking and grabbing deformables.
+// No renderer, so it runs anywhere.
 
 #include <mochi_core/utils/nd_array.h>
 #include <mochi_core/utils/span.h>
 
+#include <optional>
 #include <string_view>
 #include <vector>
 
@@ -60,5 +62,36 @@ std::vector<FrameAxisGlyph> ComputeFrameAxisGlyphs(
     mochi::Span<mochi::real const> nodeCoordinates,
     mochi::Span<int const> connectivity,
     mochi::Span<mochi::real const> frameAxes);
+
+// The nodes a grab at @p grabPoint springs, nearest first: the nearest node (the anchor, first)
+// and every node within @p radiusFraction of the nodes' bounding-box diagonal, at most @p maxNodes.
+// Empty when there are no nodes.
+std::vector<int> SelectGrabCluster(
+    mochi::Span<mochi::Real3 const> nodes,
+    mochi::Real3 const& grabPoint,
+    mochi::real radiusFraction,
+    int maxNodes);
+
+// A polyline segment before perspective division, using the camera's OpenGL-style rendering
+// projection.
+struct ClipSegment {
+  mochi::Float4 a;
+  mochi::Float4 b;
+};
+struct ScreenSegmentHit {
+  int segment = -1;
+  // World-space interpolation parameter of the original segment, 0 at `a` to 1 at `b`.
+  float t = 0;
+  float distancePx = 0;
+};
+
+// Picks the segment in front of the near plane nearest @p cursor in framebuffer pixels,
+// within @p maxDistancePx.
+// Equal screen distances are broken by depth, then by segment order.
+std::optional<ScreenSegmentHit> PickNearestScreenSegment(
+    mochi::Span<ClipSegment const> segments,
+    mochi::Float2 cursor,
+    mochi::Float2 viewportSize,
+    float maxDistancePx);
 
 } // namespace superdex::studio

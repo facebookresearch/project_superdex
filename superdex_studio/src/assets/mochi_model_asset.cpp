@@ -335,6 +335,32 @@ void MochiModelAsset::UpdateCenterlineMesh(
   }
 }
 
+bool MochiModelAsset::BakeRodRestNodes(
+    mochi::Real3 const& bakeScale,
+    mochi::TransformRT const& shapeTransform,
+    std::vector<mochi::real>& outNodes,
+    std::vector<int>& outConnectivity) {
+  using namespace mochi;
+  ErrorLog error;
+  MeshDataView const mesh = GetNativeSurfaceMesh(DeformableSurface::Centerline, error);
+  if (!error.IsOK() || mesh.nodesPerElement != 2 || mesh.GetNumNodes() < 2) {
+    return false;
+  }
+  // Baked like BakeNodePositions, but kept in Mochi space.
+  int const numNodes = mesh.GetNumNodes();
+  outNodes.resize(static_cast<size_t>(numNodes) * 3);
+  for (int n = 0; n < numNodes; ++n) {
+    Real3 const native{
+        mesh.coordinates[3 * n + 0], mesh.coordinates[3 * n + 1], mesh.coordinates[3 * n + 2]};
+    Real3 const baked = shapeTransform.TransformPoint(bakeScale * native);
+    outNodes[3 * n + 0] = baked[0];
+    outNodes[3 * n + 1] = baked[1];
+    outNodes[3 * n + 2] = baked[2];
+  }
+  outConnectivity.assign(mesh.connectivity.begin(), mesh.connectivity.end());
+  return true;
+}
+
 int MochiModelAsset::GetSoftSurfaceVertexCount() {
   mochi::ErrorLog e;
   mochi::MeshDataView const surface = GetNativeSoftSurface(e);

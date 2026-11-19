@@ -665,6 +665,17 @@ static void BuildPrefabRequests(
         asset->GetRodSurfaces(actor.useContactSkin),
         StagedActorSource::Rod);
     req.rodIsClosedLoop = IsPolylineClosedLoop(*asset->GetModelData().mesh);
+    StagedRod& rod = req.rod.emplace();
+    if (!asset->BakeRodRestNodes(
+            req.deformableBakeScale,
+            req.deformableShapeTransform,
+            rod.restNodes,
+            rod.connectivity)) {
+      MOCHI_LOG_WARNING_ONCE(
+          "SceneStage: a rod actor's model has no valid Mochi shape; it will not render.");
+      continue;
+    }
+    rod.nodes = rod.restNodes;
     out.push_back(std::move(req));
   }
 }
@@ -1336,9 +1347,7 @@ bool SceneStage::StageBotSceneImpl(
   return ApplyStageRequests(requests, stageType);
 }
 
-bool SceneStage::ApplyStageRequests(
-    std::vector<StageRequest> const& requests,
-    StageType stageType) {
+bool SceneStage::ApplyStageRequests(std::vector<StageRequest>& requests, StageType stageType) {
   using namespace mochi;
   _stageType = stageType;
   auto& manager = _studio->GetAssetManager();
@@ -1392,7 +1401,7 @@ bool SceneStage::ApplyStageRequests(
 
   for (int i = 0; i < isize(requests); ++i) {
     auto& actor = _actors[i];
-    auto const& req = requests[i];
+    auto& req = requests[i];
 
     // Refresh transforms/offsets/scales every stage so pure pose/offset/scale edits (which do not
     // invalidate reuse) are reflected. Object (re)creation only happens on the rebuild path.
@@ -1409,6 +1418,7 @@ bool SceneStage::ApplyStageRequests(
     actor.deformableBakeScale = req.deformableBakeScale;
     actor.deformableShapeTransform = req.deformableShapeTransform;
     SetSoftRenderModelNotice(actor, req.name, req.softRenderModelNotice);
+    actor.rod = std::move(req.rod);
 
     // Soft actors bake scale/shape-offset into their geometry, so an edit that changes the rest
     // geometry but not the vertex count (e.g. scaling a nested prefab) reuses the meshes. Re-bake
@@ -1916,6 +1926,9 @@ void SceneStage::ResetWorldTransforms(mochi::CoordinateSpaceConverter const& con
         RestoreDeformableRestPose(actor);
       }
     }
+    if (actor.rod) {
+      actor.rod->nodes = actor.rod->restNodes;
+    }
     // Simulation is over: hand the shape slot back to the blend-skinned surface, which tracks
     // editor-time pose changes, and drop the simulation surface entirely so its rest geometry does
     // not sit in the scene bounds until the next run.
@@ -1979,6 +1992,10 @@ void SceneStage::ApplyDeformableMeshUpdates(
         vertexCount(wirePositions) == actor.deformableCollisionVertexCount) {
       actor.dynamicShapeCenterline->Update(mochi::MakeConstSpan(wirePositions));
     }
+    // A pose of another size was read from a different model (it was reloaded underneath).
+    if (actor.rod && update.rodPose.nodes.size() == actor.rod->restNodes.size()) {
+      actor.rod->nodes = update.rodPose.nodes;
+    }
     SetStagedActorWorldTransform(actor, update.worldTransform, converter);
   }
 }
@@ -2010,6 +2027,72 @@ StagedActors const& SceneStage::GetActors() const {
 
 int SceneStage::GetNumActors() const {
   return static_cast<int>(_actors.size());
+}
+
+mochi_renderer::PickResult SceneStage::PickCenterline(
+    mochi_renderer::Scene const& renderScene,
+    float pxX,
+    float pxY,
+    float maxDistancePx) const {
+  using filament::math::float3;
+  using filament::math::float4;
+  using mochi::Int2;
+  int width = 0;
+  int height = 0;
+  renderScene.GetViewportSize(width, height);
+  if (width <= 0 || height <= 0) {
+    return {};
+  }
+  filament::math::mat4 const viewProjection =
+      renderScene.GetCamera()->getProjectionMatrix() * renderScene.GetCameraViewMatrix();
+  auto const& converter = _studio->GetEditorToRendererSpaceConverter();
+  struct Candidate {
+    SceneObject* object;
+    float3 a;
+    float3 b;
+  };
+  std::vector<Candidate> candidates;
+  std::vector<ClipSegment> segments;
+  for (StagedActor const& actor : _actors) {
+    if (!actor.rod) {
+      continue;
+    }
+    // The centerline is drawn in whichever shown slot holds it.
+    SceneObject* object = nullptr;
+    for (StagedActor::Instance const* inst : {&actor.render, &actor.shape}) {
+      if (inst->isPolyline && inst->visible && inst->sceneObject) {
+        object = inst->sceneObject;
+      }
+    }
+    if (object == nullptr) {
+      continue;
+    }
+    auto const nodes = mochi::Unflatten<mochi::Real3 const>(mochi::MakeConstSpan(actor.rod->nodes));
+    auto const elements =
+        mochi::Unflatten<Int2 const>(mochi::MakeConstSpan(actor.rod->connectivity));
+    auto toWorld = [&](int node) {
+      return ToFilament<float>(
+          converter.TranslationToOutput(actor.worldTransform.TransformPoint(nodes[node])));
+    };
+    for (Int2 const& element : elements) {
+      float3 const a = toWorld(element[0]);
+      float3 const b = toWorld(element[1]);
+      float4 const clipA = viewProjection * float4(a, 1.0f);
+      float4 const clipB = viewProjection * float4(b, 1.0f);
+      candidates.push_back({object, a, b});
+      segments.push_back({ToMochi(clipA), ToMochi(clipB)});
+    }
+  }
+  std::optional<ScreenSegmentHit> const hit = PickNearestScreenSegment(
+      mochi::MakeConstSpan(segments),
+      mochi::Float2{pxX, pxY},
+      mochi::Float2{static_cast<float>(width), static_cast<float>(height)},
+      maxDistancePx);
+  if (!hit) {
+    return {};
+  }
+  Candidate const& c = candidates[hit->segment];
+  return {.object = c.object, .worldPosition = c.a + (c.b - c.a) * hit->t, .hit = true};
 }
 
 int SceneStage::FindIndexByName(std::string_view name) const {

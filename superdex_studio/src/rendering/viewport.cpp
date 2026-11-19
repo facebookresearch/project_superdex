@@ -1040,8 +1040,8 @@ void Viewport::ShowViewportContents(bool showCameraOrientationGizmo) {
     // superseded. Tag the request and drop results that no longer match, otherwise a stale result
     // would re-arm a released drag on an object the user is no longer holding.
     uint64_t const pickGeneration = ++_grabPickGeneration;
-    _renderScene->PickSceneObjectWithPosition(
-        pickX, pickY, [this, pickGeneration](mochi_renderer::PickResult const& result) {
+    PickSceneObject(
+        pickX, pickY, fbScale, [this, pickGeneration](mochi_renderer::PickResult const& result) {
           if (pickGeneration != _grabPickGeneration) {
             return;
           }
@@ -1152,7 +1152,8 @@ void Viewport::ShowViewportContents(bool showCameraOrientationGizmo) {
       float localY = (mousePos.y - windowPos.y) * fbScale;
       float pickX = localX;
       float pickY = static_cast<float>(renderHeight) - 1.0f - localY;
-      _renderScene->PickSceneObject(pickX, pickY, [this](SceneObject* object) {
+      PickSceneObject(pickX, pickY, fbScale, [this](mochi_renderer::PickResult const& result) {
+        SceneObject* const object = result.object;
         bool const multiSelect =
             allowMultiSelect && (ImGui::GetIO().KeyCtrl || ImGui::GetIO().KeyShift);
         if (multiSelect) {
@@ -1862,6 +1863,24 @@ bool Viewport::ShowTransformGizmoToolbar() {
   ImGui::PopFont();
 
   return toolbarClicked;
+}
+
+void Viewport::PickSceneObject(
+    float pxX,
+    float pxY,
+    float fbScale,
+    std::function<void(mochi_renderer::PickResult const&)> const& onPicked) {
+  // Close enough to aim at a one-pixel line without grabbing a neighbor across the gap.
+  constexpr float kCenterlinePickRadiusPx = 8.0f;
+  if (_stage != nullptr) {
+    mochi_renderer::PickResult const centerline =
+        _stage->PickCenterline(*_renderScene, pxX, pxY, kCenterlinePickRadiusPx * fbScale);
+    if (centerline.hit) {
+      onPicked(centerline);
+      return;
+    }
+  }
+  _renderScene->PickSceneObjectWithPosition(pxX, pxY, onPicked);
 }
 
 void Viewport::HandleMeasureToolInput(bool canPick, int renderHeight, float fbScale) {
