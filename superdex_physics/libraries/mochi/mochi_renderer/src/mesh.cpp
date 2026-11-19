@@ -131,6 +131,18 @@ static void SetTangentBuffer(
           }));
 }
 
+namespace {
+// Holds freshly created buffers plus their geometry counts and bounds. Ownership of the buffers
+// transfers to the caller.
+struct GeometryBuffers {
+  filament::VertexBuffer* vertexBuffer = nullptr;
+  filament::IndexBuffer* indexBuffer = nullptr;
+  size_t vertexCount = 0;
+  size_t indexCount = 0;
+  filament::Box boundingBox;
+};
+} // namespace
+
 static size_t s_meshCount = 0;
 
 //------------------------------------------------------------------------------------------------
@@ -520,6 +532,40 @@ IInstanceable* MeshInstance::GetInstanceable() {
 
 namespace {
 size_t s_lineSegmentMeshCount = 0;
+
+void AssertValidLineSegmentGeometry(
+    [[maybe_unused]] mochi::Span<float const> positions,
+    [[maybe_unused]] mochi::Span<int const> indices) {
+  MOCHI_ASSERT(!positions.empty());
+  MOCHI_ASSERT(positions.size() % 3 == 0, "Expected 3 per vertex");
+  MOCHI_ASSERT(indices.size() % 2 == 0, "Expected 2 per line segment");
+  MOCHI_ASSERT_VERBOSE(std::ranges::all_of(indices, [&](int index) {
+    return index >= 0 && static_cast<size_t>(index) < positions.size() / 3;
+  }));
+}
+
+// Builds the POSITION vertex buffer and the segment index buffer from copies that Filament frees.
+// Bounds are computed from `positions`.
+GeometryBuffers CreateLineSegmentBuffers(
+    filament::Engine& engine,
+    mochi::Span<float const> positions,
+    mochi::Span<int const> indices) {
+  size_t const vertexCount = positions.size() / 3;
+  auto* vertexBuffer =
+      filament::VertexBuffer::Builder()
+          .vertexCount(static_cast<uint32_t>(vertexCount))
+          .bufferCount(1)
+          .attribute(
+              filament::VertexAttribute::POSITION, 0, filament::VertexBuffer::AttributeType::FLOAT3)
+          .build(engine);
+  SetPositionBuffer(engine, *vertexBuffer, 0, CopyPositions(positions, vertexCount), vertexCount);
+  return {
+      vertexBuffer,
+      CreateIndexBuffer(engine, indices),
+      vertexCount,
+      indices.size(),
+      ComputeBoundingBox(positions.data(), vertexCount)};
+}
 } // namespace
 
 std::unique_ptr<LineSegmentMesh> LineSegmentMesh::CreateLineSegmentMesh(
@@ -528,9 +574,7 @@ std::unique_ptr<LineSegmentMesh> LineSegmentMesh::CreateLineSegmentMesh(
     mochi::Span<int const> indices,
     std::shared_ptr<MaterialInstance> material,
     bool isDynamic) {
-  MOCHI_ASSERT(!positions.empty());
-  MOCHI_ASSERT(positions.size() % 3 == 0, "Expected 3 per vertex");
-  MOCHI_ASSERT(indices.size() % 2 == 0, "Expected 2 per line segment");
+  AssertValidLineSegmentGeometry(positions, indices);
   auto mesh = std::unique_ptr<LineSegmentMesh>(
       new LineSegmentMesh(engine, positions, indices, material, isDynamic));
   mesh->SetName("LineSegmentMesh" + std::to_string(s_lineSegmentMeshCount++));
@@ -544,61 +588,22 @@ LineSegmentMesh::LineSegmentMesh(
     std::shared_ptr<MaterialInstance> material,
     bool isDynamic)
     : SceneObject(engine) {
-  size_t const vertexCount = positions.size() / 3;
-  size_t const indexCount = indices.size();
-
   auto& em = utils::EntityManager::get();
   _engine = engine;
   _isDynamic = isDynamic;
-  _vertexCount = vertexCount;
-  _indexCount = indexCount;
   _entity = em.create();
   _material = material;
 
-  _vertexBuffer =
-      filament::VertexBuffer::Builder()
-          .vertexCount(static_cast<uint32_t>(vertexCount))
-          .bufferCount(1)
-          .attribute(
-              filament::VertexAttribute::POSITION, 0, filament::VertexBuffer::AttributeType::FLOAT3)
-          .build(*_engine);
-
-  if (isDynamic) {
-    _dynamicPositions.resize(vertexCount);
-    std::memcpy(
-        _dynamicPositions.data(), positions.data(), vertexCount * sizeof(filament::math::float3));
-    _vertexBuffer->setBufferAt(
-        *_engine,
-        0,
-        filament::VertexBuffer::BufferDescriptor(
-            _dynamicPositions.data(), vertexCount * sizeof(filament::math::float3)));
-  } else {
-    auto* posCopy = new filament::math::float3[vertexCount];
-    std::memcpy(posCopy, positions.data(), vertexCount * sizeof(filament::math::float3));
-    _vertexBuffer->setBufferAt(
-        *_engine,
-        0,
-        filament::VertexBuffer::BufferDescriptor(
-            posCopy, vertexCount * sizeof(filament::math::float3), [](void* buf, size_t, void*) {
-              delete[] static_cast<filament::math::float3*>(buf);
-            }));
+  GeometryBuffers const buffers = CreateLineSegmentBuffers(*_engine, positions, indices);
+  _vertexBuffer = buffers.vertexBuffer;
+  _indexBuffer = buffers.indexBuffer;
+  _vertexCount = buffers.vertexCount;
+  _indexCount = buffers.indexCount;
+  _boundingBox = buffers.boundingBox;
+  if (_isDynamic) {
+    // Persistent CPU buffer that Update rewrites and uploads from in place.
+    _dynamicPositions.resize(_vertexCount);
   }
-
-  _indexBuffer = filament::IndexBuffer::Builder()
-                     .indexCount(static_cast<uint32_t>(indexCount))
-                     .bufferType(filament::IndexBuffer::IndexType::UINT)
-                     .build(*_engine);
-
-  auto* idxCopy = new uint32_t[indexCount];
-  std::memcpy(idxCopy, indices.data(), indexCount * sizeof(uint32_t));
-  _indexBuffer->setBuffer(
-      *_engine,
-      filament::IndexBuffer::BufferDescriptor(
-          idxCopy, indexCount * sizeof(uint32_t), [](void* buf, size_t, void*) {
-            delete[] static_cast<uint32_t*>(buf);
-          }));
-
-  _boundingBox = ComputeBoundingBox(positions.data(), vertexCount);
 
   filament::RenderableManager::Builder(1)
       .boundingBox(_boundingBox)
@@ -609,7 +614,7 @@ LineSegmentMesh::LineSegmentMesh(
           _vertexBuffer,
           _indexBuffer,
           0,
-          indexCount)
+          _indexCount)
       .culling(false)
       .receiveShadows(false)
       .castShadows(false)
@@ -625,12 +630,60 @@ LineSegmentMesh::LineSegmentMesh(
 LineSegmentMesh::~LineSegmentMesh() {
   _engine->destroy(_entity);
   _material.reset();
+  // Dynamic Update() uploads straight from _dynamicPositions, so drain the backend before the
+  // buffers (and that storage) go away.
+  if (_isDynamic) {
+    _engine->flushAndWait();
+  }
   _engine->destroy(_vertexBuffer);
   _engine->destroy(_indexBuffer);
 }
 
 bool LineSegmentMesh::IsDynamic() const {
   return _isDynamic;
+}
+
+bool LineSegmentMesh::UpdateGeometry(
+    mochi::Span<float const> positions,
+    mochi::Span<int const> indices) {
+  // Filament fixes a STATIC renderable's buffers, so only a dynamic mesh can be re-pointed.
+  if (!_isDynamic) {
+    MOCHI_LOG_WARNING("LineSegmentMesh::UpdateGeometry called on a non-dynamic mesh; ignored.");
+    return false;
+  }
+  AssertValidLineSegmentGeometry(positions, indices);
+  GeometryBuffers const buffers = CreateLineSegmentBuffers(*_engine, positions, indices);
+
+  auto& rcm = _engine->getRenderableManager();
+  auto repoint = [&](utils::Entity entity) {
+    auto ri = rcm.getInstance(entity);
+    rcm.setGeometryAt(
+        ri,
+        0,
+        filament::RenderableManager::PrimitiveType::LINES,
+        buffers.vertexBuffer,
+        buffers.indexBuffer,
+        0,
+        buffers.indexCount);
+    rcm.setAxisAlignedBoundingBox(ri, buffers.boundingBox);
+  };
+  repoint(_entity);
+  for (utils::Entity const entity : _instanceEntities) {
+    repoint(entity);
+  }
+
+  // Drain the backend before freeing the buffers (and dynamic storage) referenced until now.
+  _engine->flushAndWait();
+  _engine->destroy(_vertexBuffer);
+  _engine->destroy(_indexBuffer);
+
+  _vertexBuffer = buffers.vertexBuffer;
+  _indexBuffer = buffers.indexBuffer;
+  _vertexCount = buffers.vertexCount;
+  _indexCount = buffers.indexCount;
+  _boundingBox = buffers.boundingBox;
+  _dynamicPositions.resize(_vertexCount);
+  return true;
 }
 
 bool LineSegmentMesh::Update(mochi::Span<float const> positions) {
@@ -649,7 +702,11 @@ bool LineSegmentMesh::Update(mochi::Span<float const> positions) {
 
   auto& rcm = _engine->getRenderableManager();
   auto ri = rcm.getInstance(_entity);
-  rcm.setAxisAlignedBoundingBox(ri, ComputeBoundingBox(positions.data(), _vertexCount));
+  _boundingBox = ComputeBoundingBox(positions.data(), _vertexCount);
+  rcm.setAxisAlignedBoundingBox(ri, _boundingBox);
+  for (utils::Entity const entity : _instanceEntities) {
+    rcm.setAxisAlignedBoundingBox(rcm.getInstance(entity), _boundingBox);
+  }
 
   return true;
 }
@@ -671,10 +728,6 @@ mochi::Span<utils::Entity const> LineSegmentMesh::GetEntities() const {
 }
 
 std::unique_ptr<SceneObject> LineSegmentMesh::GetInstance() {
-  if (_isDynamic) {
-    MOCHI_LOG_WARNING(
-        "Creating LineSegmentMeshInstance from dynamic LineSegmentMesh; updating LineSegmentMesh vertex positions will affect instances");
-  }
   auto& em = utils::EntityManager::get();
   auto instanceEntity = em.create();
   filament::RenderableManager::Builder(1)
@@ -696,13 +749,13 @@ std::unique_ptr<SceneObject> LineSegmentMesh::GetInstance() {
       .build(*_engine, instanceEntity);
   auto& tcm = _engine->getTransformManager();
   tcm.setTransform(tcm.getInstance(instanceEntity), filament::math::mat4f());
-  _instanceCount++;
+  _instanceEntities.push_back(instanceEntity);
   return std::unique_ptr<LineSegmentMeshInstance>(
       new LineSegmentMeshInstance(_engine, instanceEntity, this));
 }
 
 int LineSegmentMesh::GetInstanceCount() const {
-  return _instanceCount;
+  return static_cast<int>(_instanceEntities.size());
 }
 
 IInstanceable* LineSegmentMesh::GetInstanceable() {
@@ -722,7 +775,7 @@ LineSegmentMeshInstance::LineSegmentMeshInstance(
 }
 
 LineSegmentMeshInstance::~LineSegmentMeshInstance() {
-  _primaryMesh->_instanceCount--;
+  std::erase(_primaryMesh->_instanceEntities, _entity);
   _engine->destroy(_entity);
 }
 
@@ -807,21 +860,11 @@ void BuildWireframeRenderable(
   tcm.setTransform(tcm.getInstance(entity), filament::math::mat4f());
 }
 
-// Holds freshly created wireframe buffers plus their geometry counts and bounds. Ownership of the
-// buffers transfers to the caller.
-struct WireframeBuffers {
-  filament::VertexBuffer* vertexBuffer = nullptr;
-  filament::IndexBuffer* indexBuffer = nullptr;
-  size_t vertexCount = 0;
-  size_t indexCount = 0;
-  filament::Box boundingBox;
-};
-
 // De-indexes the triangles (each corner becomes a unique vertex carrying a barycentric coordinate)
 // and builds the POSITION / CUSTOM0(bary) / TANGENTS vertex buffer plus a trivial index buffer.
 // When `normals` is non-empty, real tangents are derived for flat shading; otherwise identity
 // tangents are used (the pure-wireframe pass ignores them). Bounds are computed from `positions`.
-WireframeBuffers CreateWireframeBuffers(
+GeometryBuffers CreateWireframeBuffers(
     filament::Engine& engine,
     mochi::Span<float const> positions,
     mochi::Span<float const> normals,
@@ -913,7 +956,7 @@ WireframeBuffers CreateWireframeBuffers(
 // `boneIndices` / `boneWeights` are per-NODE (indexed like positions), `weightsPerVertex` entries
 // each; they are de-indexed per corner and padded to 4 influences. The bounds are inflated so posed
 // (skinned) vertices are not culled when they move outside the rest AABB.
-WireframeBuffers CreateSkinnedWireframeBuffers(
+GeometryBuffers CreateSkinnedWireframeBuffers(
     filament::Engine& engine,
     mochi::Span<float const> positions,
     mochi::Span<float const> normals,
@@ -1081,7 +1124,7 @@ WireframeMesh::WireframeMesh(
   _isDynamic = isDynamic;
   _castShadows = castShadows;
 
-  WireframeBuffers const buffers = CreateWireframeBuffers(*_engine, positions, normals, indices);
+  GeometryBuffers const buffers = CreateWireframeBuffers(*_engine, positions, normals, indices);
   _vertexBuffer = buffers.vertexBuffer;
   _indexBuffer = buffers.indexBuffer;
   _vertexCount = buffers.vertexCount;
@@ -1185,7 +1228,7 @@ WireframeMesh::WireframeMesh(
   _castShadows = true;
   _boneCount = static_cast<size_t>(boneCount);
 
-  WireframeBuffers const buffers = CreateSkinnedWireframeBuffers(
+  GeometryBuffers const buffers = CreateSkinnedWireframeBuffers(
       *_engine, positions, normals, indices, boneIndices, boneWeights, weightsPerVertex);
   _vertexBuffer = buffers.vertexBuffer;
   _indexBuffer = buffers.indexBuffer;
@@ -1263,7 +1306,7 @@ bool WireframeMesh::UpdateGeometry(
     return false;
   }
 
-  WireframeBuffers const buffers = CreateWireframeBuffers(*_engine, positions, normals, indices);
+  GeometryBuffers const buffers = CreateWireframeBuffers(*_engine, positions, normals, indices);
 
   // Re-point the primary and every live instance at the new buffers, so all instances (e.g. across
   // editors) update at once. setGeometryAt supports a changed index count.

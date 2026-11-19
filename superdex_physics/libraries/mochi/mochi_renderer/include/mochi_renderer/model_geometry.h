@@ -16,14 +16,16 @@
 
 #pragma once
 
-// Triangle geometry for a Mochi model, with no dependency on the Filament engine, so tools that
-// only read models can use it without the renderer. SuperDex Studio's processing code reads Mochi
-// models through it, which lets `superdex_studio --process` and the processing tests run on Linux
-// CI and on devservers that have no display. Screenshots still render through the full renderer.
+// Triangle and polyline geometry for a Mochi model, with no dependency on the Filament engine, so
+// tools that only read models can use it without the renderer. SuperDex Studio's processing code
+// reads Mochi models through it, which lets `superdex_studio --process` and the processing tests
+// run on Linux CI and on devservers that have no display. Screenshots still render through the full
+// renderer.
 
 #include <vector>
 
 namespace mochi {
+struct MeshDataView;
 struct ModelData;
 class CoordinateSpaceConverter;
 } // namespace mochi
@@ -47,5 +49,17 @@ bool BuildMochiModelGeometry(
     std::vector<float>& positions,
     std::vector<float>& normals,
     std::vector<int>& indices);
+
+// Extracts the line segments of a valid polyline (rod) mesh (see @ref mochi::model::Validate),
+// converting positions like @ref BuildMochiModelGeometry. `segmentIndices` holds two node indices
+// per segment of the open or closed polyline through the nodes in order.
+//
+// @return false (leaving the outputs unspecified) if @p mesh is not a polyline mesh with at least
+// two nodes.
+bool BuildMochiPolylineGeometry(
+    mochi::MeshDataView const& mesh,
+    mochi::CoordinateSpaceConverter const* converter,
+    std::vector<float>& positions,
+    std::vector<int>& segmentIndices);
 
 } // namespace mochi_renderer

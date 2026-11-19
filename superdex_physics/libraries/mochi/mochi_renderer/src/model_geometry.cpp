@@ -19,6 +19,7 @@
 #include <mochi_renderer/render_space.h>
 #include <mochi_renderer/utils.h>
 
+#include <mochi_core/geometry/mesh_data_utils.h>
 #include <mochi_core/geometry/model_data.h>
 #include <mochi_core/geometry/tetrahedral_mesh.h>
 #include <mochi_core/utils/constants.h>
@@ -277,6 +278,33 @@ bool BuildMochiModelGeometry(
       vertexNormals.size() != positions.size()) {
     return false;
   }
+  return true;
+}
+
+bool BuildMochiPolylineGeometry(
+    mochi::MeshDataView const& mesh,
+    mochi::CoordinateSpaceConverter const* converter,
+    std::vector<float>& positions,
+    std::vector<int>& segmentIndices) {
+  int const numNodes = mesh.GetNumNodes();
+  if (mesh.nodesPerElement != 2 || numNodes < 2) {
+    return false;
+  }
+  mochi::CoordinateSpaceConverter const defaultConverter(
+      mochi::CoordinateSpace::Default(), RenderSpace());
+  mochi::CoordinateSpaceConverter const& spaceConverter = converter ? *converter : defaultConverter;
+
+  positions.clear();
+  positions.reserve(mesh.coordinates.size());
+  for (auto const& node : mochi::Unflatten<mochi::Real3 const>(mesh.coordinates)) {
+    auto const pos = spaceConverter.TranslationToOutput(StaticCast<mochi::Float3>(node));
+    positions.push_back(pos[0]);
+    positions.push_back(pos[1]);
+    positions.push_back(pos[2]);
+  }
+  mochi::DynamicArray<int> const segments =
+      mochi::MakeSequentialPolylineConnectivity(numNodes, mochi::IsPolylineClosedLoop(mesh));
+  segmentIndices.assign(segments.begin(), segments.end());
   return true;
 }
 

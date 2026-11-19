@@ -181,4 +181,58 @@ TEST(ModelGeometryTest, ModelWithoutMeshOrShapeHasNoGeometry) {
   EXPECT_FALSE(Build(mochi::ModelData{}, geometry));
 }
 
+mochi::MeshData Polyline(
+    std::vector<mochi::real> const& coordinates,
+    std::vector<int> const& connectivity) {
+  mochi::MeshData mesh;
+  mesh.nodesPerElement = 2;
+  mesh.coordinates = coordinates;
+  mesh.connectivity = connectivity;
+  return mesh;
+}
+
+struct PolylineGeometry {
+  std::vector<float> positions;
+  std::vector<int> segments;
+};
+
+bool BuildPolyline(mochi::MeshData const& mesh, PolylineGeometry& out) {
+  return mochi_renderer::BuildMochiPolylineGeometry(mesh, &Identity(), out.positions, out.segments);
+}
+
+TEST(ModelGeometryTest, PolylineKeepsItsNodesAndSegments) {
+  mochi::MeshData const mesh = Polyline({0, 0, 0, 1, 0, 0, 1, 1, 0}, {0, 1, 1, 2});
+
+  PolylineGeometry geometry;
+  ASSERT_TRUE(BuildPolyline(mesh, geometry));
+
+  EXPECT_EQ(geometry.positions, (std::vector<float>{0, 0, 0, 1, 0, 0, 1, 1, 0}));
+  EXPECT_EQ(geometry.segments, (std::vector<int>{0, 1, 1, 2}));
+}
+
+TEST(ModelGeometryTest, ClosedPolylineKeepsItsWrapSegment) {
+  mochi::MeshData const mesh = Polyline({0, 0, 0, 1, 0, 0, 1, 1, 0}, {0, 1, 1, 2, 2, 0});
+
+  PolylineGeometry geometry;
+  ASSERT_TRUE(BuildPolyline(mesh, geometry));
+
+  EXPECT_EQ(geometry.segments, (std::vector<int>{0, 1, 1, 2, 2, 0}));
+}
+
+TEST(ModelGeometryTest, PolylineWithoutConnectivityIsOpenThroughItsNodesInOrder) {
+  mochi::MeshData const mesh = Polyline({0, 0, 0, 1, 0, 0, 2, 0, 0}, {});
+
+  PolylineGeometry geometry;
+  ASSERT_TRUE(BuildPolyline(mesh, geometry));
+
+  EXPECT_EQ(geometry.segments, (std::vector<int>{0, 1, 1, 2}));
+}
+
+TEST(ModelGeometryTest, MeshesWithoutSegmentsHaveNoPolylineGeometry) {
+  PolylineGeometry geometry;
+  EXPECT_FALSE(BuildPolyline(*SurfaceMesh({0, 0, 0, 1, 0, 0, 0, 1, 0}, {0, 1, 2}).mesh, geometry));
+  EXPECT_FALSE(BuildPolyline(Polyline({0, 0, 0}, {}), geometry));
+  EXPECT_FALSE(BuildPolyline(mochi::MeshData{}, geometry));
+}
+
 } // namespace

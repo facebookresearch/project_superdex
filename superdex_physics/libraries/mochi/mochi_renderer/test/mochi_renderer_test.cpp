@@ -118,6 +118,115 @@ class DebugDrawTest : public testing::Test {
   DebugDraw* _debugDraw = nullptr;
 };
 
+TEST(LineSegmentMeshTest, GeometryAndPositionUpdatesReachExistingAndNewInstances) {
+  SKIP_IF_NO_GPU();
+  auto renderer = MochiRenderer::Create();
+  ASSERT_NE(renderer, nullptr);
+  auto material = renderer->GetResourceManager()->CreateUnlitSeeThroughMaterial({1, 1, 1, 1});
+  std::vector<float> positions = {0, 0, 0, 2, 0, 0, 2, 2, 0};
+  std::vector<int> indices = {0, 1, 1, 2};
+  auto mesh = LineSegmentMesh::CreateLineSegmentMesh(
+      renderer->GetEngine(),
+      mochi::MakeConstSpan(positions),
+      mochi::MakeConstSpan(indices),
+      material,
+      /*isDynamic=*/true);
+  auto first = mesh->GetInstance();
+  auto second = mesh->GetInstance();
+  EXPECT_EQ(mesh->GetInstanceCount(), 2);
+
+  auto expectBounds = [](SceneObject const& object,
+                         filament::math::float3 center,
+                         filament::math::float3 halfExtent) {
+    auto const bounds = object.GetAABB();
+    for (int component = 0; component < 3; ++component) {
+      EXPECT_FLOAT_EQ(bounds.center[component], center[component]);
+      EXPECT_FLOAT_EQ(bounds.halfExtent[component], halfExtent[component]);
+    }
+  };
+  positions = {4, 0, 0, 8, 0, 0};
+  indices = {1, 0};
+  ASSERT_TRUE(mesh->UpdateGeometry(mochi::MakeConstSpan(positions), mochi::MakeConstSpan(indices)));
+  expectBounds(*mesh, {6, 0, 0}, {2, 0, 0});
+  expectBounds(*first, {6, 0, 0}, {2, 0, 0});
+  expectBounds(*second, {6, 0, 0}, {2, 0, 0});
+  first.reset();
+  EXPECT_EQ(mesh->GetInstanceCount(), 1);
+
+  positions = {0, 0, 0, 4, 0, 0, 4, 4, 0, 0, 4, 0};
+  indices = {0, 2, 1, 3};
+  ASSERT_TRUE(mesh->UpdateGeometry(mochi::MakeConstSpan(positions), mochi::MakeConstSpan(indices)));
+  expectBounds(*second, {2, 2, 0}, {2, 2, 0});
+  positions = {0, 0, 0, 6, 0, 0, 6, 4, 0, 0, 4, 0};
+  ASSERT_TRUE(mesh->Update(mochi::MakeConstSpan(positions)));
+  auto third = mesh->GetInstance();
+  EXPECT_EQ(mesh->GetInstanceCount(), 2);
+  expectBounds(*mesh, {3, 2, 0}, {3, 2, 0});
+  expectBounds(*second, {3, 2, 0}, {3, 2, 0});
+  expectBounds(*third, {3, 2, 0}, {3, 2, 0});
+  second.reset();
+  third.reset();
+  EXPECT_EQ(mesh->GetInstanceCount(), 0);
+}
+
+TEST(LineSegmentMeshTest, ExistingInstanceRendersReplacementSegments) {
+  SKIP_IF_NO_GPU();
+  MochiRenderer::Config config;
+  config.viewSettings.postProcessingEnabled = false;
+  auto renderer = MochiRenderer::Create(config);
+  ASSERT_NE(renderer, nullptr);
+  auto* scene = renderer->GetScene();
+  auto* camera = renderer->CreateObservationCamera("lines", 64, 64);
+  camera->LookAt({0, 0, 5}, {0, 0, 0}, {0, 1, 0});
+  auto material = renderer->GetResourceManager()->CreateUnlitSeeThroughMaterial({1, 1, 1, 1});
+  std::vector<float> const positions = {-1, -1, 0, -1, 1, 0, 1, -1, 0, 1, 1, 0};
+  std::vector<int> indices = {0, 1};
+  auto mesh = LineSegmentMesh::CreateLineSegmentMesh(
+      renderer->GetEngine(),
+      mochi::MakeConstSpan(positions),
+      mochi::MakeConstSpan(indices),
+      material,
+      /*isDynamic=*/true);
+  scene->AddSceneObjectToScene(mesh->GetInstance());
+  auto const cleanup = mochi::Defer([&] { scene->DestroyAllSceneObjects(); });
+  auto expectLineOnSide = [&](bool onRight) {
+    auto const image = camera->RenderAndReadback(PipelineMode::Synchronized);
+    ASSERT_TRUE(image.IsValid());
+    std::array<int, 2> litPixels = {};
+    for (int y = 0; y < image.height; ++y) {
+      for (int x = 0; x < image.width; ++x) {
+        if (image.pixels[(y * image.width + x) * image.channels] > 127) {
+          ++litPixels[x >= image.width / 2];
+        }
+      }
+    }
+    EXPECT_GT(litPixels[onRight], 0);
+    EXPECT_EQ(litPixels[!onRight], 0);
+  };
+  expectLineOnSide(/*onRight=*/false);
+  indices = {2, 3};
+  ASSERT_TRUE(mesh->UpdateGeometry(mochi::MakeConstSpan(positions), mochi::MakeConstSpan(indices)));
+  expectLineOnSide(/*onRight=*/true);
+}
+
+TEST(LineSegmentMeshTest, StaticMeshRejectsGeometryReplacement) {
+  SKIP_IF_NO_GPU();
+  auto renderer = MochiRenderer::Create();
+  ASSERT_NE(renderer, nullptr);
+  auto material = renderer->GetResourceManager()->CreateUnlitSeeThroughMaterial({1, 1, 1, 1});
+  std::vector<float> const positions = {0, 0, 0, 2, 0, 0};
+  std::vector<int> const indices = {0, 1};
+  auto mesh = LineSegmentMesh::CreateLineSegmentMesh(
+      renderer->GetEngine(),
+      mochi::MakeConstSpan(positions),
+      mochi::MakeConstSpan(indices),
+      material);
+  auto const suppressWarnings = mochi::test::SuppressLogWarning();
+  EXPECT_FALSE(
+      mesh->UpdateGeometry(mochi::MakeConstSpan(positions), mochi::MakeConstSpan(indices)));
+  EXPECT_FALSE(mesh->Update(mochi::MakeConstSpan(positions)));
+}
+
 TEST(MochiRendererTest, CreateAndDestroy) {
   SKIP_IF_NO_GPU();
   MochiRenderer::Config config;

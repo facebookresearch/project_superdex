@@ -162,10 +162,14 @@ class LineSegmentMesh : public SceneObject, public IInstanceable {
 
   bool IsDynamic() const;
   bool Update(mochi::Span<float const> positions);
+  // Replaces the geometry (vertex and segment counts may change) of this mesh and every live
+  // instance. Dynamic meshes only; returns false otherwise.
+  bool UpdateGeometry(mochi::Span<float const> positions, mochi::Span<int const> indices);
   void SetMaterial(std::shared_ptr<MaterialInstance> material) override;
   utils::Entity GetRootEntity() const override;
   mochi::Span<utils::Entity const> GetEntities() const override;
 
+  // Instances share this mesh's buffers, so Update and UpdateGeometry move them too.
   std::unique_ptr<SceneObject> GetInstance() override;
   int GetInstanceCount() const override;
   IInstanceable* GetInstanceable() override;
@@ -188,7 +192,7 @@ class LineSegmentMesh : public SceneObject, public IInstanceable {
   filament::IndexBuffer* _indexBuffer = nullptr;
   filament::Box _boundingBox;
   std::shared_ptr<MaterialInstance> _material = nullptr;
-  int _instanceCount = 0;
+  std::vector<utils::Entity> _instanceEntities;
 
   std::vector<filament::math::float3> _dynamicPositions;
 };
