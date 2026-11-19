@@ -62,7 +62,7 @@ class PrefabSimSync {
   struct SimData {
     std::vector<std::string> actorNames;
     std::vector<mochi::TransformRT> actorTransforms;
-    std::vector<SoftMeshUpdate> softMeshUpdates;
+    std::vector<DeformableMeshUpdate> deformableMeshUpdates;
     // Per-step skin joint poses (one per skinned articulated actor), applied to each staged skin's
     // GPU-skinned render model. Each carries the actor's per-link world transforms in nested-link
     // (== GLB joint) order.
@@ -71,9 +71,9 @@ class PrefabSimSync {
   // Per-soft-actor query registration held while simulating: the node queries of the staged solid's
   // mesh (`surfaces.rendered`), and of the wireframe's (`surfaces.collision`) when that is a
   // different mesh. `name` matches the staged actor for the per-frame mesh update.
-  struct SoftQueryState {
+  struct DeformableQueryState {
     mochi::ActorHandle actor;
-    SoftSurfaces surfaces;
+    DeformableSurfaces surfaces;
     mochi::QueryHandle positions;
     mochi::QueryHandle normals;
     mochi::QueryHandle collisionPositions;
@@ -86,9 +86,9 @@ class PrefabSimSync {
 
   mochi::CoordinateSpaceConverter const& _editorToRenderer;
   // The meshes each staged actor was built from, by staged name (see CaptureStagedSurfaces).
-  std::unordered_map<std::string, SoftSurfaces> _stagedSurfaces;
+  std::unordered_map<std::string, DeformableSurfaces> _stagedSurfaces;
   std::vector<mochi::ActorHandle> _actors;
-  std::vector<SoftQueryState> _softQueryState;
+  std::vector<DeformableQueryState> _deformableQueryState;
   mochi_renderer::ProducerConsumerBuffer<SimData> _simData;
 };
 

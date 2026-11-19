@@ -1399,16 +1399,16 @@ mochi::CallbackHandle BotEditor::RegisterPostStepCallback(mochi::AsyncScene* sce
         // Skin: its pose and, with a collision surface, its deformed surface (0 or 1 entry each).
         if (_skinSync.has_value()) {
           data.skinnedPoseUpdates.resize(1);
-          data.softMeshUpdates.resize(_skinSync->HasSurface() ? 1 : 0);
+          data.deformableMeshUpdates.resize(_skinSync->HasSurface() ? 1 : 0);
           _skinSync->Produce(
               *actor,
               mochi::MakeConstSpan(data.linkTransforms),
               _studio->GetEditorToRendererSpaceConverter(),
               data.skinnedPoseUpdates[0],
-              data.softMeshUpdates.empty() ? nullptr : &data.softMeshUpdates[0]);
+              data.deformableMeshUpdates.empty() ? nullptr : &data.deformableMeshUpdates[0]);
         } else {
           data.skinnedPoseUpdates.clear();
-          data.softMeshUpdates.clear();
+          data.deformableMeshUpdates.clear();
         }
         _simData.Produce();
       });
@@ -1435,7 +1435,7 @@ void BotEditor::SyncFromPhysics() {
     // the links; the skin's deformed surface is applied separately below.
     _stage.ApplyWorldTransforms(
         mochi::MakeConstSpan(data.linkNames), mochi::MakeConstSpan(data.linkTransforms), converter);
-    _stage.ApplySoftMeshUpdates(mochi::MakeConstSpan(data.softMeshUpdates), converter);
+    _stage.ApplyDeformableMeshUpdates(mochi::MakeConstSpan(data.deformableMeshUpdates), converter);
     _stage.ApplySkinnedPose(mochi::MakeConstSpan(data.skinnedPoseUpdates), converter);
   }
 }

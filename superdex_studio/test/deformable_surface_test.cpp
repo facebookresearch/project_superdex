@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "rendering/soft_surface.h"
+#include "rendering/deformable_surface.h"
 
 #include <gtest/gtest.h>
 
@@ -22,56 +22,65 @@ using namespace superdex::studio;
 
 namespace {
 
-TEST(SoftSurfaceTest, TheVisualMeshIsDrawnAndTheUsedContactSkinShowsInTheCollisionView) {
+TEST(DeformableSurfaceTest, TheVisualMeshIsDrawnAndTheUsedContactSkinShowsInTheCollisionView) {
   EXPECT_EQ(
       ChooseSoftSurfaces(/*hasVisualMesh=*/true, /*hasContactSkin=*/true, /*useContactSkin=*/true),
-      (SoftSurfaces{.rendered = SoftSurface::Visual, .collision = SoftSurface::ContactSkin}));
+      (DeformableSurfaces{
+          .rendered = DeformableSurface::Visual, .collision = DeformableSurface::ContactSkin}));
 }
 
-TEST(SoftSurfaceTest, AnUnusedContactSkinLeavesTheBoundaryInTheCollisionView) {
+TEST(DeformableSurfaceTest, AnUnusedContactSkinLeavesTheBoundaryInTheCollisionView) {
   EXPECT_EQ(
       ChooseSoftSurfaces(/*hasVisualMesh=*/true, /*hasContactSkin=*/true, /*useContactSkin=*/false),
-      (SoftSurfaces{.rendered = SoftSurface::Visual, .collision = SoftSurface::Surface}));
+      (DeformableSurfaces{
+          .rendered = DeformableSurface::Visual, .collision = DeformableSurface::Surface}));
 }
 
-TEST(SoftSurfaceTest, AVisualMeshAloneIsDrawnOverTheBoundary) {
+TEST(DeformableSurfaceTest, AVisualMeshAloneIsDrawnOverTheBoundary) {
   EXPECT_EQ(
       ChooseSoftSurfaces(/*hasVisualMesh=*/true, /*hasContactSkin=*/false, /*useContactSkin=*/true),
-      (SoftSurfaces{.rendered = SoftSurface::Visual, .collision = SoftSurface::Surface}));
+      (DeformableSurfaces{
+          .rendered = DeformableSurface::Visual, .collision = DeformableSurface::Surface}));
 }
 
-TEST(SoftSurfaceTest, WithoutAVisualMeshTheContactSkinIsDrawnWhetherOrNotItIsUsed) {
+TEST(DeformableSurfaceTest, WithoutAVisualMeshTheContactSkinIsDrawnWhetherOrNotItIsUsed) {
   EXPECT_EQ(
       ChooseSoftSurfaces(/*hasVisualMesh=*/false, /*hasContactSkin=*/true, /*useContactSkin=*/true),
-      (SoftSurfaces{.rendered = SoftSurface::ContactSkin, .collision = SoftSurface::ContactSkin}));
+      (DeformableSurfaces{
+          .rendered = DeformableSurface::ContactSkin,
+          .collision = DeformableSurface::ContactSkin}));
   EXPECT_EQ(
       ChooseSoftSurfaces(
           /*hasVisualMesh=*/false, /*hasContactSkin=*/true, /*useContactSkin=*/false),
-      (SoftSurfaces{.rendered = SoftSurface::ContactSkin, .collision = SoftSurface::Surface}));
+      (DeformableSurfaces{
+          .rendered = DeformableSurface::ContactSkin, .collision = DeformableSurface::Surface}));
 }
 
-TEST(SoftSurfaceTest, WithNeitherTheBoundaryIsDrawn) {
+TEST(DeformableSurfaceTest, WithNeitherTheBoundaryIsDrawn) {
   EXPECT_EQ(
       ChooseSoftSurfaces(
           /*hasVisualMesh=*/false, /*hasContactSkin=*/false, /*useContactSkin=*/true),
-      SoftSurfaces{});
+      DeformableSurfaces{});
 }
 
-TEST(SoftSurfaceTest, AnUnembeddedVisualMeshFallsBack) {
+TEST(DeformableSurfaceTest, AnUnembeddedVisualMeshFallsBack) {
   mochi::ModelData model;
   model.visualMesh.emplace();
 
-  EXPECT_EQ(ChooseSoftSurfaces(model, /*useContactSkin=*/true), SoftSurfaces{});
+  EXPECT_EQ(ChooseSoftSurfaces(model, /*useContactSkin=*/true), DeformableSurfaces{});
 
   model.contactSkinMesh.emplace();
   EXPECT_EQ(
       ChooseSoftSurfaces(model, /*useContactSkin=*/true),
-      (SoftSurfaces{.rendered = SoftSurface::ContactSkin, .collision = SoftSurface::ContactSkin}));
+      (DeformableSurfaces{
+          .rendered = DeformableSurface::ContactSkin,
+          .collision = DeformableSurface::ContactSkin}));
 
   model.visualMesh->skinning.emplace();
   EXPECT_EQ(
       ChooseSoftSurfaces(model, /*useContactSkin=*/true),
-      (SoftSurfaces{.rendered = SoftSurface::Visual, .collision = SoftSurface::ContactSkin}));
+      (DeformableSurfaces{
+          .rendered = DeformableSurface::Visual, .collision = DeformableSurface::ContactSkin}));
 }
 
 } // namespace

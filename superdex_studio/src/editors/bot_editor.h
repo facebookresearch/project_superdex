@@ -210,7 +210,7 @@ class BotEditor : public AssetEditor {
     std::vector<mochi::TransformRT> linkTransforms;
     mochi::DynamicArray<float> transmissionDisplacements;
     // Per-step deformed skin surface (0 or 1 entry), applied to the staged "Skin" dynamic mesh.
-    std::vector<SoftMeshUpdate> softMeshUpdates;
+    std::vector<DeformableMeshUpdate> deformableMeshUpdates;
     // Per-step skin joint poses (0 or 1 entry), applied to the staged skin's GPU-skinned render
     // model. Carries the per-link world transforms in nested-link (== GLB joint) order.
     std::vector<SkinnedPoseUpdate> skinnedPoseUpdates;

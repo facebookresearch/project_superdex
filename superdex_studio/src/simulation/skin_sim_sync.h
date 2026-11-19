@@ -53,7 +53,7 @@ class SkinSimSync {
       mochi::Span<mochi::TransformRT const> linkTransforms,
       mochi::CoordinateSpaceConverter const& editorToRenderer,
       SkinnedPoseUpdate& pose,
-      SoftMeshUpdate* surface) const;
+      DeformableMeshUpdate* surface) const;
 
   [[nodiscard]] mochi::ActorHandle GetActorHandle() const {
     return _actor;

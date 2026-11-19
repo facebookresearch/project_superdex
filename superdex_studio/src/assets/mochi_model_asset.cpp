@@ -213,7 +213,7 @@ void MochiModelAsset::ClearShapeCache() {
 }
 
 mochi::MeshDataView MochiModelAsset::GetNativeSurfaceMesh(
-    SoftSurface surface,
+    DeformableSurface surface,
     mochi::Error& error) {
   using namespace mochi;
   // Load the native (unbaked) shape once (cached) and read the mesh from it. This is the same mesh
@@ -222,11 +222,11 @@ mochi::MeshDataView MochiModelAsset::GetNativeSurfaceMesh(
   ShapeHandle const shape = GetShape(Real3{1_r, 1_r, 1_r}, TransformRT::Identity(), error);
   Context const* const context = _manager->GetStudio()->GetMochiContext();
   switch (surface) {
-    case SoftSurface::Visual:
+    case DeformableSurface::Visual:
       return context->GetShapeVisualMesh(shape, error);
-    case SoftSurface::ContactSkin:
+    case DeformableSurface::ContactSkin:
       return context->GetShapeContactSkinMesh(shape, error);
-    case SoftSurface::Surface:
+    case DeformableSurface::Surface:
       return context->GetShapeSurfaceMesh(shape, error);
   }
   return {};
@@ -241,11 +241,11 @@ mochi::MeshDataView MochiModelAsset::GetNativeSoftSurface(mochi::Error& error) {
         "MochiModelAsset: model is not a tetrahedral mesh; cannot build a soft surface.");
     return {};
   }
-  return GetNativeSurfaceMesh(SoftSurface::Surface, error);
+  return GetNativeSurfaceMesh(DeformableSurface::Surface, error);
 }
 
-bool MochiModelAsset::BakeSoftSurface(
-    SoftSurface surfaceKind,
+bool MochiModelAsset::BakeDeformableSurface(
+    DeformableSurface surfaceKind,
     mochi::Real3 const& bakeScale,
     mochi::TransformRT const& shapeTransform,
     std::vector<float>& positions,
@@ -285,18 +285,18 @@ int MochiModelAsset::GetSoftSurfaceVertexCount() {
   return (e.IsOK() && !surface.IsEmpty()) ? surface.GetNumNodes() : 0;
 }
 
-int MochiModelAsset::GetSurfaceVertexCount(SoftSurface surface) {
+int MochiModelAsset::GetSurfaceVertexCount(DeformableSurface surface) {
   mochi::ErrorLog e;
   mochi::MeshDataView const mesh = GetNativeSurfaceMesh(surface, e);
   return (e.IsOK() && !mesh.IsEmpty()) ? mesh.GetNumNodes() : 0;
 }
 
-SoftSurfaces MochiModelAsset::GetSoftSurfaces(bool useContactSkin) const {
+DeformableSurfaces MochiModelAsset::GetSoftSurfaces(bool useContactSkin) const {
   return ChooseSoftSurfaces(_modelData, useContactSkin);
 }
 
-bool MochiModelAsset::CreateSoftDynamicMeshes(
-    SoftSurfaces const& surfaces,
+bool MochiModelAsset::CreateDeformableMeshes(
+    DeformableSurfaces const& surfaces,
     mochi::Real3 const& bakeScale,
     mochi::TransformRT const& shapeTransform,
     bool createSolid,
@@ -310,7 +310,7 @@ bool MochiModelAsset::CreateSoftDynamicMeshes(
   // geometry flat-lit like the rest of the shape views. Wireframe: shaded surface (surface color) +
   // edge overlay (wireframe color), deforming. Both share the actor's hashed colors.
   if (createSolid) {
-    if (!BakeSoftSurface(
+    if (!BakeDeformableSurface(
             surfaces.rendered, bakeScale, shapeTransform, positions, normals, indices)) {
       return false;
     }
@@ -319,13 +319,13 @@ bool MochiModelAsset::CreateSoftDynamicMeshes(
         mochi::MakeConstSpan(positions),
         mochi::MakeConstSpan(normals),
         mochi::MakeConstSpan(indices),
-        surfaces.rendered == SoftSurface::Visual ? rm.CreateLitOpaqueMaterial(_color)
-                                                 : rm.CreateFlatLitOpaqueMaterial(_color),
+        surfaces.rendered == DeformableSurface::Visual ? rm.CreateLitOpaqueMaterial(_color)
+                                                       : rm.CreateFlatLitOpaqueMaterial(_color),
         /*isDynamic=*/true,
         /*isClosed=*/true);
   }
   if ((!createSolid || surfaces.collision != surfaces.rendered) &&
-      !BakeSoftSurface(
+      !BakeDeformableSurface(
           surfaces.collision, bakeScale, shapeTransform, positions, normals, indices)) {
     return false;
   }
@@ -342,14 +342,14 @@ bool MochiModelAsset::CreateSoftDynamicMeshes(
   return true;
 }
 
-bool MochiModelAsset::BakeSoftSurfaceSkinning(
+bool MochiModelAsset::BakeDeformableSurfaceSkinning(
     std::vector<int>& boneIndices,
     std::vector<float>& boneWeights,
     int& weightsPerNode,
     int& outMaxBoneIndex) {
   using namespace mochi;
   ErrorLog e;
-  MeshDataView const surface = GetNativeSurfaceMesh(SoftSurface::Surface, e);
+  MeshDataView const surface = GetNativeSurfaceMesh(DeformableSurface::Surface, e);
   if (!e.IsOK() || surface.IsEmpty() || !surface.skinning) {
     return false;
   }
@@ -378,15 +378,15 @@ bool MochiModelAsset::CreateSkinnedCollisionWireframe(
   std::vector<float> positions;
   std::vector<float> normals;
   std::vector<int> indices;
-  if (!BakeSoftSurface(
-          SoftSurface::Surface, bakeScale, shapeTransform, positions, normals, indices)) {
+  if (!BakeDeformableSurface(
+          DeformableSurface::Surface, bakeScale, shapeTransform, positions, normals, indices)) {
     return false;
   }
   std::vector<int> boneIndices;
   std::vector<float> boneWeights;
   int weightsPerNode = 0;
   int maxBoneIndex = -1;
-  if (!BakeSoftSurfaceSkinning(boneIndices, boneWeights, weightsPerNode, maxBoneIndex)) {
+  if (!BakeDeformableSurfaceSkinning(boneIndices, boneWeights, weightsPerNode, maxBoneIndex)) {
     return false;
   }
   // Allocate at least enough bones to cover the referenced indices (bone index == articulation link
@@ -408,8 +408,8 @@ bool MochiModelAsset::CreateSkinnedCollisionWireframe(
   return true;
 }
 
-void MochiModelAsset::UpdateSoftDynamicMeshes(
-    SoftSurfaces const& surfaces,
+void MochiModelAsset::UpdateDeformableMeshes(
+    DeformableSurfaces const& surfaces,
     Mesh* solid,
     WireframeMesh* wireframe,
     mochi::Real3 const& bakeScale,
@@ -417,14 +417,16 @@ void MochiModelAsset::UpdateSoftDynamicMeshes(
   std::vector<float> positions;
   std::vector<float> normals;
   std::vector<int> indices;
-  bool const bakedRendered = solid &&
-      BakeSoftSurface(surfaces.rendered, bakeScale, shapeTransform, positions, normals, indices);
+  bool const bakedRendered =
+      solid &&
+      BakeDeformableSurface(
+          surfaces.rendered, bakeScale, shapeTransform, positions, normals, indices);
   if (bakedRendered) {
     solid->Update(mochi::MakeConstSpan(positions), mochi::MakeConstSpan(normals));
   }
   if (wireframe &&
       ((bakedRendered && surfaces.collision == surfaces.rendered) ||
-       BakeSoftSurface(
+       BakeDeformableSurface(
            surfaces.collision, bakeScale, shapeTransform, positions, normals, indices))) {
     wireframe->Update(mochi::MakeConstSpan(positions), mochi::MakeConstSpan(normals));
   }
@@ -437,10 +439,10 @@ void MochiModelAsset::UpdateSoftRenderModel(
   std::vector<float> positions;
   std::vector<float> normals;
   std::vector<int> indices;
-  // A failed bake, which BakeSoftSurface logs (e.g. the model was reloaded without its visual
+  // A failed bake, which BakeDeformableSurface logs (e.g. the model was reloaded without its visual
   // mesh), leaves the instance at its current pose.
-  if (BakeSoftSurface(
-          SoftSurface::Visual, bakeScale, shapeTransform, positions, normals, indices)) {
+  if (BakeDeformableSurface(
+          DeformableSurface::Visual, bakeScale, shapeTransform, positions, normals, indices)) {
     renderModel.SetVertices(mochi::MakeConstSpan(positions), mochi::MakeConstSpan(normals));
   }
 }

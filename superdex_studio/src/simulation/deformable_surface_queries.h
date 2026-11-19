@@ -16,7 +16,7 @@
 
 #pragma once
 
-#include "rendering/soft_surface.h"
+#include "rendering/deformable_surface.h"
 
 #include <mochi_core/utils/coordinate_space_converter.h>
 #include <mochi_physics/mochi_physics.h>
@@ -27,14 +27,16 @@
 namespace superdex::studio {
 
 // Registers the node position and normal queries of one of @p actor's meshes.
-[[nodiscard]] std::pair<mochi::QueryHandle, mochi::QueryHandle>
-RegisterSoftSurfaceQueries(mochi::Actor& actor, SoftSurface surface, mochi::Error& error);
+[[nodiscard]] std::pair<mochi::QueryHandle, mochi::QueryHandle> RegisterDeformableSurfaceQueries(
+    mochi::Actor& actor,
+    DeformableSurface surface,
+    mochi::Error& error);
 
-// Reads the deformed nodes of one of @p actor's meshes, from the queries RegisterSoftSurfaceQueries
-// registered, into flat renderer-space buffers (resized in place).
-void ReadSoftSurfaceNodes(
+// Reads the deformed nodes of one of @p actor's meshes, from the queries
+// RegisterDeformableSurfaceQueries registered, into flat renderer-space buffers (resized in place).
+void ReadDeformableSurfaceNodes(
     mochi::Actor const& actor,
-    SoftSurface surface,
+    DeformableSurface surface,
     mochi::CoordinateSpaceConverter const& converter,
     std::vector<float>& outPositions,
     std::vector<float>& outNormals,

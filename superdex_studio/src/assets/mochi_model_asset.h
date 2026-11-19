@@ -17,7 +17,7 @@
 #pragma once
 
 #include "assets/asset.h"
-#include "rendering/soft_surface.h"
+#include "rendering/deformable_surface.h"
 #include "rendering/stats.h"
 
 #include <mochi_physics/cpp_api/mochi_context.h>
@@ -92,29 +92,29 @@ class MochiModelAsset : public Asset {
   // Soft Dynamic Mesh Utils
   int GetSoftSurfaceVertexCount();
   // Node count of one of the shape's triangle meshes, regardless of element type, or 0 if the shape
-  // has no such mesh. SoftSurface::Surface is the tetrahedral boundary or the triangle surface
-  // itself.
-  int GetSurfaceVertexCount(SoftSurface surface);
+  // has no such mesh. DeformableSurface::Surface is the tetrahedral boundary or the triangle
+  // surface itself.
+  int GetSurfaceVertexCount(DeformableSurface surface);
   // The meshes a soft actor of this model is drawn with (see ChooseSoftSurfaces).
-  SoftSurfaces GetSoftSurfaces(bool useContactSkin) const;
+  DeformableSurfaces GetSoftSurfaces(bool useContactSkin) const;
   // A wireframe of `surfaces.collision`, plus a solid mesh of `surfaces.rendered` when
   // @p createSolid is true, both deformable.
-  bool CreateSoftDynamicMeshes(
-      SoftSurfaces const& surfaces,
+  bool CreateDeformableMeshes(
+      DeformableSurfaces const& surfaces,
       mochi::Real3 const& bakeScale,
       mochi::TransformRT const& shapeTransform,
       bool createSolid,
       std::unique_ptr<mochi_renderer::Mesh>& outSolid,
       std::unique_ptr<mochi_renderer::WireframeMesh>& outWireframe);
-  // Restores meshes made by CreateSoftDynamicMeshes with the same `surfaces` to their rest pose.
-  void UpdateSoftDynamicMeshes(
-      SoftSurfaces const& surfaces,
+  // Restores meshes made by CreateDeformableMeshes with the same `surfaces` to their rest pose.
+  void UpdateDeformableMeshes(
+      DeformableSurfaces const& surfaces,
       mochi_renderer::Mesh* solid,
       mochi_renderer::WireframeMesh* wireframe,
       mochi::Real3 const& bakeScale,
       mochi::TransformRT const& shapeTransform);
   // Sets @p renderModel, a render model linked to this model's visual mesh (see
-  // CheckRenderModelLink), to the visual mesh's rest pose, baked like UpdateSoftDynamicMeshes.
+  // CheckRenderModelLink), to the visual mesh's rest pose, baked like UpdateDeformableMeshes.
   void UpdateSoftRenderModel(
       mochi_renderer::DeformableModelInstance& renderModel,
       mochi::Real3 const& bakeScale,
@@ -185,30 +185,30 @@ class MochiModelAsset : public Asset {
       AssetManager* manager,
       mochi_renderer::ResourceManager& resourceManager);
 
-  // Load one of the shape's triangle meshes (native, unbaked). SoftSurface::Surface is the
+  // Load one of the shape's triangle meshes (native, unbaked). DeformableSurface::Surface is the
   // tetrahedral boundary for a tet mesh, or the triangle surface itself for a surface mesh. Vertex
   // ordering matches the physics engine's node queries for that mesh (e.g. SurfaceNodePositions),
   // so the same buffer can be updated in place during simulation. Empty if the shape has no such
   // mesh.
-  mochi::MeshDataView GetNativeSurfaceMesh(SoftSurface surface, mochi::Error& error);
+  mochi::MeshDataView GetNativeSurfaceMesh(DeformableSurface surface, mochi::Error& error);
   // Load the model's tetrahedral boundary surface (native, unbaked); empty view + one warning if
   // the model is not a tetrahedral mesh.
   mochi::MeshDataView GetNativeSoftSurface(mochi::Error& error);
   // Bake a native triangle mesh for `bakeScale` + `shapeTransform` into flat renderer-space buffers
   // (area-weighted normals). Works for both tetrahedral boundaries and triangle surfaces (soft
   // callers are already gated to tet meshes upstream). Returns false if the shape has no such mesh.
-  bool BakeSoftSurface(
-      SoftSurface surface,
+  bool BakeDeformableSurface(
+      DeformableSurface surface,
       mochi::Real3 const& bakeScale,
       mochi::TransformRT const& shapeTransform,
       std::vector<float>& positions,
       std::vector<float>& normals,
       std::vector<int>& indices);
   // Read the (surface-aligned) skinning from the native surface mesh into per-node bone indices and
-  // weights (numNodes * weightsPerNode each, in the same node order as BakeSoftSurface). Returns
-  // false if the shape carries no surface skinning. `outMaxBoneIndex` is the largest bone index
-  // referenced (-1 if none).
-  bool BakeSoftSurfaceSkinning(
+  // weights (numNodes * weightsPerNode each, in the same node order as BakeDeformableSurface).
+  // Returns false if the shape carries no surface skinning. `outMaxBoneIndex` is the largest bone
+  // index referenced (-1 if none).
+  bool BakeDeformableSurfaceSkinning(
       std::vector<int>& boneIndices,
       std::vector<float>& boneWeights,
       int& weightsPerNode,

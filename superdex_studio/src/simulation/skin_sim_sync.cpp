@@ -16,7 +16,7 @@
 
 #include "simulation/skin_sim_sync.h"
 
-#include "simulation/soft_surface_queries.h"
+#include "simulation/deformable_surface_queries.h"
 
 #include <mochi_core/utils/basic_utils.h>
 
@@ -55,7 +55,8 @@ void SkinSimSync::Track(
     int stagedIndex) {
   char const* const actorName = actor.GetName();
   _actor = actor.GetHandle();
-  // Must match the staged name in SceneStage so ApplySoftMeshUpdates and ApplySkinnedPose find it.
+  // Must match the staged name in SceneStage so ApplyDeformableMeshUpdates and ApplySkinnedPose
+  // find it.
   _name = SkinStagedName(actorName ? actorName : "");
   _stagedIndex = stagedIndex;
   _boneLinkRemap = std::move(boneLinkRemap);
@@ -64,7 +65,8 @@ void SkinSimSync::Track(
     return;
   }
   mochi::ErrorLog e;
-  std::tie(_positions, _normals) = RegisterSoftSurfaceQueries(actor, SoftSurface::Surface, e);
+  std::tie(_positions, _normals) =
+      RegisterDeformableSurfaceQueries(actor, DeformableSurface::Surface, e);
   if (!e.IsOK()) {
     MOCHI_LOG_ERROR("Failed to register skin surface queries for '%s'", _name.c_str());
     // Release whichever one did register.
@@ -91,7 +93,7 @@ void SkinSimSync::Produce(
     mochi::Span<mochi::TransformRT const> linkTransforms,
     mochi::CoordinateSpaceConverter const& editorToRenderer,
     SkinnedPoseUpdate& pose,
-    SoftMeshUpdate* surface) const {
+    DeformableMeshUpdate* surface) const {
   MOCHI_ASSERT_VERBOSE(actor.GetHandle() == _actor);
   // The skin's bones follow its links: in nested-link order for a natively skinned actor, else
   // reordered into skin-bone (GLB joint) order so the skin's bone indices address the right links.
@@ -114,8 +116,13 @@ void SkinSimSync::Produce(
     surface->stagedIndex = _stagedIndex;
     surface->worldTransform = actor.GetRootTransform();
     mochi::ErrorLog e;
-    ReadSoftSurfaceNodes(
-        actor, SoftSurface::Surface, editorToRenderer, surface->positions, surface->normals, e);
+    ReadDeformableSurfaceNodes(
+        actor,
+        DeformableSurface::Surface,
+        editorToRenderer,
+        surface->positions,
+        surface->normals,
+        e);
     // The skin's collision wireframe shows the same surface.
     surface->collisionPositions.clear();
     surface->collisionNormals.clear();

@@ -16,7 +16,7 @@
 
 #include "simulation/prefab_sim_sync.h"
 
-#include "simulation/soft_surface_queries.h"
+#include "simulation/deformable_surface_queries.h"
 
 #include <mochi_core/utils/basic_utils.h>
 
@@ -28,13 +28,13 @@ namespace superdex::studio {
 void PrefabSimSync::CaptureStagedSurfaces(SceneStage const& stage) {
   _stagedSurfaces.clear();
   for (StagedActor const& staged : stage.GetActors()) {
-    _stagedSurfaces.try_emplace(staged.name, staged.softSurfaces);
+    _stagedSurfaces.try_emplace(staged.name, staged.deformableSurfaces);
   }
 }
 
 bool PrefabSimSync::Track(mochi::Span<mochi::Actor* const> actors) {
   _actors.clear();
-  _softQueryState.clear();
+  _deformableQueryState.clear();
   mochi::ErrorLog e;
   for (auto* actor : actors) {
     _actors.push_back(actor->GetHandle());
@@ -44,19 +44,19 @@ bool PrefabSimSync::Track(mochi::Span<mochi::Actor* const> actors) {
   for (auto* actor : actors) {
     // Soft actors expose their deforming meshes; articulated actors expose a surface only when they
     // carry a skin (folded into the compound entity, sharing the actor's handle). Both are read the
-    // same way and emitted as SoftMeshUpdates each step, so they share this query list.
+    // same way and emitted as DeformableMeshUpdates each step, so they share this query list.
     bool const isSoft = actor->GetType() == mochi::ActorType::Soft;
     bool const isSkinnedArticulated =
         actor->GetType() == mochi::ActorType::Articulated && !actor->GetSurfaceMesh().IsEmpty();
     if (!isSoft && !isSkinnedArticulated) {
       continue;
     }
-    SoftQueryState state;
+    DeformableQueryState state;
     state.actor = actor->GetHandle();
     char const* const name = actor->GetName();
     std::string const actorName = name ? name : "";
     // The skin has no independent actor, so it is identified by its skin staged name to match the
-    // deforming mesh SceneStage staged for it (ApplySoftMeshUpdates matches by name).
+    // deforming mesh SceneStage staged for it (ApplyDeformableMeshUpdates matches by name).
     state.name = isSkinnedArticulated ? SkinStagedName(actorName) : actorName;
     // Query the meshes the staged actor was built from, so each query feeds its staged mesh.
     auto const staged = _stagedSurfaces.find(state.name);
@@ -68,10 +68,10 @@ bool PrefabSimSync::Track(mochi::Span<mochi::Actor* const> actors) {
     }
     state.surfaces = staged->second;
     std::tie(state.positions, state.normals) =
-        RegisterSoftSurfaceQueries(*actor, state.surfaces.rendered, e);
+        RegisterDeformableSurfaceQueries(*actor, state.surfaces.rendered, e);
     if (state.surfaces.collision != state.surfaces.rendered) {
       std::tie(state.collisionPositions, state.collisionNormals) =
-          RegisterSoftSurfaceQueries(*actor, state.surfaces.collision, e);
+          RegisterDeformableSurfaceQueries(*actor, state.surfaces.collision, e);
     }
     if (!e.IsOK()) {
       // Abort setup rather than storing a half-registered actor whose per-frame mesh update would
@@ -80,12 +80,12 @@ bool PrefabSimSync::Track(mochi::Span<mochi::Actor* const> actors) {
       state.CancelQueries(*actor);
       return false;
     }
-    _softQueryState.push_back(std::move(state));
+    _deformableQueryState.push_back(std::move(state));
   }
   return true;
 }
 
-void PrefabSimSync::SoftQueryState::CancelQueries(mochi::Actor& owner) const {
+void PrefabSimSync::DeformableQueryState::CancelQueries(mochi::Actor& owner) const {
   owner.CancelQuery(positions);
   owner.CancelQuery(normals);
   owner.CancelQuery(collisionPositions);
@@ -93,7 +93,7 @@ void PrefabSimSync::SoftQueryState::CancelQueries(mochi::Actor& owner) const {
 }
 
 void PrefabSimSync::Untrack(mochi::Scene* scene) {
-  for (auto const& state : _softQueryState) {
+  for (auto const& state : _deformableQueryState) {
     if (auto* actor = scene->GetActor(state.actor)) {
       state.CancelQueries(*actor);
     }
@@ -110,7 +110,7 @@ void PrefabSimSync::Produce(mochi::Scene* scene) {
   // actors expand to their nested link transforms; rigid and soft actors push their root
   // transform. Soft actors are included here so their world transform is applied by name and
   // their row appears in the Render Scene Stage debug view; their deformed surface mesh is
-  // additionally applied via the per-vertex mesh-update channel below (ApplySoftMeshUpdates).
+  // additionally applied via the per-vertex mesh-update channel below (ApplyDeformableMeshUpdates).
   for (auto const& handle : _actors) {
     auto* actor = scene->GetActor(handle);
     if (!actor) {
@@ -147,24 +147,24 @@ void PrefabSimSync::Produce(mochi::Scene* scene) {
     }
   }
   // Soft actors: overwrite per-vertex mesh deformations (matched to staged meshes by name),
-  // converting local positions/normals to renderer space. The SoftMeshUpdate entries and their
-  // position/normal buffers are kept resident across steps and resized/overwritten in place to
-  // avoid per-step reallocation; the vector is trimmed to the number of live soft actors so the
+  // converting local positions/normals to renderer space. The DeformableMeshUpdate entries and
+  // their position/normal buffers are kept resident across steps and resized/overwritten in place
+  // to avoid per-step reallocation; the vector is trimmed to the number of live soft actors so the
   // consumer sees exactly the valid updates.
-  data.softMeshUpdates.resize(_softQueryState.size());
+  data.deformableMeshUpdates.resize(_deformableQueryState.size());
   int updateCount = 0;
-  for (auto const& state : _softQueryState) {
+  for (auto const& state : _deformableQueryState) {
     auto* actor = scene->GetActor(state.actor);
     if (!actor) {
       continue;
     }
-    SoftMeshUpdate& update = data.softMeshUpdates[updateCount++];
+    DeformableMeshUpdate& update = data.deformableMeshUpdates[updateCount++];
     update.name = state.name;
     update.worldTransform = actor->GetRootTransform();
-    ReadSoftSurfaceNodes(
+    ReadDeformableSurfaceNodes(
         *actor, state.surfaces.rendered, _editorToRenderer, update.positions, update.normals, e);
     if (state.surfaces.collision != state.surfaces.rendered) {
-      ReadSoftSurfaceNodes(
+      ReadDeformableSurfaceNodes(
           *actor,
           state.surfaces.collision,
           _editorToRenderer,
@@ -178,7 +178,7 @@ void PrefabSimSync::Produce(mochi::Scene* scene) {
   }
   // Trim any trailing entries left over from soft actors that were missing this step (rare;
   // reuse keeps the common all-present case allocation-free).
-  data.softMeshUpdates.resize(updateCount);
+  data.deformableMeshUpdates.resize(updateCount);
   _simData.Produce();
 }
 
@@ -190,18 +190,19 @@ bool PrefabSimSync::Apply(
   }
   auto const& data = _simData.GetConsumerData();
   // Rigid, soft, and articulated actors are matched by name here. Soft actors additionally have
-  // their deformed surface mesh applied by ApplySoftMeshUpdates below.
+  // their deformed surface mesh applied by ApplyDeformableMeshUpdates below.
   stage.ApplyWorldTransforms(
       mochi::MakeConstSpan(data.actorNames),
       mochi::MakeConstSpan(data.actorTransforms),
       editorToRenderer);
-  stage.ApplySoftMeshUpdates(mochi::MakeConstSpan(data.softMeshUpdates), editorToRenderer);
+  stage.ApplyDeformableMeshUpdates(
+      mochi::MakeConstSpan(data.deformableMeshUpdates), editorToRenderer);
   stage.ApplySkinnedPose(mochi::MakeConstSpan(data.skinnedPoseUpdates), editorToRenderer);
   return true;
 }
 
 void PrefabSimSync::Reset() {
-  _softQueryState.clear();
+  _deformableQueryState.clear();
   _simData.Consume();
   _actors.clear();
 }

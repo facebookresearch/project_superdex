@@ -22,7 +22,7 @@ namespace superdex::studio {
 
 // One of a deformable actor's triangle meshes. Mochi reports each one's deformed nodes through its
 // own pair of position/normal queries.
-enum class SoftSurface {
+enum class DeformableSurface {
   Visual, // ModelData::visualMesh (VisualNodePositions / VisualNodeNormals)
   ContactSkin, // ModelData::contactSkinMesh (ContactSkinNodePositions / ContactSkinNodeNormals)
   Surface, // the boundary of the actor's mesh (SurfaceNodePositions / SurfaceNodeNormals)
@@ -31,42 +31,44 @@ enum class SoftSurface {
 // The meshes a staged deformable actor shows: `rendered` in the render slot and `collision` in the
 // shape (Collision Only view) slot. The defaults suit an articulated skin, which has neither a
 // visual mesh nor a contact skin.
-struct SoftSurfaces {
-  SoftSurface rendered = SoftSurface::Surface;
-  SoftSurface collision = SoftSurface::Surface;
+struct DeformableSurfaces {
+  DeformableSurface rendered = DeformableSurface::Surface;
+  DeformableSurface collision = DeformableSurface::Surface;
 
-  bool operator==(SoftSurfaces const& other) const = default;
+  bool operator==(DeformableSurfaces const& other) const = default;
 };
 
 // A soft actor is drawn with its visual mesh, else its contact skin, else its boundary. The
 // Collision Only view shows what it collides with: its contact skin when it has one and
 // SoftActorParams::useContactSkin is on, else its boundary.
-constexpr SoftSurfaces
+constexpr DeformableSurfaces
 ChooseSoftSurfaces(bool hasVisualMesh, bool hasContactSkin, bool useContactSkin) {
-  SoftSurface const rendered = hasVisualMesh ? SoftSurface::Visual
-      : hasContactSkin                       ? SoftSurface::ContactSkin
-                                             : SoftSurface::Surface;
+  DeformableSurface const rendered = hasVisualMesh ? DeformableSurface::Visual
+      : hasContactSkin                             ? DeformableSurface::ContactSkin
+                                                   : DeformableSurface::Surface;
   return {
       .rendered = rendered,
-      .collision =
-          hasContactSkin && useContactSkin ? SoftSurface::ContactSkin : SoftSurface::Surface};
+      .collision = hasContactSkin && useContactSkin ? DeformableSurface::ContactSkin
+                                                    : DeformableSurface::Surface};
 }
 
 // Deformable actors can update a visual mesh only when it has an embedding into the simulation
 // mesh, so a soft actor whose visual mesh has none falls back to its contact skin or boundary.
-constexpr SoftSurfaces ChooseSoftSurfaces(mochi::ModelData const& model, bool useContactSkin) {
+constexpr DeformableSurfaces ChooseSoftSurfaces(
+    mochi::ModelData const& model,
+    bool useContactSkin) {
   bool const hasDeformableVisualMesh = model.visualMesh && model.visualMesh->skinning;
   return ChooseSoftSurfaces(
       hasDeformableVisualMesh, model.contactSkinMesh.has_value(), useContactSkin);
 }
 
-constexpr char const* SoftSurfaceLabel(SoftSurface surface) {
+constexpr char const* DeformableSurfaceLabel(DeformableSurface surface) {
   switch (surface) {
-    case SoftSurface::Visual:
+    case DeformableSurface::Visual:
       return "Visual mesh";
-    case SoftSurface::ContactSkin:
+    case DeformableSurface::ContactSkin:
       return "Contact skin";
-    case SoftSurface::Surface:
+    case DeformableSurface::Surface:
       return "Surface";
   }
   return "";

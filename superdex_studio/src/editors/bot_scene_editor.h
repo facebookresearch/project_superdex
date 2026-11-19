@@ -166,7 +166,7 @@ class BotSceneEditor : public AssetEditor {
     std::vector<std::string> actorNames;
     std::vector<mochi::TransformRT> actorTransforms;
     std::vector<mochi::TransformRT> taskTransforms;
-    std::vector<SoftMeshUpdate> skinSurfaces;
+    std::vector<DeformableMeshUpdate> skinSurfaces;
     std::vector<SkinnedPoseUpdate> skinPoses;
   };
   mochi_renderer::ProducerConsumerBuffer<SimData> _simData;

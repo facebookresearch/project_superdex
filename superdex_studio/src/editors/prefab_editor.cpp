@@ -2594,7 +2594,7 @@ void PrefabEditor::ShowSoftActorDetails(int softIndex) {
   // The actor scale and shape offset are baked into the surface geometry at load, so an edit to
   // either model invalidates the cached shape and rebuilds the meshes.
   bool const modelEdited = ShowActorModelEditors(_studio, assetManager, *actor, modelChanged);
-  ShowSoftRendering(softIndex);
+  ShowDeformableRendering(softIndex);
 
   changed |= ShowSoftMaterialEditor(actor->material);
 
@@ -2627,7 +2627,7 @@ void PrefabEditor::ShowSoftActorDetails(int softIndex) {
   }
 }
 
-void PrefabEditor::ShowSoftRendering(int softIndex) {
+void PrefabEditor::ShowDeformableRendering(int softIndex) {
   StagedActor const* const staged = StagedActorForSource(StagedActorSource::Soft, softIndex);
   if (staged == nullptr) {
     return;
@@ -2638,7 +2638,8 @@ void PrefabEditor::ShowSoftRendering(int softIndex) {
   ImGui::LabelText(
       "Rendered As",
       "%s",
-      staged->softRenderModel ? "Render model" : SoftSurfaceLabel(staged->softSurfaces.rendered));
+      staged->softRenderModel ? "Render model"
+                              : DeformableSurfaceLabel(staged->deformableSurfaces.rendered));
   if (staged->softRenderModelNotice.empty()) {
     return;
   }

@@ -14,32 +14,34 @@
  * limitations under the License.
  */
 
-#include "simulation/soft_surface_queries.h"
+#include "simulation/deformable_surface_queries.h"
 
 #include <mochi_core/utils/basic_utils.h>
 
 namespace superdex::studio {
 
-std::pair<mochi::QueryHandle, mochi::QueryHandle>
-RegisterSoftSurfaceQueries(mochi::Actor& actor, SoftSurface surface, mochi::Error& error) {
+std::pair<mochi::QueryHandle, mochi::QueryHandle> RegisterDeformableSurfaceQueries(
+    mochi::Actor& actor,
+    DeformableSurface surface,
+    mochi::Error& error) {
   using mochi::QueryType;
   auto const registerPair = [&](QueryType positions, QueryType normals) {
     return std::pair{actor.RegisterQuery(positions, error), actor.RegisterQuery(normals, error)};
   };
   switch (surface) {
-    case SoftSurface::Visual:
+    case DeformableSurface::Visual:
       return registerPair(QueryType::VisualNodePositions, QueryType::VisualNodeNormals);
-    case SoftSurface::ContactSkin:
+    case DeformableSurface::ContactSkin:
       return registerPair(QueryType::ContactSkinNodePositions, QueryType::ContactSkinNodeNormals);
-    case SoftSurface::Surface:
+    case DeformableSurface::Surface:
       return registerPair(QueryType::SurfaceNodePositions, QueryType::SurfaceNodeNormals);
   }
   return {};
 }
 
-void ReadSoftSurfaceNodes(
+void ReadDeformableSurfaceNodes(
     mochi::Actor const& actor,
-    SoftSurface surface,
+    DeformableSurface surface,
     mochi::CoordinateSpaceConverter const& converter,
     std::vector<float>& outPositions,
     std::vector<float>& outNormals,
@@ -48,15 +50,15 @@ void ReadSoftSurfaceNodes(
   Span<real const> positions;
   Span<real const> normals;
   switch (surface) {
-    case SoftSurface::Visual:
+    case DeformableSurface::Visual:
       positions = actor.GetVisualMeshNodePositionsLocal(error);
       normals = actor.GetVisualMeshNodeNormalsLocal(error);
       break;
-    case SoftSurface::ContactSkin:
+    case DeformableSurface::ContactSkin:
       positions = actor.GetContactSkinMeshNodePositionsLocal(error);
       normals = actor.GetContactSkinMeshNodeNormalsLocal(error);
       break;
-    case SoftSurface::Surface:
+    case DeformableSurface::Surface:
       positions = actor.GetSurfaceMeshNodePositionsLocal(error);
       normals = actor.GetSurfaceMeshNodeNormalsLocal(error);
       break;

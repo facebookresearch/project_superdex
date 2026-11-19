@@ -384,14 +384,15 @@ static void BuildPrefabRequests(
     // nested link), so it is staged as a standalone deforming mesh named
     // SkinStagedName(<articulated actor name>). The per-step surface query (editors) and force-drag
     // resolution (PhysicsDragController) find it by that name; its deformed surface is pushed each
-    // step via ApplySoftMeshUpdates just like a soft actor. The articulated actor name is the
+    // step via ApplyDeformableMeshUpdates just like a soft actor. The articulated actor name is the
     // shared prefix of its nested link names (fk.names), which matches the runtime actor->GetName()
     // the query uses.
     if (art.skin.has_value() && !art.skin->shapeFile.empty() && !fk.names.empty()) {
       mochi::Path const skinShapePath =
           ResolvePrefabModelPath(art.skin->shapeFile, rootPath, prefabSource);
       auto* asset = studio->GetAssetManager().LoadMochiModelAsset(skinShapePath);
-      int const skinVertexCount = asset ? asset->GetSurfaceVertexCount(SoftSurface::Surface) : 0;
+      int const skinVertexCount =
+          asset ? asset->GetSurfaceVertexCount(DeformableSurface::Surface) : 0;
       if (skinVertexCount > 0) {
         std::string const& firstLink = fk.names.front();
         auto const slash = firstLink.find_last_of('/');
@@ -406,20 +407,20 @@ static void BuildPrefabRequests(
         // bone_j = bindRoot^-1 * current_j * inverse(bindRoot^-1 * bind_j)), so the surface is
         // undeformed at rest and correctly posed otherwise. Falls back to the actor's world
         // transform if forward kinematics produced no bind pose. Overwritten each step by
-        // ApplySoftMeshUpdates once simulating.
+        // ApplyDeformableMeshUpdates once simulating.
         TransformSRT const prefabFromActor(1_r, Normalize(art.rotation), art.translation);
         req.worldTransform = fk.bindTransforms.empty()
             ? (worldFromPrefab * prefabFromActor).GetTransformRT()
             : fk.bindTransforms.front();
         req.worldScale = Real3{1_r, 1_r, 1_r};
         req.shapeModelFile = skinShapePath;
-        req.isSoft = true;
-        req.softVertexCount = skinVertexCount;
-        req.softCollisionVertexCount = skinVertexCount;
+        req.isDeformable = true;
+        req.deformableVertexCount = skinVertexCount;
+        req.deformableCollisionVertexCount = skinVertexCount;
         // The articulated actor's (uniform) scale bakes into the rest surface; no shape offset is
         // supported for skins yet (see ArticulatedSkinPrefab).
-        req.softBakeScale = Real3{effectiveScale, effectiveScale, effectiveScale};
-        req.softShapeTransform = TransformRT{};
+        req.deformableBakeScale = Real3{effectiveScale, effectiveScale, effectiveScale};
+        req.deformableShapeTransform = TransformRT{};
         // Populate link transforms for ANY articulated skin so the collision skin can be posed
         // independently of the render model. fk.transforms are the per-link world transforms in
         // nested-link (== GLB joint) order; bindTransforms are the same at the zero/rest pose.
@@ -505,7 +506,6 @@ static void BuildPrefabRequests(
   // shape offset (deferred to stage time). Both a solid and a wireframe dynamic mesh are staged
   // (solid in the render slot, wireframe in the shape slot), so the 1/2/3 StageType toggle switches
   // between them like it does for rigid actors. ChooseSoftSurfaces picks each one's mesh.
-  real const softShapeScale = worldFromPrefab.GetScale();
   for (int i = 0; i < isize(prefab.actors.soft); ++i) {
     auto const& actor = prefab.actors.soft[i];
     // Soft actors without a shape produce no geometry; skip them.
@@ -533,16 +533,17 @@ static void BuildPrefabRequests(
     // Carry the resolved shape path as part of the reuse key and to look up the asset that creates
     // and colors the dynamic meshes.
     req.shapeModelFile = shapePath;
-    req.isSoft = true;
+    req.isDeformable = true;
     // The node counts seed the reuse check.
-    req.softSurfaces = asset->GetSoftSurfaces(actor.useContactSkin);
-    req.softVertexCount = asset->GetSurfaceVertexCount(req.softSurfaces.rendered);
-    req.softCollisionVertexCount = asset->GetSurfaceVertexCount(req.softSurfaces.collision);
+    req.deformableSurfaces = asset->GetSoftSurfaces(actor.useContactSkin);
+    req.deformableVertexCount = asset->GetSurfaceVertexCount(req.deformableSurfaces.rendered);
+    req.deformableCollisionVertexCount =
+        asset->GetSurfaceVertexCount(req.deformableSurfaces.collision);
     // Per-instance bake: scale then the shape offset, matching mochi::model_utils::BakeTransform
     // (rt * diag(scale)). The asset re-bakes from these on create/refresh/reset.
-    req.softBakeScale = actor.scale * softShapeScale;
-    req.softShapeTransform =
-        TransformRT{actor.shapeRotation, actor.shapeTranslation * softShapeScale};
+    req.deformableBakeScale = actor.scale * prefabScale;
+    req.deformableShapeTransform =
+        TransformRT{actor.shapeRotation, actor.shapeTranslation * prefabScale};
     // A render model is only drawn deformed by the visual mesh it is embedded as; otherwise the
     // solid stands in and the reason is shown in the actor's details.
     req.renderModelFile = ResolvePrefabModelPath(actor.renderModelFile, rootPath, prefabSource);
@@ -552,11 +553,12 @@ static void BuildPrefabRequests(
           *asset,
           req.renderModelFile,
           ModelPlacement{
-              .scale = actor.renderModelScale * softShapeScale,
+              .scale = actor.renderModelScale * prefabScale,
               .transform =
                   TransformRT{
-                      actor.renderModelRotation, actor.renderModelTranslation * softShapeScale}},
-          ModelPlacement{.scale = req.softBakeScale, .transform = req.softShapeTransform});
+                      actor.renderModelRotation, actor.renderModelTranslation * prefabScale}},
+          ModelPlacement{
+              .scale = req.deformableBakeScale, .transform = req.deformableShapeTransform});
       req.softRenderModelLinked = link.linked;
       req.softRenderModelNotice = link.reason;
     }
@@ -907,19 +909,20 @@ static void BuildBotRequests(
   // Skin (optional). The skin is a deformable surface skinned over the links; it is staged through
   // the same deforming dynamic-mesh path as soft actors (a solid mesh in the render slot, a
   // wireframe in the shape slot), and updated each simulation step -- matched by staged index or
-  // name -- via SceneStage::ApplySoftMeshUpdates from the articulated actor's skinned surface. The
-  // staged name is the top-level articulated actor's name plus " (Skin)": the skin is that actor's
-  // own surface (not a nested link), so SkinSimSync derives its name identically. It is staged
-  // right after the bot's links, so editors that apply simulated transforms by index give it a row
-  // of its own there (the articulation root, which its bone matrices cancel). Its rest surface is
-  // rooted at skin bone 0's bind-pose frame with the bot scale baked in (see below). A skin may
-  // have only a collision shape, only a render model, or both.
+  // name -- via SceneStage::ApplyDeformableMeshUpdates from the articulated actor's skinned
+  // surface. The staged name is the top-level articulated actor's name plus " (Skin)": the skin is
+  // that actor's own surface (not a nested link), so SkinSimSync derives its name identically. It
+  // is staged right after the bot's links, so editors that apply simulated transforms by index give
+  // it a row of its own there (the articulation root, which its bone matrices cancel). Its rest
+  // surface is rooted at skin bone 0's bind-pose frame with the bot scale baked in (see below). A
+  // skin may have only a collision shape, only a render model, or both.
   if (prefab.skin.has_value()) {
     mochi::Path const skinShapePath(prefab.skin->shapeFile);
     auto* asset = skinShapePath.IsEmpty()
         ? nullptr
         : studio->GetAssetManager().LoadMochiModelAsset(skinShapePath);
-    int const skinVertexCount = asset ? asset->GetSurfaceVertexCount(SoftSurface::Surface) : 0;
+    int const skinVertexCount =
+        asset ? asset->GetSurfaceVertexCount(DeformableSurface::Surface) : 0;
     bool const hasSkinShape = skinVertexCount > 0;
     if (hasSkinShape || !prefab.skin->renderModelFile.empty()) {
       StageRequest req;
@@ -936,12 +939,12 @@ static void BuildBotRequests(
       req.worldScale = Real3{1_r, 1_r, 1_r};
       if (hasSkinShape) {
         req.shapeModelFile = skinShapePath;
-        req.isSoft = true;
-        req.softVertexCount = skinVertexCount;
-        req.softCollisionVertexCount = skinVertexCount;
+        req.isDeformable = true;
+        req.deformableVertexCount = skinVertexCount;
+        req.deformableCollisionVertexCount = skinVertexCount;
       }
-      req.softBakeScale = Real3{prefab.scale, prefab.scale, prefab.scale};
-      req.softShapeTransform = TransformRT{};
+      req.deformableBakeScale = Real3{prefab.scale, prefab.scale, prefab.scale};
+      req.deformableShapeTransform = TransformRT{};
       // Populate link transforms for ANY articulated skin so the collision skin can be posed
       // independently of the render model (see the prefab path). Current + bind (zero/rest) poses.
       req.skinLinkWorldTransforms = linkWorldTransforms;
@@ -1266,20 +1269,22 @@ bool SceneStage::ApplyStageRequests(
   bool reuse = _actors.size() == requests.size();
   if (reuse) {
     for (size_t i = 0; i < requests.size(); ++i) {
-      bool const reqIsSoft = requests[i].isSoft;
+      bool const reqIsDeformable = requests[i].isDeformable;
       // A staged actor is "soft" if it has any deforming representation.
-      bool const actorIsSoft = _actors[i].dynamicSolidMesh != nullptr ||
+      bool const actorIsDeformable = _actors[i].dynamicSolidMesh != nullptr ||
           _actors[i].dynamicWireframeMesh != nullptr || _actors[i].softRenderModel != nullptr ||
           _actors[i].skinnedCollisionMesh != nullptr;
       // A soft/non-soft mismatch, or a change in which soft meshes are shown or in their vertex
       // counts (topology change), forces a rebuild.
       if (_actors[i].name != requests[i].name ||
           _actors[i].render.modelFile != requests[i].renderModelFile ||
-          _actors[i].shape.modelFile != requests[i].shapeModelFile || reqIsSoft != actorIsSoft ||
-          (reqIsSoft &&
-           (_actors[i].softSurfaces != requests[i].softSurfaces ||
-            _actors[i].softMeshVertexCount != requests[i].softVertexCount ||
-            _actors[i].softCollisionVertexCount != requests[i].softCollisionVertexCount ||
+          _actors[i].shape.modelFile != requests[i].shapeModelFile ||
+          reqIsDeformable != actorIsDeformable ||
+          (reqIsDeformable &&
+           (_actors[i].deformableSurfaces != requests[i].deformableSurfaces ||
+            _actors[i].deformableMeshVertexCount != requests[i].deformableVertexCount ||
+            _actors[i].deformableCollisionVertexCount !=
+                requests[i].deformableCollisionVertexCount ||
             (_actors[i].softRenderModel != nullptr) != requests[i].softRenderModelLinked))) {
         reuse = false;
         break;
@@ -1289,10 +1294,10 @@ bool SceneStage::ApplyStageRequests(
       // the common case, keep the same params and reuse).
       if ((_actors[i].skinnedCollisionMesh != nullptr ||
            _actors[i].skinnedRenderObject != nullptr) &&
-          (_actors[i].softBakeScale[0] != requests[i].softBakeScale[0] ||
-           _actors[i].softBakeScale[1] != requests[i].softBakeScale[1] ||
-           _actors[i].softBakeScale[2] != requests[i].softBakeScale[2] ||
-           !(_actors[i].softShapeTransform == requests[i].softShapeTransform))) {
+          (_actors[i].deformableBakeScale[0] != requests[i].deformableBakeScale[0] ||
+           _actors[i].deformableBakeScale[1] != requests[i].deformableBakeScale[1] ||
+           _actors[i].deformableBakeScale[2] != requests[i].deformableBakeScale[2] ||
+           !(_actors[i].deformableShapeTransform == requests[i].deformableShapeTransform))) {
         reuse = false;
         break;
       }
@@ -1318,31 +1323,31 @@ bool SceneStage::ApplyStageRequests(
     actor.shape.modelScale = req.shapeModelScale;
     // Per-instance soft bake params are refreshed every stage (harmless defaults for non-soft), so
     // rest-pose restore and idle refresh re-bake with the current scale/offset.
-    actor.softBakeScale = req.softBakeScale;
-    actor.softShapeTransform = req.softShapeTransform;
+    actor.deformableBakeScale = req.deformableBakeScale;
+    actor.deformableShapeTransform = req.deformableShapeTransform;
     SetSoftRenderModelNotice(actor, req.name, req.softRenderModelNotice);
 
     // Soft actors bake scale/shape-offset into their geometry, so an edit that changes the rest
     // geometry but not the vertex count (e.g. scaling a nested prefab) reuses the meshes. Re-bake
     // the reused solid + wireframe meshes via the asset so the idle pose stays correct (the rebuild
     // path below handles vertex-count changes).
-    if (reuse && req.isSoft &&
+    if (reuse && req.isDeformable &&
         (actor.dynamicSolidMesh || actor.dynamicWireframeMesh || actor.softRenderModel)) {
       // Re-fetch the asset from the AssetManager instead of trusting the cached raw pointer: the
       // manager owns assets as unique_ptr and may have evicted/reloaded this one since it was
-      // staged, leaving actor.softAsset dangling. Refreshing here keeps it valid for this and later
-      // dereferences (e.g. ResetWorldTransforms).
-      actor.softAsset = manager.LoadMochiModelAsset(req.shapeModelFile);
-      if (actor.softAsset) {
-        actor.softAsset->UpdateSoftDynamicMeshes(
-            actor.softSurfaces,
+      // staged, leaving actor.deformableAsset dangling. Refreshing here keeps it valid for this and
+      // later dereferences (e.g. ResetWorldTransforms).
+      actor.deformableAsset = manager.LoadMochiModelAsset(req.shapeModelFile);
+      if (actor.deformableAsset) {
+        actor.deformableAsset->UpdateDeformableMeshes(
+            actor.deformableSurfaces,
             actor.dynamicSolidMesh,
             actor.dynamicWireframeMesh,
-            req.softBakeScale,
-            req.softShapeTransform);
+            req.deformableBakeScale,
+            req.deformableShapeTransform);
         ForEachSoftRenderModel(actor, [&](mochi_renderer::DeformableModelInstance& renderModel) {
-          actor.softAsset->UpdateSoftRenderModel(
-              renderModel, req.softBakeScale, req.softShapeTransform);
+          actor.deformableAsset->UpdateSoftRenderModel(
+              renderModel, req.deformableBakeScale, req.deformableShapeTransform);
         });
       }
     }
@@ -1370,9 +1375,9 @@ bool SceneStage::ApplyStageRequests(
         int const boneCount = isize(req.skinLinkWorldTransforms);
         if (asset) {
           asset->CreateSkinnedCollisionWireframe(
-              req.softBakeScale, req.softShapeTransform, boneCount, wireframe);
+              req.deformableBakeScale, req.deformableShapeTransform, boneCount, wireframe);
         }
-        actor.softAsset = asset;
+        actor.deformableAsset = asset;
         actor.dynamicSolidMesh = nullptr;
         // The simulation surface is built on demand by EnsureSimSurface once Mochi actually reports
         // vertices; at edit time the blend-skinned preview is the only surface staged.
@@ -1386,9 +1391,9 @@ bool SceneStage::ApplyStageRequests(
             wireframe ? _renderScene->AddSceneObjectToScene(std::move(wireframe)) : nullptr;
         actor.shape.sceneObject = actor.shapeSkinnedSurface;
         actor.shape.flatShaded = true;
-        actor.softSurfaces = req.softSurfaces;
-        actor.softMeshVertexCount = req.softVertexCount;
-        actor.softCollisionVertexCount = req.softCollisionVertexCount;
+        actor.deformableSurfaces = req.deformableSurfaces;
+        actor.deformableMeshVertexCount = req.deformableVertexCount;
+        actor.deformableCollisionVertexCount = req.deformableCollisionVertexCount;
         if (hasCollisionSkin && !actor.skinnedCollisionMesh) {
           MOCHI_LOG_ERROR_ONCE(
               "SceneStage: skin collision surface has no skinning; the Collision view will not "
@@ -1428,14 +1433,14 @@ bool SceneStage::ApplyStageRequests(
                 "SceneStage: skin render model has no skin data; it will render undeformed.");
           }
         }
-      } else if (req.isSoft) {
+      } else if (req.isDeformable) {
         // Soft actors stage a deforming wireframe in the shape slot, plus either a linked render
         // model or a solid Mochi mesh in the render slot. The solid is smooth-lit only when it
         // shows the visual mesh; recording that lets the highlight clone match its shading. The
         // asset is kept so idle refresh / simulation-stop can re-bake the rest pose.
-        actor.render.flatShaded = req.softSurfaces.rendered != SoftSurface::Visual;
+        actor.render.flatShaded = req.deformableSurfaces.rendered != DeformableSurface::Visual;
         auto* asset = manager.LoadMochiModelAsset(req.shapeModelFile);
-        actor.softAsset = asset;
+        actor.deformableAsset = asset;
         // A render model linked to the visual mesh takes the solid's place, keeping its own
         // materials and deformed by the same visual-mesh updates the solid would get.
         std::unique_ptr<mochi_renderer::SceneObject> render;
@@ -1445,7 +1450,8 @@ bool SceneStage::ApplyStageRequests(
             std::unique_ptr<DeformableModelInstance> instance =
                 renderAsset->GetDeformableModelInstance(error);
             if (instance) {
-              asset->UpdateSoftRenderModel(*instance, req.softBakeScale, req.softShapeTransform);
+              asset->UpdateSoftRenderModel(
+                  *instance, req.deformableBakeScale, req.deformableShapeTransform);
               actor.softRenderModel = instance.get();
               render = std::move(instance);
             } else {
@@ -1458,10 +1464,10 @@ bool SceneStage::ApplyStageRequests(
         std::unique_ptr<mochi_renderer::Mesh> solid;
         std::unique_ptr<mochi_renderer::WireframeMesh> wireframe;
         if (asset) {
-          asset->CreateSoftDynamicMeshes(
-              req.softSurfaces,
-              req.softBakeScale,
-              req.softShapeTransform,
+          asset->CreateDeformableMeshes(
+              req.deformableSurfaces,
+              req.deformableBakeScale,
+              req.deformableShapeTransform,
               /*createSolid=*/!render,
               solid,
               wireframe);
@@ -1481,9 +1487,9 @@ bool SceneStage::ApplyStageRequests(
             render ? _renderScene->AddSceneObjectToScene(std::move(render)) : nullptr;
         actor.shape.sceneObject =
             wireframe ? _renderScene->AddSceneObjectToScene(std::move(wireframe)) : nullptr;
-        actor.softSurfaces = req.softSurfaces;
-        actor.softMeshVertexCount = req.softVertexCount;
-        actor.softCollisionVertexCount = req.softCollisionVertexCount;
+        actor.deformableSurfaces = req.deformableSurfaces;
+        actor.deformableMeshVertexCount = req.deformableVertexCount;
+        actor.deformableCollisionVertexCount = req.deformableCollisionVertexCount;
       } else {
         auto renderInstance =
             CreateRenderInstance(manager, req.renderModelFile, /*isRenderModel=*/true);
@@ -1807,20 +1813,20 @@ void SceneStage::ResetWorldTransforms(mochi::CoordinateSpaceConverter const& con
     // Soft actors also restore their rest-pose surface geometry (deformed during simulation) by
     // re-baking it via the asset into both the solid and wireframe meshes. Re-fetch the asset from
     // the AssetManager instead of trusting the cached raw pointer, which the manager may have
-    // evicted/reloaded (leaving actor.softAsset dangling); this only runs for staged soft actors,
-    // so _studio is valid.
+    // evicted/reloaded (leaving actor.deformableAsset dangling); this only runs for staged soft
+    // actors, so _studio is valid.
     if (actor.dynamicSolidMesh || actor.dynamicWireframeMesh || actor.softRenderModel) {
-      actor.softAsset = _studio->GetAssetManager().LoadMochiModelAsset(actor.shape.modelFile);
-      if (actor.softAsset) {
-        actor.softAsset->UpdateSoftDynamicMeshes(
-            actor.softSurfaces,
+      actor.deformableAsset = _studio->GetAssetManager().LoadMochiModelAsset(actor.shape.modelFile);
+      if (actor.deformableAsset) {
+        actor.deformableAsset->UpdateDeformableMeshes(
+            actor.deformableSurfaces,
             actor.dynamicSolidMesh,
             actor.dynamicWireframeMesh,
-            actor.softBakeScale,
-            actor.softShapeTransform);
+            actor.deformableBakeScale,
+            actor.deformableShapeTransform);
         ForEachSoftRenderModel(actor, [&](mochi_renderer::DeformableModelInstance& renderModel) {
-          actor.softAsset->UpdateSoftRenderModel(
-              renderModel, actor.softBakeScale, actor.softShapeTransform);
+          actor.deformableAsset->UpdateSoftRenderModel(
+              renderModel, actor.deformableBakeScale, actor.deformableShapeTransform);
         });
       }
     }
@@ -1836,8 +1842,8 @@ void SceneStage::ResetWorldTransforms(mochi::CoordinateSpaceConverter const& con
   }
 }
 
-void SceneStage::ApplySoftMeshUpdates(
-    mochi::Span<SoftMeshUpdate const> updates,
+void SceneStage::ApplyDeformableMeshUpdates(
+    mochi::Span<DeformableMeshUpdate const> updates,
     mochi::CoordinateSpaceConverter const& converter) {
   for (auto const& update : updates) {
     int const index = FindUpdateTarget(update.name, update.stagedIndex);
@@ -1855,7 +1861,7 @@ void SceneStage::ApplySoftMeshUpdates(
     auto const vertexCount = [](std::vector<float> const& positions) {
       return static_cast<int>(positions.size() / 3);
     };
-    if (vertexCount(update.positions) == actor.softMeshVertexCount) {
+    if (vertexCount(update.positions) == actor.deformableMeshVertexCount) {
       if (actor.dynamicSolidMesh) {
         actor.dynamicSolidMesh->Update(
             mochi::MakeConstSpan(update.positions), mochi::MakeConstSpan(update.normals));
@@ -1871,7 +1877,7 @@ void SceneStage::ApplySoftMeshUpdates(
     std::vector<float> const& wireNormals = sameMesh ? update.normals : update.collisionNormals;
     bool wireframeUpdated = false;
     if (actor.dynamicWireframeMesh &&
-        vertexCount(wirePositions) == actor.softCollisionVertexCount) {
+        vertexCount(wirePositions) == actor.deformableCollisionVertexCount) {
       wireframeUpdated = actor.dynamicWireframeMesh->Update(
           mochi::MakeConstSpan(wirePositions), mochi::MakeConstSpan(wireNormals));
     }
@@ -1899,8 +1905,8 @@ void SceneStage::ApplySkinnedPose(
     }
     // The bind (inverse-rest) matrices cancel these at rest, so the joints drive the deformation
     // delta while the SceneObject transform (kept in sync by ApplyWorldTransforms /
-    // ApplySoftMeshUpdates) places the whole skin. Drives both the render GLB and the collision
-    // skin.
+    // ApplyDeformableMeshUpdates) places the whole skin. Drives both the render GLB and the
+    // collision skin.
     ApplySkinnedJointPose(actor, mochi::MakeConstSpan(update.linkWorldTransforms), converter);
   }
 }
@@ -1939,17 +1945,17 @@ void SceneStage::EnsureSimSurface(
   }
   // Re-fetch rather than trusting the cached pointer, which the manager may have evicted since
   // staging (same reasoning as ResetWorldTransforms).
-  actor.softAsset = _studio->GetAssetManager().LoadMochiModelAsset(actor.shape.modelFile);
-  if (!actor.softAsset) {
+  actor.deformableAsset = _studio->GetAssetManager().LoadMochiModelAsset(actor.shape.modelFile);
+  if (!actor.deformableAsset) {
     return;
   }
   // Only the wireframe is wanted (a skin has no solid shape representation).
   std::unique_ptr<mochi_renderer::Mesh> unusedSolid;
   std::unique_ptr<mochi_renderer::WireframeMesh> simWireframe;
-  actor.softAsset->CreateSoftDynamicMeshes(
-      actor.softSurfaces,
-      actor.softBakeScale,
-      actor.softShapeTransform,
+  actor.deformableAsset->CreateDeformableMeshes(
+      actor.deformableSurfaces,
+      actor.deformableBakeScale,
+      actor.deformableShapeTransform,
       /*createSolid=*/false,
       unusedSolid,
       simWireframe);

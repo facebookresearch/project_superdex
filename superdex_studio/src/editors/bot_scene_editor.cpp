@@ -1502,7 +1502,7 @@ mochi::CallbackHandle BotSceneEditor::RegisterPostStepCallback(mochi::AsyncScene
             if (skinSync != _skinSyncs.end()) {
               data.actorTransforms.push_back(actor->GetRootTransform());
               data.actorNames.push_back(skinSync->GetName());
-              SoftMeshUpdate* const surface = skinSync->HasSurface()
+              DeformableMeshUpdate* const surface = skinSync->HasSurface()
                   ? &nextUpdate(data.skinSurfaces, numSkinSurfaces)
                   : nullptr;
               skinSync->Produce(
@@ -1601,7 +1601,7 @@ void BotSceneEditor::SyncFromPhysics() {
     auto const& data = _simData.GetConsumerData();
     auto const& converter = _studio->GetEditorToRendererSpaceConverter();
     _stage.ApplyWorldTransforms(mochi::MakeConstSpan(data.actorTransforms), converter);
-    _stage.ApplySoftMeshUpdates(mochi::MakeConstSpan(data.skinSurfaces), converter);
+    _stage.ApplyDeformableMeshUpdates(mochi::MakeConstSpan(data.skinSurfaces), converter);
     _stage.ApplySkinnedPose(mochi::MakeConstSpan(data.skinPoses), converter);
   }
 }
