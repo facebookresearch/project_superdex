@@ -16,7 +16,7 @@
 
 #include "meshing/processing_modifiers/source_mochi_model.h"
 
-#include "meshing/processing_modifiers/processing_mesh_utils.h" // LoadMochiMesh
+#include "meshing/processing_modifiers/processing_mesh_utils.h" // LoadMochiStage
 
 #include <imgui.h>
 
@@ -47,7 +47,8 @@ class MochiFromViewerMethod : public ReflectedMethod<EmptyMethodProps> {
     return "From Model Viewer";
   }
   [[nodiscard]] char const* Description() const override {
-    return "Uses the editor's current Mochi Model surface (its Model Viewer slot) as the source.";
+    return "Uses the editor's current Mochi Model (its Model Viewer slot) as the source: its "
+           "surface, or for a polyline model its bare polyline.";
   }
   [[nodiscard]] bool CanGenerate(ModifierRunContext const& ctx) const override {
     return !ctx.mochiModelPath.empty();
@@ -59,16 +60,20 @@ class MochiFromViewerMethod : public ReflectedMethod<EmptyMethodProps> {
     return "|" + ctx.mochiModelPath; // input is the editor's mochi slot (external to props)
   }
   void ShowParams(ModifierGuiContext const& /*gui*/) override {
-    ImGui::TextUnformatted("Uses the editor's current Mochi Model surface as the source.");
+    ImGui::TextUnformatted("Uses the editor's current Mochi Model as the source.");
   }
   mochi::MeshData Run(
       mochi::MeshData const& /*input*/,
       ModifierRunContext const& ctx,
       mochi::Error& error) const override {
+    return RunStage({}, ctx, error).mesh;
+  }
+  StageMesh RunStage(StageMesh const& /*input*/, ModifierRunContext const& ctx, mochi::Error& error)
+      const override {
     MOCHI_ERROR_IF(
         ctx.mochiModelPath.empty(), error, "Source from Mochi Model: no Mochi Model is set.");
     MOCHI_ERROR_RETURN(error, {});
-    return processing::LoadMochiMesh(ctx.mochiModelPath, error);
+    return processing::LoadMochiStage(ctx.mochiModelPath, error);
   }
 };
 
@@ -80,7 +85,7 @@ class MochiFromFileMethod : public ReflectedMethod<MochiFileSourceProps> {
   }
   [[nodiscard]] char const* Description() const override {
     return "Uses a Mochi Model from this modifier's own slot, independent of the editor's Model "
-           "Viewer.";
+           "Viewer: its surface, or for a polyline model its bare polyline.";
   }
   [[nodiscard]] bool CanGenerate(ModifierRunContext const& /*ctx*/) const override {
     return !_props.path.empty();
@@ -102,12 +107,18 @@ class MochiFromFileMethod : public ReflectedMethod<MochiFileSourceProps> {
   }
   mochi::MeshData Run(
       mochi::MeshData const& /*input*/,
+      ModifierRunContext const& ctx,
+      mochi::Error& error) const override {
+    return RunStage({}, ctx, error).mesh;
+  }
+  StageMesh RunStage(
+      StageMesh const& /*input*/,
       ModifierRunContext const& /*ctx*/,
       mochi::Error& error) const override {
     std::string const path{_props.path.data(), _props.path.size()};
     MOCHI_ERROR_IF(path.empty(), error, "Source from Mochi Model: no Mochi Model is set.");
     MOCHI_ERROR_RETURN(error, {});
-    return processing::LoadMochiMesh(path, error);
+    return processing::LoadMochiStage(path, error);
   }
 };
 

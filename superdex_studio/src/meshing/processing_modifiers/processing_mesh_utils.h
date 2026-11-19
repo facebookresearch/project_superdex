@@ -21,6 +21,8 @@
 // loaders, obj/glb writers, and export-path helpers. Ported from the former file-local helpers in
 // mesh_modifier.cpp so multiple modifier files can share them without duplicating code.
 
+#include "meshing/processing_modifiers/processing_method.h" // StageMesh
+
 #include <mochi_core/geometry/mesh_data.h>
 #include <mochi_core/geometry/model_data.h>
 #include <mochi_core/utils/error.h>
@@ -64,11 +66,11 @@ int64_t EstimateMochiH5SizeBytes(mochi::ModelData const& model);
 // Concatenate renderer sections into a neutral triangle MeshData (positions + indices).
 mochi::MeshData MeshDataFromSections(std::vector<mochi_renderer::MeshSection> const& sections);
 
-// Recover a stage's processing output from its display buffer. A non-empty tetrahedral output is
-// authoritative because the displayed sections hold only its boundary, or a mesh embedded in it;
-// otherwise concatenate the displayed triangle sections.
-mochi::MeshData BufferedStageOutput(
-    mochi::MeshData const& tetMesh,
+// Recover a stage's processing output from its display buffer: its complete output @p full when
+// set (a tetrahedral mesh, polyline, or a mesh carrying embeddings), otherwise the displayed
+// triangle sections concatenated.
+StageMesh BufferedStageOutput(
+    StageMesh const& full,
     std::vector<mochi_renderer::MeshSection> const& sections);
 
 // Neutral MeshData -> a single renderer MeshSection with computed angle-weighted vertex normals.
@@ -125,8 +127,19 @@ std::vector<mochi_renderer::MeshSection> TessellateStepSections(
 // Load a mochi-model file's surface as a neutral triangle MeshData in renderer space.
 mochi::MeshData LoadMochiMesh(std::string const& path, mochi::Error& error);
 
-// The triangle surface to show for a stage's output: the mesh itself, or the boundary of a
-// tetrahedral mesh (boundary nodes only). Same space as @p mesh.
+// The polyline stage of a polyline model in Mochi space: its polyline and its element frame axes
+// (the discrete Bishop frame when it has none), converted to renderer space. The model's contact
+// skin and visual mesh are left out, so the stage starts from the bare polyline like every other
+// polyline source.
+StageMesh PolylineStageFromMochiModel(mochi::ModelData const& model, mochi::Error& error);
+
+// Load a mochi-model file as a stage in renderer space: a polyline model as its polyline stage (see
+// PolylineStageFromMochiModel), any other model as its surface (see LoadMochiMesh).
+StageMesh LoadMochiStage(std::string const& path, mochi::Error& error);
+
+// The triangle surface to show for a stage's output: the mesh itself, the boundary of a
+// tetrahedral mesh (boundary nodes only), or an empty mesh for a polyline, which has no surface.
+// Same space as @p mesh.
 mochi::MeshData DisplaySurface(mochi::MeshData const& mesh);
 
 // A renderer-space mesh of any element type converted to Mochi space, keeping its connectivity.

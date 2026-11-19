@@ -40,6 +40,7 @@
 #include <mochi_renderer/debug.h>
 #include <mochi_renderer/mesh.h>
 #include <mochi_renderer/model_geometry.h>
+#include <mochi_renderer/render_space.h>
 #include <mochi_renderer/resource.h> // RenderModel, RenderModelFormat
 #include <mochi_renderer/type_conversions.h>
 #include <mochi_renderer/utils.h>
@@ -416,6 +417,18 @@ void DrawMeshVizControls(
   ImGui::PopID();
 }
 
+// Whether @p buffer shows a polyline output: its lines and frame axes rather than a surface.
+bool ShowsPolyline(StageBuffer const& buffer) {
+  return buffer.sections.empty() && buffer.full.mesh.nodesPerElement == 2;
+}
+
+// Whether @p modifier shows its captured input next to its output (see
+// MeshProcessingMethod::ShowsInputVisualization). Not for a polyline output, which Export Mochi
+// Model passes on as it is, so the two would show the same polyline.
+bool ShowsInputView(MeshProcessingModifier const& modifier) {
+  return modifier.ActiveMethod().ShowsInputVisualization() && !ShowsPolyline(modifier.output);
+}
+
 void ApplySurfaceVisibility(StageBuffer const& buffer) {
   if (buffer.surfaceMesh) {
     buffer.surfaceMesh->SetVisible(buffer.viz.showSurface);
@@ -535,6 +548,16 @@ void DrawPolylineVizControls(
 }
 
 void DrawVizToggles(char const* idScope, char const* what, StageBuffer& buffer) {
+  if (ShowsPolyline(buffer)) {
+    DrawPolylineVizToggles(
+        idScope,
+        what,
+        buffer.viz.showFrameAxes,
+        buffer.full.elementFrameAxes.has_value(),
+        buffer.viz.showWireframe,
+        [&buffer] { ApplyWireframeVisibility(buffer); });
+    return;
+  }
   DrawVizToggles(
       idScope,
       what,
@@ -1366,14 +1389,36 @@ mochi::Real3 ModelEditor::StageRoleColor(
 }
 
 void ModelEditor::RebuildStageMeshes(StageBuffer& stage, mochi::Real3 const& surfaceColor) {
+  DestroyStageBufferMeshes(stage);
   auto* scene = _viewport->GetRenderScene();
-  if (stage.surfaceMesh) {
-    scene->DestroySceneObject(stage.surfaceMesh);
-    stage.surfaceMesh = nullptr;
-  }
-  if (stage.wireframeMesh) {
-    scene->DestroySceneObject(stage.wireframeMesh);
-    stage.wireframeMesh = nullptr;
+
+  if (ShowsPolyline(stage)) {
+    stage.stats.base = FormatPolylineStats(stage.full.mesh);
+    ComposeStats(stage.stats);
+    // Stage meshes are already in renderer space.
+    mochi::CoordinateSpaceConverter const identity(
+        mochi_renderer::RenderSpace(), mochi_renderer::RenderSpace());
+    std::vector<float> positions;
+    std::vector<int> indices;
+    if (!BuildMochiPolylineGeometry(stage.full.mesh, &identity, positions, indices)) {
+      return;
+    }
+    if (stage.full.elementFrameAxes.has_value()) {
+      stage.frameAxisGlyphs = ComputeFrameAxisGlyphs(
+          mochi::MakeConstSpan(stage.full.mesh.coordinates),
+          mochi::MakeConstSpan(stage.full.mesh.connectivity),
+          mochi::MakeConstSpan(*stage.full.elementFrameAxes));
+    }
+    auto lines = mochi_renderer::LineSegmentMesh::CreateLineSegmentMesh(
+        _studio->GetEngine(),
+        mochi::MakeConstSpan(positions),
+        mochi::MakeConstSpan(indices),
+        CreatePolylineMaterial(_studio->GetResourceManager(), ToFloat3(surfaceColor)));
+    if (lines) {
+      stage.wireframeMesh = scene->AddSceneObjectToScene(std::move(lines));
+      stage.wireframeMesh->SetVisible(stage.viz.showWireframe);
+    }
+    return;
   }
 
   stage.stats.base = FormatMeshStats(stage.sections);
@@ -1426,6 +1471,18 @@ void ModelEditor::DrawStageVizControls(
     char const* idScope,
     StageBuffer& buffer,
     std::function<mochi::Real3()> const& colorFn) {
+  if (ShowsPolyline(buffer)) {
+    DrawPolylineVizControls(
+        idScope,
+        buffer.viz.showWireframe,
+        buffer.viz.showFrameAxes,
+        buffer.full.elementFrameAxes.has_value(),
+        buffer.viz.showStats,
+        buffer.stats.display,
+        _studio->GetFont("Roboto Mono"),
+        [&buffer] { ApplyWireframeVisibility(buffer); });
+    return;
+  }
   DrawMeshVizControls(
       idScope,
       buffer.viz.showSurface,
@@ -1460,6 +1517,7 @@ void ModelEditor::RecolorWireframe(
 }
 
 void ModelEditor::DestroyStageBufferMeshes(StageBuffer& stage) {
+  stage.frameAxisGlyphs.clear();
   auto* scene = _viewport->GetRenderScene();
   if (stage.surfaceMesh) {
     scene->DestroySceneObject(stage.surfaceMesh);
@@ -1479,8 +1537,7 @@ void ModelEditor::ResetStageBuffers() {
   for (auto const& modifier : _modifiers) {
     DestroyStageBufferMeshes(modifier->output);
     modifier->output.sections.clear();
-    modifier->output.tetMesh = {};
-    modifier->output.embedded = {};
+    modifier->output.full = {};
     modifier->output.stats = {};
     // The optional input-view buffer (Export Mochi Model) is invalidated with the output.
     DestroyStageBufferMeshes(modifier->inputView);
@@ -1888,23 +1945,39 @@ void ModelEditor::DestroyMochiPolylineMesh() {
 
 void ModelEditor::DrawFrameAxes() {
   mochi_renderer::DebugDraw* const debugDraw = _viewport->GetRenderScene()->GetDebugDraw();
-  if (!_showFrameAxes || _frameAxisGlyphs.empty() || debugDraw == nullptr) {
+  if (debugDraw == nullptr) {
     return;
   }
-  auto const& converter = _studio->GetEditorToRendererSpaceConverter();
-  // The same scale-rotate-translate the slot meshes get (ApplyModelTransform).
-  auto const toRenderer = [&](mochi::Real3 const& local) {
-    return mochi_renderer::ToFilament<float>(
-        converter.TranslationToOutput(_modelRotation * (_modelScale * local) + _modelTranslation));
+  auto const toFloat4 = [](mochi::Real3 const& color) {
+    return filament::math::float4{
+        static_cast<float>(color[0]),
+        static_cast<float>(color[1]),
+        static_cast<float>(color[2]),
+        1.0f};
   };
-  DrawFrameAxisGlyphs(
-      *debugDraw,
-      mochi::MakeConstSpan(_frameAxisGlyphs),
-      toRenderer,
-      {static_cast<float>(_frameAxesColor[0]),
-       static_cast<float>(_frameAxesColor[1]),
-       static_cast<float>(_frameAxesColor[2]),
-       1.0f});
+  if (_showFrameAxes && !_frameAxisGlyphs.empty()) {
+    auto const& converter = _studio->GetEditorToRendererSpaceConverter();
+    // The same scale-rotate-translate the slot meshes get (ApplyModelTransform).
+    auto const toRenderer = [&](mochi::Real3 const& local) {
+      return mochi_renderer::ToFilament<float>(converter.TranslationToOutput(
+          _modelRotation * (_modelScale * local) + _modelTranslation));
+    };
+    DrawFrameAxisGlyphs(
+        *debugDraw, mochi::MakeConstSpan(_frameAxisGlyphs), toRenderer, toFloat4(_frameAxesColor));
+  }
+  for (auto const& modifier : _modifiers) {
+    StageBuffer const& output = modifier->output;
+    if (!output.viz.showFrameAxes || !ShowsPolyline(output) ||
+        !output.full.elementFrameAxes.has_value()) {
+      continue;
+    }
+    // Stage outputs are already in renderer space.
+    DrawFrameAxisGlyphs(
+        *debugDraw,
+        mochi::MakeConstSpan(output.frameAxisGlyphs),
+        [](mochi::Real3 const& point) { return mochi_renderer::ToFilament<float>(point); },
+        toFloat4(HashedMeshColor(StageColorSeed(*modifier), kFrameAxesColorRole)));
+  }
 }
 
 void ModelEditor::RebuildSdfMeshes() {
@@ -2145,7 +2218,7 @@ void ModelEditor::ShowMeshModifierStack() {
     ImGui::SetNextItemOpen(!modifier.collapsed);
     // Mirrors of the Surface / Wireframe checkboxes in the bar. A disabled modifier's arrow and
     // label are greyed but stay clickable (visual only).
-    bool const showsInput = modifier.ActiveMethod().ShowsInputVisualization();
+    bool const showsInput = ShowsInputView(modifier);
     bool const bodyOpen = CollapsingHeaderWithToggles(
         modifier.HeaderLabel(),
         "###header",
@@ -2197,9 +2270,9 @@ void ModelEditor::ShowMeshModifierStack() {
             MeshProcessingMethod const& method = *modifier.Methods()[static_cast<std::size_t>(m)];
             bool const selected = m == modifier.ActiveMethodIndex();
             if (ImGui::Selectable(method.Name(), selected)) {
-              bool const wasShowingInput = modifier.ActiveMethod().ShowsInputVisualization();
+              bool const wasShowingInput = ShowsInputView(modifier);
               modifier.SelectMethod(m);
-              bool const nowShowsInput = modifier.ActiveMethod().ShowsInputVisualization();
+              bool const nowShowsInput = ShowsInputView(modifier);
               if (wasShowingInput != nowShowsInput) {
                 if (modifier.inputView.surfaceMesh) {
                   modifier.inputView.surfaceMesh->SetVisible(
@@ -2243,7 +2316,7 @@ void ModelEditor::ShowMeshModifierStack() {
       }
       ImGui::EndDisabled();
       tooltip(
-          modifier.output.tetMesh.GetNumElements() > 0
+          modifier.output.full.mesh.nodesPerElement == 4
               ? "Save this modifier's current tetrahedral output to a .vtk file for inspection."
               : "Save this modifier's current surface output to a .glb or .obj file for "
                 "inspection.");
@@ -2263,7 +2336,7 @@ void ModelEditor::ShowMeshModifierStack() {
 
       // Visualization controls stay active even when disabled, so a stale buffer can be inspected.
       MeshProcessingMethod const& method = modifier.ActiveMethod();
-      if (method.ShowsInputVisualization()) {
+      if (ShowsInputView(modifier)) {
         // Export Mochi Model: show the captured input surface then the reconstructed SDF, each
         // under its own heading -- mirroring the Model Viewer's Mochi Model / SDF Visualization
         // sections.
@@ -2486,15 +2559,13 @@ void ModelEditor::RunGenerationCascade(
       ctx,
       [this](std::size_t index) {
         StageBuffer const& output = _modifiers[index]->output;
-        return StageMesh{
-            .mesh = processing::BufferedStageOutput(output.tetMesh, output.sections),
-            .embedded = output.embedded};
+        return processing::BufferedStageOutput(output.full, output.sections);
       },
       [this](std::size_t index) {
         MeshProcessingModifier const& modifier = *_modifiers[index];
         // An Embed stage displays the mesh it embedded, not the boundary of its output.
         return modifier.ActiveMethod().EmbeddedRole().has_value()
-            ? processing::DisplaySurface(modifier.output.tetMesh)
+            ? processing::DisplaySurface(modifier.output.full.mesh)
             : SectionsToMeshData(modifier.output.sections);
       },
       processing::DisplaySurface);
@@ -2601,9 +2672,14 @@ void ModelEditor::RunGenerationCascade(
               embeddedMesh != nullptr && embeddedMesh->has_value() ? &**embeddedMesh : nullptr;
           mochi::MeshData const& shownSurface =
               shownEmbedded != nullptr ? *shownEmbedded : outputSurface;
-          mod.output.sections = {MeshDataToSection(shownSurface)};
-          mod.output.tetMesh = output.nodesPerElement == 4 ? output : mochi::MeshData{};
-          mod.output.embedded = run->Embedded(p);
+          // A polyline has no surface to show; it is drawn from `full` instead.
+          mod.output.sections.clear();
+          if (shownSurface.GetNumElements() > 0) {
+            mod.output.sections.push_back(MeshDataToSection(shownSurface));
+          }
+          mod.output.full = output.nodesPerElement == 3 && run->Embedded(p).IsEmpty()
+              ? StageMesh{}
+              : run->OutputStage(p);
           mod.outputGenId = _nextGenerationId++;
           mod.inputGenIdAtLastGen =
               (!isSource && p > 0) ? _modifiers[chain[p - 1]]->outputGenId : 0;
@@ -2613,7 +2689,8 @@ void ModelEditor::RunGenerationCascade(
                 refIdx >= 0 ? _modifiers[static_cast<std::size_t>(refIdx)]->outputGenId : 0;
           }
           mod.lastGenSignature = mod.PropsSignature(ctx);
-          if (mod.ActiveMethod().ShowsInputVisualization()) {
+          mod.output.stats.hausdorff = -1.0;
+          if (ShowsInputView(mod)) {
             // Export Mochi Model shows its input surface next to the reconstructed SDF. Color both
             // by role and capture a COPY of the input mesh so the input preview survives later
             // reorders.
@@ -2629,15 +2706,19 @@ void ModelEditor::RunGenerationCascade(
           } else {
             DestroyStageBufferMeshes(mod.inputView);
             mod.inputView.sections.clear();
-            mod.inputView.tetMesh = {};
+            mod.inputView.full = {};
             mod.inputView.stats = {};
             mochi::Real3 const color = StageOutputColor(mod);
             RebuildStageMeshes(mod.output, color);
           }
           // Match the estimate to the format used by Save. Export modifiers can override it below.
-          mod.output.stats.fileSizeBytes = output.nodesPerElement == 4
-              ? processing::EstimateVtkSizeBytes(output)
-              : processing::EstimateGlbSizeBytes(outputSurface);
+          if (output.nodesPerElement == 4) {
+            mod.output.stats.fileSizeBytes = processing::EstimateVtkSizeBytes(output);
+          } else if (shownSurface.GetNumElements() > 0) {
+            mod.output.stats.fileSizeBytes = processing::EstimateGlbSizeBytes(shownSurface);
+          } else {
+            mod.output.stats.fileSizeBytes = std::nullopt; // a polyline, which Save does not write
+          }
           mod.output.stats.fileSizeLabel = "Est. File Size";
           mod.output.stats.tetMesh = shownEmbedded != nullptr ? std::nullopt : TetCounts(output);
           mod.output.stats.embeddedMesh = shownEmbedded != nullptr
@@ -2651,7 +2732,7 @@ void ModelEditor::RunGenerationCascade(
           // Mirror the estimated export size onto the input (Mochi Model) view too: the .mochi.h5
           // stores the input mesh plus the SDF, so its estimated size belongs on the mesh being
           // exported, not only the reconstructed-SDF preview.
-          if (mod.ActiveMethod().ShowsInputVisualization()) {
+          if (ShowsInputView(mod)) {
             mod.inputView.stats.fileSizeBytes = mod.output.stats.fileSizeBytes;
             mod.inputView.stats.fileSizeLabel = mod.output.stats.fileSizeLabel;
             ComposeStats(mod.inputView.stats);
@@ -2989,7 +3070,7 @@ void ModelEditor::SaveModifierOutput(std::size_t index) {
     return;
   }
   StageBuffer const& output = _modifiers[index]->output;
-  bool const isTetMesh = output.tetMesh.GetNumElements() > 0;
+  bool const isTetMesh = output.full.mesh.nodesPerElement == 4;
   if (!isTetMesh && output.sections.empty()) {
     MOCHI_LOG_WARNING("Save: modifier has no output to save.");
     return;
@@ -3032,7 +3113,7 @@ void ModelEditor::SaveModifierOutput(std::size_t index) {
   std::shared_ptr<mochi::MeshData> tetMesh;
   std::shared_ptr<std::vector<MeshSection>> sections;
   if (isTetMesh) {
-    tetMesh = std::make_shared<mochi::MeshData>(output.tetMesh);
+    tetMesh = std::make_shared<mochi::MeshData>(output.full.mesh);
   } else {
     sections = std::make_shared<std::vector<MeshSection>>(output.sections);
   }

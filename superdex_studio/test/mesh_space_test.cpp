@@ -31,10 +31,15 @@
 
 #include "meshing/processing_modifiers/processing_mesh_utils.h"
 
+#include <mochi_core/geometry/mesh_data_utils.h>
+#include <mochi_core/geometry/model_utils.h>
 #include <mochi_core/test/mochi_test_helpers.h>
+#include <mochi_core/utils/array_utils.h>
 #include <mochi_core/utils/file_utils.h>
 
 #include <mochi_mesh/step_tessellation.h>
+
+#include <mochi_physics/utils/mochi_model_utils.h>
 
 #include <mochi_renderer/utils.h>
 
@@ -291,12 +296,29 @@ TEST(TetStageOutput, BufferedStageOutputPreservesTheCompleteTetMesh) {
   std::vector<mochi_renderer::MeshSection> const sections{
       SectionFromMeshData(DisplaySurface(tets))};
 
-  mochi::MeshData const output = BufferedStageOutput(tets, sections);
+  mochi::MeshData const output = BufferedStageOutput({.mesh = tets}, sections).mesh;
 
   EXPECT_EQ(output.nodesPerElement, 4);
   EXPECT_EQ(output.GetNumNodes(), 5);
   EXPECT_EQ(output.coordinates, tets.coordinates);
   EXPECT_EQ(output.connectivity, tets.connectivity);
+}
+
+TEST(TetStageOutput, BufferedTriangleStagePreservesItsMeshAndEmbeddings) {
+  StageMesh stage{.mesh = SingleTriangle()};
+  stage.embedded.contactSkinMesh = SingleTriangle();
+  stage.embedded.visualMesh = SingleTriangle();
+  stage.embedded.visualMesh->coordinates[0] = 2;
+  std::vector<mochi_renderer::MeshSection> const sections{
+      SectionFromMeshData(*stage.embedded.visualMesh)};
+
+  StageMesh const output = BufferedStageOutput(stage, sections);
+
+  EXPECT_EQ(output.mesh, stage.mesh);
+  ASSERT_TRUE(output.embedded.contactSkinMesh);
+  ASSERT_TRUE(output.embedded.visualMesh);
+  EXPECT_EQ(*output.embedded.contactSkinMesh, *stage.embedded.contactSkinMesh);
+  EXPECT_EQ(*output.embedded.visualMesh, *stage.embedded.visualMesh);
 }
 
 TEST(TetStageOutput, BufferedStageOutputFallsBackToDisplayedTriangles) {
@@ -305,11 +327,101 @@ TEST(TetStageOutput, BufferedStageOutputFallsBackToDisplayedTriangles) {
   emptyTetMesh.nodesPerElement = 4;
   std::vector<mochi_renderer::MeshSection> const sections{SectionFromMeshData(triangle)};
 
-  mochi::MeshData const output = BufferedStageOutput(emptyTetMesh, sections);
+  mochi::MeshData const output = BufferedStageOutput({.mesh = emptyTetMesh}, sections).mesh;
 
   EXPECT_EQ(output.nodesPerElement, 3);
   EXPECT_EQ(output.coordinates, triangle.coordinates);
   EXPECT_EQ(output.connectivity, triangle.connectivity);
+}
+
+// A non-planar polyline in Mochi space: (0, 0, 0), (1, 0, 0), (1, 1, 0), (1, 1, 1).
+mochi::ModelData PolylineModel() {
+  mochi::ModelData model;
+  model.mesh.emplace();
+  model.mesh->nodesPerElement = 2;
+  for (mochi::real const coordinate : {0, 0, 0, 1, 0, 0, 1, 1, 0, 1, 1, 1}) {
+    model.mesh->coordinates.push_back(coordinate);
+  }
+  return model;
+}
+
+TEST(PolylineStage, DisplaySurfaceIsEmpty) {
+  mochi::MeshData polyline = *PolylineModel().mesh;
+  polyline.connectivity = mochi::MakeSequentialPolylineConnectivity(4, /*isClosedLoop=*/false);
+  EXPECT_EQ(DisplaySurface(polyline).GetNumElements(), 0);
+}
+
+TEST(PolylineStage, BufferedStageOutputPreservesThePolylineAndItsFrameAxes) {
+  StageMesh full{.mesh = *PolylineModel().mesh};
+  full.mesh.connectivity = mochi::MakeSequentialPolylineConnectivity(4, /*isClosedLoop=*/false);
+  full.elementFrameAxes = mochi::DynamicArray<mochi::real>{0, 1, 0, 0, 0, 1, 1, 0, 0};
+
+  StageMesh const output = BufferedStageOutput(full, {});
+
+  EXPECT_EQ(output.mesh.coordinates, full.mesh.coordinates);
+  EXPECT_EQ(output.mesh.connectivity, full.mesh.connectivity);
+  EXPECT_EQ(output.elementFrameAxes, full.elementFrameAxes);
+}
+
+// The stage holds the authored frame axes, the polyline's elements stated explicitly, and both in
+// renderer space, where Mochi-space (x, y, z) is (x, z, -y). The model's contact skin is left out.
+TEST(PolylineStage, FromAMochiModelKeepsItsAuthoredFrameAxes) {
+  mochi::ModelData model = PolylineModel();
+  model.elementFrameAxes = mochi::DynamicArray<mochi::real>{0, 1, 0, 0, 0, 1, 1, 0, 0};
+  model.contactSkinMesh = mochi::model::GenerateTubularSkinMesh(
+      mochi::Unflatten<mochi::Real3 const>(mochi::MakeConstSpan(model.mesh->coordinates)),
+      mochi::Unflatten<mochi::Real3 const>(mochi::MakeConstSpan(*model.elementFrameAxes)),
+      /*isClosedLoop=*/false,
+      0.1f,
+      4,
+      mochi::test::ExpectOK{});
+
+  StageMesh const stage = PolylineStageFromMochiModel(model, mochi::test::ExpectOK{});
+
+  EXPECT_EQ(stage.mesh.nodesPerElement, 2);
+  EXPECT_EQ(
+      stage.mesh.coordinates,
+      (mochi::DynamicArray<mochi::real>{0, 0, 0, 1, 0, 0, 1, 0, -1, 1, 1, -1}));
+  EXPECT_EQ(
+      stage.mesh.connectivity,
+      mochi::MakeSequentialPolylineConnectivity(4, /*isClosedLoop=*/false));
+  ASSERT_TRUE(stage.elementFrameAxes.has_value());
+  EXPECT_EQ(
+      *stage.elementFrameAxes, (mochi::DynamicArray<mochi::real>{0, 0, -1, 0, 1, 0, 1, 0, 0}));
+  EXPECT_TRUE(stage.embedded.IsEmpty());
+}
+
+TEST(PolylineStage, FromAnUnframedMochiModelGetsItsBishopFrame) {
+  mochi::ModelData const model = PolylineModel();
+  mochi::DynamicArray<mochi::Real3> const bishop = mochi::model::GenerateDiscreteBishopFrame(
+      mochi::Unflatten<mochi::Real3 const>(mochi::MakeConstSpan(model.mesh->coordinates)),
+      /*isClosedLoop=*/false);
+
+  StageMesh const stage = PolylineStageFromMochiModel(model, mochi::test::ExpectOK{});
+
+  ASSERT_TRUE(stage.elementFrameAxes.has_value());
+  mochi::DynamicArray<mochi::real> expected;
+  for (mochi::Real3 const& axis : bishop) {
+    expected.append(mochi::MakeConstSpan(mochi::Real3{axis[0], axis[2], -axis[1]}));
+  }
+  ASSERT_EQ(stage.elementFrameAxes->size(), expected.size());
+  for (std::size_t i = 0; i < expected.size(); ++i) {
+    EXPECT_NEAR((*stage.elementFrameAxes)[i], expected[i], 1e-6) << "component " << i;
+  }
+}
+
+TEST(PolylineStage, LoadMochiStageReadsAPolylineModel) {
+  mochi::TempDirCleanup const dir =
+      mochi::CreateTempDirectory("polyline_stage_test", mochi::test::ExpectOK{});
+  std::string const path = (dir.Path() / "rod.mochi.json").string();
+  mochi::model_utils::SaveToFile(
+      PolylineModel(), path, mochi::FileFormat::JSON, mochi::test::ExpectOK{});
+
+  StageMesh const stage = LoadMochiStage(path, mochi::test::ExpectOK{});
+
+  EXPECT_EQ(stage.mesh.nodesPerElement, 2);
+  EXPECT_EQ(stage.mesh.GetNumElements(), 3);
+  EXPECT_TRUE(stage.elementFrameAxes.has_value());
 }
 
 // RenderSpace (x, y, z) is Mochi-space (x, -z, y); connectivity is untouched.

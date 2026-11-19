@@ -16,7 +16,9 @@
 
 #include "meshing/processing_modifiers/processing_mesh_utils.h"
 
+#include <mochi_core/geometry/mesh_data_utils.h>
 #include <mochi_core/geometry/model_data.h>
+#include <mochi_core/geometry/model_utils.h> // GenerateDiscreteBishopFrame
 #include <mochi_core/geometry/tetrahedral_mesh.h>
 #include <mochi_core/utils/coordinate_space_converter.h>
 #include <mochi_mesh/step_tessellation.h>
@@ -183,13 +185,11 @@ mochi::MeshData MeshDataFromSections(std::vector<MeshSection> const& sections) {
   return mesh;
 }
 
-mochi::MeshData BufferedStageOutput(
-    mochi::MeshData const& tetMesh,
-    std::vector<MeshSection> const& sections) {
-  if (tetMesh.GetNumElements() > 0) {
-    return tetMesh;
+StageMesh BufferedStageOutput(StageMesh const& full, std::vector<MeshSection> const& sections) {
+  if (full.mesh.GetNumElements() > 0) {
+    return full;
   }
-  return MeshDataFromSections(sections);
+  return {.mesh = MeshDataFromSections(sections)};
 }
 
 MeshSection SectionFromMeshData(mochi::MeshData const& mesh) {
@@ -331,9 +331,10 @@ std::vector<MeshSection> TessellateStepSections(
   return sections;
 }
 
-mochi::MeshData LoadMochiMesh(std::string const& path, mochi::Error& error) {
-  mochi::ModelData const model = mochi::model_utils::LoadFromFile(path, error);
-  MOCHI_ERROR_RETURN(error, {});
+namespace {
+
+// A loaded mochi model's surface as a neutral triangle MeshData in renderer space.
+mochi::MeshData MochiModelSurface(mochi::ModelData const& model, mochi::Error& error) {
   if (model.mesh.has_value() && model.mesh->nodesPerElement == 3 &&
       model.mesh->GetNumElements() > 0) {
     mochi::MeshData mesh = *model.mesh; // stored triangle surface, in Mochi space
@@ -361,7 +362,59 @@ mochi::MeshData LoadMochiMesh(std::string const& path, mochi::Error& error) {
   return mesh;
 }
 
+} // namespace
+
+mochi::MeshData LoadMochiMesh(std::string const& path, mochi::Error& error) {
+  mochi::ModelData const model = mochi::model_utils::LoadFromFile(path, error);
+  MOCHI_ERROR_RETURN(error, {});
+  return MochiModelSurface(model, error);
+}
+
+StageMesh PolylineStageFromMochiModel(mochi::ModelData const& model, mochi::Error& error) {
+  MOCHI_ERROR_IF(
+      !model.mesh.has_value() || model.mesh->nodesPerElement != 2,
+      error,
+      "Expected a polyline model.");
+  MOCHI_ERROR_RETURN(error, {});
+  mochi::ModelData polyline;
+  polyline.mesh = model.mesh;
+  polyline.elementFrameAxes = model.elementFrameAxes;
+  int const numNodes = polyline.mesh->GetNumNodes();
+  if (polyline.mesh->connectivity.empty() && numNodes >= 2) {
+    // Stages state the elements of a polyline explicitly, as the open chain empty means.
+    polyline.mesh->connectivity =
+        mochi::MakeSequentialPolylineConnectivity(numNodes, /*isClosedLoop=*/false);
+  }
+  mochi::model_utils::Validate(polyline, error);
+  MOCHI_ERROR_RETURN(error, {});
+  if (!polyline.elementFrameAxes.has_value()) {
+    polyline.elementFrameAxes = mochi::Flatten(
+        mochi::MakeConstSpan(
+            mochi::model::GenerateDiscreteBishopFrame(
+                mochi::Unflatten<mochi::Real3 const>(
+                    mochi::MakeConstSpan(polyline.mesh->coordinates)),
+                mochi::IsPolylineClosedLoop(*polyline.mesh))));
+  }
+  mochi::model_utils::BakeCoordinateSpaceTransform(
+      polyline, mochi::CoordinateSpace::Default(), mochi_renderer::RenderSpace(), error);
+  MOCHI_ERROR_RETURN(error, {});
+  return {
+      .mesh = std::move(*polyline.mesh), .elementFrameAxes = std::move(polyline.elementFrameAxes)};
+}
+
+StageMesh LoadMochiStage(std::string const& path, mochi::Error& error) {
+  mochi::ModelData const model = mochi::model_utils::LoadFromFile(path, error);
+  MOCHI_ERROR_RETURN(error, {});
+  if (model.mesh.has_value() && model.mesh->nodesPerElement == 2) {
+    return PolylineStageFromMochiModel(model, error);
+  }
+  return {.mesh = MochiModelSurface(model, error)};
+}
+
 mochi::MeshData DisplaySurface(mochi::MeshData const& mesh) {
+  if (mesh.nodesPerElement == 2) {
+    return {};
+  }
   if (mesh.nodesPerElement != 4) {
     return mesh;
   }

@@ -325,7 +325,8 @@ class ModelEditor : public AssetEditor {
   // A polyline (rod) model's centerline, drawn as lines instead of the surface and wireframe.
   void RebuildMochiPolylineMesh();
   void DestroyMochiPolylineMesh();
-  // Draws the polyline model's element frame axes as arrows this frame, when shown.
+  // Draws the element frame axes of the polyline model and of polyline stage outputs as arrows
+  // this frame, where shown.
   void DrawFrameAxes();
   // Builds both the SDF surface and wireframe meshes from the asset's cached SDF surface
   // (reconstructing it first if no viewport has yet).

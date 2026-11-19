@@ -27,6 +27,7 @@
 // (enums serialize as their string names, keeping the files human-readable/editable).
 
 #include <mochi_core/geometry/mesh_data.h>
+#include <mochi_core/utils/dynamic_array.h>
 #include <mochi_core/utils/dynamic_string.h>
 #include <mochi_core/utils/error.h>
 #include <mochi_core/utils/nd_array.h>
@@ -85,10 +86,15 @@ struct EmbeddedMeshes {
   }
 };
 
-// What one stage hands the next: its mesh, plus the meshes embedded in it.
+// What one stage hands the next: its mesh, plus the meshes embedded in it and, for a polyline, its
+// element frame axes.
 struct StageMesh {
   mochi::MeshData mesh;
   EmbeddedMeshes embedded;
+  // The polyline's element frame axes (see mochi::ModelData::elementFrameAxes), which every stage
+  // whose mesh is a polyline carries. Like embedded meshes, they hold only for the exact polyline
+  // they came with.
+  std::optional<mochi::DynamicArray<mochi::real>> elementFrameAxes;
 };
 
 // Everything a method's Run may need beyond its own params and input, supplied by the editor.
@@ -266,6 +272,11 @@ class MeshProcessingMethod {
   // Whether Run accepts a tetrahedral input mesh (e.g. downstream of Tetrahedralize). Most methods
   // operate on triangle surfaces only.
   [[nodiscard]] virtual bool AcceptsTetrahedralInput() const {
+    return false;
+  }
+  // Whether RunStage accepts a polyline input, passing its element frame axes on with any polyline
+  // it outputs. Most methods operate on triangle surfaces only.
+  [[nodiscard]] virtual bool AcceptsPolylineInput() const {
     return false;
   }
   // Whether RunStage reads the meshes embedded in its input: the Embed modifiers, which add to

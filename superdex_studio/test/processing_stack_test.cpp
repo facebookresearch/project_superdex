@@ -52,6 +52,8 @@ struct ModifierSpec {
   bool acceptsTets = false;
   bool acceptsEmbedded = false; // passes the meshes embedded in its input on
   std::optional<mochi::MeshData> contactSkin; // embedded by a stage that acceptsEmbedded
+  bool acceptsPolylines = false; // passes the frame axes of a polyline input on
+  std::optional<mochi::DynamicArray<mochi::real>> frameAxes; // set on the output when given
 };
 
 // A method that does whatever its spec says. Its Auto export path is the source path plus ".out".
@@ -71,12 +73,18 @@ class TestMethod : public MeshProcessingMethod {
   }
   StageMesh RunStage(StageMesh const& input, ModifierRunContext const& ctx, mochi::Error& error)
       const override {
-    if (!_spec.acceptsEmbedded) {
-      return MeshProcessingMethod::RunStage(input, ctx, error);
+    StageMesh output{.mesh = Run(input.mesh, ctx, error)};
+    if (_spec.acceptsEmbedded) {
+      output.embedded = input.embedded;
+      if (_spec.contactSkin.has_value()) {
+        output.embedded.contactSkinMesh = _spec.contactSkin;
+      }
     }
-    StageMesh output{.mesh = Run(input.mesh, ctx, error), .embedded = input.embedded};
-    if (_spec.contactSkin.has_value()) {
-      output.embedded.contactSkinMesh = _spec.contactSkin;
+    if (_spec.acceptsPolylines) {
+      output.elementFrameAxes = input.elementFrameAxes;
+    }
+    if (_spec.frameAxes.has_value()) {
+      output.elementFrameAxes = _spec.frameAxes;
     }
     return output;
   }
@@ -95,6 +103,9 @@ class TestMethod : public MeshProcessingMethod {
   }
   [[nodiscard]] bool AcceptsEmbeddedMeshes() const override {
     return _spec.acceptsEmbedded;
+  }
+  [[nodiscard]] bool AcceptsPolylineInput() const override {
+    return _spec.acceptsPolylines;
   }
   [[nodiscard]] int ReferenceIndex() const override {
     return _spec.referenceIndex;
@@ -162,6 +173,25 @@ mochi::MeshData Tetrahedron() {
   }
   return mesh;
 }
+
+// An open polyline along +X: (0, 0, 0), (1, 0, 0), (2, 0, 0).
+mochi::MeshData ProducePolyline(
+    mochi::MeshData const& /*input*/,
+    ModifierRunContext const& /*ctx*/,
+    mochi::Error& /*error*/) {
+  mochi::MeshData mesh;
+  mesh.nodesPerElement = 2;
+  for (mochi::real const coordinate : {0, 0, 0, 1, 0, 0, 2, 0, 0}) {
+    mesh.coordinates.push_back(coordinate);
+  }
+  for (int const node : {0, 1, 1, 2}) {
+    mesh.connectivity.push_back(node);
+  }
+  return mesh;
+}
+
+// Valid frame axes for ProducePolyline's elements.
+mochi::DynamicArray<mochi::real> const kPolylineFrameAxes{0, 1, 0, 0, 0, 1};
 
 mochi::MeshData ProduceTetrahedron(
     mochi::MeshData const& /*input*/,
@@ -604,4 +634,40 @@ TEST(ProcessingStackTest, ASourceRestartsWithoutTheEmbeddedMeshesAboveIt) {
 
   EXPECT_TRUE(run.Embedded(1).contactSkinMesh.has_value());
   EXPECT_TRUE(run.Embedded(2).IsEmpty());
+}
+
+TEST(ProcessingStackTest, OnlyStagesThatAcceptPolylinesRunOnAPolyline) {
+  ModifierStack const stack = MakeStack(
+      {{.kind = kSource, .run = ProducePolyline, .frameAxes = kPolylineFrameAxes},
+       {.kind = kTransform, .acceptsTets = true, .acceptsPolylines = true},
+       {.kind = kTransform, .acceptsTets = true}});
+  StackRun run(
+      stack, {0, 1, 2}, {}, CurrentMeshes(NoCurrentOutput), NoCurrentOutput, SameReferenceMesh);
+
+  mochi::Error acceptingError;
+  mochi::Error rejectingError;
+  EXPECT_TRUE(run.Generate(0, acceptingError));
+  EXPECT_TRUE(run.Generate(1, acceptingError));
+  EXPECT_FALSE(run.Generate(2, rejectingError));
+
+  EXPECT_EQ(run.Output(1).nodesPerElement, 2);
+  EXPECT_EQ(run.OutputStage(1).elementFrameAxes, kPolylineFrameAxes);
+  EXPECT_FALSE(rejectingError.IsOK());
+  EXPECT_EQ(run.Output(2).GetNumElements(), 0);
+}
+
+TEST(ProcessingStackTest, APolylineOutputNeedsValidFrameAxes) {
+  mochi::DynamicArray<mochi::real> const alongTheElements{1, 0, 0, 1, 0, 0};
+  for (std::optional<mochi::DynamicArray<mochi::real>> const& frameAxes :
+       {std::optional<mochi::DynamicArray<mochi::real>>{}, std::optional{alongTheElements}}) {
+    ModifierStack const stack =
+        MakeStack({{.kind = kSource, .run = ProducePolyline, .frameAxes = frameAxes}});
+    StackRun run(
+        stack, {0}, {}, CurrentMeshes(NoCurrentOutput), NoCurrentOutput, SameReferenceMesh);
+
+    mochi::Error error;
+    EXPECT_FALSE(run.Generate(0, error));
+    EXPECT_FALSE(error.IsOK());
+    EXPECT_EQ(run.Output(0).GetNumElements(), 0);
+  }
 }

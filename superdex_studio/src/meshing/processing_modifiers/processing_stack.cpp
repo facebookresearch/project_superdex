@@ -195,10 +195,18 @@ bool StackRun::Generate(std::size_t p, mochi::Error& error) {
         : ref.currentMesh;
   }
   StageMesh out = modifier.Run(Input(p), runCtx, error);
-  if (error.IsOK() && out.mesh.nodesPerElement == 4) {
-    // Rejected here so that extracting the boundary surface later (DisplaySurface) cannot fail.
+  if (error.IsOK() && (out.mesh.nodesPerElement == 4 || out.mesh.nodesPerElement == 2)) {
+    // Rejected here so that showing the output later (the boundary surface DisplaySurface extracts,
+    // a polyline's lines and frame axes) cannot fail.
+    MOCHI_ERROR_IF(
+        out.mesh.nodesPerElement == 2 && !out.elementFrameAxes.has_value(),
+        error,
+        "A polyline output has no element frame axes.");
     mochi::ModelDataView model;
     model.mesh = out.mesh;
+    if (out.elementFrameAxes.has_value()) {
+      model.elementFrameAxes = mochi::MakeConstSpan(*out.elementFrameAxes);
+    }
     mochi::model::Validate(model, error);
   }
   if (!error.IsOK() || out.mesh.GetNumElements() == 0) {

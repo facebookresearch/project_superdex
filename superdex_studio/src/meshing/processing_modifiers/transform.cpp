@@ -18,6 +18,9 @@
 
 #include "meshing/processing_modifiers/processing_mesh_utils.h" // ApplyTransform
 
+#include <mochi_core/geometry/model_data.h>
+#include <mochi_physics/utils/mochi_model_utils.h> // BakeTransform
+
 #include <cmath>
 #include <cstddef>
 #include <memory>
@@ -51,6 +54,9 @@ class SrtTransformMethod : public ReflectedMethod<TransformSrtProps> {
     return "Apply a scale, then rotation, then translation to the mesh.";
   }
   [[nodiscard]] bool AcceptsTetrahedralInput() const override {
+    return true;
+  }
+  [[nodiscard]] bool AcceptsPolylineInput() const override {
     return true;
   }
   void ShowParams(ModifierGuiContext const& gui) override {
@@ -94,6 +100,23 @@ class SrtTransformMethod : public ReflectedMethod<TransformSrtProps> {
       }
     }
     return out;
+  }
+  StageMesh RunStage(StageMesh const& input, ModifierRunContext const& ctx, mochi::Error& error)
+      const override {
+    if (input.mesh.nodesPerElement != 2) {
+      return {.mesh = Run(input.mesh, ctx, error)};
+    }
+    // A polyline's frame axes transform with it, exactly as Mochi bakes a transform into a polyline
+    // model.
+    mochi::ModelData polyline;
+    polyline.mesh = input.mesh;
+    polyline.elementFrameAxes = input.elementFrameAxes;
+    mochi::model_utils::BakeTransform(
+        polyline, _props.scale, _props.rotation, _props.translation, error);
+    MOCHI_ERROR_RETURN(error, {});
+    return {
+        .mesh = std::move(*polyline.mesh),
+        .elementFrameAxes = std::move(polyline.elementFrameAxes)};
   }
 };
 

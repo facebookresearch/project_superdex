@@ -23,6 +23,7 @@
 // the "Add Modifier" menu and decodes the JSON "modifier" field on load.
 
 #include "meshing/processing_modifiers/processing_method.h"
+#include "rendering/rod_visualization.h"
 
 #include <mochi_renderer/utils.h> // MeshSection
 
@@ -43,7 +44,8 @@ namespace superdex::studio {
 // serialized).
 struct StageVisualization {
   bool showSurface = false;
-  bool showWireframe = false;
+  bool showWireframe = false; // for a polyline output, its lines
+  bool showFrameAxes = false; // a polyline output's element frame axes
   bool showStats = false; // show the read-only mesh statistics block
   float opacity = 1.0f;
 };
@@ -52,12 +54,13 @@ struct StageVisualization {
 // the modifier so the buffer travels with the element when the stack is reordered.
 struct StageBuffer {
   std::vector<mochi_renderer::MeshSection> sections;
-  // The stage's output when it is tetrahedral (`sections` then hold its boundary, or for an Embed
-  // stage the mesh it embedded); empty otherwise.
-  mochi::MeshData tetMesh;
-  // The meshes embedded in the stage's output (see EmbeddedMeshes).
-  EmbeddedMeshes embedded;
+  // The complete output when sections cannot hold it: a tetrahedral mesh, a polyline, or a mesh
+  // carrying embeddings. For an Embed stage sections show the embedded mesh; for a polyline they
+  // are empty. An unembedded triangle output uses only sections.
+  StageMesh full;
+  std::vector<FrameAxisGlyph> frameAxisGlyphs;
   mochi_renderer::SceneObject* surfaceMesh = nullptr;
+  // The wireframe of `sections`, or the lines of a polyline output.
   mochi_renderer::SceneObject* wireframeMesh = nullptr;
   StageVisualization viz;
   // Mesh statistics for `sections` (base summary + composited annotations), recomputed by the
@@ -135,6 +138,11 @@ class MeshProcessingModifier {
           error,
           "Modifier takes a triangle surface but received a tetrahedral mesh. Move it above "
           "Tetrahedralize.");
+      return {};
+    }
+    if (_kind != ModifierKind::Source && input.mesh.nodesPerElement == 2 &&
+        !ActiveMethod().AcceptsPolylineInput()) {
+      MOCHI_ERROR_SET(error, "Modifier does not take a polyline input.");
       return {};
     }
     if (_kind != ModifierKind::Source && !input.embedded.IsEmpty() &&

@@ -22,7 +22,9 @@
 #include "meshing/processing_modifiers/processing_mesh_utils.h"
 
 #include <mochi_core/geometry/model_data.h>
+#include <mochi_core/geometry/model_utils.h>
 #include <mochi_core/test/mochi_test_helpers.h>
+#include <mochi_core/utils/array_utils.h>
 #include <mochi_core/utils/coordinate_space_converter.h>
 #include <mochi_core/utils/defer.h>
 #include <mochi_core/utils/file_utils.h>
@@ -204,6 +206,20 @@ constexpr char const* kNoSdfExport =
     R"({"modifier": "Export Mochi Model", "method": "SDF", "enabled": true, "collapsed": true,
         "properties": {"bakeSdf": false}})";
 
+constexpr char const* kMochiSourceFromModelViewer =
+    R"({"modifier": "Source from Mochi Model", "method": "From Model Viewer", "enabled": true,
+        "collapsed": true, "properties": {}})";
+
+// Doubles the size and moves by renderer-space (0.01, 0.02, 0.03), which is Mochi-space
+// (0.01, -0.03, 0.02).
+constexpr char const* kScaledAndTranslatedSrt =
+    R"({"modifier": "Apply SRT Transformation", "method": "SRT Transform", "enabled": true,
+        "collapsed": true, "properties": {"scale": [2, 2, 2], "translation": [0.01, 0.02, 0.03]}})";
+
+constexpr char const* kRodExport =
+    R"({"modifier": "Export Mochi Model", "method": "SDF", "enabled": true, "collapsed": true,
+        "properties": {"exportPath": "rod_out.mochi.h5"}})";
+
 // Writes a pipeline of @p modifiers, each a JSON object, in order.
 void WriteModifiers(fs::path const& path, std::vector<std::string> const& modifiers) {
   fs::create_directories(path.parent_path());
@@ -228,6 +244,26 @@ mochi::real TetSignedVolume(mochi::MeshData const& mesh, int tet) {
              mochi::Cross(
                  NodePosition(mesh, nodes[2]) - origin, NodePosition(mesh, nodes[3]) - origin)) /
       mochi::real{6};
+}
+
+// A rod centerline in Mochi space, with authored frame axes and a tubular contact skin.
+mochi::ModelData RodModel() {
+  mochi::ModelData model;
+  model.mesh.emplace();
+  model.mesh->nodesPerElement = 2;
+  for (mochi::real const coordinate : {0.0f, 0.0f, 0.0f, 0.1f, 0.0f, 0.0f, 0.2f, 0.05f, 0.0f}) {
+    model.mesh->coordinates.push_back(coordinate);
+  }
+  model.mesh->connectivity = {0, 1, 1, 2};
+  model.elementFrameAxes = mochi::DynamicArray<mochi::real>{0, 0, 1, 0, 0, 1};
+  model.contactSkinMesh = mochi::model::GenerateTubularSkinMesh(
+      mochi::Unflatten<mochi::Real3 const>(mochi::MakeConstSpan(model.mesh->coordinates)),
+      mochi::Unflatten<mochi::Real3 const>(mochi::MakeConstSpan(*model.elementFrameAxes)),
+      /*isClosedLoop=*/false,
+      0.01f,
+      4,
+      mochi::test::ExpectOK{});
+  return model;
 }
 
 class ProcessCommandTest : public ::testing::Test {
@@ -1080,4 +1116,118 @@ TEST_F(ProcessCommandTest, ShadowedModelPipelineFillsOnlyThatModelsSlot) {
   EXPECT_TRUE(fs::equivalent(slots.renderPath, model));
   EXPECT_EQ(slots.cadPath, "");
   EXPECT_EQ(slots.mochiPath, "");
+}
+
+// The rod starts from its bare polyline: the transform moves its nodes and keeps its frame axes,
+// and the export writes both without an SDF, leaving out the source model's contact skin.
+TEST_F(ProcessCommandTest, APolylineIsTransformedAndExportedWithItsFrameAxes) {
+  fs::path const source = _root / "rods" / "rod.mochi.h5";
+  mochi::ModelData const rod = RodModel();
+  mochi::model_utils::SaveToFile(
+      rod, source.string(), mochi::FileFormat::H5, mochi::test::ExpectOK{});
+  fs::path const pipeline = _root / "intermediates" / "rod.StudioProcessing.json";
+  WriteModifiers(pipeline, {kMochiSourceFromModelViewer, kScaledAndTranslatedSrt, kRodExport});
+
+  mochi::Error error;
+  ProcessReport const report = RunProcessingPipeline(
+      {.pipelinePath = pipeline.string(), .slots = {.mochiPath = source.string()}}, error);
+
+  ASSERT_TRUE(error.IsOK()) << error.GetDescription();
+  ASSERT_TRUE(report.succeeded);
+  ASSERT_EQ(report.stages.size(), 3u);
+  EXPECT_EQ(report.stages[0].polyline, (mochi::Int2{3, 2}));
+  EXPECT_EQ(report.stages[1].polyline, (mochi::Int2{3, 2}));
+  mochi::ModelData const exported = mochi::model_utils::LoadFromFile(
+      (_root / "intermediates" / "rod_out.mochi.h5").string(), error);
+  ASSERT_TRUE(error.IsOK()) << error.GetDescription();
+  ASSERT_TRUE(exported.mesh.has_value());
+  EXPECT_EQ(exported.mesh->nodesPerElement, 2);
+  EXPECT_EQ(exported.mesh->connectivity, rod.mesh->connectivity);
+  mochi::Real3 const translation{0.01f, -0.03f, 0.02f};
+  for (int node = 0; node < 3; ++node) {
+    mochi::Real3 const expected = 2.0f * NodePosition(*rod.mesh, node) + translation;
+    EXPECT_TRUE(mochi::NearEqual(NodePosition(*exported.mesh, node), expected, 1e-6f))
+        << "node " << node;
+  }
+  ASSERT_TRUE(exported.elementFrameAxes.has_value());
+  EXPECT_EQ(*exported.elementFrameAxes, *rod.elementFrameAxes);
+  EXPECT_FALSE(exported.contactSkinMesh.has_value());
+  EXPECT_FALSE(exported.sdf.has_value());
+}
+
+// Under a rotation and a non-uniform scale, the frame axes transform as Mochi bakes a transform
+// into a polyline model (as normals), so they stay orthogonal to the stretched elements.
+TEST_F(ProcessCommandTest, APolylinesFrameAxesTransformWithItsNodes) {
+  constexpr char const* kRotatedAndStretchedSrt =
+      R"({"modifier": "Apply SRT Transformation", "method": "SRT Transform", "enabled": true,
+          "collapsed": true,
+          "properties": {"scale": [1, 3, 0.5], "rotation": [0.3826834, 0, 0, 0.9238795]}})";
+  fs::path const source = _root / "rods" / "rod.mochi.h5";
+  mochi::ModelData rod = RodModel();
+  rod.contactSkinMesh.reset();
+  mochi::model_utils::SaveToFile(
+      rod, source.string(), mochi::FileFormat::H5, mochi::test::ExpectOK{});
+  fs::path const pipeline = _root / "intermediates" / "rod.StudioProcessing.json";
+  WriteModifiers(pipeline, {kMochiSourceFromModelViewer, kRotatedAndStretchedSrt, kRodExport});
+
+  mochi::Error error;
+  ProcessReport const report = RunProcessingPipeline(
+      {.pipelinePath = pipeline.string(), .slots = {.mochiPath = source.string()}}, error);
+
+  ASSERT_TRUE(error.IsOK()) << error.GetDescription();
+  ASSERT_TRUE(report.succeeded);
+  mochi::ModelData const exported = mochi::model_utils::LoadFromFile(
+      (_root / "intermediates" / "rod_out.mochi.h5").string(), error);
+  ASSERT_TRUE(error.IsOK()) << error.GetDescription();
+  // The SRT applies in the stack's renderer space.
+  mochi::ModelData expected = rod;
+  mochi::model_utils::BakeCoordinateSpaceTransform(
+      expected, mochi::CoordinateSpace::Default(), mochi_renderer::RenderSpace(), error);
+  mochi::model_utils::BakeTransform(
+      expected,
+      mochi::Real3{1.0f, 3.0f, 0.5f},
+      mochi::Quaternion{0.3826834f, 0.0f, 0.0f, 0.9238795f},
+      mochi::Real3{},
+      error);
+  mochi::model_utils::BakeCoordinateSpaceTransform(
+      expected, mochi_renderer::RenderSpace(), mochi::CoordinateSpace::Default(), error);
+  ASSERT_TRUE(error.IsOK()) << error.GetDescription();
+  ASSERT_TRUE(exported.mesh.has_value());
+  ASSERT_TRUE(exported.elementFrameAxes.has_value());
+  ASSERT_EQ(exported.mesh->coordinates.size(), expected.mesh->coordinates.size());
+  for (std::size_t i = 0; i < expected.mesh->coordinates.size(); ++i) {
+    EXPECT_NEAR(exported.mesh->coordinates[i], expected.mesh->coordinates[i], 1e-6f) << i;
+  }
+  ASSERT_EQ(exported.elementFrameAxes->size(), expected.elementFrameAxes->size());
+  for (std::size_t i = 0; i < expected.elementFrameAxes->size(); ++i) {
+    EXPECT_NEAR((*exported.elementFrameAxes)[i], (*expected.elementFrameAxes)[i], 1e-5f) << i;
+  }
+  // The rotation moved the axes, so this is not their identity transform.
+  EXPECT_FALSE(
+      mochi::NearEqual(
+          mochi::Real3{
+              (*exported.elementFrameAxes)[0],
+              (*exported.elementFrameAxes)[1],
+              (*exported.elementFrameAxes)[2]},
+          mochi::Real3{
+              (*rod.elementFrameAxes)[0], (*rod.elementFrameAxes)[1], (*rod.elementFrameAxes)[2]}));
+}
+
+TEST_F(ProcessCommandTest, APolylineFailsAStageThatTakesOnlySurfaces) {
+  fs::path const source = _root / "rods" / "rod.mochi.h5";
+  mochi::model_utils::SaveToFile(
+      RodModel(), source.string(), mochi::FileFormat::H5, mochi::test::ExpectOK{});
+  fs::path const pipeline = _root / "intermediates" / "rod.StudioProcessing.json";
+  WriteModifiers(pipeline, {kMochiSourceFromModelViewer, kMakeWatertight});
+
+  mochi::Error error;
+  ProcessReport const report = RunProcessingPipeline(
+      {.pipelinePath = pipeline.string(), .slots = {.mochiPath = source.string()}}, error);
+
+  ASSERT_TRUE(error.IsOK()) << error.GetDescription();
+  EXPECT_FALSE(report.succeeded);
+  ASSERT_EQ(report.stages.size(), 2u);
+  EXPECT_TRUE(report.stages[0].succeeded);
+  EXPECT_FALSE(report.stages[1].succeeded);
+  EXPECT_NE(report.stages[1].error.find("polyline"), std::string::npos) << report.stages[1].error;
 }

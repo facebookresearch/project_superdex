@@ -279,6 +279,8 @@ ProcessReport RunPipeline(
       stage.vertices = static_cast<int64_t>(surface.GetNumNodes());
       stage.triangles = static_cast<int64_t>(surface.GetNumElements());
       stage.tetMesh = mochi::Int2{output.GetNumNodes(), output.GetNumElements()};
+    } else if (output.nodesPerElement == 2) {
+      stage.polyline = mochi::Int2{output.GetNumNodes(), output.GetNumElements()};
     } else {
       stage.vertices = static_cast<int64_t>(output.GetNumNodes());
       stage.triangles = static_cast<int64_t>(output.GetNumElements());
@@ -328,14 +330,24 @@ int RunProcessCommand(ProcessOptions const& options) {
   mochi::Error error;
   ProcessReport const report =
       RunProcessingPipeline(options, error, [&stageIndex](ProcessStageReport const& stage) {
-        std::printf(
-            "[%zu] %s: %s, %s%lld vertices, %lld triangles",
-            stageIndex++,
-            stage.label.c_str(),
-            stage.succeeded ? "ok" : "FAILED",
-            stage.tetMesh.has_value() ? "boundary " : "",
-            static_cast<long long>(stage.vertices),
-            static_cast<long long>(stage.triangles));
+        if (stage.polyline.has_value()) {
+          std::printf(
+              "[%zu] %s: %s, polyline %d nodes, %d elements",
+              stageIndex++,
+              stage.label.c_str(),
+              stage.succeeded ? "ok" : "FAILED",
+              (*stage.polyline)[0],
+              (*stage.polyline)[1]);
+        } else {
+          std::printf(
+              "[%zu] %s: %s, %s%lld vertices, %lld triangles",
+              stageIndex++,
+              stage.label.c_str(),
+              stage.succeeded ? "ok" : "FAILED",
+              stage.tetMesh.has_value() ? "boundary " : "",
+              static_cast<long long>(stage.vertices),
+              static_cast<long long>(stage.triangles));
+        }
         if (stage.sdfGrid.has_value()) {
           std::printf(
               ", SDF grid %d x %d x %d",

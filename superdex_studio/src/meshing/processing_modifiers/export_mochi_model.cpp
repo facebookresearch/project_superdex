@@ -77,11 +77,24 @@ std::string NormalizeMochiModelExportPath(std::string path) {
   return path;
 }
 
-// The input mesh, and the meshes embedded in it, converted from the pipeline's renderer (Y-up)
-// space to Mochi (Z-up) space, which is what a .mochi.h5 stores. Triangle surfaces keep their
-// established section-based conversion; tetrahedral meshes, and meshes carrying embedded meshes,
-// are converted directly so their nodes and connectivity are kept.
-mochi::ModelData MochiSpaceModel(mochi::MeshData const& input, EmbeddedMeshes const& embedded) {
+// The input mesh, the meshes embedded in it and a polyline's frame axes, converted from the
+// pipeline's renderer (Y-up) space to Mochi (Z-up) space, which is what a .mochi.h5 stores.
+// Triangle surfaces keep their established section-based conversion; tetrahedral meshes, polylines,
+// and meshes carrying embedded meshes are converted directly so their nodes and connectivity are
+// kept.
+mochi::ModelData MochiSpaceModel(StageMesh const& stage, mochi::Error& error) {
+  mochi::MeshData const& input = stage.mesh;
+  EmbeddedMeshes const& embedded = stage.embedded;
+  if (input.nodesPerElement == 2) {
+    mochi::ModelData model;
+    model.mesh = input;
+    model.elementFrameAxes = stage.elementFrameAxes;
+    model.contactSkinMesh = embedded.contactSkinMesh;
+    model.visualMesh = embedded.visualMesh;
+    mochi::model_utils::BakeCoordinateSpaceTransform(
+        model, mochi_renderer::RenderSpace(), mochi::CoordinateSpace::Default(), error);
+    return model;
+  }
   if (input.nodesPerElement == 4 || !embedded.IsEmpty()) {
     mochi::ModelData model;
     model.mesh = processing::ToMochiSpace(input);
@@ -148,6 +161,11 @@ class MochiModelExportMethod : public ReflectedMethod<MochiModelExportProps> {
     return true;
   }
 
+  // A polyline is exported with its frame axes, and without an SDF.
+  [[nodiscard]] bool AcceptsPolylineInput() const override {
+    return true;
+  }
+
   // Writes the meshes embedded in its input (see EmbeddedMeshes) into the model.
   [[nodiscard]] bool AcceptsEmbeddedMeshes() const override {
     return true;
@@ -171,8 +189,9 @@ class MochiModelExportMethod : public ReflectedMethod<MochiModelExportProps> {
     ModifierTooltip const& tooltip = gui.tooltip;
     ImGui::Checkbox("Bake SDF", &_props.bakeSdf);
     tooltip(
-        "Bake a signed distance field into the exported model. Off exports the mesh alone; Mochi "
-        "then bakes an SDF each time it loads the model.");
+        "Bake a signed distance field into the exported model. Applies only to triangle and "
+        "tetrahedral meshes; a polyline is always exported without one. Off exports the mesh "
+        "alone, and Mochi then bakes an SDF each time it loads the model.");
     ImGui::BeginDisabled(!_props.bakeSdf);
     if (gui.host) {
       (void)gui.host->ReflectedStruct(
@@ -182,8 +201,9 @@ class MochiModelExportMethod : public ReflectedMethod<MochiModelExportProps> {
     }
     ImGui::EndDisabled();
     if (_props.bakeSdf) {
-      ImGui::TextUnformatted("Bakes a grid SDF from the input mesh; the output buffer is its");
-      ImGui::TextUnformatted("reconstructed surface (preview only).");
+      ImGui::TextUnformatted("Bakes a grid SDF from a triangle or tetrahedral input; the output");
+      ImGui::TextUnformatted("buffer is its reconstructed surface (preview only). A polyline is");
+      ImGui::TextUnformatted("exported as is, and the output buffer is the input.");
     } else {
       ImGui::TextUnformatted("Exports the input mesh alone; the output buffer is the input.");
     }
@@ -247,11 +267,11 @@ class MochiModelExportMethod : public ReflectedMethod<MochiModelExportProps> {
       mochi::MeshData const& input,
       ModifierRunContext const& /*ctx*/,
       mochi::Error& error) const override {
-    return Bake(input, {}, error);
+    return Bake({.mesh = input}, error).mesh;
   }
   StageMesh RunStage(StageMesh const& input, ModifierRunContext const& /*ctx*/, mochi::Error& error)
       const override {
-    return {.mesh = Bake(input.mesh, input.embedded, error)};
+    return Bake(input, error);
   }
 
   // Writes the cached, already-baked Mochi-space model (mesh + SDF from the last Run). Does NOT
@@ -263,7 +283,8 @@ class MochiModelExportMethod : public ReflectedMethod<MochiModelExportProps> {
       MOCHI_ERROR_SET(error, "Export Mochi Model: set a .mochi.h5 export path first.");
       return;
     }
-    if (!_bakedModel.mesh.has_value() || (_props.bakeSdf && !_bakedModel.sdf.has_value())) {
+    if (!_bakedModel.mesh.has_value() ||
+        (_props.bakeSdf && !BakedPolyline() && !_bakedModel.sdf.has_value())) {
       MOCHI_ERROR_SET(error, "Export Mochi Model: generate the model before exporting.");
       return;
     }
@@ -290,26 +311,32 @@ class MochiModelExportMethod : public ReflectedMethod<MochiModelExportProps> {
  private:
   // Bakes the SDF once, in Mochi (Z-up) space -- what a .mochi.h5 stores -- and caches the baked
   // model, with the meshes embedded in @p input, so Export reuses it without re-baking. The preview
-  // surface returned to the stack is converted back to render space.
-  mochi::MeshData
-  Bake(mochi::MeshData const& input, EmbeddedMeshes const& embedded, mochi::Error& error) const {
+  // surface returned to the stack is converted back to render space. A polyline is cached without
+  // an SDF and returned as the preview itself.
+  StageMesh Bake(StageMesh const& input, mochi::Error& error) const {
     _bakedModel = {};
-    mochi::ModelData md = MochiSpaceModel(input, embedded);
+    mochi::ModelData md = MochiSpaceModel(input, error);
+    MOCHI_ERROR_RETURN(error, {});
     if (!md.mesh.has_value()) {
       MOCHI_ERROR_SET(error, "Export Mochi Model: no input geometry.");
       return {};
     }
+    bool const isPolyline = md.mesh->nodesPerElement == 2;
     // Render and CAD sources leave triangles unjoined at seams (an STL entirely), which a Mochi
     // model must not be. Embedded meshes refer to the input's nodes as they are, so a mesh carrying
-    // them is not welded.
-    if (embedded.IsEmpty()) {
+    // them is not welded, and neither is a polyline, whose node order is its topology.
+    if (input.embedded.IsEmpty() && !isPolyline) {
       processing::WeldIdenticalVertices(*md.mesh);
     }
     mochi::model_utils::Validate(md, error);
     MOCHI_ERROR_RETURN(error, {});
+    if (isPolyline) {
+      _bakedModel = std::move(md);
+      return {.mesh = input.mesh, .elementFrameAxes = input.elementFrameAxes};
+    }
     if (!_props.bakeSdf) {
       _bakedModel = std::move(md);
-      return input;
+      return {.mesh = input.mesh};
     }
     mochi::model_utils::BakeSdf(md, _props.sdf, error);
     if (!error.IsOK() || !md.sdf.has_value()) {
@@ -327,7 +354,12 @@ class MochiModelExportMethod : public ReflectedMethod<MochiModelExportProps> {
         mochi::CoordinateSpace::Default(), mochi_renderer::RenderSpace());
     mochi_renderer::ConvertMeshSectionsSpace(previewSections, mochiToRender);
     _bakedModel = std::move(md);
-    return processing::MeshDataFromSections(previewSections);
+    return {.mesh = processing::MeshDataFromSections(previewSections)};
+  }
+
+  // Whether the model the last Run cached is a polyline.
+  [[nodiscard]] bool BakedPolyline() const {
+    return _bakedModel.mesh.has_value() && _bakedModel.mesh->nodesPerElement == 2;
   }
 
   // The path Browse offers, and what RefreshAutoExportPath keeps the field at while Auto is on.

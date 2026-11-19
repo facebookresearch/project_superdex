@@ -58,6 +58,9 @@ struct ProcessStageReport {
   int64_t triangles = 0;
   std::optional<mochi::Int3> sdfGrid; // set by stages that bake an SDF
   std::optional<mochi::Int2> tetMesh; // nodes and tets, set when the output is tetrahedral
+  // Nodes and elements, set when the output is a polyline (which then has no vertices or
+  // triangles).
+  std::optional<mochi::Int2> polyline;
   std::string exportedPath; // the file an export stage wrote
   // Where the pipeline itself puts the export stage's file: exportedPath, unless --out moved it.
   std::string pipelineExportPath;

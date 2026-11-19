@@ -117,6 +117,10 @@ class StackRun {
   [[nodiscard]] EmbeddedMeshes const& Embedded(std::size_t p) const {
     return _outputs[p].embedded;
   }
+  // The complete output of chain position @p p.
+  [[nodiscard]] StageMesh const& OutputStage(std::size_t p) const {
+    return _outputs[p];
+  }
   // Whether Generate succeeded at chain position @p p. A position it never ran on still holds the
   // output it started with, so Output alone cannot tell the two apart.
   [[nodiscard]] bool WasGenerated(std::size_t p) const {
