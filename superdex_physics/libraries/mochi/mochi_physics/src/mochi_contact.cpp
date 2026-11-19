@@ -3410,11 +3410,15 @@ void mochi::UpdateQueryContactSamples(
   outQuery.contactSamples.assign(flatPositions.begin(), flatPositions.end());
 }
 
+namespace {
+
 struct SdfSample {
   real distance;
   Real3 worldPosition;
   Real3 distanceGrad;
 };
+
+} // namespace
 
 template <bool kIsSync>
 static void AppendActiveSdfSamplesWorldSpace(
