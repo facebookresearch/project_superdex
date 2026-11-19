@@ -812,13 +812,14 @@ class DMapInverse final : public DMapImpl {
 
     // Compute Jacobians dref_ddofs = - dref_ddef * ddef_ddofs, and copy per-contact DoF indices
     int const dl = (_query->jacColliderFromWorld.size() == 1 ? 0 : 1);
-    // About 50 μs per task at about 100 ns per contact with 9 DoFs (empirical).
+    // About 20 μs per task at about 40 ns per contact with 9 DoFs (empirical).
     int constexpr kMinContactsPerTask = 512;
     ParallelForN(
         "DMapInverse::WriteJacobianSlice", outJacY.nContacts, kMinContactsPerTask, [&](int i) {
+          auto const jacColliderFromWorldT = Transpose3x3(_query->jacColliderFromWorld[i * dl]);
           for (int j = 0; j < outJacY.nDoFsInternal; j++) {
-            outJacY.Jac(i).Col(j) = AsColumnVectorView<3>(DotMatVec3x3(
-                _query->jacColliderFromWorld[i * dl], -_query->jacWorldFromDofs[i].jac[j]));
+            outJacY.Jac(i).Col(j) = AsColumnVectorView<3>(
+                DotVecMat3x3(-_query->jacWorldFromDofs[i].jac[j], jacColliderFromWorldT));
           }
           if (!_sharedDofs) {
             for (int j = 0; j < outJacY.nDoFsInternal; j++) {
