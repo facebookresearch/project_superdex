@@ -553,11 +553,18 @@ bool USuperDexBot::ComputeLinkTransformsInternal(
     return false;
   }
   const TArray<bool> PrismaticDofs = GetPrismaticDofs(CachedBotPrefab);
+  TMochiToUnrealConverter<double> Converter(kSuperDexSpace, kUnrealCentimetersSpace);
+  // JointPositions times LengthScale are physical lengths in Unreal centimeters (a prismatic joint
+  // moves the bot built at its scale, as its native commands do), but the native positions are
+  // lengths in the bot's nominal space, like its link offsets.
+  const double CentimetersPerNativeLength = Converter.MeasureToUnreal(1);
+  const double LengthToNative =
+      LengthScale / (CentimetersPerNativeLength * static_cast<double>(CachedBotPrefab.scale));
   mochi::DynamicArray<mochi::real> Pose;
   Pose.resize_noinit(JointPositions.Num());
   for (int32 i = 0; i < JointPositions.Num(); ++i) {
     const bool isPrismatic = PrismaticDofs.IsValidIndex(i) && PrismaticDofs[i];
-    mochi::real scale = isPrismatic ? LengthScale : AngleScale;
+    const double scale = isPrismatic ? LengthToNative : AngleScale;
     Pose[i] = static_cast<mochi::real>(JointPositions[i] * scale);
   }
   mochi::DynamicArray<mochi::TransformRT> MochiTransforms;
@@ -579,7 +586,6 @@ bool USuperDexBot::ComputeLinkTransformsInternal(
         e._error.GetDescription());
     return false;
   }
-  TMochiToUnrealConverter<double> Converter(kSuperDexSpace, kUnrealCentimetersSpace);
   int32 NumLinks = static_cast<int32>(MochiTransforms.size());
   OutLinkTransforms.SetNum(NumLinks);
   for (int32 i = 0; i < NumLinks; ++i) {
@@ -631,11 +637,16 @@ bool USuperDexBot::ComputeJointPositionsInternal(
     return false;
   }
   const TArray<bool> PrismaticDofs = GetPrismaticDofs(CachedBotPrefab);
+  // The inverse of the conversion in ComputeLinkTransformsInternal.
+  const double LengthToNative = LengthScale /
+      (TMochiToUnrealConverter<double>(kSuperDexSpace, kUnrealCentimetersSpace).MeasureToUnreal(1) *
+       static_cast<double>(CachedBotPrefab.scale));
   const int32 NumDofs = static_cast<int32>(Pose.size());
   OutJointPositions.SetNum(NumDofs);
   for (int32 i = 0; i < NumDofs; ++i) {
     const bool isPrismatic = PrismaticDofs.IsValidIndex(i) && PrismaticDofs[i];
-    OutJointPositions[i] = static_cast<double>(Pose[i]) / (isPrismatic ? LengthScale : AngleScale);
+    OutJointPositions[i] =
+        static_cast<double>(Pose[i]) / (isPrismatic ? LengthToNative : AngleScale);
   }
   return true;
 }
