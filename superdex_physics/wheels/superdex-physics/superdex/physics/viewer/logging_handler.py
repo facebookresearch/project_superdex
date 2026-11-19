@@ -45,6 +45,10 @@ class LogLevel(enum.Flag):
     """All log messages are displayed."""
 
 
+ERROR_LEVELS = LogLevel.ERROR | LogLevel.CRITICAL
+"""The levels that count as errors."""
+
+
 @dataclass
 class LogMessage:
     """Represents a single log message with metadata."""
@@ -90,6 +94,7 @@ class LoggingHandler(logging.Handler):
         self._lock = threading.Lock()
         self._max_messages = max_messages
         self._has_new_messages = False
+        self._has_new_errors = False
 
     def emit(self, record: logging.LogRecord) -> None:
         """
@@ -139,6 +144,8 @@ class LoggingHandler(logging.Handler):
             with self._lock:
                 self._messages.append(message)
                 self._has_new_messages = True
+                if level in ERROR_LEVELS:
+                    self._has_new_errors = True
         except Exception:
             self.handleError(record)
 
@@ -172,10 +179,25 @@ class LoggingHandler(logging.Handler):
         with self._lock:
             return self._has_new_messages
 
+    def consume_new_errors(self) -> bool:
+        """
+        Check, and clear, whether an error was emitted since the last call.
+
+        Unlike scanning :attr:`messages`, this cannot miss an error that the circular
+        buffer already discarded.
+
+        Returns:
+            True if an ERROR or CRITICAL message (:data:`ERROR_LEVELS`) was emitted.
+        """
+        with self._lock:
+            has_new_errors, self._has_new_errors = self._has_new_errors, False
+            return has_new_errors
+
     def clear(self) -> None:
-        """Clear all stored log messages."""
+        """Clear all stored log messages, and any error not yet reported."""
         with self._lock:
             self._messages.clear()
+            self._has_new_errors = False
 
     @property
     def max_messages(self) -> int:
