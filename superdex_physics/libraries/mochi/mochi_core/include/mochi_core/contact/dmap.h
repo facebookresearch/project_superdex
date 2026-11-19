@@ -32,6 +32,7 @@
 #include <mochi_core/utils/overload_visitor.h>
 #include <mochi_core/utils/simd.h>
 #include <mochi_core/utils/span.h>
+#include <mochi_core/utils/task_scheduler.h>
 #include <mochi_core/utils/vmatrix.h>
 
 #include <algorithm>
@@ -809,25 +810,26 @@ class DMapInverse final : public DMapImpl {
 
     outJacY.Resize(_sharedDofs, false, _query->ndofs, isize(_query->posColliding));
 
-    // Compute Jacobians dref_ddofs = - dref_ddef * ddef_ddofs
-    for (int i = 0, l = 0, dl = (_query->jacColliderFromWorld.size() == 1 ? 0 : 1);
-         i < outJacY.nContacts;
-         i++, l += dl) {
-      for (int j = 0; j < outJacY.nDoFsInternal; j++) {
-        outJacY.Jac(i).Col(j) = AsColumnVectorView<3>(
-            DotMatVec3x3(_query->jacColliderFromWorld[l], -_query->jacWorldFromDofs[i].jac[j]));
-      }
-    }
+    // Compute Jacobians dref_ddofs = - dref_ddef * ddef_ddofs, and copy per-contact DoF indices
+    int const dl = (_query->jacColliderFromWorld.size() == 1 ? 0 : 1);
+    // About 50 μs per task at about 100 ns per contact with 9 DoFs (empirical).
+    int constexpr kMinContactsPerTask = 512;
+    ParallelForN(
+        "DMapInverse::WriteJacobianSlice", outJacY.nContacts, kMinContactsPerTask, [&](int i) {
+          for (int j = 0; j < outJacY.nDoFsInternal; j++) {
+            outJacY.Jac(i).Col(j) = AsColumnVectorView<3>(DotMatVec3x3(
+                _query->jacColliderFromWorld[i * dl], -_query->jacWorldFromDofs[i].jac[j]));
+          }
+          if (!_sharedDofs) {
+            for (int j = 0; j < outJacY.nDoFsInternal; j++) {
+              outJacY.Inds(i)[j] = _offset + _query->jacWorldFromDofs[i].inds[j];
+            }
+          }
+        });
 
-    // Copy DoF indices
+    // Set shared DoF indices
     if (_sharedDofs) {
       std::iota(outJacY.Inds(0).begin(), outJacY.Inds(0).end(), _offset);
-    } else {
-      for (int i = 0; i < outJacY.nContacts; i++) {
-        for (int j = 0; j < outJacY.nDoFsInternal; j++) {
-          outJacY.Inds(i)[j] = _offset + _query->jacWorldFromDofs[i].inds[j];
-        }
-      }
     }
   }
 
