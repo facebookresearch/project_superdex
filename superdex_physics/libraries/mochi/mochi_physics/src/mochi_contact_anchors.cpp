@@ -18,9 +18,11 @@
 
 #include <mochi_core/utils/array_utils.h>
 #include <mochi_core/utils/profile.h>
+#include <mochi_core/utils/task_scheduler.h>
 
 #include <algorithm>
 #include <array>
+#include <numeric>
 
 using namespace mochi;
 
@@ -119,12 +121,21 @@ void mochi::UpdateFrictionAnchors(
 
   // 2. If the anchors of a sample are not contiguous, which requires anchors on several rigid
   // colliders, group them by sample. index[s] is the position of the first anchor of s, unique per
-  // sample, so sorting by it groups the anchors of each sample, in order of first appearance. The
-  // order within a sample does not matter: it has at most one anchor per collider.
+  // sample, so a counting sort by it groups the anchors of each sample, in order of first
+  // appearance, in linear time.
   if (!isGrouped) {
-    std::ranges::sort(pending, [&](FrictionAnchor const& a, FrictionAnchor const& b) {
-      return outIndex[a.sample] < outIndex[b.sample];
-    });
+    // The number of anchors of the group starting at each position, then where the group goes.
+    DynamicArray<int> groupStarts(static_cast<size_t>(numAnchors));
+    for (FrictionAnchor const& anchor : pending) {
+      ++groupStarts[outIndex[anchor.sample]];
+    }
+    std::exclusive_scan(groupStarts.begin(), groupStarts.end(), groupStarts.begin(), 0);
+    DynamicArray<FrictionAnchor> grouped;
+    grouped.resize_noinit(numAnchors);
+    for (FrictionAnchor const& anchor : pending) {
+      grouped[groupStarts[outIndex[anchor.sample]]++] = anchor;
+    }
+    std::ranges::copy(grouped, pending.begin());
   }
 }
 
@@ -231,11 +242,23 @@ void mochi::ApplyFrictionAnchorClearRequests(entt::registry& reg) {
 }
 
 void mochi::PrepareFrictionAnchors(entt::registry& reg, bool promotePending) {
+  // The per-actor passes are cheap, so each task takes a batch of actors. The anchor components are
+  // emplaced together, so the actors are those with an index.
+  constexpr int kMinActorsPerTask = 8;
+  auto& indices = reg.storage<CFrictionAnchorIndex<AnchorSet::Active>>();
+  auto& active = reg.storage<CFrictionAnchors<AnchorSet::Active>>();
+  entt::sparse_set const& actors = indices;
   if (promotePending) {
-    ecs::InvokeForEachGlobal(&PromotePendingFrictionAnchors, reg);
+    auto const& pending = reg.storage<CFrictionAnchors<AnchorSet::Pending>>();
+    ParallelForEach(
+        "PromotePendingFrictionAnchors", actors, kMinActorsPerTask, [&](entt::entity e) {
+          PromotePendingFrictionAnchors(pending.get(e), active.get(e));
+        });
   }
   ApplyFrictionAnchorClearRequests(reg);
-  ecs::InvokeForEachGlobal(&IndexFrictionAnchors<AnchorSet::Active>, reg);
+  ParallelForEach("IndexFrictionAnchors", actors, kMinActorsPerTask, [&](entt::entity e) {
+    IndexFrictionAnchors(active.get(e), indices.get(e));
+  });
 }
 
 void mochi::EmplaceFrictionAnchors(entt::registry& reg, entt::entity e, int numSamples) {

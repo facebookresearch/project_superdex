@@ -1071,8 +1071,10 @@ static void PostLastStageLocalPipeline(
   // pass at the step-end state here (after updating the state it depends on), followed by
   // FillFrictionAnchorOffsets, before advancing them.
   if (reg.ctx<CSimulationParams const>().experimentalEval.elastoPlasticFriction) {
-    ecs::InvokeForEach(&AdvanceFrictionAnchorOffsets, reg, descendants.actors);
-    ecs::InvokeForEach(&UpdateFrictionAnchors, reg, descendants.actors);
+    ParallelForEach("UpdateFrictionAnchors", descendants.actors, 1, [&](entt::entity e) {
+      ecs::TryInvokeOnEntity(&AdvanceFrictionAnchorOffsets, reg, e);
+      ecs::TryInvokeOnEntity(&UpdateFrictionAnchors, reg, e);
+    });
   }
 
   // Final collision detection with far SDF evaluation. It reuses the contact samples and bounds of
