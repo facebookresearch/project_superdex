@@ -1498,7 +1498,7 @@ static void SwapActiveElementsBshStrategy(
     CActiveBoundaryFaces& activeBoundaryFaces,
     CActiveUniqueNodes& activeUniqueNodes,
     CFemBoundaryDiscretization const& femBoundaryDiscC,
-    CDisplacementSlice<real, TimeStep::Current> const& displacements,
+    CFinalDisplacementRef<TimeStep::Current> const& displacements,
     CRootTransform const& transform,
     ecs::CtxGlobal<CSceneTime const> time,
     CActiveCollisions</*kIsSync*/ false, TimeStep::Current> const& activeCollisionsAsync,
