@@ -32,7 +32,9 @@
 #include <exception>
 #include <limits>
 #include <random>
+#include <string_view>
 #include <system_error>
+#include <unordered_set>
 #include <utility>
 
 namespace superdex::recorder {
@@ -124,6 +126,11 @@ struct Episode::StaticRows {
   std::map<std::string, std::vector<rerun::ComponentBatch>> batchesByEntity;
 };
 
+struct Episode::SeriesPaths {
+  // Views of each series' own entity path.
+  std::unordered_set<std::string_view> paths;
+};
+
 Episode::Episode(
     std::string episodeId,
     std::filesystem::path temporaryPath,
@@ -135,6 +142,7 @@ Episode::Episode(
       _outputPath{std::move(outputPath)},
       _stream{std::move(stream)},
       _staticRows{std::make_unique<StaticRows>()},
+      _seriesPaths{std::make_unique<SeriesPaths>()},
       _writer{std::make_unique<detail::ChunkWriter>(
           *_stream,
           config.chunkMaxBytes,
@@ -669,20 +677,18 @@ void Episode::ValidateWrite(mochi::Error& error) const {
 void Episode::ValidateSeriesPath(std::string_view entityPath, mochi::Error& error) const {
   MOCHI_ERROR_IF(entityPath.empty(), error, "Series entity path must not be empty.");
   MOCHI_ERROR_RETURN(error);
-  for (auto const& ownedSeries : _series) {
-    Series const* const series = ownedSeries.get();
-    if (series != nullptr && series->_entityPath == entityPath) {
-      MOCHI_LOG_ERROR(
-          "A series already exists at entity path '%s'.", std::string{entityPath}.c_str());
-      MOCHI_ERROR_SET(error, "A series already exists at this entity path.");
-      return;
-    }
+  if (_seriesPaths->paths.count(entityPath) != 0) {
+    MOCHI_LOG_ERROR(
+        "A series already exists at entity path '%s'.", std::string{entityPath}.c_str());
+    MOCHI_ERROR_SET(error, "A series already exists at this entity path.");
   }
 }
 
 void Episode::AddSeries(std::unique_ptr<Series> series) {
   series->_writer = _writer.get();
   _series.push_back(std::move(series));
+  // After the push, so that the episode owns the string the set views.
+  _seriesPaths->paths.insert(_series.back()->_entityPath);
 }
 
 void Episode::SealSeries() {

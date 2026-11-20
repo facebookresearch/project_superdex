@@ -205,6 +205,7 @@ class SUPERDEX_RECORDER_API Episode final {
   };
 
   struct StaticRows;
+  struct SeriesPaths;
 
   Episode(
       std::string episodeId,
@@ -230,6 +231,8 @@ class SUPERDEX_RECORDER_API Episode final {
   std::unique_ptr<rerun::RecordingStream> _stream;
   std::unique_ptr<StaticRows> _staticRows;
   std::vector<std::unique_ptr<Series>> _series;
+  // The series' entity paths, so that creating a series checks for a duplicate in constant time.
+  std::unique_ptr<SeriesPaths> _seriesPaths;
   // Declared after _stream so that it stops before the stream is destroyed.
   std::unique_ptr<detail::ChunkWriter> _writer;
   State _state = State::Active;
