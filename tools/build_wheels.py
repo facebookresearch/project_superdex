@@ -28,7 +28,7 @@
 
 Run from the repository root.
 
-The default path builds the seven native distributions with `cibuildwheel` and the two pure
+The default path builds the nine native distributions with `cibuildwheel` and the two pure
 ones with `python -m build`. That is the one that produces publishable artifacts: correct
 platform tags, and the per-platform wheel repair.
 
@@ -68,6 +68,8 @@ NATIVE_DISTRIBUTIONS = (
     "superdex_physics_fp64",
     "superdex_robotics",
     "superdex_robotics_fp64",
+    "superdex_recorder",
+    "superdex_recorder_fp64",
     "superdex_mesh_cli",
     "superdex_physics_debugger",
     "superdex_studio",
@@ -83,6 +85,8 @@ DISTRIBUTION_DIRECTORIES = {
     "superdex_physics_fp64": Path("superdex_physics/wheels/superdex-physics-fp64"),
     "superdex_robotics": Path("superdex_robotics/wheels/superdex-robotics"),
     "superdex_robotics_fp64": Path("superdex_robotics/wheels/superdex-robotics-fp64"),
+    "superdex_recorder": Path("superdex_recorder/wheels/superdex-recorder"),
+    "superdex_recorder_fp64": Path("superdex_recorder/wheels/superdex-recorder-fp64"),
     "superdex_mesh_cli": Path("superdex_mesh_cli"),
     "superdex_physics_debugger": Path("superdex_physics_debugger"),
     "superdex_studio": Path("superdex_studio"),
@@ -90,8 +94,12 @@ DISTRIBUTION_DIRECTORIES = {
     "superdex_meta": Path("superdex_meta"),
 }
 
-# The FP64 payloads. Dropping both halves the native build.
-FP64_DISTRIBUTIONS = ("superdex_physics_fp64", "superdex_robotics_fp64")
+# The FP64 payloads. Dropping them halves the native build.
+FP64_DISTRIBUTIONS = (
+    "superdex_physics_fp64",
+    "superdex_robotics_fp64",
+    "superdex_recorder_fp64",
+)
 
 # The distributions that build the GPL-isolated mesh helper, and so need CGAL, Boost and OCCT.
 # The studio is here because `SUPERDEX_BUILD_STUDIO=ON` builds the helper even though it ships
@@ -101,6 +109,11 @@ MESH_CLI_DISTRIBUTIONS = ("superdex_mesh_cli", "superdex_studio")
 # The distributions that link a full windowing stack. On Linux that means the X11 extension
 # libraries (Xrandr, Xinerama, Xcursor, Xi), which the manylinux image does not carry.
 RENDERER_DISTRIBUTIONS = ("superdex_physics_debugger", "superdex_studio")
+
+# The recorder's distributions. CMake downloads the Rerun C++ SDK and LZ4 at configure time, and
+# the SDK's Arrow build downloads Arrow, mimalloc and xsimd, so these need a route out. The studio
+# links the recorder too, and is already a renderer.
+RECORDER_DISTRIBUTIONS = ("superdex_recorder", "superdex_recorder_fp64")
 
 # What a platform does not produce, and why. An entry is either a gap, where the wheel is meant
 # to ship from here and does not yet, or a duplicate, where another platform already produces an
@@ -113,10 +126,11 @@ SKIPPED_DISTRIBUTIONS = {
         "they are `py3-none-any`, so nothing is lost",
     ),
     "Linux": (
-        RENDERER_DISTRIBUTIONS,
-        "they need the X11 extension libraries (Xrandr, Xinerama, Xcursor, Xi), which the "
-        "manylinux image does not carry, so their `before-all` has to yum install them and "
-        "that needs a container with a route out -- pass `--container-network`",
+        RENDERER_DISTRIBUTIONS + RECORDER_DISTRIBUTIONS,
+        "the renderers need the X11 extension libraries (Xrandr, Xinerama, Xcursor, Xi), which "
+        "the manylinux image does not carry, so their `before-all` has to yum install them; the "
+        "recorder's CMake downloads the Rerun SDK and Arrow sources. Both need a container with "
+        "a route out -- pass `--container-network`",
     ),
     "Windows": (
         PURE_DISTRIBUTIONS,
@@ -258,6 +272,7 @@ def _check_repository_root(root: Path) -> None:
         root,
         root / "superdex_physics" / "wheels",
         root / "superdex_robotics" / "wheels",
+        root / "superdex_recorder" / "wheels",
     )
     unregistered = sorted(
         str(path.relative_to(root))
@@ -919,7 +934,7 @@ def _parse_args() -> argparse.Namespace:
         "--skip-fp64",
         action="store_true",
         help=(
-            "Leave out the two FP64 distributions, halving the native build. "
+            "Leave out the FP64 distributions, halving the native build. "
             "The umbrella `superdex` pins them exactly, so it will not install from the "
             "resulting wheelhouse -- ask for `superdex-lab` instead, which pulls robotics "
             "and physics."
@@ -942,7 +957,8 @@ def _parse_args() -> argparse.Namespace:
             "platform environment and the `repair-wheel-command` from each pyproject. "
             "macOS and Windows only, where cibuildwheel cannot provision its own "
             "interpreter. Unlike --fast, the wheels this produces are repaired and "
-            "publishable."
+            "publishable. The recorder and studio wheels still need GitHub, where CMake "
+            "downloads the recorder's Rerun and Arrow sources."
         ),
     )
     parser.add_argument(
@@ -951,8 +967,9 @@ def _parse_args() -> argparse.Namespace:
         help=(
             "Let the Linux container fetch what it needs itself -- build requirements from "
             "PyPI, and the mesh helper's CGAL/Boost/OCCT sources from their upstreams -- "
-            "instead of staging both here first. Only works where the container has a "
-            "usable index and route out."
+            "instead of staging both here first. The recorder and the studio build only this "
+            "way, because CMake always downloads the recorder's Rerun and Arrow sources. Only "
+            "works where the container has a usable index and route out."
         ),
     )
     return parser.parse_args()
@@ -971,9 +988,9 @@ def _drop_skipped(
     if entry is None:
         return selected
     skipped, reason = entry
-    # The Linux entry is the one condition a flag can lift: the renderers are skipped only
-    # because their `before-all` cannot reach a package mirror, which `--container-network`
-    # fixes. Nothing else here is recoverable that way.
+    # The Linux entry is the one condition a flag can lift: the renderers and the recorder are
+    # skipped only because the container cannot reach a package mirror or the recorder's
+    # upstreams, which `--container-network` fixes. Nothing else here is recoverable that way.
     if container_network and platform.system() == "Linux":
         return selected
     dropped = [name for name in selected if name in skipped]

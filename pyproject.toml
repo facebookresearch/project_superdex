@@ -39,6 +39,7 @@ core = [
     "superdex-dev[build]",
     "superdex-lab",
     "superdex-physics",
+    "superdex-recorder",
     "superdex-robotics",
 ]
 
@@ -49,6 +50,7 @@ double = [
 fp64 = [
     "superdex-dev[core]",
     "superdex-physics-fp64",
+    "superdex-recorder-fp64",
     "superdex-robotics-fp64",
 ]
 
@@ -86,6 +88,8 @@ no-build-isolation-package = [
     "superdex-physics",
     "superdex-physics-debugger",
     "superdex-physics-fp64",
+    "superdex-recorder",
+    "superdex-recorder-fp64",
     "superdex-robotics",
     "superdex-robotics-fp64",
     "superdex-studio",
@@ -99,6 +103,8 @@ superdex-mesh-cli = {path = "superdex_mesh_cli", editable = true}
 superdex-physics = {path = "superdex_physics/wheels/superdex-physics", editable = true}
 superdex-physics-debugger = {path = "superdex_physics_debugger", editable = true}
 superdex-physics-fp64 = {path = "superdex_physics/wheels/superdex-physics-fp64", editable = true}
+superdex-recorder = {path = "superdex_recorder/wheels/superdex-recorder", editable = true}
+superdex-recorder-fp64 = {path = "superdex_recorder/wheels/superdex-recorder-fp64", editable = true}
 superdex-robotics = {path = "superdex_robotics/wheels/superdex-robotics", editable = true}
 superdex-robotics-fp64 = {path = "superdex_robotics/wheels/superdex-robotics-fp64", editable = true}
 superdex-studio = {path = "superdex_studio", editable = true}

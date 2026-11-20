@@ -566,7 +566,6 @@ def build_natives(
         # Without this the DLLs disagree with UnrealBuildTool on struct packing. Win64 only:
         # mochi rejects it with anything but MSVC or clang-cl.
         configure.append("-DMOCHI_UNREAL_ABI=ON")
-        configure.append("-DSUPERDEX_BUILD_RECORDER=ON")
     elif plat == "Android":
         assert ndk is not None
         configure += android_toolchain_args(ndk)
@@ -576,6 +575,8 @@ def build_natives(
                 "Linux builds compile against the engine's libc++: pass --ue-root or set UE_ROOT."
             )
         configure += linux_toolchain_args(ue_root)
+    # Only the Win64 plugins link the recorder (see `cmake_targets`).
+    configure.append(f"-DSUPERDEX_BUILD_RECORDER={'ON' if plat == 'Win64' else 'OFF'}")
     run(configure)
     run(
         [

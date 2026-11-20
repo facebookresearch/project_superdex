@@ -40,7 +40,7 @@ Simulates for `run.duration` (or until a stop condition triggers), prints `summa
 
 `tuner.resolved.json` is a complete tuner file: running it again reproduces the run
 
-`sim.rrd` is written unless `run.record.enabled` is false, and only when the tuner is built with the SuperDex recorder (`SUPERDEX_BUILD_RECORDER` in CMake). It is a [Rerun](https://rerun.io) recording: open it in the Rerun viewer to see the bodies move and every channel plotted. It holds:
+`sim.rrd` is written unless `run.record.enabled` is false, and only when the tuner is built with the SuperDex recorder (on by default in CMake; `-DSUPERDEX_BUILD_RECORDER=OFF` leaves it out). It is a [Rerun](https://rerun.io) recording: open it in the Rerun viewer to see the bodies move and every channel plotted. It holds:
 
 - the scene's actors at every step, under `data/physics`, drawn at `world`,
 - with `run.record.contactForces`, each step's contact points and forces under `data/physics/contacts`, drawn as arrows at `world/contact_forces`,

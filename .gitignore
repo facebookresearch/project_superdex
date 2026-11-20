@@ -28,6 +28,7 @@ cmake-build*
 CMakeUserPresets.json
 imgui.ini
 SuperDexStudio.ini
+recordings/
 *.recording.h5
 *.state.h5
 audit_reports/

@@ -532,6 +532,7 @@ core = [
     { name = "scikit-build-core" },
     { name = "superdex-lab" },
     { name = "superdex-physics" },
+    { name = "superdex-recorder" },
     { name = "superdex-robotics" },
 ]
 double = [
@@ -541,6 +542,8 @@ double = [
     { name = "superdex-lab" },
     { name = "superdex-physics" },
     { name = "superdex-physics-fp64" },
+    { name = "superdex-recorder" },
+    { name = "superdex-recorder-fp64" },
     { name = "superdex-robotics" },
     { name = "superdex-robotics-fp64" },
 ]
@@ -551,6 +554,8 @@ fp64 = [
     { name = "superdex-lab" },
     { name = "superdex-physics" },
     { name = "superdex-physics-fp64" },
+    { name = "superdex-recorder" },
+    { name = "superdex-recorder-fp64" },
     { name = "superdex-robotics" },
     { name = "superdex-robotics-fp64" },
 ]
@@ -562,6 +567,7 @@ gui = [
     { name = "superdex-mesh-cli" },
     { name = "superdex-physics" },
     { name = "superdex-physics-debugger" },
+    { name = "superdex-recorder" },
     { name = "superdex-robotics" },
     { name = "superdex-studio" },
 ]
@@ -580,6 +586,8 @@ requires-dist = [
     { name = "superdex-physics", marker = "extra == 'core'", editable = "superdex_physics/wheels/superdex-physics" },
     { name = "superdex-physics-debugger", marker = "extra == 'gui'", editable = "superdex_physics_debugger" },
     { name = "superdex-physics-fp64", marker = "extra == 'fp64'", editable = "superdex_physics/wheels/superdex-physics-fp64" },
+    { name = "superdex-recorder", marker = "extra == 'core'", editable = "superdex_recorder/wheels/superdex-recorder" },
+    { name = "superdex-recorder-fp64", marker = "extra == 'fp64'", editable = "superdex_recorder/wheels/superdex-recorder-fp64" },
     { name = "superdex-robotics", marker = "extra == 'core'", editable = "superdex_robotics/wheels/superdex-robotics" },
     { name = "superdex-robotics-fp64", marker = "extra == 'fp64'", editable = "superdex_robotics/wheels/superdex-robotics-fp64" },
     { name = "superdex-studio", marker = "extra == 'gui'", editable = "superdex_studio" },
@@ -661,6 +669,44 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [{ name = "superdex-physics", specifier = "==1.1.0" }]
+
+[[package]]
+name = "superdex-recorder"
+version = "1.1.0"
+source = { editable = "superdex_recorder/wheels/superdex-recorder" }
+dependencies = [
+    { name = "pyarrow" },
+    { name = "rerun-sdk" },
+    { name = "superdex-physics" },
+    { name = "superdex-robotics" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "pyarrow", specifier = ">=18.0.0" },
+    { name = "rerun-sdk", specifier = "==0.33.0" },
+    { name = "superdex-physics", specifier = "==1.1.0" },
+    { name = "superdex-recorder-fp64", marker = "extra == 'fp64'", specifier = "==1.1.0" },
+    { name = "superdex-robotics", specifier = "==1.1.0" },
+]
+provides-extras = ["fp64"]
+
+[[package]]
+name = "superdex-recorder-fp64"
+version = "1.1.0"
+source = { editable = "superdex_recorder/wheels/superdex-recorder-fp64" }
+dependencies = [
+    { name = "superdex-physics-fp64" },
+    { name = "superdex-recorder" },
+    { name = "superdex-robotics-fp64" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "superdex-physics-fp64", specifier = "==1.1.0" },
+    { name = "superdex-recorder", specifier = "==1.1.0" },
+    { name = "superdex-robotics-fp64", specifier = "==1.1.0" },
+]
 
 [[package]]
 name = "superdex-robotics"

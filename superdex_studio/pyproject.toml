@@ -69,6 +69,8 @@ args = [
     "-DMOCHI_USE_PYBIND=OFF",
     "-DMOCHI_BUILD_MESH_CLI=OFF",
     "-DMOCHI_BUILD_DEBUGGER=OFF",
+    # IK recording playback and the asset tuner's sim.rrd.
+    "-DSUPERDEX_BUILD_RECORDER=ON",
 ]
 
 [tool.cibuildwheel]

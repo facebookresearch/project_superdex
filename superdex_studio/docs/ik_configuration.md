@@ -193,9 +193,9 @@ support undo/redo and save; read-only documents allow inspection only.
 
 ## Session Recording
 
-Session recording playback needs the episode recorder. CMake source builds include it
-only with `-DSUPERDEX_BUILD_RECORDER=ON`; without it, **Browse RRD** is disabled and
-its tooltip names the flag.
+Session recording playback needs the episode recorder. The `superdex-studio` wheel and
+CMake source builds include it by default; with `-DSUPERDEX_BUILD_RECORDER=OFF`,
+**Browse RRD** is disabled and its tooltip names the flag.
 
 Assign a **Input Bot**, then drop one existing `.rrd` file from the Asset Browser
 onto the IK viewport, or use **Browse RRD** in **IK Solver**. **Clear RRD** returns

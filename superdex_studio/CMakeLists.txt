@@ -272,8 +272,6 @@ if (MOCHI_BUILD_TESTS)
             target_sources(${_ik_test_target} PRIVATE "src/simulation/${_ik_test}.cpp")
         endif ()
         if (_ik_test STREQUAL "ik_recording_player")
-            # Match the native reader test's writer-before-reader archive order: the prebuilt
-            # Rerun SDK also contains LZ4, so resolve its symbols before the standalone decoder.
             target_link_libraries(${_ik_test_target} PRIVATE superdex_recorder_core superdex_recorder_reader)
         endif ()
         target_include_directories(${_ik_test_target} PRIVATE

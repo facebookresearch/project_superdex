@@ -23,6 +23,8 @@ Visit the [Project SuperDex website](https://projectsuperdex.com/) for more.
 - **SuperDex Robotics** — A robotics SDK that provides robot definitions and
   composition, controllers, sensors, actuators, and the framework that
   aggregates them into complete simulation configs.
+- **SuperDex Recorder** — Records simulations, robots, and their controllers as
+  [Rerun](https://rerun.io/) episodes that you can view, read back, and restore.
 - **SuperDex Studio** — A lightweight desktop GUI authoring and visualization
   application for creating, editing, and validating the simulation assets —
   robots, meshes, task prefabs, and scenes.
@@ -113,6 +115,7 @@ Project SuperDex has first-class support for Python across the board. The quicke
     * Optional: To run Python examples in FP64, set the environment variable `SUPERDEX_PRECISION=fp64`; otherwise, FP32 is used.
     * Physics example: `uv run superdex_physics/examples/example_tendon_comparison.py`
     * Robotics example: `uv run superdex_robotics/examples/control/example_osc_jsc_control.py`
+    * Recording example: `uv run superdex_robotics/examples/control/example_osc_jsc_recording.py`
     * SuperDex Studio: `uv run superdex-studio`
 
 ## Quick Start (Unreal)
@@ -195,9 +198,9 @@ Flags for `uv sync` are:
 | uv sync flags (additive) | Build targets |
 | :-- | :-- |
 | `--extra build` | build tools only |
-| `--extra core` | physics, robotics, lab |
+| `--extra core` | physics, robotics, recorder, lab |
 | `--extra gui` | core + physics-debugger, studio, mesh-cli |
-| `--extra fp64` | core + physics-fp64, robotics-fp64 |
+| `--extra fp64` | core + physics-fp64, robotics-fp64, recorder-fp64 |
 | `--all-extras` | everything |
 
 NOTE: Running the examples above requires `--extra gui`.
@@ -215,6 +218,8 @@ Core modules such as SuperDex Physics and SuperDex Robotics are written in C++ a
 5. Build: `cmake --build build --parallel`
 
 NOTE: To build the C++ libraries in FP64, add `-DMOCHI_USE_DOUBLE_PRECISION=ON` when configuring CMake. Otherwise, FP32 will be used by default.
+
+NOTE: The build includes SuperDex Recorder, which downloads the Rerun C++ SDK and Apache Arrow from GitHub. To leave it out, add `-DSUPERDEX_BUILD_RECORDER=OFF` when configuring CMake.
 
 ---
 ## Documentation

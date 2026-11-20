@@ -34,6 +34,8 @@ on:
           - superdex-physics-fp64
           - superdex-robotics
           - superdex-robotics-fp64
+          - superdex-recorder
+          - superdex-recorder-fp64
           - superdex-lab
           - superdex
 
@@ -123,11 +125,11 @@ jobs:
           if not isinstance(source_sha, str) or re.fullmatch(r"[0-9a-f]{40}", source_sha) is None:
               raise SystemExit("selected wheels workflow run has an invalid commit SHA")
 
-          # A complete release contains exactly 23 wheels and no other files.
+          # A complete release contains exactly 29 wheels and no other files.
           entries = sorted(Path("wheelhouse").iterdir())
           wheels = [path for path in entries if path.is_file() and path.suffix == ".whl"]
-          if len(entries) != 23 or len(wheels) != 23:
-              raise SystemExit(f"wheelhouse must contain exactly 23 wheels; found {len(wheels)}")
+          if len(entries) != 29 or len(wheels) != 29:
+              raise SystemExit(f"wheelhouse must contain exactly 29 wheels; found {len(wheels)}")
 
           # Extract and require the single version shared by every wheel.
           versions = set()
@@ -201,11 +203,13 @@ jobs:
               "superdex-physics": ("superdex_physics", 3),
               "superdex-physics-debugger": ("superdex_physics_debugger", 3),
               "superdex-physics-fp64": ("superdex_physics_fp64", 3),
+              "superdex-recorder": ("superdex_recorder", 3),
+              "superdex-recorder-fp64": ("superdex_recorder_fp64", 3),
               "superdex-robotics": ("superdex_robotics", 3),
               "superdex-robotics-fp64": ("superdex_robotics_fp64", 3),
               "superdex-studio": ("superdex_studio", 3),
           }
-          # Emit one publishing job, or all nine after bootstrap is complete.
+          # Emit one publishing job, or all eleven after bootstrap is complete.
           selected = os.environ["PROJECT"]
           names = projects if selected == "all" else (selected,)
           include = [

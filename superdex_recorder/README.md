@@ -67,19 +67,29 @@ the commanded pose.
 [`tools/rrd_video`](tools/rrd_video/README.md) renders recorded episodes to real-time videos
 with Rerun.
 
+## Installing
+
+```bash
+pip install superdex-recorder
+```
+
+installs `superdex.recorder` with its native extension, `superdex-physics`, `superdex-robotics`,
+and the Rerun Python SDK that `EpisodeReader` reads with. For FP64, install
+`'superdex-recorder[fp64]'` and set `SUPERDEX_PRECISION=fp64`. The umbrella `superdex` package
+includes the recorder at both precisions.
+
 ## Building
 
-Enable the recorder in a CMake source build with `-DSUPERDEX_BUILD_RECORDER=ON`. The Python
-bindings also need `MOCHI_USE_PYBIND` and `SUPERDEX_BUILD_ROBOTICS`. Both are on by default,
-but the lean configure command in the
-[C++ build instructions](https://github.com/facebookresearch/project_superdex/blob/main/README.md#building-from-source-c)
-turns `MOCHI_USE_PYBIND` off. The build downloads [LZ4](https://github.com/lz4/lz4) 1.9.4 and the
-[Rerun C++ SDK](https://github.com/rerun-io/rerun) 0.33.0, which in turn builds
-[Apache Arrow](https://github.com/apache/arrow) 18.0.0, and links all three into the recorder.
+`uv sync --extra core` builds and installs `superdex.recorder` from source, and `--extra fp64`
+adds its FP64 extension; see the
+[Python build instructions](https://github.com/facebookresearch/project_superdex/blob/main/README.md#building-from-source-python).
 
-The CMake build installs only the `superdex_recorder` native extension, not the
-`superdex.recorder` Python package, and the `uv sync` source build does not include the recorder.
-Neither source build gives you an importable `superdex.recorder` yet.
+CMake source builds include the recorder by default; configure with
+`-DSUPERDEX_BUILD_RECORDER=OFF` to leave it out. Its Python bindings also need `MOCHI_USE_PYBIND`
+and `SUPERDEX_BUILD_ROBOTICS`, which are on by default. The build downloads
+[LZ4](https://github.com/lz4/lz4) 1.9.4 and the [Rerun C++ SDK](https://github.com/rerun-io/rerun)
+0.33.0, which in turn builds [Apache Arrow](https://github.com/apache/arrow) 18.0.0, and links all
+three into the recorder.
 
 ## License
 

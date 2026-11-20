@@ -50,6 +50,8 @@ on:
           - superdex_physics_fp64
           - superdex_robotics
           - superdex_robotics_fp64
+          - superdex_recorder
+          - superdex_recorder_fp64
           - superdex_mesh_cli
           - superdex_physics_debugger
           - superdex_studio
@@ -116,6 +118,8 @@ jobs:
               "superdex_physics_fp64",
               "superdex_robotics",
               "superdex_robotics_fp64",
+              "superdex_recorder",
+              "superdex_recorder_fp64",
               "superdex_mesh_cli",
               "superdex_physics_debugger",
               "superdex_studio",
@@ -216,7 +220,9 @@ jobs:
 
       # `--container-network` selects the CI path over the offline one: it tells the driver to
       # skip vendoring build requirements and staging the mesh helper's CGAL/Boost/OCCT, and let
-      # the manylinux container fetch them instead. No effect off Linux.
+      # the manylinux container fetch them instead. The recorder and the studio need it on Linux
+      # regardless, because CMake downloads the recorder's Rerun and Arrow sources. No effect off
+      # Linux.
       #
       # The driver rather than cibuildwheel directly, so this workflow and a local run take the
       # same path: `--only` and `--container-network` are the driver's, and anything it does on

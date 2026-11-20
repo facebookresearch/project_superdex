@@ -1,0 +1,111 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+[build-system]
+requires = ["scikit-build-core>=1.0"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "superdex-recorder"
+version = "1.1.0"
+requires-python = ">=3.12"
+authors = [{name = "SuperDex Team"}]
+description = "Episode recording to Rerun RRD files for SuperDex"
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE", "thirdparty_licenses/**/*"]
+# The native recorder writes with the Rerun C++ SDK 0.33.0, and the reader reads with the
+# matching Python SDK.
+dependencies = [
+    "pyarrow>=18.0.0",
+    "rerun-sdk==0.33.0",
+    "superdex-physics==1.1.0",
+    "superdex-robotics==1.1.0",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Scientific/Engineering",
+]
+
+[project.optional-dependencies]
+fp64 = ["superdex-recorder-fp64==1.1.0"]
+
+[project.urls]
+Homepage = "https://github.com/facebookresearch/project_superdex"
+Repository = "https://github.com/facebookresearch/project_superdex"
+
+[tool.uv]
+managed = false
+
+[tool.scikit-build]
+build-dir = "../../../build-fp32/{wheel_tag}"
+wheel.packages = ["../../superdex"]
+wheel.install-dir = "superdex/recorder/_native"
+wheel.py-api = "cp312"
+build.targets = ["superdex_recorder_pybind"]
+install.components = ["superdex_recorder_pybind"]
+
+[tool.scikit-build.env]
+CC = { env = "CC" }
+CXX = { env = "CXX" }
+
+[tool.scikit-build.cmake]
+version = ">=3.26"
+source-dir = "../../.."
+args = [
+    "-GNinja",
+    "-DMOCHI_BUILD_DEBUGGER=OFF",
+    "-DMOCHI_BUILD_MESH_CLI=OFF",
+    "-DMOCHI_BUILD_RENDERER=OFF",
+    "-DMOCHI_BUILD_SHARED=ON",
+    "-DMOCHI_USE_PYBIND=ON",
+    "-DSUPERDEX_BUILD_RECORDER=ON",
+    "-DSUPERDEX_BUILD_ROBOTICS=ON",
+]
+
+[tool.cibuildwheel]
+build = "cp312-*"
+skip = "*musllinux* *-win32"
+test-skip = "*"
+
+# The extension links the physics and robotics libraries that superdex-physics and
+# superdex-robotics install; superdex.recorder imports both first, so the process already has
+# them loaded.
+[tool.cibuildwheel.linux]
+environment-pass = ["http_proxy", "https_proxy", "no_proxy"]
+before-all = "yum install -y clang"
+repair-wheel-command = """auditwheel repair -w {dest_dir} {wheel} \
+  --exclude libmochi_physics.so --exclude libmochi_pybind_core.so --exclude 'libmarl.so*' \
+  --exclude libsuperdex_robotics.so"""
+
+[tool.cibuildwheel.linux.environment]
+CC = "clang"
+CXX = "clang++"
+
+[tool.cibuildwheel.macos]
+repair-wheel-command = """delocate-wheel --require-archs {delocate_archs} -w {dest_dir} -v {wheel} \
+  --ignore-missing-dependencies \
+  --exclude libmochi_physics.dylib --exclude libmochi_pybind_core.dylib --exclude libmarl. \
+  --exclude libsuperdex_robotics.dylib"""
+
+[tool.cibuildwheel.windows]
+repair-wheel-command = """delvewheel repair -w {dest_dir} -v {wheel} --ignore-existing \
+  --namespace-pkg superdex \
+  --exclude mochi_physics.dll --exclude mochi_pybind_core.dll --exclude marl.dll \
+  --exclude superdex_robotics.dll"""

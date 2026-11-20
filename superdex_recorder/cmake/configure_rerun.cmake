@@ -16,16 +16,24 @@ if(_superdex_original_rerun_project_include)
     include("${_superdex_original_rerun_project_include}")
 endif()
 
-function(_superdex_add_arrow_bundling_patch)
-    if(TARGET arrow_cpp)
-        ExternalProject_Add_Step(arrow_cpp superdex_clang_cl_bundle_patch
-            COMMAND "${CMAKE_COMMAND}" "-DARROW_SOURCE_DIR=<SOURCE_DIR>"
-                -P "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/patch_arrow_bundling.cmake"
-            DEPENDS "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/patch_arrow_bundling.cmake"
-            DEPENDEES patch
-            DEPENDERS configure
-        )
+function(_superdex_add_arrow_patch name script)
+    ExternalProject_Add_Step(arrow_cpp ${name}
+        COMMAND "${CMAKE_COMMAND}" "-DARROW_SOURCE_DIR=<SOURCE_DIR>"
+            -P "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/${script}"
+        DEPENDS "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/${script}"
+        DEPENDEES patch
+        DEPENDERS configure
+    )
+endfunction()
+
+function(_superdex_add_arrow_patches)
+    if(NOT TARGET arrow_cpp)
+        return()
+    endif()
+    _superdex_add_arrow_patch(superdex_mimalloc_policy_patch patch_arrow_mimalloc_policy.cmake)
+    if(WIN32)
+        _superdex_add_arrow_patch(superdex_clang_cl_bundle_patch patch_arrow_bundling.cmake)
     endif()
 endfunction()
 
-cmake_language(DEFER CALL _superdex_add_arrow_bundling_patch)
+cmake_language(DEFER CALL _superdex_add_arrow_patches)

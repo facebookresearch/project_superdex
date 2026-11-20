@@ -38,14 +38,13 @@ FetchContent_Declare(
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE
     FIND_PACKAGE_ARGS 0.33.0 EXACT CONFIG
 )
-if(WIN32)
-    set(_superdex_original_rerun_project_include "${CMAKE_PROJECT_rerun_sdk_INCLUDE}")
-    set(CMAKE_PROJECT_rerun_sdk_INCLUDE "${CMAKE_CURRENT_LIST_DIR}/cmake/configure_rerun.cmake")
-endif()
+set(_superdex_original_rerun_project_include "${CMAKE_PROJECT_rerun_sdk_INCLUDE}")
+set(CMAKE_PROJECT_rerun_sdk_INCLUDE "${CMAKE_CURRENT_LIST_DIR}/cmake/configure_rerun.cmake")
 FetchContent_MakeAvailable(rerun_sdk)
-if(WIN32)
-    set(CMAKE_PROJECT_rerun_sdk_INCLUDE "${_superdex_original_rerun_project_include}")
-endif()
+set(CMAKE_PROJECT_rerun_sdk_INCLUDE "${_superdex_original_rerun_project_include}")
+
+# The Python extension links the SDK into a shared library.
+set_target_properties(rerun_sdk PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 # CMake's cached system configuration can skip a newly supplied toolchain file.
 if(_superdex_generated_arrow_toolchain AND TARGET arrow_cpp)
@@ -66,7 +65,8 @@ if(_superdex_generated_arrow_toolchain AND TARGET arrow_cpp)
     endblock()
 endif()
 
-# The episode reader decompresses Rerun's LZ4 blocks with the reference decoder, lib/lz4.c.
+# The episode reader decompresses Rerun's LZ4 blocks with the reference decoder, lib/lz4.c, when
+# nothing else in the binary provides LZ4.
 FetchContent_Declare(
     lz4
     URL https://github.com/lz4/lz4/archive/refs/tags/v1.9.4.tar.gz
@@ -79,6 +79,11 @@ FetchContent_MakeAvailable(lz4)
 add_library(superdex_recorder_lz4 STATIC "${lz4_SOURCE_DIR}/lib/lz4.c")
 target_include_directories(superdex_recorder_lz4 SYSTEM PUBLIC "${lz4_SOURCE_DIR}/lib")
 set_target_properties(superdex_recorder_lz4 PROPERTIES POSITION_INDEPENDENT_CODE ON)
+# Rerun's prebuilt C library bundles LZ4 too. Linking the decoder after it makes a binary that
+# links both take every LZ4 symbol from Rerun's copy instead of failing on duplicates.
+if(TARGET rerun_c)
+    target_link_libraries(rerun_c INTERFACE superdex_recorder_lz4)
+endif()
 
 add_library(superdex_recorder_core STATIC
     src/chunk_writer.cpp

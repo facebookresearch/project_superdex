@@ -72,6 +72,8 @@ class NativeDistribution(NamedTuple):
     payload_dir: str
     extension: str
     own_libraries: tuple[str, ...]
+    # Libraries a sibling wheel other than the physics wheel owns, and so must not be vendored.
+    sibling_libraries: tuple[str, ...] = ()
 
 
 class ToolDistribution(NamedTuple):
@@ -124,6 +126,21 @@ NATIVE_DISTRIBUTIONS = (
         extension="superdex_robotics_double",
         own_libraries=(),
     ),
+    # The recorder extension links the robotics library that superdex-robotics ships.
+    NativeDistribution(
+        wheel_name="superdex_recorder",
+        payload_dir="superdex/recorder/_native/",
+        extension="superdex_recorder",
+        own_libraries=(),
+        sibling_libraries=("superdex_robotics",),
+    ),
+    NativeDistribution(
+        wheel_name="superdex_recorder_fp64",
+        payload_dir="superdex_recorder_fp64/_native/",
+        extension="superdex_recorder_double",
+        own_libraries=(),
+        sibling_libraries=("superdex_robotics",),
+    ),
 )
 
 # The GUI tools and the helper they spawn. Each carries a program plus every shared library that
@@ -166,7 +183,11 @@ TOOL_DISTRIBUTIONS = (
 )
 
 PURE_WHEEL_NAMES = ("superdex_lab", "superdex")
-FP64_WHEEL_NAMES = ("superdex_physics_fp64", "superdex_robotics_fp64")
+FP64_WHEEL_NAMES = (
+    "superdex_physics_fp64",
+    "superdex_robotics_fp64",
+    "superdex_recorder_fp64",
+)
 NATIVE_WHEEL_NAMES = frozenset(
     distribution.wheel_name for distribution in NATIVE_DISTRIBUTIONS
 )
@@ -745,16 +766,17 @@ def check_no_foreign_libraries(
     """A wheel must not carry a library another wheel in the set owns."""
 
     owned = set(distribution.own_libraries)
+    others = FOREIGN_LIBRARIES | set(distribution.sibling_libraries)
     foreign = sorted(
         {
             stem
             for stem in (_library_stem(name) for name in members)
-            if stem in FOREIGN_LIBRARIES and stem not in owned
+            if stem in others and stem not in owned
         }
     )
     if foreign:
         return [
-            f"{wheel.name}: vendors {', '.join(foreign)}, which the physics wheel owns; "
+            f"{wheel.name}: vendors {', '.join(foreign)}, which another wheel owns; "
             "the repair exclusions did not take effect"
         ]
     return []
@@ -1135,8 +1157,8 @@ def check_wheel_contents(wheels: list[Path]) -> list[str]:
 # `py3-none-any` wheels alongside its own platform's, and its runtime layer needs them for
 # `pip install superdex`. Inferring the target from the host excused exactly those two there.
 #
-# Linux has no entry: the renderer wheels build there whenever the container can reach a package
-# mirror, which is every CI run. A wheelhouse missing them is now incomplete rather than expected,
+# Linux has no entry: the renderer and recorder wheels build there whenever the container can reach
+# a package mirror and GitHub, which is every CI run. A wheelhouse missing them is now incomplete rather than expected,
 # so a regression fails here instead of passing quietly.
 UNBUILT_WHEELS = {
     "Darwin": ("superdex", "superdex_lab"),
@@ -1559,6 +1581,73 @@ print("smoke ok:", "fp64" if reported else "fp32", sdp.__file__)
 """
 )
 
+# One rigid body stepped once, recorded and read back. Recording needs the recorder extension to
+# share the physics Context with superdex.physics, and reading needs rerun-sdk and pyarrow.
+RECORDER_SMOKE_TEST = (
+    """
+import os
+import sys
+import sysconfig
+import tempfile
+from pathlib import Path
+
+expect_double = os.environ["SUPERDEX_EXPECT_DOUBLE"] == "1"
+
+import superdex.physics as sdp
+import superdex.recorder as sdrec
+
+"""
+    + MODULE_ORIGIN_AUDIT
+    + """
+
+reported = sdp.uses_double_precision()
+assert reported == expect_double, f"expected double={expect_double}, got {reported}"
+
+sdp.initialize(num_worker_threads=0)
+try:
+    scene = sdp.create_scene("check_wheels recorder")
+    shape = sdp.create_tri_mesh_shape(
+        coordinates=[0, 0, 0, 0.1, 0, 0, 0, 0.1, 0, 0, 0, 0.1],
+        connectivity=[0, 2, 1, 0, 1, 3, 0, 3, 2, 1, 2, 3],
+    )
+    scene.create_rigid_actor(name="tetrahedron", shape=shape, density=1000)
+    # Windows cannot delete a file a reader still holds, which is not what this checks.
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as directory:
+        recorder = sdrec.Recorder(sdrec.RecorderConfig(Path(directory)))
+        episode = recorder.begin_episode()
+        physics = sdrec.PhysicsRecorder(episode, scene)
+        physics.record(0, scene.get_total_simulation_time())
+        scene.step(1.0 / 60.0)
+        physics.record(1, scene.get_total_simulation_time())
+        episode.commit_sync()
+        path = episode.output_path
+        del physics, episode, recorder
+        assert path.is_file(), f"no committed episode at {path}"
+        space = sdrec.EpisodeReader(path).read_static_value(
+            "superdex.episode.coordinate_space"
+        )
+        assert space == "FLU", f"read back coordinate space {space!r}"
+        # The native reader decodes the file with the Arrow and LZ4 linked into the extension.
+        native = sdrec._extension._EpisodeReader(path)
+        [entity] = [
+            c.entity_path
+            for c in native.components()
+            if c.component == "superdex.episode.coordinate_space"
+        ]
+        texts = native.read_static_texts(entity, "superdex.episode.coordinate_space")
+        assert texts == ["FLU"], f"natively read back coordinate space {texts!r}"
+        del native
+finally:
+    sdp.shutdown()
+
+payload = Path(sdrec._extension.__file__).parent.parent.name
+expected_payload = "superdex_recorder_fp64" if expect_double else "recorder"
+assert payload == expected_payload, f"loaded the {payload} payload"
+
+print("recorder smoke ok:", "fp64" if reported else "fp32", sdrec.__file__)
+"""
+)
+
 MISSING_PAYLOAD_TEST = """
 import sys
 
@@ -1715,20 +1804,29 @@ def check_complete_install(workspace: Path, wheelhouse: Path, deps: Path) -> Non
 
     python = _create_venv(workspace / "complete")
     _install_offline(python, wheelhouse, deps, "superdex")
-    _run_script(python, SMOKE_TEST, {"SUPERDEX_EXPECT_DOUBLE": "0"})
-    _run_script(
-        python,
-        SMOKE_TEST,
-        {"SUPERDEX_EXPECT_DOUBLE": "1", "SUPERDEX_PRECISION": "fp64"},
-    )
+    for script in (SMOKE_TEST, RECORDER_SMOKE_TEST):
+        _run_script(python, script, {"SUPERDEX_EXPECT_DOUBLE": "0"})
+        _run_script(
+            python,
+            script,
+            {"SUPERDEX_EXPECT_DOUBLE": "1", "SUPERDEX_PRECISION": "fp64"},
+        )
 
 
 def check_fp32_install(workspace: Path, wheelhouse: Path, deps: Path) -> None:
     """Without the `fp64` extra, asking for FP64 explains itself."""
 
     python = _create_venv(workspace / "fp32")
-    _install_offline(python, wheelhouse, deps, "superdex-physics", "superdex-robotics")
+    _install_offline(
+        python,
+        wheelhouse,
+        deps,
+        "superdex-physics",
+        "superdex-robotics",
+        "superdex-recorder",
+    )
     _run_script(python, SMOKE_TEST, {"SUPERDEX_EXPECT_DOUBLE": "0"})
+    _run_script(python, RECORDER_SMOKE_TEST, {"SUPERDEX_EXPECT_DOUBLE": "0"})
     _run_script(python, MISSING_PAYLOAD_TEST, {"SUPERDEX_PRECISION": "fp64"})
 
 
@@ -1742,12 +1840,14 @@ def check_fp64_extra_install(workspace: Path, wheelhouse: Path, deps: Path) -> N
         deps,
         "superdex-physics[fp64]",
         "superdex-robotics[fp64]",
+        "superdex-recorder[fp64]",
     )
-    _run_script(
-        python,
-        SMOKE_TEST,
-        {"SUPERDEX_EXPECT_DOUBLE": "1", "SUPERDEX_PRECISION": "fp64"},
-    )
+    for script in (SMOKE_TEST, RECORDER_SMOKE_TEST):
+        _run_script(
+            python,
+            script,
+            {"SUPERDEX_EXPECT_DOUBLE": "1", "SUPERDEX_PRECISION": "fp64"},
+        )
 
 
 def check_legacy_double_extra_install(
