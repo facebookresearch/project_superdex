@@ -23,6 +23,7 @@
 
 #include <filament/Box.h>
 #include <filament/Engine.h>
+#include <mochi_core/utils/dynamic_array.h>
 #include <mochi_core/utils/span.h>
 
 #include <utils/Entity.h>
@@ -124,7 +125,7 @@ class Mesh : public SceneObject, public IInstanceable {
   filament::IndexBuffer* _indexBuffer = nullptr;
   filament::Box _boundingBox;
   std::shared_ptr<MaterialInstance> _material = nullptr;
-  int _instanceCount = 0;
+  mochi::DynamicArray<utils::Entity> _instanceEntities;
 
   std::vector<filament::math::float3> _dynamicPositions;
   std::vector<filament::math::short4> _dynamicTangents;

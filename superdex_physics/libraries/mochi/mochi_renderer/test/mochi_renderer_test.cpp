@@ -118,6 +118,45 @@ class DebugDrawTest : public testing::Test {
   DebugDraw* _debugDraw = nullptr;
 };
 
+TEST(MeshTest, UpdatedBoundsReachExistingAndNewInstances) {
+  SKIP_IF_NO_GPU();
+  auto renderer = MochiRenderer::Create();
+  ASSERT_NE(renderer, nullptr);
+  auto material = renderer->GetResourceManager()->CreateUnlitSeeThroughMaterial({1, 1, 1, 1});
+  std::vector<float> positions = {0, 0, 0, 2, 0, 0, 0, 2, 0};
+  std::vector<float> const normals = {0, 0, 1, 0, 0, 1, 0, 0, 1};
+  std::vector<int> const indices = {0, 1, 2};
+  auto mesh = Mesh::CreateMesh(
+      renderer->GetEngine(),
+      mochi::MakeConstSpan(positions),
+      mochi::MakeConstSpan(normals),
+      mochi::MakeConstSpan(indices),
+      material,
+      /*isDynamic=*/true);
+  auto first = mesh->GetInstance();
+  auto second = mesh->GetInstance();
+  auto expectBounds = [](SceneObject const& object, float x, float y, float extent) {
+    auto const bounds = object.GetAABB();
+    EXPECT_FLOAT_EQ(bounds.center.x, x);
+    EXPECT_FLOAT_EQ(bounds.center.y, y);
+    EXPECT_FLOAT_EQ(bounds.halfExtent.x, extent);
+    EXPECT_FLOAT_EQ(bounds.halfExtent.y, extent);
+  };
+  positions = {4, 0, 0, 8, 0, 0, 4, 4, 0};
+  ASSERT_TRUE(mesh->Update(mochi::MakeConstSpan(positions), mochi::MakeConstSpan(normals)));
+  expectBounds(*mesh, 6, 2, 2);
+  expectBounds(*first, 6, 2, 2);
+  expectBounds(*second, 6, 2, 2);
+  first.reset();
+  EXPECT_EQ(mesh->GetInstanceCount(), 1);
+  positions = {0, 0, 0, 6, 0, 0, 0, 6, 0};
+  ASSERT_TRUE(mesh->Update(mochi::MakeConstSpan(positions), mochi::MakeConstSpan(normals)));
+  auto third = mesh->GetInstance();
+  expectBounds(*second, 3, 3, 3);
+  expectBounds(*third, 3, 3, 3);
+  EXPECT_EQ(mesh->GetInstanceCount(), 2);
+}
+
 TEST(LineSegmentMeshTest, GeometryAndPositionUpdatesReachExistingAndNewInstances) {
   SKIP_IF_NO_GPU();
   auto renderer = MochiRenderer::Create();

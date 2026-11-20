@@ -441,7 +441,11 @@ bool Mesh::Update(mochi::Span<float const> positions, mochi::Span<float const> n
 
   auto& rcm = _engine->getRenderableManager();
   auto ri = rcm.getInstance(_entity);
-  rcm.setAxisAlignedBoundingBox(ri, ComputeBoundingBox(positions.data(), _vertexCount));
+  _boundingBox = ComputeBoundingBox(positions.data(), _vertexCount);
+  rcm.setAxisAlignedBoundingBox(ri, _boundingBox);
+  for (utils::Entity const entity : _instanceEntities) {
+    rcm.setAxisAlignedBoundingBox(rcm.getInstance(entity), _boundingBox);
+  }
 
   return true;
 }
@@ -488,12 +492,12 @@ std::unique_ptr<SceneObject> Mesh::GetInstance() {
       .build(*_engine, instanceEntity);
   auto& tcm = _engine->getTransformManager();
   tcm.setTransform(tcm.getInstance(instanceEntity), filament::math::mat4f());
-  _instanceCount++;
+  _instanceEntities.push_back(instanceEntity);
   return std::unique_ptr<MeshInstance>(new MeshInstance(_engine, instanceEntity, this));
 }
 
 int Mesh::GetInstanceCount() const {
-  return _instanceCount;
+  return static_cast<int>(_instanceEntities.size());
 }
 
 IInstanceable* Mesh::GetInstanceable() {
@@ -510,7 +514,8 @@ MeshInstance::MeshInstance(filament::Engine* engine, utils::Entity entity, Mesh*
 }
 
 MeshInstance::~MeshInstance() {
-  _primaryMesh->_instanceCount--;
+  auto& instances = _primaryMesh->_instanceEntities;
+  instances.erase(std::ranges::remove(instances, _entity).begin(), instances.end());
   _engine->destroy(_entity);
 }
 
