@@ -24,6 +24,7 @@
 #include <imgui_internal.h>
 #include <imguios/fonts/icons_font_awesome5.h>
 #include <misc/cpp/imgui_stdlib.h>
+#include <mochi_core/utils/math_utils.h>
 #include <mochi_physics/utils/mochi_prefab.h>
 #include <mochi_renderer/type_conversions.h>
 #include <picojson/picojson.h>
@@ -3362,7 +3363,8 @@ bool ImGui::ModelEditor(
     mochi::Real3* otherTranslation,
     AssetManager const& assetManager,
     bool acceptDragDropPayload,
-    bool& modelChanged) {
+    bool& modelChanged,
+    bool uniformMagnitudeScale) {
   bool changed = false;
   ImGui::SeparatorText(label);
   ImGui::PushID(label);
@@ -3387,11 +3389,22 @@ bool ImGui::ModelEditor(
       *otherTranslation = translation;
     }
   }
+  Real3 const previousScale = scale;
   if (ImGui::DragRealXYZ("Scale", scale, 0.01, 0, 0, "%.4f", 0, 1.0f)) {
+    if (uniformMagnitudeScale) {
+      auto const editedAxis = ArgMax(Abs(scale - previousScale));
+      real const magnitude = Abs(scale[editedAxis]);
+      for (real& component : scale) {
+        component = std::copysign(magnitude, component);
+      }
+    }
     changed |= true;
     if (linkModelTransforms && otherScale) {
       *otherScale = scale;
     }
+  }
+  if (uniformMagnitudeScale) {
+    ImGui::TextDisabled("Point-cloud collider: scale magnitudes are linked.");
   }
   ImGui::PopID();
   return changed;

@@ -195,6 +195,17 @@ mochi::ShapeHandle MochiModelAsset::GetShape(
     return it->second;
   }
 
+  mochi::ShapeHandle shape = CreateShape(bakeScale, bakeTransform, error);
+  MOCHI_ERROR_RETURN(error, {});
+  _shapeCache.emplace(key, shape);
+  return shape;
+}
+
+mochi::ShapeHandle MochiModelAsset::CreateShape(
+    mochi::Real3 const& bakeScale,
+    mochi::TransformRT const& bakeTransform,
+    mochi::Error& error) const {
+  MOCHI_ERROR_RETURN(error, {});
   // Note: experimental/ROM data (loaded from .h5 by the file-based path via
   // hdf5::LoadExperimentalModelDataFromFile) is intentionally not handled here. It is out of scope
   // for the in-memory editor path.
@@ -202,11 +213,7 @@ mochi::ShapeHandle MochiModelAsset::GetShape(
   mochi::model_utils::GenerateMissingPolylineFrameAxes(modelCopy, error);
   mochi::model_utils::BakeTransform(modelCopy, bakeScale, bakeTransform, error);
   MOCHI_ERROR_RETURN(error, {});
-  auto shape = _manager->GetStudio()->GetMochiContext()->CreateModelShape(modelCopy, error);
-  MOCHI_ERROR_RETURN(error, {});
-
-  _shapeCache.emplace(key, shape);
-  return shape;
+  return _manager->GetStudio()->GetMochiContext()->CreateModelShape(modelCopy, error);
 }
 
 void MochiModelAsset::ClearShapeCache() {
@@ -336,28 +343,27 @@ void MochiModelAsset::UpdateCenterlineMesh(
   }
 }
 
-bool MochiModelAsset::BakeRodRestNodes(
+bool MochiModelAsset::BakeRodRestPose(
     mochi::Real3 const& bakeScale,
     mochi::TransformRT const& shapeTransform,
-    std::vector<mochi::real>& outNodes,
-    std::vector<int>& outConnectivity) {
+    RodPose& outPose,
+    std::vector<int>& outConnectivity) const {
   using namespace mochi;
-  ErrorLog error;
-  MeshDataView const mesh = GetNativeSurfaceMesh(DeformableSurface::Centerline, error);
-  if (!error.IsOK() || mesh.nodesPerElement != 2 || mesh.GetNumNodes() < 2) {
+  if (!IsPolyline()) {
     return false;
   }
-  // Baked like BakeNodePositions, but kept in Mochi space.
-  int const numNodes = mesh.GetNumNodes();
-  outNodes.resize(static_cast<size_t>(numNodes) * 3);
-  for (int n = 0; n < numNodes; ++n) {
-    Real3 const native{
-        mesh.coordinates[3 * n + 0], mesh.coordinates[3 * n + 1], mesh.coordinates[3 * n + 2]};
-    Real3 const baked = shapeTransform.TransformPoint(bakeScale * native);
-    outNodes[3 * n + 0] = baked[0];
-    outNodes[3 * n + 1] = baked[1];
-    outNodes[3 * n + 2] = baked[2];
+  // A shape of its own, released on return: one per bake would pile up in the shape cache as the
+  // actor's scale or offset is dragged.
+  ErrorLog error;
+  ShapeHandle const shape = CreateShape(bakeScale, shapeTransform, error);
+  Context const* const context = _manager->GetStudio()->GetMochiContext();
+  MeshDataView const mesh = context->GetShapeMesh(shape, error);
+  Span<real const> const frameAxes = context->GetShapeElementFrameAxes(shape, error);
+  if (!error.IsOK()) {
+    return false;
   }
+  outPose.nodes.assign(mesh.coordinates.begin(), mesh.coordinates.end());
+  outPose.frameAxes.assign(frameAxes.begin(), frameAxes.end());
   outConnectivity.assign(mesh.connectivity.begin(), mesh.connectivity.end());
   return true;
 }

@@ -19,6 +19,7 @@
 #include "assets/asset.h"
 #include "assets/mochi_prefab_asset.h"
 #include "rendering/measure_tool.h"
+#include "rendering/rod_visualization.h"
 #include "rendering/stats.h"
 #include "ui/imgui_widgets.h"
 
@@ -125,10 +126,14 @@ void PrefabEditor::Initialize() {
        .getState = [this] { return _stageType == StageType::RenderModelFallbackToMochiModel; },
        .shortcut = ImGuiKey_3});
   _viewport->RegisterShowCommand(
-      {.name = "SDF (Collision Fallback)",
+      {.name = "Collider (Collision Fallback)",
        .onToggle = [this] { SetRepresentationMode(StageType::SdfFallbackToMochiModel); },
        .getState = [this] { return _stageType == StageType::SdfFallbackToMochiModel; },
        .shortcut = ImGuiKey_4});
+  _viewport->RegisterShowCommand(
+      {.name = "Rod Frame Axes",
+       .onToggle = [this] { _showRodFrameAxes = !_showRodFrameAxes; },
+       .getState = [this] { return _showRodFrameAxes; }});
   // Initialize Mochi scene and callbacks
   _mochiScene.Initialize(_studio->GetMochiContext(), "PrefabEditor");
   _mochiScene.SetSettings(_studio->GetAppSettings().physics);
@@ -214,6 +219,11 @@ void PrefabEditor::OnRender(Renderer const* renderer) {
         _studio->GetEditorToRendererSpaceConverter());
   }
   DrawConstraints();
+  if (_showRodFrameAxes) {
+    if (auto* debugDraw = _viewport->GetRenderScene()->GetDebugDraw()) {
+      _stage.DrawRodFrameAxes(*debugDraw);
+    }
+  }
   // Render the scene.
   _viewport->RenderScene(renderer);
 }
@@ -417,11 +427,10 @@ void PrefabEditor::SetRepresentationMode(StageType stageType) {
   _stageType = stageType;
   if (_mochiScene.IsSimulating()) {
     _stage.SetRepresentationMode(stageType);
+    SyncViewportSelection();
   } else {
     RestagePrefab();
   }
-  // Both paths can move an actor's selectable object to another representation without rebuilding.
-  SyncViewportSelection();
 }
 
 void PrefabEditor::RestagePrefab() {
@@ -441,8 +450,8 @@ void PrefabEditor::RestagePrefab() {
     // via onSceneSelectionChanged, our _selections). The prefab arrays are unchanged, so restore
     // the saved selection and rebind it to the freshly staged objects.
     _selections = saved;
-    SyncViewportSelection();
   }
+  SyncViewportSelection();
   // Position the drop-shadow ground plane where the studio physics ground plane goes: the prefab's
   // lowest point (rest pose staged above; not called mid-sim) or the custom height.
   _mochiScene.SetLowestPointHeight(_viewport->UpdateGroundPlane());
@@ -965,7 +974,9 @@ void PrefabEditor::OnGizmoTransformDelta(
         auto& actor = rod[sel.actorIndex];
         mochi::Quaternion const originalRotation = mochi::Normalize(actor.rotation);
         applyRT(actor.rotation, actor.translation);
-        mochi::Real3 const newScale = scaledReal3(actor.scale, originalRotation);
+        mochi::Real3 const newScale = UsesRodPointCloudCollider(actor.colliderType)
+            ? actor.scale * scalarMul
+            : scaledReal3(actor.scale, originalRotation);
         if (actor.scale != newScale) {
           actor.scale = newScale;
           actor.shape = {};
@@ -2778,7 +2789,8 @@ void PrefabEditor::ShowRodActorDetails(int rodIndex) {
       nullptr,
       assetManager,
       true,
-      modelChanged);
+      modelChanged,
+      UsesRodPointCloudCollider(actor->colliderType));
   if (actor->pose.has_value()) {
     ImGui::TextDisabled("Has an initial pose, applied in simulation (shown at rest here).");
   }
@@ -2788,8 +2800,19 @@ void PrefabEditor::ShowRodActorDetails(int rodIndex) {
   changed |= ImGui::SimpleReflectionStruct(actor->material);
 
   ImGui::SeparatorText("Collision / Contact");
-  changed |= ImGui::SimpleReflectionEnum("Collider Type", actor->colliderType);
-  changed |= ImGui::SimpleReflectionStruct(
+  // Restages because the Collider view draws the point-cloud collider.
+  auto const previousColliderType = actor->colliderType;
+  bool colliderChanged = ImGui::SimpleReflectionEnum("Collider Type", actor->colliderType);
+  bool const uniformScale = HasUniformScaleMagnitude(actor->scale);
+  if (colliderChanged && UsesRodPointCloudCollider(actor->colliderType) && !uniformScale) {
+    actor->colliderType = previousColliderType;
+    colliderChanged = false;
+  }
+  if (!uniformScale) {
+    ImGui::TextWrapped(
+        "Set equal scale magnitudes on all axes before enabling a point-cloud collider.");
+  }
+  colliderChanged |= ImGui::SimpleReflectionStruct(
       actor->pointCloudCollider, [](char const*, SReflect::FieldTypeInfo const& field, void*) {
         return std::strcmp(field._name, "colliderTriangleElementType") == 0;
       });
@@ -2797,6 +2820,10 @@ void PrefabEditor::ShowRodActorDetails(int rodIndex) {
   ImGui::ItemTooltipWrapped(
       "Leaving Collider Segment Element Type unchecked places one collider point per rod node. "
       "Checking it uses quadrature points from the selected segment element type.");
+  if (colliderChanged) {
+    changed = true;
+    restage = true;
+  }
   changed |= ImGui::SimpleReflectionStruct(actor->contact);
   changed |= ImGui::SimpleReflectionEnum("Contact Element Type", actor->contactElementType);
   // Restages because the Collision Only view shows the contact skin only when it is used.

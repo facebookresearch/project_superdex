@@ -822,7 +822,7 @@ void BotSceneEditor::Initialize() {
        .getState = [this] { return _stageType == StageType::RenderModelFallbackToMochiModel; },
        .shortcut = ImGuiKey_3});
   _viewport->RegisterShowCommand(
-      {.name = "SDF (Collision Fallback)",
+      {.name = "Collider (Collision Fallback)",
        .onToggle =
            [this] {
              _stageType = StageType::SdfFallbackToMochiModel;

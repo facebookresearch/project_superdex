@@ -15,9 +15,12 @@
  */
 
 #include "rendering/scene_stage.h"
+#include "rendering/rod_visualization.h"
 
+#include "rendering/arrow_glyph.h"
 #include "rendering/soft_render_link.h"
 
+#include <mochi_renderer/debug.h>
 #include <mochi_renderer/deformable_model_instance.h>
 #include <mochi_renderer/mesh.h>
 #include <mochi_renderer/resource.h>
@@ -666,16 +669,29 @@ static void BuildPrefabRequests(
         StagedActorSource::Rod);
     req.rodIsClosedLoop = IsPolylineClosedLoop(*asset->GetModelData().mesh);
     StagedRod& rod = req.rod.emplace();
-    if (!asset->BakeRodRestNodes(
+    if (!asset->BakeRodRestPose(
             req.deformableBakeScale,
             req.deformableShapeTransform,
-            rod.restNodes,
+            rod.restPose,
             rod.connectivity)) {
       MOCHI_LOG_WARNING_ONCE(
           "SceneStage: a rod actor's model has no valid Mochi shape; it will not render.");
       continue;
     }
-    rod.nodes = rod.restNodes;
+    rod.pose = rod.restPose;
+    // Mochi resolves a rod's Auto collider to a point cloud.
+    if (UsesRodPointCloudCollider(actor.colliderType)) {
+      if (HasUniformScaleMagnitude(actor.scale)) {
+        rod.collider = actor.pointCloudCollider;
+        rod.collider->radius *= Abs(actor.scale[0]) * prefabScale;
+      } else {
+        MOCHI_LOG_WARNING_ONCE(
+            "SceneStage: point-cloud rod colliders require equal scale magnitudes; collider preview omitted.");
+      }
+    }
+    ImVec4 const axesColor =
+        HashStringToColor(shapePath.ToString() + std::string(kFrameAxesColorRole));
+    rod.frameAxesColor = {axesColor.x, axesColor.y, axesColor.z};
     out.push_back(std::move(req));
   }
 }
@@ -1392,6 +1408,18 @@ bool SceneStage::ApplyStageRequests(std::vector<StageRequest>& requests, StageTy
         reuse = false;
         break;
       }
+      // A rod's collider spheres have no in-place change of count, so turning its collider on or
+      // off or changing its sample rule rebuilds; a radius edit reuses them.
+      auto const colliderLayout = [](std::optional<StagedRod> const& rod) {
+        bool const enabled = rod && rod->collider;
+        return std::make_pair(
+            enabled, enabled ? rod->collider->colliderSegmentElementType : std::nullopt);
+      };
+      if (_actors[i].rodColliderMesh != nullptr &&
+          colliderLayout(_actors[i].rod) != colliderLayout(requests[i].rod)) {
+        reuse = false;
+        break;
+      }
     }
   }
   if (!reuse) {
@@ -1418,7 +1446,12 @@ bool SceneStage::ApplyStageRequests(std::vector<StageRequest>& requests, StageTy
     actor.deformableBakeScale = req.deformableBakeScale;
     actor.deformableShapeTransform = req.deformableShapeTransform;
     SetSoftRenderModelNotice(actor, req.name, req.softRenderModelNotice);
+    // Reuse keeps the collider's sphere count (see the reuse key), so the spheres just move to the
+    // re-baked rest pose and radius.
     actor.rod = std::move(req.rod);
+    if (actor.rodColliderMesh) {
+      UpdateRodColliderMesh(actor);
+    }
 
     // Soft actors bake scale/shape-offset into their geometry, so an edit that changes the rest
     // geometry but not the vertex count (e.g. scaling a nested prefab) reuses the meshes. Re-bake
@@ -1654,14 +1687,24 @@ bool HasDeformingSurface(StagedActor const& actor) {
 
 void SceneStage::ApplySdfVisibility(StagedActor& actor) {
   // The SDF stands in for a shown shape: shape.visible as staged, or sdf.visible once the SDF has
-  // replaced it (ApplyStageVisibility clears sdf.visible before each stage). It does not follow a
-  // deforming surface, so it is not shown for one.
+  // replaced it (ApplyStageVisibility clears sdf.visible before each stage). A rod's collider is
+  // its point cloud, which follows the rod; an SDF does not follow a deforming surface.
+  bool const hasCollider =
+      actor.rod ? actor.rod->collider.has_value() : !HasDeformingSurface(actor);
   bool const wanted = _stageType == StageType::SdfFallbackToMochiModel &&
       actor.shape.sceneObject != nullptr && (actor.shape.visible || actor.sdf.visible) &&
-      !HasDeformingSurface(actor);
+      hasCollider;
   if (wanted && actor.sdf.sceneObject == nullptr) {
-    auto* asset = _studio->GetAssetManager().LoadMochiModelAsset(actor.shape.modelFile);
-    if (auto instance = asset ? asset->GetSdfRenderModelInstance() : nullptr) {
+    std::unique_ptr<SceneObject> instance;
+    if (actor.rod) {
+      std::unique_ptr<Mesh> collider = CreateRodColliderMesh(actor);
+      actor.rodColliderMesh = collider.get();
+      instance = std::move(collider);
+    } else if (
+        auto* asset = _studio->GetAssetManager().LoadMochiModelAsset(actor.shape.modelFile)) {
+      instance = asset->GetSdfRenderModelInstance();
+    }
+    if (instance) {
       instance->SetName(actor.name);
       actor.sdf.sceneObject = _renderScene->AddSceneObjectToScene(std::move(instance));
     }
@@ -1757,6 +1800,64 @@ void SceneStage::BuildMissingSdfSurfaces() {
           }
         }
       });
+}
+
+// A rod collider's spheres at the rod's current pose, in renderer space.
+static SphereCloudMesh RodColliderSpheres(
+    StagedRod const& rod,
+    mochi::CoordinateSpaceConverter const& converter) {
+  std::vector<mochi::Real3> const samples = ComputeRodColliderSamples(
+      mochi::MakeConstSpan(rod.pose.nodes),
+      mochi::MakeConstSpan(rod.connectivity),
+      rod.collider->colliderSegmentElementType);
+  SphereCloudMesh cloud = BuildSphereCloud(mochi::MakeConstSpan(samples), rod.collider->radius);
+  converter.TranslationsToOutput(mochi::MakeSpan(cloud.positions), mochi::ErrorAssert{});
+  converter.DirectionsToOutput(mochi::MakeSpan(cloud.normals), mochi::ErrorAssert{});
+  return cloud;
+}
+
+static std::vector<float> ToFloats(std::vector<mochi::real> const& values) {
+  return {values.begin(), values.end()};
+}
+
+std::unique_ptr<Mesh> SceneStage::CreateRodColliderMesh(StagedActor& actor) const {
+  if (!actor.rod || !actor.rod->collider || actor.rod->pose.nodes.empty()) {
+    return nullptr;
+  }
+  auto* asset = _studio->GetAssetManager().LoadMochiModelAsset(actor.shape.modelFile);
+  if (asset == nullptr) {
+    return nullptr;
+  }
+  SphereCloudMesh const cloud =
+      RodColliderSpheres(*actor.rod, _studio->GetEditorToRendererSpaceConverter());
+  std::vector<float> const positions = ToFloats(cloud.positions);
+  actor.rodColliderNormals.assign(cloud.normals.begin(), cloud.normals.end());
+  // Colored like an SDF surface: both are the collider the actor is simulated with.
+  return Mesh::CreateMesh(
+      _studio->GetEngine(),
+      mochi::MakeConstSpan(positions),
+      mochi::MakeConstSpan(actor.rodColliderNormals),
+      mochi::MakeConstSpan(cloud.indices),
+      _studio->GetResourceManager().CreateFlatLitOpaqueMaterial(asset->GetSdfSurfaceColor()),
+      /*isDynamic=*/true,
+      /*isClosed=*/true);
+}
+
+void SceneStage::UpdateRodColliderMesh(StagedActor const& actor) const {
+  if (!actor.rodColliderMesh || !actor.rod || !actor.rod->collider) {
+    return;
+  }
+  auto const& rod = *actor.rod;
+  auto const samples = ComputeRodColliderSamples(
+      mochi::MakeConstSpan(rod.pose.nodes),
+      mochi::MakeConstSpan(rod.connectivity),
+      rod.collider->colliderSegmentElementType);
+  auto positions = BuildSphereCloudPositions(mochi::MakeConstSpan(samples), rod.collider->radius);
+  _studio->GetEditorToRendererSpaceConverter().TranslationsToOutput(
+      mochi::MakeSpan(positions), mochi::ErrorAssert{});
+  auto const floatPositions = ToFloats(positions);
+  actor.rodColliderMesh->Update(
+      mochi::MakeConstSpan(floatPositions), mochi::MakeConstSpan(actor.rodColliderNormals));
 }
 
 void SceneStage::SetRepresentationMode(StageType stageType) {
@@ -1927,7 +2028,8 @@ void SceneStage::ResetWorldTransforms(mochi::CoordinateSpaceConverter const& con
       }
     }
     if (actor.rod) {
-      actor.rod->nodes = actor.rod->restNodes;
+      actor.rod->pose = actor.rod->restPose;
+      UpdateRodColliderMesh(actor);
     }
     // Simulation is over: hand the shape slot back to the blend-skinned surface, which tracks
     // editor-time pose changes, and drop the simulation surface entirely so its rest geometry does
@@ -1993,8 +2095,10 @@ void SceneStage::ApplyDeformableMeshUpdates(
       actor.dynamicShapeCenterline->Update(mochi::MakeConstSpan(wirePositions));
     }
     // A pose of another size was read from a different model (it was reloaded underneath).
-    if (actor.rod && update.rodPose.nodes.size() == actor.rod->restNodes.size()) {
-      actor.rod->nodes = update.rodPose.nodes;
+    if (actor.rod && update.rodPose.nodes.size() == actor.rod->restPose.nodes.size() &&
+        update.rodPose.frameAxes.size() == actor.rod->restPose.frameAxes.size()) {
+      actor.rod->pose = update.rodPose;
+      UpdateRodColliderMesh(actor);
     }
     SetStagedActorWorldTransform(actor, update.worldTransform, converter);
   }
@@ -2027,6 +2131,28 @@ StagedActors const& SceneStage::GetActors() const {
 
 int SceneStage::GetNumActors() const {
   return static_cast<int>(_actors.size());
+}
+
+void SceneStage::DrawRodFrameAxes(mochi_renderer::DebugDraw& debugDraw) const {
+  auto const& converter = _studio->GetEditorToRendererSpaceConverter();
+  for (StagedActor const& actor : _actors) {
+    if (!actor.rod || actor.hidden) {
+      continue;
+    }
+    std::vector<FrameAxisGlyph> const glyphs = ComputeFrameAxisGlyphs(
+        mochi::MakeConstSpan(actor.rod->pose.nodes),
+        mochi::MakeConstSpan(actor.rod->connectivity),
+        mochi::MakeConstSpan(actor.rod->pose.frameAxes));
+    filament::math::float3 const color = actor.rod->frameAxesColor;
+    DrawFrameAxisGlyphs(
+        debugDraw,
+        mochi::MakeConstSpan(glyphs),
+        [&](mochi::Real3 const& local) {
+          return ToFilament<float>(
+              converter.TranslationToOutput(actor.worldTransform.TransformPoint(local)));
+        },
+        {color.x, color.y, color.z, 1.0f});
+  }
 }
 
 mochi_renderer::PickResult SceneStage::PickCenterline(
@@ -2067,7 +2193,8 @@ mochi_renderer::PickResult SceneStage::PickCenterline(
     if (object == nullptr) {
       continue;
     }
-    auto const nodes = mochi::Unflatten<mochi::Real3 const>(mochi::MakeConstSpan(actor.rod->nodes));
+    auto const nodes =
+        mochi::Unflatten<mochi::Real3 const>(mochi::MakeConstSpan(actor.rod->pose.nodes));
     auto const elements =
         mochi::Unflatten<Int2 const>(mochi::MakeConstSpan(actor.rod->connectivity));
     auto toWorld = [&](int node) {

@@ -536,7 +536,8 @@ bool InertialProperties(
 // SeparatorText(label). When the link toggle is enabled and the corresponding `other*` pointers
 // are non-null, edits to rotation/translation/scale are mirrored onto them, keeping the Mochi-model
 // and render-model transforms in sync. Sets `modelChanged` when the asset path changes. Returns
-// true if any value changed.
+// true if any value changed. With uniformMagnitudeScale, editing one scale axis updates all
+// magnitudes while preserving each axis's sign.
 bool ModelEditor(
     char const* label,
     superdex::studio::SuperDexStudio* studio,
@@ -550,7 +551,8 @@ bool ModelEditor(
     mochi::Real3* otherTranslation,
     superdex::studio::AssetManager const& assetManager,
     bool acceptDragDropPayload,
-    bool& modelChanged);
+    bool& modelChanged,
+    bool uniformMagnitudeScale = false);
 
 // Renders a "Collision / Contact" section under a SeparatorText(label): collider-type combo,
 // contact params, boundary element type, and (only when @p boundarySubsampling is non-null) the

@@ -16,14 +16,23 @@
 
 #include "rendering/rod_visualization.h"
 
+#include <mochi_core/geometry/model_data.h>
+#include <mochi_core/utils/defer.h>
+#include <mochi_core/utils/math_utils.h>
+#include <mochi_physics/mochi_physics.h>
+
 #include <gtest/gtest.h>
 
 #include <algorithm>
 #include <array>
+#include <optional>
+#include <tuple>
 #include <vector>
 
 using namespace superdex::studio;
+using mochi::ActorSegmentElementType;
 using mochi::real;
+using mochi::operator""_r;
 using mochi::Real3;
 
 namespace {
@@ -80,6 +89,145 @@ TEST(RodVisualizationTest, MismatchedFrameAxesGiveNoGlyphs) {
   EXPECT_TRUE(ComputeFrameAxisGlyphs(mochi::MakeConstSpan(nodes), {}, mochi::MakeConstSpan(oneAxis))
                   .empty());
 }
+
+TEST(RodVisualizationTest, ANodalColliderSamplesTheNodes) {
+  std::vector<real> const nodes = {0, 0, 0, 1, 0, 0, 2, 0, 0};
+
+  std::vector<Real3> const samples =
+      ComputeRodColliderSamples(mochi::MakeConstSpan(nodes), {}, std::nullopt);
+
+  std::vector<Real3> const expected = {{0.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {2.0f, 0.0f, 0.0f}};
+  EXPECT_EQ(samples, expected);
+}
+
+TEST(RodVisualizationTest, AOnePointRuleSamplesElementMidpointsIncludingAClosedLoopsWrap) {
+  std::vector<real> const nodes = {0, 0, 0, 1, 0, 0, 1, 1, 0};
+  std::vector<int> const connectivity = {0, 1, 1, 2, 2, 0};
+
+  std::vector<Real3> const samples = ComputeRodColliderSamples(
+      mochi::MakeConstSpan(nodes),
+      mochi::MakeConstSpan(connectivity),
+      ActorSegmentElementType::P1Q1);
+
+  ASSERT_EQ(samples.size(), 3u);
+  ExpectNear(samples[0], {0.5f, 0.0f, 0.0f});
+  ExpectNear(samples[1], {1.0f, 0.5f, 0.0f});
+  ExpectNear(samples[2], {0.5f, 0.5f, 0.0f});
+}
+
+TEST(RodVisualizationTest, TwoAndThreePointRulesSampleEachElementSymmetrically) {
+  std::vector<real> const nodes = {0, 0, 0, 1, 0, 0};
+
+  std::vector<Real3> const two =
+      ComputeRodColliderSamples(mochi::MakeConstSpan(nodes), {}, ActorSegmentElementType::P1Q2);
+  std::vector<Real3> const three =
+      ComputeRodColliderSamples(mochi::MakeConstSpan(nodes), {}, ActorSegmentElementType::P1Q3);
+
+  ASSERT_EQ(two.size(), 2u);
+  EXPECT_NEAR(two[0][0] + two[1][0], 1.0f, 1e-6f);
+  ASSERT_EQ(three.size(), 3u);
+  ExpectNear(three[1], {0.5f, 0.0f, 0.0f});
+  EXPECT_NEAR(three[0][0] + three[2][0], 1.0f, 1e-6f);
+}
+
+TEST(RodVisualizationTest, TheSphereCloudHasEveryVertexOnItsSphere) {
+  std::vector<Real3> const centers = {{0.0f, 0.0f, 0.0f}, {1.0f, 2.0f, 3.0f}};
+  constexpr real kRadius = 0.25f;
+
+  SphereCloudMesh const mesh = BuildSphereCloud(mochi::MakeConstSpan(centers), kRadius);
+
+  int const verticesPerSphere = static_cast<int>(mesh.positions.size() / 3 / centers.size());
+  ASSERT_GT(verticesPerSphere, 0);
+  for (int v = 0; v < static_cast<int>(mesh.positions.size() / 3); ++v) {
+    Real3 const position{
+        mesh.positions[3 * v], mesh.positions[3 * v + 1], mesh.positions[3 * v + 2]};
+    EXPECT_NEAR(mochi::Norm(position - centers[v / verticesPerSphere]), kRadius, 1e-5f) << v;
+  }
+  auto movedCenters = centers;
+  for (auto& center : movedCenters) {
+    center += Real3{2_r, -1_r, 0.5_r};
+  }
+  auto const moved = BuildSphereCloudPositions(mochi::MakeConstSpan(movedCenters), 2_r * kRadius);
+  ASSERT_EQ(moved.size(), mesh.positions.size());
+  for (int v = 0; v < static_cast<int>(moved.size() / 3); ++v) {
+    Real3 const position{moved[3 * v], moved[3 * v + 1], moved[3 * v + 2]};
+    EXPECT_NEAR(mochi::Norm(position - movedCenters[v / verticesPerSphere]), 2_r * kRadius, 1e-5_r);
+  }
+  for (int const index : mesh.indices) {
+    EXPECT_TRUE(index >= 0 && index < static_cast<int>(mesh.positions.size() / 3)) << index;
+  }
+}
+
+// Mochi's "Point Cloud Collider" debug draw puts a sphere at each of a rod's collider samples, so
+// the helper must place the same samples for every collider rule, on a deformed open or closed rod.
+class RodColliderSamplesTest
+    : public ::testing::TestWithParam<std::tuple<std::optional<ActorSegmentElementType>, bool>> {};
+
+TEST_P(RodColliderSamplesTest, MatchMochisPointCloudColliderDebugDraw) {
+  auto const [elementType, closedLoop] = GetParam();
+  mochi::Context* const context = mochi::CreateContext(0);
+  MOCHI_DEFER(mochi::DestroyContext(context));
+  mochi::Scene* const scene = context->CreateScene("rod_collider_samples_test");
+  MOCHI_DEFER(context->DestroyScene(scene));
+  mochi::ModelData model;
+  model.mesh = mochi::MeshData{};
+  model.mesh->nodesPerElement = 2;
+  // A square in the xy plane, closed or not; frame axes along z stay orthogonal to every element.
+  model.mesh->coordinates = {0, 0, 0, 0.1f, 0, 0, 0.1f, 0.1f, 0, 0, 0.1f, 0};
+  if (closedLoop) {
+    model.mesh->connectivity = {0, 1, 1, 2, 2, 3, 3, 0};
+  }
+  model.elementFrameAxes = closedLoop
+      ? mochi::DynamicArray<real>{0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1}
+      : mochi::DynamicArray<real>{0, 0, 1, 0, 0, 1, 0, 0, 1};
+  mochi::ErrorAssert error;
+  mochi::RodActorParams params;
+  params.shape = context->CreateModelShape(model, error);
+  params.hasGravity = false;
+  params.material.linearDensity = 0.3f;
+  params.material.linearRotationalInertia = 1e-5f;
+  params.material.axialStiffness = 3000.0f;
+  params.material.torsionalStiffness = 0.05f;
+  params.material.flexuralStiffness = {0.08f, 0.08f};
+  params.colliderType = mochi::ColliderType::PointCloud;
+  params.pointCloudCollider.radius = 0.01f;
+  params.pointCloudCollider.colliderSegmentElementType = elementType;
+  mochi::Actor* const rod = scene->CreateRodActor(params, error);
+  // Deform the rod in its plane, so the frame axes stay orthogonal to it.
+  std::vector<real> const displacements = {0, 0, 0, 0.01f, 0.01f, 0, 0, 0.03f, 0, -0.02f, 0, 0};
+  rod->SetRodPose(
+      mochi::MakeConstSpan(displacements), mochi::MakeConstSpan(*model.elementFrameAxes), error);
+  std::vector<real> deformed(model.mesh->coordinates.begin(), model.mesh->coordinates.end());
+  for (size_t i = 0; i < deformed.size(); ++i) {
+    deformed[i] += displacements[i];
+  }
+
+  mochi::DebugDraw& debugDraw = scene->GetDebugDraw();
+  debugDraw.Enable(true);
+  int const feature = debugDraw.FindFeature("Point Cloud Collider");
+  ASSERT_GE(feature, 0);
+  debugDraw.EnableFeature(feature, true);
+  mochi::DebugDrawData const drawn = debugDraw.GatherData();
+  std::vector<Real3> const samples = ComputeRodColliderSamples(
+      mochi::MakeConstSpan(deformed), mochi::MakeConstSpan(model.mesh->connectivity), elementType);
+
+  ASSERT_EQ(drawn.spheres.positions.size(), samples.size());
+  for (size_t i = 0; i < samples.size(); ++i) {
+    ExpectNear(drawn.spheres.positions[i], samples[i]);
+    EXPECT_NEAR(drawn.spheres.radii[i], 0.01f, 1e-7f);
+  }
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    AllColliderRules,
+    RodColliderSamplesTest,
+    ::testing::Combine(
+        ::testing::Values(
+            std::nullopt,
+            ActorSegmentElementType::P1Q1,
+            ActorSegmentElementType::P1Q2,
+            ActorSegmentElementType::P1Q3),
+        ::testing::Bool()));
 
 TEST(RodVisualizationTest, AGrabClusterIsTheNearestNodeThenItsNeighborsWithinTheRadius) {
   // Ten nodes 0.1 apart: the diagonal is 0.9, so a 0.25 fraction reaches 0.225 from the grab.

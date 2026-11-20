@@ -16,13 +16,18 @@
 
 #include "rendering/rod_visualization.h"
 
+#include <mochi_core/contact/contact_params.h>
+#include <mochi_core/elements/segment/simplex_quadrature.h>
 #include <mochi_core/geometry/mesh_data_utils.h>
 #include <mochi_core/utils/basic_utils.h>
+#include <mochi_core/utils/constants.h>
 #include <mochi_core/utils/dynamic_array.h>
 #include <mochi_core/utils/math_utils.h>
 #include <mochi_core/utils/nd_array_utils.h>
+#include <mochi_physics/cpp_api/mochi_enums.h>
 
 #include <algorithm>
+#include <cmath>
 #include <limits>
 #include <utility>
 
@@ -32,6 +37,16 @@ using mochi::Int2;
 using mochi::operator""_r;
 using mochi::real;
 using mochi::Real3;
+
+bool UsesRodPointCloudCollider(mochi::ColliderType type) {
+  return type == mochi::ColliderType::PointCloud || type == mochi::ColliderType::Auto;
+}
+
+bool HasUniformScaleMagnitude(mochi::Real3 const& scale) {
+  auto const magnitudes = mochi::Abs(scale);
+  return mochi::NearEqualRel(magnitudes[0], magnitudes[1]) &&
+      mochi::NearEqualRel(magnitudes[0], magnitudes[2]);
+}
 
 std::vector<Int2> PolylineElements(int numNodes, mochi::Span<int const> connectivity) {
   if (!connectivity.empty()) {
@@ -70,6 +85,95 @@ std::vector<FrameAxisGlyph> ComputeFrameAxisGlyphs(
     glyphs.push_back({midpoint, axes[i] * glyphLength});
   }
   return glyphs;
+}
+
+std::vector<Real3> ComputeRodColliderSamples(
+    mochi::Span<real const> nodeCoordinates,
+    mochi::Span<int const> connectivity,
+    std::optional<mochi::ActorSegmentElementType> segmentElementType) {
+  auto const nodes = mochi::Unflatten<Real3 const>(nodeCoordinates);
+  if (!segmentElementType.has_value()) {
+    return {nodes.begin(), nodes.end()};
+  }
+  mochi::Span<mochi::Real1 const> points;
+  switch (*segmentElementType) {
+    case mochi::ActorSegmentElementType::P1Q1:
+      points = mochi::MakeConstSpan(mochi::segment::SegmentQuadrature<1>::points);
+      break;
+    case mochi::ActorSegmentElementType::P1Q2:
+      points = mochi::MakeConstSpan(mochi::segment::SegmentQuadrature<2>::points);
+      break;
+    case mochi::ActorSegmentElementType::P1Q3:
+      points = mochi::MakeConstSpan(mochi::segment::SegmentQuadrature<3>::points);
+      break;
+    case mochi::ActorSegmentElementType::Count:
+      break;
+  }
+  std::vector<Real3> samples;
+  for (Int2 const& element : PolylineElements(mochi::isize(nodes), connectivity)) {
+    for (auto const& point : points) {
+      real const t = point[0];
+      samples.push_back(nodes[element[0]] * (1_r - t) + nodes[element[1]] * t);
+    }
+  }
+  return samples;
+}
+
+static constexpr int kSphereStacks = 5;
+static constexpr int kSphereSlices = 8;
+
+static std::vector<Real3> const& UnitSphereVertices() {
+  static std::vector<Real3> const points = [] {
+    std::vector<Real3> vertices;
+    for (int stack = 0; stack <= kSphereStacks; ++stack) {
+      real const theta = static_cast<real>(mochi::kPI) * static_cast<real>(stack) / kSphereStacks;
+      for (int slice = 0; slice <= kSphereSlices; ++slice) {
+        real const phi =
+            2_r * static_cast<real>(mochi::kPI) * static_cast<real>(slice) / kSphereSlices;
+        vertices.emplace_back(
+            std::sin(theta) * std::cos(phi), std::sin(theta) * std::sin(phi), std::cos(theta));
+      }
+    }
+    return vertices;
+  }();
+  return points;
+}
+
+std::vector<real> BuildSphereCloudPositions(mochi::Span<Real3 const> centers, real radius) {
+  std::vector<real> positions;
+  auto const& unitSphere = UnitSphereVertices();
+  positions.reserve(centers.size() * unitSphere.size() * 3);
+  for (Real3 const& center : centers) {
+    for (Real3 const& normal : unitSphere) {
+      Real3 const position = center + normal * radius;
+      positions.insert(positions.end(), {position[0], position[1], position[2]});
+    }
+  }
+  return positions;
+}
+
+SphereCloudMesh BuildSphereCloud(mochi::Span<Real3 const> centers, real radius) {
+  auto const& unitSphere = UnitSphereVertices();
+  int const verticesPerSphere = mochi::isize(unitSphere);
+  SphereCloudMesh mesh;
+  mesh.positions = BuildSphereCloudPositions(centers, radius);
+  mesh.normals.reserve(mesh.positions.size());
+  mesh.indices.reserve(centers.size() * kSphereStacks * kSphereSlices * 6);
+  for (int sphere = 0; sphere < mochi::isize(centers); ++sphere) {
+    for (Real3 const& normal : unitSphere) {
+      mesh.normals.insert(mesh.normals.end(), {normal[0], normal[1], normal[2]});
+    }
+    int const base = sphere * verticesPerSphere;
+    for (int stack = 0; stack < kSphereStacks; ++stack) {
+      for (int slice = 0; slice < kSphereSlices; ++slice) {
+        int const current = base + stack * (kSphereSlices + 1) + slice;
+        int const below = current + kSphereSlices + 1;
+        mesh.indices.insert(
+            mesh.indices.end(), {current, below, current + 1, current + 1, below, below + 1});
+      }
+    }
+  }
+  return mesh;
 }
 
 std::vector<int> SelectGrabCluster(

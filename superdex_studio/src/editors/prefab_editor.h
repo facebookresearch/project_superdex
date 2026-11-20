@@ -315,6 +315,8 @@ class PrefabEditor : public AssetEditor {
   // The stage's render and collision stats, taken after each staging at the rest pose.
   StageStats _stageStats;
   StageType _stageType = StageType::RenderModelFallbackToMochiModel;
+  // Draw every rod's element frame axes (viewport Show menu).
+  bool _showRodFrameAxes = false;
   // physics scene state
   MochiAsyncScene _mochiScene;
   PrefabSimSync _simSync;

@@ -26,7 +26,15 @@
 #include <string_view>
 #include <vector>
 
+namespace mochi {
+enum class ActorSegmentElementType;
+enum class ColliderType;
+} // namespace mochi
+
 namespace superdex::studio {
+
+bool UsesRodPointCloudCollider(mochi::ColliderType type);
+bool HasUniformScaleMagnitude(mochi::Real3 const& scale);
 
 // Role suffix hashed with a model's color seed to color its frame-axis arrows, so they read alike
 // everywhere they are shown.
@@ -62,6 +70,27 @@ std::vector<FrameAxisGlyph> ComputeFrameAxisGlyphs(
     mochi::Span<mochi::real const> nodeCoordinates,
     mochi::Span<int const> connectivity,
     mochi::Span<mochi::real const> frameAxes);
+
+// The sample points of a rod's point-cloud collider, as Mochi places them: the polyline's nodes
+// when `segmentElementType` is unset, else each element's Gauss points of that rule (one, two or
+// three per element, interpolated linearly between its nodes). Each is the center of a sphere of
+// PointCloudColliderParams::radius.
+std::vector<mochi::Real3> ComputeRodColliderSamples(
+    mochi::Span<mochi::real const> nodeCoordinates,
+    mochi::Span<int const> connectivity,
+    std::optional<mochi::ActorSegmentElementType> segmentElementType);
+
+// A triangle mesh of a low-poly sphere of @p radius around each of @p centers, as flat buffers.
+struct SphereCloudMesh {
+  std::vector<mochi::real> positions;
+  std::vector<mochi::real> normals;
+  std::vector<int> indices;
+};
+SphereCloudMesh BuildSphereCloud(mochi::Span<mochi::Real3 const> centers, mochi::real radius);
+// Positions in the same vertex order as BuildSphereCloud, for fixed-layout pose/radius updates.
+std::vector<mochi::real> BuildSphereCloudPositions(
+    mochi::Span<mochi::Real3 const> centers,
+    mochi::real radius);
 
 // The nodes a grab at @p grabPoint springs, nearest first: the nearest node (the anchor, first)
 // and every node within @p radiusFraction of the nodes' bounding-box diagonal, at most @p maxNodes.

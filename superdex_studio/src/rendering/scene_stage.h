@@ -26,6 +26,7 @@
 #include <mochi_core/utils/nd_array.h>
 #include <mochi_core/utils/span.h>
 #include <mochi_core/utils/transform_rt.h>
+#include <mochi_physics/cpp_api/mochi_structs.h>
 #include <mochi_renderer/path.h>
 
 #include <math/mat4.h>
@@ -48,6 +49,7 @@ struct ScenePrefab;
 } // namespace mochi::prefab
 
 namespace mochi_renderer {
+class DebugDraw;
 class DeformableModelInstance;
 class LineSegmentMesh;
 struct PickResult;
@@ -67,7 +69,8 @@ enum class StageType {
   RenderModelFallbackToMochiModel,
   RenderModelOnly,
   MochiModelOnly,
-  // The collision model's SDF surface where it has one, else the collision model itself.
+  // The collider: the collision model's SDF surface where it has one, or a rod's point-cloud
+  // collider spheres, else the collision model itself.
   SdfFallbackToMochiModel,
 };
 
@@ -82,13 +85,17 @@ enum class StagedActorSource {
   Rod,
 };
 
-// A staged rod's centerline, in its local frame (Mochi space), 3 values per node.
+// A staged rod's centerline, in its local frame (Mochi space), and its point-cloud collider.
 struct StagedRod {
   // Two node indices per element.
   std::vector<int> connectivity;
-  std::vector<mochi::real> restNodes;
-  // The rest nodes while editing, the simulated nodes while simulating.
-  std::vector<mochi::real> nodes;
+  RodPose restPose;
+  // The rest pose while editing, the simulated pose while simulating.
+  RodPose pose;
+  // Set when the rod collides through a point cloud (ColliderType::PointCloud or Auto).
+  std::optional<mochi::PointCloudColliderParams> collider;
+  // Hashed from the model path like the Model Viewer's.
+  filament::math::float3 frameAxesColor = {};
 };
 
 struct StagedActor {
@@ -131,7 +138,8 @@ struct StagedActor {
   Instance shape;
   // The shape's SDF surface: an instance of the collision model's shared SDF mesh, sharing the
   // shape's model file, offset and scale. Created the first time StageType::SdfFallbackToMochiModel
-  // finds the surface built, then kept like the other two. Never set for deforming actors.
+  // finds the surface built, then kept like the other two. Never set for deforming actors, except
+  // that a rod with a point-cloud collider shows its collider's spheres here (`rodColliderMesh`).
   Instance sdf;
   // Hidden from the viewport by the user, whatever the StageType shows (see
   // SceneStage::SetActorHidden).
@@ -179,8 +187,11 @@ struct StagedActor {
   mochi_renderer::LineSegmentMesh* dynamicRenderCenterline = nullptr;
   mochi_renderer::LineSegmentMesh* dynamicShapeCenterline = nullptr;
   bool rodIsClosedLoop = false;
-  // Rod actors only: the centerline.
+  // Rod actors only: the centerline, and the deforming sphere cloud of its point-cloud collider in
+  // the `sdf` slot (non-owning, like the meshes above).
   std::optional<StagedRod> rod;
+  mochi_renderer::Mesh* rodColliderMesh = nullptr;
+  mochi::DynamicArray<float> rodColliderNormals;
   // Soft actors whose render model is linked to their visual mesh (see CheckRenderModelLink): the
   // render model, drawn in the render slot instead of the solid and deformed by the visual mesh's
   // updates. A non-owning back-pointer like dynamicSolidMesh; null otherwise.
@@ -326,7 +337,7 @@ struct StageRequest {
   // and if not, why (empty when there is no render model).
   bool softRenderModelLinked = false;
   std::string softRenderModelNotice;
-  // Rod actors only: the centerline at its rest pose.
+  // Rod actors only: the centerline at its rest pose and the point-cloud collider.
   std::optional<StagedRod> rod;
   // Skinned skin only: per-link WORLD transforms (Mochi space) in the GLB's joint order (== nested
   // link / link-declaration order), captured at build time. Populated for ANY articulated skin,
@@ -462,6 +473,9 @@ struct SceneStage {
   // Get the ordered list of staged actors.
   StagedActors const& GetActors() const;
 
+  // Draws every staged rod's element frame axes at its current pose (see ComputeFrameAxisGlyphs).
+  void DrawRodFrameAxes(mochi_renderer::DebugDraw& debugDraw) const;
+
   // The shown rod centerline (drawn as lines, which are too thin for the GPU pick to hit reliably)
   // nearest the framebuffer pixel (@p pxX, @p pxY) (Filament's bottom-origin convention) within
   // @p maxDistancePx, with the nearest point on it in renderer space; no hit if none.
@@ -552,6 +566,12 @@ struct SceneStage {
   // shows them in place of their collision models (no restage needed). A no-op when nothing is
   // missing or another batch is running.
   void BuildMissingSdfSurfaces();
+
+  // A deforming sphere cloud of a staged rod's point-cloud collider at its current pose, for the
+  // `sdf` slot, or null if the rod has no such collider.
+  std::unique_ptr<mochi_renderer::Mesh> CreateRodColliderMesh(StagedActor& actor) const;
+  // Moves a rod's collider spheres to its current pose.
+  void UpdateRodColliderMesh(StagedActor const& actor) const;
 
   bool StageBotSceneImpl(
       superdex::robotics::BotScenePrefab const& scene,
