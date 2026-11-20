@@ -142,7 +142,7 @@ SensorStepResult SensorLinkVertexForce::Step(StepTime const& now, Error& error) 
   MOCHI_ERROR_IF_NOT(inputs.empty(), error, "SensorLinkVertexForce does not accept inputs");
   MOCHI_ERROR_RETURN(error, SensorStepResult::NoUpdate);
   auto const samplePeriod =
-      detail::SensorCapturePeriod(now, _params.sampleRateHz, _lastSamplePeriod);
+      detail::SensorCapturePeriod(now, _params.sampleRateHz, _lastSamplePeriod, _sampleEpochTime);
   if (!samplePeriod) {
     return SensorStepResult::NoUpdate;
   }
@@ -157,6 +157,7 @@ SensorStepResult SensorLinkVertexForce::Step(StepTime const& now, Error& error) 
 }
 
 void SensorLinkVertexForce::ResetSensor() {
+  _sampleEpochTime.reset();
   _lastSamplePeriod.reset();
 }
 

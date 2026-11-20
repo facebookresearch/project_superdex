@@ -26,8 +26,10 @@
 #include <superdex_robotics/controllers/controller_basic_osc_pd.h>
 #include <superdex_robotics/controllers/controller_mochi_articulated_pose.h>
 #include <superdex_robotics/sensors/sensor_camera.h>
+#include <superdex_robotics/sensors/sensor_delay_line.h>
 #include <superdex_robotics/sensors/sensor_seed_rect_map.h>
 #include <superdex_robotics/sensors/sensor_seed_v1_mlp.h>
+#include <superdex_robotics/sensors/sensor_temporal_window.h>
 #include <superdex_robotics/superdex_robotics.h>
 #include <superdex_robotics/utils/bot_utils.h>
 #include <superdex_robotics/utils/superdex_robotics_api_checks.generated.h>
@@ -158,6 +160,14 @@ MOCHI_BASE_CLASS(superdex::robotics::ComponentBase)
 MOCHI_STRUCT_END_EX()
 
 MOCHI_STRUCT_BEGIN_EX(superdex::robotics::SensorCamera)
+MOCHI_BASE_CLASS(superdex::robotics::SensorBase)
+MOCHI_STRUCT_END_EX()
+
+MOCHI_STRUCT_BEGIN_EX(superdex::robotics::SensorTemporalWindow)
+MOCHI_BASE_CLASS(superdex::robotics::SensorBase)
+MOCHI_STRUCT_END_EX()
+
+MOCHI_STRUCT_BEGIN_EX(superdex::robotics::SensorDelayLine)
 MOCHI_BASE_CLASS(superdex::robotics::SensorBase)
 MOCHI_STRUCT_END_EX()
 

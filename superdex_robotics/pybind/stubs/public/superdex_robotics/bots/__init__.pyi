@@ -2472,6 +2472,34 @@ class SensorSeedV1MLPResult:
         num_contacts: int = ...,
     ) -> None: ...
 
+class SensorTemporalWindowParams:
+    """Fixed oldest-first rolling-window configuration."""
+    history_length: int
+    """Number of native-rate samples in the output leading axis."""
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(self, *, history_length: int = ...) -> None: ...
+
+class SensorDelayLineParams:
+    """Deterministic time-domain delay configuration."""
+    delay_ms: float
+    """Time from input publication to output publication [ms]."""
+    buffer_ms: float
+    """Pending-history duration used to size storage at Init [ms]."""
+    buffer_assumed_frequency_hz_estimate: float
+    """Fallback publication-rate estimate [Hz] when the input rate is unknown."""
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(
+        self,
+        *,
+        delay_ms: float = ...,
+        buffer_ms: float = ...,
+        buffer_assumed_frequency_hz_estimate: float = ...,
+    ) -> None: ...
+
 class TactileTaxelLayout:
     """Ordered, sensor-link-frame positions for a tactile taxel layout."""
     @property
@@ -2978,6 +3006,24 @@ class SensorSeedV1MLP(SensorBase):
     ) -> SensorSeedV1MLPResult: ...
     def get_params(self) -> SensorSeedV1MLPParams: ...
     def set_params(self, params: SensorSeedV1MLPParams) -> None: ...
+
+class SensorTemporalWindow(SensorBase):
+    """Fixed oldest-first rolling window over one native-rate CPU float sensor."""
+    @staticmethod
+    def type_name() -> str: ...
+    def get_params(self) -> SensorTemporalWindowParams: ...
+
+class SensorDelayLine(SensorBase):
+    """Deterministic time-domain delay over one fixed CPU sensor output."""
+    @staticmethod
+    def type_name() -> str: ...
+    def get_params(self) -> SensorDelayLineParams: ...
+    def set_params(self, params: SensorDelayLineParams) -> None:
+        """Install typed episode parameters before resetting the graph.
+
+        Raises:
+            :class:`~superdex.physics.Error`: If an error occurs.
+        """
 
 class BotSceneMetadata:
     """Human-readable metadata for a .superdex_scene file. Not consumed by the runtime.

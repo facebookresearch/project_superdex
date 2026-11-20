@@ -19,6 +19,7 @@
 #include <superdex_robotics/sensors/sensor_recording.h>
 
 #include <algorithm>
+#include <cmath>
 #include <limits>
 #include <utility>
 
@@ -42,6 +43,18 @@ DynamicArray<real> SensorBase::CopyLatestValues() const {
   std::ranges::transform(
       _output, values.begin(), [](float value) { return static_cast<real>(value); });
   return values;
+}
+
+double SensorBase::GetPublicationFrequencyHzEstimate() const {
+  double frequency = 0.0;
+  for (SensorBase const* input : Inputs()) {
+    double const estimate = input->GetPublicationFrequencyHzEstimate();
+    if (!std::isfinite(estimate) || estimate <= 0.0) {
+      return 0.0;
+    }
+    frequency = std::max(frequency, estimate);
+  }
+  return frequency;
 }
 
 namespace {
@@ -133,6 +146,8 @@ void SensorBase::ClearOutput() {
   std::ranges::fill(_output, 0.0F);
   _latest.captureStep = -1;
   _latest.captureTime = 0.0;
+  _latest.publishedStep = -1;
+  _latest.publishedTime = 0.0;
   _latest.data = _output.data();
   _latest.elementCount = static_cast<int64_t>(_output.size());
 }
@@ -154,6 +169,8 @@ bool SensorBase::PublishSample(
   std::ranges::copy(sample, _output.begin());
   _latest.captureStep = source != nullptr ? source->captureStep : now.step;
   _latest.captureTime = source != nullptr ? source->captureTime : now.t;
+  _latest.publishedStep = now.step;
+  _latest.publishedTime = now.t;
   return true;
 }
 

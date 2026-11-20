@@ -477,7 +477,6 @@ bool SensorGraph::Step(StepTime const& now, Error& error) {
       return false;
     }
   }
-
   for (std::size_t const index : _activeOrder) {
     [[maybe_unused]] SensorStepResult const result = _nodes[index].sensor->Step(now, error);
     MOCHI_ERROR_RETURN(error, false);

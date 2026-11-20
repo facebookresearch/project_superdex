@@ -35,10 +35,12 @@
 #include <superdex_robotics/sensors/sensor_articulated_joint_wrench.h>
 #include <superdex_robotics/sensors/sensor_base.h>
 #include <superdex_robotics/sensors/sensor_camera.h>
+#include <superdex_robotics/sensors/sensor_delay_line.h>
 #include <superdex_robotics/sensors/sensor_graph.h>
 #include <superdex_robotics/sensors/sensor_link_vertex_force.h>
 #include <superdex_robotics/sensors/sensor_seed_rect_map.h>
 #include <superdex_robotics/sensors/sensor_seed_v1_mlp.h>
+#include <superdex_robotics/sensors/sensor_temporal_window.h>
 #include <superdex_robotics/superdex_robotics.h>
 #include <superdex_robotics/utils/asset_snapshot.h>
 #include <superdex_robotics/utils/file_utils.h>

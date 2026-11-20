@@ -44,6 +44,8 @@ struct StepTime {
 struct SensorSample {
   int64_t captureStep = -1;
   double captureTime = 0.0;
+  int64_t publishedStep = -1;
+  double publishedTime = 0.0;
   void const* data = nullptr;
   int64_t elementCount = 0;
 
@@ -80,6 +82,10 @@ class MOCHI_API SensorBase : public ComponentBase {
   [[nodiscard]] SensorFormat const& GetFormat() const {
     return _format;
   }
+
+  /* @brief Initialization-time publication-rate estimate [Hz]; zero means unknown.
+   * Derived nodes inherit the fastest input estimate when all input rates are known. */
+  [[nodiscard]] virtual double GetPublicationFrequencyHzEstimate() const;
 
   /* @brief Return the latest sample without triggering acquisition or allocation. */
   [[nodiscard]] SensorSample Latest() const {

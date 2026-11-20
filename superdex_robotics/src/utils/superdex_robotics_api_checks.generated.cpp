@@ -27,10 +27,12 @@
 #include <superdex_robotics/scene/bot_task.h>
 #include <superdex_robotics/sensors/sensor_articulated_joint_wrench.h>
 #include <superdex_robotics/sensors/sensor_camera.h>
+#include <superdex_robotics/sensors/sensor_delay_line.h>
 #include <superdex_robotics/sensors/sensor_graph.h>
 #include <superdex_robotics/sensors/sensor_link_vertex_force.h>
 #include <superdex_robotics/sensors/sensor_seed_rect_map.h>
 #include <superdex_robotics/sensors/sensor_seed_v1_mlp.h>
+#include <superdex_robotics/sensors/sensor_temporal_window.h>
 #include <superdex_robotics/superdex_robotics.h>
 #include <superdex_robotics/utils/archive_utils.h>
 #include <superdex_robotics/utils/asset_snapshot.h>
@@ -353,6 +355,14 @@ static_assert(std::is_same_v<decltype(&superdex::robotics::SensorSeedV1MLPResult
 static_assert(std::is_same_v<decltype(&superdex::robotics::SensorSeedV1MLPResult::contactNormal), mochi::Real3 superdex::robotics::SensorSeedV1MLPResult::*>, "\n  ERROR: Field superdex::robotics::SensorSeedV1MLPResult::contactNormal is out-of-sync with C++ definition.\n  Please check the field type, then run mochi_gen_py to regenerate this file.\n");
 static_assert(std::is_same_v<decltype(&superdex::robotics::SensorSeedV1MLPResult::numContacts), int superdex::robotics::SensorSeedV1MLPResult::*>, "\n  ERROR: Field superdex::robotics::SensorSeedV1MLPResult::numContacts is out-of-sync with C++ definition.\n  Please check the field type, then run mochi_gen_py to regenerate this file.\n");
 
+// struct superdex::robotics::SensorTemporalWindowParams
+static_assert(std::is_same_v<decltype(&superdex::robotics::SensorTemporalWindowParams::historyLength), int superdex::robotics::SensorTemporalWindowParams::*>, "\n  ERROR: Field superdex::robotics::SensorTemporalWindowParams::historyLength is out-of-sync with C++ definition.\n  Please check the field type, then run mochi_gen_py to regenerate this file.\n");
+
+// struct superdex::robotics::SensorDelayLineParams
+static_assert(std::is_same_v<decltype(&superdex::robotics::SensorDelayLineParams::delayMs), double superdex::robotics::SensorDelayLineParams::*>, "\n  ERROR: Field superdex::robotics::SensorDelayLineParams::delayMs is out-of-sync with C++ definition.\n  Please check the field type, then run mochi_gen_py to regenerate this file.\n");
+static_assert(std::is_same_v<decltype(&superdex::robotics::SensorDelayLineParams::bufferMs), double superdex::robotics::SensorDelayLineParams::*>, "\n  ERROR: Field superdex::robotics::SensorDelayLineParams::bufferMs is out-of-sync with C++ definition.\n  Please check the field type, then run mochi_gen_py to regenerate this file.\n");
+static_assert(std::is_same_v<decltype(&superdex::robotics::SensorDelayLineParams::bufferAssumedFrequencyHzEstimate), double superdex::robotics::SensorDelayLineParams::*>, "\n  ERROR: Field superdex::robotics::SensorDelayLineParams::bufferAssumedFrequencyHzEstimate is out-of-sync with C++ definition.\n  Please check the field type, then run mochi_gen_py to regenerate this file.\n");
+
 // struct superdex::robotics::TactileTaxelLayout
 static_assert(std::is_same_v<decltype(&superdex::robotics::TactileTaxelLayout::positions), mochi::DynamicArray<mochi::Real3> superdex::robotics::TactileTaxelLayout::*>, "\n  ERROR: Field superdex::robotics::TactileTaxelLayout::positions is out-of-sync with C++ definition.\n  Please check the field type, then run mochi_gen_py to regenerate this file.\n");
 
@@ -452,6 +462,15 @@ static_assert(std::is_same_v<decltype(static_cast<superdex::robotics::SensorSeed
 static_assert(std::is_same_v<decltype(static_cast<superdex::robotics::SensorSeedV1MLPResult (superdex::robotics::SensorSeedV1MLP::*)(mochi::Span<mochi::ContactPoint const>, mochi::Error&)>(&superdex::robotics::SensorSeedV1MLP::ComputeSignal)), superdex::robotics::SensorSeedV1MLPResult (superdex::robotics::SensorSeedV1MLP::*)(mochi::Span<mochi::ContactPoint const>, mochi::Error&)>, "\n  ERROR: Function superdex::robotics::SensorSeedV1MLP::ComputeSignal is out-of-sync with C++.\n  Please check the function signature, then run mochi_gen_py to regenerate this file.\n");
 static_assert(std::is_same_v<decltype(&superdex::robotics::SensorSeedV1MLP::GetParams), superdex::robotics::SensorSeedV1MLPParams const& (superdex::robotics::SensorSeedV1MLP::*)() const>, "\n  ERROR: Function superdex::robotics::SensorSeedV1MLP::GetParams is out-of-sync with C++.\n  Please check the function signature, then run mochi_gen_py to regenerate this file.\n");
 static_assert(std::is_same_v<decltype(&superdex::robotics::SensorSeedV1MLP::SetParams), void (superdex::robotics::SensorSeedV1MLP::*)(superdex::robotics::SensorSeedV1MLPParams const&, mochi::Error&)>, "\n  ERROR: Function superdex::robotics::SensorSeedV1MLP::SetParams is out-of-sync with C++.\n  Please check the function signature, then run mochi_gen_py to regenerate this file.\n");
+
+// class superdex::robotics::SensorTemporalWindow
+static_assert(std::is_same_v<decltype(&superdex::robotics::SensorTemporalWindow::TypeName), std::string_view (*)()>, "\n  ERROR: Function superdex::robotics::SensorTemporalWindow::TypeName is out-of-sync with C++.\n  Please check the function signature, then run mochi_gen_py to regenerate this file.\n");
+static_assert(std::is_same_v<decltype(&superdex::robotics::SensorTemporalWindow::GetParams), superdex::robotics::SensorTemporalWindowParams const& (superdex::robotics::SensorTemporalWindow::*)() const>, "\n  ERROR: Function superdex::robotics::SensorTemporalWindow::GetParams is out-of-sync with C++.\n  Please check the function signature, then run mochi_gen_py to regenerate this file.\n");
+
+// class superdex::robotics::SensorDelayLine
+static_assert(std::is_same_v<decltype(&superdex::robotics::SensorDelayLine::TypeName), std::string_view (*)()>, "\n  ERROR: Function superdex::robotics::SensorDelayLine::TypeName is out-of-sync with C++.\n  Please check the function signature, then run mochi_gen_py to regenerate this file.\n");
+static_assert(std::is_same_v<decltype(&superdex::robotics::SensorDelayLine::GetParams), superdex::robotics::SensorDelayLineParams (superdex::robotics::SensorDelayLine::*)() const>, "\n  ERROR: Function superdex::robotics::SensorDelayLine::GetParams is out-of-sync with C++.\n  Please check the function signature, then run mochi_gen_py to regenerate this file.\n");
+static_assert(std::is_same_v<decltype(&superdex::robotics::SensorDelayLine::SetParams), void (superdex::robotics::SensorDelayLine::*)(superdex::robotics::SensorDelayLineParams const&, mochi::Error&)>, "\n  ERROR: Function superdex::robotics::SensorDelayLine::SetParams is out-of-sync with C++.\n  Please check the function signature, then run mochi_gen_py to regenerate this file.\n");
 
 // struct superdex::robotics::BotSceneArchiveMetadata
 static_assert(std::is_same_v<decltype(&superdex::robotics::BotSceneArchiveMetadata::date), mochi::DynamicString superdex::robotics::BotSceneArchiveMetadata::*>, "\n  ERROR: Field superdex::robotics::BotSceneArchiveMetadata::date is out-of-sync with C++ definition.\n  Please check the field type, then run mochi_gen_py to regenerate this file.\n");

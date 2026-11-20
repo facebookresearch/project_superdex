@@ -994,6 +994,36 @@
 /// @brief SEED tactile sensor result.
 ///
 
+/// @struct superdex::robotics::SensorTemporalWindowParams
+///
+/// @brief Fixed oldest-first rolling-window configuration.
+///
+
+/// @var superdex::robotics::SensorTemporalWindowParams::historyLength
+///
+/// @brief Number of native-rate samples in the output leading axis.
+///
+
+/// @struct superdex::robotics::SensorDelayLineParams
+///
+/// @brief Deterministic time-domain delay configuration.
+///
+
+/// @var superdex::robotics::SensorDelayLineParams::delayMs
+///
+/// @brief Time from input publication to output publication [ms].
+///
+
+/// @var superdex::robotics::SensorDelayLineParams::bufferMs
+///
+/// @brief Pending-history duration used to size storage at Init [ms].
+///
+
+/// @var superdex::robotics::SensorDelayLineParams::bufferAssumedFrequencyHzEstimate
+///
+/// @brief Fallback publication-rate estimate [Hz] when the input rate is unknown.
+///
+
 /// @struct superdex::robotics::TactileTaxelLayout
 ///
 /// @brief Ordered, sensor-link-frame positions for a tactile taxel layout.
@@ -1385,6 +1415,23 @@
 /// @class superdex::robotics::SensorSeedV1MLP
 ///
 /// @brief SEED tactile sensor using Mochi-native MLP inference.
+///
+
+/// @class superdex::robotics::SensorTemporalWindow
+///
+/// @brief Fixed oldest-first rolling window over one native-rate CPU float sensor.
+///
+
+/// @class superdex::robotics::SensorDelayLine
+///
+/// @brief Deterministic time-domain delay over one fixed CPU sensor output.
+///
+
+/// @fn void superdex::robotics::SensorDelayLine::SetParams(SensorDelayLineParams const& params, superdex::Error& error)
+///
+/// @brief Install typed episode parameters before resetting the graph.
+///
+/// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
 ///
 
 /// @struct superdex::robotics::BotSceneArchiveMetadata

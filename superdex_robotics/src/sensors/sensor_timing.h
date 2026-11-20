@@ -34,12 +34,19 @@ inline int64_t SensorPeriodIndex(double timeSeconds, real sampleRateHz) {
       std::abs(scaled - nearest) <= roundoffTolerance ? nearest : std::floor(scaled));
 }
 
-inline std::optional<int64_t>
-SensorCapturePeriod(StepTime const& now, real sampleRateHz, std::optional<int64_t> lastPeriod) {
+inline std::optional<int64_t> SensorCapturePeriod(
+    StepTime const& now,
+    real sampleRateHz,
+    std::optional<int64_t> lastPeriod,
+    std::optional<double>& epochTime) {
   if (now.dt <= 0.0) {
     return std::nullopt;
   }
-  int64_t const period = sampleRateHz > 0_r ? SensorPeriodIndex(now.t, sampleRateHz) : now.step;
+  if (sampleRateHz > 0_r && !epochTime) {
+    epochTime = now.t;
+  }
+  int64_t const period =
+      sampleRateHz > 0_r ? SensorPeriodIndex(now.t - *epochTime, sampleRateHz) : now.step;
   if (sampleRateHz > 0_r && lastPeriod == period) {
     return std::nullopt;
   }

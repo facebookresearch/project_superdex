@@ -109,6 +109,8 @@ void mochi::DeclareSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module
   registry.StoreClass(nb::class_<superdex::robotics::SensorSeedRectMapParams>(m_bots, "SensorSeedRectMapParams", "Fixed geometry for a SEED force RectMap sensor."));
   registry.StoreClass(nb::class_<superdex::robotics::SensorSeedV1MLPParams>(m_bots, "SensorSeedV1MLPParams", "SEED tactile sensor parameters."));
   registry.StoreClass(nb::class_<superdex::robotics::SensorSeedV1MLPResult>(m_bots, "SensorSeedV1MLPResult", "SEED tactile sensor result."));
+  registry.StoreClass(nb::class_<superdex::robotics::SensorTemporalWindowParams>(m_bots, "SensorTemporalWindowParams", "Fixed oldest-first rolling-window configuration."));
+  registry.StoreClass(nb::class_<superdex::robotics::SensorDelayLineParams>(m_bots, "SensorDelayLineParams", "Deterministic time-domain delay configuration."));
   registry.StoreClass(nb::class_<superdex::robotics::TactileTaxelLayout>(m_bots, "TactileTaxelLayout", "Ordered, sensor-link-frame positions for a tactile taxel layout."));
   registry.StoreClass(nb::class_<superdex::robotics::TactileTaxelForces>(m_bots, "TactileTaxelForces", "Dense per-taxel force observation for one tactile site."));
   registry.StoreClass(nb::class_<superdex::robotics::TactileAggregateForce>(m_bots, "TactileAggregateForce", "Aggregate force observation for one tactile site."));
@@ -128,6 +130,8 @@ void mochi::DeclareSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module
   registry.StoreClass(nb::class_<superdex::robotics::SensorCamera, superdex::robotics::SensorBase>(m_bots, "SensorCamera", "Camera sensor runtime object. Stores intrinsics/extrinsics for use by renderers\n(UE, etc.). No ComputeSignal — cameras don't produce data in the mochi physics\nloop; renderers query GetParams() to configure their camera actors.", nb::never_destruct()));
   registry.StoreClass(nb::class_<superdex::robotics::SensorSeedRectMap, superdex::robotics::SensorBase>(m_bots, "SensorSeedRectMap", "Image-like force map derived from one vertex-force point-cloud sensor.", nb::never_destruct()));
   registry.StoreClass(nb::class_<superdex::robotics::SensorSeedV1MLP, superdex::robotics::SensorBase>(m_bots, "SensorSeedV1MLP", "SEED tactile sensor using Mochi-native MLP inference.", nb::never_destruct()));
+  registry.StoreClass(nb::class_<superdex::robotics::SensorTemporalWindow, superdex::robotics::SensorBase>(m_bots, "SensorTemporalWindow", "Fixed oldest-first rolling window over one native-rate CPU float sensor.", nb::never_destruct()));
+  registry.StoreClass(nb::class_<superdex::robotics::SensorDelayLine, superdex::robotics::SensorBase>(m_bots, "SensorDelayLine", "Deterministic time-domain delay over one fixed CPU sensor output.", nb::never_destruct()));
   registry.StoreClass(nb::class_<superdex::robotics::BotSceneMetadata>(m_bots, "BotSceneMetadata", "Human-readable metadata for a .superdex_scene file. Not consumed by the runtime."));
   registry.StoreClass(nb::class_<superdex::robotics::PrefabEntry>(m_bots, "PrefabEntry", "A named reference to a spawnable scene, prefab, bot, or bot archive."));
   registry.StoreClass(nb::class_<superdex::robotics::BaseSceneParams>(m_bots, "BaseSceneParams", "Scene definition within a .superdex_scene.\n\nThe base_scene is optional — a scene under construction may not have one yet.\nWhen present it is the authoritative source for all simulation physics\nparameters (gravity, solver config, contact filtering, collision layers, etc.);\nwhen absent the scene keeps its default parameters."));
@@ -1385,6 +1389,42 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_rw("num_contacts", &superdex::robotics::SensorSeedV1MLPResult::numContacts)
   ;
 
+  registry.GetClass<superdex::robotics::SensorTemporalWindowParams>()
+    .def("__init__", [](superdex::robotics::SensorTemporalWindowParams* self, nb::object history_length) {
+      superdex::robotics::SensorTemporalWindowParams result{};
+      result.historyLength = nb::cast<int>(history_length);
+      new (self) superdex::robotics::SensorTemporalWindowParams(std::move(result));
+    }
+      , nb::kw_only()
+      , nb::arg("history_length") = superdex::robotics::SensorTemporalWindowParams{}.historyLength
+    )
+    .def(nb::init<>())
+    .def("__copy__", [](superdex::robotics::SensorTemporalWindowParams const& self) { return superdex::robotics::SensorTemporalWindowParams(self); })
+    .def("__deepcopy__", [](superdex::robotics::SensorTemporalWindowParams const& self, nb::dict) { return superdex::robotics::SensorTemporalWindowParams(self); })
+    .def_rw("history_length", &superdex::robotics::SensorTemporalWindowParams::historyLength, "Number of native-rate samples in the output leading axis.")
+  ;
+
+  registry.GetClass<superdex::robotics::SensorDelayLineParams>()
+    .def("__init__", [](superdex::robotics::SensorDelayLineParams* self, nb::object delay_ms, nb::object buffer_ms, nb::object buffer_assumed_frequency_hz_estimate) {
+      superdex::robotics::SensorDelayLineParams result{};
+      result.delayMs = nb::cast<double>(delay_ms);
+      result.bufferMs = nb::cast<double>(buffer_ms);
+      result.bufferAssumedFrequencyHzEstimate = nb::cast<double>(buffer_assumed_frequency_hz_estimate);
+      new (self) superdex::robotics::SensorDelayLineParams(std::move(result));
+    }
+      , nb::kw_only()
+      , nb::arg("delay_ms") = superdex::robotics::SensorDelayLineParams{}.delayMs
+      , nb::arg("buffer_ms") = superdex::robotics::SensorDelayLineParams{}.bufferMs
+      , nb::arg("buffer_assumed_frequency_hz_estimate") = superdex::robotics::SensorDelayLineParams{}.bufferAssumedFrequencyHzEstimate
+    )
+    .def(nb::init<>())
+    .def("__copy__", [](superdex::robotics::SensorDelayLineParams const& self) { return superdex::robotics::SensorDelayLineParams(self); })
+    .def("__deepcopy__", [](superdex::robotics::SensorDelayLineParams const& self, nb::dict) { return superdex::robotics::SensorDelayLineParams(self); })
+    .def_rw("delay_ms", &superdex::robotics::SensorDelayLineParams::delayMs, "Time from input publication to output publication [ms].")
+    .def_rw("buffer_ms", &superdex::robotics::SensorDelayLineParams::bufferMs, "Pending-history duration used to size storage at Init [ms].")
+    .def_rw("buffer_assumed_frequency_hz_estimate", &superdex::robotics::SensorDelayLineParams::bufferAssumedFrequencyHzEstimate, "Fallback publication-rate estimate [Hz] when the input rate is unknown.")
+  ;
+
   registry.GetClass<superdex::robotics::TactileTaxelLayout>()
     .def("__init__", [](superdex::robotics::TactileTaxelLayout* self, nb::object positions) {
       superdex::robotics::TactileTaxelLayout result{};
@@ -1783,6 +1823,31 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
       }
     }
       , nb::arg("params")
+    )
+  ;
+
+  registry.GetClass<superdex::robotics::SensorTemporalWindow, superdex::robotics::SensorBase>()
+    .def_static("type_name", &superdex::robotics::SensorTemporalWindow::TypeName
+    )
+    .def("get_params", &superdex::robotics::SensorTemporalWindow::GetParams
+      , nb::rv_policy::reference
+    )
+  ;
+
+  registry.GetClass<superdex::robotics::SensorDelayLine, superdex::robotics::SensorBase>()
+    .def_static("type_name", &superdex::robotics::SensorDelayLine::TypeName
+    )
+    .def("get_params", &superdex::robotics::SensorDelayLine::GetParams
+    )
+    .def("set_params", [](superdex::robotics::SensorDelayLine& self, superdex::robotics::SensorDelayLineParams const& params) {
+      mochi::Error error;
+      self.SetParams(params, error);
+      if (!error.IsOK()) {
+        throw MochiErrorException(error);
+      }
+    }
+      , nb::arg("params")
+      , "Install typed episode parameters before resetting the graph.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
     )
   ;
 

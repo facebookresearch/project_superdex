@@ -63,6 +63,10 @@ class MOCHI_API SensorLinkVertexForce : public SensorBase {
   SensorLinkVertexForce(Actor* linkActor, Params const& params, superdex::Error& error);
   ~SensorLinkVertexForce() override;
 
+  [[nodiscard]] double GetPublicationFrequencyHzEstimate() const override {
+    return static_cast<double>(_params.sampleRateHz);
+  }
+
   [[nodiscard]] SensorStepResult Step(StepTime const& now, superdex::Error& error) override;
 
   [[nodiscard]] Span<std::byte const> TryGetMetadata(std::string_view key) const override;
@@ -95,6 +99,7 @@ class MOCHI_API SensorLinkVertexForce : public SensorBase {
   DynamicArray<float> _graphOutput;
   QueryHandle _nodeForceQuery;
   bool _queryRegistered = false;
+  std::optional<double> _sampleEpochTime;
   std::optional<int64_t> _lastSamplePeriod;
 };
 
