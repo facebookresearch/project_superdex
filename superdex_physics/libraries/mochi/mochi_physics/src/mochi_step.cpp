@@ -46,6 +46,8 @@
 #include <mochi_core/utils/defer.h>
 #include <mochi_core/utils/profile.h>
 
+#include <algorithm>
+
 using namespace mochi;
 
 // Update CBoundingVolume for actor types whose local bounds can change.
@@ -473,9 +475,20 @@ void mochi::UpdateIslandContactQueries(
     CIslandDescendants const& descendants,
     bool farSdfActors) {
   MOCHI_PROFILE_SCOPE();
+
+  // Contact-derived queries require assembly (see QueryRequiresAssembly), so only actors tagged
+  // with TagQueryRequiresAssembly can have any.
+  auto const needsUpdate = [&](entt::entity e) {
+    return reg.all_of<TagQueryRequiresAssembly>(e) &&
+        reg.any_of<CRequiresFarSdfEvaluation>(e) == farSdfActors;
+  };
+  if (std::ranges::none_of(descendants.actors, needsUpdate)) {
+    return;
+  }
+
   TaskSemaphore sem;
   for (auto e : descendants.actors) {
-    if (reg.any_of<CRequiresFarSdfEvaluation>(e) == farSdfActors) {
+    if (needsUpdate(e)) {
       UpdateActorContactQueriesAsync(sem, reg, e);
     }
   }
