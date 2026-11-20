@@ -335,6 +335,205 @@ TEST(EpisodeReaderTest, ReadsSeriesWrittenAsManyChunks) {
   EXPECT_TRUE(error.IsOK()) << error.ToString();
 }
 
+TEST(EpisodeReaderTest, LaterEpisodesOfARecorderReadBackOnlyTheirOwnSamples) {
+  // Values carry their episode's offset, so a sample left in a reused buffer would show up.
+  auto const record = [](Episode& episode, mochi::real offset, mochi::Error& error) {
+    auto* const scalars = episode.CreateScalarSeries(
+        "data/test", {{"superdex.archetypes.Test", "superdex.test.values"}}, error);
+    auto* const transforms = episode.CreateTransformSeries("world/box", error);
+    auto* const arrows = episode.CreateArrow3DSeries("world/arrows", error);
+    auto* const points = episode.CreatePoints3DSeries("world/points", error);
+    std::array<uint32_t, 3> const triangle{0, 1, 2};
+    auto* const mesh =
+        episode.CreateDeformableMeshSeries("world/mesh", 3, triangle, {255, 255, 255, 255}, error);
+    auto* const plot = episode.CreatePlotSeries("data/plot", error);
+    ASSERT_NE(scalars, nullptr);
+    ASSERT_NE(transforms, nullptr);
+    ASSERT_NE(arrows, nullptr);
+    ASSERT_NE(points, nullptr);
+    ASSERT_NE(mesh, nullptr);
+    ASSERT_NE(plot, nullptr);
+    for (uint64_t frame = 0; frame < 4; ++frame) {
+      SampleTime const time{.frame = frame, .simulationTimeSec = 0.5 * frame};
+      mochi::real const value = offset + static_cast<mochi::real>(frame);
+      std::vector<mochi::real> const values(frame + 1, value);
+      std::array<mochi::Span<mochi::real const>, 1> const fields{values};
+      scalars->Append(time, fields, error);
+      transforms->Append(time, {value, 0_r, 0_r}, {0_r, 0_r, value, 1_r}, error);
+      std::array<mochi::Real3, 1> const origin{mochi::Real3{value, 0_r, 0_r}};
+      std::array<mochi::Real3, 1> const vector{mochi::Real3{0_r, 0_r, value}};
+      arrows->Append(time, origin, vector, error);
+      std::array<mochi::Real3, 1> const point{mochi::Real3{0_r, value, 0_r}};
+      points->Append(time, point, error);
+      std::array<mochi::real, 9> const vertices{0_r, value, 0_r, 1_r, value, 0_r, 0_r, value, 1_r};
+      std::array<mochi::real, 9> const normals{0_r, 1_r, 0_r, 0_r, 1_r, 0_r, 0_r, 1_r, 0_r};
+      mesh->Append(time, vertices, normals, error);
+      plot->Append(time, value, error);
+    }
+  };
+  TemporaryDirectory directory;
+  // Chunks of one to three rows, small enough to keep, so that later episodes reuse buffers.
+  Recorder recorder{{.outputDirectory = directory.Path(), .chunkMaxBytes = 64}};
+  // The first episode is discarded mid-chunk; the others continue in its buffers.
+  std::vector<std::pair<mochi::real, std::filesystem::path>> committed;
+  for (mochi::real const offset : {10_r, 20_r, 30_r}) {
+    mochi::Error error;
+    auto episode = recorder.BeginEpisode({}, error);
+    ASSERT_NE(episode, nullptr) << error.ToString();
+    record(*episode, offset, error);
+    if (offset == 10_r) {
+      episode->Abort("discarded", error);
+    } else {
+      episode->CommitSync(error);
+      committed.emplace_back(offset, episode->GetOutputPath());
+    }
+    ASSERT_TRUE(error.IsOK()) << error.ToString();
+  }
+
+  for (auto const& [offset, path] : committed) {
+    auto const expectedPath = RecordEpisode(
+        directory, [&](Episode& episode, mochi::Error& error) { record(episode, offset, error); });
+    auto const actual = OpenEpisode(path);
+    auto const expected = OpenEpisode(expectedPath);
+    ASSERT_NE(actual, nullptr);
+    ASSERT_NE(expected, nullptr);
+    mochi::Error error;
+    for (auto const& [entityPath, component] :
+         {std::pair{"data/test", "superdex.test.values"},
+          std::pair{"world/box", "Transform3D:translation"},
+          std::pair{"world/box", "Transform3D:quaternion"},
+          std::pair{"world/arrows", "Arrows3D:origins"},
+          std::pair{"world/arrows", "Arrows3D:vectors"},
+          std::pair{"world/points", "Points3D:positions"},
+          std::pair{"world/mesh", "Mesh3D:vertex_positions"},
+          std::pair{"world/mesh", "Mesh3D:vertex_normals"},
+          std::pair{"data/plot", "Scalars:scalars"}}) {
+      ScalarRows const expectedRows = expected->ReadScalars(entityPath, component, error);
+      ScalarRows const actualRows = actual->ReadScalars(entityPath, component, error);
+
+      ASSERT_TRUE(error.IsOK()) << error.ToString();
+      EXPECT_EQ(actualRows.frames, expectedRows.frames) << component;
+      EXPECT_EQ(actualRows.offsets, expectedRows.offsets) << component;
+      EXPECT_EQ(actualRows.values, expectedRows.values) << component;
+    }
+  }
+}
+
+TEST(EpisodeReaderTest, ReusedChunkBuffersTakeTheLayoutOfTheNewSeries) {
+  TemporaryDirectory directory;
+  Recorder recorder{{.outputDirectory = directory.Path(), .chunkMaxBytes = 64}};
+  ComponentField const x{.archetype = "superdex.archetypes.Test", .component = "superdex.test.x"};
+  ComponentField const y{.archetype = "superdex.archetypes.Test", .component = "superdex.test.y"};
+  ComponentField const z{.archetype = "superdex.archetypes.Test", .component = "superdex.test.z"};
+  mochi::Error error;
+  // Leaves two-field scalar buffers for data/a and transform buffers for data/b.
+  {
+    auto episode = recorder.BeginEpisode({}, error);
+    ASSERT_NE(episode, nullptr) << error.ToString();
+    auto* const a = episode->CreateScalarSeries("data/a", {x, y}, error);
+    auto* const b = episode->CreateTransformSeries("data/b", error);
+    ASSERT_TRUE(error.IsOK()) << error.ToString();
+    std::array<mochi::real, 1> const one{1_r};
+    std::array<mochi::Span<mochi::real const>, 2> const fields{one, one};
+    for (uint64_t frame = 0; frame < 2; ++frame) {
+      SampleTime const time{.frame = frame, .simulationTimeSec = 0.1 * frame};
+      a->Append(time, fields, error);
+      b->Append(time, {static_cast<mochi::real>(frame), 0_r, 0_r}, {0_r, 0_r, 0_r, 1_r}, error);
+    }
+    episode->CommitSync(error);
+    ASSERT_TRUE(error.IsOK()) << error.ToString();
+  }
+
+  // Records data/a with one other field, and data/b as scalars.
+  auto episode = recorder.BeginEpisode({}, error);
+  ASSERT_NE(episode, nullptr) << error.ToString();
+  auto* const a = episode->CreateScalarSeries("data/a", {z}, error);
+  auto* const b = episode->CreateScalarSeries("data/b", {x}, error);
+  ASSERT_TRUE(error.IsOK()) << error.ToString();
+  std::array<mochi::real, 1> const two{2_r};
+  std::array<mochi::Span<mochi::real const>, 1> const fields{two};
+  for (uint64_t frame = 0; frame < 2; ++frame) {
+    SampleTime const time{.frame = frame, .simulationTimeSec = 0.1 * frame};
+    a->Append(time, fields, error);
+    b->Append(time, fields, error);
+  }
+  episode->CommitSync(error);
+  ASSERT_TRUE(error.IsOK()) << error.ToString();
+  auto const reader = OpenEpisode(episode->GetOutputPath());
+  ASSERT_NE(reader, nullptr);
+
+  std::vector<double> const expected{2, 2};
+  EXPECT_EQ(reader->ReadScalars("data/a", "superdex.test.z", error).values, expected);
+  EXPECT_EQ(reader->ReadScalars("data/b", "superdex.test.x", error).values, expected);
+  EXPECT_TRUE(error.IsOK()) << error.ToString();
+  EXPECT_FALSE(reader->HasComponent("data/a", "superdex.test.x", /*isStatic=*/false));
+  EXPECT_FALSE(reader->HasComponent("data/b", "Transform3D:translation", /*isStatic=*/false));
+}
+
+TEST(EpisodeReaderTest, OverlappingEpisodesOfARecorderRecordTheirOwnSamples) {
+  TemporaryDirectory directory;
+  // Chunks of one to three rows, small enough to keep, so that later episodes reuse buffers.
+  Recorder recorder{{.outputDirectory = directory.Path(), .chunkMaxBytes = 64}};
+  ComponentField const field{
+      .archetype = "superdex.archetypes.Test", .component = "superdex.test.values"};
+  ComponentField const text{.archetype = "rerun.archetypes.TextLog", .component = "TextLog:text"};
+  constexpr uint64_t kNumFrames = 10;
+  std::vector<std::filesystem::path> paths;
+  // Each episode commits in the background and lives until the next one commits, as in Unreal.
+  std::unique_ptr<Episode> committing;
+  for (int index = 0; index < 3; ++index) {
+    mochi::Error error;
+    auto episode = recorder.BeginEpisode({}, error);
+    ASSERT_NE(episode, nullptr) << error.ToString();
+    auto* const values = episode->CreateScalarSeries("data/test", {field}, error);
+    // One path alternates between text and scalars.
+    TextSeries* const texts =
+        index % 2 == 0 ? episode->CreateTextSeries("data/mixed", text, error) : nullptr;
+    ScalarSeries* const scalars =
+        index % 2 == 1 ? episode->CreateScalarSeries("data/mixed", {field}, error) : nullptr;
+    ASSERT_TRUE(error.IsOK()) << error.ToString();
+    for (uint64_t frame = 0; frame < kNumFrames; ++frame) {
+      SampleTime const time{
+          .frame = frame,
+          .simulationTimeSec = 0.1 * frame,
+          .wallTimeSec = episode->GetWallTimeSec()};
+      std::array<mochi::real, 1> const value{static_cast<mochi::real>(100 * index + frame)};
+      std::array<mochi::Span<mochi::real const>, 1> const fields{value};
+      values->Append(time, fields, error);
+      if (texts != nullptr) {
+        std::array<std::string, 1> const message{std::to_string(frame)};
+        texts->Append(time, message, error);
+      }
+      if (scalars != nullptr) {
+        scalars->Append(time, fields, error);
+      }
+    }
+    episode->CommitAsync(error);
+    ASSERT_TRUE(error.IsOK()) << error.ToString();
+    paths.push_back(episode->GetOutputPath());
+    committing = std::move(episode);
+  }
+  committing.reset();
+
+  for (int index = 0; index < 3; ++index) {
+    auto const reader = OpenEpisode(paths[index]);
+    ASSERT_NE(reader, nullptr);
+    mochi::Error error;
+    std::vector<double> expected;
+    expected.reserve(kNumFrames);
+    for (uint64_t frame = 0; frame < kNumFrames; ++frame) {
+      expected.push_back(static_cast<double>(100 * index + frame));
+    }
+    EXPECT_EQ(reader->ReadScalars("data/test", "superdex.test.values", error).values, expected);
+    if (index % 2 == 1) {
+      EXPECT_EQ(reader->ReadScalars("data/mixed", "superdex.test.values", error).values, expected);
+    } else {
+      EXPECT_TRUE(reader->HasComponent("data/mixed", "TextLog:text", /*isStatic=*/false));
+    }
+    EXPECT_TRUE(error.IsOK()) << error.ToString();
+  }
+}
+
 TEST(EpisodeReaderTest, RejectsFilesThatAreNotWholeEpisodes) {
   TemporaryDirectory directory;
   auto const episodePath = RecordEpisode(directory, [](Episode&, mochi::Error&) {});

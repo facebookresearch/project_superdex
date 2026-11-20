@@ -18,6 +18,8 @@
 #include <superdex_recorder/series.h>
 #include <superdex_recorder/source_recorder.h>
 
+#include "chunk_writer.h"
+
 #include <mochi_core/utils/defer.h>
 #include <mochi_core/utils/log.h>
 
@@ -77,6 +79,111 @@ void AppendSample(Episode& episode, mochi::Error& error) {
   std::array<mochi::Span<mochi::real const>, 1> const fields{value};
   series->Append({.frame = 0, .simulationTimeSec = 0.0}, fields, error);
   ASSERT_TRUE(error.IsOK()) << error.ToString();
+}
+
+struct TestRows final : detail::SeriesRows {
+  void BuildColumns(std::vector<rerun::ComponentColumn>& output, mochi::Error& /*error*/)
+      const override {
+    output.push_back(
+        rerun::ComponentColumn::from_loggable(
+            rerun::Collection<rerun::components::Scalar>::borrow(values),
+            rerun::ComponentDescriptor{"superdex.test.value"})
+            .value);
+  }
+  void Clear() override {
+    values.clear();
+  }
+
+  std::vector<rerun::components::Scalar> values;
+};
+
+/* A chunk of one row. */
+detail::SeriesChunk MakeChunk(std::string entityPath, int64_t frame, size_t numBytes = 0) {
+  detail::SeriesChunk chunk;
+  chunk.entityPath = std::move(entityPath);
+  chunk.frames = {frame};
+  chunk.simulationTimesSec = {0.0};
+  auto rows = std::make_unique<TestRows>();
+  rows->values = {rerun::components::Scalar{1.0}};
+  chunk.rows = std::move(rows);
+  chunk.numBytes = numBytes;
+  return chunk;
+}
+
+TEST(ChunkPoolTest, KeepsTwoChunksPerEntityPathAndHandsOutTheOldestFirst) {
+  detail::ChunkPool pool;
+  pool.Give(MakeChunk("data/a", 1));
+  pool.Give(MakeChunk("data/a", 2));
+  pool.Give(MakeChunk("data/a", 3));
+
+  std::vector<int64_t> taken;
+  for (int i = 0; i < 3; ++i) {
+    detail::SeriesChunk const chunk = pool.Take("data/a");
+    taken.push_back(chunk.rows != nullptr ? chunk.frames.front() : -1);
+  }
+
+  std::vector<int64_t> const expected{1, 2, -1};
+  EXPECT_EQ(taken, expected);
+  EXPECT_EQ(pool.Take("data/b").rows, nullptr);
+}
+
+TEST(ChunkPoolTest, FreesChunksOfPathsUnusedSinceBeforeThePreviousEpisode) {
+  detail::ChunkPool pool;
+  pool.BeginEpisode();
+  pool.Give(MakeChunk("data/used", 1));
+  pool.Give(MakeChunk("data/unused", 1));
+  pool.BeginEpisode();
+  pool.Give(pool.Take("data/used"));
+
+  pool.BeginEpisode();
+
+  EXPECT_NE(pool.Take("data/used").rows, nullptr);
+  EXPECT_EQ(pool.Take("data/unused").rows, nullptr);
+}
+
+/* Whether a chunk of numBytes, once written, is kept for reuse under these limits. */
+bool KeepsWrittenChunk(size_t chunkMaxBytes, double chunkMaxDurationSec, size_t numBytes) {
+  TemporaryDirectory directory;
+  rerun::RecordingStream stream{"superdex_chunk_writer_test"};
+  EXPECT_TRUE(stream.save((directory.Path() / "chunks.rrd").string()).is_ok());
+  auto const pool = std::make_shared<detail::ChunkPool>();
+  mochi::Error error;
+  {
+    detail::ChunkWriter writer{stream, chunkMaxBytes, chunkMaxDurationSec, pool};
+    writer.Submit(MakeChunk("data/test", 0, numBytes));
+    writer.Finish(error);
+  }
+  EXPECT_TRUE(error.IsOK()) << error.ToString();
+  return pool->Take("data/test").rows != nullptr;
+}
+
+TEST(ChunkWriterTest, KeepsNoBuffersWithoutAByteLimit) {
+  EXPECT_FALSE(KeepsWrittenChunk(0, 10.0, 1));
+}
+
+TEST(ChunkWriterTest, KeepsTheEmptiedBuffersOfWrittenChunksThatAreNotOversized) {
+  TemporaryDirectory directory;
+  rerun::RecordingStream stream{"superdex_chunk_writer_test"};
+  ASSERT_TRUE(stream.save((directory.Path() / "chunks.rrd").string()).is_ok());
+  auto const pool = std::make_shared<detail::ChunkPool>();
+  mochi::Error error;
+  {
+    // Chunks over twice the byte limit are not kept.
+    detail::ChunkWriter writer{stream, 100, 0.0, pool};
+    writer.Submit(MakeChunk("data/small", 0, 200));
+    writer.Submit(MakeChunk("data/large", 0, 201));
+    writer.Finish(error);
+  }
+
+  ASSERT_TRUE(error.IsOK()) << error.ToString();
+  detail::SeriesChunk const small = pool->Take("data/small");
+  ASSERT_NE(small.rows, nullptr);
+  EXPECT_TRUE(small.frames.empty());
+  EXPECT_GE(small.frames.capacity(), 1U);
+  EXPECT_TRUE(small.simulationTimesSec.empty());
+  EXPECT_TRUE(static_cast<TestRows const&>(*small.rows).values.empty());
+  EXPECT_EQ(small.numBytes, 0U);
+  EXPECT_EQ(pool->Take("data/large").rows, nullptr);
 }
 
 TEST(SuperDexRecorderTest, CommitPublishesOnlyFinalFile) {

@@ -143,8 +143,12 @@ bool FSuperDexSceneRecorder::BeginEpisode(
   }
 
   const FString OutputDirectory = ResolveOutputDirectory(Config.OutputDirectory);
-  Recorder = std::make_unique<superdex::recorder::Recorder>(
-      superdex::recorder::RecorderConfig{std::filesystem::path{ToUtf8(OutputDirectory)}});
+  if (Recorder == nullptr ||
+      !OutputDirectory.Equals(RecorderOutputDirectory, ESearchCase::CaseSensitive)) {
+    Recorder = std::make_unique<superdex::recorder::Recorder>(
+        superdex::recorder::RecorderConfig{std::filesystem::path{ToUtf8(OutputDirectory)}});
+    RecorderOutputDirectory = OutputDirectory;
+  }
   mochi::Error Error;
   Episode = Recorder->BeginEpisode({std::move(Properties)}, Error);
   if (!Error.IsOK() || Episode == nullptr) {
@@ -153,7 +157,6 @@ bool FSuperDexSceneRecorder::BeginEpisode(
         Error,
         TEXT("Failed to begin episode: %s"),
         UTF8_TO_TCHAR(Error.ToString().c_str()));
-    Recorder.reset();
     return false;
   }
 
@@ -643,7 +646,6 @@ bool FSuperDexSceneRecorder::CommitEpisode(bool bAsync) {
     mochi::Error AbortError;
     Episode->Abort("Commit failed.", AbortError);
     Episode.reset();
-    Recorder.reset();
     return false;
   }
   if (bAsync) {
@@ -653,7 +655,6 @@ bool FSuperDexSceneRecorder::CommitEpisode(bool bAsync) {
     UE_LOG(LogSuperDexRecorder, Log, TEXT("Committed SuperDex recording: %s"), *OutputPath);
     Episode.reset();
   }
-  Recorder.reset();
   return true;
 }
 
@@ -673,7 +674,6 @@ void FSuperDexSceneRecorder::AbortEpisode(FStringView Reason) {
         UTF8_TO_TCHAR(Error.ToString().c_str()));
   }
   Episode.reset();
-  Recorder.reset();
 }
 
 bool FSuperDexSceneRecorder::IsRecording() const {

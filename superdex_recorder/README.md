@@ -52,6 +52,9 @@ with recorder.begin_episode(metadata) as episode:
   before you call `step`. `EpisodeRestorer` uses this pairing when it resumes from a frame.
 - Call `record` from your simulation loop, or from a scene post-step callback in C++.
 - Keep the episode, the scene and the robotics context alive while the recorders exist.
+- Record consecutive episodes with one `Recorder`: their series continue in the buffers of
+  earlier episodes instead of growing new ones while recording. The recorder keeps those buffers
+  while it or any of its episodes exists. A zero `chunkMaxBytes` disables this reuse.
 - To show a commanded pose or tracked hand keypoints, add a `RobotShadow` or a `SkeletonShadow`
   and record it each step too.
 

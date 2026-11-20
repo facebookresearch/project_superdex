@@ -39,7 +39,7 @@ void SetRerunError(rerun::Error const& rerunError, mochi::Error& error, char con
   error.SetFirstError(description, __FILE__, __LINE__);
 }
 
-void WriteChunk(rerun::RecordingStream& stream, SeriesChunk& chunk, mochi::Error& error) {
+void WriteChunk(rerun::RecordingStream& stream, SeriesChunk const& chunk, mochi::Error& error) {
   std::vector<rerun::ComponentColumn> componentColumns;
   chunk.rows->BuildColumns(componentColumns, error);
   MOCHI_ERROR_RETURN(error);
@@ -48,17 +48,19 @@ void WriteChunk(rerun::RecordingStream& stream, SeriesChunk& chunk, mochi::Error
   timeColumns.reserve(3);
   timeColumns.emplace_back(
       rerun::TimeColumn::from_sequence(
-          std::string{kFrameTimeline}, std::move(chunk.frames), rerun::SortingStatus::Sorted));
+          std::string{kFrameTimeline},
+          rerun::Collection<int64_t>::borrow(chunk.frames),
+          rerun::SortingStatus::Sorted));
   timeColumns.emplace_back(
       rerun::TimeColumn::from_duration_secs(
           std::string{kSimulationTimeTimeline},
-          std::move(chunk.simulationTimesSec),
+          rerun::Collection<double>::borrow(chunk.simulationTimesSec),
           rerun::SortingStatus::Sorted));
   if (!chunk.wallTimesSec.empty()) {
     timeColumns.emplace_back(
         rerun::TimeColumn::from_duration_secs(
             std::string{kWallTimeTimeline},
-            std::move(chunk.wallTimesSec),
+            rerun::Collection<double>::borrow(chunk.wallTimesSec),
             rerun::SortingStatus::Sorted));
   }
   SetRerunError(
@@ -70,13 +72,65 @@ void WriteChunk(rerun::RecordingStream& stream, SeriesChunk& chunk, mochi::Error
       "Failed to write sampled series.");
 }
 
+void Empty(SeriesChunk& chunk) {
+  chunk.frames.clear();
+  chunk.simulationTimesSec.clear();
+  chunk.wallTimesSec.clear();
+  chunk.rows->Clear();
+  chunk.numBytes = 0;
+}
+
 } // namespace
+
+SeriesChunk ChunkPool::Take(std::string const& entityPath) {
+  return _state.Mutate([&](State& state) {
+    auto const entry = state.entries.find(entityPath);
+    if (entry == state.entries.end() || entry->second.chunks.empty()) {
+      return SeriesChunk{};
+    }
+    entry->second.lastUsedEpisode = state.numEpisodes;
+    // Oldest first: the newest is often an episode's last, partial chunk, whose buffers may be
+    // too small for a full chunk.
+    SeriesChunk chunk = std::move(entry->second.chunks.front());
+    entry->second.chunks.erase(entry->second.chunks.begin());
+    return chunk;
+  });
+}
+
+void ChunkPool::Give(SeriesChunk chunk) {
+  // A chunk that is not kept is freed on return, outside the lock.
+  _state.Mutate([&](State& state) {
+    Entry& entry = state.entries[chunk.entityPath];
+    entry.lastUsedEpisode = state.numEpisodes;
+    if (entry.chunks.size() < kMaxChunksPerPath) {
+      entry.chunks.reserve(kMaxChunksPerPath);
+      entry.chunks.push_back(std::move(chunk));
+    }
+  });
+}
+
+void ChunkPool::BeginEpisode() {
+  std::vector<Entry> unused; // Freed outside the lock.
+  _state.Mutate([&](State& state) {
+    ++state.numEpisodes;
+    for (auto entry = state.entries.begin(); entry != state.entries.end();) {
+      if (entry->second.lastUsedEpisode + 2 <= state.numEpisodes) {
+        unused.push_back(std::move(entry->second));
+        entry = state.entries.erase(entry);
+      } else {
+        ++entry;
+      }
+    }
+  });
+}
 
 ChunkWriter::ChunkWriter(
     rerun::RecordingStream& stream,
     size_t chunkMaxBytes,
-    double chunkMaxDurationSec)
+    double chunkMaxDurationSec,
+    std::shared_ptr<ChunkPool> pool)
     : _stream{stream},
+      _pool{std::move(pool)},
       _chunkMaxBytes{chunkMaxBytes},
       _chunkMaxDurationSec{chunkMaxDurationSec},
       _thread{[this] { Run(); }} {}
@@ -91,6 +145,10 @@ bool ChunkWriter::IsChunkFull(size_t numBytes, double durationSec) const {
 }
 
 void ChunkWriter::Submit(SeriesChunk chunk) {
+  if (chunk.frames.empty()) {
+    Recycle(std::move(chunk));
+    return;
+  }
   size_t pendingBytes = 0;
   bool warn = false;
   _state.Mutate([&](State& state) {
@@ -106,6 +164,18 @@ void ChunkWriter::Submit(SeriesChunk chunk) {
     MOCHI_LOG_WARNING(
         "The recorder's writer thread is %zu MB behind; the disk may be too slow.",
         pendingBytes / 1'000'000);
+  }
+}
+
+SeriesChunk ChunkWriter::TakeEmptyChunk(std::string const& entityPath) {
+  return _pool->Take(entityPath);
+}
+
+void ChunkWriter::Recycle(SeriesChunk chunk) {
+  // Keeps chunks of at most twice the byte limit; none without one.
+  if (_chunkMaxBytes != 0 && chunk.numBytes <= 2 * _chunkMaxBytes) {
+    Empty(chunk);
+    _pool->Give(std::move(chunk));
   }
 }
 
@@ -159,15 +229,17 @@ void ChunkWriter::Stop(bool discard) {
 }
 
 void ChunkWriter::Run() {
+  std::vector<SeriesChunk> chunks;
   while (true) {
-    std::vector<SeriesChunk> chunks;
+    chunks.clear();
     _state.MutateWithLock([&](std::unique_lock<std::mutex>& lock, State& state) {
       _wake.wait(lock, [&] { return state.stopping || !state.pending.empty(); });
       if (state.discarding) {
         state.pending.clear();
         state.pendingBytes = 0;
       }
-      chunks = std::exchange(state.pending, {});
+      // Swapped, so that both vectors keep their capacity.
+      chunks.swap(state.pending);
     });
     if (chunks.empty()) {
       break; // Stopping with every chunk written or discarded.
@@ -185,7 +257,7 @@ void ChunkWriter::Run() {
         }
         return state.discarding;
       });
-      chunk = {};
+      Recycle(std::move(chunk));
       if (discarding) {
         break;
       }

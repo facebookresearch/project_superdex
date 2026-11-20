@@ -136,7 +136,8 @@ Episode::Episode(
     std::filesystem::path temporaryPath,
     std::filesystem::path outputPath,
     std::unique_ptr<rerun::RecordingStream> stream,
-    RecorderConfig const& config)
+    RecorderConfig const& config,
+    std::shared_ptr<detail::ChunkPool> pool)
     : _episodeId{std::move(episodeId)},
       _temporaryPath{std::move(temporaryPath)},
       _outputPath{std::move(outputPath)},
@@ -146,7 +147,8 @@ Episode::Episode(
       _writer{std::make_unique<detail::ChunkWriter>(
           *_stream,
           config.chunkMaxBytes,
-          config.chunkMaxDurationSec)} {}
+          config.chunkMaxDurationSec,
+          std::move(pool))} {}
 
 Episode::~Episode() {
   if (_state == State::Active || _state == State::CommitFailed) {
@@ -598,7 +600,8 @@ void Episode::BeginCommit(mochi::Error& error) {
       MOCHI_ERROR_SET(error, "Episode contains an invalid series.");
       break;
     }
-    series->SubmitChunk();
+    // Takes no kept buffers, since the series records nothing more.
+    _writer->Submit(series->TakeChunk({}));
   }
 }
 
@@ -686,6 +689,11 @@ void Episode::ValidateSeriesPath(std::string_view entityPath, mochi::Error& erro
 
 void Episode::AddSeries(std::unique_ptr<Series> series) {
   series->_writer = _writer.get();
+  // Starts in the buffers of an earlier chunk with its entity path, if the recorder kept one.
+  detail::SeriesChunk kept = _writer->TakeEmptyChunk(series->_entityPath);
+  if (kept.rows != nullptr) {
+    series->TakeChunk(std::move(kept));
+  }
   _series.push_back(std::move(series));
   // After the push, so that the episode owns the string the set views.
   _seriesPaths->paths.insert(_series.back()->_entityPath);
@@ -701,9 +709,19 @@ void Episode::SealSeries() {
 }
 
 void Episode::DiscardTemporaryFile(mochi::Error* error) {
+  bool const recording = _state == State::Active;
   _state = State::CommitFailed;
   SealSeries();
   _writer->Discard();
+  // Later episodes continue in the buffers of a discarded one. A failed commit already recycled
+  // them.
+  if (recording) {
+    for (auto const& series : _series) {
+      if (series != nullptr) {
+        _writer->Recycle(series->TakeChunk({}));
+      }
+    }
+  }
   if (RemoveTemporaryFile(error)) {
     _state = State::Aborted;
   }
@@ -724,7 +742,8 @@ bool Episode::RemoveTemporaryFile(mochi::Error* error) {
   return true;
 }
 
-Recorder::Recorder(RecorderConfig const& config) : _config(config) {}
+Recorder::Recorder(RecorderConfig const& config)
+    : _config(config), _pool{std::make_shared<detail::ChunkPool>()} {}
 
 Recorder::~Recorder() = default;
 
@@ -769,7 +788,8 @@ std::unique_ptr<Episode> Recorder::BeginEpisode(
       std::move(temporaryPath),
       std::move(outputPath),
       std::move(stream),
-      _config}};
+      _config,
+      _pool}};
   SetRerunError(
       episode->_stream->save(episode->_temporaryPath.string()),
       error,
@@ -801,6 +821,7 @@ std::unique_ptr<Episode> Recorder::BeginEpisode(
     episode->WriteConstantText(path, episodeField("superdex.episode.property_value"), value, error);
   }
   MOCHI_ERROR_RETURN(error, nullptr);
+  _pool->BeginEpisode();
   return episode;
 }
 

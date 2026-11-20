@@ -38,6 +38,15 @@ void SetRerunError(rerun::Error const& rerunError, mochi::Error& error, char con
   error.SetFirstError(description, __FILE__, __LINE__);
 }
 
+/* Returns reuse as Rows if it holds Rows, or else new Rows. */
+template <typename Rows>
+std::unique_ptr<Rows> ReuseRows(std::unique_ptr<detail::SeriesRows> reuse) {
+  if (dynamic_cast<Rows*>(reuse.get()) == nullptr) {
+    return std::make_unique<Rows>();
+  }
+  return std::unique_ptr<Rows>{static_cast<Rows*>(reuse.release())};
+}
+
 } // namespace
 
 detail::SeriesRows::~SeriesRows() = default;
@@ -108,17 +117,21 @@ void Series::AppendTime(SampleTime time, size_t numBytes, mochi::Error& error) {
   ++_numSamples;
 }
 
+detail::SeriesChunk Series::TakeChunk(detail::SeriesChunk next) {
+  std::swap(_frames, next.frames);
+  std::swap(_simulationTimesSec, next.simulationTimesSec);
+  std::swap(_wallTimesSec, next.wallTimesSec);
+  next.rows = TakeRows(std::move(next.rows));
+  next.entityPath = _entityPath;
+  next.numBytes = std::exchange(_bufferedBytes, 0);
+  return next;
+}
+
 void Series::SubmitChunk() {
   if (_frames.empty() || _writer == nullptr) {
     return;
   }
-  _writer->Submit(
-      {.entityPath = _entityPath,
-       .frames = std::exchange(_frames, {}),
-       .simulationTimesSec = std::exchange(_simulationTimesSec, {}),
-       .wallTimesSec = std::exchange(_wallTimesSec, {}),
-       .rows = TakeRows(),
-       .numBytes = std::exchange(_bufferedBytes, 0)});
+  _writer->Submit(TakeChunk(_writer->TakeEmptyChunk(_entityPath)));
 }
 
 ScalarSeries::ScalarSeries(std::string_view entityPath, std::vector<ComponentField> const& fields)
@@ -159,13 +172,21 @@ void ScalarSeries::Append(
   }
 }
 
-std::unique_ptr<detail::SeriesRows> ScalarSeries::TakeRows() {
-  auto empty = std::make_unique<Rows>();
-  empty->columns.reserve(_rows->columns.size());
-  for (auto const& column : _rows->columns) {
-    empty->columns.push_back({.field = column.field, .lengths = {}, .values = {}});
+std::unique_ptr<detail::SeriesRows> ScalarSeries::TakeRows(
+    std::unique_ptr<detail::SeriesRows> reuse) {
+  auto next = ReuseRows<Rows>(std::move(reuse));
+  next->columns.resize(_rows->columns.size());
+  for (size_t i = 0; i < next->columns.size(); ++i) {
+    next->columns[i].field = _rows->columns[i].field;
   }
-  return std::exchange(_rows, std::move(empty));
+  return std::exchange(_rows, std::move(next));
+}
+
+void ScalarSeries::Rows::Clear() {
+  for (auto& column : columns) {
+    column.lengths.clear();
+    column.values.clear();
+  }
 }
 
 void ScalarSeries::Rows::BuildColumns(
@@ -230,8 +251,14 @@ void TransformSeries::Append(
   Append(time, translationArray, quaternion, error);
 }
 
-std::unique_ptr<detail::SeriesRows> TransformSeries::TakeRows() {
-  return std::exchange(_rows, std::make_unique<Rows>());
+std::unique_ptr<detail::SeriesRows> TransformSeries::TakeRows(
+    std::unique_ptr<detail::SeriesRows> reuse) {
+  return std::exchange(_rows, ReuseRows<Rows>(std::move(reuse)));
+}
+
+void TransformSeries::Rows::Clear() {
+  translations.clear();
+  rotations.clear();
 }
 
 void TransformSeries::Rows::BuildColumns(
@@ -288,8 +315,15 @@ void Arrow3DSeries::Append(
   }
 }
 
-std::unique_ptr<detail::SeriesRows> Arrow3DSeries::TakeRows() {
-  return std::exchange(_rows, std::make_unique<Rows>());
+std::unique_ptr<detail::SeriesRows> Arrow3DSeries::TakeRows(
+    std::unique_ptr<detail::SeriesRows> reuse) {
+  return std::exchange(_rows, ReuseRows<Rows>(std::move(reuse)));
+}
+
+void Arrow3DSeries::Rows::Clear() {
+  lengths.clear();
+  origins.clear();
+  vectors.clear();
 }
 
 void Arrow3DSeries::Rows::BuildColumns(
@@ -356,8 +390,14 @@ void Points3DSeries::Append(
   _rows->positions.insert(_rows->positions.end(), _lastPositions.begin(), _lastPositions.end());
 }
 
-std::unique_ptr<detail::SeriesRows> Points3DSeries::TakeRows() {
-  return std::exchange(_rows, std::make_unique<Rows>());
+std::unique_ptr<detail::SeriesRows> Points3DSeries::TakeRows(
+    std::unique_ptr<detail::SeriesRows> reuse) {
+  return std::exchange(_rows, ReuseRows<Rows>(std::move(reuse)));
+}
+
+void Points3DSeries::Rows::Clear() {
+  lengths.clear();
+  positions.clear();
 }
 
 void Points3DSeries::Rows::BuildColumns(
@@ -418,8 +458,15 @@ void DeformableMeshSeries::Append(
   _rows->normals.insert(_rows->normals.end(), _lastNormals.begin(), _lastNormals.end());
 }
 
-std::unique_ptr<detail::SeriesRows> DeformableMeshSeries::TakeRows() {
-  return std::exchange(_rows, std::make_unique<Rows>());
+std::unique_ptr<detail::SeriesRows> DeformableMeshSeries::TakeRows(
+    std::unique_ptr<detail::SeriesRows> reuse) {
+  return std::exchange(_rows, ReuseRows<Rows>(std::move(reuse)));
+}
+
+void DeformableMeshSeries::Rows::Clear() {
+  lengths.clear();
+  positions.clear();
+  normals.clear();
 }
 
 void DeformableMeshSeries::Rows::BuildColumns(
@@ -472,10 +519,16 @@ void TextSeries::Append(
   }
 }
 
-std::unique_ptr<detail::SeriesRows> TextSeries::TakeRows() {
-  auto empty = std::make_unique<Rows>();
-  empty->field = _rows->field;
-  return std::exchange(_rows, std::move(empty));
+std::unique_ptr<detail::SeriesRows> TextSeries::TakeRows(
+    std::unique_ptr<detail::SeriesRows> reuse) {
+  auto next = ReuseRows<Rows>(std::move(reuse));
+  next->field = _rows->field;
+  return std::exchange(_rows, std::move(next));
+}
+
+void TextSeries::Rows::Clear() {
+  lengths.clear();
+  texts.clear();
 }
 
 void TextSeries::Rows::BuildColumns(
@@ -503,8 +556,13 @@ void PlotSeries::Append(SampleTime time, double value, mochi::Error& error) {
   _rows->values.emplace_back(value);
 }
 
-std::unique_ptr<detail::SeriesRows> PlotSeries::TakeRows() {
-  return std::exchange(_rows, std::make_unique<Rows>());
+std::unique_ptr<detail::SeriesRows> PlotSeries::TakeRows(
+    std::unique_ptr<detail::SeriesRows> reuse) {
+  return std::exchange(_rows, ReuseRows<Rows>(std::move(reuse)));
+}
+
+void PlotSeries::Rows::Clear() {
+  values.clear();
 }
 
 void PlotSeries::Rows::BuildColumns(

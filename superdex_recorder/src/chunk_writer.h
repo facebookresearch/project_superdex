@@ -31,6 +31,7 @@
 #include <memory>
 #include <string>
 #include <thread>
+#include <unordered_map>
 #include <vector>
 
 namespace superdex::recorder::detail {
@@ -45,20 +46,64 @@ struct SeriesChunk {
   size_t numBytes = 0;
 };
 
-/* Writes series chunks to an episode's Rerun stream on its own thread, in submission order. Each
- * episode owns one writer, internal to it, whose thread starts with the writer. Destroying the
- * writer waits for that thread; after FinishAsync, until finish has returned. */
+/* Emptied chunks, kept by entity path so that the series with that path, in the same or a later
+ * episode of a recorder, continue in grown buffers instead of growing new ones. A series fills one
+ * chunk while the writer writes the other, so it keeps two per path. */
+class ChunkPool final {
+  MOCHI_DECLARE_NO_COPY_NO_MOVE(ChunkPool)
+
+ public:
+  static constexpr size_t kMaxChunksPerPath = 2;
+
+  ChunkPool() = default;
+  ~ChunkPool() = default;
+
+  /* The oldest kept chunk for the entity path, or an empty chunk without rows if none is kept. */
+  [[nodiscard]] SeriesChunk Take(std::string const& entityPath);
+  /* Keeps an emptied chunk, unless its entity path already has kMaxChunksPerPath. */
+  void Give(SeriesChunk chunk);
+  /* Frees the chunks of entity paths that no series took and no writer gave since the previous
+   * episode began. */
+  void BeginEpisode();
+
+ private:
+  struct Entry {
+    std::vector<SeriesChunk> chunks;
+    uint64_t lastUsedEpisode = 0; // numEpisodes when a chunk of the path was last taken or given.
+  };
+  struct State {
+    std::unordered_map<std::string, Entry> entries;
+    uint64_t numEpisodes = 0; // Episodes begun.
+  };
+
+  mochi::Guarded<State> _state;
+};
+
+/* Writes series chunks to an episode's Rerun stream on its own thread, in submission order, then
+ * gives their emptied buffers to the pool. Each episode owns one writer, internal to it, whose
+ * thread starts with the writer. Destroying the writer waits for that thread; after FinishAsync,
+ * until finish has returned. */
 class ChunkWriter final {
   MOCHI_DECLARE_NO_COPY_NO_MOVE(ChunkWriter)
 
  public:
-  ChunkWriter(rerun::RecordingStream& stream, size_t chunkMaxBytes, double chunkMaxDurationSec);
+  ChunkWriter(
+      rerun::RecordingStream& stream,
+      size_t chunkMaxBytes,
+      double chunkMaxDurationSec,
+      std::shared_ptr<ChunkPool> pool);
   /* Writes the remaining chunks, then stops the thread. */
   ~ChunkWriter();
 
   /* True once a series has buffered enough samples to submit them as a chunk. */
   [[nodiscard]] bool IsChunkFull(size_t numBytes, double durationSec) const;
+  /* Queues a chunk to write, or recycles it if it has no samples. */
   void Submit(SeriesChunk chunk);
+  /* Empty buffers for the next chunk of the series with this entity path. */
+  [[nodiscard]] SeriesChunk TakeEmptyChunk(std::string const& entityPath);
+  /* Empties a chunk that is written or no longer needed, and keeps its buffers for the next chunk
+   * of its entity path. */
+  void Recycle(SeriesChunk chunk);
   /* Sets the first failure to write a chunk, if any. */
   void CheckError(mochi::Error& error) const;
   /* Writes the remaining chunks, then stops the thread. */
@@ -89,6 +134,7 @@ class ChunkWriter final {
   void Stop(bool discard);
 
   rerun::RecordingStream& _stream;
+  std::shared_ptr<ChunkPool> const _pool;
   size_t const _chunkMaxBytes = 0;
   double const _chunkMaxDurationSec = 0.0;
   mochi::Guarded<State> _state;

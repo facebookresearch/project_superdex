@@ -44,6 +44,8 @@ struct SeriesRows {
   virtual ~SeriesRows();
   virtual void BuildColumns(std::vector<rerun::ComponentColumn>& output, mochi::Error& error)
       const = 0;
+  /* Removes the values and keeps their capacity, for reuse. */
+  virtual void Clear() = 0;
 };
 
 } // namespace detail
@@ -70,8 +72,13 @@ class SUPERDEX_RECORDER_API Series {
  private:
   friend class Episode;
 
-  /* Moves out the buffered values, leaving the series empty. */
-  virtual std::unique_ptr<detail::SeriesRows> TakeRows() = 0;
+  /* Moves out the buffered values and continues in reuse, if it holds empty rows of this series'
+   * type, or else in new rows. */
+  virtual std::unique_ptr<detail::SeriesRows> TakeRows(
+      std::unique_ptr<detail::SeriesRows> reuse) = 0;
+  /* Returns the buffered samples as a chunk and continues in next's empty buffers, or in new ones
+   * if next has no rows. */
+  detail::SeriesChunk TakeChunk(detail::SeriesChunk next);
   /* Queues the buffered samples on the writer thread as one RRD chunk. */
   void SubmitChunk();
 
@@ -104,6 +111,7 @@ class SUPERDEX_RECORDER_API ScalarSeries final : public Series {
   struct Rows final : detail::SeriesRows {
     void BuildColumns(std::vector<rerun::ComponentColumn>& output, mochi::Error& error)
         const override;
+    void Clear() override;
 
     std::vector<Column> columns;
   };
@@ -117,7 +125,7 @@ class SUPERDEX_RECORDER_API ScalarSeries final : public Series {
       mochi::Error& error);
 
  private:
-  std::unique_ptr<detail::SeriesRows> TakeRows() override;
+  std::unique_ptr<detail::SeriesRows> TakeRows(std::unique_ptr<detail::SeriesRows> reuse) override;
 
   std::unique_ptr<Rows> _rows = std::make_unique<Rows>();
 };
@@ -139,12 +147,13 @@ class SUPERDEX_RECORDER_API TransformSeries final : public Series {
   struct Rows final : detail::SeriesRows {
     void BuildColumns(std::vector<rerun::ComponentColumn>& output, mochi::Error& error)
         const override;
+    void Clear() override;
 
     std::vector<rerun::components::Translation3D> translations;
     std::vector<rerun::components::RotationQuat> rotations;
   };
 
-  std::unique_ptr<detail::SeriesRows> TakeRows() override;
+  std::unique_ptr<detail::SeriesRows> TakeRows(std::unique_ptr<detail::SeriesRows> reuse) override;
 
   std::unique_ptr<Rows> _rows = std::make_unique<Rows>();
   // Translation then quaternion, as stored.
@@ -166,13 +175,14 @@ class SUPERDEX_RECORDER_API Arrow3DSeries final : public Series {
   struct Rows final : detail::SeriesRows {
     void BuildColumns(std::vector<rerun::ComponentColumn>& output, mochi::Error& error)
         const override;
+    void Clear() override;
 
     std::vector<uint32_t> lengths;
     std::vector<rerun::components::Position3D> origins;
     std::vector<rerun::components::Vector3D> vectors;
   };
 
-  std::unique_ptr<detail::SeriesRows> TakeRows() override;
+  std::unique_ptr<detail::SeriesRows> TakeRows(std::unique_ptr<detail::SeriesRows> reuse) override;
 
   std::unique_ptr<Rows> _rows = std::make_unique<Rows>();
 };
@@ -189,12 +199,13 @@ class SUPERDEX_RECORDER_API Points3DSeries final : public Series {
   struct Rows final : detail::SeriesRows {
     void BuildColumns(std::vector<rerun::ComponentColumn>& output, mochi::Error& error)
         const override;
+    void Clear() override;
 
     std::vector<uint32_t> lengths;
     std::vector<rerun::components::Position3D> positions;
   };
 
-  std::unique_ptr<detail::SeriesRows> TakeRows() override;
+  std::unique_ptr<detail::SeriesRows> TakeRows(std::unique_ptr<detail::SeriesRows> reuse) override;
 
   std::unique_ptr<Rows> _rows = std::make_unique<Rows>();
   std::vector<rerun::components::Position3D> _lastPositions;
@@ -219,13 +230,14 @@ class SUPERDEX_RECORDER_API DeformableMeshSeries final : public Series {
   struct Rows final : detail::SeriesRows {
     void BuildColumns(std::vector<rerun::ComponentColumn>& output, mochi::Error& error)
         const override;
+    void Clear() override;
 
     std::vector<uint32_t> lengths;
     std::vector<rerun::components::Position3D> positions;
     std::vector<rerun::components::Vector3D> normals;
   };
 
-  std::unique_ptr<detail::SeriesRows> TakeRows() override;
+  std::unique_ptr<detail::SeriesRows> TakeRows(std::unique_ptr<detail::SeriesRows> reuse) override;
 
   size_t _numVertices;
   std::unique_ptr<Rows> _rows = std::make_unique<Rows>();
@@ -244,13 +256,14 @@ class SUPERDEX_RECORDER_API TextSeries final : public Series {
   struct Rows final : detail::SeriesRows {
     void BuildColumns(std::vector<rerun::ComponentColumn>& output, mochi::Error& error)
         const override;
+    void Clear() override;
 
     ComponentField field;
     std::vector<uint32_t> lengths;
     std::vector<rerun::components::Text> texts;
   };
 
-  std::unique_ptr<detail::SeriesRows> TakeRows() override;
+  std::unique_ptr<detail::SeriesRows> TakeRows(std::unique_ptr<detail::SeriesRows> reuse) override;
 
   std::unique_ptr<Rows> _rows = std::make_unique<Rows>();
 };
@@ -267,11 +280,12 @@ class SUPERDEX_RECORDER_API PlotSeries final : public Series {
   struct Rows final : detail::SeriesRows {
     void BuildColumns(std::vector<rerun::ComponentColumn>& output, mochi::Error& error)
         const override;
+    void Clear() override;
 
     std::vector<rerun::components::Scalar> values;
   };
 
-  std::unique_ptr<detail::SeriesRows> TakeRows() override;
+  std::unique_ptr<detail::SeriesRows> TakeRows(std::unique_ptr<detail::SeriesRows> reuse) override;
 
   std::unique_ptr<Rows> _rows = std::make_unique<Rows>();
 };

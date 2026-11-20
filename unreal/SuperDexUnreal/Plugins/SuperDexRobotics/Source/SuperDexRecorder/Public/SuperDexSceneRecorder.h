@@ -190,7 +190,9 @@ class SUPERDEXRECORDER_API FSuperDexSceneRecorder final {
   TWeakObjectPtr<UMochiSceneObject> SceneObject;
   mochi::CallbackHandle PostStepCallback;
   superdex::robotics::RoboticsContext* RoboticsContext = nullptr;
+  // Kept across episodes, so that later episodes reuse the chunk buffers of earlier ones.
   std::unique_ptr<superdex::recorder::Recorder> Recorder;
+  FString RecorderOutputDirectory;
   std::unique_ptr<superdex::recorder::Episode> Episode;
   std::unique_ptr<superdex::recorder::Episode> CommittingEpisode;
   superdex::recorder::PhysicsRecorderConfig PhysicsConfig;

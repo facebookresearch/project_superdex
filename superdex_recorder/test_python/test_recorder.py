@@ -679,11 +679,33 @@ class RecorderTest(unittest.TestCase):
         chunk_max_duration_sec: float,
         commit_async: bool = False,
         wait_for_commit: bool = False,
+        num_episodes: int = 1,
     ) -> Path:
         """Record a cube dropped on the ground, with contacts, for 200 frames.
 
-        The episode is released, so its file is published, before this returns.
+        Records it num_episodes times with one recorder and returns the last episode's file.
+        Each episode is released, so its file is published, before the next begins.
         """
+        episode_recorder = recorder.Recorder(
+            recorder.RecorderConfig(
+                directory,
+                chunk_max_bytes=chunk_max_bytes,
+                chunk_max_duration_sec=chunk_max_duration_sec,
+            )
+        )
+        output_path = Path()
+        for _ in range(num_episodes):
+            output_path = self.record_falling_cube_episode(
+                episode_recorder, commit_async, wait_for_commit
+            )
+        return output_path
+
+    def record_falling_cube_episode(
+        self,
+        episode_recorder: recorder.Recorder,
+        commit_async: bool,
+        wait_for_commit: bool,
+    ) -> Path:
         sdp.initialize(num_worker_threads=0)
         scene = None
         physics = None
@@ -718,13 +740,7 @@ class RecorderTest(unittest.TestCase):
             )
             config = recorder.PhysicsRecorderConfig()
             config.record_contact_forces = True
-            episode = recorder.Recorder(
-                recorder.RecorderConfig(
-                    directory,
-                    chunk_max_bytes=chunk_max_bytes,
-                    chunk_max_duration_sec=chunk_max_duration_sec,
-                )
-            ).begin_episode()
+            episode = episode_recorder.begin_episode()
             physics = recorder.PhysicsRecorder(episode, scene, config)
             physics.record(0, scene.get_total_simulation_time())
             for frame in range(1, 200):
@@ -766,6 +782,16 @@ class RecorderTest(unittest.TestCase):
             self.assertGreater(chunks_per_entity["/data/physics/contacts"], 1)
             self.assert_same_falling_cube(EpisodeReader(chunked), EpisodeReader(whole))
 
+    def test_later_episodes_of_a_recorder_record_the_same_samples(self) -> None:
+        with tempfile.TemporaryDirectory() as directory_string:
+            directory = Path(directory_string)
+            whole = self.record_falling_cube(directory, 0, 0.0)
+            # The third episode's series reuse the chunk buffers of earlier episodes.
+            third = self.record_falling_cube(
+                directory, 2048, 0.25, commit_async=True, num_episodes=3
+            )
+            self.assert_same_falling_cube(EpisodeReader(third), EpisodeReader(whole))
+
     def test_commit_async_publishes_the_same_episode(self) -> None:
         with tempfile.TemporaryDirectory() as directory_string:
             directory = Path(directory_string)
@@ -802,6 +828,7 @@ class RecorderTest(unittest.TestCase):
                 "data/physics/contacts",
                 "superdex.physics.contact_force_on_a_world_xyz",
             ),
+            ("world/contact_forces", "Arrows3D:vectors"),
         ):
             self.assertEqual(
                 [

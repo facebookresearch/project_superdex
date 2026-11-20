@@ -43,7 +43,9 @@ class RecordingStream;
 namespace superdex::recorder {
 
 namespace detail {
+class ChunkPool;
 class ChunkWriter;
+struct SeriesChunk;
 } // namespace detail
 
 class Series;
@@ -81,7 +83,8 @@ struct RecorderConfig {
   std::filesystem::path outputDirectory;
   /* @brief A series writes its buffered rows as one RRD chunk once they reach either limit. Zero
    * disables a limit; with both disabled, each series is one chunk written at commit. The byte
-   * limit is at most 1 GB, since the native reader rejects chunks over 2 GiB. */
+   * limit is at most 1 GB, since the native reader rejects chunks over 2 GiB. A zero byte limit
+   * also disables reusing chunk buffers (see Recorder). */
   size_t chunkMaxBytes = 8'000'000; // 8 MB
   double chunkMaxDurationSec = 10.0;
 };
@@ -212,7 +215,8 @@ class SUPERDEX_RECORDER_API Episode final {
       std::filesystem::path temporaryPath,
       std::filesystem::path outputPath,
       std::unique_ptr<rerun::RecordingStream> stream,
-      RecorderConfig const& config);
+      RecorderConfig const& config,
+      std::shared_ptr<detail::ChunkPool> pool);
 
   void ValidateWrite(mochi::Error& error) const;
   void ValidateSeriesPath(std::string_view entityPath, mochi::Error& error) const;
@@ -241,7 +245,12 @@ class SUPERDEX_RECORDER_API Episode final {
   std::chrono::steady_clock::time_point _startTime = std::chrono::steady_clock::now();
 };
 
-/* @brief Starts transactional episode recordings in one output directory. */
+/* @brief Starts transactional episode recordings in one output directory.
+ * Keep one recorder for consecutive episodes: their series continue in the buffers of earlier
+ * episodes' chunks rather than growing new ones while recording. The recorder keeps the buffers of
+ * up to two chunks per entity path, each of at most about four times chunkMaxBytes, while it or
+ * any of its episodes exists; it frees those of paths that its episodes stop recording. A zero
+ * chunkMaxBytes disables this reuse. */
 class SUPERDEX_RECORDER_API Recorder final {
   MOCHI_DECLARE_NO_COPY_NO_MOVE(Recorder)
 
@@ -253,6 +262,8 @@ class SUPERDEX_RECORDER_API Recorder final {
 
  private:
   RecorderConfig _config;
+  // Written chunks' buffers, which the series of its episodes continue in.
+  std::shared_ptr<detail::ChunkPool> _pool;
 };
 
 /* @brief Sets Mochi's log callback inside this library.
