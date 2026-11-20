@@ -54,13 +54,16 @@ ChooseSoftSurfaces(bool hasVisualMesh, bool hasContactSkin, bool useContactSkin)
 }
 
 // Deformable actors can update a visual mesh only when it has an embedding into the simulation
-// mesh, so a soft actor whose visual mesh has none falls back to its contact skin or boundary.
+// mesh; one without is drawn as if it had no visual mesh.
+constexpr bool HasDeformableVisualMesh(mochi::ModelData const& model) {
+  return model.visualMesh && model.visualMesh->skinning;
+}
+
 constexpr DeformableSurfaces ChooseSoftSurfaces(
     mochi::ModelData const& model,
     bool useContactSkin) {
-  bool const hasDeformableVisualMesh = model.visualMesh && model.visualMesh->skinning;
   return ChooseSoftSurfaces(
-      hasDeformableVisualMesh, model.contactSkinMesh.has_value(), useContactSkin);
+      HasDeformableVisualMesh(model), model.contactSkinMesh.has_value(), useContactSkin);
 }
 
 // A rod actor is drawn like a soft actor, with its centerline in place of the boundary: its visual
@@ -75,11 +78,9 @@ ChooseRodSurfaces(bool hasVisualMesh, bool hasContactSkin, bool useContactSkin) 
   return {.rendered = rod(soft.rendered), .collision = rod(soft.collision)};
 }
 
-// Unlike a soft actor's, a rod's visual mesh needs no skinning: Mochi embeds it in the rod's
-// elements when the actor is created.
 constexpr DeformableSurfaces ChooseRodSurfaces(mochi::ModelData const& model, bool useContactSkin) {
   return ChooseRodSurfaces(
-      model.visualMesh.has_value(), model.contactSkinMesh.has_value(), useContactSkin);
+      HasDeformableVisualMesh(model), model.contactSkinMesh.has_value(), useContactSkin);
 }
 
 constexpr char const* DeformableSurfaceLabel(DeformableSurface surface) {

@@ -102,10 +102,16 @@ TEST(DeformableSurfaceTest, ARodIsDrawnLikeASoftActorWithItsCenterlineForTheBoun
           .rendered = DeformableSurface::Centerline, .collision = DeformableSurface::Centerline}));
 }
 
-TEST(DeformableSurfaceTest, ARodDrawsItsVisualMeshWithoutSkinning) {
+TEST(DeformableSurfaceTest, ARodsUnembeddedVisualMeshFallsBack) {
   mochi::ModelData model;
   model.visualMesh.emplace();
 
+  EXPECT_EQ(
+      ChooseRodSurfaces(model, /*useContactSkin=*/true),
+      (DeformableSurfaces{
+          .rendered = DeformableSurface::Centerline, .collision = DeformableSurface::Centerline}));
+
+  model.visualMesh->skinning.emplace();
   EXPECT_EQ(
       ChooseRodSurfaces(model, /*useContactSkin=*/true),
       (DeformableSurfaces{
