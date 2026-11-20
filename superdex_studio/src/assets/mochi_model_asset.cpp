@@ -199,6 +199,7 @@ mochi::ShapeHandle MochiModelAsset::GetShape(
   // hdf5::LoadExperimentalModelDataFromFile) is intentionally not handled here. It is out of scope
   // for the in-memory editor path.
   mochi::ModelData modelCopy = _modelData;
+  mochi::model_utils::GenerateMissingPolylineFrameAxes(modelCopy, error);
   mochi::model_utils::BakeTransform(modelCopy, bakeScale, bakeTransform, error);
   MOCHI_ERROR_RETURN(error, {});
   auto shape = _manager->GetStudio()->GetMochiContext()->CreateModelShape(modelCopy, error);

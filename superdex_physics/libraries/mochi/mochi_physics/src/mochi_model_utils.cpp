@@ -65,6 +65,10 @@ void model_utils::AutoCorrect(ModelData& data, Error& error) {
   return model::AutoCorrect(data, error);
 }
 
+void model_utils::GenerateMissingPolylineFrameAxes(ModelData& data, Error& error) {
+  model::GenerateMissingPolylineFrameAxes(data, error);
+}
+
 void model_utils::BakeTransform(
     ModelData& data,
     Real3 const& scale,

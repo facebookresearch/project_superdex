@@ -30,6 +30,7 @@
 #include <mochi_physics/src/mochi_rod.h>
 #include <mochi_physics/src/mochi_scene.h>
 #include <mochi_physics/src/mochi_soft_rom_components.h>
+#include <mochi_physics/utils/mochi_model_utils.h>
 #include <mochi_physics/utils/mochi_prefab.h>
 
 #include "mochi_physics_test_fixture.h"
@@ -2354,6 +2355,20 @@ TEST(Prefab, RodActor_AddToScene_PoseForGeneratedFrameAxes) {
   auto const posedPose = test::GetRodPose(*bakedRods[1]);
   EXPECT_TRUE(test::NearEqualSpan(restPose.displacements, posedPose.displacements, 1e-6_r));
   EXPECT_TRUE(test::NearEqualSpan(restPose.elementFrameAxes, posedPose.elementFrameAxes, 1e-5_r));
+
+  ModelData inMemoryModel = curvedModel;
+  model_utils::GenerateMissingPolylineFrameAxes(inMemoryModel, ExpectOK{});
+  auto const& rod = bakedPrefab.actors.rod[0];
+  model::BakeTransform(
+      inMemoryModel, rod.scale, rod.shapeRotation, rod.shapeTranslation, ExpectOK{});
+  auto const bakedAxes = *inMemoryModel.elementFrameAxes;
+  model::GenerateMissingPolylineFrameAxes(inMemoryModel);
+  EXPECT_EQ(bakedAxes, *inMemoryModel.elementFrameAxes);
+  EXPECT_FALSE(curvedModel.elementFrameAxes.has_value());
+  auto const shape = context->CreateModelShape(inMemoryModel, ExpectOK{});
+  EXPECT_TRUE(
+      test::NearEqualSpan(
+          context->GetShapeElementFrameAxes(shape, ExpectOK{}), restPose.elementFrameAxes, 1e-5_r));
 }
 
 // A pose can be applied to a preset shape handle.

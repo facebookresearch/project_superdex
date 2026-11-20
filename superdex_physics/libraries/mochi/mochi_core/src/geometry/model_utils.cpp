@@ -710,6 +710,26 @@ void mochi::model::ValidatePolylineElementFrameAxes(
   }
 }
 
+void mochi::model::GenerateMissingPolylineFrameAxes(ModelData& model, Error& error) {
+  MOCHI_ERROR_RETURN(error);
+  if (!model.mesh || model.mesh->nodesPerElement != 2 || model.elementFrameAxes) {
+    return;
+  }
+  Validate(model, error);
+  MOCHI_ERROR_RETURN(error);
+  GenerateMissingPolylineFrameAxes(model);
+}
+
+void mochi::model::GenerateMissingPolylineFrameAxes(ModelData& model) {
+  if (!model.mesh || model.mesh->nodesPerElement != 2 || model.elementFrameAxes) {
+    return;
+  }
+  DynamicArray<Real3> const axes = GenerateDiscreteBishopFrame(
+      Unflatten<Real3 const>(model.mesh->coordinates), IsPolylineClosedLoop(*model.mesh));
+  Span<real const> const flatAxes = Flatten(MakeConstSpan(axes));
+  model.elementFrameAxes.emplace(flatAxes.begin(), flatAxes.end());
+}
+
 DynamicArray<Real3> mochi::model::GenerateDiscreteBishopFrame(
     Span<Real3 const> nodes,
     bool isClosedLoop) {

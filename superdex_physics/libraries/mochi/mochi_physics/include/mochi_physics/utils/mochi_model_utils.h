@@ -60,6 +60,7 @@ SaveToFile(ModelDataView const& data, std::string_view path, FileFormat format, 
 [[nodiscard]] MOCHI_API DynamicString SaveToJsonString(ModelData const& data, Error& error);
 MOCHI_API void Validate(ModelDataView const& data, Error& error);
 MOCHI_API void AutoCorrect(ModelData& data, Error& error);
+MOCHI_API void GenerateMissingPolylineFrameAxes(ModelData& model, Error& error);
 MOCHI_API void BakeTransform(
     ModelData& data,
     Real3 const& scale,

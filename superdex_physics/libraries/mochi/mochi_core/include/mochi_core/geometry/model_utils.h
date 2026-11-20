@@ -222,6 +222,28 @@ void ValidatePolylineElementFrameAxes(
     bool isClosedLoop);
 
 /**
+ * @brief Generate missing frame axes of a polyline model.
+ *
+ * @details Validates the model before generation. Call before @ref BakeTransform so default axes
+ * transform like authored axes. Models with frame axes and non-polyline models are unchanged.
+ *
+ * @param[in,out] model Model data. Unchanged on error.
+ * @param[in,out] error Error status. Check @ref Error::IsOK for success.
+ */
+void GenerateMissingPolylineFrameAxes(ModelData& model, Error& error);
+
+/**
+ * @brief Generate missing frame axes from validated model data.
+ *
+ * @details Caller must ensure @ref Validate succeeds before calling this overload.
+ * Call before @ref BakeTransform so default axes transform like authored axes.
+ * Models with frame axes and non-polyline models are unchanged.
+ *
+ * @param[in,out] model Valid model data.
+ */
+void GenerateMissingPolylineFrameAxes(ModelData& model);
+
+/**
  * @brief Validate polyline geometry and tube dimensions for @ref GenerateTubularSkinMesh.
  *
  * @details Checks @ref ValidatePolylineGeometry, a positive finite radius, at least three

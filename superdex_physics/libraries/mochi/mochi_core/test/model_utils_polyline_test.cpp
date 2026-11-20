@@ -114,6 +114,15 @@ DynamicArray<Real3> ArcNodes(int numNodes, real arcAngle) {
   return nodes;
 }
 
+ModelData MakePolylineFrameModel(bool isClosedLoop = false) {
+  ModelData model;
+  MeshData& mesh = model.mesh.emplace();
+  mesh.nodesPerElement = 2;
+  mesh.coordinates = {0_r, 0_r, 0_r, 1_r, 0_r, 0_r, 1_r, 1_r, 0_r};
+  mesh.connectivity = MakeSequentialPolylineConnectivity(3, isClosedLoop);
+  return model;
+}
+
 // Checks that @p tube surrounds @p nodes as GenerateTubularSkinMesh documents: a ring of
 // numSegments nodes at distance radius around each element midpoint (and each end node of an
 // open polyline), orthogonal to the ring's element and skinned to it, plus cap nodes at the end
@@ -175,6 +184,81 @@ void ExpectTubeAroundPolyline(
 }
 
 } // namespace
+
+TEST(GenerateMissingPolylineFrameAxes, GeneratesOpenAndClosedFrames) {
+  for (bool const isClosedLoop : {false, true}) {
+    ModelData model = MakePolylineFrameModel(isClosedLoop);
+    DynamicArray<real> expectedAxes(3 * model.mesh->GetNumElements(), 0_r);
+    for (int i = 2; i < isize(expectedAxes); i += 3) {
+      expectedAxes[i] = 1_r;
+    }
+    model::GenerateMissingPolylineFrameAxes(model, test::ExpectOK{});
+    ASSERT_TRUE(model.elementFrameAxes.has_value());
+    EXPECT_TRUE(
+        test::NearEqualSpan(
+            MakeConstSpan(expectedAxes), MakeConstSpan(*model.elementFrameAxes), kTubeTolerance));
+    model::Validate(model, test::ExpectOK{});
+  }
+}
+
+TEST(GenerateMissingPolylineFrameAxes, PreservesExistingAxesAndOtherModels) {
+  ModelData authored = MakePolylineFrameModel();
+  authored.elementFrameAxes = DynamicArray<real>{0_r, 0_r, -1_r, 0_r, 0_r, -1_r};
+  auto const authoredAxes = *authored.elementFrameAxes;
+  model::GenerateMissingPolylineFrameAxes(authored, test::ExpectOK{});
+  EXPECT_EQ(authoredAxes, *authored.elementFrameAxes);
+
+  ModelData empty;
+  model::GenerateMissingPolylineFrameAxes(empty, test::ExpectOK{});
+  EXPECT_FALSE(empty.mesh.has_value());
+  EXPECT_FALSE(empty.elementFrameAxes.has_value());
+
+  ModelData triangle = MakePolylineFrameModel();
+  triangle.mesh->nodesPerElement = 3;
+  triangle.mesh->connectivity = {0, 1, 2};
+  auto const coordinates = triangle.mesh->coordinates;
+  model::GenerateMissingPolylineFrameAxes(triangle, test::ExpectOK{});
+  EXPECT_FALSE(triangle.elementFrameAxes.has_value());
+  EXPECT_EQ(coordinates, triangle.mesh->coordinates);
+}
+
+TEST(GenerateMissingPolylineFrameAxes, RejectsInvalidModelsWithoutMutation) {
+  DynamicArray<DynamicArray<real>> const invalidCoordinates{
+      {},
+      {0_r, 0_r, 0_r},
+      {0_r, 0_r, 0_r, 1_r, 0_r},
+      {0_r, 0_r, 0_r, 0_r, 0_r, 0_r},
+      {0_r, 0_r, 0_r, 1_r, 0_r, 0_r, 0_r, 0_r, 0_r},
+      {std::numeric_limits<real>::infinity(), 0_r, 0_r, 1_r, 0_r, 0_r}};
+  auto const expectInvalid = [](ModelData& model) {
+    auto const coordinates = model.mesh->coordinates;
+    auto const connectivity = model.mesh->connectivity;
+    model::GenerateMissingPolylineFrameAxes(model, test::ExpectNotOK{});
+    EXPECT_FALSE(model.elementFrameAxes.has_value());
+    EXPECT_EQ(coordinates, model.mesh->coordinates);
+    EXPECT_EQ(connectivity, model.mesh->connectivity);
+  };
+  for (auto const& coordinates : invalidCoordinates) {
+    ModelData model = MakePolylineFrameModel();
+    model.mesh->coordinates = coordinates;
+    model.mesh->connectivity.clear();
+    expectInvalid(model);
+  }
+  ModelData model = MakePolylineFrameModel();
+  model.mesh->connectivity[1] = 3;
+  expectInvalid(model);
+}
+
+TEST(GenerateMissingPolylineFrameAxes, PreservesExistingErrorWithoutMutation) {
+  ModelData model = MakePolylineFrameModel();
+  auto const coordinates = model.mesh->coordinates;
+  Error error;
+  MOCHI_ERROR_SET(error, "Existing error");
+  model::GenerateMissingPolylineFrameAxes(model, error);
+  EXPECT_STREQ("Existing error", error.GetDescription());
+  EXPECT_FALSE(model.elementFrameAxes.has_value());
+  EXPECT_EQ(coordinates, model.mesh->coordinates);
+}
 
 TEST_F(GenerateDiscreteBishopFrameTest, RandomPolylinesValidityAndMinimalRotation) {
   // Use a fixed seed for reproducibility
