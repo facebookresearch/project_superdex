@@ -36,6 +36,7 @@
 #include <superdex_robotics/sensors/sensor_base.h>
 #include <superdex_robotics/sensors/sensor_camera.h>
 #include <superdex_robotics/sensors/sensor_delay_line.h>
+#include <superdex_robotics/sensors/sensor_gaussian_noise.h>
 #include <superdex_robotics/sensors/sensor_graph.h>
 #include <superdex_robotics/sensors/sensor_link_vertex_force.h>
 #include <superdex_robotics/sensors/sensor_seed_rect_map.h>

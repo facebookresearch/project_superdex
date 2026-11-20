@@ -111,6 +111,8 @@ void mochi::DeclareSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module
   registry.StoreClass(nb::class_<superdex::robotics::SensorSeedV1MLPResult>(m_bots, "SensorSeedV1MLPResult", "SEED tactile sensor result."));
   registry.StoreClass(nb::class_<superdex::robotics::SensorTemporalWindowParams>(m_bots, "SensorTemporalWindowParams", "Fixed oldest-first rolling-window configuration."));
   registry.StoreClass(nb::class_<superdex::robotics::SensorDelayLineParams>(m_bots, "SensorDelayLineParams", "Deterministic time-domain delay configuration."));
+  registry.StoreClass(nb::class_<superdex::robotics::SensorRandomParams>(m_bots, "SensorRandomParams", "Episode seed and stable acquisition stream identity."));
+  registry.StoreClass(nb::class_<superdex::robotics::SensorGaussianNoiseParams>(m_bots, "SensorGaussianNoiseParams", "Additive zero-mean Gaussian noise parameters."));
   registry.StoreClass(nb::class_<superdex::robotics::TactileTaxelLayout>(m_bots, "TactileTaxelLayout", "Ordered, sensor-link-frame positions for a tactile taxel layout."));
   registry.StoreClass(nb::class_<superdex::robotics::TactileTaxelForces>(m_bots, "TactileTaxelForces", "Dense per-taxel force observation for one tactile site."));
   registry.StoreClass(nb::class_<superdex::robotics::TactileAggregateForce>(m_bots, "TactileAggregateForce", "Aggregate force observation for one tactile site."));
@@ -132,6 +134,7 @@ void mochi::DeclareSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module
   registry.StoreClass(nb::class_<superdex::robotics::SensorSeedV1MLP, superdex::robotics::SensorBase>(m_bots, "SensorSeedV1MLP", "SEED tactile sensor using Mochi-native MLP inference.", nb::never_destruct()));
   registry.StoreClass(nb::class_<superdex::robotics::SensorTemporalWindow, superdex::robotics::SensorBase>(m_bots, "SensorTemporalWindow", "Fixed oldest-first rolling window over one native-rate CPU float sensor.", nb::never_destruct()));
   registry.StoreClass(nb::class_<superdex::robotics::SensorDelayLine, superdex::robotics::SensorBase>(m_bots, "SensorDelayLine", "Deterministic time-domain delay over one fixed CPU sensor output.", nb::never_destruct()));
+  registry.StoreClass(nb::class_<superdex::robotics::SensorGaussianNoise, superdex::robotics::SensorBase>(m_bots, "SensorGaussianNoise", "Independent additive noise on new input captures.", nb::never_destruct()));
   registry.StoreClass(nb::class_<superdex::robotics::BotSceneMetadata>(m_bots, "BotSceneMetadata", "Human-readable metadata for a .superdex_scene file. Not consumed by the runtime."));
   registry.StoreClass(nb::class_<superdex::robotics::PrefabEntry>(m_bots, "PrefabEntry", "A named reference to a spawnable scene, prefab, bot, or bot archive."));
   registry.StoreClass(nb::class_<superdex::robotics::BaseSceneParams>(m_bots, "BaseSceneParams", "Scene definition within a .superdex_scene.\n\nThe base_scene is optional — a scene under construction may not have one yet.\nWhen present it is the authoritative source for all simulation physics\nparameters (gravity, solver config, contact filtering, collision layers, etc.);\nwhen absent the scene keeps its default parameters."));
@@ -1425,6 +1428,42 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_rw("buffer_assumed_frequency_hz_estimate", &superdex::robotics::SensorDelayLineParams::bufferAssumedFrequencyHzEstimate, "Fallback publication-rate estimate [Hz] when the input rate is unknown.")
   ;
 
+  registry.GetClass<superdex::robotics::SensorRandomParams>()
+    .def("__init__", [](superdex::robotics::SensorRandomParams* self, nb::object episode_seed, nb::object process_key) {
+      superdex::robotics::SensorRandomParams result{};
+      result.episodeSeed = nb::cast<uint64_t>(episode_seed);
+      result.processKey = nb::cast<mochi::DynamicString>(process_key);
+      new (self) superdex::robotics::SensorRandomParams(std::move(result));
+    }
+      , nb::kw_only()
+      , nb::arg("episode_seed") = superdex::robotics::SensorRandomParams{}.episodeSeed
+      , nb::arg("process_key") = superdex::robotics::SensorRandomParams{}.processKey
+    )
+    .def(nb::init<>())
+    .def("__copy__", [](superdex::robotics::SensorRandomParams const& self) { return superdex::robotics::SensorRandomParams(self); })
+    .def("__deepcopy__", [](superdex::robotics::SensorRandomParams const& self, nb::dict) { return superdex::robotics::SensorRandomParams(self); })
+    .def_rw("episode_seed", &superdex::robotics::SensorRandomParams::episodeSeed)
+    .def_rw("process_key", &superdex::robotics::SensorRandomParams::processKey)
+  ;
+
+  registry.GetClass<superdex::robotics::SensorGaussianNoiseParams>()
+    .def("__init__", [](superdex::robotics::SensorGaussianNoiseParams* self, nb::object std, nb::object random) {
+      superdex::robotics::SensorGaussianNoiseParams result{};
+      result.std = nb::cast<mochi::DynamicArray<mochi::real>>(std);
+      result.random = nb::cast<superdex::robotics::SensorRandomParams>(random);
+      new (self) superdex::robotics::SensorGaussianNoiseParams(std::move(result));
+    }
+      , nb::kw_only()
+      , nb::arg("std").sig("...") = superdex::robotics::SensorGaussianNoiseParams{}.std
+      , nb::arg("random").sig("...") = superdex::robotics::SensorGaussianNoiseParams{}.random
+    )
+    .def(nb::init<>())
+    .def("__copy__", [](superdex::robotics::SensorGaussianNoiseParams const& self) { return superdex::robotics::SensorGaussianNoiseParams(self); })
+    .def("__deepcopy__", [](superdex::robotics::SensorGaussianNoiseParams const& self, nb::dict) { return superdex::robotics::SensorGaussianNoiseParams(self); })
+    .def_prop_rw("std", [](superdex::robotics::SensorGaussianNoiseParams& self) -> mochi::DynamicArray<mochi::real>& { return self.std; }, [](superdex::robotics::SensorGaussianNoiseParams& self, nb::object val) { self.std = nb::cast<mochi::DynamicArray<mochi::real>>(val); })
+    .def_rw("random", &superdex::robotics::SensorGaussianNoiseParams::random)
+  ;
+
   registry.GetClass<superdex::robotics::TactileTaxelLayout>()
     .def("__init__", [](superdex::robotics::TactileTaxelLayout* self, nb::object positions) {
       superdex::robotics::TactileTaxelLayout result{};
@@ -1848,6 +1887,22 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     }
       , nb::arg("params")
       , "Install typed episode parameters before resetting the graph.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+    )
+  ;
+
+  registry.GetClass<superdex::robotics::SensorGaussianNoise, superdex::robotics::SensorBase>()
+    .def_static("type_name", &superdex::robotics::SensorGaussianNoise::TypeName
+    )
+    .def("get_params", &superdex::robotics::SensorGaussianNoise::GetParams
+    )
+    .def("set_params", [](superdex::robotics::SensorGaussianNoise& self, superdex::robotics::SensorGaussianNoiseParams const& params) {
+      mochi::Error error;
+      self.SetParams(params, error);
+      if (!error.IsOK()) {
+        throw MochiErrorException(error);
+      }
+    }
+      , nb::arg("params")
     )
   ;
 

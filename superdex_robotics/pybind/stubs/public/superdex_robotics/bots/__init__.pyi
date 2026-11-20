@@ -2500,6 +2500,32 @@ class SensorDelayLineParams:
         buffer_assumed_frequency_hz_estimate: float = ...,
     ) -> None: ...
 
+class SensorRandomParams:
+    """Episode seed and stable acquisition stream identity."""
+    episode_seed: int
+    process_key: str
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(self, *, episode_seed: int = ..., process_key: str = ...) -> None: ...
+
+class SensorGaussianNoiseParams:
+    """Additive zero-mean Gaussian noise parameters."""
+    @property
+    def std(self) -> mochi_physics.DynamicArrayReal: ...
+    @std.setter
+    def std(self, value: mochi_physics.ArrayLikeReal) -> None: ...
+    random: SensorRandomParams
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(
+        self,
+        *,
+        std: mochi_physics.ArrayLikeReal = ...,
+        random: SensorRandomParams = ...,
+    ) -> None: ...
+
 class TactileTaxelLayout:
     """Ordered, sensor-link-frame positions for a tactile taxel layout."""
     @property
@@ -3024,6 +3050,13 @@ class SensorDelayLine(SensorBase):
         Raises:
             :class:`~superdex.physics.Error`: If an error occurs.
         """
+
+class SensorGaussianNoise(SensorBase):
+    """Independent additive noise on new input captures."""
+    @staticmethod
+    def type_name() -> str: ...
+    def get_params(self) -> SensorGaussianNoiseParams: ...
+    def set_params(self, params: SensorGaussianNoiseParams) -> None: ...
 
 class BotSceneMetadata:
     """Human-readable metadata for a .superdex_scene file. Not consumed by the runtime.

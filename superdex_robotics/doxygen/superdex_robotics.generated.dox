@@ -1024,6 +1024,16 @@
 /// @brief Fallback publication-rate estimate [Hz] when the input rate is unknown.
 ///
 
+/// @struct superdex::robotics::SensorRandomParams
+///
+/// @brief Episode seed and stable acquisition stream identity.
+///
+
+/// @struct superdex::robotics::SensorGaussianNoiseParams
+///
+/// @brief Additive zero-mean Gaussian noise parameters.
+///
+
 /// @struct superdex::robotics::TactileTaxelLayout
 ///
 /// @brief Ordered, sensor-link-frame positions for a tactile taxel layout.
@@ -1432,6 +1442,11 @@
 /// @brief Install typed episode parameters before resetting the graph.
 ///
 /// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
+///
+
+/// @class superdex::robotics::SensorGaussianNoise
+///
+/// @brief Independent additive noise on new input captures.
 ///
 
 /// @struct superdex::robotics::BotSceneArchiveMetadata

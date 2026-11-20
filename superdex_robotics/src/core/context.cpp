@@ -20,6 +20,7 @@
 #include <superdex_robotics/core/context.h>
 #include <superdex_robotics/sensors/sensor_articulated_joint_wrench.h>
 #include <superdex_robotics/sensors/sensor_camera.h>
+#include <superdex_robotics/sensors/sensor_gaussian_noise.h>
 #include <superdex_robotics/sensors/sensor_link_vertex_force.h>
 #include <superdex_robotics/sensors/sensor_seed_rect_map.h>
 #include <superdex_robotics/sensors/sensor_seed_v1_mlp.h>
@@ -688,6 +689,7 @@ void RoboticsContext::RegisterBuiltinTypes() {
   RegisterController<ControllerBasicOscPd>();
   RegisterSensor<SensorArticulatedJointWrench>();
   RegisterSensor<SensorCamera>();
+  RegisterSensor<SensorGaussianNoise>();
   RegisterSensor<SensorLinkVertexForce>();
   RegisterSensor<SensorSeedRectMap>();
   RegisterSensor<SensorSeedV1MLP>();

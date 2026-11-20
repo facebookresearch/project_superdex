@@ -1199,6 +1199,18 @@ struct bots::SensorDelayLineParams [no_reflection] {
   double bufferAssumedFrequencyHzEstimate = 100.0;
 }
 
+// @brief Episode seed and stable acquisition stream identity.
+struct bots::SensorRandomParams [no_reflection] {
+  uint64 episodeSeed = 0;
+  String processKey;
+}
+
+// @brief Additive zero-mean Gaussian noise parameters.
+struct bots::SensorGaussianNoiseParams [no_reflection] {
+  DynamicArray<real> std = {0.0};
+  bots::SensorRandomParams random;
+}
+
 // @brief Ordered, sensor-link-frame positions for a tactile taxel layout.
 struct bots::TactileTaxelLayout [no_reflection] {
   // @brief Taxel positions [m] in the sensor link frame. Their order is the taxel identity.
@@ -1535,6 +1547,13 @@ class bots::SensorDelayLine(bots::SensorBase) [no_init, no_destruct] {
   fn GetParams() -> bots::SensorDelayLineParams [const];
   // @brief Install typed episode parameters before resetting the graph.
   fn SetParams(bots::SensorDelayLineParams const& params) -> void [mochi_error];
+}
+
+// @brief Independent additive noise on new input captures.
+class bots::SensorGaussianNoise(bots::SensorBase) [no_init, no_destruct, no_reflection] {
+  fn TypeName() -> StringView [static];
+  fn GetParams() -> bots::SensorGaussianNoiseParams [const];
+  fn SetParams(bots::SensorGaussianNoiseParams const& params) -> void [mochi_error];
 }
 
 // @brief Create a @ref Bot runtime object from a @ref BotPrefab. Builds the underlying
