@@ -56,6 +56,11 @@ endif ()
 
 mochi_add_library(mochi_mesh)
 
+# Both precision payloads can coexist, so their shared-library names must be distinct.
+if (MOCHI_USE_DOUBLE_PRECISION)
+    set_target_properties(mochi_mesh PROPERTIES OUTPUT_NAME "mochi_mesh_double")
+endif ()
+
 # mochi_mesh marshals its heavier mesh operations to the superdex_mesh_cli helper over a pipe (see
 # mesh_cli_client). It depends only on mochi_core and the wire-protocol targets above; it never
 # links CGAL itself.

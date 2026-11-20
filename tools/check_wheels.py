@@ -91,8 +91,13 @@ class ToolDistribution(NamedTuple):
 
 # `marl` carries no `real`-typed API, so it is not precision-suffixed; it is still the
 # physics wheel's payload rather than the robotics wheel's.
-_PHYSICS_LIBRARIES = ("mochi_physics", "mochi_pybind_core", "marl")
-_PHYSICS_LIBRARIES_FP64 = ("mochi_physics_double", "mochi_pybind_core_double", "marl")
+_PHYSICS_LIBRARIES = ("mochi_physics", "mochi_pybind_core", "mochi_mesh", "marl")
+_PHYSICS_LIBRARIES_FP64 = (
+    "mochi_physics_double",
+    "mochi_pybind_core_double",
+    "mochi_mesh_double",
+    "marl",
+)
 
 NATIVE_DISTRIBUTIONS = (
     NativeDistribution(
@@ -1529,6 +1534,7 @@ from pathlib import Path
 expect_double = os.environ["SUPERDEX_EXPECT_DOUBLE"] == "1"
 
 import superdex.physics as sdp
+import superdex.physics.mesh
 import superdex.robotics as sdr
 
 """

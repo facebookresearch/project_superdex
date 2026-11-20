@@ -69,8 +69,8 @@ wheel.packages = ["superdex"]
 wheel.exclude = ["superdex/physics/internal", "superdex/physics/utils/testing/internal"]
 wheel.install-dir = "superdex/physics/_native"
 wheel.py-api = "cp312"
-build.targets = ["mochi_physics_pybind"]
-install.components = ["mochi_physics_pybind"]
+build.targets = ["mochi_physics_pybind", "mochi_mesh_pybind"]
+install.components = ["mochi_physics_pybind", "mochi_mesh_pybind"]
 
 [tool.scikit-build.env]
 CC = { env = "CC" }
@@ -83,6 +83,7 @@ args = [
     "-GNinja",
     "-DMOCHI_BUILD_DEBUGGER=OFF",
     "-DMOCHI_BUILD_MESH_CLI=OFF",
+    "-DMOCHI_BUILD_MESH_LIB=ON",
     "-DMOCHI_BUILD_RENDERER=OFF",
     "-DMOCHI_BUILD_SHARED=ON",
     "-DMOCHI_USE_PYBIND=ON",

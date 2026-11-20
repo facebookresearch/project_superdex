@@ -12,7 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-nanobind_add_module(mochi_mesh_pybind mesh_tools_pybind.cpp)
+if (SKBUILD_SABI_VERSION)
+    nanobind_add_module(mochi_mesh_pybind STABLE_ABI mesh_tools_pybind.cpp)
+else ()
+    nanobind_add_module(mochi_mesh_pybind mesh_tools_pybind.cpp)
+endif ()
 target_link_libraries(mochi_mesh_pybind PUBLIC mochi_mesh)
 target_include_directories(mochi_mesh_pybind PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
@@ -32,15 +36,21 @@ endif ()
 set_target_properties(mochi_mesh_pybind PROPERTIES
     PREFIX ""
     OUTPUT_NAME "${mochi_mesh_pybind_output_name}"
+    # The extension and shared library share an output name, but must not share debug symbols.
+    PDB_NAME "${mochi_mesh_pybind_output_name}.pyd"
 )
 if (WIN32)
     set_target_properties(mochi_mesh_pybind PROPERTIES SUFFIX ".pyd")
-else ()
+elseif (NOT SKBUILD_SABI_VERSION)
     set_target_properties(mochi_mesh_pybind PROPERTIES SUFFIX ".so")
 endif ()
 
 install(TARGETS mochi_mesh_pybind DESTINATION . COMPONENT mochi_mesh_pybind)
 
 if (MOCHI_BUILD_SHARED)
-    install(TARGETS mochi_mesh DESTINATION . COMPONENT mochi_mesh_pybind)
+    mochi_set_pybind_rpath(mochi_mesh)
+    install(TARGETS mochi_mesh
+        RUNTIME DESTINATION . COMPONENT mochi_mesh_pybind
+        LIBRARY DESTINATION . COMPONENT mochi_mesh_pybind
+    )
 endif ()
