@@ -75,7 +75,7 @@ TEST(EpisodeRestorerTest, RestoresRecordedFramesFromAnEpisodeFile) {
       recordedTranslations.push_back(liveCube->GetRootTransform().GetTranslation());
     }
   }
-  episode->Commit(error);
+  episode->CommitSync(error);
   auto const recording = EpisodeReader::Open(episode->GetOutputPath(), error);
   Scene* const restored = context->CreateScene("restored");
   Actor* const restoredCube = createCube(*restored);
@@ -132,7 +132,7 @@ void ExpectRestoresActorInFlight(
       recordedStates.push_back(getFullState(*liveActor));
     }
   }
-  episode->Commit(error);
+  episode->CommitSync(error);
   auto const recording = EpisodeReader::Open(episode->GetOutputPath(), error);
   Scene* const restored = context->CreateScene("restored");
   Actor* const restoredActor = createActor(*context, *restored, error);

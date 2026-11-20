@@ -302,7 +302,7 @@ def run_initialized(args: argparse.Namespace, bot_path: str) -> Path:
                 if args.debugger:
                     scene.update_debugger()
 
-            episode.commit()
+            episode.commit_sync()
             return episode.output_path
     finally:
         sdr.destroy_bot(scene, bot)

@@ -229,7 +229,7 @@ class Fixture {
           {static_cast<uint64_t>(row.frame), static_cast<double>(row.time) / 1e9}, fields, error);
       ASSERT_TRUE(error.IsOK()) << error.ToString();
     }
-    episode->Commit(error);
+    episode->CommitSync(error);
     ASSERT_TRUE(error.IsOK()) << error.ToString();
     path = episode->GetOutputPath();
   }

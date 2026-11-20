@@ -171,9 +171,20 @@ class SUPERDEX_RECORDER_API Episode final {
       float keypointRadiusMeters,
       mochi::Error& error);
 
-  /* Writes the remaining rows and the constants, then publishes the file. Commit and Abort may run
-   * on any thread once appending has stopped. */
-  void Commit(mochi::Error& error);
+  /* Writes the remaining rows and the constants, then publishes the file. CommitSync, CommitAsync
+   * and Abort may run on any thread once appending has stopped. */
+  void CommitSync(mochi::Error& error);
+  /* Like CommitSync, but returns without waiting for the file: error reports only the failures
+   * found before it returns. The episode's writer thread then publishes the file, or logs the
+   * failure and deletes it. IsCommitFinished and WaitForCommit tell when that is done; destroying
+   * the episode waits for it. */
+  void CommitAsync(mochi::Error& error);
+  /* True once the commit is done, published or failed: right after CommitSync, and once the writer
+   * thread has finished after CommitAsync. Destroying the episode then does not wait. */
+  [[nodiscard]] bool IsCommitFinished() const;
+  /* Waits until the commit is done, then sets its failure, if any. Returns at once after
+   * CommitSync, which reported its own failures. Call it on the thread that committed. */
+  void WaitForCommit(mochi::Error& error);
   void Abort(std::string_view reason, mochi::Error& error);
 
   [[nodiscard]] std::string const& GetEpisodeId() const;
@@ -206,7 +217,12 @@ class SUPERDEX_RECORDER_API Episode final {
   void ValidateSeriesPath(std::string_view entityPath, mochi::Error& error) const;
   void AddSeries(std::unique_ptr<Series> series);
   void SealSeries();
+  /* Seals the series and submits their remaining rows to the writer. */
+  void BeginCommit(mochi::Error& error);
+  /* Writes the constants and renames the file into place once every chunk is written. */
+  void PublishFile(mochi::Error& error);
   void DiscardTemporaryFile(mochi::Error* error);
+  [[nodiscard]] bool RemoveTemporaryFile(mochi::Error* error);
 
   std::string _episodeId;
   std::filesystem::path _temporaryPath;
@@ -217,6 +233,8 @@ class SUPERDEX_RECORDER_API Episode final {
   // Declared after _stream so that it stops before the stream is destroyed.
   std::unique_ptr<detail::ChunkWriter> _writer;
   State _state = State::Active;
+  // The failure of a CommitAsync, set on the writer thread and read once it has stopped.
+  mochi::Error _commitError;
   std::chrono::steady_clock::time_point _startTime = std::chrono::steady_clock::now();
 };
 

@@ -618,7 +618,7 @@ bool FSuperDexSceneRecorder::CommitEpisode() {
   }
 
   mochi::Error Error;
-  Episode->Commit(Error);
+  Episode->CommitSync(Error);
   if (!Error.IsOK()) {
     UE_LOG(
         LogSuperDexRecorder,

@@ -64,7 +64,7 @@ class FrameBankTest(unittest.TestCase):
             time_sec = scene.get_total_simulation_time()
             physics.record(frame, time_sec)
             robotics.record(frame, time_sec)
-        episode.commit()
+        episode.commit_sync()
         # Mochi objects must be released before Mochi shuts down.
         del physics, robotics
         sdr.destroy_bot(scene, bot)

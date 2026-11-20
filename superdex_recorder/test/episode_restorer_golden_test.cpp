@@ -216,7 +216,7 @@ std::filesystem::path RecordGoldenEpisode(
       physics.Record(time, error);
     }
   }
-  episode->Commit(error);
+  episode->CommitSync(error);
   return episode->GetOutputPath();
 }
 

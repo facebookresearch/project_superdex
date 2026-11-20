@@ -43,7 +43,7 @@ with recorder.begin_episode(metadata) as episode:
         scene.step(time_step)
         physics.record(frame + 1, scene.get_total_simulation_time())
 
-    episode.commit()
+    episode.commit_sync()
 ```
 
 - Create the recorders after you add every actor to the scene.

@@ -233,7 +233,7 @@ class LinkRecordingTest(unittest.TestCase):
                 scene.step(TIME_STEP)
             physics.record(frame, scene.get_total_simulation_time())
             poses.append(link_poses(links))
-        episode.commit()
+        episode.commit_sync()
         return episode.output_path, poses
 
     def record_tracked_hand(
@@ -272,7 +272,7 @@ class LinkRecordingTest(unittest.TestCase):
                 hand.record_untracked(frame, time_sec)
             else:
                 hand.record(frame, time_sec, sample.astype(real_dtype).reshape(-1))
-        episode.commit()
+        episode.commit_sync()
         return (
             episode.output_path,
             [
@@ -292,7 +292,7 @@ class LinkRecordingTest(unittest.TestCase):
             physics.record(frame, self.scene.get_total_simulation_time())
             if frame == MIDDLE_FRAME:
                 middle_poses = link_poses(self.links)
-        episode.commit()
+        episode.commit_sync()
 
         world, counts = recorded_world_transforms(episode.output_path)
         link_paths = recorded_link_names(episode.output_path, ROBOT_NAME)
@@ -354,7 +354,7 @@ class LinkRecordingTest(unittest.TestCase):
         shadows["hand"].record(
             0, time_sec, self.links[HAND_ROOT_LINK].get_root_transform(), pose
         )
-        episode.commit()
+        episode.commit_sync()
 
         world, _ = recorded_world_transforms(episode.output_path)
         for shadow_id, expected_links in (
@@ -449,7 +449,7 @@ class LinkRecordingTest(unittest.TestCase):
             rows.record(1, TIME_STEP, np.zeros((6, 2), dtype=real_dtype))
         with self.assertRaisesRegex(sdp.Error, "one position per keypoint"):
             rows.record(1, TIME_STEP, keypoints[:3])
-        episode.commit()
+        episode.commit_sync()
 
         positions = EpisodeReader(episode.output_path).component_samples(
             "Points3D:positions"
@@ -483,7 +483,7 @@ class LinkRecordingTest(unittest.TestCase):
                 frame * TIME_STEP,
                 rng.random((num_keypoints, 3)).astype(real_dtype),
             )
-        episode.commit()
+        episode.commit_sync()
 
         batches = [
             chunk.to_record_batch()
@@ -514,7 +514,7 @@ class LinkRecordingTest(unittest.TestCase):
         episode = self.episode_recorder.begin_episode()
         physics = recorder.PhysicsRecorder(episode, self.scene)
         robotics = recorder.RoboticsRecorder(episode, self.bot)
-        episode.commit()
+        episode.commit_sync()
         del physics, robotics
 
         recording = EpisodeReader(episode.output_path)
@@ -555,7 +555,7 @@ class LinkRecordingTest(unittest.TestCase):
             recorder.RoboticsRecorder(episode, twin)
         with self.assertRaisesRegex(sdp.Error, "A series already exists"):
             recorder.RobotShadow(episode, twin, "full")
-        episode.commit()
+        episode.commit_sync()
 
         num_dofs = EpisodeReader(episode.output_path).component_samples(
             "superdex.robotics.num_dofs"
@@ -587,7 +587,7 @@ class LinkRecordingTest(unittest.TestCase):
         episode = self.episode_recorder.begin_episode()
         physics = recorder.PhysicsRecorder(episode, self.scene)
         physics.record(0, self.scene.get_total_simulation_time())
-        episode.commit()
+        episode.commit_sync()
 
         world, _ = recorded_world_transforms(episode.output_path)
         self.assert_links_match(

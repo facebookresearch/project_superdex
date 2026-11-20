@@ -203,7 +203,7 @@ class FrameBankRecordingTest : public testing::Test {
         }
       }
     }
-    episode->Commit(error);
+    episode->CommitSync(error);
     EXPECT_TRUE(error.IsOK()) << error.ToString();
     return episode->GetOutputPath();
   }
@@ -286,7 +286,7 @@ TEST_F(FrameBankRecordingTest, RefusesATargetThatChangesSize) {
         grip->closure.push_back(1_r);
       }
     }
-    episode->Commit(error);
+    episode->CommitSync(error);
     return episode->GetOutputPath();
   }();
   auto const recording = EpisodeReader::Open(path, error);

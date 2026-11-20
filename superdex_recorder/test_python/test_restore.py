@@ -209,7 +209,7 @@ class EpisodeRestorerTest(unittest.TestCase):
             recording.translations[frame] = (
                 cube.get_root_transform().translation.tolist()
             )
-        episode.commit()
+        episode.commit_sync()
         return recording
 
     def copy_with_cube_states(
@@ -277,7 +277,7 @@ class EpisodeRestorerTest(unittest.TestCase):
             )
             recording.joint_positions[frame] = source.joint_positions()
             recording.forces[frame] = source.grasp_forces()
-        episode.commit()
+        episode.commit_sync()
         return recording
 
     def cube_resume_error(
@@ -463,7 +463,7 @@ class EpisodeRestorerTest(unittest.TestCase):
         episode = recorder.Recorder(config).begin_episode()
         physics = recorder.PhysicsRecorder(episode, source)
         physics.record(0, source.get_total_simulation_time())
-        episode.commit()
+        episode.commit_sync()
 
         scene, _ = self.make_cube_scene(method)
         with self.assertRaisesRegex(sdp.Error, "both bind to scene actor 'ground'"):
@@ -558,7 +558,7 @@ class EpisodeRestorerTest(unittest.TestCase):
         physics.record(0, live.get_total_simulation_time())
         live.step(DT)
         physics.record(1, live.get_total_simulation_time())
-        episode.commit()
+        episode.commit_sync()
 
         # Named as a rebuilt task names them, and created in the other order, so
         # restoring must move each block to its own state.

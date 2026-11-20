@@ -27,6 +27,7 @@
 #include <condition_variable>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <string>
 #include <thread>
@@ -44,7 +45,9 @@ struct SeriesChunk {
   size_t numBytes = 0;
 };
 
-/* Writes series chunks to an episode's Rerun stream on its own thread, in submission order. */
+/* Writes series chunks to an episode's Rerun stream on its own thread, in submission order. Each
+ * episode owns one writer, internal to it, whose thread starts with the writer. Destroying the
+ * writer waits for that thread; after FinishAsync, until finish has returned. */
 class ChunkWriter final {
   MOCHI_DECLARE_NO_COPY_NO_MOVE(ChunkWriter)
 
@@ -60,6 +63,14 @@ class ChunkWriter final {
   void CheckError(mochi::Error& error) const;
   /* Writes the remaining chunks, then stops the thread. */
   void Finish(mochi::Error& error);
+  /* Returns at once. The thread writes the remaining chunks, calls finish with the first failure,
+   * if any, then stops. finish runs on the thread, so it must not destroy the writer. */
+  void FinishAsync(std::function<void(mochi::Error&)> finish);
+  /* True once the thread has stopped: after Finish or Discard, or once FinishAsync's finish has
+   * returned. */
+  [[nodiscard]] bool IsFinished() const;
+  /* Waits for the thread to stop after FinishAsync. */
+  void Wait();
   /* Drops the remaining chunks, then stops the thread. */
   void Discard();
 
@@ -71,6 +82,7 @@ class ChunkWriter final {
     bool discarding = false;
     bool warnedBehind = false;
     mochi::Error error;
+    std::function<void(mochi::Error&)> finish;
   };
 
   void Run();
@@ -83,6 +95,7 @@ class ChunkWriter final {
   std::condition_variable _wake;
   // Lets CheckError, which runs on every append, skip the lock until a write fails.
   std::atomic<bool> _failed = false;
+  std::atomic<bool> _finished = false;
   std::thread _thread;
 };
 

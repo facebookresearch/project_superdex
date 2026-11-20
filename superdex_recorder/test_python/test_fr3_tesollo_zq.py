@@ -182,7 +182,7 @@ class Fr3TesolloZqTest(unittest.TestCase):
                 loaded.block.get_root_transform().translation.tolist()
             )
             joint_positions[frame] = get_joint_positions(loaded.actor)
-        episode.commit()
+        episode.commit_sync()
         return Rollout(
             episode.output_path, poses, heights, block_translations, joint_positions
         )

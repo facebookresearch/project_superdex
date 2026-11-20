@@ -198,7 +198,7 @@ bool SimRecording::Finish(RunSummary const& summary, std::string& outError) {
     AbortEpisode(*impl->episode, outError);
     return false;
   }
-  impl->episode->Commit(error);
+  impl->episode->CommitSync(error);
   // The recorder names files after their episode ID; tuner runs keep a fixed name.
   std::error_code renameError;
   if (error.IsOK()) {

@@ -780,7 +780,7 @@ def recording(
         return
     run = Recording(scene, directory, first_frame)
     yield run
-    run.episode.commit()
+    run.episode.commit_sync()
 
 
 def keep_recording(run: Recording | None, name: str) -> None:

@@ -164,7 +164,7 @@ TEST_F(PhysicsRecorderTest, CommitsWholeSceneWithoutExplicitActorRegistration) {
   physics.Record({.frame = 0, .simulationTimeSec = 0.0}, error);
   scene->Step(0.01);
   physics.Record({.frame = 1, .simulationTimeSec = scene->GetTotalSimulationTime()}, error);
-  episode->Commit(error);
+  episode->CommitSync(error);
 
   ASSERT_TRUE(error.IsOK()) << error.ToString();
   EXPECT_TRUE(std::filesystem::exists(episode->GetOutputPath()));
@@ -205,7 +205,7 @@ TEST_F(PhysicsRecorderTest, RecordsSoftActors) {
   physics.Record({.frame = 0, .simulationTimeSec = 0.0}, error);
   scene->Step(0.01);
   physics.Record({.frame = 1, .simulationTimeSec = scene->GetTotalSimulationTime()}, error);
-  episode->Commit(error);
+  episode->CommitSync(error);
 
   EXPECT_TRUE(error.IsOK()) << error.ToString();
 }
@@ -224,7 +224,7 @@ TEST_F(PhysicsRecorderTest, RecordsContactsWithRodActors) {
   PhysicsRecorder physics{*episode, *scene, {.recordContactForces = true}, error};
   scene->Step(0.01);
   physics.Record({.frame = 1, .simulationTimeSec = scene->GetTotalSimulationTime()}, error);
-  episode->Commit(error);
+  episode->CommitSync(error);
   auto const recording = EpisodeReader::Open(episode->GetOutputPath(), error);
   ASSERT_TRUE(error.IsOK()) << error.ToString();
 
@@ -292,7 +292,7 @@ TEST_F(PhysicsRecorderTest, RecordsEachRodSelfContactOnce) {
   scene->Step(1e-3_r);
   physics.Record({.frame = 1, .simulationTimeSec = scene->GetTotalSimulationTime()}, error);
   size_t const numMochiContacts = rod->GetContactPointsWorld(error).size();
-  episode->Commit(error);
+  episode->CommitSync(error);
   auto const recording = EpisodeReader::Open(episode->GetOutputPath(), error);
   ASSERT_TRUE(error.IsOK()) << error.ToString();
   auto const read = [&](char const* field) {

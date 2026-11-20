@@ -124,7 +124,7 @@ class NativeEpisodeReaderTest(unittest.TestCase):
                 hand.record_untracked(frame, time_sec)
             else:
                 hand.record(frame, time_sec, (keypoints + 0.001 * frame).reshape(-1))
-        episode.commit()
+        episode.commit_sync()
         # Mochi objects must be released before Mochi shuts down.
         del physics, robotics, command, hand, robot, bot, scene, bot_scene
         del robotics_context

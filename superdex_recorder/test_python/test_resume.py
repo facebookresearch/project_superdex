@@ -287,7 +287,7 @@ class ResumeTest(unittest.TestCase):
             recording.states.append(source.state())
             recording.efforts.append(applied)
             recording.touching.append(source.touches_robot())
-        episode.commit()
+        episode.commit_sync()
         rrd_verify.assert_rerun_accepts(episode.output_path)
         return recording
 

@@ -78,7 +78,7 @@ std::filesystem::path RecordEpisode(
     return {};
   }
   record(*episode, error);
-  episode->Commit(error);
+  episode->CommitSync(error);
   EXPECT_TRUE(error.IsOK()) << error.ToString();
   return episode->GetOutputPath();
 }

@@ -123,6 +123,26 @@ void ChunkWriter::Finish(mochi::Error& error) {
   CheckError(error);
 }
 
+void ChunkWriter::FinishAsync(std::function<void(mochi::Error&)> finish) {
+  _state.Mutate([&](State& state) {
+    MOCHI_ASSERT_VERBOSE(!state.stopping);
+    state.stopping = true;
+    state.finish = std::move(finish);
+  });
+  _wake.notify_one();
+}
+
+bool ChunkWriter::IsFinished() const {
+  return _finished.load(std::memory_order_acquire);
+}
+
+void ChunkWriter::Wait() {
+  MOCHI_ASSERT_VERBOSE(_state.Read([](State const& state) { return state.stopping; }));
+  if (_thread.joinable()) {
+    _thread.join();
+  }
+}
+
 void ChunkWriter::Discard() {
   Stop(/*discard=*/true);
 }
@@ -171,6 +191,16 @@ void ChunkWriter::Run() {
       }
     }
   }
+  std::function<void(mochi::Error&)> finish;
+  mochi::Error error;
+  _state.Mutate([&](State& state) {
+    finish = std::move(state.finish);
+    error = state.error.Copy();
+  });
+  if (finish) {
+    finish(error);
+  }
+  _finished.store(true, std::memory_order_release);
 }
 
 } // namespace superdex::recorder::detail

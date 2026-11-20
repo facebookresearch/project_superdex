@@ -144,6 +144,8 @@ Episode::~Episode() {
   if (_state == State::Active || _state == State::CommitFailed) {
     DiscardTemporaryFile(nullptr);
   }
+  // Waits for CommitAsync to publish the file.
+  _writer.reset();
 }
 
 void* Episode::operator new(size_t size) {
@@ -527,7 +529,48 @@ void Episode::WriteKeypointSkeleton(
   row.insert(row.end(), pointBatches.value.begin(), pointBatches.value.end());
 }
 
-void Episode::Commit(mochi::Error& error) {
+void Episode::CommitSync(mochi::Error& error) {
+  BeginCommit(error);
+  MOCHI_ERROR_RETURN(error);
+  _writer->Finish(error);
+  PublishFile(error);
+  MOCHI_ERROR_RETURN(error);
+  _state = State::Committed;
+}
+
+void Episode::CommitAsync(mochi::Error& error) {
+  BeginCommit(error);
+  MOCHI_ERROR_RETURN(error);
+  _state = State::Committed;
+  _writer->FinishAsync([this](mochi::Error& writeError) {
+    PublishFile(writeError);
+    if (!writeError.IsOK()) {
+      MOCHI_LOG_ERROR(
+          "Failed to commit episode '%s': %s", _episodeId.c_str(), writeError.ToString().c_str());
+      (void)RemoveTemporaryFile(nullptr);
+      _commitError = writeError.Copy();
+    }
+  });
+}
+
+bool Episode::IsCommitFinished() const {
+  return _state == State::Committed && _writer->IsFinished();
+}
+
+void Episode::WaitForCommit(mochi::Error& error) {
+  if (_state != State::Committed) {
+    MOCHI_ERROR_SET(error, "Cannot wait for an episode that is not committed.");
+    return;
+  }
+  _writer->Wait();
+  // The writer thread has stopped, so its write of _commitError is visible here.
+  if (!_commitError.IsOK()) {
+    error.SetFirstError(
+        _commitError.GetDescription(), _commitError.GetFile(), _commitError.GetLine());
+  }
+}
+
+void Episode::BeginCommit(mochi::Error& error) {
   ValidateWrite(error);
   _writer->CheckError(error);
   MOCHI_ERROR_RETURN(error);
@@ -549,7 +592,9 @@ void Episode::Commit(mochi::Error& error) {
     }
     series->SubmitChunk();
   }
-  _writer->Finish(error);
+}
+
+void Episode::PublishFile(mochi::Error& error) {
   MOCHI_ERROR_RETURN(error);
   // Every chunk is written, so this thread is the stream's only user.
   for (auto& [entityPath, batches] : _staticRows->batchesByEntity) {
@@ -571,9 +616,7 @@ void Episode::Commit(mochi::Error& error) {
         _episodeId.c_str(),
         filesystemError.message().c_str());
     MOCHI_ERROR_SET(error, "Failed to atomically publish the episode RRD.");
-    return;
   }
-  _state = State::Committed;
 }
 
 void Episode::Abort(std::string_view reason, mochi::Error& error) {
@@ -655,6 +698,12 @@ void Episode::DiscardTemporaryFile(mochi::Error* error) {
   _state = State::CommitFailed;
   SealSeries();
   _writer->Discard();
+  if (RemoveTemporaryFile(error)) {
+    _state = State::Aborted;
+  }
+}
+
+bool Episode::RemoveTemporaryFile(mochi::Error* error) {
   _stream.reset();
   std::error_code filesystemError;
   std::filesystem::remove(_temporaryPath, filesystemError);
@@ -664,9 +713,9 @@ void Episode::DiscardTemporaryFile(mochi::Error* error) {
     if (error != nullptr) {
       error->SetFirstError("Failed to remove the episode RRD.", __FILE__, __LINE__);
     }
-    return;
+    return false;
   }
-  _state = State::Aborted;
+  return true;
 }
 
 Recorder::Recorder(RecorderConfig const& config) : _config(config) {}

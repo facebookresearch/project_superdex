@@ -183,7 +183,7 @@ TEST_F(RoboticsRecorderTest, CommitsControllerConstantsAndSamples) {
 
   controllers.Record({.frame = 0, .simulationTimeSec = 0.0}, error);
   controllers.Record({.frame = 1, .simulationTimeSec = 0.01}, error);
-  episode->Commit(error);
+  episode->CommitSync(error);
 
   ASSERT_TRUE(error.IsOK()) << error.ToString();
   EXPECT_TRUE(std::filesystem::exists(episode->GetOutputPath()));
@@ -278,7 +278,7 @@ TEST_F(RoboticsRecorderTest, SkeletonShadowCommitsKeypointsAndUntrackedSamples) 
   ASSERT_TRUE(error.IsOK()) << error.ToString();
   Error repeatedFrameError;
   skeleton.RecordUntracked({.frame = 2, .simulationTimeSec = 0.02}, repeatedFrameError);
-  episode->Commit(error);
+  episode->CommitSync(error);
 
   EXPECT_FALSE(repeatedFrameError.IsOK());
   ASSERT_TRUE(error.IsOK()) << error.ToString();

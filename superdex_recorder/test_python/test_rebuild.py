@@ -215,7 +215,7 @@ class RebuildSceneTest(unittest.TestCase):
             for physics in recorders:
                 physics.record(frame, scene.get_total_simulation_time())
         for episode in episodes:
-            episode.commit()
+            episode.commit_sync()
         return episodes[0].output_path, episodes[1].output_path
 
     def test_rebuilt_scene_has_randomized_physical_parameters(self) -> None:
@@ -661,7 +661,7 @@ class RebuildSceneTest(unittest.TestCase):
         ).begin_episode()
         # Static poses are recorded with the first frame, which this episode never has.
         recorder.PhysicsRecorder(episode, physics_scene(live))
-        episode.commit()
+        episode.commit_sync()
         with self.assertRaisesRegex(
             ValueError, r"Static actor '.+' has no recorded pose"
         ):

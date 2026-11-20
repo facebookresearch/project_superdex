@@ -18,8 +18,12 @@
 #include <superdex_recorder/series.h>
 #include <superdex_recorder/source_recorder.h>
 
+#include <mochi_core/utils/defer.h>
+#include <mochi_core/utils/log.h>
+
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <array>
 #include <chrono>
 #include <cstdint>
@@ -87,7 +91,7 @@ TEST(SuperDexRecorderTest, CommitPublishesOnlyFinalFile) {
   EXPECT_FALSE(std::filesystem::exists(outputPath));
   ASSERT_NO_FATAL_FAILURE(AppendSample(*episode, error));
 
-  episode->Commit(error);
+  episode->CommitSync(error);
 
   ASSERT_TRUE(error.IsOK()) << error.ToString();
   EXPECT_FALSE(episode->IsActive());
@@ -112,7 +116,7 @@ TEST(SuperDexRecorderTest, CommitFailureLeavesNoPartialFile) {
     // No platform renames a file over a non-empty directory.
     std::filesystem::create_directories(outputPath / "blocker");
 
-    episode->Commit(error);
+    episode->CommitSync(error);
 
     EXPECT_FALSE(error.IsOK());
     EXPECT_FALSE(episode->IsActive());
@@ -122,6 +126,170 @@ TEST(SuperDexRecorderTest, CommitFailureLeavesNoPartialFile) {
   std::vector<std::filesystem::path> const files{
       std::filesystem::directory_iterator{directory.Path()}, std::filesystem::directory_iterator{}};
   EXPECT_EQ(files, expectedFiles);
+}
+
+TEST(SuperDexRecorderTest, CommitAsyncPublishesTheFileByTheTimeTheEpisodeIsDestroyed) {
+  TemporaryDirectory directory;
+  // Every sample fills a chunk, so chunks are still queued when the episode commits.
+  Recorder recorder{{.outputDirectory = directory.Path(), .chunkMaxBytes = 1}};
+  mochi::Error error;
+  std::filesystem::path outputPath;
+  {
+    auto episode = recorder.BeginEpisode({}, error);
+    ASSERT_NE(episode, nullptr) << error.ToString();
+    auto* const series = episode->CreateScalarSeries(
+        "data/test", {{"superdex.archetypes.Test", "superdex.test.value"}}, error);
+    ASSERT_NE(series, nullptr) << error.ToString();
+    std::array<mochi::real, 1> const value{1_r};
+    std::array<mochi::Span<mochi::real const>, 1> const fields{value};
+    for (uint64_t frame = 0; frame < 100; ++frame) {
+      series->Append({.frame = frame, .simulationTimeSec = 0.1 * frame}, fields, error);
+    }
+    ASSERT_TRUE(error.IsOK()) << error.ToString();
+    outputPath = episode->GetOutputPath();
+
+    episode->CommitAsync(error);
+
+    ASSERT_TRUE(error.IsOK()) << error.ToString();
+    EXPECT_FALSE(episode->IsActive());
+  }
+
+  std::vector<std::filesystem::path> const expectedFiles{outputPath};
+  std::vector<std::filesystem::path> const files{
+      std::filesystem::directory_iterator{directory.Path()}, std::filesystem::directory_iterator{}};
+  EXPECT_EQ(files, expectedFiles);
+  EXPECT_GT(std::filesystem::file_size(outputPath), 0);
+}
+
+TEST(SuperDexRecorderTest, CommitAsyncLogsFailureAndLeavesNoPartialFile) {
+  // Destroying the episode joins the writer thread before these are read.
+  std::vector<std::string> errors;
+  mochi::SetLogCallback(
+      [&errors](mochi::LogChannel channel, char const* message, char const*, int) {
+        if (channel == mochi::LogChannel::Error) {
+          errors.emplace_back(message);
+        }
+      });
+  MOCHI_DEFER(mochi::SetLogCallback({}));
+  TemporaryDirectory directory;
+  Recorder recorder{{.outputDirectory = directory.Path()}};
+  mochi::Error error;
+  std::filesystem::path outputPath;
+  {
+    auto episode = recorder.BeginEpisode({}, error);
+    ASSERT_TRUE(error.IsOK()) << error.ToString();
+    ASSERT_NE(episode, nullptr);
+    ASSERT_NO_FATAL_FAILURE(AppendSample(*episode, error));
+    outputPath = episode->GetOutputPath();
+    // No platform renames a file over a non-empty directory.
+    std::filesystem::create_directories(outputPath / "blocker");
+
+    episode->CommitAsync(error);
+
+    EXPECT_TRUE(error.IsOK()) << error.ToString();
+  }
+
+  std::vector<std::filesystem::path> const expectedFiles{outputPath};
+  std::vector<std::filesystem::path> const files{
+      std::filesystem::directory_iterator{directory.Path()}, std::filesystem::directory_iterator{}};
+  EXPECT_EQ(files, expectedFiles);
+  EXPECT_TRUE(std::any_of(errors.begin(), errors.end(), [](std::string const& message) {
+    return message.find("Failed to commit episode") != std::string::npos;
+  }));
+}
+
+TEST(SuperDexRecorderTest, CommitAsyncEndsTheEpisode) {
+  TemporaryDirectory directory;
+  Recorder recorder{{.outputDirectory = directory.Path()}};
+  mochi::Error error;
+  auto episode = recorder.BeginEpisode({}, error);
+  ASSERT_TRUE(error.IsOK()) << error.ToString();
+  ASSERT_NE(episode, nullptr);
+  auto* const series = episode->CreateScalarSeries(
+      "data/test", {{"superdex.archetypes.Test", "superdex.test.value"}}, error);
+  ASSERT_NE(series, nullptr) << error.ToString();
+
+  episode->CommitAsync(error);
+
+  ASSERT_TRUE(error.IsOK()) << error.ToString();
+  mochi::Error appendError;
+  std::array<mochi::real, 1> const value{1_r};
+  std::array<mochi::Span<mochi::real const>, 1> const fields{value};
+  series->Append({.frame = 0, .simulationTimeSec = 0.0}, fields, appendError);
+  EXPECT_FALSE(appendError.IsOK());
+  mochi::Error commitError;
+  episode->CommitSync(commitError);
+  EXPECT_FALSE(commitError.IsOK());
+  mochi::Error abortError;
+  episode->Abort("too late", abortError);
+  EXPECT_FALSE(abortError.IsOK());
+}
+
+TEST(SuperDexRecorderTest, WaitForCommitReturnsOnceTheBackgroundCommitPublishedTheFile) {
+  TemporaryDirectory directory;
+  // Every sample fills a chunk, so chunks are still queued when the episode commits.
+  Recorder recorder{{.outputDirectory = directory.Path(), .chunkMaxBytes = 1}};
+  mochi::Error error;
+  auto episode = recorder.BeginEpisode({}, error);
+  ASSERT_NE(episode, nullptr) << error.ToString();
+  auto* const series = episode->CreateScalarSeries(
+      "data/test", {{"superdex.archetypes.Test", "superdex.test.value"}}, error);
+  ASSERT_NE(series, nullptr) << error.ToString();
+  std::array<mochi::real, 1> const value{1_r};
+  std::array<mochi::Span<mochi::real const>, 1> const fields{value};
+  for (uint64_t frame = 0; frame < 100; ++frame) {
+    series->Append({.frame = frame, .simulationTimeSec = 0.1 * frame}, fields, error);
+  }
+  episode->CommitAsync(error);
+  ASSERT_TRUE(error.IsOK()) << error.ToString();
+
+  episode->WaitForCommit(error);
+
+  EXPECT_TRUE(error.IsOK()) << error.ToString();
+  EXPECT_TRUE(episode->IsCommitFinished());
+  std::vector<std::filesystem::path> const expectedFiles{episode->GetOutputPath()};
+  std::vector<std::filesystem::path> const files{
+      std::filesystem::directory_iterator{directory.Path()}, std::filesystem::directory_iterator{}};
+  EXPECT_EQ(files, expectedFiles);
+}
+
+TEST(SuperDexRecorderTest, WaitForCommitReportsAFailedBackgroundCommit) {
+  mochi::SetLogCallback([](mochi::LogChannel, char const*, char const*, int) {});
+  MOCHI_DEFER(mochi::SetLogCallback({}));
+  TemporaryDirectory directory;
+  Recorder recorder{{.outputDirectory = directory.Path()}};
+  mochi::Error error;
+  auto episode = recorder.BeginEpisode({}, error);
+  ASSERT_NE(episode, nullptr) << error.ToString();
+  ASSERT_NO_FATAL_FAILURE(AppendSample(*episode, error));
+  // No platform renames a file over a non-empty directory.
+  std::filesystem::create_directories(episode->GetOutputPath() / "blocker");
+  episode->CommitAsync(error);
+  ASSERT_TRUE(error.IsOK()) << error.ToString();
+
+  episode->WaitForCommit(error);
+
+  EXPECT_FALSE(error.IsOK());
+  EXPECT_TRUE(episode->IsCommitFinished());
+}
+
+TEST(SuperDexRecorderTest, CommitIsFinishedOnlyOnceCommitted) {
+  TemporaryDirectory directory;
+  Recorder recorder{{.outputDirectory = directory.Path()}};
+  mochi::Error error;
+  auto episode = recorder.BeginEpisode({}, error);
+  ASSERT_NE(episode, nullptr) << error.ToString();
+  EXPECT_FALSE(episode->IsCommitFinished());
+  mochi::Error waitError;
+  episode->WaitForCommit(waitError);
+  EXPECT_FALSE(waitError.IsOK());
+
+  episode->CommitSync(error);
+
+  ASSERT_TRUE(error.IsOK()) << error.ToString();
+  EXPECT_TRUE(episode->IsCommitFinished());
+  episode->WaitForCommit(error);
+  EXPECT_TRUE(error.IsOK()) << error.ToString();
 }
 
 TEST(SuperDexRecorderTest, AbortDiscardsEpisode) {
@@ -206,9 +374,9 @@ TEST(SuperDexRecorderTest, EpisodesHaveIndependentIdsAndFiles) {
   ASSERT_NE(second, nullptr);
   EXPECT_NE(first->GetEpisodeId(), second->GetEpisodeId());
 
-  first->Commit(error);
+  first->CommitSync(error);
   ASSERT_TRUE(error.IsOK()) << error.ToString();
-  second->Commit(error);
+  second->CommitSync(error);
   ASSERT_TRUE(error.IsOK()) << error.ToString();
   EXPECT_TRUE(std::filesystem::exists(first->GetOutputPath()));
   EXPECT_TRUE(std::filesystem::exists(second->GetOutputPath()));
@@ -285,7 +453,7 @@ TEST(SuperDexRecorderTest, SamplesSubmittedToTheWriterStayCounted) {
   for (uint64_t frame = 0; frame < 5; ++frame) {
     series->Append({.frame = frame, .simulationTimeSec = 0.1 * frame}, fields, error);
   }
-  episode->Commit(error);
+  episode->CommitSync(error);
 
   ASSERT_TRUE(error.IsOK()) << error.ToString();
   EXPECT_EQ(series->GetNumSamples(), 5U);
@@ -469,7 +637,7 @@ TEST(SuperDexRecorderTest, TransformSeriesRejectsUnchangedTransformsAfterCommit)
   ASSERT_NE(series, nullptr);
   auto const transform = mochi::TransformRT::Identity();
   series->Append({.frame = 1, .simulationTimeSec = 0.1}, transform, error);
-  episode->Commit(error);
+  episode->CommitSync(error);
   ASSERT_TRUE(error.IsOK()) << error.ToString();
 
   mochi::Error appendError;
@@ -522,7 +690,7 @@ TEST(SuperDexRecorderTest, Points3DSeriesStoresOnlyChangedBatches) {
   EXPECT_EQ(series->GetNumSamples(), 4U);
   series->Append({.frame = 8, .simulationTimeSec = 0.8}, points, error);
   EXPECT_EQ(series->GetNumSamples(), 5U);
-  episode->Commit(error);
+  episode->CommitSync(error);
 
   ASSERT_TRUE(error.IsOK()) << error.ToString();
 }
@@ -593,7 +761,7 @@ TEST(SuperDexRecorderTest, TextSeriesRecordsSeveralTextsPerFrame) {
   series->Append({.frame = 2, .simulationTimeSec = 0.2}, {}, error);
   series->Append({.frame = 3, .simulationTimeSec = 0.3}, text, error);
   EXPECT_EQ(series->GetNumSamples(), 3U);
-  episode->Commit(error);
+  episode->CommitSync(error);
 
   ASSERT_TRUE(error.IsOK()) << error.ToString();
   EXPECT_TRUE(std::filesystem::exists(episode->GetOutputPath()));
@@ -646,7 +814,7 @@ TEST(SuperDexRecorderTest, SourceRecorderCreatesEachStreamOnFirstUse) {
     sources.RecordTexts(time, "study", events, error);
     sources.RecordScalar(time, "score", static_cast<mochi::real>(frame), error);
   }
-  episode->Commit(error);
+  episode->CommitSync(error);
 
   EXPECT_TRUE(error.IsOK()) << error.ToString();
 }
@@ -667,7 +835,7 @@ TEST(SuperDexRecorderTest, SourceRecorderRecordsScalarListsOnTheScalarSeries) {
   sources.RecordScalar(second, "forces", 4_r, error);
   mochi::Error repeatedFrameError;
   sources.RecordScalars(second, "forces", forces, repeatedFrameError);
-  episode->Commit(error);
+  episode->CommitSync(error);
 
   EXPECT_TRUE(error.IsOK()) << error.ToString();
   EXPECT_FALSE(repeatedFrameError.IsOK());

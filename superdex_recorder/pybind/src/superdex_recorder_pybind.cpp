@@ -173,8 +173,22 @@ NB_MODULE(SUPERDEX_RECORDER_MODULE_NAME, module) {
 
   nb::class_<Episode>(module, "Episode")
       .def(
-          "commit",
-          [](Episode& self) { CallWithError([&](mochi::Error& error) { self.Commit(error); }); })
+          "commit_sync",
+          [](Episode& self) {
+            CallWithError([&](mochi::Error& error) { self.CommitSync(error); });
+          })
+      .def(
+          "commit_async",
+          [](Episode& self) {
+            CallWithError([&](mochi::Error& error) { self.CommitAsync(error); });
+          })
+      .def(
+          "wait_for_commit",
+          [](Episode& self) {
+            CallWithError([&](mochi::Error& error) { self.WaitForCommit(error); });
+          },
+          nb::call_guard<nb::gil_scoped_release>())
+      .def_prop_ro("is_commit_finished", &Episode::IsCommitFinished)
       .def(
           "abort",
           [](Episode& self, std::string const& reason) {

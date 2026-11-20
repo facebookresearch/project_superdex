@@ -66,7 +66,7 @@ class RecorderTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory_string:
             directory = Path(directory_string)
             episode = self.make_recorder(directory).begin_episode(self.make_metadata())
-            episode.commit()
+            episode.commit_sync()
 
             self.assertTrue(episode.output_path.exists())
             recording = EpisodeReader(episode.output_path)
@@ -178,7 +178,7 @@ class RecorderTest(unittest.TestCase):
                 physics.record(0, 0.0)
                 scene.step(0.02)
                 physics.record(1, scene.get_total_simulation_time())
-                episode.commit()
+                episode.commit_sync()
 
                 recording = EpisodeReader(episode.output_path)
                 actor_ids = recording.component_samples("superdex.physics.actor_id")
@@ -290,7 +290,7 @@ class RecorderTest(unittest.TestCase):
                 episode = self.make_recorder(directory).begin_episode()
                 physics = recorder.PhysicsRecorder(episode, scene, config)
                 physics.record(0, 0.0)
-                episode.commit()
+                episode.commit_sync()
 
                 recording = EpisodeReader(episode.output_path)
                 ids = {
@@ -351,7 +351,7 @@ class RecorderTest(unittest.TestCase):
                 episode = self.make_recorder(Path(directory_string)).begin_episode()
                 physics = recorder.PhysicsRecorder(episode, scene)
                 physics.record(0, 0.0)
-                episode.commit()
+                episode.commit_sync()
 
                 real_type = pa.from_numpy_dtype(np.asarray(scene.get_gravity()).dtype)
                 self.assertEqual(
@@ -395,7 +395,7 @@ class RecorderTest(unittest.TestCase):
                 episode = self.make_recorder(Path(directory_string)).begin_episode()
                 physics = recorder.PhysicsRecorder(episode, scene)
                 physics.record(0, 0.0)
-                episode.commit()
+                episode.commit_sync()
 
                 stream = _rr_experimental.RrdReader(episode.output_path).stream()
                 static_chunks = [chunk for chunk in stream if chunk.is_static]
@@ -437,7 +437,7 @@ class RecorderTest(unittest.TestCase):
                 episode = self.make_recorder(Path(directory_string)).begin_episode()
                 physics = recorder.PhysicsRecorder(episode, scene)
                 physics.record(0, 0.0)
-                episode.commit()
+                episode.commit_sync()
 
                 recording = EpisodeReader(episode.output_path)
                 self.assertEqual(
@@ -499,7 +499,7 @@ class RecorderTest(unittest.TestCase):
                     physics.record(frame, scene.get_total_simulation_time())
                     surfaces.append(np.array(get_vertices(actor)))
                 triangles = np.asarray(get_mesh(actor).connectivity)
-                episode.commit()
+                episode.commit_sync()
 
                 rrd_verify.assert_rerun_accepts(episode.output_path)
                 recording = EpisodeReader(episode.output_path)
@@ -595,7 +595,7 @@ class RecorderTest(unittest.TestCase):
                     if frame > 0:
                         scene.step(0.01)
                     physics.record(frame, scene.get_total_simulation_time())
-                episode.commit()
+                episode.commit_sync()
 
                 recording = EpisodeReader(episode.output_path)
                 samples = recording.component_samples(
@@ -634,7 +634,7 @@ class RecorderTest(unittest.TestCase):
                         scene.get_total_simulation_time(),
                         wall_time_sec=wall_times_sec[-1],
                     )
-                episode.commit()
+                episode.commit_sync()
 
                 samples = EpisodeReader(episode.output_path).component_samples(
                     "superdex.physics.step_dt_sec"
@@ -660,7 +660,7 @@ class RecorderTest(unittest.TestCase):
                         scene.step(0.0010003)
                     times_sec.append(scene.get_total_simulation_time())
                     physics.record(frame, times_sec[-1])
-                episode.commit()
+                episode.commit_sync()
 
                 samples = EpisodeReader(episode.output_path).component_samples(
                     "superdex.physics.step_dt_sec"
@@ -673,9 +673,17 @@ class RecorderTest(unittest.TestCase):
                 sdp.shutdown()
 
     def record_falling_cube(
-        self, directory: Path, chunk_max_bytes: int, chunk_max_duration_sec: float
+        self,
+        directory: Path,
+        chunk_max_bytes: int,
+        chunk_max_duration_sec: float,
+        commit_async: bool = False,
+        wait_for_commit: bool = False,
     ) -> Path:
-        """Record a cube dropped on the ground, with contacts, for 200 frames."""
+        """Record a cube dropped on the ground, with contacts, for 200 frames.
+
+        The episode is released, so its file is published, before this returns.
+        """
         sdp.initialize(num_worker_threads=0)
         scene = None
         physics = None
@@ -722,7 +730,14 @@ class RecorderTest(unittest.TestCase):
             for frame in range(1, 200):
                 scene.step(0.01)
                 physics.record(frame, scene.get_total_simulation_time())
-            episode.commit()
+            if commit_async:
+                episode.commit_async()
+            else:
+                episode.commit_sync()
+            if wait_for_commit:
+                episode.wait_for_commit()
+                self.assertTrue(episode.is_commit_finished)
+                self.assertTrue(episode.output_path.is_file())
             return episode.output_path
         finally:
             physics = None
@@ -750,6 +765,31 @@ class RecorderTest(unittest.TestCase):
             self.assertGreater(chunks_per_entity["/data/physics/frames"], 1)
             self.assertGreater(chunks_per_entity["/data/physics/contacts"], 1)
             self.assert_same_falling_cube(EpisodeReader(chunked), EpisodeReader(whole))
+
+    def test_commit_async_publishes_the_same_episode(self) -> None:
+        with tempfile.TemporaryDirectory() as directory_string:
+            directory = Path(directory_string)
+            synchronous = self.record_falling_cube(directory, 2048, 0.25)
+            asynchronous = self.record_falling_cube(
+                directory, 2048, 0.25, commit_async=True
+            )
+            rrd_verify.assert_rerun_accepts(asynchronous)
+            self.assert_same_falling_cube(
+                EpisodeReader(asynchronous), EpisodeReader(synchronous)
+            )
+
+    def test_wait_for_commit_publishes_the_file_before_the_episode_is_released(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory_string:
+            directory = Path(directory_string)
+            synchronous = self.record_falling_cube(directory, 2048, 0.25)
+            waited = self.record_falling_cube(
+                directory, 2048, 0.25, commit_async=True, wait_for_commit=True
+            )
+            self.assert_same_falling_cube(
+                EpisodeReader(waited), EpisodeReader(synchronous)
+            )
 
     def assert_same_falling_cube(
         self, actual: EpisodeReader, expected: EpisodeReader
@@ -826,7 +866,7 @@ class RecorderTest(unittest.TestCase):
                     scene.step(0.01)
                     physics.record(frame, scene.get_total_simulation_time())
                     expected_forces[frame] = cube.get_contact_force_world().tolist()
-                episode.commit()
+                episode.commit_sync()
                 rrd_verify.assert_rerun_accepts(episode.output_path)
                 self.assertGreater(expected_forces[3][1], 1.0)
 
