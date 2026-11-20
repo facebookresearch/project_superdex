@@ -101,6 +101,7 @@ FSuperDexSceneRecorder::FSuperDexSceneRecorder() = default;
 
 FSuperDexSceneRecorder::~FSuperDexSceneRecorder() {
   AbortEpisode(TEXT("Recorder destroyed before commit."));
+  CommittingEpisode.reset();
 }
 
 bool FSuperDexSceneRecorder::BeginEpisode(
@@ -607,7 +608,16 @@ void FSuperDexSceneRecorder::EndCapture() {
   CapturingRecorders().RemoveAll([this](const auto& Entry) { return Entry.Value == this; });
 }
 
-bool FSuperDexSceneRecorder::CommitEpisode() {
+bool FSuperDexSceneRecorder::CommitEpisodeSync() {
+  CommittingEpisode.reset();
+  return CommitEpisode(/*bAsync=*/false);
+}
+
+bool FSuperDexSceneRecorder::CommitEpisodeAsync() {
+  return CommitEpisode(/*bAsync=*/true);
+}
+
+bool FSuperDexSceneRecorder::CommitEpisode(bool bAsync) {
   if (Episode == nullptr) {
     return false;
   }
@@ -618,7 +628,11 @@ bool FSuperDexSceneRecorder::CommitEpisode() {
   }
 
   mochi::Error Error;
-  Episode->CommitSync(Error);
+  if (bAsync) {
+    Episode->CommitAsync(Error);
+  } else {
+    Episode->CommitSync(Error);
+  }
   if (!Error.IsOK()) {
     UE_LOG(
         LogSuperDexRecorder,
@@ -632,8 +646,13 @@ bool FSuperDexSceneRecorder::CommitEpisode() {
     Recorder.reset();
     return false;
   }
-  UE_LOG(LogSuperDexRecorder, Log, TEXT("Committed SuperDex recording: %s"), *OutputPath);
-  Episode.reset();
+  if (bAsync) {
+    UE_LOG(LogSuperDexRecorder, Log, TEXT("Committing SuperDex recording: %s"), *OutputPath);
+    CommittingEpisode = std::move(Episode);
+  } else {
+    UE_LOG(LogSuperDexRecorder, Log, TEXT("Committed SuperDex recording: %s"), *OutputPath);
+    Episode.reset();
+  }
   Recorder.reset();
   return true;
 }

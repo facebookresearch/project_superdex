@@ -128,7 +128,11 @@ class SUPERDEXRECORDER_API FSuperDexSceneRecorder final {
 
   bool BeginEpisode(UObject* WorldContext, const FSuperDexSceneRecorderConfig& Config);
   void EndCapture();
-  bool CommitEpisode();
+  /* Waits for an earlier CommitEpisodeAsync, then writes this episode's file before returning. */
+  bool CommitEpisodeSync();
+  /* Writes the file in the background; the next commit and the recorder's destruction wait for
+   * it. */
+  bool CommitEpisodeAsync();
   void AbortEpisode(FStringView Reason);
 
   bool IsRecording() const;
@@ -181,12 +185,14 @@ class SUPERDEXRECORDER_API FSuperDexSceneRecorder final {
   void RecordSources(const superdex::recorder::SampleTime& Time, mochi::Error& Error);
   void RecordQueuedValues(const superdex::recorder::SampleTime& Time, mochi::Error& Error);
   void SetCaptureError(const mochi::Error& Error);
+  bool CommitEpisode(bool bAsync);
 
   TWeakObjectPtr<UMochiSceneObject> SceneObject;
   mochi::CallbackHandle PostStepCallback;
   superdex::robotics::RoboticsContext* RoboticsContext = nullptr;
   std::unique_ptr<superdex::recorder::Recorder> Recorder;
   std::unique_ptr<superdex::recorder::Episode> Episode;
+  std::unique_ptr<superdex::recorder::Episode> CommittingEpisode;
   superdex::recorder::PhysicsRecorderConfig PhysicsConfig;
   std::unique_ptr<superdex::recorder::PhysicsRecorder> PhysicsRecorder;
   std::vector<std::unique_ptr<superdex::recorder::RoboticsRecorder>> RoboticsRecorders;

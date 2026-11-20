@@ -1,15 +1,15 @@
 # SuperDex Recorder for Unreal
 
 The `SuperDexRecorder` module of the SuperDexRobotics plugin records a Mochi scene and its SuperDex
-robot controllers to one transactional RRD per episode. It buffers sampled columns in memory and
-writes them when the episode commits. A two-arm teleoperation scene records about 1 MB/s, and
-committing blocks the calling thread while it writes, so keep episodes to minutes.
+robot controllers to one transactional RRD per episode, written in chunks on a background thread.
 
-Create an `FSuperDexSceneRecorder`, call `BeginEpisode`, then call either `CommitEpisode` or
-`AbortEpisode`. It records the SuperDexPhysics game-instance scene unless the config's `Scene` names
-another Mochi scene, and only the robots whose articulation lives in that scene. To record several
-scenes, use one recorder (one episode) per scene. Two recorders capturing the same scene both record
-everything in it, so the second logs a warning.
+Create an `FSuperDexSceneRecorder`, call `BeginEpisode`, then call `CommitEpisodeSync`,
+`CommitEpisodeAsync` or `AbortEpisode`. `CommitEpisodeAsync` writes the file in the background; the
+next commit and the recorder's destruction wait for it. It records the SuperDexPhysics
+game-instance scene unless the config's `Scene` names another Mochi scene, and only the robots
+whose articulation lives in that scene. To record several scenes, use one recorder (one episode)
+per scene. Two recorders capturing the same scene both record everything in it, so the second logs
+a warning.
 
 Each sample is recorded on three timelines: `frame`, `sim_time` (the simulation time) and
 `wall_time`, the wall-clock time since the episode began, on a monotonic clock, at which the

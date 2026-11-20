@@ -108,7 +108,7 @@ bool ASuperDexRecorder::CommitRecording() {
     return false;
   }
   const FString OutputPath = Recorder->GetOutputPath();
-  const bool bCommitted = Recorder->CommitEpisode();
+  const bool bCommitted = Recorder->CommitEpisodeSync();
   EndSources();
   if (!bCommitted) {
     OnRecordingAborted.Broadcast(TEXT("Commit failed."));
