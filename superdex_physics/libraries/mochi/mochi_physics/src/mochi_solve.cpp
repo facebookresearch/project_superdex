@@ -515,7 +515,7 @@ static void GatherSnleDataFromActors(
 
   // Helper: Adds to actorResiduals and/or actorMatrices
   auto addActorSnleToProblem = [&](int dofOffset, ActorSnle* actorSnle, entt::entity actor) {
-    if (actorSnle && actorSnle->useInSolver) {
+    if (actorSnle->useInSolver) {
       bool const useReduced = actorSnle->UseReduced();
       auto& res = useReduced ? actorSnle->reducedResidual : actorSnle->fullResidual;
       auto& dRes = useReduced ? actorSnle->reducedDResidual : actorSnle->fullDResidual;
@@ -570,7 +570,7 @@ static void GatherSnleDataFromActors(
 
   // Helper: Adds to interactionResiduals and/or interactionMatrices
   auto addInteractionSnleToProblem = [&](InteractionSnle* interSnle) {
-    if (interSnle && interSnle->useInSolver) {
+    if (interSnle->useInSolver) {
       outProblem.trustMargin = Min(outProblem.trustMargin, interSnle->trustMargin);
       if (params.assemObj) {
         outProblem.objective += interSnle->objective;
@@ -615,9 +615,13 @@ static void GatherSnleDataFromActors(
   }
 
   ForEachIslandSnle(reg, island, actors, [&]<typename Snle>(entt::entity e, Snle* snle) {
+    if (!snle) {
+      return;
+    }
+
     if constexpr (!std::is_same_v<Snle, CActorSnle>) {
       addInteractionSnleToProblem(snle);
-    } else if (snle && snle->useInSolver) {
+    } else if (snle->useInSolver) {
       // Determine the dof offset for this actor based on the grad target.
       int dofOffset{};
       switch (params.gradTarget) {
@@ -638,6 +642,11 @@ static void GatherSnleDataFromActors(
       }
       addActorSnleToProblem(dofOffset, snle, e);
     }
+
+    // The terms that compute a trust margin lower it from +inf in the next assembly. Reset it in
+    // every SNLE, including those not used in the solver: articulated link bodies relay theirs to
+    // their compound.
+    snle->trustMargin = kInf;
   });
 }
 
@@ -723,13 +732,14 @@ void mochi::solver::AssembleIslandPipeline(
 
   auto const& descendants = reg.get<CIslandDescendants const>(island);
 
-  // Reset the trust margins of the SNLEs, including those not used in the solver (articulated link
-  // bodies relay theirs to their compound), before the terms that compute one lower them.
+#if MOCHI_ASSERT_VERBOSE_ENABLED
+  // The previous assembly's gather reset them (see GatherSnleDataFromActors).
   ForEachIslandSnle(reg, island, descendants.actors, [](entt::entity, BaseSnle* snle) {
-    if (snle) {
-      snle->trustMargin = kInf;
-    }
+    MOCHI_ASSERT_VERBOSE(
+        !snle || snle->trustMargin == kInf,
+        "SNLE trust margins must be +inf when an island assembly starts.");
   });
+#endif // MOCHI_ASSERT_VERBOSE_ENABLED
 
   // Used to wait for async tasks
   TaskSemaphore masterSemaphore, softCompletionSem;
@@ -919,7 +929,8 @@ void mochi::solver::AssembleIslandPipeline(
   // before GatherSnleDataFromActors (weights consumed).
   ecs::InvokeForEach(&UpdateActorConvergenceWeights, reg, descendants.actors, std::cref(reg));
 
-  // Collect SNLE data from the individual actors.
+  // Collect SNLE data from the individual actors. This also resets their trust margins for the
+  // next assembly, so every assembly must end here.
   GatherSnleDataFromActors(problem, params, reg, island, descendants.actors);
 
   // Apply Dirichlet Boundary Conditions
