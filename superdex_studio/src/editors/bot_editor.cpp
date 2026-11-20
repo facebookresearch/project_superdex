@@ -721,12 +721,12 @@ void BotEditor::SnapshotBatchRenameNames() {
           [&](auto&& m) {
             using T = std::decay_t<decltype(m)>;
             if constexpr (std::is_same_v<T, AttachLink>) {
-              _batchRename.linkNames.push_back(m.link.name.c_str());
-              _batchRename.jointNames.push_back(m.joint.name.c_str());
+              _batchRename.linkNames.emplace_back(m.link.name.c_str());
+              _batchRename.jointNames.emplace_back(m.joint.name.c_str());
             } else if constexpr (std::is_same_v<T, ReplaceLink>) {
-              _batchRename.linkNames.push_back(m.link.name.c_str());
+              _batchRename.linkNames.emplace_back(m.link.name.c_str());
             } else if constexpr (std::is_same_v<T, AttachBot>) {
-              _batchRename.jointNames.push_back(m.joint.name.c_str());
+              _batchRename.jointNames.emplace_back(m.joint.name.c_str());
             }
           },
           mod);
@@ -734,10 +734,10 @@ void BotEditor::SnapshotBatchRenameNames() {
   } else {
     BotPrefab const& botPrefab = _botAsset->GetBotPrefab();
     for (auto const& link : botPrefab.links) {
-      _batchRename.linkNames.push_back(link.name.c_str());
+      _batchRename.linkNames.emplace_back(link.name.c_str());
     }
     for (auto const& joint : botPrefab.joints) {
-      _batchRename.jointNames.push_back(joint.name.c_str());
+      _batchRename.jointNames.emplace_back(joint.name.c_str());
     }
   }
 }
