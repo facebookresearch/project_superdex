@@ -236,9 +236,16 @@ class Simd<float, 4> {
   template <int N = kSize>
   MOCHI_FORCE_INLINE static void Store([[maybe_unused]] float* ptr, [[maybe_unused]] Simd v) {
     static_assert(N >= 0 && N <= kSize);
+    // Partial stores write the lanes straight from the register. A memcpy of the vector leaves the
+    // instructions and their order to the compiler.
     if constexpr (N == 0) {
-    } else if constexpr (N < kSize) {
-      memcpy(ptr, &v, sizeof(float) * N);
+    } else if constexpr (N == 1) {
+      vst1q_lane_f32(ptr, v.raw, 0);
+    } else if constexpr (N == 2) {
+      vst1_f32(ptr, vget_low_f32(v.raw));
+    } else if constexpr (N == 3) {
+      vst1_f32(ptr, vget_low_f32(v.raw));
+      vst1q_lane_f32(ptr + 2, v.raw, 2);
     } else {
       vst1q_f32(ptr, v.raw);
     }

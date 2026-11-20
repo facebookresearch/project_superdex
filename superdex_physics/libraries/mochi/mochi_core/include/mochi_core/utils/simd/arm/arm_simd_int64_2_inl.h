@@ -197,8 +197,8 @@ class Simd<int64_t, 2> {
   MOCHI_FORCE_INLINE static void Store([[maybe_unused]] Scalar* ptr, [[maybe_unused]] Simd v) {
     static_assert(N >= 0 && N <= kSize);
     if constexpr (N == 0) {
-    } else if constexpr (N < kSize) {
-      memcpy(ptr, &v, sizeof(Scalar) * N);
+    } else if constexpr (N == 1) {
+      vst1q_lane_s64(ptr, v.raw, 0);
     } else {
       vst1q_s64(ptr, v.raw);
     }
