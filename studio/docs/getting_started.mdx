@@ -45,7 +45,8 @@ Studio also builds with CMake by enabling `-DSUPERDEX_BUILD_STUDIO=ON`.
    to get the source code, install the prerequisites, open the Windows developer
    shell when applicable, and enter the repository root.
 2. Configure the build to include Studio: `cmake -B build -DCMAKE_BUILD_TYPE=Release -DMOCHI_BUILD_DEBUGGER=OFF -DMOCHI_USE_PYBIND=OFF -DSUPERDEX_BUILD_STUDIO=ON -G Ninja`
-3. Build: `cmake --build build --parallel`
+3. Build: `cmake --build build --parallel`. To build without downloading the Rerun C++ SDK and
+   Apache Arrow, configure with `-DSUPERDEX_BUILD_RECORDER=OFF`, which disables IK recording playback.
 4. Run Studio from `build/bin`: `./superdex_studio` on Linux or macOS, or
    `superdex_studio.exe` on Windows.
 
