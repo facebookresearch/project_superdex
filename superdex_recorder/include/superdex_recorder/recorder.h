@@ -42,6 +42,10 @@ class RecordingStream;
 
 namespace superdex::recorder {
 
+namespace detail {
+class ChunkWriter;
+} // namespace detail
+
 class Series;
 class ScalarSeries;
 class TransformSeries;
@@ -75,13 +79,19 @@ struct ComponentField {
 
 struct RecorderConfig {
   std::filesystem::path outputDirectory;
+  /* @brief A series writes its buffered rows as one RRD chunk once they reach either limit. Zero
+   * disables a limit; with both disabled, each series is one chunk written at commit. The byte
+   * limit is at most 1 GB, since the native reader rejects chunks over 2 GiB. */
+  size_t chunkMaxBytes = 8'000'000; // 8 MB
+  double chunkMaxDurationSec = 10.0;
 };
 
 struct EpisodeMetadata {
   std::map<std::string, std::string> properties;
 };
 
-/* @brief Owns one transactional RRD and the constants and sample series buffered until commit. */
+/* @brief Owns one transactional RRD and its sample series. A writer thread writes the series in
+ * chunks; constants are buffered until commit. */
 class SUPERDEX_RECORDER_API Episode final {
   MOCHI_DECLARE_NO_COPY_NO_MOVE(Episode)
 
@@ -161,8 +171,8 @@ class SUPERDEX_RECORDER_API Episode final {
       float keypointRadiusMeters,
       mochi::Error& error);
 
-  /* Every sample stays in memory until Commit, which blocks the calling thread while it writes the
-   * episode; a two-arm teleoperation scene records about 1 MB/s, so keep episodes to minutes. */
+  /* Writes the remaining rows and the constants, then publishes the file. Commit and Abort may run
+   * on any thread once appending has stopped. */
   void Commit(mochi::Error& error);
   void Abort(std::string_view reason, mochi::Error& error);
 
@@ -189,10 +199,12 @@ class SUPERDEX_RECORDER_API Episode final {
       std::string episodeId,
       std::filesystem::path temporaryPath,
       std::filesystem::path outputPath,
-      std::unique_ptr<rerun::RecordingStream> stream);
+      std::unique_ptr<rerun::RecordingStream> stream,
+      RecorderConfig const& config);
 
   void ValidateWrite(mochi::Error& error) const;
   void ValidateSeriesPath(std::string_view entityPath, mochi::Error& error) const;
+  void AddSeries(std::unique_ptr<Series> series);
   void SealSeries();
   void DiscardTemporaryFile(mochi::Error* error);
 
@@ -202,6 +214,8 @@ class SUPERDEX_RECORDER_API Episode final {
   std::unique_ptr<rerun::RecordingStream> _stream;
   std::unique_ptr<StaticRows> _staticRows;
   std::vector<std::unique_ptr<Series>> _series;
+  // Declared after _stream so that it stops before the stream is destroyed.
+  std::unique_ptr<detail::ChunkWriter> _writer;
   State _state = State::Active;
   std::chrono::steady_clock::time_point _startTime = std::chrono::steady_clock::now();
 };

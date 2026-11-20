@@ -16,6 +16,8 @@
 
 #include <superdex_recorder/series.h>
 
+#include "chunk_writer.h"
+
 #include <mochi_core/utils/log.h>
 
 #include <algorithm>
@@ -28,10 +30,6 @@
 namespace superdex::recorder {
 namespace {
 
-constexpr std::string_view kFrameTimeline = "frame";
-constexpr std::string_view kSimulationTimeTimeline = "sim_time";
-constexpr std::string_view kWallTimeTimeline = "wall_time";
-
 void SetRerunError(rerun::Error const& rerunError, mochi::Error& error, char const* description) {
   if (rerunError.is_ok()) {
     return;
@@ -42,12 +40,14 @@ void SetRerunError(rerun::Error const& rerunError, mochi::Error& error, char con
 
 } // namespace
 
+detail::SeriesRows::~SeriesRows() = default;
+
 Series::Series(std::string_view entityPath) : _entityPath{entityPath} {}
 
 Series::~Series() = default;
 
 size_t Series::GetNumSamples() const {
-  return _frames.size();
+  return _numSamples;
 }
 
 void Series::AdvanceTime(SampleTime time, mochi::Error& error) {
@@ -78,11 +78,14 @@ void Series::AdvanceTime(SampleTime time, mochi::Error& error) {
         error,
         "Series wall time must not decrease.");
   }
+  if (_writer != nullptr) {
+    _writer->CheckError(error);
+  }
   MOCHI_ERROR_RETURN(error);
   _latestTime = time;
 }
 
-void Series::AppendTime(SampleTime time, mochi::Error& error) {
+void Series::AppendTime(SampleTime time, size_t numBytes, mochi::Error& error) {
   MOCHI_ERROR_RETURN(error);
   // The wall_time timeline needs a value in every row.
   MOCHI_ERROR_IF(
@@ -91,55 +94,38 @@ void Series::AppendTime(SampleTime time, mochi::Error& error) {
       "Every sample of a series must have a wall time, or none.");
   AdvanceTime(time, error);
   MOCHI_ERROR_RETURN(error);
+  if (_writer != nullptr && !_frames.empty() &&
+      _writer->IsChunkFull(_bufferedBytes, time.simulationTimeSec - _simulationTimesSec.front())) {
+    SubmitChunk();
+  }
   _frames.push_back(static_cast<int64_t>(time.frame));
   _simulationTimesSec.push_back(time.simulationTimeSec);
   if (time.wallTimeSec.has_value()) {
     _wallTimesSec.push_back(*time.wallTimeSec);
+    numBytes += sizeof(double);
   }
+  _bufferedBytes += numBytes + sizeof(int64_t) + sizeof(double);
+  ++_numSamples;
 }
 
-void Series::Flush(rerun::RecordingStream& recording, mochi::Error& error) {
-  MOCHI_ERROR_RETURN(error);
-  _sealed = true;
-  if (_frames.empty()) {
+void Series::SubmitChunk() {
+  if (_frames.empty() || _writer == nullptr) {
     return;
   }
-
-  std::vector<rerun::ComponentColumn> componentColumns;
-  BuildColumns(componentColumns, error);
-  MOCHI_ERROR_RETURN(error);
-
-  std::vector<rerun::TimeColumn> timeColumns;
-  timeColumns.reserve(3);
-  timeColumns.emplace_back(
-      rerun::TimeColumn::from_sequence(
-          std::string{kFrameTimeline}, std::move(_frames), rerun::SortingStatus::Sorted));
-  timeColumns.emplace_back(
-      rerun::TimeColumn::from_duration_secs(
-          std::string{kSimulationTimeTimeline},
-          std::move(_simulationTimesSec),
-          rerun::SortingStatus::Sorted));
-  if (!_wallTimesSec.empty()) {
-    timeColumns.emplace_back(
-        rerun::TimeColumn::from_duration_secs(
-            std::string{kWallTimeTimeline},
-            std::move(_wallTimesSec),
-            rerun::SortingStatus::Sorted));
-  }
-  SetRerunError(
-      recording.try_send_columns(
-          _entityPath,
-          rerun::Collection<rerun::TimeColumn>::take_ownership(std::move(timeColumns)),
-          rerun::Collection<rerun::ComponentColumn>::take_ownership(std::move(componentColumns))),
-      error,
-      "Failed to write sampled series.");
+  _writer->Submit(
+      {.entityPath = _entityPath,
+       .frames = std::exchange(_frames, {}),
+       .simulationTimesSec = std::exchange(_simulationTimesSec, {}),
+       .wallTimesSec = std::exchange(_wallTimesSec, {}),
+       .rows = TakeRows(),
+       .numBytes = std::exchange(_bufferedBytes, 0)});
 }
 
 ScalarSeries::ScalarSeries(std::string_view entityPath, std::vector<ComponentField> const& fields)
     : Series{entityPath} {
-  _columns.reserve(fields.size());
+  _rows->columns.reserve(fields.size());
   for (auto const& field : fields) {
-    _columns.push_back({.field = field});
+    _rows->columns.push_back({.field = field, .lengths = {}, .values = {}});
   }
 }
 
@@ -148,18 +134,23 @@ void ScalarSeries::Append(
     mochi::Span<mochi::Span<mochi::real const> const> values,
     mochi::Error& error) {
   MOCHI_ERROR_RETURN(error);
-  MOCHI_ERROR_IF(values.size() != _columns.size(), error, "Scalar series field count changed.");
+  MOCHI_ERROR_IF(
+      values.size() != _rows->columns.size(), error, "Scalar series field count changed.");
   for (auto const& value : values) {
     MOCHI_ERROR_IF(
         value.size() > std::numeric_limits<uint32_t>::max(),
         error,
         "A scalar series field is too large to record.");
   }
-  AppendTime(time, error);
+  size_t numBytes = 0;
+  for (auto const& value : values) {
+    numBytes += sizeof(uint32_t) + value.size() * sizeof(Value);
+  }
+  AppendTime(time, numBytes, error);
   MOCHI_ERROR_RETURN(error);
 
   auto const* input = values.begin();
-  for (auto& column : _columns) {
+  for (auto& column : _rows->columns) {
     column.lengths.push_back(static_cast<uint32_t>(input->size()));
     for (mochi::real const value : *input) {
       column.values.emplace_back(value);
@@ -168,13 +159,24 @@ void ScalarSeries::Append(
   }
 }
 
-void ScalarSeries::BuildColumns(std::vector<rerun::ComponentColumn>& output, mochi::Error& error) {
+std::unique_ptr<detail::SeriesRows> ScalarSeries::TakeRows() {
+  auto empty = std::make_unique<Rows>();
+  empty->columns.reserve(_rows->columns.size());
+  for (auto const& column : _rows->columns) {
+    empty->columns.push_back({.field = column.field, .lengths = {}, .values = {}});
+  }
+  return std::exchange(_rows, std::move(empty));
+}
+
+void ScalarSeries::Rows::BuildColumns(
+    std::vector<rerun::ComponentColumn>& output,
+    mochi::Error& error) const {
   // `rerun rrd verify` rejects a datatype as a component type, so 32-bit columns declare none.
   constexpr auto kComponentType = std::is_same_v<Value, rerun::components::Scalar>
       ? std::optional{rerun::Loggable<Value>::ComponentType}
       : std::nullopt;
-  output.reserve(_columns.size());
-  for (auto const& column : _columns) {
+  output.reserve(columns.size());
+  for (auto const& column : columns) {
     auto encoded = rerun::ComponentColumn::from_loggable_with_lengths(
         rerun::Collection<Value>::borrow(column.values),
         rerun::Collection<uint32_t>::borrow(column.lengths),
@@ -207,10 +209,10 @@ void TransformSeries::Append(
     AdvanceTime(time, error);
     return;
   }
-  AppendTime(time, error);
+  AppendTime(time, sizeof(transform), error);
   MOCHI_ERROR_RETURN(error);
-  _translations.emplace_back(transform[0], transform[1], transform[2]);
-  _rotations.emplace_back(
+  _rows->translations.emplace_back(transform[0], transform[1], transform[2]);
+  _rows->rotations.emplace_back(
       rerun::datatypes::Quaternion::from_xyzw(
           transform[3], transform[4], transform[5], transform[6]));
   _lastTransform = transform;
@@ -228,26 +230,31 @@ void TransformSeries::Append(
   Append(time, translationArray, quaternion, error);
 }
 
-void TransformSeries::BuildColumns(
+std::unique_ptr<detail::SeriesRows> TransformSeries::TakeRows() {
+  return std::exchange(_rows, std::make_unique<Rows>());
+}
+
+void TransformSeries::Rows::BuildColumns(
     std::vector<rerun::ComponentColumn>& output,
-    mochi::Error& error) {
+    mochi::Error& error) const {
   output.reserve(2);
-  auto translations = rerun::ComponentColumn::from_loggable(
-      rerun::Collection<rerun::components::Translation3D>::borrow(_translations),
+  auto encodedTranslations = rerun::ComponentColumn::from_loggable(
+      rerun::Collection<rerun::components::Translation3D>::borrow(translations),
       rerun::archetypes::Transform3D::Descriptor_translation);
-  if (translations.is_err()) {
-    SetRerunError(translations.error, error, "Failed to encode a transform translation series.");
+  if (encodedTranslations.is_err()) {
+    SetRerunError(
+        encodedTranslations.error, error, "Failed to encode a transform translation series.");
     return;
   }
-  auto rotations = rerun::ComponentColumn::from_loggable(
-      rerun::Collection<rerun::components::RotationQuat>::borrow(_rotations),
+  auto encodedRotations = rerun::ComponentColumn::from_loggable(
+      rerun::Collection<rerun::components::RotationQuat>::borrow(rotations),
       rerun::archetypes::Transform3D::Descriptor_quaternion);
-  if (rotations.is_err()) {
-    SetRerunError(rotations.error, error, "Failed to encode a transform rotation series.");
+  if (encodedRotations.is_err()) {
+    SetRerunError(encodedRotations.error, error, "Failed to encode a transform rotation series.");
     return;
   }
-  output.emplace_back(std::move(translations.value));
-  output.emplace_back(std::move(rotations.value));
+  output.emplace_back(std::move(encodedTranslations.value));
+  output.emplace_back(std::move(encodedRotations.value));
 }
 
 Arrow3DSeries::Arrow3DSeries(std::string_view entityPath) : Series{entityPath} {}
@@ -265,42 +272,48 @@ void Arrow3DSeries::Append(
       error,
       "Arrow series sample is too large to record.");
   MOCHI_ERROR_RETURN(error);
-  AppendTime(time, error);
+  AppendTime(time, sizeof(uint32_t) + origins.size() * 6 * sizeof(float), error);
   MOCHI_ERROR_RETURN(error);
 
-  _lengths.push_back(static_cast<uint32_t>(origins.size()));
+  _rows->lengths.push_back(static_cast<uint32_t>(origins.size()));
   for (size_t i = 0; i < origins.size(); ++i) {
-    _origins.emplace_back(
+    _rows->origins.emplace_back(
         static_cast<float>(origins[i][0]),
         static_cast<float>(origins[i][1]),
         static_cast<float>(origins[i][2]));
-    _vectors.emplace_back(
+    _rows->vectors.emplace_back(
         static_cast<float>(vectors[i][0]),
         static_cast<float>(vectors[i][1]),
         static_cast<float>(vectors[i][2]));
   }
 }
 
-void Arrow3DSeries::BuildColumns(std::vector<rerun::ComponentColumn>& output, mochi::Error& error) {
+std::unique_ptr<detail::SeriesRows> Arrow3DSeries::TakeRows() {
+  return std::exchange(_rows, std::make_unique<Rows>());
+}
+
+void Arrow3DSeries::Rows::BuildColumns(
+    std::vector<rerun::ComponentColumn>& output,
+    mochi::Error& error) const {
   output.reserve(2);
-  auto origins = rerun::ComponentColumn::from_loggable_with_lengths(
-      rerun::Collection<rerun::components::Position3D>::borrow(_origins),
-      rerun::Collection<uint32_t>::borrow(_lengths),
+  auto encodedOrigins = rerun::ComponentColumn::from_loggable_with_lengths(
+      rerun::Collection<rerun::components::Position3D>::borrow(origins),
+      rerun::Collection<uint32_t>::borrow(lengths),
       rerun::archetypes::Arrows3D::Descriptor_origins);
-  if (origins.is_err()) {
-    SetRerunError(origins.error, error, "Failed to encode arrow origins.");
+  if (encodedOrigins.is_err()) {
+    SetRerunError(encodedOrigins.error, error, "Failed to encode arrow origins.");
     return;
   }
-  auto vectors = rerun::ComponentColumn::from_loggable_with_lengths(
-      rerun::Collection<rerun::components::Vector3D>::borrow(_vectors),
-      rerun::Collection<uint32_t>::borrow(_lengths),
+  auto encodedVectors = rerun::ComponentColumn::from_loggable_with_lengths(
+      rerun::Collection<rerun::components::Vector3D>::borrow(vectors),
+      rerun::Collection<uint32_t>::borrow(lengths),
       rerun::archetypes::Arrows3D::Descriptor_vectors);
-  if (vectors.is_err()) {
-    SetRerunError(vectors.error, error, "Failed to encode arrow vectors.");
+  if (encodedVectors.is_err()) {
+    SetRerunError(encodedVectors.error, error, "Failed to encode arrow vectors.");
     return;
   }
-  output.emplace_back(std::move(origins.value));
-  output.emplace_back(std::move(vectors.value));
+  output.emplace_back(std::move(encodedOrigins.value));
+  output.emplace_back(std::move(encodedVectors.value));
 }
 
 Points3DSeries::Points3DSeries(std::string_view entityPath) : Series{entityPath} {}
@@ -321,37 +334,44 @@ void Points3DSeries::Append(
         static_cast<float>(position[1]),
         static_cast<float>(position[2])};
   };
-  bool const repeatsLastSample = !_lengths.empty() && _lengths.back() == positions.size() &&
-      std::equal(
-          positions.begin(),
-          positions.end(),
-          _positions.end() - static_cast<std::ptrdiff_t>(positions.size()),
-          [&](mochi::Real3 const& position, rerun::components::Position3D const& stored) {
-            return toPosition(position).xyz.xyz == stored.xyz.xyz;
-          });
+  bool const repeatsLastSample = GetNumSamples() != 0 &&
+      _lastPositions.size() == positions.size() &&
+      std::equal(positions.begin(),
+                 positions.end(),
+                 _lastPositions.begin(),
+                 [&](mochi::Real3 const& position, rerun::components::Position3D const& stored) {
+                   return toPosition(position).xyz.xyz == stored.xyz.xyz;
+                 });
   if (repeatsLastSample) {
     AdvanceTime(time, error);
     return;
   }
-  AppendTime(time, error);
+  AppendTime(time, sizeof(uint32_t) + positions.size() * 3 * sizeof(float), error);
   MOCHI_ERROR_RETURN(error);
 
-  _lengths.push_back(static_cast<uint32_t>(positions.size()));
-  std::ranges::transform(positions, std::back_inserter(_positions), toPosition);
+  _rows->lengths.push_back(static_cast<uint32_t>(positions.size()));
+  _lastPositions.clear();
+  std::transform(
+      positions.begin(), positions.end(), std::back_inserter(_lastPositions), toPosition);
+  _rows->positions.insert(_rows->positions.end(), _lastPositions.begin(), _lastPositions.end());
 }
 
-void Points3DSeries::BuildColumns(
+std::unique_ptr<detail::SeriesRows> Points3DSeries::TakeRows() {
+  return std::exchange(_rows, std::make_unique<Rows>());
+}
+
+void Points3DSeries::Rows::BuildColumns(
     std::vector<rerun::ComponentColumn>& output,
-    mochi::Error& error) {
-  auto positions = rerun::ComponentColumn::from_loggable_with_lengths(
-      rerun::Collection<rerun::components::Position3D>::borrow(_positions),
-      rerun::Collection<uint32_t>::borrow(_lengths),
+    mochi::Error& error) const {
+  auto encodedPositions = rerun::ComponentColumn::from_loggable_with_lengths(
+      rerun::Collection<rerun::components::Position3D>::borrow(positions),
+      rerun::Collection<uint32_t>::borrow(lengths),
       rerun::archetypes::Points3D::Descriptor_positions);
-  if (positions.is_err()) {
-    SetRerunError(positions.error, error, "Failed to encode point positions.");
+  if (encodedPositions.is_err()) {
+    SetRerunError(encodedPositions.error, error, "Failed to encode point positions.");
     return;
   }
-  output.emplace_back(std::move(positions.value));
+  output.emplace_back(std::move(encodedPositions.value));
 }
 
 DeformableMeshSeries::DeformableMeshSeries(std::string_view entityPath, size_t numVertices)
@@ -369,58 +389,66 @@ void DeformableMeshSeries::Append(
       "Mesh sample does not have one position and one normal per vertex.");
   MOCHI_ERROR_RETURN(error);
   bool repeatsLastSample = GetNumSamples() != 0;
-  size_t const lastSample = _positions.size() - (repeatsLastSample ? _numVertices : 0);
   for (size_t i = 0; i < 3 * _numVertices && repeatsLastSample; ++i) {
     repeatsLastSample =
-        static_cast<float>(vertexPositions[i]) == _positions[lastSample + i / 3].xyz.xyz[i % 3] &&
-        static_cast<float>(vertexNormals[i]) == _normals[lastSample + i / 3].vector.xyz[i % 3];
+        static_cast<float>(vertexPositions[i]) == _lastPositions[i / 3].xyz.xyz[i % 3] &&
+        static_cast<float>(vertexNormals[i]) == _lastNormals[i / 3].vector.xyz[i % 3];
   }
   if (repeatsLastSample) {
     AdvanceTime(time, error);
     return;
   }
-  AppendTime(time, error);
+  AppendTime(time, sizeof(uint32_t) + _numVertices * 6 * sizeof(float), error);
   MOCHI_ERROR_RETURN(error);
 
+  _lastPositions.clear();
+  _lastNormals.clear();
   for (size_t i = 0; i < _numVertices; ++i) {
-    _positions.emplace_back(
+    _lastPositions.emplace_back(
         static_cast<float>(vertexPositions[3 * i]),
         static_cast<float>(vertexPositions[3 * i + 1]),
         static_cast<float>(vertexPositions[3 * i + 2]));
-    _normals.emplace_back(
+    _lastNormals.emplace_back(
         static_cast<float>(vertexNormals[3 * i]),
         static_cast<float>(vertexNormals[3 * i + 1]),
         static_cast<float>(vertexNormals[3 * i + 2]));
   }
+  _rows->lengths.push_back(static_cast<uint32_t>(_numVertices));
+  _rows->positions.insert(_rows->positions.end(), _lastPositions.begin(), _lastPositions.end());
+  _rows->normals.insert(_rows->normals.end(), _lastNormals.begin(), _lastNormals.end());
 }
 
-void DeformableMeshSeries::BuildColumns(
+std::unique_ptr<detail::SeriesRows> DeformableMeshSeries::TakeRows() {
+  return std::exchange(_rows, std::make_unique<Rows>());
+}
+
+void DeformableMeshSeries::Rows::BuildColumns(
     std::vector<rerun::ComponentColumn>& output,
-    mochi::Error& error) {
-  std::vector<uint32_t> const lengths(GetNumSamples(), static_cast<uint32_t>(_numVertices));
-  auto positions = rerun::ComponentColumn::from_loggable_with_lengths(
-      rerun::Collection<rerun::components::Position3D>::borrow(_positions),
+    mochi::Error& error) const {
+  auto encodedPositions = rerun::ComponentColumn::from_loggable_with_lengths(
+      rerun::Collection<rerun::components::Position3D>::borrow(positions),
       rerun::Collection<uint32_t>::borrow(lengths),
       rerun::archetypes::Mesh3D::Descriptor_vertex_positions);
-  if (positions.is_err()) {
-    SetRerunError(positions.error, error, "Failed to encode mesh vertex positions.");
+  if (encodedPositions.is_err()) {
+    SetRerunError(encodedPositions.error, error, "Failed to encode mesh vertex positions.");
     return;
   }
-  auto normals = rerun::ComponentColumn::from_loggable_with_lengths(
-      rerun::Collection<rerun::components::Vector3D>::borrow(_normals),
+  auto encodedNormals = rerun::ComponentColumn::from_loggable_with_lengths(
+      rerun::Collection<rerun::components::Vector3D>::borrow(normals),
       rerun::Collection<uint32_t>::borrow(lengths),
       rerun::archetypes::Mesh3D::Descriptor_vertex_normals);
-  if (normals.is_err()) {
-    SetRerunError(normals.error, error, "Failed to encode mesh vertex normals.");
+  if (encodedNormals.is_err()) {
+    SetRerunError(encodedNormals.error, error, "Failed to encode mesh vertex normals.");
     return;
   }
   output.reserve(2);
-  output.emplace_back(std::move(positions.value));
-  output.emplace_back(std::move(normals.value));
+  output.emplace_back(std::move(encodedPositions.value));
+  output.emplace_back(std::move(encodedNormals.value));
 }
 
-TextSeries::TextSeries(std::string_view entityPath, ComponentField field)
-    : Series{entityPath}, _field{std::move(field)} {}
+TextSeries::TextSeries(std::string_view entityPath, ComponentField field) : Series{entityPath} {
+  _rows->field = std::move(field);
+}
 
 void TextSeries::Append(
     SampleTime time,
@@ -431,47 +459,65 @@ void TextSeries::Append(
       texts.size() > std::numeric_limits<uint32_t>::max(),
       error,
       "Text series sample is too large to record.");
-  AppendTime(time, error);
+  size_t numBytes = sizeof(uint32_t);
+  for (auto const& text : texts) {
+    numBytes += text.size();
+  }
+  AppendTime(time, numBytes, error);
   MOCHI_ERROR_RETURN(error);
 
-  _lengths.push_back(static_cast<uint32_t>(texts.size()));
+  _rows->lengths.push_back(static_cast<uint32_t>(texts.size()));
   for (auto const& text : texts) {
-    _texts.emplace_back(text);
+    _rows->texts.emplace_back(text);
   }
 }
 
-void TextSeries::BuildColumns(std::vector<rerun::ComponentColumn>& output, mochi::Error& error) {
-  auto texts = rerun::ComponentColumn::from_loggable_with_lengths(
-      rerun::Collection<rerun::components::Text>::borrow(_texts),
-      rerun::Collection<uint32_t>::borrow(_lengths),
+std::unique_ptr<detail::SeriesRows> TextSeries::TakeRows() {
+  auto empty = std::make_unique<Rows>();
+  empty->field = _rows->field;
+  return std::exchange(_rows, std::move(empty));
+}
+
+void TextSeries::Rows::BuildColumns(
+    std::vector<rerun::ComponentColumn>& output,
+    mochi::Error& error) const {
+  auto encodedTexts = rerun::ComponentColumn::from_loggable_with_lengths(
+      rerun::Collection<rerun::components::Text>::borrow(texts),
+      rerun::Collection<uint32_t>::borrow(lengths),
       rerun::ComponentDescriptor{
-          _field.archetype,
-          _field.component,
+          field.archetype,
+          field.component,
           rerun::Loggable<rerun::components::Text>::ComponentType});
-  if (texts.is_err()) {
-    SetRerunError(texts.error, error, "Failed to encode a text series.");
+  if (encodedTexts.is_err()) {
+    SetRerunError(encodedTexts.error, error, "Failed to encode a text series.");
     return;
   }
-  output.emplace_back(std::move(texts.value));
+  output.emplace_back(std::move(encodedTexts.value));
 }
 
 PlotSeries::PlotSeries(std::string_view entityPath) : Series{entityPath} {}
 
 void PlotSeries::Append(SampleTime time, double value, mochi::Error& error) {
-  AppendTime(time, error);
+  AppendTime(time, sizeof(double), error);
   MOCHI_ERROR_RETURN(error);
-  _values.emplace_back(value);
+  _rows->values.emplace_back(value);
 }
 
-void PlotSeries::BuildColumns(std::vector<rerun::ComponentColumn>& output, mochi::Error& error) {
-  auto values = rerun::ComponentColumn::from_loggable(
-      rerun::Collection<rerun::components::Scalar>::borrow(_values),
+std::unique_ptr<detail::SeriesRows> PlotSeries::TakeRows() {
+  return std::exchange(_rows, std::make_unique<Rows>());
+}
+
+void PlotSeries::Rows::BuildColumns(
+    std::vector<rerun::ComponentColumn>& output,
+    mochi::Error& error) const {
+  auto encodedValues = rerun::ComponentColumn::from_loggable(
+      rerun::Collection<rerun::components::Scalar>::borrow(values),
       rerun::archetypes::Scalars::Descriptor_scalars);
-  if (values.is_err()) {
-    SetRerunError(values.error, error, "Failed to encode a plot series.");
+  if (encodedValues.is_err()) {
+    SetRerunError(encodedValues.error, error, "Failed to encode a plot series.");
     return;
   }
-  output.emplace_back(std::move(values.value));
+  output.emplace_back(std::move(encodedValues.value));
 }
 
 } // namespace superdex::recorder

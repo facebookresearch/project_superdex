@@ -24,6 +24,7 @@
 #include <chrono>
 #include <cstdint>
 #include <filesystem>
+#include <limits>
 #include <random>
 #include <regex>
 #include <string>
@@ -245,6 +246,71 @@ TEST(SuperDexRecorderTest, BeginEpisodeRejectsEmptyPropertyKeyBeforeCreatingDire
   EXPECT_EQ(episode, nullptr);
   EXPECT_FALSE(error.IsOK());
   EXPECT_FALSE(std::filesystem::exists(outputDirectory));
+}
+
+TEST(SuperDexRecorderTest, BeginEpisodeRejectsInvalidChunkDuration) {
+  TemporaryDirectory directory;
+  for (double const duration : {-1.0, std::numeric_limits<double>::quiet_NaN()}) {
+    Recorder const recorder{{.outputDirectory = directory.Path(), .chunkMaxDurationSec = duration}};
+    mochi::Error error;
+
+    EXPECT_EQ(recorder.BeginEpisode({}, error), nullptr);
+    EXPECT_FALSE(error.IsOK());
+  }
+  EXPECT_TRUE(std::filesystem::is_empty(directory.Path()));
+}
+
+TEST(SuperDexRecorderTest, BeginEpisodeRejectsAByteLimitAboveOneGigabyte) {
+  TemporaryDirectory directory;
+  Recorder const recorder{{.outputDirectory = directory.Path(), .chunkMaxBytes = 1'000'000'001}};
+  mochi::Error error;
+
+  EXPECT_EQ(recorder.BeginEpisode({}, error), nullptr);
+  EXPECT_FALSE(error.IsOK());
+}
+
+TEST(SuperDexRecorderTest, SamplesSubmittedToTheWriterStayCounted) {
+  TemporaryDirectory directory;
+  // Every sample fills a chunk.
+  Recorder recorder{{.outputDirectory = directory.Path(), .chunkMaxBytes = 1}};
+  mochi::Error error;
+  auto episode = recorder.BeginEpisode({}, error);
+  ASSERT_NE(episode, nullptr) << error.ToString();
+  auto* const series = episode->CreateScalarSeries(
+      "data/test", {{"superdex.archetypes.Test", "superdex.test.value"}}, error);
+  ASSERT_NE(series, nullptr) << error.ToString();
+  std::array<mochi::real, 1> const value{1_r};
+  std::array<mochi::Span<mochi::real const>, 1> const fields{value};
+
+  for (uint64_t frame = 0; frame < 5; ++frame) {
+    series->Append({.frame = frame, .simulationTimeSec = 0.1 * frame}, fields, error);
+  }
+  episode->Commit(error);
+
+  ASSERT_TRUE(error.IsOK()) << error.ToString();
+  EXPECT_EQ(series->GetNumSamples(), 5U);
+}
+
+TEST(SuperDexRecorderTest, AbortDeletesTheFileAfterChunksWereSubmitted) {
+  TemporaryDirectory directory;
+  Recorder recorder{{.outputDirectory = directory.Path(), .chunkMaxBytes = 4096}};
+  mochi::Error error;
+  auto episode = recorder.BeginEpisode({}, error);
+  ASSERT_NE(episode, nullptr) << error.ToString();
+  auto* const series = episode->CreateScalarSeries(
+      "data/test", {{"superdex.archetypes.Test", "superdex.test.values"}}, error);
+  ASSERT_NE(series, nullptr) << error.ToString();
+  std::vector<mochi::real> const values(10'000, 1_r);
+  std::array<mochi::Span<mochi::real const>, 1> const fields{values};
+  for (uint64_t frame = 0; frame < 200; ++frame) {
+    series->Append({.frame = frame, .simulationTimeSec = 0.01 * frame}, fields, error);
+  }
+  ASSERT_TRUE(error.IsOK()) << error.ToString();
+
+  episode->Abort("rejected", error);
+
+  ASSERT_TRUE(error.IsOK()) << error.ToString();
+  EXPECT_TRUE(std::filesystem::is_empty(directory.Path()));
 }
 
 TEST(SuperDexRecorderTest, ScalarSeriesRejectsRepeatedFrames) {

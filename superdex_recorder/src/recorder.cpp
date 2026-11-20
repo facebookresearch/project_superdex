@@ -18,6 +18,8 @@
 
 #include <superdex_recorder/series.h>
 
+#include "chunk_writer.h"
+
 #include <mochi_core/utils/log.h>
 
 #include <rerun.hpp>
@@ -39,6 +41,8 @@ namespace {
 constexpr std::string_view kApplicationId = "superdex";
 constexpr std::string_view kEpisodeArchetype = "superdex.archetypes.Episode";
 constexpr std::string_view kShadowsPath = "world/shadows";
+// Below the native reader's 2 GiB chunk limit, since a chunk can exceed the limit by one sample.
+constexpr size_t kMaxChunkBytes = 1'000'000'000; // 1 GB
 
 bool HasValidPropertyKeys(std::map<std::string, std::string> const& properties) {
   return std::ranges::none_of(
@@ -124,12 +128,17 @@ Episode::Episode(
     std::string episodeId,
     std::filesystem::path temporaryPath,
     std::filesystem::path outputPath,
-    std::unique_ptr<rerun::RecordingStream> stream)
+    std::unique_ptr<rerun::RecordingStream> stream,
+    RecorderConfig const& config)
     : _episodeId{std::move(episodeId)},
       _temporaryPath{std::move(temporaryPath)},
       _outputPath{std::move(outputPath)},
       _stream{std::move(stream)},
-      _staticRows{std::make_unique<StaticRows>()} {}
+      _staticRows{std::make_unique<StaticRows>()},
+      _writer{std::make_unique<detail::ChunkWriter>(
+          *_stream,
+          config.chunkMaxBytes,
+          config.chunkMaxDurationSec)} {}
 
 Episode::~Episode() {
   if (_state == State::Active || _state == State::CommitFailed) {
@@ -162,7 +171,7 @@ ScalarSeries* Episode::CreateScalarSeries(
 
   auto series = std::make_unique<ScalarSeries>(entityPath, fields);
   auto* const result = series.get();
-  _series.push_back(std::move(series));
+  AddSeries(std::move(series));
   return result;
 }
 
@@ -173,7 +182,7 @@ TransformSeries* Episode::CreateTransformSeries(std::string_view entityPath, moc
 
   auto series = std::make_unique<TransformSeries>(entityPath);
   auto* const result = series.get();
-  _series.push_back(std::move(series));
+  AddSeries(std::move(series));
   return result;
 }
 
@@ -184,7 +193,7 @@ Arrow3DSeries* Episode::CreateArrow3DSeries(std::string_view entityPath, mochi::
 
   auto series = std::make_unique<Arrow3DSeries>(entityPath);
   auto* const result = series.get();
-  _series.push_back(std::move(series));
+  AddSeries(std::move(series));
   return result;
 }
 
@@ -195,7 +204,7 @@ Points3DSeries* Episode::CreatePoints3DSeries(std::string_view entityPath, mochi
 
   auto series = std::make_unique<Points3DSeries>(entityPath);
   auto* const result = series.get();
-  _series.push_back(std::move(series));
+  AddSeries(std::move(series));
   return result;
 }
 
@@ -242,7 +251,7 @@ DeformableMeshSeries* Episode::CreateDeformableMeshSeries(
 
   auto series = std::make_unique<DeformableMeshSeries>(entityPath, numVertices);
   auto* const result = series.get();
-  _series.push_back(std::move(series));
+  AddSeries(std::move(series));
   return result;
 }
 
@@ -258,7 +267,7 @@ TextSeries* Episode::CreateTextSeries(
 
   auto series = std::make_unique<TextSeries>(entityPath, field);
   auto* const result = series.get();
-  _series.push_back(std::move(series));
+  AddSeries(std::move(series));
   return result;
 }
 
@@ -269,7 +278,7 @@ PlotSeries* Episode::CreatePlotSeries(std::string_view entityPath, mochi::Error&
 
   auto series = std::make_unique<PlotSeries>(entityPath);
   auto* const result = series.get();
-  _series.push_back(std::move(series));
+  AddSeries(std::move(series));
   return result;
 }
 
@@ -520,6 +529,7 @@ void Episode::WriteKeypointSkeleton(
 
 void Episode::Commit(mochi::Error& error) {
   ValidateWrite(error);
+  _writer->CheckError(error);
   MOCHI_ERROR_RETURN(error);
   SealSeries();
 
@@ -531,19 +541,22 @@ void Episode::Commit(mochi::Error& error) {
   _state = State::CommitFailed;
   MOCHI_ERROR_RETURN(error);
 
-  for (auto& [entityPath, batches] : _staticRows->batchesByEntity) {
-    SetRerunError(
-        _stream->try_log_serialized_batches(entityPath, /*static_=*/true, std::move(batches)),
-        error,
-        "Failed to write constant data.");
-  }
   for (auto& ownedSeries : _series) {
     Series* const series = ownedSeries.get();
     if (series == nullptr) {
       MOCHI_ERROR_SET(error, "Episode contains an invalid series.");
       break;
     }
-    series->Flush(*_stream, error);
+    series->SubmitChunk();
+  }
+  _writer->Finish(error);
+  MOCHI_ERROR_RETURN(error);
+  // Every chunk is written, so this thread is the stream's only user.
+  for (auto& [entityPath, batches] : _staticRows->batchesByEntity) {
+    SetRerunError(
+        _stream->try_log_serialized_batches(entityPath, /*static_=*/true, std::move(batches)),
+        error,
+        "Failed to write constant data.");
   }
   MOCHI_ERROR_RETURN(error);
   SetRerunError(_stream->flush_blocking(), error, "Failed to flush the episode RRD.");
@@ -624,6 +637,11 @@ void Episode::ValidateSeriesPath(std::string_view entityPath, mochi::Error& erro
   }
 }
 
+void Episode::AddSeries(std::unique_ptr<Series> series) {
+  series->_writer = _writer.get();
+  _series.push_back(std::move(series));
+}
+
 void Episode::SealSeries() {
   for (auto const& ownedSeries : _series) {
     Series* const series = ownedSeries.get();
@@ -636,6 +654,7 @@ void Episode::SealSeries() {
 void Episode::DiscardTemporaryFile(mochi::Error* error) {
   _state = State::CommitFailed;
   SealSeries();
+  _writer->Discard();
   _stream.reset();
   std::error_code filesystemError;
   std::filesystem::remove(_temporaryPath, filesystemError);
@@ -659,6 +678,12 @@ std::unique_ptr<Episode> Recorder::BeginEpisode(
     mochi::Error& error) const {
   MOCHI_ERROR_RETURN(error, nullptr);
   MOCHI_ERROR_IF(_config.outputDirectory.empty(), error, "Recorder output directory is empty.");
+  MOCHI_ERROR_IF_NOT(
+      std::isfinite(_config.chunkMaxDurationSec) && _config.chunkMaxDurationSec >= 0.0,
+      error,
+      "Recorder chunk duration must be finite and non-negative.");
+  MOCHI_ERROR_IF(
+      _config.chunkMaxBytes > kMaxChunkBytes, error, "Recorder chunk byte limit is above 1 GB.");
   MOCHI_ERROR_IF_NOT(
       HasValidPropertyKeys(metadata.properties), error, "Episode property keys must not be empty.");
   MOCHI_ERROR_RETURN(error, nullptr);
@@ -685,7 +710,11 @@ std::unique_ptr<Episode> Recorder::BeginEpisode(
   }
 
   auto episode = std::unique_ptr<Episode>{new Episode{
-      std::move(episodeId), std::move(temporaryPath), std::move(outputPath), std::move(stream)}};
+      std::move(episodeId),
+      std::move(temporaryPath),
+      std::move(outputPath),
+      std::move(stream),
+      _config}};
   SetRerunError(
       episode->_stream->save(episode->_temporaryPath.string()),
       error,

@@ -26,7 +26,9 @@
 #include <rerun.hpp>
 
 #include <array>
+#include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -35,13 +37,25 @@
 
 namespace superdex::recorder {
 
-/* @brief A timestamped set of columns buffered until its episode commits. */
+namespace detail {
+
+/* Values a series has buffered, which its episode's writer thread encodes as one chunk. */
+struct SeriesRows {
+  virtual ~SeriesRows();
+  virtual void BuildColumns(std::vector<rerun::ComponentColumn>& output, mochi::Error& error)
+      const = 0;
+};
+
+} // namespace detail
+
+/* @brief A timestamped set of columns, written in chunks by its episode's writer thread. */
 class SUPERDEX_RECORDER_API Series {
   MOCHI_DECLARE_NO_COPY_NO_MOVE(Series)
 
  public:
   virtual ~Series();
 
+  /* Includes samples already submitted to the writer. */
   [[nodiscard]] size_t GetNumSamples() const;
 
  protected:
@@ -50,18 +64,24 @@ class SUPERDEX_RECORDER_API Series {
   /* Checks that time follows the previous append's time and makes it the latest, without storing
    * a sample. */
   void AdvanceTime(SampleTime time, mochi::Error& error);
-  void AppendTime(SampleTime time, mochi::Error& error);
+  /* Stores a sample's time; the subclass then stores its numBytes of values. */
+  void AppendTime(SampleTime time, size_t numBytes, mochi::Error& error);
 
  private:
   friend class Episode;
 
-  void Flush(rerun::RecordingStream& recording, mochi::Error& error);
-  virtual void BuildColumns(std::vector<rerun::ComponentColumn>& output, mochi::Error& error) = 0;
+  /* Moves out the buffered values, leaving the series empty. */
+  virtual std::unique_ptr<detail::SeriesRows> TakeRows() = 0;
+  /* Queues the buffered samples on the writer thread as one RRD chunk. */
+  void SubmitChunk();
 
   std::string _entityPath;
   std::vector<int64_t> _frames;
   std::vector<double> _simulationTimesSec;
   std::vector<double> _wallTimesSec; // Empty when the samples have no wall time.
+  size_t _bufferedBytes = 0;
+  size_t _numSamples = 0;
+  detail::ChunkWriter* _writer = nullptr;
   std::optional<SampleTime> _latestTime; // May be newer than the last stored time.
   bool _sealed = false; // Rejects appends once its episode commits or is discarded.
 };
@@ -81,6 +101,12 @@ class SUPERDEX_RECORDER_API ScalarSeries final : public Series {
     std::vector<uint32_t> lengths;
     std::vector<Value> values;
   };
+  struct Rows final : detail::SeriesRows {
+    void BuildColumns(std::vector<rerun::ComponentColumn>& output, mochi::Error& error)
+        const override;
+
+    std::vector<Column> columns;
+  };
 
  public:
   ScalarSeries(std::string_view entityPath, std::vector<ComponentField> const& fields);
@@ -91,9 +117,9 @@ class SUPERDEX_RECORDER_API ScalarSeries final : public Series {
       mochi::Error& error);
 
  private:
-  void BuildColumns(std::vector<rerun::ComponentColumn>& output, mochi::Error& error) override;
+  std::unique_ptr<detail::SeriesRows> TakeRows() override;
 
-  std::vector<Column> _columns;
+  std::unique_ptr<Rows> _rows = std::make_unique<Rows>();
 };
 
 /* @brief Stores one translation and quaternion per sample. A transform equal to the previous
@@ -110,10 +136,17 @@ class SUPERDEX_RECORDER_API TransformSeries final : public Series {
   void Append(SampleTime time, mochi::TransformRT const& transform, mochi::Error& error);
 
  private:
-  void BuildColumns(std::vector<rerun::ComponentColumn>& output, mochi::Error& error) override;
+  struct Rows final : detail::SeriesRows {
+    void BuildColumns(std::vector<rerun::ComponentColumn>& output, mochi::Error& error)
+        const override;
 
-  std::vector<rerun::components::Translation3D> _translations;
-  std::vector<rerun::components::RotationQuat> _rotations;
+    std::vector<rerun::components::Translation3D> translations;
+    std::vector<rerun::components::RotationQuat> rotations;
+  };
+
+  std::unique_ptr<detail::SeriesRows> TakeRows() override;
+
+  std::unique_ptr<Rows> _rows = std::make_unique<Rows>();
   // Translation then quaternion, as stored.
   std::optional<std::array<float, 7>> _lastTransform;
 };
@@ -130,11 +163,18 @@ class SUPERDEX_RECORDER_API Arrow3DSeries final : public Series {
       mochi::Error& error);
 
  private:
-  void BuildColumns(std::vector<rerun::ComponentColumn>& output, mochi::Error& error) override;
+  struct Rows final : detail::SeriesRows {
+    void BuildColumns(std::vector<rerun::ComponentColumn>& output, mochi::Error& error)
+        const override;
 
-  std::vector<uint32_t> _lengths;
-  std::vector<rerun::components::Position3D> _origins;
-  std::vector<rerun::components::Vector3D> _vectors;
+    std::vector<uint32_t> lengths;
+    std::vector<rerun::components::Position3D> origins;
+    std::vector<rerun::components::Vector3D> vectors;
+  };
+
+  std::unique_ptr<detail::SeriesRows> TakeRows() override;
+
+  std::unique_ptr<Rows> _rows = std::make_unique<Rows>();
 };
 
 /* @brief Stores a variable-length batch of world-space 3D points per sample. A batch equal to the
@@ -146,10 +186,18 @@ class SUPERDEX_RECORDER_API Points3DSeries final : public Series {
   void Append(SampleTime time, mochi::Span<mochi::Real3 const> positions, mochi::Error& error);
 
  private:
-  void BuildColumns(std::vector<rerun::ComponentColumn>& output, mochi::Error& error) override;
+  struct Rows final : detail::SeriesRows {
+    void BuildColumns(std::vector<rerun::ComponentColumn>& output, mochi::Error& error)
+        const override;
 
-  std::vector<uint32_t> _lengths;
-  std::vector<rerun::components::Position3D> _positions;
+    std::vector<uint32_t> lengths;
+    std::vector<rerun::components::Position3D> positions;
+  };
+
+  std::unique_ptr<detail::SeriesRows> TakeRows() override;
+
+  std::unique_ptr<Rows> _rows = std::make_unique<Rows>();
+  std::vector<rerun::components::Position3D> _lastPositions;
 };
 
 /* @brief Stores a triangle mesh whose vertices move but whose triangles do not, such as the surface
@@ -168,11 +216,21 @@ class SUPERDEX_RECORDER_API DeformableMeshSeries final : public Series {
       mochi::Error& error);
 
  private:
-  void BuildColumns(std::vector<rerun::ComponentColumn>& output, mochi::Error& error) override;
+  struct Rows final : detail::SeriesRows {
+    void BuildColumns(std::vector<rerun::ComponentColumn>& output, mochi::Error& error)
+        const override;
+
+    std::vector<uint32_t> lengths;
+    std::vector<rerun::components::Position3D> positions;
+    std::vector<rerun::components::Vector3D> normals;
+  };
+
+  std::unique_ptr<detail::SeriesRows> TakeRows() override;
 
   size_t _numVertices;
-  std::vector<rerun::components::Position3D> _positions;
-  std::vector<rerun::components::Vector3D> _normals;
+  std::unique_ptr<Rows> _rows = std::make_unique<Rows>();
+  std::vector<rerun::components::Position3D> _lastPositions;
+  std::vector<rerun::components::Vector3D> _lastNormals;
 };
 
 class SUPERDEX_RECORDER_API TextSeries final : public Series {
@@ -183,11 +241,18 @@ class SUPERDEX_RECORDER_API TextSeries final : public Series {
   void Append(SampleTime time, mochi::Span<std::string const> texts, mochi::Error& error);
 
  private:
-  void BuildColumns(std::vector<rerun::ComponentColumn>& output, mochi::Error& error) override;
+  struct Rows final : detail::SeriesRows {
+    void BuildColumns(std::vector<rerun::ComponentColumn>& output, mochi::Error& error)
+        const override;
 
-  ComponentField _field;
-  std::vector<uint32_t> _lengths;
-  std::vector<rerun::components::Text> _texts;
+    ComponentField field;
+    std::vector<uint32_t> lengths;
+    std::vector<rerun::components::Text> texts;
+  };
+
+  std::unique_ptr<detail::SeriesRows> TakeRows() override;
+
+  std::unique_ptr<Rows> _rows = std::make_unique<Rows>();
 };
 
 /* @brief Stores one double per sample as Rerun's Scalars archetype, which the Rerun viewer plots by
@@ -199,9 +264,16 @@ class SUPERDEX_RECORDER_API PlotSeries final : public Series {
   void Append(SampleTime time, double value, mochi::Error& error);
 
  private:
-  void BuildColumns(std::vector<rerun::ComponentColumn>& output, mochi::Error& error) override;
+  struct Rows final : detail::SeriesRows {
+    void BuildColumns(std::vector<rerun::ComponentColumn>& output, mochi::Error& error)
+        const override;
 
-  std::vector<rerun::components::Scalar> _values;
+    std::vector<rerun::components::Scalar> values;
+  };
+
+  std::unique_ptr<detail::SeriesRows> TakeRows() override;
+
+  std::unique_ptr<Rows> _rows = std::make_unique<Rows>();
 };
 
 } // namespace superdex::recorder

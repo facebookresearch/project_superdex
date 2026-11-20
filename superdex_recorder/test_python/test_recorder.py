@@ -23,6 +23,7 @@ from typing import Any
 
 import numpy as np
 import pyarrow as pa
+import pyarrow.compute as pc
 import rerun.experimental as rr_experimental
 import superdex.physics as sdp
 import superdex.recorder as recorder
@@ -617,7 +618,11 @@ class RecorderTest(unittest.TestCase):
             sdp.initialize(num_worker_threads=0)
             try:
                 scene = sdp.create_scene("wall_times")
-                episode = self.make_recorder(Path(directory_string)).begin_episode()
+                # One chunk per sample, so each chunk carries its own wall times.
+                config = recorder.RecorderConfig(
+                    Path(directory_string), chunk_max_bytes=1
+                )
+                episode = recorder.Recorder(config).begin_episode()
                 physics = recorder.PhysicsRecorder(episode, scene)
                 wall_times_sec = []
                 for frame in range(3):
@@ -666,6 +671,113 @@ class RecorderTest(unittest.TestCase):
                     )
             finally:
                 sdp.shutdown()
+
+    def record_falling_cube(
+        self, directory: Path, chunk_max_bytes: int, chunk_max_duration_sec: float
+    ) -> Path:
+        """Record a cube dropped on the ground, with contacts, for 200 frames."""
+        sdp.initialize(num_worker_threads=0)
+        scene = None
+        physics = None
+        try:
+            scene = sdp.create_scene("chunks")
+            scene.set_gravity([0, -10, 0])
+            h = 0.05
+            scene.create_rigid_actor(
+                name="cube",
+                shape=sdp.create_tri_mesh_shape(
+                    coordinates=[
+                        c
+                        for z in (-h, h)
+                        for y in (-h, h)
+                        for x in (-h, h)
+                        for c in (x, y, z)
+                    ],
+                    connectivity=[
+                        *(0, 2, 1, 1, 2, 3, 4, 5, 6, 5, 7, 6),
+                        *(0, 1, 5, 0, 5, 4, 2, 6, 3, 3, 6, 7),
+                        *(0, 4, 2, 2, 4, 6, 1, 3, 5, 3, 7, 5),
+                    ],
+                ),
+                density=1000,
+                world_from_local=sdp.TransformRT(translation=[0, 3 * h, 0]),
+                collider_type=sdp.ColliderType.BOX,
+            )
+            scene.create_rigid_actor(
+                name="ground",
+                shape=sdp.create_plane_shape(normal=[0, 1, 0], distance=0),
+                is_static=True,
+            )
+            config = recorder.PhysicsRecorderConfig()
+            config.record_contact_forces = True
+            episode = recorder.Recorder(
+                recorder.RecorderConfig(
+                    directory,
+                    chunk_max_bytes=chunk_max_bytes,
+                    chunk_max_duration_sec=chunk_max_duration_sec,
+                )
+            ).begin_episode()
+            physics = recorder.PhysicsRecorder(episode, scene, config)
+            physics.record(0, scene.get_total_simulation_time())
+            for frame in range(1, 200):
+                scene.step(0.01)
+                physics.record(frame, scene.get_total_simulation_time())
+            episode.commit()
+            return episode.output_path
+        finally:
+            physics = None
+            gc.collect()
+            if scene is not None:
+                sdp.destroy_scene(scene)
+            sdp.shutdown()
+
+    def test_series_are_written_in_bounded_chunks(self) -> None:
+        with tempfile.TemporaryDirectory() as directory_string:
+            directory = Path(directory_string)
+            whole = self.record_falling_cube(directory, 0, 0.0)
+            chunked = self.record_falling_cube(directory, 2048, 0.25)
+            rrd_verify.assert_rerun_accepts(chunked)
+
+            chunks_per_entity: dict[str, int] = {}
+            for chunk in _rr_experimental.RrdReader(chunked).stream():
+                if chunk.is_static:
+                    continue
+                path = chunk.entity_path
+                chunks_per_entity[path] = chunks_per_entity.get(path, 0) + 1
+                times = chunk.to_record_batch().column("sim_time").cast(pa.int64())
+                span_sec = (pc.max(times).as_py() - pc.min(times).as_py()) * 1e-9
+                self.assertLessEqual(span_sec, 0.25 + 1e-6, path)
+            self.assertGreater(chunks_per_entity["/data/physics/frames"], 1)
+            self.assertGreater(chunks_per_entity["/data/physics/contacts"], 1)
+            self.assert_same_falling_cube(EpisodeReader(chunked), EpisodeReader(whole))
+
+    def assert_same_falling_cube(
+        self, actual: EpisodeReader, expected: EpisodeReader
+    ) -> None:
+        for entity_path, component in (
+            ("data/physics/frames", "superdex.physics.step_dt_sec"),
+            ("data/physics/actors/cube", "superdex.physics.root_translation_xyz"),
+            ("world/cube", "Transform3D:translation"),
+            (
+                "data/physics/contacts",
+                "superdex.physics.contact_force_on_a_world_xyz",
+            ),
+        ):
+            self.assertEqual(
+                [
+                    (s.timelines, list(s.value))
+                    for s in actual.component_samples(
+                        component, entity_path=entity_path
+                    )
+                ],
+                [
+                    (s.timelines, list(s.value))
+                    for s in expected.component_samples(
+                        component, entity_path=entity_path
+                    )
+                ],
+                component,
+            )
 
     def test_records_simulated_contact_forces(self) -> None:
         with tempfile.TemporaryDirectory() as directory_string:

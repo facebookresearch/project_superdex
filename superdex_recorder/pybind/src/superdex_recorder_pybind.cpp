@@ -149,11 +149,20 @@ NB_MODULE(SUPERDEX_RECORDER_MODULE_NAME, module) {
 
   nb::class_<RecorderConfig>(module, "RecorderConfig")
       .def(
-          nb::new_([](std::filesystem::path outputDirectory) {
-            return RecorderConfig{std::move(outputDirectory)};
+          nb::new_([](std::filesystem::path outputDirectory,
+                      size_t chunkMaxBytes,
+                      double chunkMaxDurationSec) {
+            return RecorderConfig{
+                .outputDirectory = std::move(outputDirectory),
+                .chunkMaxBytes = chunkMaxBytes,
+                .chunkMaxDurationSec = chunkMaxDurationSec};
           }),
-          nb::arg("output_directory"))
-      .def_rw("output_directory", &RecorderConfig::outputDirectory);
+          nb::arg("output_directory"),
+          nb::arg("chunk_max_bytes") = RecorderConfig{}.chunkMaxBytes,
+          nb::arg("chunk_max_duration_sec") = RecorderConfig{}.chunkMaxDurationSec)
+      .def_rw("output_directory", &RecorderConfig::outputDirectory)
+      .def_rw("chunk_max_bytes", &RecorderConfig::chunkMaxBytes)
+      .def_rw("chunk_max_duration_sec", &RecorderConfig::chunkMaxDurationSec);
 
   nb::class_<EpisodeMetadata>(module, "EpisodeMetadata")
       .def(

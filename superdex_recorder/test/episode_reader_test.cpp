@@ -64,8 +64,13 @@ class TemporaryDirectory final {
 /* Records and commits one episode, returning its file. */
 std::filesystem::path RecordEpisode(
     TemporaryDirectory const& directory,
-    std::function<void(Episode&, mochi::Error&)> const& record) {
-  Recorder recorder{{.outputDirectory = directory.Path()}};
+    std::function<void(Episode&, mochi::Error&)> const& record,
+    size_t chunkMaxBytes = RecorderConfig{}.chunkMaxBytes,
+    double chunkMaxDurationSec = RecorderConfig{}.chunkMaxDurationSec) {
+  Recorder recorder{
+      {.outputDirectory = directory.Path(),
+       .chunkMaxBytes = chunkMaxBytes,
+       .chunkMaxDurationSec = chunkMaxDurationSec}};
   mochi::Error error;
   auto episode = recorder.BeginEpisode({}, error);
   EXPECT_NE(episode, nullptr) << error.ToString();
@@ -254,6 +259,80 @@ TEST(EpisodeReaderTest, OrdersRowsByFrameKeepingRecordedOrder) {
   ASSERT_TRUE(error.IsOK()) << error.ToString();
   EXPECT_EQ(rows.frames, (std::vector<int64_t>{1, 1, 3}));
   EXPECT_EQ(rows.values, (std::vector<double>{10, 11, 30}));
+}
+
+TEST(EpisodeReaderTest, ReadsSeriesWrittenAsManyChunks) {
+  // Transforms, points and meshes repeat at frames 1, 3 and 5, so only frames 0, 2 and 4 store a
+  // row.
+  auto const record = [](Episode& episode, mochi::Error& error) {
+    auto* const scalars = episode.CreateScalarSeries(
+        "data/test", {{"superdex.archetypes.Test", "superdex.test.values"}}, error);
+    auto* const transforms = episode.CreateTransformSeries("world/box", error);
+    auto* const points = episode.CreatePoints3DSeries("world/points", error);
+    std::array<uint32_t, 3> const triangle{0, 1, 2};
+    auto* const mesh =
+        episode.CreateDeformableMeshSeries("world/mesh", 3, triangle, {255, 255, 255, 255}, error);
+    auto* const plot = episode.CreatePlotSeries("data/plot", error);
+    ASSERT_NE(scalars, nullptr);
+    ASSERT_NE(transforms, nullptr);
+    ASSERT_NE(points, nullptr);
+    ASSERT_NE(mesh, nullptr);
+    ASSERT_NE(plot, nullptr);
+    for (uint64_t frame = 0; frame < 6; ++frame) {
+      SampleTime const time{.frame = frame, .simulationTimeSec = 0.5 * frame};
+      std::vector<mochi::real> const values(frame, static_cast<mochi::real>(frame));
+      std::array<mochi::Span<mochi::real const>, 1> const fields{values};
+      scalars->Append(time, fields, error);
+      uint64_t const step = frame / 2;
+      auto const position = static_cast<mochi::real>(step);
+      transforms->Append(time, {position, 0_r, 0_r}, {0_r, 0_r, 0_r, 1_r}, error);
+      std::array<mochi::Real3, 1> const point{mochi::Real3{0_r, position, 0_r}};
+      points->Append(time, point, error);
+      std::array<mochi::real, 9> const vertices{
+          0_r, position, 0_r, 1_r, position, 0_r, 0_r, position, 1_r};
+      std::array<mochi::real, 9> const normals{0_r, 1_r, 0_r, 0_r, 1_r, 0_r, 0_r, 1_r, 0_r};
+      mesh->Append(time, vertices, normals, error);
+      plot->Append(time, 0.1 * static_cast<double>(frame), error);
+    }
+  };
+  TemporaryDirectory directory;
+  // One chunk per series, then one chunk per row.
+  auto const onePath = RecordEpisode(directory, record, 0, 0.0);
+  auto const manyPath = RecordEpisode(directory, record, 1, 0.0);
+  auto const one = OpenEpisode(onePath);
+  auto const many = OpenEpisode(manyPath);
+  ASSERT_NE(one, nullptr);
+  ASSERT_NE(many, nullptr);
+  mochi::Error error;
+
+  for (auto const& [entityPath, component] :
+       {std::pair{"data/test", "superdex.test.values"},
+        std::pair{"world/box", "Transform3D:translation"},
+        std::pair{"world/points", "Points3D:positions"},
+        std::pair{"world/mesh", "Mesh3D:vertex_positions"},
+        std::pair{"data/plot", "Scalars:scalars"}}) {
+    ScalarRows const expected = one->ReadScalars(entityPath, component, error);
+    ScalarRows const actual = many->ReadScalars(entityPath, component, error);
+
+    ASSERT_TRUE(error.IsOK()) << error.ToString();
+    EXPECT_EQ(actual.frames, expected.frames) << component;
+    EXPECT_EQ(actual.simulationTimesNs, expected.simulationTimesNs) << component;
+    EXPECT_EQ(actual.offsets, expected.offsets) << component;
+    EXPECT_EQ(actual.values, expected.values) << component;
+  }
+  EXPECT_EQ(
+      many->ReadScalars("world/box", "Transform3D:translation", error).frames,
+      (std::vector<int64_t>{0, 2, 4}));
+  EXPECT_EQ(
+      many->ReadScalars("world/points", "Points3D:positions", error).frames,
+      (std::vector<int64_t>{0, 2, 4}));
+  EXPECT_EQ(
+      many->ReadScalars("world/mesh", "Mesh3D:vertex_positions", error).frames,
+      (std::vector<int64_t>{0, 2, 4}));
+  EXPECT_EQ(
+      many->ReadScalars("data/test", "superdex.test.values", error).values,
+      (std::vector<double>{1, 2, 2, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 5}));
+  EXPECT_TRUE(error.IsOK()) << error.ToString();
 }
 
 TEST(EpisodeReaderTest, RejectsFilesThatAreNotWholeEpisodes) {

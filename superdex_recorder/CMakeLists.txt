@@ -81,6 +81,8 @@ target_include_directories(superdex_recorder_lz4 SYSTEM PUBLIC "${lz4_SOURCE_DIR
 set_target_properties(superdex_recorder_lz4 PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 add_library(superdex_recorder_core STATIC
+    src/chunk_writer.cpp
+    src/chunk_writer.h
     src/link_kinematics.cpp
     src/series.cpp
     src/recorder.cpp
@@ -160,6 +162,7 @@ endif ()
 # that is the only platform the Unreal module links it on.
 if (WIN32 AND MOCHI_BUILD_SHARED AND TARGET superdex_recorder_robotics)
     add_library(superdex_recorder_shared SHARED
+        src/chunk_writer.cpp
         src/contact_collector.cpp
         src/link_kinematics.cpp
         src/physics_recorder.cpp

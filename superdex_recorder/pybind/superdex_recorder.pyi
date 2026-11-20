@@ -23,8 +23,15 @@ import numpy as np
 import numpy.typing as npt
 
 class RecorderConfig:
-    def __init__(self, output_directory: str | Path) -> None: ...
+    def __init__(
+        self,
+        output_directory: str | Path,
+        chunk_max_bytes: int = ...,
+        chunk_max_duration_sec: float = ...,
+    ) -> None: ...
     output_directory: Path
+    chunk_max_bytes: int
+    chunk_max_duration_sec: float
 
 class EpisodeMetadata:
     def __init__(self, properties: dict[str, str] = ...) -> None: ...
