@@ -104,7 +104,8 @@ struct NewtonSolverStatus {
   T resNormError = T(0);
 
   /// @brief Wall time spent setting up the linear operator and solving the linear system across all
-  /// Newton iterations [s].
+  /// Newton iterations [s]. Measured only with @ref NewtonSolverParams::measureLinearSolveTime, and
+  /// 0 otherwise.
   double linearSolveSec = 0.0;
 
   /// @brief Solver timer.

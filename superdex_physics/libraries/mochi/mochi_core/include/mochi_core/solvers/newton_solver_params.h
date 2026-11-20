@@ -81,6 +81,9 @@ struct NewtonSolverParams {
   bool consistencyResNorm = false;
   real consistencyResNormStep = ExperimentalEvalParams{}.consistencyResNormStep;
 
+  // Measurement of NewtonSolverStatus::linearSolveSec, executed by reading the clock around every linear solve (for profiling only).
+  bool measureLinearSolveTime = false;
+
   // Linear solver params. For solves that stop on ResidualPerActorWeighted, their absTol bounds
   // every actor's weighted residual. A negative absTol lets the Newton solver select it.
   KrylovSolverParams lParams = {.absTol = LinearSolverParams{}.absTol};

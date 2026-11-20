@@ -24,6 +24,7 @@
 #include "mochi_island.h"
 #include "mochi_joint_friction.h"
 #include "mochi_rigid.h"
+#include "mochi_scene_profiler.h"
 #include "mochi_soft.h"
 #include "mochi_solve.h"
 
@@ -87,6 +88,8 @@ void mochi::GetIslandNewtonParams(
   outNewtonParams.verbosity = simParams.nonLinearSolver.verbosity;
   outNewtonParams.consistencyResNorm = simParams.experimentalEval.consistencyResNorm;
   outNewtonParams.consistencyResNormStep = simParams.experimentalEval.consistencyResNormStep;
+  // Only the island profiler reads it (see CIslandStats::solveSec).
+  outNewtonParams.measureLinearSolveTime = reg.all_of<CIslandStats>(island);
 
   // Linear solver and preconditioner type
   outNewtonParams.lParams.preconditionerType = simParams.linearSolver.preconditionerType;

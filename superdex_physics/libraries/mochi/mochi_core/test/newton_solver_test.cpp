@@ -1973,19 +1973,28 @@ TEST(NewtonSolver, TrustMarginEscapesToFittedCurvature) {
   }));
 }
 
-TEST(NewtonSolver, LinearSolveTimeIsPartOfSolveTime) {
+TEST(NewtonSolver, LinearSolveTimeIsPartOfSolveTimeIfMeasured) {
   auto w0 = ColumnVector<real>::Ones(1);
   auto w1 = ColumnVector<real>::Ones(1);
-  auto problem = GetTwoActorMixedProblem(w0, w1);
+  for (bool const measure : {false, true}) {
+    auto problem = GetTwoActorMixedProblem(w0, w1);
 
-  NewtonSolverParams params;
-  params.absTolRes = 1e-4_r;
-  params.maxIter = 10;
-  NewtonSolver<real> solver(params);
-  problem.SetSolution(ColumnVector<real>({{0_r, 2_r}}));
-  auto const status = solver.Solve(problem);
+    NewtonSolverParams params;
+    params.absTolRes = 1e-4_r;
+    params.maxIter = 10;
+    if (measure) {
+      params.measureLinearSolveTime = true;
+    }
+    NewtonSolver<real> solver(params);
+    problem.SetSolution(ColumnVector<real>({{0_r, 2_r}}));
+    auto const status = solver.Solve(problem);
 
-  ASSERT_GT(status.numIterDone, 0);
-  EXPECT_GT(status.linearSolveSec, 0.0);
-  EXPECT_LE(status.linearSolveSec, ToSeconds(status.timer.GetElapsed()));
+    ASSERT_GT(status.numIterDone, 0);
+    if (measure) {
+      EXPECT_GT(status.linearSolveSec, 0.0);
+      EXPECT_LE(status.linearSolveSec, ToSeconds(status.timer.GetElapsed()));
+    } else {
+      EXPECT_EQ(status.linearSolveSec, 0.0);
+    }
+  }
 }
