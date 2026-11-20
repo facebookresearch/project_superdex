@@ -1127,7 +1127,7 @@ static void PostLastStageLocalPipeline(
 // previous steps available (cold start), e.g. BDF2 requires using backward Euler in the first step.
 // The number of previous steps available is determined by the minimum across all actors in the
 // island.
-TimeIntegratorParams mochi::solver::CreateIslandTimeIntegrationParams(
+TimeIntegratorParams const& mochi::solver::GetIslandTimeIntegratorParams(
     entt::registry const& reg,
     CIslandDescendants const& descendants,
     IntegrationMethod const& targetMethod) {
@@ -1228,7 +1228,7 @@ TimeIntegratorParams mochi::solver::CreateIslandTimeIntegrationParams(
       method = replacement;
     }
   }
-  return CreateTimeIntegratorParams(method);
+  return GetTimeIntegratorParams(method);
 }
 
 // Builds the island's SnleProblem, gathers the initial solution from the actors, and applies
@@ -1288,8 +1288,8 @@ SnleProblem<real> mochi::solver::InitIslandAssembly(
 
   // Multi-stage assembly is not supported
   auto const& simParams = reg.ctx<CSimulationParams const>();
-  TimeIntegratorParams const integrationParams =
-      CreateIslandTimeIntegrationParams(reg, descendants, simParams.integrationMethod);
+  TimeIntegratorParams const& integrationParams =
+      GetIslandTimeIntegratorParams(reg, descendants, simParams.integrationMethod);
   MOCHI_ASSERT(integrationParams.numStages == 1, "Only one stage is supported for assembly");
   SetTimeIntegratorState(reg, descendants.actors, integrationParams, 0);
 
@@ -1368,8 +1368,8 @@ bool mochi::solver::StepIslandNewtonAsync(
   // Perform time integration.
   bool success = true;
   real restValue = 1_r;
-  auto const integrationParams =
-      CreateIslandTimeIntegrationParams(reg, descendants, simParams.integrationMethod);
+  auto const& integrationParams =
+      GetIslandTimeIntegratorParams(reg, descendants, simParams.integrationMethod);
 
   for (int iStage = 0; iStage < integrationParams.numStages; ++iStage) {
     bool const isImplicitStage = (integrationParams.A(iStage, iStage) != 0_r);

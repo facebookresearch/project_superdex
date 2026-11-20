@@ -713,7 +713,7 @@ void SceneImpl::Step(double timeStepSec) {
     dbg::StepProfileTimers stepProfile;
     stepProfile.numWorkerThreads = TaskScheduler::StaticGetNumThreads();
     if (timeStepSec > 0.0) {
-      // Quasistatic steps use backward Euler (see solver::CreateIslandTimeIntegrationParams).
+      // Quasistatic steps use backward Euler (see solver::GetIslandTimeIntegratorParams).
       auto const method = _registry.ctx<CSimulationParams const>().integrationMethod;
       if (!IsFinite(timeStepSec) && method != IntegrationMethod::BackwardEuler) {
         MOCHI_LOG_WARNING_ONCE(

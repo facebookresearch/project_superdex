@@ -544,8 +544,8 @@ static void PrepareBackPropagationIslandAsync(
   MOCHI_ASSERT(
       simParams.integrationMethod == IntegrationMethod::BackwardEuler,
       "Only Backward Euler is supported")
-  auto const integrationParams =
-      solver::CreateIslandTimeIntegrationParams(reg, descendants, simParams.integrationMethod);
+  auto const& integrationParams =
+      solver::GetIslandTimeIntegratorParams(reg, descendants, simParams.integrationMethod);
   MOCHI_ASSERT(integrationParams.numStages == 1);
   solver::SetTimeIntegratorState(reg, descendants.actors, integrationParams, /*iStage*/ 0);
 

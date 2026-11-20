@@ -58,7 +58,7 @@ TEST(IntegrationUtils, Coefficients) {
     Matrix<real> Aexpected = {{1_r}};
     RowVector<real> bExpected = {{1_r}};
     RowVector<real> cExpected = {{1_r}};
-    auto const params = CreateTimeIntegratorParams(IntegrationMethod::BackwardEuler);
+    auto const& params = GetTimeIntegratorParams(IntegrationMethod::BackwardEuler);
     runChecks(
         params, numSteps, numStages, alphaExpected, betaExpected, Aexpected, bExpected, cExpected);
   }
@@ -71,7 +71,7 @@ TEST(IntegrationUtils, Coefficients) {
     Matrix<real> Aexpected = {{1_r}};
     RowVector<real> bExpected = {{1_r}};
     RowVector<real> cExpected = {{1_r}};
-    auto const params = CreateTimeIntegratorParams(IntegrationMethod::BDF2);
+    auto const& params = GetTimeIntegratorParams(IntegrationMethod::BDF2);
     runChecks(
         params, numSteps, numStages, alphaExpected, betaExpected, Aexpected, bExpected, cExpected);
   }
@@ -84,7 +84,7 @@ TEST(IntegrationUtils, Coefficients) {
     Matrix<real> Aexpected = {{1_r}};
     RowVector<real> bExpected = {{1_r}};
     RowVector<real> cExpected = {{1_r}};
-    auto const params = CreateTimeIntegratorParams(IntegrationMethod::BDF3);
+    auto const& params = GetTimeIntegratorParams(IntegrationMethod::BDF3);
     runChecks(
         params, numSteps, numStages, alphaExpected, betaExpected, Aexpected, bExpected, cExpected);
   }
@@ -98,7 +98,7 @@ TEST(IntegrationUtils, Coefficients) {
     Matrix<real> Aexpected = {{alpha, 1_r - alpha}, {0_r, alpha}};
     RowVector<real> bExpected = {{1_r - alpha, alpha}};
     RowVector<real> cExpected = {{alpha, 1_r}};
-    auto const params = CreateTimeIntegratorParams(IntegrationMethod::DIRK22);
+    auto const& params = GetTimeIntegratorParams(IntegrationMethod::DIRK22);
     runChecks(
         params, numSteps, numStages, alphaExpected, betaExpected, Aexpected, bExpected, cExpected);
   }
@@ -115,7 +115,7 @@ TEST(IntegrationUtils, Coefficients) {
     Matrix<real> Aexpected = {{gamma, c2 - gamma, b1}, {0_r, gamma, b2}, {0_r, 0_r, gamma}};
     RowVector<real> bExpected = {{b1, b2, gamma}};
     RowVector<real> cExpected = {{gamma, c2, 1_r}};
-    auto const params = CreateTimeIntegratorParams(IntegrationMethod::DIRK33);
+    auto const& params = GetTimeIntegratorParams(IntegrationMethod::DIRK33);
     runChecks(
         params, numSteps, numStages, alphaExpected, betaExpected, Aexpected, bExpected, cExpected);
   }
@@ -129,7 +129,7 @@ TEST(IntegrationUtils, Coefficients) {
         {0.5_r + 0.5_r / Sqrt(3_r), -1_r / Sqrt(3_r)}, {0_r, 0.5_r + 0.5_r / Sqrt(3_r)}};
     RowVector<real> bExpected = {{0.5_r, 0.5_r}};
     RowVector<real> cExpected = {{0.5_r + 0.5_r / Sqrt(3_r), 0.5_r - 0.5_r / Sqrt(3_r)}};
-    auto const params = CreateTimeIntegratorParams(IntegrationMethod::DIRK23);
+    auto const& params = GetTimeIntegratorParams(IntegrationMethod::DIRK23);
     runChecks(
         params, numSteps, numStages, alphaExpected, betaExpected, Aexpected, bExpected, cExpected);
   }
@@ -142,7 +142,7 @@ TEST(IntegrationUtils, Coefficients) {
     Matrix<real> Aexpected = {{0.5_r}};
     RowVector<real> bExpected = {{1_r}};
     RowVector<real> cExpected = {{0.5_r}};
-    auto const params = CreateTimeIntegratorParams(IntegrationMethod::SymplecticDIRK12);
+    auto const& params = GetTimeIntegratorParams(IntegrationMethod::SymplecticDIRK12);
     runChecks(
         params, numSteps, numStages, alphaExpected, betaExpected, Aexpected, bExpected, cExpected);
   }
@@ -155,7 +155,7 @@ TEST(IntegrationUtils, Coefficients) {
     Matrix<real> Aexpected = {{0.25_r, 0.5_r}, {0_r, 0.25_r}};
     RowVector<real> bExpected = {{0.5_r, 0.5_r}};
     RowVector<real> cExpected = {{0.25_r, 0.75_r}};
-    auto const params = CreateTimeIntegratorParams(IntegrationMethod::SymplecticDIRK22);
+    auto const& params = GetTimeIntegratorParams(IntegrationMethod::SymplecticDIRK22);
     runChecks(
         params, numSteps, numStages, alphaExpected, betaExpected, Aexpected, bExpected, cExpected);
   }
@@ -163,7 +163,7 @@ TEST(IntegrationUtils, Coefficients) {
 
 TEST(IntegrationUtils, TimeIntegratorStateFromParams) {
   // Test TimeIntegratorState constructor from params.
-  auto const params = CreateTimeIntegratorParams(IntegrationMethod::DIRK33);
+  auto const& params = GetTimeIntegratorParams(IntegrationMethod::DIRK33);
   int const currentStage = 1;
   real const dt = 1.5e-2_r;
   TimeIntegratorState state;
@@ -237,7 +237,7 @@ TEST(IntegrationUtils, GetMethodEndingAtLastStage) {
 TEST(IntegrationUtils, EndsAtLastStageMatchesTableau) {
   for (int i = 0; i < static_cast<int>(IntegrationMethod::Count); ++i) {
     auto const method = static_cast<IntegrationMethod>(i);
-    auto const params = CreateTimeIntegratorParams(method);
+    auto const& params = GetTimeIntegratorParams(method);
     int const lastStage = params.numStages - 1;
     bool bIsLastRowOfA = true;
     for (int j = 0; j < params.numStages; ++j) {

@@ -23,7 +23,10 @@
 #include <mochi_core/utils/log.h>
 #include <mochi_core/utils/no_copy.h>
 
+#include <array>
+#include <cstddef>
 #include <limits>
+#include <utility>
 
 namespace mochi {
 
@@ -224,6 +227,18 @@ struct TimeIntegratorState {
       "Please update the switch statement above if IntegrationMethod enumerator changes");
 
   return TimeIntegratorParams{0, {}, 0_r, 0, {}, {}, {}};
+}
+
+// Returns the parameters of a time integration method. They are created once and never destroyed,
+// so they stay valid during static destruction.
+[[nodiscard]] inline TimeIntegratorParams const& GetTimeIntegratorParams(IntegrationMethod method) {
+  static auto const* const kParams = []<size_t... kMethods>(std::index_sequence<kMethods...>) {
+    return new auto(
+        std::array{CreateTimeIntegratorParams(static_cast<IntegrationMethod>(kMethods))...});
+  }(std::make_index_sequence<static_cast<size_t>(IntegrationMethod::Count)>{});
+  MOCHI_ASSERT_VERBOSE(
+      static_cast<size_t>(method) < kParams->size(), "Unsupported integration method.");
+  return (*kParams)[static_cast<size_t>(method)];
 }
 
 [[nodiscard]] inline int GetNumSteps(IntegrationMethod const& method) {

@@ -81,7 +81,7 @@ void PreStageLocalPipeline(
 
 void PostStageLocalPipeline(entt::registry& reg, CIslandDescendants const& descendants);
 
-TimeIntegratorParams CreateIslandTimeIntegrationParams(
+[[nodiscard]] TimeIntegratorParams const& GetIslandTimeIntegratorParams(
     entt::registry const& reg,
     CIslandDescendants const& descendants,
     IntegrationMethod const& targetMethod);
