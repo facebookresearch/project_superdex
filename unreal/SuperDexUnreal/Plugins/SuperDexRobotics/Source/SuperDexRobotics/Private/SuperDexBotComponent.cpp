@@ -140,25 +140,26 @@ const TArray<double>& USuperDexBotComponent::GetCurrentJointVelocities() const {
 }
 
 bool USuperDexBotComponent::SetController(TSubclassOf<USuperDexBotController> NewControllerClass) {
-  FScopeLock lock(&BotControllerMutex);
-  if (BotController != nullptr) {
-    BotController->Shutdown(this);
+  // The Mochi simulation thread steps the controller under BotControllerMutex
+  // (OnArticulatedActorControl), so the controller is swapped under it. Shutdown and Initialize run
+  // without it: a controller may wait for the simulation thread there (to destroy or create its
+  // Mochi controller), and that thread may be waiting on this mutex in the control callback, which
+  // froze the game thread when a roboperator was destroyed mid-step. With no controller set, the
+  // callback returns without controlling.
+  USuperDexBotController* OldController = nullptr;
+  {
+    FScopeLock lock(&BotControllerMutex);
+    OldController = BotController;
     BotController = nullptr;
+  }
+  if (OldController != nullptr) {
+    OldController->Shutdown(this);
   }
   BotControllerClass = NewControllerClass;
   if (BotControllerClass) {
-    BotController = NewObject<USuperDexBotController>(this, BotControllerClass);
-    if (BotController) {
-      if (!BotController->Initialize(this)) {
-        UE_LOG(
-            LogMochiPhysics,
-            Warning,
-            TEXT("[USuperDexBotComponent] Failed to initialize SuperDexBotController of class %s"),
-            *BotControllerClass->GetName());
-        BotController = nullptr;
-        return false;
-      }
-    } else {
+    USuperDexBotController* NewController =
+        NewObject<USuperDexBotController>(this, BotControllerClass);
+    if (NewController == nullptr) {
       UE_LOG(
           LogMochiPhysics,
           Error,
@@ -166,6 +167,16 @@ bool USuperDexBotComponent::SetController(TSubclassOf<USuperDexBotController> Ne
           *BotControllerClass->GetName());
       return false;
     }
+    if (!NewController->Initialize(this)) {
+      UE_LOG(
+          LogMochiPhysics,
+          Warning,
+          TEXT("[USuperDexBotComponent] Failed to initialize SuperDexBotController of class %s"),
+          *BotControllerClass->GetName());
+      return false;
+    }
+    FScopeLock lock(&BotControllerMutex);
+    BotController = NewController;
   }
   return true;
 }
