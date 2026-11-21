@@ -17,16 +17,20 @@
 #include "Retargeters/SuperDexBotIKRetargeter.h"
 
 #include <mochi_core/utils/math_utils.h>
+#include <superdex_robotics/ik/bot_ik_config.h>
 #include <superdex_robotics/utils/bot_utils.h>
 #include <algorithm>
+#include "DrawDebugHelpers.h"
 #include "Engine/Engine.h"
 #include "Engine/SkeletalMesh.h"
+#include "Materials/MaterialInterface.h"
 #include "MochiConversions.h"
 #include "SuperDexBot.h"
 #include "SuperDexIKSolverObject.h"
 #include "SuperDexPoseFunctionLibrary.h"
 #include "SuperDexTeleopModule.h"
 #include "TeleopNode.h"
+#include "UObject/ConstructorHelpers.h"
 #if WITH_EDITOR
 #include "Misc/DataValidation.h"
 #endif
@@ -185,6 +189,11 @@ USuperDexBotIKRetargeter::USuperDexBotIKRetargeter() {
   bGetTransformedPoseDoesNotNeedValidSourcePose = true;
   bShow_EditorViewportPose = false;
   ErrorMessageKey = reinterpret_cast<uint64>(this);
+  // Same default as UMochiIKRetargeter's input pose skeleton: the translucent tracked-hand look.
+  static ConstructorHelpers::FObjectFinder<UMaterialInterface> DefaultInputPoseSkeletonMaterial(
+      TEXT(
+          "/Script/Engine.MaterialInstanceConstant'/SuperDexRobotics/Teleop/Operator/MI_Operator_TrackedHand.MI_Operator_TrackedHand'"));
+  DebugDrawInputPoseSkeletonMaterialOverride = DefaultInputPoseSkeletonMaterial.Object;
 }
 
 bool USuperDexBotIKRetargeter::ValidateConfiguration(FString& Diagnostic) const {
@@ -260,17 +269,6 @@ bool USuperDexBotIKRetargeter::ValidateConfiguration(FString& Diagnostic) const 
       return false;
     }
   }
-  return ValidateSourceProvider(Diagnostic);
-}
-
-bool USuperDexBotIKRetargeter::ValidateSourceProvider(FString& Diagnostic) const {
-  // Same priority as the pose framework. Input poses are assumed to match InputBot's link layout;
-  // only their bone count is checked, per pose.
-  if (!PoseSourceOverride &&
-      (SourcePoseableOverride ? SourcePoseableOverride : GetChildSourcePoseable()) == this) {
-    Diagnostic = TEXT("Retargeter cannot be its own pose source.");
-    return false;
-  }
   return true;
 }
 
@@ -284,10 +282,6 @@ void USuperDexBotIKRetargeter::SetStatus(
     Changed = bCurrentValid != bValid || LastDiagnostic != Diagnostic;
     bCurrentValid = bValid;
     LastDiagnostic = Diagnostic;
-    if (Changed) {
-      ++StatusSequence;
-      bPendingStatus = true;
-    }
   }
   if (!bValid && bPublishTeleopHandJointTargets && IsInGameThread() && GetOwner()) {
     if (auto* Node = GetOwner()->GetComponentByClass<UTeleopNodeOperatorComponent>()) {
@@ -324,8 +318,6 @@ bool USuperDexBotIKRetargeter::InitializeRetargeter() {
   OutputModel = Config->OutputBot->GetBotPrefab();
   PrepareBiasedCommandLimits();
   InputModel = Config->InputBot->GetBotPrefab();
-  OutputModelJson = Config->OutputBot->GetBotPrefabJson();
-  InputModelJson = Config->InputBot->GetBotPrefabJson();
   Solver = USuperDexIKSolverObject::CreateBotIKSolver(this, Config->OutputBot, NativeConfig);
   if (!Solver) {
     SetStatus(false, TEXT("Could not instantiate the configured private IK solver."), true);
@@ -336,29 +328,17 @@ bool USuperDexBotIKRetargeter::InitializeRetargeter() {
   InitializedInputBot = Config->InputBot;
   SetSkinnedAssetAndUpdate(Config->OutputBot->GetSkeletalMesh());
   InputRootFrameFromOutputRootFrame = FTransform::Identity;
-  // Capture the root-driven Mochi pose contract from the real component/source relation, not
-  // outputBaseFrameFromInputBaseFrame. That authored frame aligns solver goals only. In a
-  // roboperator, using its inverse here adds a fresh arm-target offset whenever the clutch resets
-  // from arm feedback. Resolve metadata only: never invoke the runtime world/controller pose-source
-  // resolver here.
-  const auto* Source = PoseSourceOverride
-      ? nullptr
-      : (SourcePoseableOverride ? SourcePoseableOverride : GetChildSourcePoseable());
-  if (Source) {
-    // The output bot's root link is its skeleton root, where this component is.
-    auto WorldFrameFromOutputRootFrame = GetComponentTransform();
-    auto WorldFrameFromInputRootFrame = Source->GetComponentTransform();
-    WorldFrameFromOutputRootFrame.SetScale3D(FVector::OneVector);
-    WorldFrameFromInputRootFrame.SetScale3D(FVector::OneVector);
-    InputRootFrameFromOutputRootFrame =
-        USuperDexPoseFunctionLibrary::MultiplyTransformsStrippingScale(
-            WorldFrameFromOutputRootFrame, WorldFrameFromInputRootFrame.Inverse());
-    if (InputRootFrameFromOutputRootFrame.ContainsNaN() ||
-        !UnitRotation(InputRootFrameFromOutputRootFrame.GetRotation())) {
-      ReleaseSolver();
-      SetStatus(false, TEXT("Output/source root calibration must be finite and rigid."), true);
-      return false;
-    }
+  // The root-driven pose contract comes from the authored input/output base frame. An attached
+  // source (normally the clutch) is placed at that frame too, so the clutch initializes from the
+  // same relation and the arm target does not jump when it resets from arm feedback. Resolve
+  // metadata only: never invoke the runtime world/controller pose-source resolver here.
+  PlaceSourceAtConfigInputBaseFrame();
+  InputRootFrameFromOutputRootFrame = ComputeInputRootFrameFromOutputRootFrame();
+  if (InputRootFrameFromOutputRootFrame.ContainsNaN() ||
+      !UnitRotation(InputRootFrameFromOutputRootFrame.GetRotation())) {
+    ReleaseSolver();
+    SetStatus(false, TEXT("Output/source root calibration must be finite and rigid."), true);
+    return false;
   }
   bInputBotHasPrismatic =
       std::any_of(InputModel.joints.begin(), InputModel.joints.end(), [](const auto& Joint) {
@@ -372,21 +352,8 @@ bool USuperDexBotIKRetargeter::GetTransformedPose_Implementation(
     const FSuperDexPose& SourcePose,
     bool bSourceIsValid,
     FSuperDexPose& TransformedPose) {
-  if (!IsInGameThread()) {
-    UE_LOG(
-        LogSuperDexTeleop,
-        Error,
-        TEXT(
-            "BotIK retargeter solves require the game thread; use cached results on physics threads."));
-    return false;
-  }
-  bool bModelsChanged = !Solver || !Config || Config != InitializedConfig ||
+  const bool bModelsChanged = !Solver || !Config || Config != InitializedConfig ||
       Config->OutputBot != InitializedOutputBot || Config->InputBot != InitializedInputBot;
-#if WITH_EDITOR
-  // Only the editor changes a bot asset in place (e.g. a reimport).
-  bModelsChanged = bModelsChanged || Config->OutputBot->GetBotPrefabJson() != OutputModelJson ||
-      Config->InputBot->GetBotPrefabJson() != InputModelJson;
-#endif
   if (bModelsChanged) {
     SetStatus(
         false,
@@ -441,11 +408,13 @@ bool USuperDexBotIKRetargeter::GetTransformedPose_Implementation(
     LogLargeInputResiduals(
         *this, InputModel, InputResiduals, bInputBotHasPrismatic, LargeInputResidualFrames);
   }
+  const mochi::TransformRT WorldFrameFromInputBaseFrame =
+      NativeConfig.outputBaseFrameFromInputBaseFrame * InputRootLocal;
   if (!Error.IsOK() ||
       !Solver->SetBotInputConfiguration(
           InputModel,
           InputPositions,
-          NativeConfig.outputBaseFrameFromInputBaseFrame * InputRootLocal,
+          WorldFrameFromInputBaseFrame,
           NativeConfig.inputBotScale,
           NativeConfig.goals)) {
     SetStatus(false, TEXT("Applying the input pose to the IK goals failed."), true);
@@ -456,6 +425,16 @@ bool USuperDexBotIKRetargeter::GetTransformedPose_Implementation(
   if (!Solver->SolveBotIK(Reached)) {
     SetStatus(false, TEXT("Native IK solve failed; no fresh robot command was published."), true);
     return false;
+  }
+  if (bDebugDrawIKCoordinateFrames) {
+    CaptureDebugGoalFrames(WorldFrameFromInputBaseFrame);
+  } else {
+    DebugGoalFrames.Reset();
+  }
+  if (bDebugDrawInputPoseSkeleton) {
+    CaptureDebugInputPose(WorldFrameFromInputBaseFrame);
+  } else {
+    bHasDebugInputPose = false;
   }
   TArray<double> Positions = Solver->GetSolvedDofs();
   if (Positions.Num() != OutputModel._numDofs) {
@@ -503,13 +482,23 @@ bool USuperDexBotIKRetargeter::GetTransformedPose_Implementation(
     SetStatus(false, TEXT("IK result width does not match the output bot."), true);
     return false;
   }
+  if (bPublishTeleopHandJointTargets) {
+    auto* Node =
+        GetOwner() ? GetOwner()->GetComponentByClass<UTeleopNodeOperatorComponent>() : nullptr;
+    if (!IsValid(Node) || Node->NumHandJoints != Positions.Num()) {
+      SetStatus(
+          false,
+          TEXT("Teleop hand node is missing or its width changed; no command published."),
+          true);
+      return false;
+    }
+    Node->SetHandJointTargets(Positions);
+  }
   TransformedPose = MoveTemp(Candidate);
   {
     FScopeLock Lock(&ResultMutex);
     JointCache = MoveTemp(Positions);
     bHasSolution = true;
-    bLastGoalsReached = Reached;
-    ++SolutionSequence;
   }
   SetStatus(true, Reached ? TEXT("Goals reached") : TEXT("Best effort: goals unreached"), false);
   return true;
@@ -519,31 +508,17 @@ bool USuperDexBotIKRetargeter::GetPose(FSuperDexPose& OutPose) {
   if (!IsInGameThread()) {
     return false;
   }
-  if (bEvaluatingPose) {
-    // The outer SuperDexPose request may still own CacheLock while invoking its source. No cache
-    // read or callback publication is safe from a nested source evaluation.
-    return false;
-  }
-  if (bPublishing) {
-    return GetCachedPose(OutPose);
-  }
-  bool Result;
-  {
-    TGuardValue<bool> EvaluationGuard(bEvaluatingPose, true);
-    Result = Super::GetPose(OutPose);
-  }
-  bool WasValid;
+  const bool Result = Super::GetPose(OutPose);
+  bool bValid;
   {
     FScopeLock Lock(&ResultMutex);
-    WasValid = bCurrentValid;
+    bValid = bCurrentValid;
   }
-  if (!Result && WasValid) {
+  if (!Result && bValid) {
     SetStatus(false, TEXT("Pose source unavailable, disabled or cyclic; no fresh command."), false);
+    return false;
   }
-  // Super holds CacheLock during GetTransformedPose. Listener callbacks run only after return.
-  PublishPending();
-  FScopeLock Lock(&ResultMutex);
-  return Result && bCurrentValid;
+  return Result && bValid;
 }
 
 bool USuperDexBotIKRetargeter::GetCachedPose(FSuperDexPose& OutPose) const {
@@ -569,76 +544,6 @@ bool USuperDexBotIKRetargeter::GetCachedJointConfiguration(TArray<double>& Posit
     Positions = JointCache;
   }
   return bHasSolution;
-}
-
-FString USuperDexBotIKRetargeter::GetRetargetingDiagnostic() const {
-  FScopeLock Lock(&ResultMutex);
-  return LastDiagnostic;
-}
-
-void USuperDexBotIKRetargeter::PublishPending() {
-  if (!IsInGameThread() || bPublishing) {
-    return;
-  }
-  TArray<double> Positions;
-  FString Diagnostic;
-  bool Valid, Reached, PublishSolution, PublishStatus;
-  uint64 Generation, Sequence;
-  {
-    FScopeLock Lock(&ResultMutex);
-    Generation = SolverGeneration;
-    Sequence = SolutionSequence;
-    Valid = bCurrentValid;
-    Reached = bLastGoalsReached;
-    Diagnostic = LastDiagnostic;
-    PublishSolution = Valid && SolutionSequence != PublishedSequence;
-    PublishStatus = StatusSequence != PublishedStatusSequence;
-    PublishedSequence = SolutionSequence;
-    PublishedStatusSequence = StatusSequence;
-    bPendingStatus = false;
-    if (PublishSolution) {
-      Positions = JointCache;
-    }
-  }
-  bPublishing = true;
-  if (PublishStatus) {
-    OnRetargetingStatusChanged.Broadcast(Valid, Diagnostic);
-  }
-  if (PublishSolution &&
-      (!Config || Config != InitializedConfig || Config->OutputBot != InitializedOutputBot ||
-       Config->InputBot != InitializedInputBot)) {
-    SetStatus(
-        false,
-        TEXT("Configuration references changed during result publication; reinitialize."),
-        true);
-  }
-  {
-    FScopeLock Lock(&ResultMutex);
-    PublishSolution &=
-        bCurrentValid && SolverGeneration == Generation && SolutionSequence == Sequence;
-  }
-  if (PublishSolution && Solver) {
-    if (bPublishTeleopHandJointTargets) {
-      auto* Node =
-          GetOwner() ? GetOwner()->GetComponentByClass<UTeleopNodeOperatorComponent>() : nullptr;
-      if (IsValid(Node) && Node->NumHandJoints == Positions.Num()) {
-        Node->SetHandJointTargets(Positions);
-      } else {
-        if (IsValid(Node)) {
-          Node->InvalidateHandJointTargets();
-        }
-        SetStatus(
-            false,
-            TEXT("Teleop hand node is missing or its width changed; no command published."),
-            true);
-        PublishSolution = false;
-      }
-    }
-    if (PublishSolution) {
-      OnJointConfigurationSolved.Broadcast(Positions, Reached);
-    }
-  }
-  bPublishing = false;
 }
 
 void USuperDexBotIKRetargeter::PrepareBiasedCommandLimits() {
@@ -718,16 +623,343 @@ void USuperDexBotIKRetargeter::ReleaseSolver() {
   PreviousInputPositions.clear();
   BiasedCommandLimits.Reset();
   LargeInputResidualFrames = 0;
+  DebugGoalFrames.Reset();
+  bHasDebugInputPose = false;
   FScopeLock Lock(&ResultMutex);
-  ++SolverGeneration;
   bHasSolution = bCurrentValid = false;
   JointCache.Reset();
-  PublishedSequence = SolutionSequence;
+}
+
+void USuperDexBotIKRetargeter::OnRegister() {
+  Super::OnRegister();
+  PlaceSourceAtConfigInputBaseFrame();
+}
+
+void USuperDexBotIKRetargeter::OnChildAttached(USceneComponent* ChildComponent) {
+  Super::OnChildAttached(ChildComponent);
+  PlaceSourceAtConfigInputBaseFrame();
+}
+
+USuperDexPoseableComponent* USuperDexBotIKRetargeter::GetComponentPoseSource() const {
+  if (PoseSourceOverride) {
+    return nullptr;
+  }
+  return SourcePoseableOverride ? SourcePoseableOverride : GetChildSourcePoseable();
+}
+
+bool USuperDexBotIKRetargeter::ComputeSourcePlacement(
+    const USuperDexPoseableComponent& Source,
+    FTransform& OutSourceRelative) const {
+  if (Config == nullptr || Source.GetAttachParent() != this) {
+    return false;
+  }
+  // UE order throughout: A * B is A expressed in B's frame. Each bot's base is its root link, at its
+  // component (the skeleton root of the poses it shows).
+  FTransform SourceInComponent = Config->OutputBaseFrameFromInputBaseFrame;
+  SourceInComponent.SetScale3D(FVector::OneVector);
+  FTransform ComponentInAttachFrame = FTransform::Identity;
+  if (!Source.GetAttachSocketName().IsNone()) {
+    FTransform AttachFrameInComponent =
+        GetSocketTransform(Source.GetAttachSocketName(), RTS_Component);
+    AttachFrameInComponent.SetScale3D(FVector::OneVector);
+    ComponentInAttachFrame = AttachFrameInComponent.Inverse();
+  }
+  OutSourceRelative = SourceInComponent * ComponentInAttachFrame;
+  return true;
+}
+
+FTransform USuperDexBotIKRetargeter::ComputeInputRootFrameFromOutputRootFrame() const {
+  if (Config == nullptr) {
+    return FTransform::Identity;
+  }
+  // The output root in the source root's frame: both are their components' skeleton roots, so with
+  // the source placed per ComputeSourcePlacement this equals the measured relation.
+  FTransform InputBaseInOutputBase = Config->OutputBaseFrameFromInputBaseFrame;
+  InputBaseInOutputBase.SetScale3D(FVector::OneVector);
+  return InputBaseInOutputBase.Inverse();
+}
+
+void USuperDexBotIKRetargeter::PlaceSourceAtConfigInputBaseFrame() {
+  USuperDexPoseableComponent* Source = GetComponentPoseSource();
+  if (Source == nullptr || Source == this) {
+    return;
+  }
+  FTransform SourceRelative;
+  if (ComputeSourcePlacement(*Source, SourceRelative)) {
+    Source->SetRelativeLocationAndRotation(
+        SourceRelative.GetLocation(), SourceRelative.GetRotation());
+  }
 }
 
 void USuperDexBotIKRetargeter::BeginPlay() {
   Super::BeginPlay();
   InitializeRetargeter();
+}
+
+void USuperDexBotIKRetargeter::CaptureDebugGoalFrames(
+    const mochi::TransformRT& WorldFrameFromInputBaseFrame) {
+  DebugGoalFrames.Reset();
+  if (!Solver) {
+    return;
+  }
+  // Same resolution as the native BotIK::SetInputBotConfiguration, in the solver's world frame.
+  mochi::Error Error;
+  mochi::DynamicArray<mochi::TransformRT> WorldFromInputLinks;
+  superdex::robotics::ComputeIKInputBotTransforms(
+      InputModel,
+      PreviousInputPositions,
+      WorldFrameFromInputBaseFrame,
+      NativeConfig.inputBotScale,
+      WorldFromInputLinks,
+      Error);
+  const auto WorldFromOutputLinks = Solver->GetOutputBotWorldFromLinks();
+  if (!Error.IsOK() || WorldFromOutputLinks.empty()) {
+    return;
+  }
+  // Express everything relative to the output base (its root link), which is where this
+  // component's root bone is drawn.
+  const mochi::TransformRT OutputBaseFromWorld = mochi::Invert(WorldFromOutputLinks[0]);
+  FMochiToUnrealConverter ToUnreal(kSuperDexSpace);
+  const auto InOutputBase = [&](const mochi::TransformRT& WorldFromFrame) {
+    return ToUnreal.TransformToUnreal(OutputBaseFromWorld * WorldFromFrame);
+  };
+  for (const auto& Goal : NativeConfig.goals) {
+    if (!Goal.enabled || (Goal.positionStiffness <= 0 && Goal.rotationStiffness <= 0)) {
+      continue;
+    }
+    const int OutputLink =
+        superdex::robotics::FindLinkIndexByName(OutputModel, Goal.outputBotLink);
+    if (OutputLink < 0 || OutputLink >= static_cast<int>(WorldFromOutputLinks.size())) {
+      continue;
+    }
+    mochi::Error GoalError;
+    mochi::TransformRT WorldFromGoal;
+    superdex::robotics::ComputeIKGoalWorldConstraintTransform(
+        Goal,
+        OutputModel.worldFromRoot,
+        &InputModel,
+        WorldFromInputLinks,
+        NativeConfig.inputBotScale,
+        WorldFromGoal,
+        GoalError);
+    if (!GoalError.IsOK()) {
+      continue;
+    }
+    FDebugGoalFrames Frames;
+    Frames.GoalInOutputBase = InOutputBase(WorldFromGoal);
+    Frames.OutputLinkInOutputBase = InOutputBase(WorldFromOutputLinks[OutputLink]);
+    Frames.ConstraintInOutputBase =
+        InOutputBase(WorldFromOutputLinks[OutputLink] * Goal.linkFrameFromConstraintFrame);
+    if (!Goal.inputBotLink.empty()) {
+      const int InputLink =
+          superdex::robotics::FindLinkIndexByName(InputModel, Goal.inputBotLink);
+      if (InputLink >= 0 && InputLink < static_cast<int>(WorldFromInputLinks.size())) {
+        Frames.InputLinkInOutputBase = InOutputBase(WorldFromInputLinks[InputLink]);
+        Frames.InputLinkName = FName(UTF8_TO_TCHAR(Goal.inputBotLink.c_str()));
+        Frames.bHasInputLink = true;
+      }
+    }
+    DebugGoalFrames.Add(Frames);
+  }
+}
+
+void USuperDexBotIKRetargeter::CaptureDebugInputPose(
+    const mochi::TransformRT& WorldFrameFromInputBaseFrame) {
+  bHasDebugInputPose = false;
+  const auto WorldFromOutputLinks = Solver ? Solver->GetOutputBotWorldFromLinks()
+                                           : mochi::Span<mochi::TransformRT const>{};
+  if (WorldFromOutputLinks.empty()) {
+    return;
+  }
+  // Nominal FK at the solver's input positions; the input base placement and the display scale
+  // reproduce ComputeIKInputBotTransforms, which scales only root-relative translations.
+  mochi::Error Error;
+  mochi::DynamicArray<mochi::TransformRT> ParentFromLinks;
+  superdex::robotics::ComputeLinkTransformsFromPose(
+      InputModel,
+      PreviousInputPositions,
+      ParentFromLinks,
+      superdex::robotics::LinkTransformSpace::ParentFromLink,
+      Error);
+  if (!Error.IsOK()) {
+    return;
+  }
+  FMochiToUnrealConverter ToUnreal(kSuperDexSpace);
+  DebugInputBaseInOutputBase = ToUnreal.TransformToUnreal(
+      mochi::Invert(WorldFromOutputLinks[0]) * WorldFrameFromInputBaseFrame);
+  DebugInputBaseInOutputBase.SetScale3D(FVector(InputModel.scale * NativeConfig.inputBotScale));
+  DebugInputLinksInParent.SetNum(static_cast<int32>(ParentFromLinks.size()));
+  for (int32 I = 0; I < DebugInputLinksInParent.Num(); ++I) {
+    DebugInputLinksInParent[I] = ToUnreal.TransformToUnreal(ParentFromLinks[I]);
+  }
+  bHasDebugInputPose = true;
+}
+
+void USuperDexBotIKRetargeter::UpdateDebugInputPoseMesh(bool bFreshSolve) {
+  USkeletalMesh* Mesh =
+      (Config && Config->InputBot) ? Config->InputBot->GetSkeletalMesh() : nullptr;
+  // Only a fresh solve: a held input pose would show stale tracking.
+  const bool bShow = bDebugDrawInputPoseSkeleton && bFreshSolve && bHasDebugInputPose && Mesh &&
+      GetOwner() && GetNumBones() > 0 &&
+      DebugInputLinksInParent.Num() == static_cast<int32>(InputModel.links.size());
+  if (!bShow) {
+    if (DebugInputPoseMesh) {
+      DebugInputPoseMesh->SetVisibility(false);
+    }
+    return;
+  }
+  if (!DebugInputPoseMesh) {
+    DebugInputPoseMesh = NewObject<UPoseableMeshComponent>(GetOwner(), NAME_None, RF_Transient);
+    DebugInputPoseMesh->SetupAttachment(this);
+    DebugInputPoseMesh->SetUsingAbsoluteLocation(true);
+    DebugInputPoseMesh->SetUsingAbsoluteRotation(true);
+    DebugInputPoseMesh->SetUsingAbsoluteScale(true);
+    DebugInputPoseMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    DebugInputPoseMesh->SetCastShadow(false);
+    DebugInputPoseMesh->RegisterComponent();
+  }
+  if (DebugInputPoseMesh->GetSkinnedAsset() != Mesh) {
+    DebugInputPoseMesh->SetSkinnedAssetAndUpdate(Mesh);
+    // Bones are posed by index, so the mesh must list the input bot's links in order.
+    bDebugInputPoseMeshMatchesBot =
+        DebugInputPoseMesh->GetNumBones() == DebugInputLinksInParent.Num();
+    for (int32 I = 0; bDebugInputPoseMeshMatchesBot && I < DebugInputLinksInParent.Num(); ++I) {
+      bDebugInputPoseMeshMatchesBot = DebugInputPoseMesh->GetBoneName(I) ==
+          FName(UTF8_TO_TCHAR(InputModel.links[I].name.c_str()));
+    }
+    if (!bDebugInputPoseMeshMatchesBot) {
+      UE_LOG(
+          LogSuperDexTeleop,
+          Warning,
+          TEXT("[%hs] Input bot mesh [%s] bones do not follow the input bot's links; the input"
+               " pose skeleton is not drawn."),
+          __FUNCTION__,
+          *Mesh->GetName());
+    }
+  }
+  if (!bDebugInputPoseMeshMatchesBot) {
+    DebugInputPoseMesh->SetVisibility(false);
+    return;
+  }
+  // Like UMochiIKRetargeter: the override replaces every material; none keeps the mesh's own.
+  if (DebugDrawInputPoseSkeletonMaterialOverride) {
+    for (int32 Slot = 0; Slot < DebugInputPoseMesh->GetNumMaterials(); ++Slot) {
+      if (DebugInputPoseMesh->GetMaterial(Slot) != DebugDrawInputPoseSkeletonMaterialOverride) {
+        DebugInputPoseMesh->SetMaterial(Slot, DebugDrawInputPoseSkeletonMaterialOverride);
+      }
+    }
+  } else if (!DebugInputPoseMesh->OverrideMaterials.IsEmpty()) {
+    DebugInputPoseMesh->EmptyOverrideMaterials();
+  }
+  FTransform OutputBaseToWorld = GetComponentTransform();
+  OutputBaseToWorld.SetScale3D(FVector::OneVector);
+  DebugInputPoseMesh->SetWorldTransform(DebugInputBaseInOutputBase * OutputBaseToWorld);
+  // Parent-relative transforms by index: SetBoneTransformByName in component space would read the
+  // parents' cached component transforms, which are stale until the next refresh.
+  for (int32 I = 0; I < DebugInputLinksInParent.Num(); ++I) {
+    DebugInputPoseMesh->BoneSpaceTransforms[I] = DebugInputLinksInParent[I];
+  }
+  DebugInputPoseMesh->RefreshBoneTransforms();
+  DebugInputPoseMesh->SetVisibility(true);
+}
+
+void USuperDexBotIKRetargeter::DrawDebugGoalFrames() const {
+  UWorld* World = GetWorld();
+  if (World == nullptr || DebugGoalFrames.IsEmpty() || GetNumBones() == 0) {
+    return;
+  }
+  FTransform OutputBaseToWorld = GetComponentTransform();
+  OutputBaseToWorld.SetScale3D(FVector::OneVector);
+  constexpr float kFrameSize = 1.0f;
+  constexpr float kLinkRadius = 0.2f;
+  const auto DrawFrame = [&](const FTransform& FrameToWorld) {
+    DrawDebugCoordinateSystem(
+        World,
+        FrameToWorld.GetLocation(),
+        FrameToWorld.Rotator(),
+        kFrameSize,
+        false,
+        -1.f,
+        SDPG_Foreground);
+  };
+  const auto DrawLink = [&](const FTransform& LinkToWorld,
+                            const FTransform& FrameToWorld,
+                            FColor Color) {
+    DrawDebugLine(
+        World,
+        FrameToWorld.GetLocation(),
+        LinkToWorld.GetLocation(),
+        Color,
+        false,
+        -1.f,
+        SDPG_Foreground);
+    DrawDebugCircle(
+        World, LinkToWorld.GetLocation(), kLinkRadius, 16, Color, false, -1.f, SDPG_Foreground);
+  };
+  for (const FDebugGoalFrames& Frames : DebugGoalFrames) {
+    const FTransform Goal = Frames.GoalInOutputBase * OutputBaseToWorld;
+    const FTransform Constraint = Frames.ConstraintInOutputBase * OutputBaseToWorld;
+    DrawFrame(Goal);
+    DrawFrame(Constraint);
+    DrawDebugLine(
+        World,
+        Goal.GetLocation(),
+        Constraint.GetLocation(),
+        FColor::Black,
+        false,
+        -1.f,
+        SDPG_Foreground);
+    DrawLink(Frames.OutputLinkInOutputBase * OutputBaseToWorld, Constraint, FColor::White);
+    if (Frames.bHasInputLink) {
+      DrawLink(Frames.InputLinkInOutputBase * OutputBaseToWorld, Goal, FColor::Yellow);
+    }
+  }
+}
+
+void USuperDexBotIKRetargeter::TickComponent(
+    float DeltaTime,
+    enum ELevelTick TickType,
+    FActorComponentTickFunction* ThisTickFunction) {
+  Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+  bool bValid;
+  {
+    FScopeLock Lock(&ResultMutex);
+    bValid = bCurrentValid;
+  }
+  // Only frames from a fresh solve: held goals would show stale tracking.
+  if (bDebugDrawIKCoordinateFrames && bValid) {
+    DrawDebugGoalFrames();
+  }
+  UpdateDebugInputPoseMesh(bValid);
+}
+
+void USuperDexBotIKRetargeter::OnTickManageCache(FSuperDexPose& Pose, bool bIsValid) {
+  Super::OnTickManageCache(Pose, bIsValid);
+  // A fresh solve already displayed feedback (see GetTransformedPose). Otherwise (tracking lost,
+  // unconfident, clutch not yet initialized, ...) keep the mesh following the hand's reported
+  // state, like the arm does. Display only: bCurrentValid, the published command and the
+  // GetPose/GetCachedPose results are untouched, so consumers still see no valid pose.
+  if (bIsValid || !bSubscribeToTeleopHandJointPositions || !Solver || !GetOwner()) {
+    return;
+  }
+  auto* Node = GetOwner()->GetComponentByClass<UTeleopNodeOperatorComponent>();
+  TArray<double> Feedback;
+  if (!IsValid(Node) || !Node->GetHandJointStates(Feedback) ||
+      Feedback.Num() != OutputModel._numDofs ||
+      !std::all_of(Feedback.begin(), Feedback.end(), [](double Q) { return FMath::IsFinite(Q); })) {
+    return;
+  }
+  FWriteScopeLock Lock(CacheLock);
+  // Without a previous pose there is no root to keep; don't invent one for a self-placing mesh.
+  if (!CacheInitialized && bUpdateComponentToRootTransformOnTick) {
+    return;
+  }
+  FSuperDexPose Display = CachedOutputPose;
+  if (USuperDexPoseFunctionLibrary::ComputeSuperDexPoseFromJointPositions(
+          InitializedOutputBot, Feedback, Display)) {
+    CachedOutputPose = MoveTemp(Display);
+    CacheInitialized = true;
+  }
 }
 void USuperDexBotIKRetargeter::EndPlay(const EEndPlayReason::Type Reason) {
   ReleaseSolver();
@@ -738,12 +970,17 @@ void USuperDexBotIKRetargeter::EndPlay(const EEndPlayReason::Type Reason) {
 }
 void USuperDexBotIKRetargeter::OnComponentDestroyed(bool bDestroyingHierarchy) {
   ReleaseSolver();
+  if (DebugInputPoseMesh) {
+    DebugInputPoseMesh->DestroyComponent();
+    DebugInputPoseMesh = nullptr;
+  }
   Super::OnComponentDestroyed(bDestroyingHierarchy);
 }
 #if WITH_EDITOR
 void USuperDexBotIKRetargeter::PostEditChangeProperty(FPropertyChangedEvent& Event) {
   Super::PostEditChangeProperty(Event);
   ReleaseSolver();
+  PlaceSourceAtConfigInputBaseFrame();
 }
 EDataValidationResult USuperDexBotIKRetargeter::IsDataValid(FDataValidationContext& Context) const {
   const auto Base = Super::IsDataValid(Context);

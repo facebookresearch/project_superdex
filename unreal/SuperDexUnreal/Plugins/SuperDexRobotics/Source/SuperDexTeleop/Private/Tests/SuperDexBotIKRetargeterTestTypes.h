@@ -21,7 +21,7 @@
 
 #include "SuperDexBotIKRetargeterTestTypes.generated.h"
 
-// Reflected callback fixtures; instantiated only by dev automation tests.
+// Pose source fixture; instantiated only by dev automation tests.
 UCLASS()
 class USuperDexBotIKTestPoseSource : public USuperDexPoseableComponent {
   GENERATED_BODY()
@@ -30,15 +30,7 @@ class USuperDexBotIKTestPoseSource : public USuperDexPoseableComponent {
   FSuperDexPose TestPose;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Transient, Category = "Test")
   bool bTestValid = true;
-  bool bReenter = false;
-  bool bNestedReturned = true;
-  UPROPERTY()
-  TObjectPtr<USuperDexBotIKRetargeter> Retargeter;
   virtual bool GetPose(FSuperDexPose& Out) override {
-    if (bReenter && Retargeter) {
-      FSuperDexPose Nested;
-      bNestedReturned = Retargeter->GetPose(Nested);
-    }
     Out = TestPose;
     return bTestValid;
   }
