@@ -340,7 +340,7 @@ static void ComputeAsyncContactResponseImpl(
     ComputeCollisionResponse<GradTarget::Current>(
         contactQuery,
         contactParams,
-        config,
+        MakeContactEvalConfigForCollider(config, reg, collisions[c].colliderEntity, contactParams),
         dtStage,
         evalEner,
         evalGrad,
@@ -403,10 +403,9 @@ void deformable::ComputeAsyncContactResponse(
     CDeformablePointAsyncCollisionsResponse& outResponse,
     real& outTrustMargin,
     Span<bool const> allowedContactElementMask) {
-  auto const& experimentalEval = simParams.experimentalEval;
   femBoundaryDisc.Visit([&](auto const& femBoundaryDiscImpl) {
-    ContactEvalConfig const config = MakeContactEvalConfigAsync(
-        experimentalEval, reg, e, params.psdDRes, params.fittedSaturationHessian.contactFriction);
+    ContactEvalConfig const config = MakeContactEvalConfigForColliding(
+        simParams, reg, e, params.psdDRes, params.fittedSaturationHessian.contactFriction);
 
     ComputeAsyncContactResponseImpl(
         reg,
@@ -544,9 +543,7 @@ void deformable::EmplaceContactComponents(
   reg.emplace<CPotentialColliders</*kIsSync*/ true>>(e);
   reg.emplace<CContactSamples<TimeStep::Current>>(e, numCollidingSamples);
   reg.emplace<CContactSamples<TimeStep::StageStart>>(e, numCollidingSamples);
-  if (reg.ctx<CSimulationParams const>().experimentalEval.elastoPlasticFriction) {
-    EmplaceFrictionAnchors(reg, e, numCollidingSamples);
-  }
+  EmplaceFrictionAnchors(reg, e);
   reg.emplace<CContactCorrespondence</*kIsSync*/ false>>(e, numCollidingSamples);
   reg.emplace<CContactCorrespondence</*kIsSync*/ true>>(e, numCollidingSamples);
   reg.emplace<CActiveCollisions</*kIsSync*/ false, TimeStep::Current>>(e, numContactPartitions);

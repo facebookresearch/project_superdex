@@ -104,15 +104,20 @@ struct ContactPairParamsOverride [equality(default)] {
   // @see ContactParams::penaltyCoefficient
   Optional<real> penaltyCoefficient [units("Pa/m")];
 
+  // @brief [Experimental] Whether the pair prefers elasto-plastic friction.
+  //
+  // @warning This is an experimental feature. It may be changed or removed in the future. Use at
+  // your own risk.
+  //
+  // @see ContactParams::preferElastoPlasticFriction
+  Optional<bool> preferElastoPlasticFriction;
+
   // @brief Friction falloff velocity [m/s].
   //
   // @see ContactParams::frictionFalloffVel
   Optional<real> frictionFalloffVel [units("m/s")];
 
-  // @brief [Experimental] Presliding displacement of elasto-plastic friction [m].
-  //
-  // @warning This is an experimental feature. It may be changed or removed in the future. Use at
-  // your own risk.
+  // @brief Presliding displacement of elasto-plastic friction [m].
   //
   // @see ContactParams::preslidingDisplacement
   Optional<real> preslidingDisplacement [units("m")];

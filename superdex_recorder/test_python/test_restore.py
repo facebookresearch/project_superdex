@@ -53,11 +53,13 @@ PICKUP_LIFTED_POSE = (-0.1, 0.0, 0.0)
 # The hand lifts the block at a steady speed through these frames.
 GRASP_RESUME_START_FRAME = 250
 GRASP_RESUME_END_FRAME = 320
-# Resumed bodies stay this close to the recording under backward Euler: the cube's
-# translation [m], and the block's translation [m] and joint positions [rad] in the
-# grasp. Without the restored velocities, each check fails. A restore starts BDF2 and
-# BDF3 afresh, which costs them more.
+# The resumed cube's translation [m] stays this close to the recording under backward
+# Euler with velocity-regularized friction.
 CUBE_RESUME_TOLERANCE = 1e-5
+# Resumed bodies stay this close to the recording under backward Euler: the block's
+# translation [m] and joint positions [rad] in the grasp. Without the restored
+# velocities, the check fails. A restore starts BDF2 and BDF3 afresh, which costs them
+# more.
 GRASP_RESUME_TOLERANCE = 5e-4
 CUBE_HALF_SIZE = 0.05
 # Off the actor origin, so the root transform is rounded from the simulated COM state.
@@ -147,6 +149,7 @@ class EpisodeRestorerTest(unittest.TestCase):
         *,
         cube_name: str = "cube",
         ground_height: float = 0.0,
+        elasto_plastic: bool = True,
     ) -> tuple[sdp.Scene, sdp.Actor]:
         scene = sdp.create_scene("cube")
         self.addCleanup(sdp.destroy_scene, scene)
@@ -158,6 +161,7 @@ class EpisodeRestorerTest(unittest.TestCase):
             penalty_coefficient=1e8,
             penalty_threshold_default=0.005,
             viscous_friction_coefficient=2,
+            prefer_elasto_plastic_friction=elasto_plastic,
         )
         scene.create_rigid_actor(
             name="ground",
@@ -194,8 +198,9 @@ class EpisodeRestorerTest(unittest.TestCase):
         self,
         method: sdp.IntegrationMethod,
         num_frames: int,
+        elasto_plastic: bool = True,
     ) -> CubeRecording:
-        scene, cube = self.make_cube_scene(method)
+        scene, cube = self.make_cube_scene(method, elasto_plastic=elasto_plastic)
         cube.set_velocity([0.5, 0, 0], [0, 0.5, 2])
         config = recorder.RecorderConfig(self.directory)
         episode = recorder.Recorder(config).begin_episode()
@@ -387,22 +392,38 @@ class EpisodeRestorerTest(unittest.TestCase):
                         self.assertAlmostEqual(actual, expected, delta=1e-6)
 
     def test_restored_frames_resume_near_the_recording(self) -> None:
+        """The resumed cube stays near the recording under backward Euler, for each
+        friction law. With velocity-regularized friction, it stays within
+        CUBE_RESUME_TOLERANCE. With elasto-plastic friction, it stays within twice the
+        presliding displacement: the restore does not restore friction anchors, so the
+        cube's contacts may slip by up to the presliding displacement. Without the
+        restored velocities, each check fails."""
         method = sdp.IntegrationMethod.BACKWARD_EULER
-        recording = self.record_sliding_cube(method, 20)
-        scene, cube = self.make_cube_scene(method)
-        restorer = recorder.EpisodeRestorer(EpisodeReader(recording.path), scene)
-        self.assertLess(
-            self.cube_resume_error(
-                restorer, scene, cube, recording, zero_velocity=False
-            ),
-            CUBE_RESUME_TOLERANCE,
-        )
-        self.assertGreater(
-            self.cube_resume_error(
-                restorer, scene, cube, recording, zero_velocity=True
-            ),
-            CUBE_RESUME_TOLERANCE,
-        )
+        for elasto_plastic in (False, True):
+            with self.subTest(elasto_plastic=elasto_plastic):
+                recording = self.record_sliding_cube(
+                    method, 20, elasto_plastic=elasto_plastic
+                )
+                scene, cube = self.make_cube_scene(
+                    method, elasto_plastic=elasto_plastic
+                )
+                # The ground is static, so the cube's presliding displacement applies.
+                tolerance = (
+                    2 * cube.get_contact_params().presliding_displacement
+                    if elasto_plastic
+                    else CUBE_RESUME_TOLERANCE
+                )
+                restorer = recorder.EpisodeRestorer(
+                    EpisodeReader(recording.path), scene
+                )
+                error = self.cube_resume_error(
+                    restorer, scene, cube, recording, zero_velocity=False
+                )
+                control = self.cube_resume_error(
+                    restorer, scene, cube, recording, zero_velocity=True
+                )
+                self.assertLess(error, tolerance)
+                self.assertGreater(control, tolerance)
 
     def test_restores_frames_under_dirk_methods(self) -> None:
         for method in DIRK_METHODS:

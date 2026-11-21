@@ -290,6 +290,50 @@ TEST(ContactPairParams, NoOverridePreservesDynamicAndStaticCombination) {
   ExpectColliderOwnedFieldsUnchanged(staticCollider, collider);
 }
 
+// A pair prefers elasto-plastic friction only if both actors do, even with a static collider. An
+// override that sets the preference replaces the combined one. An override that sets only other
+// fields keeps it.
+TEST(ContactPairParams, ElastoPlasticFrictionPreferenceCombination) {
+  auto const combine = [](ContactParams const& colliding,
+                          ContactParams const& collider,
+                          ContactPairParamsOverride const* paramsOverride,
+                          bool isStaticCollider) {
+    return CombineContactParams(
+        colliding,
+        collider,
+        paramsOverride,
+        isStaticCollider,
+        /*collidingIntegralDim=*/2,
+        /*colliderIntegralDim=*/0,
+        /*colliderPenaltyLengthScale=*/0_r,
+        /*collidingPadding=*/0_r);
+  };
+  for (bool const collidingPrefers : {false, true}) {
+    for (bool const colliderPrefers : {false, true}) {
+      for (bool const isStaticCollider : {false, true}) {
+        ContactParams colliding = MakeCollidingContactParams();
+        ContactParams collider = MakeColliderContactParams();
+        colliding.preferElastoPlasticFriction = collidingPrefers;
+        collider.preferElastoPlasticFriction = colliderPrefers;
+        EXPECT_EQ(
+            collidingPrefers && colliderPrefers,
+            combine(colliding, collider, nullptr, isStaticCollider).preferElastoPlasticFriction)
+            << collidingPrefers << colliderPrefers << isStaticCollider;
+        for (std::optional<bool> const overridden :
+             std::array<std::optional<bool>, 3>{std::nullopt, false, true}) {
+          ContactPairParamsOverride paramsOverride;
+          paramsOverride.penaltyCoefficient = 7_r;
+          paramsOverride.preferElastoPlasticFriction = overridden;
+          EXPECT_EQ(
+              overridden.value_or(collidingPrefers && colliderPrefers),
+              combine(colliding, collider, &paramsOverride, isStaticCollider)
+                  .preferElastoPlasticFriction);
+        }
+      }
+    }
+  }
+}
+
 TEST(ContactPairParams, EachOverrideFieldReplacesOnlyItsResolvedValue) {
   ContactParams const colliding = MakeCollidingContactParams();
   ContactParams const collider = MakeColliderContactParams();

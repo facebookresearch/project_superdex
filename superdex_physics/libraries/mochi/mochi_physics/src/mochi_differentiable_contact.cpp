@@ -29,41 +29,11 @@
 
 using namespace mochi;
 
-static ContactEvalConfig InitializeContactForceAdjointEvalConfig(
-    CSimulationParams const& simParams) {
-  // Match the contact force law used by the prepared query data. Do not apply solver-stabilization
-  // approximations here: PSD projection and fitted Hessians are useful for nonlinear solves, but
-  // this VJP needs the derivative of the actual force returned by the query.
-  return ContactEvalConfig{
-      .psdDRes = false,
-      .explicitNormals = simParams.experimentalEval.explicitNormals,
-      .fadeFriction = simParams.experimentalEval.fadeFriction,
-      .implicitNormalForceForDissipation =
-          simParams.experimentalEval.implicitNormalForceForDissipation,
-      .useFittedHessian = false,
-      .frictionModel = simParams.experimentalEval.frictionModel,
-      .elastoPlasticFriction = simParams.experimentalEval.elastoPlasticFriction};
-}
-
-static ContactEvalConfig RefineContactForceAdjointEvalConfig(
-    ContactAssemblyReg const& reg,
-    entt::entity colliding,
-    ContactEvalConfig const& base) {
-  ContactEvalConfig config = base;
-  config.addPadding = ShouldAddPenaltyPadding(reg.get<CColliderInfo const>(colliding).type);
-  config.validCollidingNormals = ValidCollidingNormals(reg, colliding);
-  return config;
-}
-
-// Whether the contacts of a collision read friction anchors of the colliding actor, whose force
-// then depends on the anchor offsets.
-static bool ReadsFrictionAnchors(
-    FrictionAnchorReg reg,
-    entt::entity collider,
-    ContactParams const& params,
-    ContactEvalConfig const& config) {
-  return config.elastoPlasticFriction && params.coulombFrictionCoefficient > 0_r &&
-      HasFrictionAnchors(reg, collider);
+// Whether the contacts of a collision, with their configuration refined for the collider (see
+// MakeContactEvalConfigForCollider), read friction anchors of the colliding actor, whose force then
+// depends on the anchor offsets.
+static bool ReadsFrictionAnchors(ContactParams const& params, ContactEvalConfig const& config) {
+  return config.elastoPlasticFriction && params.coulombFrictionCoefficient > 0_r;
 }
 
 namespace {
@@ -183,8 +153,9 @@ static void AccumulateRigidContactForceAdjoints(
   if (activeCollisions.empty()) {
     return;
   }
-  ContactEvalConfig const config = RefineContactForceAdjointEvalConfig(
-      reg, e, InitializeContactForceAdjointEvalConfig(simParams.value));
+  // The VJP needs the derivative of the actual force: no PSD projection or fitted Hessian.
+  ContactEvalConfig const config = MakeContactEvalConfigForColliding(
+      simParams.value, reg, e, /*psdDRes*/ false, /*useFittedHessian*/ false);
   if (kGradTarget != GradTarget::Current || (activeAnchors && activeAnchors->anchors.empty())) {
     outAnchorGrad = nullptr;
   }
@@ -217,10 +188,20 @@ static void AccumulateRigidContactForceAdjoints(
     // Jacobians of the contact forces wrt the contact positions and, with anchor adjoints, wrt the
     // anchor offsets.
     ContactParams const params = GetContactPairParams(reg, e, collider);
-    bool const readsAnchors = outAnchorGrad && ReadsFrictionAnchors(reg, collider, params, config);
+    ContactEvalConfig const colliderConfig =
+        MakeContactEvalConfigForCollider(config, reg, collider, params);
+    bool const readsAnchors = outAnchorGrad && ReadsFrictionAnchors(params, colliderConfig);
     response.ResizeNoInit(numContacts, false, false, true, readsAnchors);
     ComputeCollisionResponse<kGradTarget>(
-        query, params, config, intState.dtStage, false, false, true, readsAnchors, response);
+        query,
+        params,
+        colliderConfig,
+        intState.dtStage,
+        false,
+        false,
+        true,
+        readsAnchors,
+        response);
 
     // The queried force also depends on the anchor offset z_n that the step read, so
     // zBar_n += (df/dz)^T fBar. New contacts and contacts cleared by a placement read a zero offset
@@ -346,8 +327,9 @@ void AccumulateAnchorAdvanceAdjoints(
   if (pendingGrad.grads.empty()) {
     return;
   }
-  ContactEvalConfig const advanceConfig =
-      MakeAnchorAdvanceEvalConfig(simParams.value.experimentalEval, reg, e);
+  // The configuration of AdvanceFrictionAnchorOffsets, which evaluates no Hessian.
+  ContactEvalConfig const advanceConfig = MakeContactEvalConfigForColliding(
+      simParams.value, reg, e, /*psdDRes*/ false, /*useFittedHessian*/ false);
   auto const& activeAnchors = active.anchors;
   auto const& pendingAnchors = pending.anchors;
   MOCHI_ASSERT_VERBOSE(pendingGrad.grads.size() == pendingAnchors.size());
@@ -369,7 +351,8 @@ void AccumulateAnchorAdvanceAdjoints(
     auto const colliderId = entt::to_integral(collider);
     auto const& result = collision.collisionResult;
     int const numContacts = isize(result.sampleIndices);
-    if (numContacts == 0 || !HasFrictionAnchors(reg, collider)) {
+    // Only the contacts that use elasto-plastic friction have anchor offsets.
+    if (numContacts == 0 || result.anchorOffset.empty()) {
       continue;
     }
 
@@ -390,8 +373,12 @@ void AccumulateAnchorAdvanceAdjoints(
     if (!hasAdjoint) {
       continue;
     }
+    ContactParams const params = GetContactPairParams(reg, e, collider);
     AdvanceAnchorOffsetsVjp(
-        result, GetContactPairParams(reg, e, collider), advanceConfig, MakeSpan(wBar));
+        result,
+        params,
+        MakeContactEvalConfigForCollider(advanceConfig, reg, collider, params),
+        MakeSpan(wBar));
 
     // dw/dp = I with p at the end of the step (q_{n+1}), dw/dp0 = -I with p0 at its stage start
     // (q_n), and dw/dz_n = I.
@@ -482,8 +469,9 @@ void AccumulateSolveAnchorAdjoints(
   if (activeCollisions.empty() || anchors.empty()) {
     return;
   }
-  ContactEvalConfig const config = RefineContactForceAdjointEvalConfig(
-      reg, e, InitializeContactForceAdjointEvalConfig(simParams.value));
+  // The VJP needs the derivative of the actual force: no PSD projection or fitted Hessian.
+  ContactEvalConfig const config = MakeContactEvalConfigForColliding(
+      simParams.value, reg, e, /*psdDRes*/ false, /*useFittedHessian*/ false);
 
   // Reserve for the largest collision up-front so the per-collision ResizeNoInit below never
   // reallocates, which the FILO allocator requires.
@@ -499,7 +487,9 @@ void AccumulateSolveAnchorAdjoints(
       continue;
     }
     ContactParams const params = GetContactPairParams(reg, e, collider);
-    if (!ReadsFrictionAnchors(reg, collider, params, config)) {
+    ContactEvalConfig const colliderConfig =
+        MakeContactEvalConfigForCollider(config, reg, collider, params);
+    if (!ReadsFrictionAnchors(params, colliderConfig)) {
       continue;
     }
 
@@ -508,7 +498,7 @@ void AccumulateSolveAnchorAdjoints(
     ComputeCollisionResponse<GradTarget::Current>(
         result,
         params,
-        config,
+        colliderConfig,
         intState.dtStage,
         false,
         false,

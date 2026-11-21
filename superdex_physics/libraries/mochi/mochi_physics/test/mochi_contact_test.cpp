@@ -30,6 +30,7 @@
 // Private src headers
 #include <mochi_physics/src/mochi_articulated_body.h>
 #include <mochi_physics/src/mochi_contact.h>
+#include <mochi_physics/src/mochi_contact_anchors.h>
 #include <mochi_physics/src/mochi_context.h>
 #include <mochi_physics/src/mochi_deformable.h>
 #include <mochi_physics/src/mochi_differentiable.h>
@@ -688,11 +689,23 @@ INSTANTIATE_TEST_SUITE_P(
         FarCollider::Sphere),
     FarColliderName);
 
-class FarGroundRestingTest : public FarColliderContactTest {};
+class FarGroundRestingTest : public FarColliderContactTest {
+ protected:
+  void ExpectCubesDoNotSlide(bool elastoPlasticFriction);
+};
 
-// Cubes resting on stationary ground must not slide. Friction would read any difference between
-// current and stage-start contact positions as slip.
+// Cubes resting on stationary ground must not slide, with elasto-plastic or with
+// velocity-regularized friction. Friction would read any difference between current and stage-start
+// contact positions as slip.
 TEST_P(FarGroundRestingTest, CubesDoNotSlide) {
+  ExpectCubesDoNotSlide(/*elastoPlasticFriction*/ true);
+}
+
+TEST_P(FarGroundRestingTest, CubesDoNotSlideWithVelocityRegularizedFriction) {
+  ExpectCubesDoNotSlide(/*elastoPlasticFriction*/ false);
+}
+
+void FarGroundRestingTest::ExpectCubesDoNotSlide(bool elastoPlasticFriction) {
   CreateFarCollider();
   // Separated cubes on the top face, with orientations that slide when positions differ.
   struct Placement {
@@ -712,6 +725,9 @@ TEST_P(FarGroundRestingTest, CubesDoNotSlide) {
     ASSERT_NE(cube, nullptr);
     cubes.push_back(cube);
     starts.push_back(cube->GetRootTransform().GetTranslation());
+  }
+  if (!elastoPlasticFriction) {
+    test::PreferVelocityRegularizedFriction(_scene);
   }
   for (int step = 0; step < 500; ++step) {
     _scene->Step(0.001_r);
@@ -760,6 +776,9 @@ struct TestParams {
   real colliderShear = 0_r;
   std::optional<ActorBoundaryElementType> collidingBoundaryElementType = {};
   bool ignoreColliderDres = false;
+  // Friction anchor offsets of the contacts that use elasto-plastic friction, in presliding
+  // displacements (see SeedFrictionAnchors).
+  real anchorPreload = 0_r;
 };
 } // namespace
 
@@ -1179,6 +1198,60 @@ class MochiContactTestBase : public test::MochiSceneTestBase,
     PreStepEcs(reg);
   }
 
+  // Presliding displacement of the tests with friction anchors, far larger than the
+  // finite-difference step, so that finite differences resolve the ramp of the friction law.
+  static constexpr real kPreloadPreslidingDisplacement = 1e-2_r;
+
+  // Sets the presliding displacement of every actor (see kPreloadPreslidingDisplacement).
+  void SetPreloadPreslidingDisplacement() {
+    DynamicArray<Actor*> actors(_scene->GetNumActors());
+    _scene->GetActors(MakeSpan(actors), test::ExpectOK{});
+    for (Actor* actor : actors) {
+      Error error;
+      ContactParams params = actor->GetContactParams(error);
+      if (!error.IsOK()) {
+        continue; // No contact parameters.
+      }
+      params.preslidingDisplacement = kPreloadPreslidingDisplacement;
+      actor->SetContactParams(params, test::ExpectOK{});
+    }
+  }
+
+  // Seeds the friction anchors of the contacts that use elasto-plastic friction, as a converged
+  // step would: each anchor is its contact position displaced by 0.5, 1.5 or 2.5 times `preload`
+  // presliding displacements, along a direction with a normal component. The next collision
+  // detection refills the anchor offsets from these anchors, so they are not these displacements.
+  // Some saturate, others stick. Requires a collision detection pass.
+  void SeedFrictionAnchors(real preload) {
+    auto& reg = GetRegistry();
+    real constexpr delta = kPreloadPreslidingDisplacement;
+    Real3 const direction = Normalize(Real3{1_r, 0.3_r, -0.6_r});
+    int numSeeded = 0;
+    auto const seed = [&](auto& collisions) {
+      for (auto& collision : collisions) {
+        auto& result = collision.collisionResult;
+        if (result.anchorOffset.empty()) {
+          continue; // No elasto-plastic friction.
+        }
+        ++numSeeded;
+        int const numContacts = isize(result.sampleIndices);
+        result.keepsAnchor.clear();
+        result.keepsAnchor.resize(numContacts, true);
+        for (int i = 0; i < numContacts; ++i) {
+          result.anchorOffset[i] = (0.5_r + static_cast<real>(i % 3)) * preload * delta * direction;
+        }
+      }
+    };
+    for (entt::entity e : reg.view<CFrictionAnchors<AnchorSet::Pending>>()) {
+      seed(reg.get<CActiveCollisions</*kIsSync*/ false, TimeStep::Current>>(e));
+      seed(reg.get<CActiveCollisions</*kIsSync*/ true, TimeStep::Current>>(e));
+      ecs::InvokeOnEntity(&UpdateFrictionAnchors, reg, e);
+      ecs::InvokeOnEntity(&PromotePendingFrictionAnchors, reg, e);
+      ecs::InvokeOnEntity(&IndexFrictionAnchors<AnchorSet::Active>, reg, e);
+    }
+    EXPECT_GT(numSeeded, 0) << "No contact uses elasto-plastic friction.";
+  }
+
   void ComputeResponse(GradTarget gradTarget) {
     IslandAssembly assembly = AssembleSingleIsland(GetRegistry(), gradTarget);
     _objective = assembly.objective;
@@ -1190,6 +1263,23 @@ class MochiContactTestBase : public test::MochiSceneTestBase,
           _dresidual.SetValue(row, col, assembly.dresidual(row, col));
         }
       }
+    }
+  }
+
+  // Computes the response at the initial state, with the friction anchors seeded by the test
+  // preload, if any.
+  void ComputeInitialResponse() {
+    auto const& params = GetParam();
+    InitializeSceneFromParams();
+    if (params.anchorPreload > 0_r) {
+      SetPreloadPreslidingDisplacement();
+    }
+    InitState();
+    PreStep();
+    ComputeResponse(params.gradTarget);
+    if (params.anchorPreload > 0_r) {
+      SeedFrictionAnchors(params.anchorPreload);
+      ComputeResponse(params.gradTarget);
     }
   }
 
@@ -1223,11 +1313,7 @@ class MochiContactTestBase : public test::MochiSceneTestBase,
   // ExpectDissipationIsNonPotential).
   void RunTest() {
     auto const& params = GetParam();
-    InitializeSceneFromParams();
-
-    InitState();
-    PreStep();
-    ComputeResponse(params.gradTarget);
+    ComputeInitialResponse();
     ColumnVector<real> res0 = _residual.Duplicate();
     SparseMatrix<real> dres = _dresidual.Duplicate();
     ColumnVector<real> resFD = _residual.Duplicate();
@@ -1402,13 +1488,12 @@ class MochiContactTestBase : public test::MochiSceneTestBase,
   // Compares the mapped contact-skin assembly, with contacts detected only as sync or only as
   // async, with the legacy one through colliding contact Jacobians, which runs once the linear
   // element map is removed.
+  // With a preload, the legacy assembly reuses the seeded anchors, which the next step start
+  // promotes again.
   template <bool kIsSync>
   void RunMappedVsLegacyContactSkinTest() {
     auto const gradTarget = GetParam().gradTarget;
-    InitializeSceneFromParams();
-    InitState();
-    PreStep();
-    ComputeResponse(gradTarget);
+    ComputeInitialResponse();
     ExpectMappedContactSkinCollisions<kIsSync>();
     double const mappedObjective = _objective;
     ColumnVector<real> const mappedResidual = _residual.Duplicate();
@@ -1839,6 +1924,19 @@ INSTANTIATE_TEST_SUITE_P(
         TestParams{"NoFrictionPrevious", GradTarget::Previous, 0_r, 0_r, 0_r, true, {}, {}},
         TestParams{"ViscousPrevious", GradTarget::Previous, 0_r, 1_r, 0_r, true, 1e-3_r, {}},
         TestParams{"CoulombPrevious", GradTarget::Previous, 0.5_r, 0_r, 0_r, true, 1e-3_r, {}},
+        TestParams{
+            .name = "CoulombPreload",
+            .coulombCoefficient = 0.5_r,
+            .resTol = 2e-3_r,
+            .dresTol = 3e-2_r,
+            .anchorPreload = 1_r},
+        TestParams{
+            .name = "CoulombPreloadExplicit",
+            .coulombCoefficient = 0.5_r,
+            .explicitNormals = true,
+            .resTol = 2e-3_r,
+            .dresTol = 3e-2_r,
+            .anchorPreload = 1_r},
         TestParams{"DampingPrevious", GradTarget::Previous, 0_r, 0_r, 1_r, true, 3e-3_r, {}}),
     [](::testing::TestParamInfo<TestParams> const& info) { return info.param.name; });
 
@@ -2033,6 +2131,19 @@ INSTANTIATE_TEST_SUITE_P(
         TestParams{"NoFrictionPrevious", GradTarget::Previous, 0_r, 0_r, 0_r, true, {}, {}},
         TestParams{"ViscousPrevious", GradTarget::Previous, 0_r, 1_r, 0_r, true, 2e-3_r, {}},
         TestParams{"CoulombPrevious", GradTarget::Previous, 0.5_r, 0_r, 0_r, true},
+        TestParams{
+            .name = "CoulombPreload",
+            .coulombCoefficient = 0.5_r,
+            .resTol = 4e-3_r,
+            .dresTol = 6e-2_r,
+            .anchorPreload = 1_r},
+        TestParams{
+            .name = "CoulombPreloadExplicit",
+            .coulombCoefficient = 0.5_r,
+            .explicitNormals = true,
+            .resTol = 2e-3_r,
+            .dresTol = 7e-2_r,
+            .anchorPreload = 1_r},
         TestParams{"DampingPrevious", GradTarget::Previous, 0_r, 0_r, 1_r, true, 4e-3_r, {}}),
     [](::testing::TestParamInfo<TestParams> const& info) { return info.param.name; });
 
@@ -2924,6 +3035,19 @@ INSTANTIATE_TEST_SUITE_P(
         TestParams{"NoFrictionExplicit", GradTarget::Current, 0_r, 0_r, 0_r, true, 1e-3_r, 1e-3_r},
         TestParams{"ViscousExplicit", GradTarget::Current, 0_r, 1_r, 0_r, true, 1e-3_r, 1e-3_r},
         TestParams{"CoulombExplicit", GradTarget::Current, 0.5_r, 0_r, 0_r, true, 1e-3_r, 1e-3_r},
+        TestParams{
+            .name = "CoulombPreload",
+            .coulombCoefficient = 0.5_r,
+            .resTol = 1e-3_r,
+            .dresTol = 1e-3_r,
+            .anchorPreload = 1_r},
+        TestParams{
+            .name = "CoulombPreloadExplicit",
+            .coulombCoefficient = 0.5_r,
+            .explicitNormals = true,
+            .resTol = 1e-3_r,
+            .dresTol = 1e-3_r,
+            .anchorPreload = 1_r},
         TestParams{"DampingExplicit", GradTarget::Current, 0_r, 0_r, 1_r, true, 1e-3_r, 1e-3_r}),
     [](::testing::TestParamInfo<TestParams> const& info) { return info.param.name; });
 
@@ -2990,6 +3114,19 @@ INSTANTIATE_TEST_SUITE_P(
         TestParams{"NoFrictionExplicit", GradTarget::Current, 0_r, 0_r, 0_r, true, 1e-3_r, 2e-3_r},
         TestParams{"ViscousExplicit", GradTarget::Current, 0_r, 1_r, 0_r, true, 1e-3_r, 2e-3_r},
         TestParams{"CoulombExplicit", GradTarget::Current, 0.5_r, 0_r, 0_r, true, 1e-3_r, 2e-3_r},
+        TestParams{
+            .name = "CoulombPreload",
+            .coulombCoefficient = 0.5_r,
+            .resTol = 1e-3_r,
+            .dresTol = 2e-3_r,
+            .anchorPreload = 1_r},
+        TestParams{
+            .name = "CoulombPreloadExplicit",
+            .coulombCoefficient = 0.5_r,
+            .explicitNormals = true,
+            .resTol = 1e-3_r,
+            .dresTol = 2e-3_r,
+            .anchorPreload = 1_r},
         TestParams{"DampingExplicit", GradTarget::Current, 0_r, 0_r, 1_r, true, 1e-3_r, 2e-3_r}),
     [](::testing::TestParamInfo<TestParams> const& info) { return info.param.name; });
 
@@ -3130,6 +3267,13 @@ INSTANTIATE_TEST_SUITE_P(
         TestParams{"Viscous", GradTarget::Current, 0_r, 1_r, 0_r, false, 1e-3_r, 1e-3_r, true},
         TestParams{"Coulomb", GradTarget::Current, 0.5_r, 0_r, 0_r, false, 3e-3_r, 1e-3_r, true},
         TestParams{
+            .name = "CoulombPreload",
+            .coulombCoefficient = 0.5_r,
+            .resTol = 3e-3_r,
+            .dresTol = 1e-3_r,
+            .ignoreColliderRotDres = true,
+            .anchorPreload = 1_r},
+        TestParams{
             "NoFrictionExplicit",
             GradTarget::Current,
             0_r,
@@ -3197,6 +3341,13 @@ INSTANTIATE_TEST_SUITE_P(
         TestParams{"NoFriction", GradTarget::Current, 0_r, 0_r, 0_r, false, 1e-3_r, 1e-3_r, true},
         TestParams{"Viscous", GradTarget::Current, 0_r, 1_r, 0_r, false, 1e-3_r, 1e-3_r, true},
         TestParams{"Coulomb", GradTarget::Current, 0.5_r, 0_r, 0_r, false, 3e-3_r, 1e-3_r, true},
+        TestParams{
+            .name = "CoulombPreload",
+            .coulombCoefficient = 0.5_r,
+            .resTol = 3e-3_r,
+            .dresTol = 1e-3_r,
+            .ignoreColliderRotDres = true,
+            .anchorPreload = 1_r},
         TestParams{
             "NoFrictionExplicit",
             GradTarget::Current,
@@ -4071,6 +4222,12 @@ INSTANTIATE_TEST_SUITE_P(
             .resTol = kResApproxTol,
             .dresTol = kDResLargeTol},
         TestParams{
+            .name = "CoulombPreload",
+            .coulombCoefficient = 0.5_r,
+            .resTol = kResApproxTol,
+            .dresTol = kDResLargeTol,
+            .anchorPreload = 1_r},
+        TestParams{
             .name = "Damping",
             .dampingCoefficient = 10_r,
             .resTol = kResApproxTol,
@@ -4344,9 +4501,9 @@ class ZeroDofSkinContact : public test::MochiSceneTestBase {
     return {skin, box};
   }
 
-  static void ShiftBoxX(Actor* box, real dx) {
+  static void ShiftBox(Actor* box, Real3 const& shift) {
     TransformRT transform = box->GetRootTransform();
-    transform.SetTranslation(transform.GetTranslation() + Real3{dx, 0_r, 0_r});
+    transform.SetTranslation(transform.GetTranslation() + shift);
     box->SetRootTransform(transform, test::ExpectOK{});
   }
 
@@ -4521,33 +4678,66 @@ class ZeroDofSkinContact : public test::MochiSceneTestBase {
     EXPECT_FALSE(UsesSkinnedContactInSolver(skinEntity));
     EXPECT_TRUE(GetRegistry().get<CSkinnedContactSnle const>(skinEntity).residuals.empty());
 
-    ShiftBoxX(box, kMixedBoxMaxX - kZeroDofBoxMaxX);
+    ShiftBox(box, Real3{kMixedBoxMaxX - kZeroDofBoxMaxX, 0_r, 0_r});
     real const poseBefore = GetPrismaticPose(skinEntity);
     Step();
     EXPECT_GT(CountContactsByDofType</*kIsSync*/ false>(skinEntity, boxEntity).second, 0);
     EXPECT_TRUE(UsesSkinnedContactInSolver(skinEntity));
     EXPECT_NE(poseBefore, GetPrismaticPose(skinEntity));
   }
+
+  // Steps once with only zero-DoF async contact with a static box, whose contact force the skin
+  // reports. At rest after a tangential shift of the box, only elasto-plastic friction holds the
+  // skin.
+  void ExpectStaticBoxReportsForceFromAsyncContact(bool preferElastoPlasticFriction) {
+    auto [skin, box] = CreateActors(/*isBoxStatic=*/true);
+    if (!preferElastoPlasticFriction) {
+      test::PreferVelocityRegularizedFriction(_scene);
+    }
+    entt::entity const skinEntity = GetEntity(skin->GetHandle());
+    entt::entity const boxEntity = GetEntity(box->GetHandle());
+    ExpectEmptyAndNonemptyPartitions(skinEntity);
+
+    skin->RegisterQuery(QueryType::TotalContactForce, test::ExpectOK{});
+    skin->RegisterQuery(QueryType::ContactPoints, test::ExpectOK{});
+    Step();
+
+    auto const [zeroDofContacts, nonzeroDofContacts] =
+        CountContactsByDofType</*kIsSync*/ false>(skinEntity, boxEntity);
+    EXPECT_GT(zeroDofContacts, 0);
+    EXPECT_EQ(0, nonzeroDofContacts);
+    EXPECT_EQ((std::pair{0, 0}), CountContactsByDofType</*kIsSync*/ true>(skinEntity, boxEntity));
+    EXPECT_FALSE(GetRegistry().get<CSkinnedContactSnle const>(skinEntity).useInSolver);
+    EXPECT_FALSE(skin->GetContactPointsWorld(test::ExpectOK{}).empty());
+    EXPECT_GT(Norm(skin->GetContactForceWorld(test::ExpectOK{})), 0_r);
+
+    // Shift the box tangentially within the presliding displacement, over one step, then rest it.
+    ContactParams const contactParams;
+    ShiftBox(box, Real3{0_r, 0.5_r * contactParams.preslidingDisplacement, 0_r});
+    Step();
+    Step();
+    Real3 const force = skin->GetContactForceWorld(test::ExpectOK{});
+    real const coulombBound = contactParams.coulombFrictionCoefficient * force[0];
+    ASSERT_GT(coulombBound, 0_r);
+    if (preferElastoPlasticFriction) {
+      // Shifting the box carries its anchors, which pull on the fixed contact samples.
+      EXPECT_GT(force[1], 0.1_r * coulombBound);
+      EXPECT_LT(force[1], coulombBound);
+    } else {
+      // Without slip, velocity-regularized friction vanishes.
+      EXPECT_NEAR(force[1], 0_r, 1e-6_r * coulombBound);
+    }
+  }
 };
 
 TEST_F(ZeroDofSkinContact, StaticBoxReportsForceFromAsyncContact) {
-  auto [skin, box] = CreateActors(/*isBoxStatic=*/true);
-  entt::entity const skinEntity = GetEntity(skin->GetHandle());
-  entt::entity const boxEntity = GetEntity(box->GetHandle());
-  ExpectEmptyAndNonemptyPartitions(skinEntity);
+  ExpectStaticBoxReportsForceFromAsyncContact(/*preferElastoPlasticFriction=*/true);
+}
 
-  skin->RegisterQuery(QueryType::TotalContactForce, test::ExpectOK{});
-  skin->RegisterQuery(QueryType::ContactPoints, test::ExpectOK{});
-  Step();
-
-  auto const [zeroDofContacts, nonzeroDofContacts] =
-      CountContactsByDofType</*kIsSync*/ false>(skinEntity, boxEntity);
-  EXPECT_GT(zeroDofContacts, 0);
-  EXPECT_EQ(0, nonzeroDofContacts);
-  EXPECT_EQ((std::pair{0, 0}), CountContactsByDofType</*kIsSync*/ true>(skinEntity, boxEntity));
-  EXPECT_FALSE(GetRegistry().get<CSkinnedContactSnle const>(skinEntity).useInSolver);
-  EXPECT_FALSE(skin->GetContactPointsWorld(test::ExpectOK{}).empty());
-  EXPECT_GT(Norm(skin->GetContactForceWorld(test::ExpectOK{})), 0_r);
+// The zero-DoF force path selects the friction of each pair: velocity-regularized contacts have no
+// anchor offsets.
+TEST_F(ZeroDofSkinContact, StaticBoxReportsForceFromAsyncContactWithVelocityRegularizedFriction) {
+  ExpectStaticBoxReportsForceFromAsyncContact(/*preferElastoPlasticFriction=*/false);
 }
 
 TEST_F(ZeroDofSkinContact, DynamicBoxMovesFromSyncContact) {
@@ -4681,7 +4871,7 @@ TEST_F(ZeroDofSkinContact, SolverUseStopsWhenOnlyZeroDofContactRemains) {
   EXPECT_GT(CountContactsByDofType</*kIsSync*/ false>(skinEntity, boxEntity).second, 0);
   EXPECT_TRUE(UsesSkinnedContactInSolver(skinEntity));
 
-  ShiftBoxX(box, kZeroDofBoxMaxX - kMixedBoxMaxX);
+  ShiftBox(box, Real3{kZeroDofBoxMaxX - kMixedBoxMaxX, 0_r, 0_r});
   Step();
   auto const [zeroDofContacts, nonzeroDofContacts] =
       CountContactsByDofType</*kIsSync*/ false>(skinEntity, boxEntity);
@@ -4855,14 +5045,14 @@ class MochiDissipationScene
 
 // Friction and damping are reported as non-potential terms (see
 // test::ExpectDissipationIsNonPotential) once an actor touches the ground or the slab, with
-// regular and elasto-plastic friction.
+// velocity-regularized and elasto-plastic friction.
 TEST_P(MochiDissipationScene, DissipationIsNonPotential) {
   auto const& [sceneParams, elastoPlasticFriction] = GetParam();
-  SolverParams solverParams = _scene->GetSolverParams();
-  solverParams.experimentalEval.elastoPlasticFriction = elastoPlasticFriction;
-  _scene->SetSolverParams(solverParams, test::ExpectOK{});
   AddGroundPlane(_scene);
   sceneParams.addActors(_scene);
+  if (!elastoPlasticFriction) {
+    test::PreferVelocityRegularizedFriction(_scene);
+  }
   test::ExpectDissipationIsNonPotentialAfterTouch(_scene, /*dt*/ 0.02_r);
 }
 
@@ -4950,7 +5140,7 @@ INSTANTIATE_TEST_SUITE_P(
 // The minimum trust margin of the contacts of an island's actors, as ComputeCollisionResponse
 // reports them.
 static real IslandContactTrustMargin(entt::registry& reg, entt::entity island) {
-  auto const& experimentalEval = reg.ctx<CSimulationParams const>().experimentalEval;
+  auto const& simParams = reg.ctx<CSimulationParams const>();
   real margin = kInf;
   auto const lowerByCollisions = [&]<bool kIsSync>(entt::entity colliding) {
     auto const* collisions =
@@ -4958,23 +5148,19 @@ static real IslandContactTrustMargin(entt::registry& reg, entt::entity island) {
     if (!collisions) {
       return;
     }
+    ContactEvalConfig const collidingConfig = MakeContactEvalConfigForColliding(
+        simParams, reg, colliding, /*psdDRes*/ false, /*useFittedHessian*/ false);
     for (auto const& collision : *collisions) {
       ContactDetectionResult const& query = collision.collisionResult;
-      ContactEvalConfig const config = kIsSync
-          ? MakeContactEvalConfigPair(
-                experimentalEval,
-                reg,
-                colliding,
-                collision.colliderEntity,
-                /*psdDRes*/ false,
-                /*useFittedHessian*/ false)
-          : MakeContactEvalConfigAsync(
-                experimentalEval, reg, colliding, /*psdDRes*/ false, /*useFittedHessian*/ false);
+      ContactParams const pairParams =
+          GetContactPairParams(reg, colliding, collision.colliderEntity);
+      ContactEvalConfig const config = MakeContactEvalConfigForCollider(
+          collidingConfig, reg, collision.colliderEntity, pairParams);
       CollisionResponseResult response;
       response.ResizeNoInit(isize(query.sampleIndices), true, false, false);
       ComputeCollisionResponse<GradTarget::Current>(
           query,
-          GetContactPairParams(reg, colliding, collision.colliderEntity),
+          pairParams,
           config,
           reg.get<CTimeIntegratorState const>(colliding).dtStage,
           /*assemEnergy*/ true,
@@ -5004,12 +5190,9 @@ class MochiTrustMarginScene : public test::MochiSceneTestBase,
 };
 
 // Once an actor touches the ground or the slab, the trust margin of its island is the minimum of
-// those of its contacts, whatever the contact path. Elasto-plastic friction is on: without it, the
-// margin is +inf (see ContactPenalties.TrustMargin_Eligibility).
+// those of its contacts, whatever the contact path. The contacts use elasto-plastic friction, the
+// default: without it, the margin is +inf (see ContactPenalties.TrustMargin_Eligibility).
 TEST_P(MochiTrustMarginScene, MinimumOverContacts) {
-  SolverParams solverParams = _scene->GetSolverParams();
-  solverParams.experimentalEval.elastoPlasticFriction = true;
-  _scene->SetSolverParams(solverParams, test::ExpectOK{});
   AddGroundPlane(_scene);
   GetParam().addActors(_scene);
   test::TestIslandsAfterTouch(

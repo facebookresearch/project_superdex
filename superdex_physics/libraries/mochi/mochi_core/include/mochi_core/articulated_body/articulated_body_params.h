@@ -169,6 +169,8 @@ struct ArticulatedJointFrictionParams {
    * joint slides.
    *
    * @note Must be positive. Smaller values hold loads more stiffly, but may degrade convergence.
+   * @note Below it, dry friction adds no damping. A held joint is damped only by @ref viscous (zero
+   * by default) and by the time integration.
    */
   real preslidingDisplacement = 1e-4_r;
 

@@ -28,11 +28,22 @@ enum struct IntegrationMethod {
   BDF2, ///< BDF2: 2 steps, 1 stage, 2nd order, A-stable.
   BDF3, ///< BDF3: 3 steps, 1 stage, 3rd order.
   DIRK22, ///< DIRK(2,2): 1 step, 2 stages, 2nd order, L-stable.
-  DIRK23, ///< DIRK(2,3): 1 step, 2 stages, 3rd order.
+  DIRK23, ///< DIRK(2,3): 1 step, 2 stages, 3rd order. Its step does not end at its last stage, so
+          ///< its steps use velocity-regularized friction for all contacts (see
+          ///< @ref ContactParams::preferElastoPlasticFriction). Queries refreshed without a step
+          ///< approximate it with one BackwardEuler stage, which may use elasto-plastic friction.
   DIRK33, ///< DIRK(3,3): 1 step, 3 stages, 3rd order, L-stable.
   SymplecticDIRK12, ///< Symplectic DIRK(1,2): 1 step, 1 stage, 2nd order, A-stable. Also known as
-                    ///< Gauss and implicit midpoint.
-  SymplecticDIRK22, ///< Symplectic DIRK(2,2): 1 step, 2 stages, 2nd order, A-stable.
+                    ///< Gauss and implicit midpoint. Its step does not end at its last stage, so
+                    ///< its steps use velocity-regularized friction for all contacts (see
+                    ///< @ref ContactParams::preferElastoPlasticFriction). Queries refreshed
+                    ///< without a step approximate it with one BackwardEuler stage, which may use
+                    ///< elasto-plastic friction.
+  SymplecticDIRK22, ///< Symplectic DIRK(2,2): 1 step, 2 stages, 2nd order, A-stable. Its step does
+                    ///< not end at its last stage, so its steps use velocity-regularized friction
+                    ///< for all contacts (see @ref ContactParams::preferElastoPlasticFriction).
+                    ///< Queries refreshed without a step approximate it with one BackwardEuler
+                    ///< stage, which may use elasto-plastic friction.
   Count, ///< Number of time integration method enum values.
   Default = BackwardEuler, ///< Default time integration method.
 };

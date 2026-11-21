@@ -406,14 +406,19 @@ class SUPERDEXPHYSICS_API UMochiContactParams : public UObject {
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Friction")
   float CoulombFrictionCoefficient;
 
-  // Velocity threshold for Coulomb friction.
+  // [Experimental] Prefer elasto-plastic friction, which holds a tangential load below the Coulomb
+  // limit without slip, to velocity-regularized friction. Contacts with rigid colliders use it if
+  // both actors prefer it.
+  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Friction", AdvancedDisplay)
+  bool bPreferElastoPlasticFriction;
+
+  // Velocity threshold for Coulomb friction, for contacts with velocity-regularized friction (see
+  // bPreferElastoPlasticFriction).
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Friction", meta = (Units = "m/s"))
   float FrictionFalloffVel;
 
-  // [Experimental] Tangential displacement from the friction anchor over which elasto-plastic
-  // friction reaches the Coulomb limit. Used instead of FrictionFalloffVel with elasto-plastic
-  // friction (see FMochiExperimentalEvalParams::bElastoPlasticFriction). Must be finite and
-  // strictly positive.
+  // Tangential displacement from the friction anchor over which elasto-plastic friction reaches
+  // the Coulomb limit. Must be finite and strictly positive.
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,

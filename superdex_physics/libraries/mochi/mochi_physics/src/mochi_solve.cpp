@@ -1077,11 +1077,11 @@ static void PostLastStageLocalPipeline(
   // intermediate configurations, which are not states of the trajectory. The PostLastStage systems
   // above do not use the contact results, which FarSdfCollisionDetection overwrites.
   // TODO: Support integrators whose step does not end at their last stage (DIRK23,
-  // SymplecticDIRK12/22), which SetSolverParams rejects with elasto-plastic friction. Their step
+  // SymplecticDIRK12/22), with which all contacts use velocity-regularized friction. Their step
   // ends at the bTilde combination of the stages, so the anchors would need a collision detection
   // pass at the step-end state here (after updating the state it depends on), followed by
   // FillFrictionAnchorOffsets, before advancing them.
-  if (reg.ctx<CSimulationParams const>().experimentalEval.elastoPlasticFriction) {
+  if (AllowsElastoPlasticFriction(reg.ctx<CSimulationParams const>())) {
     ParallelForEach("UpdateFrictionAnchors", descendants.actors, 1, [&](entt::entity e) {
       ecs::TryInvokeOnEntity(&AdvanceFrictionAnchorOffsets, reg, e);
       ecs::TryInvokeOnEntity(&UpdateFrictionAnchors, reg, e);

@@ -86,7 +86,8 @@ struct ZeroStepCase {
   bool elastoPlasticFriction;
 };
 
-// Each integrator with regular friction and, if it supports it, with elasto-plastic friction.
+// Each integrator with velocity-regularized friction and, if it supports it, with elasto-plastic
+// friction.
 DynamicArray<ZeroStepCase> WithAndWithoutElastoPlasticFriction(
     std::initializer_list<IntegrationMethod> integrations) {
   DynamicArray<ZeroStepCase> cases;
@@ -104,10 +105,12 @@ std::string ZeroStepCaseName(::testing::TestParamInfo<ZeroStepCase> const& info)
       (info.param.elastoPlasticFriction ? "_ElastoPlasticFriction" : "");
 }
 
+// Contacts use elasto-plastic friction by default, where supported. Without it, they use
+// velocity-regularized friction.
 void SetElastoPlasticFriction(Scene* scene, bool enabled) {
-  SolverParams params = scene->GetSolverParams();
-  params.experimentalEval.elastoPlasticFriction = enabled;
-  scene->SetSolverParams(params, test::ExpectOK{});
+  if (!enabled) {
+    test::PreferVelocityRegularizedFriction(scene);
+  }
 }
 } // namespace
 
@@ -778,8 +781,8 @@ INSTANTIATE_TEST_SUITE_P(
 TEST_P(ZeroStepMovingStaticTest, ZeroStepReproducesMovingStaticCollider) {
   auto const [motion, elastoPlasticFriction] = GetParam();
   auto* scene = _mochiContext->CreateScene("MovingStatic");
-  SetElastoPlasticFriction(scene, elastoPlasticFriction);
   auto [staticBox, dynamicBox] = AddBoxOnStaticBox(scene);
+  SetElastoPlasticFriction(scene, elastoPlasticFriction);
   Real3 constexpr kStaticVelocity{0.05_r, 0_r, 0_r};
   for (int i = 0; i < 20; ++i) {
     if (motion == StaticMotion::Pose) {

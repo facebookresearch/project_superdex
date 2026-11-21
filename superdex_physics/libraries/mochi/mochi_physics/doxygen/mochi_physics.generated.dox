@@ -2433,6 +2433,15 @@
 /// @see @ref mochi::ContactParams::penaltyCoefficient "ContactParams::penaltyCoefficient"
 ///
 
+/// @var mochi::ContactPairParamsOverride::preferElastoPlasticFriction
+///
+/// @brief [Experimental] Whether the pair prefers elasto-plastic friction.
+///
+/// @warning This is an experimental feature. It may be changed or removed in the future. Use at your own risk.
+///
+/// @see @ref mochi::ContactParams::preferElastoPlasticFriction "ContactParams::preferElastoPlasticFriction"
+///
+
 /// @var mochi::ContactPairParamsOverride::frictionFalloffVel
 ///
 /// @brief Friction falloff velocity [m/s].
@@ -2442,9 +2451,7 @@
 
 /// @var mochi::ContactPairParamsOverride::preslidingDisplacement
 ///
-/// @brief [Experimental] Presliding displacement of elasto-plastic friction [m].
-///
-/// @warning This is an experimental feature. It may be changed or removed in the future. Use at your own risk.
+/// @brief Presliding displacement of elasto-plastic friction [m].
 ///
 /// @see @ref mochi::ContactParams::preslidingDisplacement "ContactParams::preslidingDisplacement"
 ///
@@ -5326,7 +5333,7 @@
 ///
 /// @brief Represents a simulated body (actor) in a scene.
 ///
-/// @details The actor history is the state that an actor carries over from its previous time steps, besides its current state: the previous states of multi-step time integrators, the friction preload of the joints of articulated actors (see @ref mochi::ArticulatedJointFrictionParams "ArticulatedJointFrictionParams"), and, with @ref mochi::ExperimentalEvalParams::elastoPlasticFriction "ExperimentalEvalParams::elastoPlasticFriction", the friction preload of its contacts and of contacts on it. Setters that change the state discontinuously invalidate the actor history: in the next time step, multi-step time integrators restart (e.g. BDF2 falls back to backward Euler), and the contacts restart without friction preload. Joints restart without friction preload only when their positions are set (@ref mochi::Actor::SetArticulatedPoseFromJoints "SetArticulatedPoseFromJoints", @ref mochi::Actor::SetArticulatedPoseFromLinks "SetArticulatedPoseFromLinks") or their dry friction is enabled (@ref mochi::Actor::SetArticulatedJointFrictionParams "SetArticulatedJointFrictionParams").
+/// @details The actor history is the state that an actor carries over from its previous time steps, besides its current state: the previous states of multi-step time integrators, the friction preload of the joints of articulated actors (see @ref mochi::ArticulatedJointFrictionParams "ArticulatedJointFrictionParams"), and the friction preload of its contacts and of contacts on it, with elasto-plastic friction (see @ref mochi::ContactParams::preferElastoPlasticFriction "ContactParams::preferElastoPlasticFriction"). Setters that change the state discontinuously invalidate the actor history: in the next time step, multi-step time integrators restart (e.g. BDF2 falls back to backward Euler), and the contacts restart without friction preload. Joints restart without friction preload only when their positions are set (@ref mochi::Actor::SetArticulatedPoseFromJoints "SetArticulatedPoseFromJoints", @ref mochi::Actor::SetArticulatedPoseFromLinks "SetArticulatedPoseFromLinks") or their dry friction is enabled (@ref mochi::Actor::SetArticulatedJointFrictionParams "SetArticulatedJointFrictionParams").
 ///
 /// @note Every body in the simulation is an actor.
 /// @note Actors always belong to exactly one scene.

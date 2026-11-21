@@ -645,14 +645,15 @@ struct ContactEvalConfig {
   // convergence.
   bool useFittedHessian = ExperimentalEvalParams{}.fittedSaturationHessian.contactFriction;
 
-  // Selects which Coulomb friction smoothing model to use.
+  // Selects the smoothing of velocity-regularized Coulomb friction. Elasto-plastic
+  // friction always uses C1Regularized.
   CoulombFrictionModel frictionModel = ExperimentalEvalParams{}.frictionModel;
 
-  // [Experimental] Elasto-plastic Coulomb friction. Coulomb friction acts on the tangential
-  // displacement from each contact's anchor, at the anchor offset from the stage-start
-  // position, with ContactParams::preslidingDisplacement as transition width, so contacts hold a
-  // load below the Coulomb limit without slip. A new contact has its anchor at the stage-start
-  // position (zero offset). Requires the anchor offsets of every contact.
+  // Elasto-plastic Coulomb friction. Coulomb friction acts on the tangential displacement from each
+  // contact's anchor, at the anchor offset from the stage-start position, with
+  // ContactParams::preslidingDisplacement as transition width and the C1Regularized ramp, so
+  // contacts hold a load below the Coulomb limit without slip. A new contact has its anchor at the
+  // stage-start position (zero offset). Requires the anchor offsets of every contact.
   bool elastoPlasticFriction = false;
 };
 
@@ -1042,9 +1043,6 @@ MOCHI_FORCE_INLINE void ComputeBatchContactDissipationForceDForce(
   MOCHI_ASSERT_VERBOSE(
       !config.elastoPlasticFriction || params.preslidingDisplacement > 0_r,
       "Invalid friction presliding displacement.");
-  MOCHI_ASSERT_VERBOSE(
-      !config.elastoPlasticFriction || config.frictionModel == CoulombFrictionModel::C1Regularized,
-      "Elasto-plastic friction requires C1Regularized friction.");
 
   using V = BatchReal<kBatchSize>;
   using Vd = BatchDouble<kBatchSize>;
@@ -1109,13 +1107,17 @@ MOCHI_FORCE_INLINE void ComputeBatchContactDissipationForceDForce(
         V{config.elastoPlasticFriction ? params.preslidingDisplacement
                                        : params.frictionFalloffVel * dtFactor};
 
-    // Compute friction smoothing function.
+    // Compute friction smoothing function. Elasto-plastic friction always uses C1Regularized, whose
+    // compact support saturates at the presliding displacement, where the anchor update clamps the
+    // displacement; the friction model only selects the smoothing of velocity-regularized friction.
     // Note: falloffFriction serves as the transition width `t` for IPC (compact support) and as the
     // regularization parameter `eps` for CinfRegularized (no compact support). Both control the
     // smoothing scale near the stick-slip transition; the semantics differ but the numerical value
     // is shared.
     V smoother, dSmoother, ddSmoother, dSmoother_ptNorm;
-    switch (config.frictionModel) {
+    CoulombFrictionModel const frictionModel =
+        config.elastoPlasticFriction ? CoulombFrictionModel::C1Regularized : config.frictionModel;
+    switch (frictionModel) {
       case CoulombFrictionModel::CinfRegularized:
         CinfRegularized<V>(
             slipTNorm, falloffFriction, smoother, dSmoother, ddSmoother, dSmoother_ptNorm);
@@ -1362,7 +1364,8 @@ MOCHI_FORCE_INLINE void ComputeBatchContactDissipationForceDForce(
  * points.
  *
  * @details Processes a batch of contacts using SIMD operations to compute penalty-based collision
- * response. Supports penalty forces with optional Coulomb friction (regular or elasto-plastic, see
+ * response. Supports penalty forces with optional Coulomb friction (velocity-regularized or
+ * elasto-plastic, see
  * @ref ContactEvalConfig::elastoPlasticFriction), viscous friction, and normal collision damping.
  * All quantities are expressed in the collider's local space.
  *
@@ -1852,8 +1855,7 @@ MOCHI_FORCE_INLINE void ComputeBatchAnchorDisplacement(
   MOCHI_ASSERT_VERBOSE(!config.validCollidingNormals || normalColliding.size() == kBatchSize);
   MOCHI_ASSERT_VERBOSE(!config.explicitNormals || distanceGradStageStart.size() == kBatchSize);
   MOCHI_ASSERT_VERBOSE(
-      config.elastoPlasticFriction && params.preslidingDisplacement > 0_r,
-      "Anchors advance only with elasto-plastic friction.");
+      config.elastoPlasticFriction, "Anchors advance only with elasto-plastic friction.");
 
   using V = BatchReal<kBatchSize>;
   using V3 = BatchReal3<kBatchSize>;

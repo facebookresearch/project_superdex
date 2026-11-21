@@ -54,6 +54,8 @@ class Scene;
 struct ContactPairParamsOverride {
   std::optional<real> penaltyCoefficient;
 
+  std::optional<bool> preferElastoPlasticFriction;
+
   std::optional<real> frictionFalloffVel;
 
   std::optional<real> preslidingDisplacement;

@@ -49,6 +49,7 @@ _PHYSICAL_COMPONENTS = (
     _MOMENT_OF_INERTIA,
 )
 _GRAVITY = "superdex.physics.gravity_xyz"
+_PREFER_ELASTO_PLASTIC_FRICTION = "prefer_elasto_plastic_friction"
 # Prefab edits made before bots and task spawns were created, as JSON objects by name.
 _BOT_EDITS = "superdex.scene.bot_edits"
 _SPAWN_EDITS = "superdex.scene.spawn_edits"
@@ -132,6 +133,11 @@ def apply_recorded_physics(recording: EpisodeReader, scene: sdp.Scene) -> None:
     domain randomization may have changed at run time; a link's come from its prefab. Each
     recorded center of mass must then match, which catches a link built without its
     recorded prefab edit.
+
+    Recordings made before ``prefer_elasto_plastic_friction`` was recorded used
+    velocity-regularized friction, the default then, so their bodies opt out of
+    elasto-plastic friction. The recorder never recorded the scene-wide opt-in that
+    preceded the preference.
     """
     names = recording.read_static_value("superdex.physics.contact_param_names")
     template = sdp.ContactParams()
@@ -152,6 +158,8 @@ def apply_recorded_physics(recording: EpisodeReader, scene: sdp.Scene) -> None:
         contact = actor.get_contact_params()
         for name, value in zip(names, sample.value, strict=True):
             setattr(contact, name, type(getattr(template, name))(value))
+        if _PREFER_ELASTO_PLASTIC_FRICTION not in names:
+            contact.prefer_elasto_plastic_friction = False
         # Recorded as float64, but stored at Mochi's precision, which may be float32.
         requested = [float(getattr(contact, name)) for name in names]
         actor.set_contact_params(contact)

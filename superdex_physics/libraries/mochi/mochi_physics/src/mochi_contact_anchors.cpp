@@ -16,6 +16,8 @@
 
 #include "mochi_contact_anchors.h"
 
+#include "mochi_contact.h"
+
 #include <mochi_core/utils/array_utils.h>
 #include <mochi_core/utils/profile.h>
 #include <mochi_core/utils/task_scheduler.h>
@@ -27,34 +29,28 @@
 using namespace mochi;
 
 void mochi::FillFrictionAnchorOffsets(
-    FrictionAnchorReg const& reg,
     CFrictionAnchorIndex<AnchorSet::Active> const& index,
     Span<FrictionAnchor const> anchors,
-    Span<ActiveCollision> outCollisions) {
-  int hint = 0;
-  for (auto& collision : outCollisions) {
-    if (!HasFrictionAnchors(reg, collision.colliderEntity)) {
-      continue;
-    }
-    auto& result = collision.collisionResult;
-    auto const colliderId = entt::to_integral(collision.colliderEntity);
-    int const numContacts = isize(result.sampleIndices);
-    MOCHI_ASSERT_VERBOSE(
-        isize(result.posCollidingStageStart) == numContacts,
-        "Collision detection must evaluate the stage-start contact positions.");
-    result.anchorOffset.resize_noinit(numContacts);
-    for (int c = 0; c < numContacts; ++c) {
-      int const i =
-          FindFrictionAnchorFromHint(index, anchors, result.sampleIndices[c], colliderId, hint);
-      result.anchorOffset[c] =
-          i == kSentinelIndex ? Real3{} : result.posCollidingStageStart[c] - anchors[i].point;
-    }
+    ActiveCollision& outCollision,
+    int& inOutHint) {
+  auto& outResult = outCollision.collisionResult;
+  auto const collider = entt::to_integral(outCollision.colliderEntity);
+  int const numContacts = isize(outResult.sampleIndices);
+  MOCHI_ASSERT_VERBOSE(
+      isize(outResult.posCollidingStageStart) == numContacts,
+      "Collision detection must evaluate the stage-start contact positions.");
+  outResult.anchorOffset.resize_noinit(numContacts);
+  for (int c = 0; c < numContacts; ++c) {
+    int const i =
+        FindFrictionAnchorFromHint(index, anchors, outResult.sampleIndices[c], collider, inOutHint);
+    outResult.anchorOffset[c] =
+        i == kSentinelIndex ? Real3{} : outResult.posCollidingStageStart[c] - anchors[i].point;
   }
 }
 
 void mochi::UpdateFrictionAnchors(
-    FrictionAnchorReg reg,
     CConvergenceStatus const* convergence,
+    CContactSamples<TimeStep::Current> const& samples,
     CActiveCollisions</*kIsSync*/ false, TimeStep::Current> const& asyncCollisions,
     CActiveCollisions</*kIsSync*/ true, TimeStep::Current> const& syncCollisions,
     CFrictionAnchors<AnchorSet::Pending>& outNext,
@@ -73,25 +69,28 @@ void mochi::UpdateFrictionAnchors(
       MakeConstSpan(asyncCollisions), MakeConstSpan(syncCollisions)};
 
   // 1. Append the anchors in visiting order, using the index as scratch to locate the first anchor
-  // of each sample. Sized to the contacts that use elasto-plastic friction, which bounds the number
-  // of anchors.
+  // of each sample. Sized to the contacts that use elasto-plastic friction, the only ones with the
+  // keep mask, which bounds the number of anchors.
   int maxAnchors = 0;
   for (auto const collisions : allCollisions) {
     for (auto const& collision : collisions) {
-      if (HasFrictionAnchors(reg, collision.colliderEntity)) {
-        maxAnchors += isize(collision.collisionResult.sampleIndices);
-      }
+      maxAnchors += isize(collision.collisionResult.keepsAnchor);
     }
   }
+  if (maxAnchors == 0) {
+    pending.clear();
+    return;
+  }
+  outIndex.Allocate(isize(samples.positions));
   pending.resize_noinit(maxAnchors);
   int numAnchors = 0;
   bool isGrouped = true;
   for (auto const collisions : allCollisions) {
     for (auto const& collision : collisions) {
-      if (!HasFrictionAnchors(reg, collision.colliderEntity)) {
+      auto const& result = collision.collisionResult;
+      if (result.keepsAnchor.empty()) {
         continue;
       }
-      auto const& result = collision.collisionResult;
       auto const colliderId = entt::to_integral(collision.colliderEntity);
       int const numContacts = isize(result.sampleIndices);
       MOCHI_ASSERT_VERBOSE(
@@ -150,10 +149,15 @@ void mochi::PromotePendingFrictionAnchors(
 
 template <AnchorSet kSet>
 void mochi::IndexFrictionAnchors(
+    CContactSamples<TimeStep::Current> const& samples,
     CFrictionAnchors<kSet> const& anchorsComp,
     CFrictionAnchorIndex<kSet>& outIndex) {
   // Only the samples with anchors are set; other entries may be stale, and lookups reject them.
   auto const& anchors = anchorsComp.anchors;
+  if (anchors.empty()) {
+    return;
+  }
+  outIndex.Allocate(isize(samples.positions));
   for (int i = 0; i < isize(anchors); ++i) {
     if (i == 0 || anchors[i - 1].sample != anchors[i].sample) {
       outIndex[anchors[i].sample] = i;
@@ -162,9 +166,11 @@ void mochi::IndexFrictionAnchors(
 }
 
 template void mochi::IndexFrictionAnchors(
+    CContactSamples<TimeStep::Current> const& samples,
     CFrictionAnchors<AnchorSet::Active> const& anchorsComp,
     CFrictionAnchorIndex<AnchorSet::Active>& outIndex);
 template void mochi::IndexFrictionAnchors(
+    CContactSamples<TimeStep::Current> const& samples,
     CFrictionAnchors<AnchorSet::Pending> const& anchorsComp,
     CFrictionAnchorIndex<AnchorSet::Pending>& outIndex);
 
@@ -253,6 +259,21 @@ void mochi::ApplyFrictionAnchorClearRequests(entt::registry& reg) {
   entities.clear();
 }
 
+void mochi::ClearFrictionAnchors(entt::registry& reg) {
+  ecs::InvokeForEachGlobal(
+      +[](CFrictionAnchors<AnchorSet::Active>& active,
+          CFrictionAnchors<AnchorSet::Pending>& pending,
+          CFrictionAnchorIndex<AnchorSet::Active>& outIndex) {
+        if (!active.anchors.empty() || !pending.anchors.empty()) {
+          outIndex.anchorsChanged = true;
+        }
+        active.anchors.clear();
+        pending.anchors.clear();
+      },
+      reg);
+  reg.ctx<CFrictionAnchorClearRequests>().entities.clear();
+}
+
 void mochi::PrepareFrictionAnchors(entt::registry& reg, bool promotePending) {
   // The per-actor passes are cheap, so each task takes a batch of actors. The anchor components are
   // emplaced together, so the actors are those with an index.
@@ -271,17 +292,18 @@ void mochi::PrepareFrictionAnchors(entt::registry& reg, bool promotePending) {
   }
   ApplyFrictionAnchorClearRequests(reg);
   // A solve-free assembly keeps the flags: the promotion is still owed.
+  auto const& samples = reg.storage<CContactSamples<TimeStep::Current>>();
   ParallelForEach("IndexFrictionAnchors", actors, kMinActorsPerTask, [&](entt::entity e) {
     auto& index = indices.get(e);
     if (index.anchorsChanged) {
-      IndexFrictionAnchors(active.get(e), index);
+      IndexFrictionAnchors(samples.get(e), active.get(e), index);
       index.anchorsChanged = !promotePending;
     }
   });
 }
 
-void mochi::EmplaceFrictionAnchors(entt::registry& reg, entt::entity e, int numSamples) {
+void mochi::EmplaceFrictionAnchors(entt::registry& reg, entt::entity e) {
   reg.emplace<CFrictionAnchors<AnchorSet::Active>>(e);
   reg.emplace<CFrictionAnchors<AnchorSet::Pending>>(e);
-  reg.emplace<CFrictionAnchorIndex<AnchorSet::Active>>(e, numSamples);
+  reg.emplace<CFrictionAnchorIndex<AnchorSet::Active>>(e);
 }

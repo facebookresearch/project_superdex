@@ -17,12 +17,12 @@
 // @details The actor history is the state that an actor carries over from its previous time
 // steps, besides its current state: the previous states of multi-step time integrators, the
 // friction preload of the joints of articulated actors (see @ref ArticulatedJointFrictionParams),
-// and, with @ref ExperimentalEvalParams::elastoPlasticFriction, the friction preload of its contacts
-// and of contacts on it. Setters that change the state discontinuously invalidate the actor
-// history: in the next time step, multi-step time integrators restart (e.g. BDF2 falls back to
-// backward Euler), and the contacts restart without friction preload. Joints restart without
-// friction preload only when their positions are set (@ref SetArticulatedPoseFromJoints,
-// @ref SetArticulatedPoseFromLinks) or their dry friction is enabled
+// and the friction preload of its contacts and of contacts on it, with elasto-plastic friction (see
+// @ref ContactParams::preferElastoPlasticFriction). Setters that change the state discontinuously
+// invalidate the actor history: in the next time step, multi-step time integrators restart (e.g.
+// BDF2 falls back to backward Euler), and the contacts restart without friction preload. Joints
+// restart without friction preload only when their positions are set
+// (@ref SetArticulatedPoseFromJoints, @ref SetArticulatedPoseFromLinks) or their dry friction is enabled
 // (@ref SetArticulatedJointFrictionParams).
 //
 // @warning Concurrent access to the actor or its scene is illegal.

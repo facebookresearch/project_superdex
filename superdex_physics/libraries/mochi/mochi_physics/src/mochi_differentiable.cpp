@@ -530,6 +530,16 @@ static void SetLinkForceContainer(
   }
 }
 
+// Whether the back-propagation of the step of an actor goes through friction anchors: those the
+// step read (Active) or produced (Pending). Their adjoints need the contacts at the solution.
+static bool HasFrictionAnchorAdjoints(entt::registry const& reg, entt::entity e) {
+  if (!reg.all_of<CDiffFrictionAnchorGrad<AnchorSet::Active>>(e)) {
+    return false;
+  }
+  return !reg.get<CFrictionAnchors<AnchorSet::Active> const>(e).anchors.empty() ||
+      !reg.get<CFrictionAnchors<AnchorSet::Pending> const>(e).anchors.empty();
+}
+
 static void PrepareBackPropagationIslandAsync(
     entt::registry& reg,
     entt::entity island,
@@ -561,7 +571,7 @@ static void PrepareBackPropagationIslandAsync(
   // Run collision detection if some actor has queries enabled or friction anchors, whose adjoint
   // reads the current contacts.
   if (std::ranges::any_of(descendants.actors, [&](auto const& e) {
-        return reg.any_of<CQueryActorContactForces, CDiffFrictionAnchorGrad<AnchorSet::Active>>(e);
+        return reg.all_of<CQueryActorContactForces>(e) || HasFrictionAnchorAdjoints(reg, e);
       })) {
     // We must visit the full island, to account for cases where the queried actors act as
     // colliders.
@@ -754,8 +764,7 @@ void mochi::EmplaceDifferentiabilityComponents(
 static void EmplaceDifferentiableFrictionAnchorComponents(entt::registry& reg, entt::entity e) {
   reg.emplace<CDiffFrictionAnchorGrad<AnchorSet::Active>>(e);
   reg.emplace<CDiffFrictionAnchorGrad<AnchorSet::Pending>>(e);
-  reg.emplace<CFrictionAnchorIndex<AnchorSet::Pending>>(
-      e, isize(reg.get<CFrictionAnchorIndex<AnchorSet::Active> const>(e)));
+  reg.emplace<CFrictionAnchorIndex<AnchorSet::Pending>>(e);
 }
 
 void mochi::EmplaceDifferentiableContactComponents(
@@ -766,22 +775,6 @@ void mochi::EmplaceDifferentiableContactComponents(
   reg.emplace<CDiffContactGrad<GradTarget::Current>>(e, dofInfo.dofsSize);
   reg.emplace<CDiffContactGrad<GradTarget::Previous>>(e, dofInfo.dofsSize);
   if (reg.all_of<CFrictionAnchors<AnchorSet::Active>>(e)) {
-    EmplaceDifferentiableFrictionAnchorComponents(reg, e);
-  }
-}
-
-void mochi::EnableDifferentiableFrictionAnchorComponents(entt::registry& reg, bool enable) {
-  if (!enable) {
-    reg.clear<CDiffFrictionAnchorGrad<AnchorSet::Active>>();
-    reg.clear<CDiffFrictionAnchorGrad<AnchorSet::Pending>>();
-    reg.clear<CFrictionAnchorIndex<AnchorSet::Pending>>();
-    return;
-  }
-  auto view = reg.view<
-      CFrictionAnchors<AnchorSet::Active> const,
-      CDiffContactGrad<GradTarget::Current> const>(
-      entt::exclude<CDiffFrictionAnchorGrad<AnchorSet::Pending>>);
-  for (auto e : view) {
     EmplaceDifferentiableFrictionAnchorComponents(reg, e);
   }
 }

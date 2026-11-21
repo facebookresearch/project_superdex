@@ -31,12 +31,13 @@ namespace mochi {
 [[nodiscard]] inline ContactParams ApplyContactPairParamsOverride(
     ContactParams params,
     ContactPairParamsOverride const& paramsOverride) {
-  auto const applyOverride = [](real& value, std::optional<real> const& optional) {
+  auto const applyOverride = []<class T>(T& value, std::optional<T> const& optional) {
     if (optional) {
       value = *optional;
     }
   };
   applyOverride(params.penaltyCoefficient, paramsOverride.penaltyCoefficient);
+  applyOverride(params.preferElastoPlasticFriction, paramsOverride.preferElastoPlasticFriction);
   applyOverride(params.frictionFalloffVel, paramsOverride.frictionFalloffVel);
   applyOverride(params.preslidingDisplacement, paramsOverride.preslidingDisplacement);
   applyOverride(params.viscousFrictionCoefficient, paramsOverride.viscousFrictionCoefficient);

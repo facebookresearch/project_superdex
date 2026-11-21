@@ -25,10 +25,10 @@
 // Scene setup shared by the tests of back-propagation through elasto-plastic friction anchors.
 namespace mochi::test {
 
-// Enables elasto-plastic friction, with the exact friction Hessian that back-propagation needs.
-inline void EnableElastoPlasticFriction(Scene* scene) {
+// Uses the exact friction Hessian, which back-propagation needs, for the elasto-plastic friction of
+// contacts with rigid colliders, the default.
+inline void UseExactFrictionHessian(Scene* scene) {
   auto params = scene->GetSolverParams();
-  params.experimentalEval.elastoPlasticFriction = true;
   params.experimentalEval.fittedSaturationHessian.contactFriction = false;
   scene->SetSolverParams(params, ExpectOK{});
 }

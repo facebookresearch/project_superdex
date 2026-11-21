@@ -29,6 +29,9 @@
 
 namespace mochi {
 
+template <TimeStep kStep>
+struct CContactSamples;
+
 // Registry access of the friction anchor systems: whether a collider is rigid.
 using FrictionAnchorReg = ecs::PartialRegistry<TagRigidActor const, TagStaticActor const>;
 
@@ -80,12 +83,13 @@ namespace mochi {
  * anchor per collider. AnchorSet::Active holds the anchors the step uses, and AnchorSet::Pending
  * those for the next step. At the start of each step, PromotePendingFrictionAnchors copies Pending
  * into Active without consuming it, so Pending stays valid while an island sleeps. Each collision
- * detection pass at TimeStep::Current sets ContactDetectionResult::anchorOffset to the stage-start
- * position of each contact relative to its Active anchor, or zero without one. The anchors stay
- * fixed during the stages of a step. After the last stage, AdvanceFrictionAnchorOffsets advances
- * the offsets to the end of the step, and UpdateFrictionAnchors rebuilds Pending from the contacts
- * that keep their anchors, even at zero offset. A diverged step resets the actor's state, so it
- * releases the anchors: it empties Pending, and Active keeps the anchors the step used.
+ * detection pass at TimeStep::Current sets ContactDetectionResult::anchorOffset of the contacts
+ * that use elasto-plastic friction to their stage-start positions relative to their Active anchors,
+ * or zero without one. The anchors stay fixed during the stages of a step. After the last stage,
+ * AdvanceFrictionAnchorOffsets advances the offsets to the end of the step, and
+ * UpdateFrictionAnchors rebuilds Pending from the contacts that keep their anchors, even at zero
+ * offset. A diverged step resets the actor's state, so it releases the anchors: it empties Pending,
+ * and Active keeps the anchors the step used.
  *
  * @note Queued preload resets drop the anchors from both sets after promotion, so that no later
  * promotion brings them back, even if a sleeping island skips the solve that rebuilds Pending.
@@ -98,6 +102,8 @@ namespace mochi {
  * anchors (see CFrictionAnchorIndex).
  * @note The collider includes the entity version: anchors on a destroyed collider never match a
  * recycled entity, and the next rebuild drops them.
+ * @note Every actor with contact samples has both sets. Only the contacts that use elasto-plastic
+ * friction keep anchors, so the sets are empty without it.
  */
 template <AnchorSet kSet>
 struct CFrictionAnchors : NoCopy {
@@ -125,14 +131,21 @@ struct CFrictionAnchors : NoCopy {
  * or PrepareBackPropagation derives it again. Each of these changes sets anchorsChanged, so that
  * the next step start promotes and indexes again only the actors whose anchors changed, which
  * skips the actors asleep since the last step start. AnchorSet::Pending exists only in
- * differentiable scenes with elasto-plastic friction: it is derived in PrepareBackPropagation too,
- * for the back-propagation of the anchor advance, which looks up the Pending anchors.
+ * differentiable scenes: it is derived in PrepareBackPropagation too, for the back-propagation of
+ * the anchor advance, which looks up the Pending anchors.
+ *
+ * @note The entries are allocated by Allocate, on the first anchors to index, so that actors
+ * without anchors, e.g., without elasto-plastic friction, do not store them.
  */
 template <AnchorSet kSet>
 struct CFrictionAnchorIndex : private DynamicArray<int>, public NoCopy {
-  CFrictionAnchorIndex() = default;
-  explicit CFrictionAnchorIndex(int numSamples) {
-    resize(numSamples, kSentinelIndex);
+  // Allocates an entry per contact sample of the colliding actor, if not done yet.
+  void Allocate(int numSamples) {
+    MOCHI_ASSERT_VERBOSE(
+        empty() || isize(*this) == numSamples, "The index has an entry per contact sample.");
+    if (empty()) {
+      resize(numSamples, kSentinelIndex);
+    }
   }
 
   using DynamicArray<int>::operator[];
@@ -147,8 +160,7 @@ struct CFrictionAnchorIndex : private DynamicArray<int>, public NoCopy {
 /**
  * @brief Requests to clear friction preload since the last step. At the start of the next step,
  * ApplyFrictionAnchorClearRequests drops each actor's anchors from both sets, both as colliding
- * and collider.
- * Global context, present only with elasto-plastic friction.
+ * and collider. Global context.
  *
  * @note Captured, so that restoring a state also restores its pending requests, which apply to the
  * anchors of that state.
@@ -177,6 +189,10 @@ template <AnchorSet kSet>
     Span<FrictionAnchor const> anchors,
     int sample,
     uint32_t collider) {
+  // Without anchors, the index may not be allocated.
+  if (anchors.empty()) {
+    return kSentinelIndex;
+  }
   for (int i = index[sample]; IsAnchorOfSample(anchors, i, sample); ++i) {
     if (anchors[i].collider == collider) {
       return i;
@@ -208,48 +224,40 @@ template <AnchorSet kSet>
   return anchor;
 }
 
-// Sets the anchor offsets of the contacts that use elasto-plastic friction to their stage-start
-// positions relative to their anchors; contacts without an anchor get zero.
+// Sets the anchor offsets of the contacts of a collision of a colliding actor, whose contacts use
+// elasto-plastic friction, to their stage-start positions relative to their anchors; contacts
+// without an anchor get zero. inOutHint is the lookup hint of FindFrictionAnchorFromHint, carried
+// across the collisions of the actor. Collision detection calls it for the pairs that use
+// elasto-plastic friction, and clears the offsets of the others.
 void FillFrictionAnchorOffsets(
-    FrictionAnchorReg const& reg,
     CFrictionAnchorIndex<AnchorSet::Active> const& index,
     Span<FrictionAnchor const> anchors,
-    Span<ActiveCollision> outCollisions);
-
-// Sets the anchor offsets of the current contact results of a colliding actor from its stored
-// friction anchors, after a collision detection pass at TimeStep::Current.
-template <bool kIsSync>
-void FillFrictionAnchorOffsets(
-    FrictionAnchorReg reg,
-    CFrictionAnchorIndex<AnchorSet::Active> const& index,
-    CFrictionAnchors<AnchorSet::Active> const& active,
-    CActiveCollisions<kIsSync, TimeStep::Current>& activeCollisions) {
-  FillFrictionAnchorOffsets(reg, index, MakeConstSpan(active.anchors), MakeSpan(activeCollisions));
-}
+    ActiveCollision& outCollision,
+    int& inOutHint);
 
 // Rebuilds the next-step anchors of the contacts that keep them after AdvanceFrictionAnchorOffsets,
-// including zero offsets. Uses the Active index as scratch and reuses Pending's capacity. A
+// including zero offsets. Only the contacts that use elasto-plastic friction, whose anchors
+// advance, have the keep mask. Uses the Active index as scratch and reuses Pending's capacity. A
 // diverged step empties Pending.
 void UpdateFrictionAnchors(
-    FrictionAnchorReg reg,
     CConvergenceStatus const* convergence,
+    CContactSamples<TimeStep::Current> const& samples,
     CActiveCollisions</*kIsSync*/ false, TimeStep::Current> const& asyncCollisions,
     CActiveCollisions</*kIsSync*/ true, TimeStep::Current> const& syncCollisions,
     CFrictionAnchors<AnchorSet::Pending>& outNext,
     CFrictionAnchorIndex<AnchorSet::Active>& outIndex);
 
 // Requests dropping, at the start of the next step, the friction anchors of an actor, both as
-// colliding and collider (see CFrictionAnchorClearRequests). Does nothing without elasto-plastic
-// friction.
+// colliding and collider (see CFrictionAnchorClearRequests).
 void RequestFrictionAnchorClear(entt::registry& reg, entt::entity e);
 
-// Emplaces empty friction anchor components on an actor with numSamples contact samples. Call
-// only if ExperimentalEvalParams::elastoPlasticFriction is enabled.
-void EmplaceFrictionAnchors(entt::registry& reg, entt::entity e, int numSamples);
+// Emplaces empty friction anchor components on an actor with contact samples.
+void EmplaceFrictionAnchors(entt::registry& reg, entt::entity e);
 
 // Points the index to the group of each sample with anchors.
 template <AnchorSet kSet>
 void IndexFrictionAnchors(
+    CContactSamples<TimeStep::Current> const& samples,
     CFrictionAnchors<kSet> const& anchorsComp,
     CFrictionAnchorIndex<kSet>& outIndex);
 
@@ -259,6 +267,12 @@ void IndexFrictionAnchors(
 // sets, and indexes Active. Only the actors whose anchors changed are promoted and indexed (see
 // CFrictionAnchorIndex::anchorsChanged).
 void PrepareFrictionAnchors(entt::registry& reg, bool promotePending);
+
+// Empties both anchor sets of every actor, and the clear requests, at the start of a step in a
+// scene that does not allow elasto-plastic friction (see AllowsElastoPlasticFriction), so that
+// anchors left by an earlier setting or a restored state do not come back as preload once it is
+// allowed again.
+void ClearFrictionAnchors(entt::registry& reg);
 
 // Building blocks of PrepareFrictionAnchors, declared for tests that drive single actors.
 

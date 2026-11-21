@@ -135,37 +135,17 @@ struct ExperimentalEvalParams {
   SaturationHessianParams fittedSaturationHessian;
 
   /**
-   * @brief Selects which Coulomb friction smoothing model to use.
+   * @brief Selects the smoothing of velocity-regularized Coulomb friction.
    *
    * @details C1Regularized (default) preserves existing behavior exactly. CinfRegularized is an
    * additional model that can be selected at runtime without affecting C1Regularized users.
    *
-   * @note @ref elastoPlasticFriction requires C1Regularized.
+   * @note Contacts with elasto-plastic friction (see
+   * @ref ContactParams::preferElastoPlasticFriction) always use the
+   * @ref CoulombFrictionModel::C1Regularized ramp, in displacement over
+   * @ref ContactParams::preslidingDisplacement, whatever this setting.
    */
   CoulombFrictionModel frictionModel = CoulombFrictionModel::Default;
-
-  /**
-   * @brief [Experimental] Use elasto-plastic Coulomb friction.
-   *
-   * @details Elasto-plastic friction holds a tangential load below the Coulomb limit without slip,
-   * and slides once the tangential displacement exceeds @ref ContactParams::preslidingDisplacement.
-   * Regular Coulomb friction, in contrast, needs slip to act.
-   *
-   * @note Applies only to contacts with rigid colliders, static or dynamic, including articulated
-   * links. Contacts with deformable colliders (soft actors with an Sdf collider, and point cloud
-   * colliders) keep the velocity-regularized Coulomb friction.
-   * @note Requires @ref frictionModel = C1Regularized, whose compact support saturates friction at
-   * the presliding displacement.
-   * @note Requires a time integration method (@ref IntegrationMethod) whose step ends at its last
-   * stage: BackwardEuler, BDF2, BDF3, DIRK22 or DIRK33.
-   * @note Friction preload is part of the actor history, and is cleared when it is invalidated (see
-   * @ref Actor).
-   * @note A static actor given a velocity every step, like a conveyor belt, never builds friction
-   * preload, so contacts on it creep as with regular friction.
-   * @note Changing this setting changes the content of the scene state, so states captured before
-   * the change cannot be restored after it.
-   */
-  bool elastoPlasticFriction = false;
 
   /**
    * @brief Validate that the residual is the gradient of the objective by a directional
@@ -190,7 +170,6 @@ struct ExperimentalEvalParams {
   MOCHI_FIELD(implicitNormalForceForDissipation)
   MOCHI_FIELD(fittedSaturationHessian)
   MOCHI_FIELD(frictionModel)
-  MOCHI_FIELD(elastoPlasticFriction)
   MOCHI_FIELD(consistencyResNorm)
   MOCHI_FIELD(consistencyResNormStep)
   MOCHI_STRUCT_END()

@@ -167,6 +167,7 @@ MOCHI_STRUCT_END_EX()
 
 MOCHI_STRUCT_BEGIN_EX(mochi::ContactPairParamsOverride)
 MOCHI_FIELD(penaltyCoefficient) MOCHI_ATTRIBUTE(Units("Pa/m"))
+MOCHI_FIELD(preferElastoPlasticFriction)
 MOCHI_FIELD(frictionFalloffVel) MOCHI_ATTRIBUTE(Units("m/s"))
 MOCHI_FIELD(preslidingDisplacement) MOCHI_ATTRIBUTE(Units("m"))
 MOCHI_FIELD(viscousFrictionCoefficient) MOCHI_ATTRIBUTE(Units("s/m"))

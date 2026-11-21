@@ -190,7 +190,8 @@ class MochiDifferentiableContact : public MochiSceneTestBase {
       std::string_view prefabName,
       std::string_view queryActorName,
       std::string_view gradActorName,
-      real tolerance) {
+      real tolerance,
+      bool elastoPlasticFriction = true) {
     real constexpr kEps = 1e-7_r;
 
     entt::registry& reg = test::GetRegistry(_scene);
@@ -198,6 +199,9 @@ class MochiDifferentiableContact : public MochiSceneTestBase {
 
     // Initialize the scene and actors
     LoadScenePrefab(_scene, prefabName);
+    if (!elastoPlasticFriction) {
+      test::PreferVelocityRegularizedFriction(_scene);
+    }
     _queryActor = FindActorByName(_scene, queryActorName);
     _queryEntity = GetEntity(_queryActor);
     _gradActor = FindActorByName(_scene, gradActorName);
@@ -276,6 +280,18 @@ TEST_IF_F(
       "ArticulatedActor/Link0_Root",
       "ArticulatedActor",
       /*tolerance*/ 2e-2_r);
+}
+
+TEST_IF_F(
+    MOCHI_USE_DOUBLE_AND_INTERNAL,
+    MochiDifferentiableContact,
+    ConsistencyTestArticulatedAsyncVelocityRegularizedFriction) {
+  RunTest</*kIsSync*/ false>(
+      "articulated_actor_on_plane.mochi_scene",
+      "ArticulatedActor/Link0_Root",
+      "ArticulatedActor",
+      /*tolerance*/ 2e-2_r,
+      /*elastoPlasticFriction*/ false);
 }
 
 TEST_IF_F(

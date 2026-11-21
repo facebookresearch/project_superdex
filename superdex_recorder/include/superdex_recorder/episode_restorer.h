@@ -52,7 +52,9 @@ BindRecordedActors(mochi::Scene& scene, EpisodeReader const& recording, mochi::E
 /* @brief Restores a scene to the end of any recorded step.
  * Each restore sets the scene clock, each actor's state through the public setters, pose-controller
  * targets, and external forces, then takes a zero step. The integrator starts afresh from the
- * restored state. The scene must outlive the restorer. */
+ * restored state. Friction preload is not recorded, so resumed contacts with elasto-plastic
+ * friction start without friction anchors and may slip by up to the presliding displacement before
+ * they hold again. The scene must outlive the restorer. */
 class SUPERDEX_RECORDER_API EpisodeRestorer final {
   MOCHI_DECLARE_NO_COPY_NO_MOVE(EpisodeRestorer)
 

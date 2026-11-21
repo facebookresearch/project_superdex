@@ -14,13 +14,16 @@
 
 from __future__ import annotations
 
+import dataclasses
 import gc
 import json
 import math
 import os
 import tempfile
 import unittest
+from collections.abc import Collection, Sequence
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import superdex.physics as sdp
@@ -28,7 +31,7 @@ import superdex.recorder as recorder
 import superdex.robotics as sdr
 from superdex.physics.paths import resolve_asset
 from superdex.physics.utils.scene_helpers import load_bot_scene
-from superdex.recorder.reader import EpisodeReader
+from superdex.recorder.reader import ComponentSample, EpisodeReader
 from superdex.recorder.rebuild import _recorded_bots
 
 BOT_SCENE_PATH = resolve_asset(
@@ -42,13 +45,14 @@ SPAWN_NAME = "shape_filter"
 SELECTED_PREFAB_NAME = "clamp"
 SPAWN_TRANSLATION = [0.05, 0.0, 0.0]
 RANDOMIZED_SPAWN_TRANSLATION = [0.06, 0.01, 0.0]
+# Domain randomization scales. The bodies rest at the last recorded frame, where friction
+# barely changes their motion and density changes only how deep they press into their
+# contacts. The large density scale keeps a rebuild without the recorded parameters far
+# from the live run.
 FRICTION_SCALE = 1.4
-DENSITY_SCALE = 0.8
+DENSITY_SCALE = 16.0
 NUM_FRAMES = 100
 NUM_RESUME_FRAMES = 20
-# Rebuilt bodies resumed from the last recorded frame stay this close to the live run
-# [m]. Without the recorded friction and density, the check fails.
-RESUME_TOLERANCE = 1e-5
 TIME_STEP = 0.005
 KNOB_ARCHIVE = (
     "internal/archives/task_items/Knob_M8_50mm_4273T84/"
@@ -70,6 +74,41 @@ CROSS = "shape_cross"
 TILTED_GRAVITY = [0.0, 2.0, -9.6]
 # A center of mass moved by domain randomization at run time [m].
 CENTER_OF_MASS_SHIFT = [0.002, -0.001, 0.003]
+CONTACT_PARAM_NAMES = "superdex.physics.contact_param_names"
+CONTACT_PARAMS = "superdex.physics.contact_params"
+PREFER_ELASTO_PLASTIC_FRICTION = "prefer_elasto_plastic_friction"
+
+
+class RecordingWithoutFrictionPreference(EpisodeReader):
+    """Reads a recording as if it was made before the recorder recorded
+    ``prefer_elasto_plastic_friction``."""
+
+    def read_static_value(self, component: str) -> Any:
+        value = super().read_static_value(component)
+        if component == CONTACT_PARAM_NAMES:
+            value = [name for name in value if name != PREFER_ELASTO_PLASTIC_FRICTION]
+        return value
+
+    def component_samples_many(
+        self,
+        components: Sequence[str],
+        *,
+        entity_path: str | None = None,
+        frames: Collection[int] | None = None,
+    ) -> dict[str, list[ComponentSample]]:
+        samples = super().component_samples_many(
+            components, entity_path=entity_path, frames=frames
+        )
+        if CONTACT_PARAMS in samples:
+            names = super().read_static_value(CONTACT_PARAM_NAMES)
+            index = names.index(PREFER_ELASTO_PLASTIC_FRICTION)
+            samples[CONTACT_PARAMS] = [
+                dataclasses.replace(
+                    sample, value=sample.value[:index] + sample.value[index + 1 :]
+                )
+                for sample in samples[CONTACT_PARAMS]
+            ]
+        return samples
 
 
 def physics_scene(bot_scene: sdr.BotScene) -> sdp.Scene:
@@ -251,6 +290,10 @@ class RebuildSceneTest(unittest.TestCase):
                 )
 
     def test_rebuilt_scene_resumes_randomized_episode(self) -> None:
+        """Rebuilt bodies resumed from the last recorded frame stay within twice their
+        presliding displacement of the live run. The recorder does not restore friction
+        anchors, so the resumed contacts may slip by up to the presliding displacement.
+        Without the recorded friction and density, the check fails."""
         live, spawned = self.load_live_scene(RANDOMIZED_SPAWN_TRANSLATION)
         live_scene = physics_scene(live)
         randomize_physics(live_scene)
@@ -299,8 +342,36 @@ class RebuildSceneTest(unittest.TestCase):
                     )
             return error
 
-        self.assertLess(resume_error(undo_randomization=False), RESUME_TOLERANCE)
-        self.assertGreater(resume_error(undo_randomization=True), RESUME_TOLERANCE)
+        tolerance = 2 * max(
+            body.get_contact_params().presliding_displacement
+            for body in live_bodies.values()
+        )
+        error = resume_error(undo_randomization=False)
+        control = resume_error(undo_randomization=True)
+        self.assertLess(error, tolerance)
+        self.assertGreater(control, tolerance)
+
+    def test_rebuilds_old_recordings_with_velocity_regularized_friction(self) -> None:
+        """Recordings made before the friction preference was recorded used
+        velocity-regularized friction."""
+        live, spawned = self.load_live_scene()
+        path, _ = self.record(physics_scene(live), spawned, 1)
+
+        for recording, expected in (
+            (EpisodeReader(path), True),
+            (RecordingWithoutFrictionPreference(path), False),
+        ):
+            rebuilt = recorder.rebuild_scene(
+                recording, BOT_SCENE_PATH, self.context, bot_task_path=self.task_path
+            )
+            bodies = colliding_bodies(physics_scene(rebuilt.bot_scene))
+            self.assertTrue(bodies)
+            for name, body in bodies.items():
+                with self.subTest(body=name, expected=expected):
+                    self.assertIs(
+                        body.get_contact_params().prefer_elasto_plastic_friction,
+                        expected,
+                    )
 
     def test_applies_recorded_contact_parameters_of_a_skinned_hand(self) -> None:
         """A skinned articulation keeps its contact skin's parameters on the root."""
@@ -423,6 +494,10 @@ class RebuildSceneTest(unittest.TestCase):
                 )
 
     def test_rebuilt_scene_resumes_rod_episode(self) -> None:
+        """The rebuilt rod resumed from the last recorded frame stays within twice its
+        presliding displacement of the live run. The recorder does not restore friction
+        anchors, so the resumed contacts may slip by up to the presliding displacement.
+        Without the restored velocities, the check fails."""
         model = sdp.experimental.generate_tubular_rod_model_data(
             nodes=[[0.05 * i, 0.0, 0.0] for i in range(7)],
             element_frame_axes=[],
@@ -475,13 +550,29 @@ class RebuildSceneTest(unittest.TestCase):
         )
         scene = physics_scene(rebuilt.bot_scene)
         rod = scene_actors(scene)[f"{ROD_SPAWN_NAME}/rod"]
-        recorder.EpisodeRestorer(recording, scene).restore_frame(NUM_FRAMES)
-        error = 0.0
-        for expected in live_positions:
-            scene.step(TIME_STEP)
-            error = max(error, float(np.abs(rod_node_positions(rod) - expected).max()))
+        restorer = recorder.EpisodeRestorer(recording, scene)
 
-        self.assertLess(error, RESUME_TOLERANCE)
+        def resume_error(zero_velocity: bool) -> float:
+            restorer.restore_frame(NUM_FRAMES)
+            if zero_velocity:
+                rod.set_node_velocities_local(
+                    np.zeros_like(np.asarray(rod.get_node_velocities_local()))
+                )
+            error = 0.0
+            for expected in live_positions:
+                scene.step(TIME_STEP)
+                error = max(
+                    error, float(np.abs(rod_node_positions(rod) - expected).max())
+                )
+            return error
+
+        # The foam and the table are static, so the rod's presliding displacement
+        # applies.
+        tolerance = 2 * rod.get_contact_params().presliding_displacement
+        error = resume_error(zero_velocity=False)
+        control = resume_error(zero_velocity=True)
+        self.assertLess(error, tolerance)
+        self.assertGreater(control, tolerance)
 
     def test_accepts_files_matching_recorded_hashes(self) -> None:
         live, spawned = self.load_live_scene()

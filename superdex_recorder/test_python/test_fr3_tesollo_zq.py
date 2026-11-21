@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import gc
+import math
 import tempfile
 import unittest
 from pathlib import Path
@@ -27,19 +28,22 @@ from superdex.physics.paths import resolve_asset
 from superdex.physics.utils.scene_helpers import find_actor, load_bot_scene
 from superdex.recorder.reader import EpisodeReader
 
-
 BOT_SCENE = "bots/internal/tests/zq_fr3_tesollo/fr3_tesollo_zq.mochi_bot_scene"
 CHECKPOINT_FRAMES = (40, 60, 120, 180, 240, 300)
 RESUME_START_FRAME = 180
 RESUME_END_FRAME = 240
-# A grasp resumed from a checkpoint stays this close to the live run: the block's
-# translation [m] and the joint positions. Without the restored velocities, each check
-# fails. Restoring sets the pose controller's target velocity to the restored joint
-# velocities, so the first resumed step extrapolates its old target from them instead
-# of using the live previous target. Checked with backward Euler only: a restore starts
-# BDF2 and BDF3 afresh, which costs them up to about 0.7 mm here.
-BLOCK_RESUME_TOLERANCE = 2e-4
-JOINT_RESUME_TOLERANCE = 5e-4
+NUM_ARM_DOFS = 7
+# A grasp resumed from a checkpoint stays close to the live run. The recorder does not
+# restore friction anchors, so the resumed contacts may slip by up to the presliding
+# displacement. The block's translation stays within twice the block's presliding
+# displacement, and the hand's joint positions within that over the shortest distal
+# finger segment. The arm's joint positions stay within this bound [rad]. Without the
+# restored velocities, the block and arm checks fail. Restoring sets the pose
+# controller's target velocity to the restored joint velocities, so the first resumed
+# step extrapolates its old target from them instead of using the live previous target.
+# Checked with backward Euler only: a restore starts BDF2 and BDF3 afresh, which costs
+# them up to about 0.7 mm here.
+ARM_JOINT_RESUME_TOLERANCE = 5e-4
 
 
 class LoadedScene(NamedTuple):
@@ -49,6 +53,12 @@ class LoadedScene(NamedTuple):
     actor: sdp.Actor
     block: sdp.Actor
     controller: sdr.ControllerMochiArticulatedPose
+
+
+class ResumeErrors(NamedTuple):
+    block: float
+    arm_joints: float
+    hand_joints: float
 
 
 class Rollout(NamedTuple):
@@ -98,6 +108,23 @@ def load_test_scene(method: sdp.IntegrationMethod) -> LoadedScene:
         find_actor(scene, "*PickupBlock"),
         create_pose_controller(bot),
     )
+
+
+def shortest_distal_segment(scene: sdp.Scene) -> float:
+    """The shortest distance [m] from a finger's last joint to its fingertip."""
+    links: dict[str, sdp.Actor] = {}
+    scene.for_each_actor(lambda actor: links.__setitem__(actor.get_name(), actor))
+    lengths = []
+    for name, tip in links.items():
+        if name.endswith("_tip"):
+            distal = links[name.removesuffix("_tip") + "_4"]
+            lengths.append(
+                math.dist(
+                    tip.get_root_transform().translation.tolist(),
+                    distal.get_root_transform().translation.tolist(),
+                )
+            )
+    return min(lengths)
 
 
 def get_trajectory_poses(
@@ -193,8 +220,8 @@ class Fr3TesolloZqTest(unittest.TestCase):
         restorer: recorder.EpisodeRestorer,
         rollout: Rollout,
         zero_velocity: bool,
-    ) -> tuple[float, float]:
-        """The largest block translation and joint position errors over the resume."""
+    ) -> ResumeErrors:
+        """The largest errors over the resume."""
         restorer.restore_frame(RESUME_START_FRAME)
         if zero_velocity:
             loaded.actor.set_articulated_joint_velocities(
@@ -202,7 +229,7 @@ class Fr3TesolloZqTest(unittest.TestCase):
             )
             loaded.block.set_velocity([0, 0, 0], [0, 0, 0])
         root = loaded.actor.get_root_transform()
-        block_error = joint_error = 0.0
+        block = arm_joints = hand_joints = 0.0
         for frame in range(RESUME_START_FRAME + 1, RESUME_END_FRAME + 1):
             loaded.controller.compute_output(
                 sdr.ControllerMochiArticulatedPoseObsv(),
@@ -212,20 +239,24 @@ class Fr3TesolloZqTest(unittest.TestCase):
                 ),
             )
             loaded.scene.step(0.005)
-            block_error = max(
-                block_error,
+            block = max(
+                block,
                 max_error(
                     loaded.block.get_root_transform().translation.tolist(),
                     rollout.block_translations[frame],
                 ),
             )
-            joint_error = max(
-                joint_error,
-                max_error(
-                    get_joint_positions(loaded.actor), rollout.joint_positions[frame]
-                ),
+            joints = get_joint_positions(loaded.actor)
+            expected = rollout.joint_positions[frame]
+            arm_joints = max(
+                arm_joints,
+                max_error(joints[:NUM_ARM_DOFS], expected[:NUM_ARM_DOFS]),
             )
-        return block_error, joint_error
+            hand_joints = max(
+                hand_joints,
+                max_error(joints[NUM_ARM_DOFS:], expected[NUM_ARM_DOFS:]),
+            )
+        return ResumeErrors(block, arm_joints, hand_joints)
 
     def test_grasp_with_backward_euler(self) -> None:
         self.assert_grasp_restores(sdp.IntegrationMethod.BACKWARD_EULER)
@@ -302,16 +333,23 @@ class Fr3TesolloZqTest(unittest.TestCase):
                 restorer = recorder.EpisodeRestorer(
                     EpisodeReader(rollout.path), reconstructed.scene
                 )
-                block_error, joint_error = self.resume_errors(
+                block_tolerance = (
+                    2 * reconstructed.block.get_contact_params().presliding_displacement
+                )
+                hand_tolerance = block_tolerance / shortest_distal_segment(
+                    reconstructed.scene
+                )
+                errors = self.resume_errors(
                     reconstructed, restorer, rollout, zero_velocity=False
                 )
-                self.assertLess(block_error, BLOCK_RESUME_TOLERANCE)
-                self.assertLess(joint_error, JOINT_RESUME_TOLERANCE)
-                block_error, joint_error = self.resume_errors(
+                self.assertLess(errors.block, block_tolerance)
+                self.assertLess(errors.arm_joints, ARM_JOINT_RESUME_TOLERANCE)
+                self.assertLess(errors.hand_joints, hand_tolerance)
+                controls = self.resume_errors(
                     reconstructed, restorer, rollout, zero_velocity=True
                 )
-                self.assertGreater(block_error, BLOCK_RESUME_TOLERANCE)
-                self.assertGreater(joint_error, JOINT_RESUME_TOLERANCE)
+                self.assertGreater(controls.block, block_tolerance)
+                self.assertGreater(controls.arm_joints, ARM_JOINT_RESUME_TOLERANCE)
             finally:
                 source = None
                 reconstructed = None

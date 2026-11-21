@@ -47,7 +47,7 @@ class MochiDifferentiableFrictionAnchor : public test::MochiSceneTestBase {
   }
 
   Actor* CreateDifferentiableCube() {
-    test::EnableElastoPlasticFriction(_scene);
+    test::UseExactFrictionHessian(_scene);
     RigidActorParams cubeParams;
     cubeParams.shape = test::CreateUnitCubeTetMeshShape(_mochiContext);
     auto* cube = _scene->CreateRigidActor(cubeParams, test::ExpectOK{});
@@ -58,7 +58,7 @@ class MochiDifferentiableFrictionAnchor : public test::MochiSceneTestBase {
   // A cube pushed along x for 10 steps on three coincident static planes, so that a contact sample
   // can have an anchor on each plane. Returns the cube and the middle plane.
   std::pair<Actor*, Actor*> CreatePushedCubeOnThreePlanes() {
-    test::EnableElastoPlasticFriction(_scene);
+    test::UseExactFrictionHessian(_scene);
     test::CreateGroundPlane(_mochiContext, _scene);
     auto* middlePlane = test::CreateGroundPlane(_mochiContext, _scene);
     test::CreateGroundPlane(_mochiContext, _scene);
@@ -81,7 +81,7 @@ class MochiDifferentiableFrictionAnchor : public test::MochiSceneTestBase {
 // PrepareBackPropagate restores the friction anchors that the forward step used, not those it
 // advanced, and back-propagation detects the step's contacts with them.
 TEST_F(MochiDifferentiableFrictionAnchor, PrepareBackPropagateUsesForwardStepAnchors) {
-  test::EnableElastoPlasticFriction(_scene);
+  test::UseExactFrictionHessian(_scene);
   test::CreateGroundPlane(_mochiContext, _scene);
 
   // A 0.5 m cube with a corner at its origin, resting on the plane.

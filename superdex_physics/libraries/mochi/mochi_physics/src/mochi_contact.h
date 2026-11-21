@@ -34,6 +34,7 @@
 #include <mochi_core/geometry/base_map.h>
 #include <mochi_core/geometry/geometry_utils.h>
 #include <mochi_core/geometry/sphere_tree.h>
+#include <mochi_core/integration/integration_utils.h>
 #include <mochi_core/linear_algebra/any_matrix.h>
 #include <mochi_core/linear_algebra/sparse_matrix.h>
 #include <mochi_core/utils/basic_utils.h>
@@ -875,12 +876,26 @@ GetCollidingPadding(ContactAssemblyReg const& reg, entt::entity colliding, entt:
   return pairParams;
 }
 
+// Elasto-plastic friction preference of a contact pair (see
+// ContactParams::preferElastoPlasticFriction): the override's if it sets it, else whether both
+// actors prefer it, even with a static collider.
+[[nodiscard]] inline bool CombinePreferElastoPlasticFriction(
+    ContactParams const& collidingParams,
+    ContactParams const& colliderParams,
+    ContactPairParamsOverride const* paramsOverride) {
+  if (paramsOverride != nullptr && paramsOverride->preferElastoPlasticFriction) {
+    return *paramsOverride->preferElastoPlasticFriction;
+  }
+  return collidingParams.preferElastoPlasticFriction && colliderParams.preferElastoPlasticFriction;
+}
+
 /**
  * @brief Combines contact parameters from two actors into a single set of contact parameters.
  *
  * This function implements the combination logic for friction coefficients, penalty coefficient,
- * friction falloff velocity and friction presliding displacement using geometric mean. Additional
- * parameters can modify the behavior for static colliders and rod actors.
+ * friction falloff velocity and friction presliding displacement using geometric mean, and for the
+ * elasto-plastic friction preference using logical and. Additional parameters can modify the
+ * behavior for static colliders and rod actors.
  *
  * @param collidingParams Contact parameters from the colliding actor.
  * @param colliderParams Contact parameters from the collider actor.
@@ -925,6 +940,8 @@ inline ContactParams CombineContactParams(
         ? collidingParams.preslidingDisplacement
         : Sqrt(collidingParams.preslidingDisplacement * colliderParams.preslidingDisplacement);
   }
+  pairParams.preferElastoPlasticFriction =
+      CombinePreferElastoPlasticFriction(collidingParams, colliderParams, paramsOverride);
 
   bool const hasFrictionOverride = paramsOverride != nullptr &&
       (paramsOverride->coulombFrictionCoefficient || paramsOverride->viscousFrictionCoefficient);
@@ -1020,6 +1037,11 @@ GetContactPairParams(ContactAssemblyReg const& reg, entt::entity colliding, entt
       !params.fittedSaturationHessian.contactFriction;
 }
 
+/// @brief Returns `true` if the collider type warrants extra penalty-threshold padding.
+inline constexpr bool ShouldAddPenaltyPadding(ColliderType type) {
+  return type == ColliderType::None || type == ColliderType::PointCloud;
+}
+
 inline bool ValidCollidingNormals(ContactAssemblyReg const& reg, entt::entity colliding) {
   // Tags for actor types without valid normals at colliding samples should be added here.
   return !reg.any_of<TagShellActor, TagRodActor>(colliding);
@@ -1039,30 +1061,44 @@ inline bool ValidCollidingNormals(ContactAssemblyReg const& reg, entt::entity co
       ValidCollidingNormals(reg, colliding));
 }
 
-[[nodiscard]] ContactEvalConfig MakeContactEvalConfigAsync(
-    ExperimentalEvalParams const& experimentalEval,
+// Whether the scene settings allow elasto-plastic friction (see
+// ContactParams::preferElastoPlasticFriction): an integration method whose step ends at its last
+// stage, from whose contacts the anchors advance. Otherwise, all contacts use velocity-regularized
+// friction, and the friction anchor systems do not run.
+[[nodiscard]] constexpr bool AllowsElastoPlasticFriction(SolverParams const& params) {
+  return EndsAtLastStage(params.integrationMethod);
+}
+
+// Evaluation configuration shared by the contacts of a colliding actor, async and sync, whose
+// ContactEvalConfig::elastoPlasticFriction says whether the scene allows elasto-plastic friction.
+// Refine it for the contacts with each collider with MakeContactEvalConfigForCollider.
+[[nodiscard]] inline ContactEvalConfig MakeContactEvalConfigForColliding(
+    SolverParams const& params,
     ContactAssemblyReg reg,
     entt::entity colliding,
     bool psdDRes,
-    bool useFittedHessian);
+    bool useFittedHessian) {
+  ExperimentalEvalParams const& experimentalEval = params.experimentalEval;
+  return ContactEvalConfig{
+      .psdDRes = psdDRes,
+      .addPadding = ShouldAddPenaltyPadding(reg.get<CColliderInfo const>(colliding).type),
+      .validCollidingNormals = ValidCollidingNormals(reg, colliding),
+      .explicitNormals = experimentalEval.explicitNormals,
+      .fadeFriction = experimentalEval.fadeFriction,
+      .implicitNormalForceForDissipation = experimentalEval.implicitNormalForceForDissipation,
+      .useFittedHessian = useFittedHessian,
+      .frictionModel = experimentalEval.frictionModel,
+      .elastoPlasticFriction = AllowsElastoPlasticFriction(params)};
+}
 
-// Evaluation configuration of the contact between a colliding actor and a collider in a contact
-// pair assembly: MakeContactEvalConfigAsync, with elasto-plastic friction only if the collider has
-// friction anchors.
-[[nodiscard]] ContactEvalConfig MakeContactEvalConfigPair(
-    ExperimentalEvalParams const& experimentalEval,
+// Evaluation configuration of the contacts of a colliding actor with a collider, from that of the
+// colliding actor: elasto-plastic friction if the scene allows it, the collider keeps friction
+// anchors, and the pair prefers it (pairParams, from GetContactPairParams).
+[[nodiscard]] ContactEvalConfig MakeContactEvalConfigForCollider(
+    ContactEvalConfig config,
     ContactAssemblyReg reg,
-    entt::entity colliding,
     entt::entity collider,
-    bool psdDRes,
-    bool useFittedHessian);
-
-// Evaluation configuration of the friction anchor advance of a colliding actor (see
-// AdvanceFrictionAnchorOffsets), which its back-propagation must reproduce.
-[[nodiscard]] ContactEvalConfig MakeAnchorAdvanceEvalConfig(
-    ExperimentalEvalParams const& experimentalEval,
-    ContactAssemblyReg reg,
-    entt::entity colliding);
+    ContactParams const& pairParams);
 
 /**************************************************************************
   ECS contact-related pipelines
@@ -1119,10 +1155,10 @@ void AddMissingStageStartCollisions(
     CActiveCollisions<kIsSync, TimeStep::StageStart> const& stageStartCollisions,
     CActiveCollisions<kIsSync, TimeStep::Current>& outCurrentCollisions);
 
-// With elasto-plastic friction, replaces the friction anchor offsets of the current contact
-// results of a colliding actor with those at the end of the step, i.e. of its last stage (see
-// AdvanceAnchorOffsets), from which UpdateFrictionAnchors rebuilds the next-step anchors. A
-// diverged step skips this advance: it releases the anchors.
+// Replaces the friction anchor offsets of the current contacts of a colliding actor that use
+// elasto-plastic friction, the only ones with offsets, with those at the end of the step, i.e. of
+// its last stage (see AdvanceAnchorOffsets), from which UpdateFrictionAnchors rebuilds the
+// next-step anchors. A diverged step skips this advance: it releases the anchors.
 void AdvanceFrictionAnchorOffsets(
     ContactAssemblyReg reg,
     entt::entity e,
@@ -1285,11 +1321,6 @@ inline real GetColliderPadding(ContactParams const& contactParams) {
       contactParams.distanceErrorBound;
 }
 
-/// @brief Returns `true` if the collider type warrants extra penalty-threshold padding.
-inline constexpr bool ShouldAddPenaltyPadding(ColliderType type) {
-  return type == ColliderType::None || type == ColliderType::PointCloud;
-}
-
 /// @brief Returns the contact detection threshold [m] between a colliding actor and a collider.
 [[nodiscard]] inline real GetPairPenaltyThresholdDist(
     ContactAssemblyReg const& reg,
@@ -1374,11 +1405,6 @@ void UpdateConservativePotentialColliders(entt::registry& reg);
 // Returns the axis on which the centers of the finite boxes vary most, along which
 // UpdateConservativePotentialColliders sweeps, or 0 (x) if no box is finite.
 [[nodiscard]] size_t SelectSweepAxis(Span<Aabb const> bounds);
-
-// Adds empty friction anchor components to every actor with contact samples, and the friction
-// anchor clear requests to the registry context, or removes them all, to follow
-// ExperimentalEvalParams::elastoPlasticFriction. Does nothing if they already match.
-void EnableFrictionAnchorComponents(entt::registry& reg, bool enable);
 
 void InitializeOnce(entt::registry& reg);
 

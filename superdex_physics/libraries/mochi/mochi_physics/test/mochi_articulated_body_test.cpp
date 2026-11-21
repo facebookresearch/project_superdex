@@ -3129,9 +3129,9 @@ TEST_F(CreateBlendedActorTest, NonCollidingLinksRejectedWithoutBlendedSurface) {
   EXPECT_EQ(numActorsBefore, _scene->GetNumActors());
 }
 
-// Parameterized over the body that carries inertia and whether elasto-plastic friction is enabled.
+// Parameterized over the body that carries inertia.
 class ExternalPoseResetTest : public CreateBlendedActorTest,
-                              public ::testing::WithParamInterface<std::tuple<bool, bool>> {
+                              public ::testing::WithParamInterface<bool> {
  protected:
   enum class Route { Links, Joints, Root };
 
@@ -3140,11 +3140,10 @@ class ExternalPoseResetTest : public CreateBlendedActorTest,
   }
 
   void CheckExternalPoseReset(Route route) {
-    auto const [posedInertia, elastoPlasticFriction] = GetParam();
+    bool const posedInertia = GetParam();
     _scene->SetGravity({});
     auto solverParams = _scene->GetSolverParams();
     solverParams.integrationMethod = IntegrationMethod::BDF3;
-    solverParams.experimentalEval.elastoPlasticFriction = elastoPlasticFriction;
     _scene->SetSolverParams(solverParams, test::ExpectOK{});
 
     auto params = MakeMinimalBlendedParams(
@@ -3206,15 +3205,13 @@ class ExternalPoseResetTest : public CreateBlendedActorTest,
     ColumnVector<real> const seededJointAnchors = jointAnchors.Duplicate();
     FrictionAnchor const seededAnchor{
         .sample = 0, .collider = entt::to_integral(linkEntity), .point = Real3{1_r, 0_r, 0_r}};
-    if (elastoPlasticFriction) {
-      ASSERT_TRUE(
-          (reg.all_of<CFrictionAnchors<AnchorSet::Active>, CFrictionAnchors<AnchorSet::Pending>>(
-              parentEntity)));
-      for (auto const actorEntity : affected) {
-        if (auto* active = reg.try_get<CFrictionAnchors<AnchorSet::Active>>(actorEntity)) {
-          active->anchors = {seededAnchor};
-          reg.get<CFrictionAnchors<AnchorSet::Pending>>(actorEntity).anchors = active->anchors;
-        }
+    ASSERT_TRUE(
+        (reg.all_of<CFrictionAnchors<AnchorSet::Active>, CFrictionAnchors<AnchorSet::Pending>>(
+            parentEntity)));
+    for (auto const actorEntity : affected) {
+      if (auto* active = reg.try_get<CFrictionAnchors<AnchorSet::Active>>(actorEntity)) {
+        active->anchors = {seededAnchor};
+        reg.get<CFrictionAnchors<AnchorSet::Pending>>(actorEntity).anchors = active->anchors;
       }
     }
 
@@ -3270,18 +3267,16 @@ class ExternalPoseResetTest : public CreateBlendedActorTest,
     } else {
       EXPECT_EQ(jointAnchors.Rows(), 0);
     }
-    if (elastoPlasticFriction) {
-      auto const& requests = reg.ctx<CFrictionAnchorClearRequests>().entities;
-      for (auto const actorEntity : affected) {
-        EXPECT_TRUE(Contains(requests, entt::to_integral(actorEntity)));
-      }
-      ApplyFrictionAnchorClearRequests(reg);
-      for (auto const actorEntity : affected) {
-        if (auto const* active = reg.try_get<CFrictionAnchors<AnchorSet::Active>>(actorEntity)) {
-          auto const& pending = reg.get<CFrictionAnchors<AnchorSet::Pending>>(actorEntity).anchors;
-          EXPECT_TRUE(active->anchors.empty());
-          EXPECT_TRUE(pending.empty());
-        }
+    auto const& requests = reg.ctx<CFrictionAnchorClearRequests>().entities;
+    for (auto const actorEntity : affected) {
+      EXPECT_TRUE(Contains(requests, entt::to_integral(actorEntity)));
+    }
+    ApplyFrictionAnchorClearRequests(reg);
+    for (auto const actorEntity : affected) {
+      if (auto const* active = reg.try_get<CFrictionAnchors<AnchorSet::Active>>(actorEntity)) {
+        auto const& pending = reg.get<CFrictionAnchors<AnchorSet::Pending>>(actorEntity).anchors;
+        EXPECT_TRUE(active->anchors.empty());
+        EXPECT_TRUE(pending.empty());
       }
     }
   }
@@ -3302,10 +3297,7 @@ TEST_P(ExternalPoseResetTest, FromRootPublishesDerivedState) {
   CheckExternalPoseReset(Route::Root);
 }
 
-INSTANTIATE_TEST_SUITE_P(
-    Configurations,
-    ExternalPoseResetTest,
-    ::testing::Combine(::testing::Bool(), ::testing::Bool()));
+INSTANTIATE_TEST_SUITE_P(Configurations, ExternalPoseResetTest, ::testing::Bool());
 
 // Parameterized over the body, unposed (false) or posed (true), that carries inertia and the one
 // that carries stress. Without stress, the body with inertia copies its stored mass matrix into its

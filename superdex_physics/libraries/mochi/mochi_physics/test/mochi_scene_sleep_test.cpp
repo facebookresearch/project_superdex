@@ -1020,6 +1020,15 @@ static DynamicArray<WakeCase> const& GetWakeCases() {
          params.coulombFrictionCoefficient = 0.25_r;
          c.actor->SetContactParams(params, test::ExpectOK{});
        }},
+      {.name = "SetContactParams_PreferElastoPlasticFriction",
+       .types = kWithContactParams,
+       .onRepeat = OnRepeat::NoWake,
+       .apply =
+           [](WakeContext& c) {
+             auto params = c.actor->GetContactParams(test::ExpectOK{});
+             params.preferElastoPlasticFriction = false;
+             c.actor->SetContactParams(params, test::ExpectOK{});
+           }},
       {.name = "SetContactParams_CollidingPadding",
        .types = kWithContactParams,
        .onRepeat = OnRepeat::NoWake,
@@ -1289,6 +1298,14 @@ static DynamicArray<WakeCase> const& GetWakeCases() {
        [](WakeContext& c) {
          auto params = c.ground->GetContactParams(test::ExpectOK{});
          params.coulombFrictionCoefficient = 0.25_r;
+         c.ground->SetContactParams(params, test::ExpectOK{});
+       }},
+      {"Ground_SetContactParams_PreferElastoPlasticFriction",
+       kAll,
+       OnRepeat::NoWake,
+       [](WakeContext& c) {
+         auto params = c.ground->GetContactParams(test::ExpectOK{});
+         params.preferElastoPlasticFriction = false;
          c.ground->SetContactParams(params, test::ExpectOK{});
        }},
       {"Ground_SetContactLayer",

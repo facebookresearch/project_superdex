@@ -226,7 +226,12 @@ void mochi::PreStepEcs(entt::registry& reg) {
   // Promote the persistent Pending anchors to Active, apply queued resets, and index Active
   // before collision detection. Promotion preserves Pending while sleeping islands skip their
   // solve. A solve-free assembly retains the last Active anchors and applies resets temporarily.
-  PrepareFrictionAnchors(reg, /*promotePending*/ advanceStep);
+  // Without elasto-plastic friction, drop any anchors instead.
+  if (AllowsElastoPlasticFriction(reg.ctx<CSimulationParams const>())) {
+    PrepareFrictionAnchors(reg, /*promotePending*/ advanceStep);
+  } else {
+    ClearFrictionAnchors(reg);
+  }
 
   // Update of previous state and trajectory-dependent derived state.
   if (advanceStep) {

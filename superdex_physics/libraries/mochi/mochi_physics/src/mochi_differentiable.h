@@ -251,11 +251,6 @@ void EmplaceDifferentiableContactComponents(
     entt::entity e,
     CActorDofInfo const& dofInfo);
 
-// Emplaces the anchor adjoint component on the differentiable actors with friction anchors, or
-// removes it from all actors, to follow ExperimentalEvalParams::elastoPlasticFriction in a scene
-// that is already differentiable. Call after contact::EnableFrictionAnchorComponents.
-void EnableDifferentiableFrictionAnchorComponents(entt::registry& reg, bool enable);
-
 // System to emplace differentiability components on constraints
 void EmplaceConstraintDifferentiabilityComponents(entt::registry& reg, entt::entity e);
 

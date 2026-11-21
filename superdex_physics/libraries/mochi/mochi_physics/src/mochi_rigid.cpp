@@ -200,7 +200,7 @@ template <GradTarget kGradTarget>
         Interval<int>{0, numPoints},
         contactQuery,
         contactParams,
-        config,
+        MakeContactEvalConfigForCollider(config, reg, collision.colliderEntity, contactParams),
         dtStage,
         sample.weights,
         comColliderSpace,
@@ -725,12 +725,8 @@ void mochi::rigid::EntityAssemble(
     MOCHI_ASSERT(
         gradTarget == GradTarget::Current || !params.assemDRes,
         "The contact DResidual only supports GradTarget::Current.");
-    ContactEvalConfig const config = MakeContactEvalConfigAsync(
-        simParams->experimentalEval,
-        reg,
-        e,
-        params.psdDRes,
-        params.fittedSaturationHessian.contactFriction);
+    ContactEvalConfig const config = MakeContactEvalConfigForColliding(
+        simParams.value, reg, e, params.psdDRes, params.fittedSaturationHessian.contactFriction);
     auto const& pose = gradTarget == GradTarget::Current ? currPose.value : stageStartPose.value;
     // Dispatch to the appropriate templatized implementation
     auto assembleRigidBodyAsyncContactResponseFn = gradTarget == GradTarget::Previous
@@ -1138,9 +1134,7 @@ static void InitRigidActor_Dynamic(
     reg.emplace<CContactCorrespondence</*kIsSync*/ false>>(e, numSamples);
     reg.emplace<CContactCorrespondence</*kIsSync*/ true>>(e, numSamples);
 
-    if (reg.ctx<CSimulationParams const>().experimentalEval.elastoPlasticFriction) {
-      EmplaceFrictionAnchors(reg, e, numSamples);
-    }
+    EmplaceFrictionAnchors(reg, e);
 
     reg.emplace<CConservativePotentialColliders</*kIsSync*/ false>>(e);
     reg.emplace<CConservativePotentialColliders</*kIsSync*/ true>>(e);

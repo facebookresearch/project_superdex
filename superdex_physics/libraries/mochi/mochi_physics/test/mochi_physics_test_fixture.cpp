@@ -23,6 +23,7 @@
 #include <mochi_core/utils/array_utils.h>
 #include <mochi_core/utils/task_scheduler.h>
 #include <mochi_physics/src/mochi_active_collisions.h>
+#include <mochi_physics/src/mochi_contact.h>
 #include <mochi_physics/src/mochi_contact_anchors.h>
 #include <mochi_physics/src/mochi_contact_pair_params.h>
 #include <mochi_physics/src/mochi_island.h>
@@ -39,6 +40,20 @@
 #include <variant>
 
 namespace mochi::test {
+
+void PreferVelocityRegularizedFriction(Scene* scene) {
+  DynamicArray<Actor*> actors(scene->GetNumActors());
+  scene->GetActors(MakeSpan(actors), ExpectOK{});
+  for (Actor* actor : actors) {
+    Error error;
+    ContactParams params = actor->GetContactParams(error);
+    if (!error.IsOK()) {
+      continue; // No contact parameters.
+    }
+    params.preferElastoPlasticFriction = false;
+    actor->SetContactParams(params, ExpectOK{});
+  }
+}
 
 MochiContextTestBase::~MochiContextTestBase() {
   MOCHI_ASSERT(
@@ -523,7 +538,24 @@ void TestIslandsAfterTouch(
     test(reg, island, problem);
   }
 
-  if (reg.ctx<CSimulationParams const>().experimentalEval.elastoPlasticFriction) {
+  // With elasto-plastic friction, the anchors advanced by the step, as the next step uses them.
+  // Only the pairs with a rigid collider that prefer it have anchors.
+  auto const anyElastoPlasticPair = [&]<bool kIsSync>() {
+    for (auto [e, collisions] :
+         reg.view<CActiveCollisions<kIsSync, TimeStep::Current> const>().each()) {
+      for (auto const& collision : collisions) {
+        if (!collision.collisionResult.Empty() &&
+            HasFrictionAnchors(reg, collision.colliderEntity) &&
+            GetContactPairParams(reg, e, collision.colliderEntity).preferElastoPlasticFriction) {
+          return true;
+        }
+      }
+    }
+    return false;
+  };
+  if (AllowsElastoPlasticFriction(reg.ctx<CSimulationParams const>()) &&
+      (anyElastoPlasticPair.template operator()<true>() ||
+       anyElastoPlasticPair.template operator()<false>())) {
     bool const hasAnchoredContact = anyCollision([](auto const& collision) {
       return std::ranges::any_of(
           collision.collisionResult.anchorOffset, [](Real3 const& o) { return o != Real3{}; });

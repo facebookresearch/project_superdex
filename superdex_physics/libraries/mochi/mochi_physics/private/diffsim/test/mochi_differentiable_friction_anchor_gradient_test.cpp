@@ -307,7 +307,6 @@ class FrictionAnchorGradient : public test::MochiSceneTestBase,
 
 // Sticking (theta < 1) and sliding (theta > 1) under a push along x.
 TEST_P(FrictionAnchorGradient, PushThenRest) {
-  test::EnableElastoPlasticFriction(_scene);
   test::CreateGroundPlane(_mochiContext, _scene);
   auto* cube = CreateCube(Real3{});
   MakeDifferentiable();
@@ -319,7 +318,6 @@ TEST_P(FrictionAnchorGradient, PushThenRest) {
 
 // Torsional sticking and slipping exercise the rotational contact Jacobians.
 TEST_P(FrictionAnchorGradient, TwistThenRest) {
-  test::EnableElastoPlasticFriction(_scene);
   test::CreateGroundPlane(_mochiContext, _scene);
   auto* cube = CreateCube(Real3{});
   MakeDifferentiable();
@@ -330,12 +328,16 @@ TEST_P(FrictionAnchorGradient, TwistThenRest) {
       {0.5_r, 2_r}));
 }
 
-// A sample with anchors on several colliders: three coincident planes.
+// A sample with contacts on several colliders: three coincident planes. The last one opts out of
+// elasto-plastic friction, so the contacts with it use velocity-regularized friction.
 TEST_P(FrictionAnchorGradient, PushOnThreeCoincidentPlanes) {
-  test::EnableElastoPlasticFriction(_scene);
+  Actor* plane = nullptr;
   for (int i = 0; i < 3; ++i) {
-    test::CreateGroundPlane(_mochiContext, _scene);
+    plane = test::CreateGroundPlane(_mochiContext, _scene);
   }
+  ContactParams regular = plane->GetContactParams(test::ExpectOK{});
+  regular.preferElastoPlasticFriction = false;
+  plane->SetContactParams(regular, test::ExpectOK{});
   auto* cube = CreateCube(Real3{});
   MakeDifferentiable();
   ExpectMatch(
@@ -348,7 +350,6 @@ TEST_P(FrictionAnchorGradient, PushOnThreeCoincidentPlanes) {
 // anchors on the box also back-propagate to the box's DoFs. The box has 4 times the cube's
 // presliding displacement, so the pair has twice the cube's (geometric mean).
 TEST_P(FrictionAnchorGradient, PushOnDynamicBox) {
-  test::EnableElastoPlasticFriction(_scene);
   test::CreateGroundPlane(_mochiContext, _scene);
   auto* box = CreateDynamicBox(4_r * kPreslidingDisplacement);
   auto* cube = CreateCube(Real3{0_r, 1_r, 0_r});
@@ -363,7 +364,6 @@ TEST_P(FrictionAnchorGradient, PushOnDynamicBox) {
 // which sticks to it far from the box's center, so the cube's anchors back-propagate to the box's
 // rotation.
 TEST_P(FrictionAnchorGradient, TwistDynamicBox) {
-  test::EnableElastoPlasticFriction(_scene);
   auto* plane = test::CreateGroundPlane(_mochiContext, _scene);
   ContactParams frictionless = plane->GetContactParams(test::ExpectOK{});
   frictionless.coulombFrictionCoefficient = 0_r;
@@ -380,7 +380,6 @@ TEST_P(FrictionAnchorGradient, TwistDynamicBox) {
 // The anchors are on articulated links, so the solve adjoint is mapped from the articulated DoFs
 // through each link's rows of the Jacobian.
 TEST_P(FrictionAnchorGradient, PushArticulatedLink) {
-  test::EnableElastoPlasticFriction(_scene);
   test::CreateGroundPlane(_mochiContext, _scene);
   auto* articulated = CreateArticulatedCubes(Real3{}, 1.5_r * kCubeSize);
   MakeDifferentiable();
@@ -394,7 +393,6 @@ TEST_P(FrictionAnchorGradient, PushArticulatedLink) {
 // move with the root's rotation times a long lever arm, so the solve adjoint mapped to them through
 // the Jacobian dominates the gradient.
 TEST_P(FrictionAnchorGradient, TwistArticulatedWithLongLever) {
-  test::EnableElastoPlasticFriction(_scene);
   test::CreateGroundPlane(_mochiContext, _scene);
   real constexpr kLever = 4_r;
   auto* articulated = CreateArticulatedCubes(Real3{}, kLever);
@@ -411,7 +409,6 @@ TEST_P(FrictionAnchorGradient, TwistArticulatedWithLongLever) {
 // ResetBackPropagation clears the anchor adjoints of articulated links, which have no state
 // adjoint: a second back-propagation of a rollout gives the gradient again.
 TEST_P(FrictionAnchorGradient, PushArticulatedLinkBackPropagatedTwice) {
-  test::EnableElastoPlasticFriction(_scene);
   test::CreateGroundPlane(_mochiContext, _scene);
   auto* articulated = CreateArticulatedCubes(Real3{}, 1.5_r * kCubeSize);
   MakeDifferentiable();
@@ -424,7 +421,6 @@ TEST_P(FrictionAnchorGradient, PushArticulatedLinkBackPropagatedTwice) {
 
 // An articulated actor and a cube in separate islands, both pushed, with a loss on both.
 TEST_P(FrictionAnchorGradient, PushInTwoIslands) {
-  test::EnableElastoPlasticFriction(_scene);
   test::CreateGroundPlane(_mochiContext, _scene);
   auto* articulated = CreateArticulatedCubes(Real3{}, 1.5_r * kCubeSize);
   auto* cube = CreateCube(Real3{5_r, 0_r, 0_r});
@@ -440,7 +436,6 @@ TEST_P(FrictionAnchorGradient, PushInTwoIslands) {
 // Placing the cube when the push is released drops its anchors, so a sticking cube no longer
 // springs back. No adjoint crosses the placement through the dropped anchors.
 TEST_P(FrictionAnchorGradient, PlacedAtRelease) {
-  test::EnableElastoPlasticFriction(_scene);
   test::CreateGroundPlane(_mochiContext, _scene);
   auto* cube = CreateCube(Real3{});
   MakeDifferentiable();
@@ -455,7 +450,6 @@ TEST_P(FrictionAnchorGradient, PlacedAtRelease) {
 // Placing the resting cube before the first step drops its anchors. Unpushed, it does not move, so
 // its contacts get new anchors at exactly zero offset, through which any push springs back.
 TEST_P(FrictionAnchorGradient, PlacedAtStartUnpushed) {
-  test::EnableElastoPlasticFriction(_scene);
   test::CreateGroundPlane(_mochiContext, _scene);
   auto* cube = CreateCube(Real3{});
   MakeDifferentiable();
@@ -467,12 +461,18 @@ TEST_P(FrictionAnchorGradient, PlacedAtStartUnpushed) {
           {0_r}));
 }
 
-// Anchors enabled on a scene that is already differentiable get their adjoint too.
-TEST_P(FrictionAnchorGradient, EnabledAfterMakingSceneDifferentiable) {
-  test::CreateGroundPlane(_mochiContext, _scene);
+// Anchors of actors that prefer elasto-plastic friction only once the scene is differentiable get
+// their adjoint too.
+TEST_P(FrictionAnchorGradient, PreferredAfterMakingSceneDifferentiable) {
+  Actor* ground = test::CreateGroundPlane(_mochiContext, _scene);
   auto* cube = CreateCube(Real3{});
+  test::PreferVelocityRegularizedFriction(_scene);
   MakeDifferentiable();
-  test::EnableElastoPlasticFriction(_scene);
+  for (Actor* actor : {ground, cube}) {
+    ContactParams params = actor->GetContactParams(test::ExpectOK{});
+    params.preferElastoPlasticFriction = true;
+    actor->SetContactParams(params, test::ExpectOK{});
+  }
   ExpectMatch(
       Run({.pushes = {{.actor = cube, .force = FrictionLimit({cube})}},
            .loss = {ComTransformLoss(cube, 0)}},
@@ -483,7 +483,6 @@ TEST_P(FrictionAnchorGradient, EnabledAfterMakingSceneDifferentiable) {
 // toward its anchors, and the friction force it reports is the anchor spring. Its stored offsets
 // reach the loss both through the step's solve and directly through the reported force.
 TEST_P(FrictionAnchorGradient, ContactForceLossAfterRelease) {
-  test::EnableElastoPlasticFriction(_scene);
   test::CreateGroundPlane(_mochiContext, _scene);
   auto* cube = CreateCube(Real3{});
   cube->RegisterQuery(QueryType::TotalContactForce, test::ExpectOK{});
@@ -500,7 +499,6 @@ TEST_P(FrictionAnchorGradient, ContactForceLossAfterRelease) {
 // Hessian-vector products: with a short presliding displacement, the anchor stiffness changes over
 // a displacement comparable to that perturbation.
 TEST_P(FrictionAnchorGradient, ContactForceLossWhileHolding) {
-  test::EnableElastoPlasticFriction(_scene);
   test::CreateGroundPlane(_mochiContext, _scene);
   auto* cube = CreateCube(Real3{}, 1e-5_r);
   cube->RegisterQuery(QueryType::TotalContactForce, test::ExpectOK{});
@@ -518,7 +516,6 @@ TEST_P(FrictionAnchorGradient, ContactForceLossWhileHolding) {
 // misses its finite difference by a few percent even without anchors, so the box sticks to the
 // plane.
 TEST_P(FrictionAnchorGradient, ContactForceLossOnDynamicBox) {
-  test::EnableElastoPlasticFriction(_scene);
   test::CreateGroundPlane(_mochiContext, _scene);
   auto* box = CreateDynamicBox(4_r * kPreslidingDisplacement);
   auto* cube = CreateCube(Real3{0_r, 1_r, 0_r});

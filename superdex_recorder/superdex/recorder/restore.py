@@ -71,6 +71,9 @@ class EpisodeRestorer:
     to refresh actor queries. A positive step then continues the episode. The
     integrator starts afresh from the restored state, as at the start of a simulation,
     so a resumed run stays close to the original but may not match it bit for bit.
+    Friction preload is not recorded either: resumed contacts with elasto-plastic
+    friction start without friction anchors, so they may slip by up to the presliding
+    displacement before they hold again.
 
     Restoring a frame also sets each recorded robot's external forces to the joint
     effort recorded for the step after the frame, and clears other dynamic actors'

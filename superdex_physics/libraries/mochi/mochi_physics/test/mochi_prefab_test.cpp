@@ -1290,6 +1290,7 @@ TEST(Prefab, RigidActor_Serialization) {
             "maxAlignmentNormals": -1,
             "viscousFrictionCoefficient": 0.123,
             "coulombFrictionCoefficient": 0.456,
+            "preferElastoPlasticFriction": false,
             "frictionFalloffVel": 0.0234,
             "distanceErrorBound": 0.0567,
             "objScale": 1.111,
@@ -1331,6 +1332,7 @@ TEST(Prefab, RigidActor_Serialization) {
     EXPECT_NEAR_EQ(-1_r, rigid.contact.maxAlignmentNormals);
     EXPECT_NEAR_EQ(0.123_r, rigid.contact.viscousFrictionCoefficient);
     EXPECT_NEAR_EQ(0.456_r, rigid.contact.coulombFrictionCoefficient);
+    EXPECT_FALSE(rigid.contact.preferElastoPlasticFriction);
     EXPECT_NEAR_EQ(0.0234_r, rigid.contact.frictionFalloffVel);
     EXPECT_NEAR_EQ(0.0567_r, rigid.contact.distanceErrorBound);
     EXPECT_NEAR_EQ(1.111_r, rigid.contact.objScale);
@@ -6552,6 +6554,7 @@ TEST(Prefab, ContactPairParamsOverride_SerializationPreservesSparseFields) {
     EXPECT_STREQ("ActorB", pair.actors[1].c_str());
     EXPECT_EQ(std::optional<real>{12_r}, pair.paramsOverride.penaltyCoefficient);
     EXPECT_EQ(std::optional<real>{0_r}, pair.paramsOverride.coulombFrictionCoefficient);
+    EXPECT_EQ(std::optional<bool>{false}, pair.paramsOverride.preferElastoPlasticFriction);
     EXPECT_FALSE(pair.paramsOverride.frictionFalloffVel.has_value());
     EXPECT_FALSE(pair.paramsOverride.viscousFrictionCoefficient.has_value());
     EXPECT_FALSE(pair.paramsOverride.normalViscousDampingCoefficient.has_value());
@@ -6562,6 +6565,7 @@ TEST(Prefab, ContactPairParamsOverride_SerializationPreservesSparseFields) {
     EXPECT_STREQ("Self", self.actors[1].c_str());
     EXPECT_EQ(std::optional<real>{0_r}, self.paramsOverride.frictionFalloffVel);
     EXPECT_FALSE(self.paramsOverride.penaltyCoefficient.has_value());
+    EXPECT_FALSE(self.paramsOverride.preferElastoPlasticFriction.has_value());
   };
 
   auto scenePrefab = prefab::ShallowLoadFromJsonString(
@@ -6571,7 +6575,8 @@ TEST(Prefab, ContactPairParamsOverride_SerializationPreservesSparseFields) {
             "actors": ["ActorA", "ActorB"],
             "paramsOverride": {
               "penaltyCoefficient": 12,
-              "coulombFrictionCoefficient": 0
+              "coulombFrictionCoefficient": 0,
+              "preferElastoPlasticFriction": false
             }
           },
           {

@@ -71,11 +71,13 @@ NUM_ARM_DOFS = 7
 RESTING_STEPS = slice(150, 250)
 PUSHING_FRAME = 330
 CLOSED_LOOP_STEPS = 25
-# Under backward Euler, the closed-loop resume ends this close to the recording. Without
-# the restored velocities, each check fails. A restore starts BDF2 and BDF3 afresh, which
-# costs them more.
+# Under backward Euler, the closed-loop resume ends this close to the recording: the
+# cube's rotation quaternion and the joint positions [rad]. The cube's position ends
+# within twice its presliding displacement: the recorder does not restore friction
+# anchors, so the resumed contacts may slip by up to the presliding displacement.
+# Without the restored velocities, each check fails. A restore starts BDF2 and BDF3
+# afresh, which costs them more.
 CLOSED_LOOP_TOLERANCES = {
-    "cube_position": 1e-4,
     "cube_rotation": 4e-3,
     "joint_positions": 4e-3,
 }
@@ -94,6 +96,7 @@ class Recording(NamedTuple):
     """The effort applied during each step."""
     touching: list[bool]
     """Whether the robot touches the cube at each frame."""
+    cube_presliding_displacement: float
 
 
 def add_box(
@@ -271,7 +274,13 @@ class ResumeTest(unittest.TestCase):
         physics = recorder.PhysicsRecorder(episode, source.scene)
         controls = recorder.RoboticsRecorder(episode, source.bot)
         physics.record(0, source.scene.get_total_simulation_time())
-        recording = Recording(episode.output_path, [source.state()], [], [False])
+        recording = Recording(
+            episode.output_path,
+            [source.state()],
+            [],
+            [False],
+            source.cube.get_contact_params().presliding_displacement,
+        )
         applied = np.zeros(len(source.dofs), dtype=NP_REAL)
         for step, duration in enumerate(STEP_DURATIONS[:num_steps]):
             time_sec = source.scene.get_total_simulation_time()
@@ -356,6 +365,11 @@ class ResumeTest(unittest.TestCase):
         self.assertTrue(recording.touching[PUSHING_FRAME])
         errors = self.closed_loop_errors(method, recording, with_velocities=True)
         controls = self.closed_loop_errors(method, recording, with_velocities=False)
-        for name, tolerance in CLOSED_LOOP_TOLERANCES.items():
+        tolerances = {
+            # The table is static, so the cube's presliding displacement applies.
+            "cube_position": 2 * recording.cube_presliding_displacement,
+            **CLOSED_LOOP_TOLERANCES,
+        }
+        for name, tolerance in tolerances.items():
             self.assertLess(getattr(errors, name), tolerance, name)
             self.assertGreater(getattr(controls, name), tolerance, name)

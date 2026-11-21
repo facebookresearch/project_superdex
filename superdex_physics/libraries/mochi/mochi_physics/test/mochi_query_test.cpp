@@ -1031,9 +1031,17 @@ static void ExpectEqualContactForces(bool expectSuccess, Actor* actor) {
   }
 }
 
-// Verifies that contact forces on an actor are nearly vertical (Y-dominant).
-// This is expected for stacked cubes under gravity.
-static void ExpectVerticalContactForces(bool expectSuccess, Actor* actor) {
+// Verifies the contact forces of an actor resting on horizontal faces under gravity: their totals,
+// over nodes and over contact points, are nearly vertical, and the force of each contact point is
+// within the friction cone around the vertical. With elasto-plastic friction, per-point forces need
+// not be vertical: a soft actor whose contacts stick keeps the static friction that resists its
+// lateral expansion, which balances out over its contacts. Velocity-regularized friction lets the
+// contacts creep until every per-node and per-point force is vertical.
+static void ExpectVerticalContactForces(
+    bool expectSuccess,
+    Scene* scene,
+    Actor* actor,
+    bool elastoPlasticFriction) {
   Error error;
   Span<NodeContactForce const> nodeForces = actor->GetNodeContactForcesWorld(error);
   Span<ContactPoint const> contacts = actor->GetContactPointsWorld(error);
@@ -1041,44 +1049,65 @@ static void ExpectVerticalContactForces(bool expectSuccess, Actor* actor) {
   if (expectSuccess) {
     EXPECT_OK(error);
 
-    constexpr real kVerticalityTolerance = 0.05_r; // Allow small deviation from pure vertical
+    constexpr real kTolerance = 0.05_r; // Allow small deviations from the vertical and the cone
+    auto const tangentialNorm = [](Real3 const& force) {
+      return Norm(Real3{force[0], 0_r, force[2]});
+    };
+    auto const expectVertical = [&](Real3 const& force, char const* what) {
+      EXPECT_LE(tangentialNorm(force), kTolerance * Norm(force))
+          << what << " is not vertical: " << force[0] << ", " << force[1] << ", " << force[2];
+    };
+    // Within about 18 degrees of the vertical.
+    auto const expectNearlyVertical = [&](Real3 const& force, char const* what) {
+      EXPECT_GE(Abs(force[1]), (1_r - kTolerance) * Norm(force))
+          << what << " is not vertical: " << force[0] << ", " << force[1] << ", " << force[2];
+    };
 
-    // Check node contact forces are vertical
+    Real3 nodeForceSum = {};
     for (auto const& node : nodeForces) {
-      real forceMag = Norm(node.force);
-      if (forceMag > 1e-6_r) {
-        Real3 normalizedForce = node.force / forceMag;
-        real yComponent = Abs(normalizedForce[1]);
-        EXPECT_GT(yComponent, 1_r - kVerticalityTolerance)
-            << "Node contact force is not vertical: " << node.force[0] << ", " << node.force[1]
-            << ", " << node.force[2];
+      nodeForceSum += node.force;
+      if (!elastoPlasticFriction) {
+        expectNearlyVertical(node.force, "Node contact force");
       }
     }
+    expectVertical(nodeForceSum, "Total node contact force");
 
-    // Check contact point forces are vertical
+    real const mu = actor->GetContactParams(test::ExpectOK{}).coulombFrictionCoefficient;
+    Real3 contactForceSum = {};
     for (auto const& contact : contacts) {
-      if (actor->GetHandle() == contact.actorA) {
-        real forceMag = Norm(contact.force);
-        if (forceMag > 1e-6_r) {
-          Real3 normalizedForce = contact.force / forceMag;
-          real yComponent = Abs(normalizedForce[1]);
-          EXPECT_GT(yComponent, 1_r - kVerticalityTolerance)
-              << "Contact point force is not vertical: " << contact.force[0] << ", "
-              << contact.force[1] << ", " << contact.force[2];
-        }
+      if (actor->GetHandle() != contact.actorA) {
+        continue;
+      }
+      contactForceSum += contact.force;
+      // Pair friction coefficient: the geometric mean of the actors' coefficients.
+      real const muCollider = scene->GetActor(contact.actorB)
+                                  ->GetContactParams(test::ExpectOK{})
+                                  .coulombFrictionCoefficient;
+      real const muPair = Sqrt(mu * muCollider);
+      Real3 const& force = contact.force;
+      EXPECT_LE(tangentialNorm(force), (1_r + kTolerance) * muPair * Abs(force[1]) + 1e-6_r)
+          << "Contact point force is outside the friction cone: " << force[0] << ", " << force[1]
+          << ", " << force[2];
+      if (!elastoPlasticFriction) {
+        expectNearlyVertical(force, "Contact point force");
       }
     }
+    expectVertical(contactForceSum, "Total contact point force");
   } else {
     EXPECT_NOT_OK(error);
   }
 }
 
-static void TestNodeContactForces(Scene* scene, Actor* bodyA, Actor* bodyB) {
+static void
+TestNodeContactForces(Scene* scene, Actor* bodyA, Actor* bodyB, bool elastoPlasticFriction) {
+  if (!elastoPlasticFriction) {
+    test::PreferVelocityRegularizedFriction(scene);
+  }
   // Enable gravity and let the bodies fall on the ground.
   // Step many times to make sure it is fully settled.
   Real3 const gravity = Real3{0_r, -10_r, 0_r};
   scene->SetGravity(gravity);
-  // The near-vertical force check relies on backward Euler's damping to settle the stack.
+  // The vertical force checks rely on backward Euler's damping to settle the stack.
   test::SetSceneIntegrationMethod(scene, IntegrationMethod::BackwardEuler);
   for (int i = 0; i < 100; ++i) {
     scene->Step(0.01);
@@ -1087,7 +1116,7 @@ static void TestNodeContactForces(Scene* scene, Actor* bodyA, Actor* bodyB) {
   // Now we can expect to get a non-empty collection of contact points when the query is enabled
   TestQuery(scene, bodyA, bodyB, QueryType::NodeContactForces, [&](bool expectSuccess, Actor* a) {
     ExpectEqualContactForces(expectSuccess, a);
-    ExpectVerticalContactForces(expectSuccess, a);
+    ExpectVerticalContactForces(expectSuccess, scene, a, elastoPlasticFriction);
   });
 }
 
@@ -1095,21 +1124,26 @@ static void TestNodeContactForces(Scene* scene, Actor* bodyA, Actor* bodyB) {
 struct NodeContactForcesParams {
   RotationAxis90 topRotation;
   RotationAxis90 bottomRotation;
+  bool elastoPlasticFriction;
 
   std::string GetName() const {
     return std::string("Top") + SReflect::EnumToString(topRotation) + "_Bottom" +
-        SReflect::EnumToString(bottomRotation);
+        SReflect::EnumToString(bottomRotation) +
+        (elastoPlasticFriction ? "" : "_VelocityRegularizedFriction");
   }
 };
 
-// Generate all combinations of rotation axes for top and bottom cubes
+// Generate all combinations of rotation axes for top and bottom cubes, with elasto-plastic and with
+// velocity-regularized friction.
 static std::vector<NodeContactForcesParams> GetNodeContactForcesTestCases() {
   std::vector<NodeContactForcesParams> params;
   for (auto topRot :
        {RotationAxis90::None, RotationAxis90::X, RotationAxis90::Y, RotationAxis90::Z}) {
     for (auto bottomRot :
          {RotationAxis90::None, RotationAxis90::X, RotationAxis90::Y, RotationAxis90::Z}) {
-      params.push_back({topRot, bottomRot});
+      for (bool elastoPlasticFriction : {true, false}) {
+        params.push_back({topRot, bottomRot, elastoPlasticFriction});
+      }
     }
   }
   return params;
@@ -1134,7 +1168,7 @@ TEST_P(NodeContactForcesTest, DynamicSoft_on_StaticRigid) {
   Actor* bodyA = CreateSoftCube(_scene, 0.1_r, Real3{-1_r, 0.001_r, 0_r}, params.topRotation);
   Actor* bodyB = CreateSoftCube(_scene, 0.11_r, Real3{-1_r, 0.001_r, 0_r}, params.bottomRotation);
   CreateStaticGroundPlane(_scene, -1);
-  TestNodeContactForces(_scene, bodyA, bodyB);
+  TestNodeContactForces(_scene, bodyA, bodyB, params.elastoPlasticFriction);
 }
 
 TEST_P(NodeContactForcesTest, DynamicSoftContactSkin_on_StaticRigid) {
@@ -1146,7 +1180,7 @@ TEST_P(NodeContactForcesTest, DynamicSoftContactSkin_on_StaticRigid) {
   Actor* bodyB = CreateSoftCube(
       _scene, 0.11_r, Real3{-1_r, 0.001_r, 0_r}, params.bottomRotation, /*useContactSkin=*/true);
   CreateStaticGroundPlane(_scene, -1);
-  TestNodeContactForces(_scene, bodyA, bodyB);
+  TestNodeContactForces(_scene, bodyA, bodyB, params.elastoPlasticFriction);
 }
 
 TEST_P(NodeContactForcesTest, DynamicRigid_on_StaticRigid) {
@@ -1158,7 +1192,7 @@ TEST_P(NodeContactForcesTest, DynamicRigid_on_StaticRigid) {
   Actor* bodyB = CreateRigidCube(
       _scene, 2_r, Real3{10_r, 0_r, 0_r}, false, ColliderType::Box, params.bottomRotation);
   CreateStaticGroundPlane(_scene, -1);
-  TestNodeContactForces(_scene, bodyA, bodyB);
+  TestNodeContactForces(_scene, bodyA, bodyB, params.elastoPlasticFriction);
 }
 
 TEST_P(NodeContactForcesTest, DynamicSoft_on_DynamicRigid) {
@@ -1178,7 +1212,7 @@ TEST_P(NodeContactForcesTest, DynamicSoft_on_DynamicRigid) {
       ColliderType::Box,
       params.bottomRotation);
   CreateStaticGroundPlane(_scene, kGroundHeight);
-  TestNodeContactForces(_scene, softTopCube, rigidBottomCube);
+  TestNodeContactForces(_scene, softTopCube, rigidBottomCube, params.elastoPlasticFriction);
 }
 
 TEST_P(NodeContactForcesTest, DynamicSoftContactSkin_on_DynamicRigid) {
@@ -1201,7 +1235,7 @@ TEST_P(NodeContactForcesTest, DynamicSoftContactSkin_on_DynamicRigid) {
       ColliderType::Box,
       params.bottomRotation);
   CreateStaticGroundPlane(_scene, kGroundHeight);
-  TestNodeContactForces(_scene, softTopCube, rigidBottomCube);
+  TestNodeContactForces(_scene, softTopCube, rigidBottomCube, params.elastoPlasticFriction);
 }
 
 TEST_P(NodeContactForcesTest, DynamicRigid_on_DynamicRigid) {
@@ -1226,7 +1260,7 @@ TEST_P(NodeContactForcesTest, DynamicRigid_on_DynamicRigid) {
       ColliderType::Box,
       params.bottomRotation);
   CreateStaticGroundPlane(_scene, kGroundHeight);
-  TestNodeContactForces(_scene, rigidTopCube, rigidBottomCube);
+  TestNodeContactForces(_scene, rigidTopCube, rigidBottomCube, params.elastoPlasticFriction);
 }
 
 INSTANTIATE_TEST_SUITE_P(

@@ -128,6 +128,10 @@ inline void SetSceneIntegrationMethod(Scene* scene, IntegrationMethod method) {
   scene->SetSolverParams(solverParams, ExpectOK{});
 }
 
+// Drops the elasto-plastic friction preference of every actor of the scene, so that all its
+// contacts use velocity-regularized friction.
+void PreferVelocityRegularizedFriction(Scene* scene);
+
 // Maps local positions relative to the actor's current, possibly recentered, root transform to
 // local positions relative to `worldFromLocalInitial`.
 inline TransformRT GetInitialFromCurrentLocal(

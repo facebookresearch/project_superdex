@@ -875,16 +875,32 @@ enum class EMochiIntegrationMethod : uint8 {
   BDF3 = 2,
   /** DIRK(2,2): 1 step, 2 stages, 2nd order, L-stable. */
   DIRK22 = 3,
-  /** DIRK(2,3): 1 step, 2 stages, 3rd order. */
+  /**
+   * DIRK(2,3): 1 step, 2 stages, 3rd order.
+   *
+   * @note Its step does not end at its last stage, so its steps use velocity-regularized friction
+   *   for all contacts (see ContactParams::preferElastoPlasticFriction). Queries refreshed without
+   *   a step approximate it with one BackwardEuler stage, which may use elasto-plastic friction.
+   */
   DIRK23 = 4,
   /** DIRK(3,3): 1 step, 3 stages, 3rd order, L-stable. */
   DIRK33 = 5,
   /**
    * Symplectic DIRK(1,2): 1 step, 1 stage, 2nd order, A-stable. Also known as Gauss and implicit
    *   midpoint.
+   *
+   * @note Its step does not end at its last stage, so its steps use velocity-regularized friction
+   *   for all contacts (see ContactParams::preferElastoPlasticFriction). Queries refreshed without
+   *   a step approximate it with one BackwardEuler stage, which may use elasto-plastic friction.
    */
   SymplecticDIRK12 = 6,
-  /** Symplectic DIRK(2,2): 1 step, 2 stages, 2nd order, A-stable. */
+  /**
+   * Symplectic DIRK(2,2): 1 step, 2 stages, 2nd order, A-stable.
+   *
+   * @note Its step does not end at its last stage, so its steps use velocity-regularized friction
+   *   for all contacts (see ContactParams::preferElastoPlasticFriction). Queries refreshed without
+   *   a step approximate it with one BackwardEuler stage, which may use elasto-plastic friction.
+   */
   SymplecticDIRK22 = 7,
   /** Number of time integration method enum values. */
   Count = 8 UMETA(Hidden),
@@ -898,12 +914,22 @@ SUPERDEXPHYSICS_API mochi::IntegrationMethod ToMochi(EMochiIntegrationMethod Val
 /** Returns the Unreal representation of Value. */
 SUPERDEXPHYSICS_API EMochiIntegrationMethod ToUnreal(mochi::IntegrationMethod Value);
 
-/** Coulomb friction regularization model. */
+/**
+ * [Experimental] Smoothing of velocity-regularized Coulomb friction.
+ *
+ * @note Elasto-plastic friction (see ContactParams::preferElastoPlasticFriction) always uses the
+ *   EMochiCoulombFrictionModel::C1Regularized ramp, in displacement.
+ *
+ * @warning This is an experimental feature. It may be changed or removed in the future. Use at your
+ *   own risk.
+ */
 UENUM(BlueprintType)
 enum class EMochiCoulombFrictionModel : uint8 {
   /**
-   * C1-smoothed Coulomb friction with compact support: friction transitions linearly from 0 to full
-   *   strength over [0, ContactParams::frictionFalloffVel].
+   * C1-smoothed Coulomb friction with compact support: friction rises smoothly from 0 and reaches
+   *   full strength with zero slope at the end of the ramp. The ramp width is
+   *   ContactParams::frictionFalloffVel of slip speed for velocity-regularized friction, and
+   *   ContactParams::preslidingDisplacement of displacement for elasto-plastic friction.
    */
   C1Regularized = 0,
   /**
@@ -2258,39 +2284,17 @@ struct SUPERDEXPHYSICS_API FMochiExperimentalEvalParams {
   FMochiSaturationHessianParams FittedSaturationHessian{};
 
   /**
-   * Selects which Coulomb friction smoothing model to use.
+   * Selects the smoothing of velocity-regularized Coulomb friction.
    *
    * C1Regularized (default) preserves existing behavior exactly. CinfRegularized is an additional
    *   model that can be selected at runtime without affecting C1Regularized users.
    *
-   * @note FMochiExperimentalEvalParams::bElastoPlasticFriction requires C1Regularized.
+   * @note Contacts with elasto-plastic friction (see ContactParams::preferElastoPlasticFriction)
+   *   always use the EMochiCoulombFrictionModel::C1Regularized ramp, in displacement over
+   *   ContactParams::preslidingDisplacement, whatever this setting.
    */
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   EMochiCoulombFrictionModel FrictionModel{};
-
-  /**
-   * [Experimental] Use elasto-plastic Coulomb friction.
-   *
-   * Elasto-plastic friction holds a tangential load below the Coulomb limit without slip, and
-   *   slides once the tangential displacement exceeds ContactParams::preslidingDisplacement.
-   *   Regular Coulomb friction, in contrast, needs slip to act.
-   *
-   * @note Applies only to contacts with rigid colliders, static or dynamic, including articulated
-   *   links. Contacts with deformable colliders (soft actors with an Sdf collider, and point cloud
-   *   colliders) keep the velocity-regularized Coulomb friction.
-   * @note Requires FMochiExperimentalEvalParams::FrictionModel = C1Regularized, whose compact
-   *   support saturates friction at the presliding displacement.
-   * @note Requires a time integration method (EMochiIntegrationMethod) whose step ends at its last
-   *   stage: BackwardEuler, BDF2, BDF3, DIRK22 or DIRK33.
-   * @note Friction preload is part of the actor history, and is cleared when it is invalidated (see
-   *   Actor).
-   * @note A static actor given a velocity every step, like a conveyor belt, never builds friction
-   *   preload, so contacts on it creep as with regular friction.
-   * @note Changing this setting changes the content of the scene state, so states captured before
-   *   the change cannot be restored after it.
-   */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
-  bool bElastoPlasticFriction{};
 
   /**
    * Validate that the residual is the gradient of the objective by a directional finite-difference

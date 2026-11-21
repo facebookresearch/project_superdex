@@ -428,8 +428,8 @@ static void TestPlaneContact(
 }
 
 TEST(ContactPenalties, ConsistencyTests) {
-  // Four different sets of contact evaluation config
-  std::array<ContactEvalConfig, 4> config;
+  // Six different sets of contact evaluation config
+  std::array<ContactEvalConfig, 6> config;
   // Implicit normals. Forbid friction fading. Do not use the fitted Hessian.
   config[0].explicitNormals = false;
   config[0].fadeFriction = false;
@@ -443,6 +443,11 @@ TEST(ContactPenalties, ConsistencyTests) {
   config[2].elastoPlasticFriction = true;
   config[3] = config[1];
   config[3].elastoPlasticFriction = true;
+  // The same with CinfRegularized velocity-regularized friction
+  config[4] = config[0];
+  config[4].frictionModel = CoulombFrictionModel::CinfRegularized;
+  config[5] = config[1];
+  config[5].frictionModel = CoulombFrictionModel::CinfRegularized;
 
   // Four different sets of contact parameters
   std::array<ContactParams, 4> params;
@@ -798,7 +803,7 @@ TEST(ContactPenalties, AlignmentGate_ReportsRemovedPenaltyAsNonPotential) {
 }
 
 // A contact anchored within the presliding displacement holds a load below the Coulomb limit
-// without slip, while regular Coulomb friction needs slip to act.
+// without slip, while velocity-regularized Coulomb friction needs slip to act.
 TEST(ContactPenalties, ElastoPlasticFriction_HoldsLoadWithoutSlip) {
   ContactParams params;
   params.coulombFrictionCoefficient = 0.5_r;
@@ -862,7 +867,8 @@ TEST(ContactPenalties, ElastoPlasticFriction_HoldsLoadWithoutSlip) {
         expectedFrictionPerNormalForce[i], (Real3{force[i][0], force[i][1], 0_r} / normalForce));
   }
 
-  // Unlike regular Coulomb friction, elasto-plastic friction does not depend on the time step.
+  // Unlike velocity-regularized Coulomb friction, elasto-plastic friction does not depend on the
+  // time step.
   EXPECT_EQ(force, computeForce(0.001_r));
 }
 
@@ -1247,8 +1253,8 @@ TEST(ContactPenalties, ElastoPlasticFriction_DForceAnchorIsCoulombBlockOfDForce)
 }
 
 // The collision response and the rigid contact sums use elasto-plastic friction, with the anchor
-// offsets, if the configuration requests it, and regular friction otherwise, ignoring any offsets.
-// They match the batch kernel with the corresponding law.
+// offsets, if the configuration requests it, and velocity-regularized friction otherwise, ignoring
+// any offsets. They match the batch kernel with the corresponding law.
 TEST(ContactPenalties, ElastoPlasticFriction_FollowsConfig) {
   ContactParams const params;
   real const delta = params.preslidingDisplacement;
@@ -1547,6 +1553,31 @@ TEST(ContactPenalties, TrustMargin_SameForContactSums) {
       }
     }
   }
+}
+
+// Elasto-plastic friction always uses the C1Regularized ramp, whatever the friction model, which
+// only selects the smoothing of velocity-regularized friction.
+TEST(ContactPenalties, ElastoPlasticFriction_AlwaysUsesC1Regularized) {
+  ContactParams const params;
+  real const delta = params.preslidingDisplacement;
+  real constexpr kDt = 0.01_r;
+  ContactDetectionResult const contacts = MakeAnchoredContacts(
+      {Real3{0.1_r * delta, 0_r, 0_r}}, {Real3{0.4_r * delta, 0.2_r * delta, 0_r}});
+  auto const force = [&](bool elastoPlasticFriction, CoulombFrictionModel frictionModel) {
+    ContactEvalConfig const config{
+        .frictionModel = frictionModel, .elastoPlasticFriction = elastoPlasticFriction};
+    CollisionResponseResult response;
+    response.ResizeNoInit(1, false, true, false);
+    ComputeCollisionResponse<GradTarget::Current>(
+        contacts, params, config, kDt, false, true, false, /*assemDForceAnchor*/ false, response);
+    return response.force[0];
+  };
+  EXPECT_EQ(
+      force(true, CoulombFrictionModel::C1Regularized),
+      force(true, CoulombFrictionModel::CinfRegularized));
+  EXPECT_FALSE(NearEqual(
+      force(false, CoulombFrictionModel::C1Regularized),
+      force(false, CoulombFrictionModel::CinfRegularized)));
 }
 
 // Expect that two vectors point in the same direction +/- some angle

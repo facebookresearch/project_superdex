@@ -27,14 +27,16 @@ namespace mochi {
  *
  * @note For each field without an actor-pair override, contact between a colliding actor and a
  * collider uses the collider's contact parameter (not the colliding actor's). The exceptions are:
- *   - For friction and dissipation coefficients (viscousFrictionCoefficient,
- *     coulombFrictionCoefficient, normalViscousDampingCoefficient), the geometric mean of the
- *     colliding and collider's coefficients is used. This disables friction/dissipation if either
- *     of them does.
- *   - For penalty coefficient (penaltyCoefficient), friction velocity threshold
- *     (frictionFalloffVel) and presliding displacement (preslidingDisplacement), the
+ *   - For friction and dissipation coefficients (@ref viscousFrictionCoefficient,
+ *     @ref coulombFrictionCoefficient, @ref normalViscousDampingCoefficient), the geometric mean of
+ *     the colliding and collider's coefficients is used. This disables friction/dissipation if
+ *     either of them does.
+ *   - For penalty coefficient (@ref penaltyCoefficient), friction velocity threshold
+ *     (@ref frictionFalloffVel) and presliding displacement (@ref preslidingDisplacement), the
  *     geometric mean of the colliding and collider's values is used, except if the collider is
  *     static in which case the colliding's values are used.
+ *   - Elasto-plastic friction is preferred (@ref preferElastoPlasticFriction) only if both the
+ *     colliding and the collider prefer it.
  *
  * @see Scene::SetContactPairParamsOverride
  */
@@ -54,6 +56,7 @@ struct ContactParams {
    * @param[in] alignmentSmoothingFraction See @ref alignmentSmoothingFraction.
    * @param[in] viscousFrictionCoefficient See @ref viscousFrictionCoefficient.
    * @param[in] coulombFrictionCoefficient See @ref coulombFrictionCoefficient.
+   * @param[in] preferElastoPlasticFriction See @ref preferElastoPlasticFriction.
    * @param[in] frictionFalloffVel See @ref frictionFalloffVel.
    * @param[in] preslidingDisplacement See @ref preslidingDisplacement.
    * @param[in] normalViscousDampingCoefficient See @ref normalViscousDampingCoefficient.
@@ -75,6 +78,7 @@ struct ContactParams {
       real alignmentSmoothingFraction,
       real viscousFrictionCoefficient,
       real coulombFrictionCoefficient,
+      bool preferElastoPlasticFriction,
       real frictionFalloffVel,
       real preslidingDisplacement,
       real normalViscousDampingCoefficient,
@@ -248,6 +252,32 @@ struct ContactParams {
   real coulombFrictionCoefficient = 0.5_r;
 
   /**
+   * @brief [Experimental] Prefer elasto-plastic Coulomb friction to velocity-regularized Coulomb
+   * friction.
+   *
+   * @details Elasto-plastic friction measures the tangential displacement of each contact from its
+   * anchor, a point of the collider, so a contact holds a tangential load below the Coulomb limit
+   * without slip (see @ref preslidingDisplacement). Velocity-regularized friction acts only through
+   * slip, so held objects creep (see @ref frictionFalloffVel).
+   *
+   * @warning This is an experimental feature. It may be changed or removed in the future. Use at
+   * your own risk.
+   *
+   * @note Contacts that prefer elasto-plastic friction use it where it is supported: with rigid
+   * colliders, static or dynamic, including articulated links, and with an integration method whose
+   * step ends at its last stage (@ref IntegrationMethod::BackwardEuler,
+   * @ref IntegrationMethod::BDF2, @ref IntegrationMethod::BDF3, @ref IntegrationMethod::DIRK22 or
+   * @ref IntegrationMethod::DIRK33). The other contacts use velocity-regularized friction.
+   * @note Friction preload is part of the actor history (see @ref Actor). A static actor given a
+   * velocity every step, like a conveyor belt, never builds preload, so contacts on it creep, as
+   * with velocity-regularized friction whose falloff velocity is @ref preslidingDisplacement over
+   * the stage step (the time step with @ref IntegrationMethod::BackwardEuler).
+   * @note Without an actor-pair override for this field, a collision prefers elasto-plastic
+   * friction only if both the colliding and the collider do, even if the collider is static.
+   */
+  bool preferElastoPlasticFriction = true;
+
+  /**
    * @brief [Experimental] Velocity threshold for Coulomb friction smoothing [m/s].
    *
    * @details For C1Regularized, the Coulomb friction force smoothly transitions from 0 to full
@@ -260,6 +290,8 @@ struct ContactParams {
    *
    * @note Must be finite and not negative. For CinfRegularized, a value of zero is clamped
    * internally to avoid numerical issues.
+   * @note Used only by contacts with velocity-regularized friction (see
+   * @ref preferElastoPlasticFriction).
    * @note Smaller velocity thresholds improve physical accuracy but may degrade stability.
    * @note Without an actor-pair override for this field, the value used in a collision is the
    * geometric mean of the colliding and collider's thresholds. The exception is if the collider is
@@ -268,16 +300,23 @@ struct ContactParams {
   real frictionFalloffVel = 0.01_r;
 
   /**
-   * @brief [Experimental] Presliding displacement of elasto-plastic Coulomb friction [m].
+   * @brief Presliding displacement of elasto-plastic Coulomb friction [m].
    *
-   * @details With elasto-plastic friction, which requires C1Regularized, contacts take friction
-   * from their tangential displacement from their anchor, instead of using @ref frictionFalloffVel.
-   * The Coulomb friction force smoothly transitions from 0 to full strength as the displacement
-   * increases from 0 to preslidingDisplacement (compact support).
+   * @details With elasto-plastic friction (see @ref preferElastoPlasticFriction), the Coulomb
+   * friction force smoothly transitions from 0 to full strength as the tangential displacement of a
+   * contact from its anchor increases from 0 to preslidingDisplacement, and beyond it the anchor
+   * follows the contact. A held contact springs back by up to preslidingDisplacement once the load
+   * is removed.
    *
-   * @warning This is an experimental feature. It may be changed or removed in the future. Use at
-   * your own risk.
+   * @note The force follows the ramp of @ref CoulombFrictionModel::C1Regularized, whose compact
+   * support ends at preslidingDisplacement, whatever @ref ExperimentalEvalParams::frictionModel.
    *
+   * @note Smaller values reduce presliding motion and spring-back, but stiffen the tangential
+   * response.
+   * @note Within the presliding displacement, the friction force is elastic: it stores energy and
+   * adds no damping. Tangential damping comes only from @ref viscousFrictionCoefficient, zero by
+   * default, and from the time integration (@ref normalViscousDampingCoefficient acts along the
+   * normal).
    * @note Must be finite and strictly positive.
    * @note Without an actor-pair override for this field, the value used in a collision is the
    * geometric mean of the colliding and collider's displacements. The exception is if the collider
@@ -378,6 +417,7 @@ struct ContactParams {
   MOCHI_FIELD(alignmentSmoothingFraction)
   MOCHI_FIELD(viscousFrictionCoefficient) MOCHI_ATTRIBUTE(Units("s/m"))
   MOCHI_FIELD(coulombFrictionCoefficient)
+  MOCHI_FIELD(preferElastoPlasticFriction)
   MOCHI_FIELD(frictionFalloffVel) MOCHI_ATTRIBUTE(Units("m/s"))
   MOCHI_FIELD(preslidingDisplacement) MOCHI_ATTRIBUTE(Units("m"))
   MOCHI_FIELD(normalViscousDampingCoefficient) MOCHI_ATTRIBUTE(Units("s/m"))
@@ -389,14 +429,22 @@ struct ContactParams {
 };
 
 /**
- * @brief Selects which Coulomb friction smoothing model to use.
+ * @brief [Experimental] Smoothing of velocity-regularized Coulomb friction.
+ *
+ * @warning This is an experimental feature. It may be changed or removed in the future. Use at your
+ * own risk.
+ *
+ * @note Elasto-plastic friction (see @ref ContactParams::preferElastoPlasticFriction) always uses
+ * the @ref CoulombFrictionModel::C1Regularized ramp, in displacement.
  *
  * @see ContactParams::frictionFalloffVel
  */
 enum class CoulombFrictionModel {
   /**
-   * @brief C1-smoothed Coulomb friction with compact support: friction transitions linearly from 0
-   * to full strength over [0, @ref ContactParams::frictionFalloffVel].
+   * @brief C1-smoothed Coulomb friction with compact support: friction rises smoothly from 0 and
+   * reaches full strength with zero slope at the end of the ramp. The ramp width is
+   * @ref ContactParams::frictionFalloffVel of slip speed for velocity-regularized friction, and
+   * @ref ContactParams::preslidingDisplacement of displacement for elasto-plastic friction.
    */
   C1Regularized,
 

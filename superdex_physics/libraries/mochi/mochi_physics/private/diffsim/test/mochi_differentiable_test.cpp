@@ -74,6 +74,7 @@ struct TestParams {
   real controlSpeed = 0_r;
   real forceSpeed = 1_r;
   // Forward simulation solver params
+  int solverMaxIter = kSolverMaxIter;
   VerbosityLevel simVerbosity = NonLinearSolverParams{}.verbosity;
   // Back propagation solver params
   VerbosityLevel diffVerbosity = BackPropagationSolverParams{}.verbosity;
@@ -240,7 +241,7 @@ class MochiDifferentiable : public MochiSceneTestBase,
     // Set the forward simulation solver settings.
     auto simParams = _scene->GetSolverParams();
     // Special settings for differentiability
-    simParams.nonLinearSolver.maxIter = kSolverMaxIter;
+    simParams.nonLinearSolver.maxIter = params.solverMaxIter;
     simParams.nonLinearSolver.absTol = kSolverAbsTol;
     simParams.nonLinearSolver.relTol = BackPropagationSolverParams{}.outerSolverRelTol;
     simParams.nonLinearSolver.convergenceMode =
@@ -557,6 +558,20 @@ TEST_IF_P(
   RunGradientConsistencyTest(lossTerms, target, 10, params);
 }
 
+// Same, with velocity-regularized friction.
+TEST_IF_P(
+    MOCHI_USE_DOUBLE_AND_INTERNAL,
+    MochiDifferentiable,
+    SingleRigidActorContactCoulombVelocityRegularizedFriction_LastStepError) {
+  auto* target =
+      LoadScenePrefab(_scene, "rigid_cube_on_plane_coulomb_friction.mochi_scene", "Cube");
+  test::PreferVelocityRegularizedFriction(_scene);
+  std::array<LossAndGradientEvalPair, 2> lossTerms = {
+      lastStepTranslationError, lastStepRotationError};
+  TestParams params{.gradEpsFiniteDiff = 1e-6_r, .forceSpeed = 0.1_r};
+  RunGradientConsistencyTest(lossTerms, target, 10, params);
+}
+
 // The cube falls on the incline on step 10, then it slides for 10 more steps.
 TEST_IF_P(
     MOCHI_USE_DOUBLE_AND_INTERNAL,
@@ -595,6 +610,19 @@ TEST_IF_P(
       _scene, "two_rigid_cubes_on_plane_coulomb_friction.mochi_scene", "BottomCube");
   std::array<LossAndGradientEvalPair, 2> lossTerms = {
       lastStepTranslationError, lastStepRotationError};
+  RunGradientConsistencyTest(lossTerms, target, 10, TestParams{.solverMaxIter = 50});
+}
+
+// Same, with velocity-regularized friction.
+TEST_IF_P(
+    MOCHI_USE_DOUBLE_AND_INTERNAL,
+    MochiDifferentiable,
+    TwoRigidActorsContactCoulombVelocityRegularizedFriction_LastStepError) {
+  auto* target = LoadScenePrefab(
+      _scene, "two_rigid_cubes_on_plane_coulomb_friction.mochi_scene", "BottomCube");
+  test::PreferVelocityRegularizedFriction(_scene);
+  std::array<LossAndGradientEvalPair, 2> lossTerms = {
+      lastStepTranslationError, lastStepRotationError};
   RunGradientConsistencyTest(lossTerms, target, 10);
 }
 
@@ -628,6 +656,20 @@ TEST_IF_P(
     SingleArticulatedActorContact_LastStepError) {
   auto* target = LoadScenePrefab(
       _scene, "articulated_actor_on_plane.mochi_scene", "ArticulatedActor/Link2_Horizontal");
+  TestParams params{.gradEpsFiniteDiff = 1e-6_r, .forceSpeed = 0.1_r};
+  std::array<LossAndGradientEvalPair, 2> lossTerms = {
+      lastStepTranslationError, lastStepRotationError};
+  RunGradientConsistencyTest(lossTerms, target, 10, params);
+}
+
+// Same, with velocity-regularized friction.
+TEST_IF_P(
+    MOCHI_TEST_ARTICULATED_DOUBLE,
+    MochiDifferentiable,
+    SingleArticulatedActorContactVelocityRegularizedFriction_LastStepError) {
+  auto* target = LoadScenePrefab(
+      _scene, "articulated_actor_on_plane.mochi_scene", "ArticulatedActor/Link2_Horizontal");
+  test::PreferVelocityRegularizedFriction(_scene);
   TestParams params{.gradEpsFiniteDiff = 1e-6_r, .forceSpeed = 0.1_r};
   std::array<LossAndGradientEvalPair, 2> lossTerms = {
       lastStepTranslationError, lastStepRotationError};
@@ -763,19 +805,19 @@ TEST_IF_P(
   RunGradientConsistencyTest(lossTerms, target, 10, params);
 }
 
-// Mixed rigid/articulated contact with high damping, pose control and elasto-plastic friction.
+// Mixed rigid/articulated contact with high damping and pose control, with Coulomb friction on the
+// articulated links too, so that contacts on them keep elasto-plastic friction anchors (the
+// prefab's links are frictionless, so that MixedRigidAndArticulatedContact_LastStepError has no
+// anchors).
 TEST_IF_P(
     MOCHI_TEST_ARTICULATED_DOUBLE,
     MochiDifferentiable,
-    MixedRigidAndArticulatedAnchorContact_LastStepError) {
+    MixedRigidAndArticulatedFrictionContact_LastStepError) {
   auto* target = LoadScenePrefab(
       _scene,
       "mixed_rigid_and_articulated_contact_high_damping_control.mochi_scene",
       "ArticulatedActor1/ArticulatedActor/Link2_Horizontal");
-  auto solverParams = _scene->GetSolverParams();
-  solverParams.experimentalEval.elastoPlasticFriction = true;
-  _scene->SetSolverParams(solverParams, test::ExpectOK{});
-  // The prefab's articulated links are frictionless.
+  // Every rigid actor, including the articulated links.
   _scene->ForEachActor([&](Actor* actor) {
     if (actor->GetType() == ActorType::Rigid) {
       auto contactParams = actor->GetContactParams(test::ExpectOK{});

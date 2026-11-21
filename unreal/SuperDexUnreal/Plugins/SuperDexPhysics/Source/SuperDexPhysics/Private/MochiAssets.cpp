@@ -286,6 +286,7 @@ mochi::ContactParams UMochiContactParams::ToMochi() const {
   result.distanceErrorBound = mochi::real(DistanceErrorBound);
   result.viscousFrictionCoefficient = mochi::real(ViscousFrictionCoefficient);
   result.coulombFrictionCoefficient = mochi::real(CoulombFrictionCoefficient);
+  result.preferElastoPlasticFriction = bPreferElastoPlasticFriction;
   result.frictionFalloffVel = mochi::real(FrictionFalloffVel);
   result.preslidingDisplacement = mochi::real(PreslidingDisplacement);
   result.normalViscousDampingCoefficient = mochi::real(NormalViscousDampingCoefficient);
@@ -305,6 +306,7 @@ void UMochiContactParams::FromMochi(const mochi::ContactParams& Mochi) {
   DistanceErrorBound = Mochi.distanceErrorBound;
   ViscousFrictionCoefficient = Mochi.viscousFrictionCoefficient;
   CoulombFrictionCoefficient = Mochi.coulombFrictionCoefficient;
+  bPreferElastoPlasticFriction = Mochi.preferElastoPlasticFriction;
   FrictionFalloffVel = Mochi.frictionFalloffVel;
   PreslidingDisplacement = Mochi.preslidingDisplacement;
   NormalViscousDampingCoefficient = Mochi.normalViscousDampingCoefficient;

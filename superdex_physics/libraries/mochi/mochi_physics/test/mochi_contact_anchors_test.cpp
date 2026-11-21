@@ -42,6 +42,23 @@ using namespace mochi;
 using test::AreEqualAnchors;
 using test::ExpectAnchors;
 
+// Fills the anchor offsets of the contacts of a colliding actor with colliders whose contacts all
+// use elasto-plastic friction, as collision detection does.
+static void FillAnchorOffsets(
+    CFrictionAnchorIndex<AnchorSet::Active> const& index,
+    DynamicArray<FrictionAnchor> const& anchors,
+    Span<ActiveCollision> collisions) {
+  int hint = 0;
+  for (auto& collision : collisions) {
+    FillFrictionAnchorOffsets(index, MakeConstSpan(anchors), collision, hint);
+  }
+}
+
+// Contact samples of a colliding actor with numSamples samples, which size its anchor index.
+static CContactSamples<TimeStep::Current> MakeSamples(int numSamples) {
+  return {ContactSamples(numSamples)};
+}
+
 // Contacts of a colliding actor with one collider, with their anchor offsets, at positions twice
 // those offsets, so that the anchors rebuilt from them are at points equal to the offsets. They all
 // keep their anchors, unless told otherwise.
@@ -94,8 +111,8 @@ TEST(FrictionAnchorLookup, FindFromHintMatchesIndexLookup) {
       {.sample = 0, .collider = 20},
       {.sample = 2, .collider = 10},
       {.sample = 3, .collider = 20}};
-  CFrictionAnchorIndex<AnchorSet::Pending> index(5);
-  IndexFrictionAnchors(pending, index);
+  CFrictionAnchorIndex<AnchorSet::Pending> index;
+  IndexFrictionAnchors(MakeSamples(5), pending, index);
   Span<FrictionAnchor const> const anchors = MakeConstSpan(pending.anchors);
 
   // In layout order, every lookup is the hint.
@@ -126,18 +143,6 @@ TEST(FrictionAnchorLookup, FindFromHintMatchesIndexLookup) {
 namespace {
 class FrictionAnchors : public test::MochiSceneTestBase {
  protected:
-  // The anchor components only exist with elasto-plastic friction enabled.
-  void SetUp() override {
-    MochiSceneTestBase::SetUp();
-    SetElastoPlasticFriction(true);
-  }
-
-  void SetElastoPlasticFriction(bool enabled) {
-    SolverParams params = _scene->GetSolverParams();
-    params.experimentalEval.elastoPlasticFriction = enabled;
-    _scene->SetSolverParams(params, test::ExpectOK{});
-  }
-
   // Static plane at y = 0. The unit cube mesh has a corner at its origin, so actors created with
   // the identity transform rest on it. Normal contact damping applies only if both actors have it.
   void CreatePlane(real normalDamping = 0_r) {
@@ -149,11 +154,14 @@ class FrictionAnchors : public test::MochiSceneTestBase {
     _plane = _scene->CreateRigidActor(params, test::ExpectOK{});
   }
 
+  // Its elasto-plastic friction preference is _preferElastoPlasticFriction, which its contacts with
+  // the static plane use.
   Actor* CreateRigidCube(real normalDamping = 0_r) {
     RigidActorParams params;
     params.name = "RigidCube";
     params.shape = test::CreateUnitCubeTetMeshShape(_mochiContext);
     params.contact.normalViscousDampingCoefficient = normalDamping;
+    params.contact.preferElastoPlasticFriction = _preferElastoPlasticFriction;
     return _scene->CreateRigidActor(params, test::ExpectOK{});
   }
 
@@ -212,6 +220,10 @@ class FrictionAnchors : public test::MochiSceneTestBase {
     return GetRegistry().get<CFrictionAnchorIndex<AnchorSet::Active>>(GetEntity(actor));
   }
 
+  CContactSamples<TimeStep::Current> const& GetSamples(Actor* actor) {
+    return GetRegistry().get<CContactSamples<TimeStep::Current> const>(GetEntity(actor));
+  }
+
   // Copies the actor's pending anchors and indexes them, as at the start of the next step.
   void PromoteAnchors(Actor* actor) {
     ecs::InvokeOnEntity(&PromotePendingFrictionAnchors, GetRegistry(), GetEntity(actor));
@@ -223,6 +235,7 @@ class FrictionAnchors : public test::MochiSceneTestBase {
   void RebuildAnchors(
       DynamicArray<FrictionAnchor>& anchors,
       CFrictionAnchorIndex<AnchorSet::Active>& index,
+      CContactSamples<TimeStep::Current> const& samples,
       DynamicArray<ActiveCollision> const& asyncCollisions,
       DynamicArray<ActiveCollision> const& syncCollisions = {}) {
     CActiveCollisions</*kIsSync*/ false, TimeStep::Current> asyncActive(/*numPartitions*/ 1);
@@ -232,9 +245,9 @@ class FrictionAnchors : public test::MochiSceneTestBase {
     CFrictionAnchors<AnchorSet::Active> active;
     CFrictionAnchors<AnchorSet::Pending> pending;
     UpdateFrictionAnchors(
-        GetRegistry(), /*convergence*/ nullptr, asyncActive, syncActive, pending, index);
+        /*convergence*/ nullptr, samples, asyncActive, syncActive, pending, index);
     PromotePendingFrictionAnchors(pending, active);
-    IndexFrictionAnchors(active, index);
+    IndexFrictionAnchors(samples, active, index);
     anchors = std::move(active.anchors);
   }
 
@@ -256,15 +269,17 @@ class FrictionAnchors : public test::MochiSceneTestBase {
       entt::entity a,
       entt::entity b,
       DynamicArray<FrictionAnchor>& anchors,
-      CFrictionAnchorIndex<AnchorSet::Active>& index) {
+      CFrictionAnchorIndex<AnchorSet::Active>& index,
+      CContactSamples<TimeStep::Current> const& samples) {
     RebuildAnchors(
         anchors,
         index,
+        samples,
         {MakeCollision(a, {2, 0}, {Real3{1_r, 0_r, 0_r}, Real3{4_r, 0_r, 0_r}})},
         {MakeCollision(b, {0, 2}, {Real3{2_r, 0_r, 0_r}, Real3{3_r, 0_r, 0_r}})});
   }
 
-  // Expects both anchor sets and an index entry per contact sample.
+  // Expects both anchor sets and an index, empty or with an entry per contact sample.
   void ExpectAnchorComponents(Actor* actor) {
     auto& reg = GetRegistry();
     entt::entity const e = GetEntity(actor);
@@ -273,9 +288,8 @@ class FrictionAnchors : public test::MochiSceneTestBase {
                  CFrictionAnchors<AnchorSet::Pending>,
                  CFrictionAnchorIndex<AnchorSet::Active>>(e)))
         << actor->GetName();
-    EXPECT_EQ(
-        isize(reg.get<CContactSamples<TimeStep::Current> const>(e).positions),
-        isize(reg.get<CFrictionAnchorIndex<AnchorSet::Active> const>(e)))
+    int const indexSize = isize(reg.get<CFrictionAnchorIndex<AnchorSet::Active> const>(e));
+    EXPECT_TRUE(indexSize == 0 || indexSize == isize(GetSamples(actor).positions))
         << actor->GetName();
   }
 
@@ -293,7 +307,7 @@ class FrictionAnchors : public test::MochiSceneTestBase {
     for (entt::entity const collider : colliders) {
       collisions.push_back(MakeCollision(collider, {0}, {Real3{1_r, 0_r, 0_r}}));
     }
-    RebuildAnchors(GetAnchors(actor), GetIndex(actor), collisions);
+    RebuildAnchors(GetAnchors(actor), GetIndex(actor), GetSamples(actor), collisions);
     GetPendingAnchors(actor) = GetAnchors(actor);
   }
 
@@ -413,7 +427,7 @@ class FrictionAnchors : public test::MochiSceneTestBase {
     Real3 const seededOffset{3_r * delta, 0_r, 0_r};
     ActiveCollision seeded = MakeCollision(plane, {sample}, {seededOffset});
     seeded.collisionResult.posColliding = {position};
-    RebuildAnchors(GetAnchors(actor), GetIndex(actor), {seeded});
+    RebuildAnchors(GetAnchors(actor), GetIndex(actor), GetSamples(actor), {seeded});
     GetPendingAnchors(actor) = GetAnchors(actor);
 
     Step(1);
@@ -480,6 +494,7 @@ class FrictionAnchors : public test::MochiSceneTestBase {
 
   static constexpr real kGravity = 9.81_r;
   Actor* _plane = nullptr;
+  bool _preferElastoPlasticFriction = true;
 };
 
 // Elasto-plastic friction with each integrator that it supports.
@@ -507,10 +522,12 @@ TEST_F(FrictionAnchors, RebuildAppendsAdjacentAnchorsInContactOrder) {
   entt::entity const a = GetEntity(_plane);
   entt::entity const b = GetEntity(CreateRigidCube());
   DynamicArray<FrictionAnchor> anchors;
-  CFrictionAnchorIndex<AnchorSet::Active> index(3);
+  CFrictionAnchorIndex<AnchorSet::Active> index;
+  auto const samples = MakeSamples(3);
   RebuildAnchors(
       anchors,
       index,
+      samples,
       {MakeCollision(a, {0, 1}, {Real3{1_r, 0_r, 0_r}, Real3{2_r, 0_r, 0_r}})},
       {MakeCollision(b, {1}, {Real3{3_r, 0_r, 0_r}})});
 
@@ -534,8 +551,9 @@ TEST_F(FrictionAnchors, RebuildGroupsBySample) {
   entt::entity const a = GetEntity(_plane);
   entt::entity const b = GetEntity(CreateRigidCube());
   DynamicArray<FrictionAnchor> anchors;
-  CFrictionAnchorIndex<AnchorSet::Active> index(4);
-  RebuildInterleavedAnchors(a, b, anchors, index);
+  CFrictionAnchorIndex<AnchorSet::Active> index;
+  auto const samples = MakeSamples(4);
+  RebuildInterleavedAnchors(a, b, anchors, index, samples);
 
   ExpectIndex(index, {2, kSentinelIndex, 0, kSentinelIndex});
   ASSERT_EQ(4, isize(anchors));
@@ -555,32 +573,29 @@ TEST_F(FrictionAnchors, RebuildGroupsBySample) {
 // contacts come in a different order than when the anchors were rebuilt, so that the hint misses
 // and the lookup has to skip the anchor of the other collider. The offset of a contact with an
 // anchor is its stage-start position relative to the anchor point. Contacts without an anchor get
-// zero, and contacts with a deformable collider get no offsets.
+// zero.
 TEST_F(FrictionAnchors, FillFindsAnchorsOfSamplesWithSeveralColliders) {
   CreatePlane();
   entt::entity const a = GetEntity(_plane);
   entt::entity const b = GetEntity(CreateRigidCube());
-  entt::entity const soft = GetEntity(CreateSoftCube());
   DynamicArray<FrictionAnchor> anchors;
-  CFrictionAnchorIndex<AnchorSet::Active> index(4);
-  RebuildInterleavedAnchors(a, b, anchors, index);
+  CFrictionAnchorIndex<AnchorSet::Active> index;
+  auto const samples = MakeSamples(4);
+  RebuildInterleavedAnchors(a, b, anchors, index, samples);
 
   DynamicArray<ActiveCollision> collisions{
-      MakeCollision(b, {2, 0, 1}, {}),
-      MakeCollision(a, {0, 3, 2}, {}),
-      MakeCollision(soft, {0}, {})};
+      MakeCollision(b, {2, 0, 1}, {}), MakeCollision(a, {0, 3, 2}, {})};
   Real3 const stageStart{10_r, 0_r, 0_r};
   for (auto& collision : collisions) {
     auto& result = collision.collisionResult;
     result.posCollidingStageStart.resize(result.sampleIndices.size(), stageStart);
   }
-  FillFrictionAnchorOffsets(GetRegistry(), index, anchors, MakeSpan(collisions));
+  FillAnchorOffsets(index, anchors, MakeSpan(collisions));
 
   DynamicArray<Real3> const expectedB{Real3{7_r, 0_r, 0_r}, Real3{8_r, 0_r, 0_r}, Real3{}};
   DynamicArray<Real3> const expectedA{Real3{6_r, 0_r, 0_r}, Real3{}, Real3{9_r, 0_r, 0_r}};
   EXPECT_EQ(expectedB, collisions[0].collisionResult.anchorOffset);
   EXPECT_EQ(expectedA, collisions[1].collisionResult.anchorOffset);
-  EXPECT_TRUE(collisions[2].collisionResult.anchorOffset.empty());
 }
 
 // Anchors store the collider's entity with its version, so a new collider that recycles the entity
@@ -591,8 +606,9 @@ TEST_F(FrictionAnchors, FillIgnoresAnchorsOfRecycledColliders) {
   Actor* cube = CreateRigidCube();
   entt::entity const b = GetEntity(cube);
   DynamicArray<FrictionAnchor> anchors;
-  CFrictionAnchorIndex<AnchorSet::Active> index(4);
-  RebuildInterleavedAnchors(a, b, anchors, index);
+  CFrictionAnchorIndex<AnchorSet::Active> index;
+  auto const samples = MakeSamples(4);
+  RebuildInterleavedAnchors(a, b, anchors, index, samples);
 
   _scene->DestroyActor(cube);
   entt::entity const recycled = GetEntity(CreateRigidCube());
@@ -603,8 +619,7 @@ TEST_F(FrictionAnchors, FillIgnoresAnchorsOfRecycledColliders) {
 
   ActiveCollision collision = MakeCollision(recycled, {2, 0}, {});
   collision.collisionResult.posCollidingStageStart.resize(2, Real3{10_r, 0_r, 0_r});
-  FillFrictionAnchorOffsets(
-      GetRegistry(), index, anchors, Span<ActiveCollision>(&collision, size_t{1}));
+  FillAnchorOffsets(index, anchors, Span<ActiveCollision>(&collision, size_t{1}));
 
   EXPECT_EQ((DynamicArray<Real3>{Real3{}, Real3{}}), collision.collisionResult.anchorOffset);
 }
@@ -615,39 +630,47 @@ TEST_F(FrictionAnchors, RebuildOfFilledOffsetsKeepsAnchorPoints) {
   CreatePlane();
   entt::entity const plane = GetEntity(_plane);
   DynamicArray<FrictionAnchor> anchors;
-  CFrictionAnchorIndex<AnchorSet::Active> index(2);
+  CFrictionAnchorIndex<AnchorSet::Active> index;
+  auto const samples = MakeSamples(2);
   RebuildAnchors(
-      anchors, index, {MakeCollision(plane, {0, 1}, {Real3{1_r, 0_r, 0_r}, Real3{0_r, 0_r, 2_r}})});
+      anchors,
+      index,
+      samples,
+      {MakeCollision(plane, {0, 1}, {Real3{1_r, 0_r, 0_r}, Real3{0_r, 0_r, 2_r}})});
 
   ActiveCollision collision = MakeCollision(plane, {1, 0}, {});
   collision.collisionResult.posCollidingStageStart = {Real3{5_r, 6_r, 7_r}, Real3{-1_r, 0_r, 3_r}};
   collision.collisionResult.posColliding = collision.collisionResult.posCollidingStageStart;
   collision.collisionResult.keepsAnchor = {true, true};
-  FillFrictionAnchorOffsets(
-      GetRegistry(), index, anchors, Span<ActiveCollision>(&collision, size_t{1}));
-  RebuildAnchors(anchors, index, {collision});
+  FillAnchorOffsets(index, anchors, Span<ActiveCollision>(&collision, size_t{1}));
+  RebuildAnchors(anchors, index, samples, {collision});
 
   EXPECT_EQ(2, isize(anchors));
   EXPECT_EQ((Real3{1_r, 0_r, 0_r}), FindAnchorPoint(anchors, index, 0, plane));
   EXPECT_EQ((Real3{0_r, 0_r, 2_r}), FindAnchorPoint(anchors, index, 1, plane));
 }
 
-// Only the contacts with rigid colliders that keep their anchors have one, including zero offsets.
-TEST_F(FrictionAnchors, RebuildKeepsAnchorsOfKeptContactsWithRigidColliders) {
+// Only the contacts that keep their anchors have one, including zero offsets. Contacts that do not
+// use elasto-plastic friction, e.g., with a deformable collider, have no keep mask.
+TEST_F(FrictionAnchors, RebuildKeepsAnchorsOfKeptContacts) {
   CreatePlane();
   entt::entity const plane = GetEntity(_plane);
   entt::entity const soft = GetEntity(CreateSoftCube());
   DynamicArray<FrictionAnchor> anchors;
-  CFrictionAnchorIndex<AnchorSet::Active> index(4);
+  CFrictionAnchorIndex<AnchorSet::Active> index;
+  auto const samples = MakeSamples(4);
+  ActiveCollision withSoft = MakeCollision(soft, {3}, {});
+  withSoft.collisionResult.posColliding = {Real3{3_r, 0_r, 0_r}};
   RebuildAnchors(
       anchors,
       index,
+      samples,
       {MakeCollision(
            plane,
            {0, 1, 2},
            {Real3{1_r, 0_r, 0_r}, Real3{}, Real3{2_r, 0_r, 0_r}},
            {true, true, false}),
-       MakeCollision(soft, {3}, {Real3{3_r, 0_r, 0_r}})});
+       withSoft});
 
   ExpectIndex(index, {0, 1, kSentinelIndex, kSentinelIndex});
   DynamicArray<FrictionAnchor> const expectedAnchors{
@@ -662,7 +685,8 @@ TEST_F(FrictionAnchors, RebuildReusesCapacity) {
   entt::entity const plane = GetEntity(_plane);
   CFrictionAnchors<AnchorSet::Active> active;
   CFrictionAnchors<AnchorSet::Pending> pending;
-  CFrictionAnchorIndex<AnchorSet::Active> index(3);
+  CFrictionAnchorIndex<AnchorSet::Active> index;
+  auto const samples = MakeSamples(3);
   active.anchors.reserve(3);
   pending.anchors.reserve(3);
   auto const* activeStorage = active.anchors.data();
@@ -673,14 +697,14 @@ TEST_F(FrictionAnchors, RebuildReusesCapacity) {
     ActivateCollisions(collisions, asyncActive);
     ActivateCollisions({}, syncActive);
     UpdateFrictionAnchors(
-        GetRegistry(), /*convergence*/ nullptr, asyncActive, syncActive, pending, index);
+        /*convergence*/ nullptr, samples, asyncActive, syncActive, pending, index);
     EXPECT_EQ(pendingStorage, pending.anchors.data());
     EXPECT_EQ(3u, pending.anchors.capacity());
     PromotePendingFrictionAnchors(pending, active);
     ExpectAnchors(pending.anchors, active.anchors);
     EXPECT_EQ(activeStorage, active.anchors.data());
     EXPECT_EQ(3u, active.anchors.capacity());
-    IndexFrictionAnchors(active, index);
+    IndexFrictionAnchors(samples, active, index);
   };
   ActiveCollision const threeContacts = MakeCollision(
       plane, {0, 1, 2}, {Real3{1_r, 0_r, 0_r}, Real3{2_r, 0_r, 0_r}, Real3{3_r, 0_r, 0_r}});
@@ -706,7 +730,12 @@ TEST_F(FrictionAnchors, PlacingColliderShiftsRemainingAnchorGroups) {
   entt::entity const plane = GetEntity(_plane);
   Actor* collider = CreateRigidCube();
   Actor* colliding = CreateRigidCube();
-  RebuildInterleavedAnchors(plane, GetEntity(collider), GetAnchors(colliding), GetIndex(colliding));
+  RebuildInterleavedAnchors(
+      plane,
+      GetEntity(collider),
+      GetAnchors(colliding),
+      GetIndex(colliding),
+      GetSamples(colliding));
   GetPendingAnchors(colliding) = GetAnchors(colliding);
   // As for an actor asleep since the last step start, which skips its unchanged anchors.
   GetIndex(colliding).anchorsChanged = false;
@@ -732,7 +761,12 @@ TEST_F(FrictionAnchors, PlacingOtherActorKeepsAnchors) {
   Actor* collider = CreateRigidCube();
   Actor* other = CreateRigidCube();
   Actor* colliding = CreateRigidCube();
-  RebuildInterleavedAnchors(plane, GetEntity(collider), GetAnchors(colliding), GetIndex(colliding));
+  RebuildInterleavedAnchors(
+      plane,
+      GetEntity(collider),
+      GetAnchors(colliding),
+      GetIndex(colliding),
+      GetSamples(colliding));
   GetPendingAnchors(colliding) = GetAnchors(colliding);
   DynamicArray<FrictionAnchor> const savedAnchors = GetAnchors(colliding);
 
@@ -748,83 +782,153 @@ TEST_F(FrictionAnchors, PlacingOtherActorKeepsAnchors) {
   EXPECT_TRUE(GetPendingAnchors(colliding).empty());
 }
 
-// Elasto-plastic friction requires the C1Regularized friction model: SetSolverParams rejects
-// CinfRegularized with it, and keeps the previous params.
-TEST_F(FrictionAnchors, RequiresC1RegularizedFriction) {
-  SolverParams params = _scene->GetSolverParams();
-  ASSERT_TRUE(params.experimentalEval.elastoPlasticFriction);
-  params.experimentalEval.frictionModel = CoulombFrictionModel::CinfRegularized;
-  _scene->SetSolverParams(params, test::ExpectNotOK{});
-  EXPECT_EQ(
-      CoulombFrictionModel::C1Regularized,
-      _scene->GetSolverParams().experimentalEval.frictionModel);
-
-  params.experimentalEval.elastoPlasticFriction = false;
-  _scene->SetSolverParams(params, test::ExpectOK{});
-}
-
-// Elasto-plastic friction requires an integrator whose step ends at its last stage, since anchors
-// advance from the contacts of the last stage: SetSolverParams rejects the others with it, and
-// keeps the previous params. Without it, every integrator is accepted.
-TEST_F(FrictionAnchors, RequiresIntegratorEndingAtLastStage) {
+// Integrators whose step does not end at their last stage do not allow elasto-plastic friction.
+// They are accepted, and all contacts then use velocity-regularized friction: the contacts of a
+// held cube drop their anchors at the next step and keep none. Allowing it again starts the
+// contacts without preload. CinfRegularized friction, which only applies to velocity-regularized
+// friction, keeps elasto-plastic friction.
+TEST_F(
+    FrictionAnchors,
+    IntegratorsThatDisallowElastoPlasticFrictionSelectVelocityRegularizedFriction) {
+  Actor* cube = CreateCubeUnderTangentialLoad(0.5_r);
+  SolverParams const allowed = _scene->GetSolverParams();
+  ASSERT_TRUE(AllowsElastoPlasticFriction(allowed));
+  DynamicArray<SolverParams> cases;
+  SolverParams cinf = allowed;
+  cinf.experimentalEval.frictionModel = CoulombFrictionModel::CinfRegularized;
+  cases.push_back(cinf);
   for (int i = 0; i < static_cast<int>(IntegrationMethod::Count); ++i) {
-    auto const method = static_cast<IntegrationMethod>(i);
-    SolverParams params = _scene->GetSolverParams();
-    params.experimentalEval.elastoPlasticFriction = true;
-    params.integrationMethod = method;
-    Error error;
-    _scene->SetSolverParams(params, error);
-    EXPECT_EQ(EndsAtLastStage(method), error.IsOK()) << SReflect::EnumToString(method);
-    if (!error.IsOK()) {
-      EXPECT_NE(method, _scene->GetSolverParams().integrationMethod);
-    }
+    SolverParams params = allowed;
+    params.integrationMethod = static_cast<IntegrationMethod>(i);
+    cases.push_back(params);
+  }
 
-    params.experimentalEval.elastoPlasticFriction = false;
+  for (SolverParams const& params : cases) {
+    SCOPED_TRACE(
+        std::string(SReflect::EnumToString(params.integrationMethod)) + ", " +
+        SReflect::EnumToString(params.experimentalEval.frictionModel));
+    _scene->SetSolverParams(allowed, test::ExpectOK{});
+    Step(5);
+    ASSERT_FALSE(GetPendingAnchors(cube).empty());
+    DynamicArray<FrictionAnchor> const held = GetPendingAnchors(cube);
+
     _scene->SetSolverParams(params, test::ExpectOK{});
+    Step(1);
+    bool const allowsElastoPlastic = EndsAtLastStage(params.integrationMethod);
+    EXPECT_EQ(allowsElastoPlastic, !GetPendingAnchors(cube).empty());
+    if (!allowsElastoPlastic) {
+      EXPECT_TRUE(GetAnchors(cube).empty());
+      // A setter still queues a clear request, which the next step drops.
+      auto const& requests = GetRegistry().ctx<CFrictionAnchorClearRequests const>().entities;
+      cube->SetRootTransform(cube->GetRootTransform(), test::ExpectOK{});
+      EXPECT_FALSE(requests.empty());
+      Step(1);
+      EXPECT_TRUE(requests.empty());
+      _scene->SetSolverParams(allowed, test::ExpectOK{});
+      Step(1);
+      EXPECT_TRUE(GetAnchors(cube).empty()) << "The step after allowing it starts without preload.";
+      EXPECT_FALSE(GetPendingAnchors(cube).empty());
+      EXPECT_FALSE(AreEqualAnchors(held, GetPendingAnchors(cube)));
+    }
   }
 }
 
-// ExperimentalEvalParams::elastoPlasticFriction governs the anchor components of every actor with
-// contact samples, with an index entry per sample, and the clear requests: actors created with it
-// disabled have none, enabling it adds empty ones, actors created with it enabled have them, and
-// disabling it removes them all. The static plane is only a collider: it never has anchor
-// components. Stepping without the components runs no anchor system. A state captured with it
-// disabled cannot be restored with it enabled.
-TEST_F(FrictionAnchors, ElastoPlasticFrictionGovernsAnchorComponents) {
-  SetElastoPlasticFriction(false);
-  EXPECT_FALSE(GetRegistry().try_ctx<CFrictionAnchorClearRequests>());
-  CreatePlane();
-  std::array<Actor*, 2> const disabledActors = {CreateRigidCube(), CreateSoftCube()};
-  for (Actor* actor : disabledActors) {
-    EXPECT_FALSE(HasAnyAnchorComponent(actor)) << actor->GetName();
-  }
-  Step(1);
-  StateHandle const disabledState = _scene->CaptureState(test::ExpectOK{});
-
-  SetElastoPlasticFriction(true);
+// Every actor with contact samples has both anchor sets and an index, whatever its elasto-plastic
+// friction preference, and the scene has the clear requests. The static plane is only a collider:
+// it has none. The index entries are allocated with the first anchors, so an actor whose contacts
+// use velocity-regularized friction never stores them.
+TEST_F(FrictionAnchors, EveryContactActorHasAnchorComponents) {
   EXPECT_TRUE(GetRegistry().try_ctx<CFrictionAnchorClearRequests>());
-  // Same entities as the capture, so that only the anchor components reject the restore.
-  StateHandle const enabledState = _scene->CaptureState(test::ExpectOK{});
-  _scene->RestoreState(disabledState, /*releaseImmediately=*/true, test::ExpectNotOK{});
-  _scene->RestoreState(enabledState, /*releaseImmediately=*/true, test::ExpectOK{});
-  std::array<Actor*, 4> const actors = {
-      disabledActors[0], disabledActors[1], CreateRigidCube(), CreateSoftCube()};
+  CreatePlane();
+  Actor* rigid = CreateRigidCube();
+  Actor* soft = CreateSoftCube();
+  soft->SetRootTransform(TransformRT{Real3{2_r, 0_r, 0_r}}, test::ExpectOK{});
+  _preferElastoPlasticFriction = false;
+  Actor* regular = CreateRigidCube();
+  regular->SetRootTransform(TransformRT{Real3{4_r, 0_r, 0_r}}, test::ExpectOK{});
+  std::array<Actor*, 3> const actors{rigid, soft, regular};
   for (Actor* actor : actors) {
     ExpectAnchorComponents(actor);
-    EXPECT_TRUE(GetAnchors(actor).empty()) << actor->GetName();
-    EXPECT_TRUE(GetPendingAnchors(actor).empty()) << actor->GetName();
+    EXPECT_EQ(0, isize(GetIndex(actor))) << actor->GetName();
   }
   EXPECT_FALSE(GetRegistry().all_of<CContactSamples<TimeStep::Current>>(GetEntity(_plane)));
   EXPECT_FALSE(HasAnyAnchorComponent(_plane));
-  Step(1);
 
-  SetElastoPlasticFriction(false);
-  EXPECT_FALSE(GetRegistry().try_ctx<CFrictionAnchorClearRequests>());
-  for (Actor* actor : actors) {
-    EXPECT_FALSE(HasAnyAnchorComponent(actor)) << actor->GetName();
+  Step(5);
+  for (Actor* actor : {rigid, soft}) {
+    EXPECT_FALSE(GetPendingAnchors(actor).empty()) << actor->GetName();
+    EXPECT_EQ(isize(GetSamples(actor).positions), isize(GetIndex(actor))) << actor->GetName();
+  }
+  EXPECT_TRUE(GetPendingAnchors(regular).empty());
+  EXPECT_EQ(0, isize(GetIndex(regular)));
+}
+
+// Which side opts the pair of a cube with the plane out of elasto-plastic friction.
+enum class FrictionOptOut { Colliding, StaticCollider, PairOverride };
+
+class FrictionAnchorsOptOut : public FrictionAnchors,
+                              public ::testing::WithParamInterface<FrictionOptOut> {};
+
+// The elasto-plastic friction preference selects the friction of each pair: a cube that prefers it
+// holds a tangential load below the Coulomb limit. Once the pair does not prefer it, because the
+// cube, the static plane or an override of the pair opts out, its contacts drop their anchors and
+// offsets at the next step, and the cube creeps with velocity-regularized friction. An override of
+// the pair selects elasto-plastic friction again.
+TEST_P(FrictionAnchorsOptOut, PreferenceSelectsFrictionOfEachPair) {
+  real constexpr kNormalDamping = 100_r; // [s/m]
+  Actor* cube = CreateCubeUnderTangentialLoad(0.5_r, kNormalDamping);
+  auto const slide = [&](int numSteps) {
+    real const x0 = cube->GetRootTransform().GetTranslation()[0];
+    Step(numSteps);
+    return cube->GetRootTransform().GetTranslation()[0] - x0;
+  };
+  Step(20);
+  EXPECT_NEAR(0_r, slide(50), 1e-6_r);
+  ASSERT_FALSE(GetPendingAnchors(cube).empty());
+
+  if (GetParam() == FrictionOptOut::PairOverride) {
+    ContactPairParamsOverride paramsOverride;
+    paramsOverride.preferElastoPlasticFriction = false;
+    _scene->SetContactPairParamsOverride(
+        cube->GetHandle(), _plane->GetHandle(), paramsOverride, test::ExpectOK{});
+  } else {
+    Actor* actor = GetParam() == FrictionOptOut::Colliding ? cube : _plane;
+    ContactParams params = actor->GetContactParams(test::ExpectOK{});
+    params.preferElastoPlasticFriction = false;
+    actor->SetContactParams(params, test::ExpectOK{});
   }
   Step(1);
+  EXPECT_TRUE(GetPendingAnchors(cube).empty());
+  for (auto const& collision : GetCollisions(cube)) {
+    EXPECT_TRUE(collision.collisionResult.anchorOffset.empty());
+  }
+  // Creep with velocity-regularized friction (see
+  // VelocityRegularizedFrictionCreepsUnderTangentialLoad).
+  real const creepSpeed = ContactParams{}.frictionFalloffVel * (1_r - Sqrt(0.5_r));
+  EXPECT_GT(slide(50), 0.25_r * creepSpeed);
+
+  ContactPairParamsOverride paramsOverride;
+  paramsOverride.preferElastoPlasticFriction = true;
+  _scene->SetContactPairParamsOverride(
+      cube->GetHandle(), _plane->GetHandle(), paramsOverride, test::ExpectOK{});
+  Step(20);
+  EXPECT_FALSE(GetPendingAnchors(cube).empty());
+  EXPECT_NEAR(0_r, slide(50), 1e-6_r);
 }
+
+static std::string FrictionOptOutName(::testing::TestParamInfo<FrictionOptOut> const& info) {
+  constexpr std::array kNames{"Colliding", "StaticCollider", "PairOverride"};
+  return kNames[static_cast<int>(info.param)];
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    AllOptOuts,
+    FrictionAnchorsOptOut,
+    ::testing::Values(
+        FrictionOptOut::Colliding,
+        FrictionOptOut::StaticCollider,
+        FrictionOptOut::PairOverride),
+    FrictionOptOutName);
 
 TEST_F(FrictionAnchors, SoftActorAnchorsAdvance) {
   CreatePlane();
@@ -845,8 +949,8 @@ TEST_F(FrictionAnchors, RebuildDropsAnchorsOfLostContacts) {
 }
 
 // Only contacts with rigid colliders use elasto-plastic friction and get anchor offsets: those of a
-// rigid cube resting on a soft cube, and of the soft cube with the plane, use regular friction and
-// elasto-plastic friction, respectively.
+// rigid cube resting on a soft cube, and of the soft cube with the plane, use velocity-regularized
+// friction and elasto-plastic friction, respectively.
 TEST_F(FrictionAnchors, OnlyRigidCollidersHaveAnchorOffsets) {
   CreatePlane();
   SoftActorParams softParams;
@@ -940,11 +1044,11 @@ TEST_P(FrictionAnchorsIntegrator, StickingAnchorsStayAtTheirMaterialPoints) {
   }
 }
 
-// The same load makes regular friction creep with backward Euler, at the speed of
-// velocity-regularized friction v_f (1 - sqrt(1 - loadRatio)), so the hold above is due to the
-// anchors.
-TEST_F(FrictionAnchors, RegularFrictionCreepsUnderTangentialLoad) {
-  SetElastoPlasticFriction(false);
+// Without the elasto-plastic friction preference, the same load makes velocity-regularized friction
+// creep with backward Euler, at the speed of velocity-regularized friction v_f (1 - sqrt(1 -
+// loadRatio)), so the hold above is due to the anchors.
+TEST_F(FrictionAnchors, VelocityRegularizedFrictionCreepsUnderTangentialLoad) {
+  _preferElastoPlasticFriction = false;
   real const creepSpeed = ContactParams{}.frictionFalloffVel * (1_r - Sqrt(0.5_r));
   real const distance = SlideUnderTangentialLoad(/*loadRatio*/ 0.5_r, /*numSteps*/ 100);
   EXPECT_NEAR(0.5_r * creepSpeed, distance, 0.05_r * 0.5_r * creepSpeed);
@@ -1537,6 +1641,24 @@ TEST_F(FrictionAnchors, SleepingActorSkipsUnchangedAnchors) {
   Step(1);
   EXPECT_TRUE(IsAwake(cube));
   ExpectAnchors(anchors, GetAnchors(cube));
+  EXPECT_TRUE(GetIndex(cube).anchorsChanged);
+}
+
+// A step whose integration method disallows elasto-plastic friction empties the anchors of an actor
+// that skipped them while asleep, and flags its index, so a later step does not keep its stale
+// index.
+TEST_F(FrictionAnchors, DisallowingElastoPlasticFrictionFlagsClearedAnchors) {
+  Actor* cube = CreateCubeThatSleeps();
+  StepUntilAsleep(cube);
+  ASSERT_FALSE(GetPendingAnchors(cube).empty());
+  ASSERT_FALSE(GetIndex(cube).anchorsChanged);
+
+  SolverParams params = _scene->GetSolverParams();
+  params.integrationMethod = IntegrationMethod::DIRK23;
+  _scene->SetSolverParams(params, test::ExpectOK{});
+  Step(1);
+  EXPECT_TRUE(GetAnchors(cube).empty());
+  EXPECT_TRUE(GetPendingAnchors(cube).empty());
   EXPECT_TRUE(GetIndex(cube).anchorsChanged);
 }
 

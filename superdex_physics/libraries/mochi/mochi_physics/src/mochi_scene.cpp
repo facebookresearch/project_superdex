@@ -598,15 +598,6 @@ void SceneImpl::SetSolverParams(SolverParams const& params, Error& error) {
           _registry.try_ctx<TagDifferentiableScene>(),
       error,
       "implicitNormalForceForDissipation = true is not supported in differentiable scenes.");
-  MOCHI_ERROR_IF(
-      params.experimentalEval.elastoPlasticFriction &&
-          params.experimentalEval.frictionModel != CoulombFrictionModel::C1Regularized,
-      error,
-      "elastoPlasticFriction = true requires frictionModel = C1Regularized.");
-  MOCHI_ERROR_IF(
-      params.experimentalEval.elastoPlasticFriction && !EndsAtLastStage(params.integrationMethod),
-      error,
-      "elastoPlasticFriction = true requires an integrationMethod whose step ends at its last stage (BackwardEuler, BDF2, BDF3, DIRK22 or DIRK33).");
   MOCHI_ERROR_RETURN(error);
 
   // After validation, since NaN can compare equal under MSVC /fp:fast.
@@ -618,12 +609,6 @@ void SceneImpl::SetSolverParams(SolverParams const& params, Error& error) {
   // Store in CSimulationParams (global to our registry)
   storedParams = params;
 
-  // Enable or disable elasto-plastic friction.
-  contact::EnableFrictionAnchorComponents(_registry, params.experimentalEval.elastoPlasticFriction);
-  if (_registry.try_ctx<TagDifferentiableScene>()) {
-    EnableDifferentiableFrictionAnchorComponents(
-        _registry, params.experimentalEval.elastoPlasticFriction);
-  }
   sleep::WakeAll(_registry);
 
   if (_registry.try_ctx<TagDifferentiableScene>() && !params.experimentalEval.explicitNormals) {
@@ -1645,7 +1630,7 @@ void SceneImpl::BackPropagate(Error& error) {
   ecs::InvokeForEachGlobal(&ReverseFrictionAnchorDropAdjoints, _registry);
   ecs::InvokeForEachGlobal(&articulated::compound::HandOffJointFrictionAnchorAdjoints, _registry);
   // Then restore the old Active anchors too, so that the scene is left in the old state.
-  if (_registry.ctx<CSimulationParams const>().experimentalEval.elastoPlasticFriction) {
+  if (AllowsElastoPlasticFriction(_registry.ctx<CSimulationParams const>())) {
     SReflect::TypeId excludeAdjoints[] = {attribute::HasAdjoint::GetTypeId()};
     RestorePartialState(
         stateOld, /*releaseImmediately*/ false, excludeAdjoints, /*wakeAllIslands*/ true, error);

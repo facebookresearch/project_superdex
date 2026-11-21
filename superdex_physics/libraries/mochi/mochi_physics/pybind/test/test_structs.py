@@ -24,6 +24,7 @@ class TestStructs(MochiTestBase):
         params = mochi.ContactParams()
         self.assertEqual(0, params.distance_error_bound)
         self.assertEqual(1, params.obj_scale)
+        self.assertTrue(params.prefer_elasto_plastic_friction)
 
         # Test keyword argument constructor with all fields in shuffled order.
         params_kw_all = mochi.ContactParams(
@@ -38,6 +39,8 @@ class TestStructs(MochiTestBase):
             friction_falloff_vel=0.02,
             distance_error_bound=0.001,
             friction_with_collider_normal=False,
+            prefer_elasto_plastic_friction=False,
+            presliding_displacement=2e-4,
         )
         self.assertAlmostEqual(2e9, params_kw_all.penalty_coefficient)
         self.assertAlmostEqual(0.01, params_kw_all.penalty_smoothing_half_distance)
@@ -48,6 +51,8 @@ class TestStructs(MochiTestBase):
         self.assertAlmostEqual(0.1, params_kw_all.viscous_friction_coefficient)
         self.assertAlmostEqual(0.8, params_kw_all.coulomb_friction_coefficient)
         self.assertAlmostEqual(0.02, params_kw_all.friction_falloff_vel)
+        self.assertIs(False, params_kw_all.prefer_elasto_plastic_friction)
+        self.assertAlmostEqual(2e-4, params_kw_all.presliding_displacement)
         self.assertAlmostEqual(0.001, params_kw_all.distance_error_bound)
         self.assertAlmostEqual(2.0, params_kw_all.obj_scale)
 
@@ -72,6 +77,8 @@ class TestStructs(MochiTestBase):
         params.viscous_friction_coefficient = 0
         params.coulomb_friction_coefficient = 0.5
         params.friction_falloff_vel = 0.01
+        params.prefer_elasto_plastic_friction = False
+        params.presliding_displacement = 1e-4
         params.distance_error_bound = 0
         params.obj_scale = 1
         params.penalty_threshold_default = 0.001
@@ -80,6 +87,7 @@ class TestStructs(MochiTestBase):
     def test_contact_pair_params_override(self):
         params = mochi.ContactPairParamsOverride()
         self.assertIsNone(params.penalty_coefficient)
+        self.assertIsNone(params.prefer_elasto_plastic_friction)
         self.assertIsNone(params.friction_falloff_vel)
         self.assertIsNone(params.viscous_friction_coefficient)
         self.assertIsNone(params.coulomb_friction_coefficient)
@@ -88,19 +96,23 @@ class TestStructs(MochiTestBase):
         sparse = mochi.ContactPairParamsOverride(
             penalty_coefficient=2e9,
             coulomb_friction_coefficient=0.0,
+            prefer_elasto_plastic_friction=False,
         )
         self.assertAlmostEqual(2e9, sparse.penalty_coefficient)
         self.assertEqual(0.0, sparse.coulomb_friction_coefficient)
+        self.assertIs(False, sparse.prefer_elasto_plastic_friction)
         self.assertIsNone(sparse.friction_falloff_vel)
         self.assertIsNone(sparse.viscous_friction_coefficient)
         self.assertIsNone(sparse.normal_viscous_damping_coefficient)
 
         params.penalty_coefficient = 1e9
+        params.prefer_elasto_plastic_friction = False
         params.friction_falloff_vel = 0.01
         params.viscous_friction_coefficient = 0.1
         params.coulomb_friction_coefficient = 0.5
         params.normal_viscous_damping_coefficient = 0.2
         self.assertAlmostEqual(1e9, params.penalty_coefficient)
+        self.assertIs(False, params.prefer_elasto_plastic_friction)
         self.assertAlmostEqual(0.01, params.friction_falloff_vel)
         self.assertAlmostEqual(0.1, params.viscous_friction_coefficient)
         self.assertAlmostEqual(0.5, params.coulomb_friction_coefficient)

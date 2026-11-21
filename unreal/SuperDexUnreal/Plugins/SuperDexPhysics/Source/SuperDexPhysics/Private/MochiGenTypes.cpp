@@ -530,7 +530,6 @@ void AssignFromMochi(FMochiExperimentalEvalParams& Out, mochi::ExperimentalEvalP
   Out.bImplicitNormalForceForDissipation = static_cast<bool>(Src.implicitNormalForceForDissipation);
   Out.FittedSaturationHessian = ToUnreal(Src.fittedSaturationHessian);
   Out.FrictionModel = ToUnreal(Src.frictionModel);
-  Out.bElastoPlasticFriction = static_cast<bool>(Src.elastoPlasticFriction);
   Out.bConsistencyResNorm = static_cast<bool>(Src.consistencyResNorm);
   Out.ConsistencyResNormStep = static_cast<float>(Src.consistencyResNormStep);
 }
@@ -886,7 +885,6 @@ mochi::ExperimentalEvalParams ToMochi(FMochiExperimentalEvalParams const& Src) {
   Out.implicitNormalForceForDissipation = static_cast<bool>(Src.bImplicitNormalForceForDissipation);
   Out.fittedSaturationHessian = ToMochi(Src.FittedSaturationHessian);
   Out.frictionModel = ToMochi(Src.FrictionModel);
-  Out.elastoPlasticFriction = static_cast<bool>(Src.bElastoPlasticFriction);
   Out.consistencyResNorm = static_cast<bool>(Src.bConsistencyResNorm);
   Out.consistencyResNormStep = static_cast<mochi::real>(Src.ConsistencyResNormStep);
   return Out;

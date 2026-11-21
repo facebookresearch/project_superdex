@@ -1226,11 +1226,25 @@ class LogChannel:
     def __index__(self) -> int: ...
 
 class CoulombFrictionModel:
-    """Coulomb friction regularization model."""
+    """[Experimental] Smoothing of velocity-regularized Coulomb friction.
+
+    Note:
+        Elasto-plastic friction (see
+        :attr:`~superdex.physics.ContactParams.prefer_elasto_plastic_friction`)
+        always uses the :class:`C1_REGULARIZED
+        <superdex.physics.CoulombFrictionModel>` ramp, in displacement.
+
+    Warning:
+        This is an experimental feature. It may be changed or removed in the future.
+        Use at your own risk.
+    """
     C1_REGULARIZED: CoulombFrictionModel
-    """C1-smoothed Coulomb friction with compact support: friction transitions linearly
-    from 0 to full strength over [0,
-    :attr:`~superdex.physics.ContactParams.friction_falloff_vel`].
+    """C1-smoothed Coulomb friction with compact support: friction rises smoothly from
+    0 and reaches full strength with zero slope at the end of the ramp. The ramp
+    width is :attr:`~superdex.physics.ContactParams.friction_falloff_vel` of slip
+    speed for velocity-regularized friction, and
+    :attr:`~superdex.physics.ContactParams.presliding_displacement` of displacement
+    for elasto-plastic friction.
     """
     CINF_REGULARIZED: CoulombFrictionModel
     """C-infinity regularized Coulomb friction with no compact support: friction
@@ -1877,15 +1891,38 @@ class IntegrationMethod:
     DIRK22: IntegrationMethod
     """DIRK(2,2): 1 step, 2 stages, 2nd order, L-stable."""
     DIRK23: IntegrationMethod
-    """DIRK(2,3): 1 step, 2 stages, 3rd order."""
+    """DIRK(2,3): 1 step, 2 stages, 3rd order.
+
+    Note:
+        Its step does not end at its last stage, so its steps use
+        velocity-regularized friction for all contacts (see
+        :attr:`~superdex.physics.ContactParams.prefer_elasto_plastic_friction`).
+        Queries refreshed without a step approximate it with one BackwardEuler
+        stage, which may use elasto-plastic friction.
+    """
     DIRK33: IntegrationMethod
     """DIRK(3,3): 1 step, 3 stages, 3rd order, L-stable."""
     SYMPLECTIC_DIRK12: IntegrationMethod
     """Symplectic DIRK(1,2): 1 step, 1 stage, 2nd order, A-stable. Also known as Gauss
     and implicit midpoint.
+
+    Note:
+        Its step does not end at its last stage, so its steps use
+        velocity-regularized friction for all contacts (see
+        :attr:`~superdex.physics.ContactParams.prefer_elasto_plastic_friction`).
+        Queries refreshed without a step approximate it with one BackwardEuler
+        stage, which may use elasto-plastic friction.
     """
     SYMPLECTIC_DIRK22: IntegrationMethod
-    """Symplectic DIRK(2,2): 1 step, 2 stages, 2nd order, A-stable."""
+    """Symplectic DIRK(2,2): 1 step, 2 stages, 2nd order, A-stable.
+
+    Note:
+        Its step does not end at its last stage, so its steps use
+        velocity-regularized friction for all contacts (see
+        :attr:`~superdex.physics.ContactParams.prefer_elasto_plastic_friction`).
+        Queries refreshed without a step approximate it with one BackwardEuler
+        stage, which may use elasto-plastic friction.
+    """
     COUNT: IntegrationMethod
     """Number of time integration method enum values."""
     DEFAULT: IntegrationMethod
@@ -3372,14 +3409,18 @@ class ContactParams:
         For each field without an actor-pair override, contact between a colliding
         actor and a collider uses the collider's contact parameter (not the
         colliding actor's). The exceptions are: - For friction and dissipation
-        coefficients (viscousFrictionCoefficient, coulombFrictionCoefficient,
-        normalViscousDampingCoefficient), the geometric mean of the colliding and
-        collider's coefficients is used. This disables friction/dissipation if
-        either of them does. - For penalty coefficient (penaltyCoefficient),
-        friction velocity threshold (frictionFalloffVel) and presliding displacement
-        (preslidingDisplacement), the geometric mean of the colliding and collider's
-        values is used, except if the collider is static in which case the
-        colliding's values are used.
+        coefficients (:attr:`viscous_friction_coefficient`,
+        :attr:`coulomb_friction_coefficient`,
+        :attr:`normal_viscous_damping_coefficient`), the geometric mean of the
+        colliding and collider's coefficients is used. This disables
+        friction/dissipation if either of them does. - For penalty coefficient
+        (:attr:`penalty_coefficient`), friction velocity threshold
+        (:attr:`friction_falloff_vel`) and presliding displacement
+        (:attr:`presliding_displacement`), the geometric mean of the colliding and
+        collider's values is used, except if the collider is static in which case
+        the colliding's values are used. - Elasto-plastic friction is preferred
+        (:attr:`prefer_elasto_plastic_friction`) only if both the colliding and the
+        collider prefer it.
 
     See Also:
         :meth:`~superdex.physics.Scene.set_contact_pair_params_override`
@@ -3623,6 +3664,46 @@ class ContactParams:
         is the geometric mean of the colliding and collider's coefficients. This
         disables Coulomb friction if either of them does.
     """
+    prefer_elasto_plastic_friction: bool
+    """[Experimental] Prefer elasto-plastic Coulomb friction to velocity-regularized
+    Coulomb friction.
+
+    Elasto-plastic friction measures the tangential displacement of each contact
+    from its anchor, a point of the collider, so a contact holds a tangential load
+    below the Coulomb limit without slip (see
+    :attr:`~superdex.physics.ContactParams.presliding_displacement`).
+    Velocity-regularized friction acts only through slip, so held objects creep (see
+    :attr:`~superdex.physics.ContactParams.friction_falloff_vel`).
+
+    Note:
+        Contacts that prefer elasto-plastic friction use it where it is supported:
+        with rigid colliders, static or dynamic, including articulated links, and
+        with an integration method whose step ends at its last stage
+        (:class:`BACKWARD_EULER <superdex.physics.IntegrationMethod>`, :class:`BDF2
+        <superdex.physics.IntegrationMethod>`, :class:`BDF3
+        <superdex.physics.IntegrationMethod>`, :class:`DIRK22
+        <superdex.physics.IntegrationMethod>` or :class:`DIRK33
+        <superdex.physics.IntegrationMethod>`). The other contacts use
+        velocity-regularized friction.
+
+    Note:
+        Friction preload is part of the actor history (see
+        :class:`~superdex.physics.Actor`). A static actor given a velocity every
+        step, like a conveyor belt, never builds preload, so contacts on it creep,
+        as with velocity-regularized friction whose falloff velocity is
+        :attr:`~superdex.physics.ContactParams.presliding_displacement` over the
+        stage step (the time step with :class:`BACKWARD_EULER
+        <superdex.physics.IntegrationMethod>`).
+
+    Note:
+        Without an actor-pair override for this field, a collision prefers
+        elasto-plastic friction only if both the colliding and the collider do, even
+        if the collider is static.
+
+    Warning:
+        This is an experimental feature. It may be changed or removed in the future.
+        Use at your own risk.
+    """
     friction_falloff_vel: float
     """[Experimental] Velocity threshold for Coulomb friction smoothing [m/s].
 
@@ -3635,6 +3716,10 @@ class ContactParams:
     Note:
         Must be finite and not negative. For CinfRegularized, a value of zero is
         clamped internally to avoid numerical issues.
+
+    Note:
+        Used only by contacts with velocity-regularized friction (see
+        :attr:`~superdex.physics.ContactParams.prefer_elasto_plastic_friction`).
 
     Note:
         Smaller velocity thresholds improve physical accuracy but may degrade
@@ -3651,13 +3736,32 @@ class ContactParams:
         Use at your own risk.
     """
     presliding_displacement: float
-    """[Experimental] Presliding displacement of elasto-plastic Coulomb friction [m].
+    """Presliding displacement of elasto-plastic Coulomb friction [m].
 
-    With elasto-plastic friction, which requires C1Regularized, contacts take
-    friction from their tangential displacement from their anchor, instead of using
-    :attr:`~superdex.physics.ContactParams.friction_falloff_vel`. The Coulomb
-    friction force smoothly transitions from 0 to full strength as the displacement
-    increases from 0 to preslidingDisplacement (compact support).
+    With elasto-plastic friction (see
+    :attr:`~superdex.physics.ContactParams.prefer_elasto_plastic_friction`), the
+    Coulomb friction force smoothly transitions from 0 to full strength as the
+    tangential displacement of a contact from its anchor increases from 0 to
+    preslidingDisplacement, and beyond it the anchor follows the contact. A held
+    contact springs back by up to preslidingDisplacement once the load is removed.
+
+    Note:
+        The force follows the ramp of :class:`C1_REGULARIZED
+        <superdex.physics.CoulombFrictionModel>`, whose compact support ends at
+        preslidingDisplacement, whatever
+        :attr:`~superdex.physics.ExperimentalEvalParams.friction_model`.
+
+    Note:
+        Smaller values reduce presliding motion and spring-back, but stiffen the
+        tangential response.
+
+    Note:
+        Within the presliding displacement, the friction force is elastic: it stores
+        energy and adds no damping. Tangential damping comes only from
+        :attr:`~superdex.physics.ContactParams.viscous_friction_coefficient`, zero
+        by default, and from the time integration
+        (:attr:`~superdex.physics.ContactParams.normal_viscous_damping_coefficient`
+        acts along the normal).
 
     Note:
         Must be finite and strictly positive.
@@ -3667,10 +3771,6 @@ class ContactParams:
         is the geometric mean of the colliding and collider's displacements. The
         exception is if the collider is static, in which case the colliding's
         displacement is used.
-
-    Warning:
-        This is an experimental feature. It may be changed or removed in the future.
-        Use at your own risk.
     """
     normal_viscous_damping_coefficient: float
     """Normal viscous damping coefficient [s/m].
@@ -3770,6 +3870,7 @@ class ContactParams:
         alignment_smoothing_fraction: float = ...,
         viscous_friction_coefficient: float = ...,
         coulomb_friction_coefficient: float = ...,
+        prefer_elasto_plastic_friction: bool = ...,
         friction_falloff_vel: float = ...,
         presliding_displacement: float = ...,
         normal_viscous_damping_coefficient: float = ...,
@@ -3840,6 +3941,11 @@ class ArticulatedJointFrictionParams:
     Note:
         Must be positive. Smaller values hold loads more stiffly, but may degrade
         convergence.
+
+    Note:
+        Below it, dry friction adds no damping. A held joint is damped only by
+        :attr:`~superdex.physics.ArticulatedJointFrictionParams.viscous` (zero by
+        default) and by the time integration.
     """
     falloff_vel: Optional[float]
     """[Deprecated] Ignored. Dry friction no longer uses a velocity threshold: it is
@@ -4109,51 +4215,19 @@ class ExperimentalEvalParams:
         to fitted Hessians.
     """
     friction_model: CoulombFrictionModel
-    """Selects which Coulomb friction smoothing model to use.
+    """Selects the smoothing of velocity-regularized Coulomb friction.
 
     C1Regularized (default) preserves existing behavior exactly. CinfRegularized is
     an additional model that can be selected at runtime without affecting
     C1Regularized users.
 
     Note:
-        :attr:`~superdex.physics.ExperimentalEvalParams.elasto_plastic_friction`
-        requires C1Regularized.
-    """
-    elasto_plastic_friction: bool
-    """[Experimental] Use elasto-plastic Coulomb friction.
-
-    Elasto-plastic friction holds a tangential load below the Coulomb limit without
-    slip, and slides once the tangential displacement exceeds
-    :attr:`~superdex.physics.ContactParams.presliding_displacement`. Regular Coulomb
-    friction, in contrast, needs slip to act.
-
-    Note:
-        Applies only to contacts with rigid colliders, static or dynamic, including
-        articulated links. Contacts with deformable colliders (soft actors with an
-        Sdf collider, and point cloud colliders) keep the velocity-regularized
-        Coulomb friction.
-
-    Note:
-        Requires :attr:`~superdex.physics.ExperimentalEvalParams.friction_model` =
-        C1Regularized, whose compact support saturates friction at the presliding
-        displacement.
-
-    Note:
-        Requires a time integration method
-        (:class:`~superdex.physics.IntegrationMethod`) whose step ends at its last
-        stage: BackwardEuler, BDF2, BDF3, DIRK22 or DIRK33.
-
-    Note:
-        Friction preload is part of the actor history, and is cleared when it is
-        invalidated (see :class:`~superdex.physics.Actor`).
-
-    Note:
-        A static actor given a velocity every step, like a conveyor belt, never
-        builds friction preload, so contacts on it creep as with regular friction.
-
-    Note:
-        Changing this setting changes the content of the scene state, so states
-        captured before the change cannot be restored after it.
+        Contacts with elasto-plastic friction (see
+        :attr:`~superdex.physics.ContactParams.prefer_elasto_plastic_friction`)
+        always use the :class:`C1_REGULARIZED
+        <superdex.physics.CoulombFrictionModel>` ramp, in displacement over
+        :attr:`~superdex.physics.ContactParams.presliding_displacement`, whatever
+        this setting.
     """
     consistency_res_norm: bool
     """Validate that the residual is the gradient of the objective by a directional
@@ -4175,7 +4249,6 @@ class ExperimentalEvalParams:
         implicit_normal_force_for_dissipation: bool = ...,
         fitted_saturation_hessian: SaturationHessianParams = ...,
         friction_model: CoulombFrictionModel | int = ...,
-        elasto_plastic_friction: bool = ...,
         consistency_res_norm: bool = ...,
         consistency_res_norm_step: float = ...,
     ) -> None: ...
@@ -5481,6 +5554,16 @@ class ContactPairParamsOverride:
     See Also:
         :attr:`~superdex.physics.ContactParams.penalty_coefficient`
     """
+    prefer_elasto_plastic_friction: Optional[bool]
+    """[Experimental] Whether the pair prefers elasto-plastic friction.
+
+    Warning:
+        This is an experimental feature. It may be changed or removed in the future.
+        Use at your own risk.
+
+    See Also:
+        :attr:`~superdex.physics.ContactParams.prefer_elasto_plastic_friction`
+    """
     friction_falloff_vel: Optional[float]
     """Friction falloff velocity [m/s].
 
@@ -5488,11 +5571,7 @@ class ContactPairParamsOverride:
         :attr:`~superdex.physics.ContactParams.friction_falloff_vel`
     """
     presliding_displacement: Optional[float]
-    """[Experimental] Presliding displacement of elasto-plastic friction [m].
-
-    Warning:
-        This is an experimental feature. It may be changed or removed in the future.
-        Use at your own risk.
+    """Presliding displacement of elasto-plastic friction [m].
 
     See Also:
         :attr:`~superdex.physics.ContactParams.presliding_displacement`
@@ -5522,6 +5601,7 @@ class ContactPairParamsOverride:
         self,
         *,
         penalty_coefficient: Optional[float] = ...,
+        prefer_elasto_plastic_friction: Optional[bool] = ...,
         friction_falloff_vel: Optional[float] = ...,
         presliding_displacement: Optional[float] = ...,
         viscous_friction_coefficient: Optional[float] = ...,
@@ -10201,13 +10281,13 @@ class Actor:
     The actor history is the state that an actor carries over from its previous time
     steps, besides its current state: the previous states of multi-step time
     integrators, the friction preload of the joints of articulated actors (see
-    :class:`~superdex.physics.ArticulatedJointFrictionParams`), and, with
-    :attr:`~superdex.physics.ExperimentalEvalParams.elasto_plastic_friction`, the
-    friction preload of its contacts and of contacts on it. Setters that change the
-    state discontinuously invalidate the actor history: in the next time step,
-    multi-step time integrators restart (e.g. BDF2 falls back to backward Euler),
-    and the contacts restart without friction preload. Joints restart without
-    friction preload only when their positions are set
+    :class:`~superdex.physics.ArticulatedJointFrictionParams`), and the friction
+    preload of its contacts and of contacts on it, with elasto-plastic friction (see
+    :attr:`~superdex.physics.ContactParams.prefer_elasto_plastic_friction`). Setters
+    that change the state discontinuously invalidate the actor history: in the next
+    time step, multi-step time integrators restart (e.g. BDF2 falls back to backward
+    Euler), and the contacts restart without friction preload. Joints restart
+    without friction preload only when their positions are set
     (:meth:`set_articulated_pose_from_joints`,
     :meth:`set_articulated_pose_from_links`) or their dry friction is enabled
     (:meth:`set_articulated_joint_friction_params`).
