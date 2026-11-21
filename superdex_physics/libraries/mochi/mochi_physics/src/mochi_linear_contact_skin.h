@@ -111,7 +111,7 @@ void AssembleContactResponseRange(
     Interval<int> pointRange,
     CollisionResponseResult const& response,
     Span<ContactJac const*> colliderJacs,
-    Allocator* allocator,
+    Allocator* filoAllocator,
     AssemblyResults<real> results);
 
 namespace details {
@@ -120,7 +120,7 @@ namespace details {
 DynamicArray<int> SortContactsBySample(
     Interval<int> pointRange,
     ContactDetectionResult const& query,
-    Allocator* allocator);
+    Allocator* filoAllocator);
 } // namespace details
 
 } // namespace mochi::linear_contact_skin

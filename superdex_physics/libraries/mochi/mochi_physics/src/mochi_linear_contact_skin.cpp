@@ -501,7 +501,7 @@ void AssembleElementContactResponses(
     Span<real const> sampleWeights,
     VMatrix3x3r const& worldFromCollidingRotation,
     int dofOffset,
-    Allocator* allocator,
+    Allocator* filoAllocator,
     AssemblyResults<real> results) {
   static_assert(ElementT::kNumNodes == 3, "Linear contact-skin assembly requires triangles.");
   constexpr int kSamplesPerElement = ElementT::kNumQuadPoints;
@@ -516,7 +516,7 @@ void AssembleElementContactResponses(
 
   int const maxPhysicsNodes =
       assemDRes ? MaxPhysicsNodes(elementMap, query, sortedContactIndices) : 0;
-  DynamicArray<real> mappedBasis(allocator);
+  DynamicArray<real> mappedBasis(filoAllocator);
   std::optional<NodeSetSums<VMatrix3x3r, kSamplesPerElement>> dresSums;
   if (assemDRes) {
     mappedBasis.reserve(maxPhysicsNodes);
@@ -525,7 +525,7 @@ void AssembleElementContactResponses(
         sortedContactIndices,
         query,
         [](int numNodes) { return numNodes * (numNodes + 1) / 2; },
-        allocator);
+        filoAllocator);
   }
 
   auto const colliderFromCollidingRotation =
@@ -597,8 +597,8 @@ void AssembleElementContactResponses(
   }
 
   int const maxDofs = kSpaceDim3 * maxPhysicsNodes;
-  DynamicArray<real> sumValues(allocator);
-  DynamicArray<IndexGroup> sumGroups(allocator);
+  DynamicArray<real> sumValues(filoAllocator);
+  DynamicArray<IndexGroup> sumGroups(filoAllocator);
   sumValues.reserve(maxDofs * maxDofs);
   sumGroups.reserve(maxPhysicsNodes);
 
@@ -644,7 +644,7 @@ void AssembleLinearContactSkinMixedBlocks(
     Span<real const> sampleWeights,
     Span<ContactJac const*> colliderJacs,
     VMatrix3x3r const& worldFromCollidingRotation,
-    Allocator* allocator,
+    Allocator* filoAllocator,
     AnyMatrixView<real>& outDRes) {
   static_assert(ElementT::kNumNodes == 3, "Linear contact-skin assembly requires triangles.");
   constexpr int kSamplesPerElement = ElementT::kNumQuadPoints;
@@ -655,11 +655,11 @@ void AssembleLinearContactSkinMixedBlocks(
     maxStateDofs = Max(maxStateDofs, colliderJac->nDoFsState);
   }
 
-  DynamicArray<IndexGroup> skinGroups(allocator);
-  DynamicArray<real> mappedBasis(allocator);
-  DynamicArray<real> contactToStateValues(allocator);
-  DynamicArray<real> mixedValues(allocator);
-  DynamicArray<real> transposeValues(allocator);
+  DynamicArray<IndexGroup> skinGroups(filoAllocator);
+  DynamicArray<real> mappedBasis(filoAllocator);
+  DynamicArray<real> contactToStateValues(filoAllocator);
+  DynamicArray<real> mixedValues(filoAllocator);
+  DynamicArray<real> transposeValues(filoAllocator);
   skinGroups.reserve(maxPhysicsNodes);
   mappedBasis.reserve(maxPhysicsNodes);
   contactToStateValues.reserve(kSpaceDim3 * maxStateDofs);
@@ -692,7 +692,7 @@ void AssembleLinearContactSkinMixedBlocks(
           sortedContactIndices,
           query,
           [&](int numNodes) { return kSpaceDim3 * numNodes * colliderDofs; },
-          allocator);
+          filoAllocator);
     }
 
     ForEachElementContacts<kSamplesPerElement>(
@@ -776,8 +776,8 @@ void AssembleLinearContactSkinMixedBlocks(
 DynamicArray<int> mochi::linear_contact_skin::details::SortContactsBySample(
     Interval<int> pointRange,
     ContactDetectionResult const& query,
-    Allocator* allocator) {
-  DynamicArray<int> sortedContactIndices(pointRange, allocator);
+    Allocator* filoAllocator) {
+  DynamicArray<int> sortedContactIndices(pointRange, filoAllocator);
   // Contacts usually arrive in sample order, so sort only when they don't. Having producers sort
   // all their per-contact arrays instead would cost more than sorting these indices.
   auto const sampleThenContact = [&](int contactIndex) {
@@ -800,7 +800,7 @@ void mochi::linear_contact_skin::AssembleContactResponseRange(
     Interval<int> pointRange,
     CollisionResponseResult const& response,
     Span<ContactJac const*> colliderJacs,
-    Allocator* allocator,
+    Allocator* filoAllocator,
     AssemblyResults<real> results) {
   if (pointRange.Size() == 0) {
     return;
@@ -808,7 +808,7 @@ void mochi::linear_contact_skin::AssembleContactResponseRange(
   bool const assemDRes = GetNumValues(results.outDRes) > 0;
   auto const worldFromCollidingRotation = ToVMatrix3x3(rootTransform.worldFromLocal.GetRotation());
 
-  auto const sortedContactIndices = details::SortContactsBySample(pointRange, query, allocator);
+  auto const sortedContactIndices = details::SortContactsBySample(pointRange, query, filoAllocator);
   surfaceDisc.Visit([&](auto const& disc) {
     auto const elements = MakeConstSpan(disc.femElements);
     AssembleElementContactResponses(
@@ -820,7 +820,7 @@ void mochi::linear_contact_skin::AssembleContactResponseRange(
         sampleWeights,
         worldFromCollidingRotation,
         dofOffset,
-        allocator,
+        filoAllocator,
         results);
     if (assemDRes && !colliderJacs.empty()) {
       AssembleLinearContactSkinMixedBlocks(
@@ -833,7 +833,7 @@ void mochi::linear_contact_skin::AssembleContactResponseRange(
           sampleWeights,
           colliderJacs,
           worldFromCollidingRotation,
-          allocator,
+          filoAllocator,
           results.outDRes);
     }
   });
