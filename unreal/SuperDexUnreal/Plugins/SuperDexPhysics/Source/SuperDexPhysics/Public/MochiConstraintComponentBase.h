@@ -20,6 +20,8 @@
 #include "CoreMinimal.h"
 #include "MochiConstraintUtil.h"
 
+#include <mochi_physics/mochi_physics.h>
+
 #include <functional>
 #include <memory>
 #include <vector>
@@ -38,14 +40,14 @@ class SUPERDEXPHYSICS_API UMochiConstraintComponentBase : public USceneComponent
  public:
   // Stiffness [N/m for a distance, N*m/rad for an angle].
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mochi Constraint", meta = (ClampMin = "0"))
-  float Stiffness = 1e6f;
+  float Stiffness = mochi::ConstraintParams{}.stiffness;
   // Damping [N*s/m for a distance, N*m*s/rad for an angle].
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mochi Constraint", meta = (ClampMin = "0"))
-  float Damping = 0.0f;
+  float Damping = mochi::ConstraintParams{}.damping;
   // Deviation beyond which the constraint force stops growing, in the unit of what the constraint
   // drives (see the subclass). Negative disables saturation.
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mochi Constraint")
-  float Saturation = -1.0f;
+  float Saturation = mochi::ConstraintParams{}.saturation;
 
   UFUNCTION(BlueprintCallable, Category = "Mochi Constraint")
   void SetStiffness(float NewStiffness);

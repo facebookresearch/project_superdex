@@ -203,7 +203,6 @@ void UMochiRodConstraintComponent::CreateConstraints() {
       params.deformableActor = rodHandle;
       params.rigidActor = rigidHandle;
       params.deformableNodeIndex = nodeIndex;
-      params.fixToDeformablePos = true;
       params.stiffness = posStiffness;
       params.damping = posDamping;
       auto* constraint = Scene->CreateDeformableNodeToRigidConstraint(params, e);

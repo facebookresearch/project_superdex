@@ -277,6 +277,10 @@ const TArray<FMochiArticulationSoftLink>& UMochiArticulation::GetSoftLinks() con
   return SoftLinks;
 }
 
+bool UMochiArticulation::GetEnableCollidingLinks() const {
+  return bEnableCollidingLinks;
+}
+
 const TArray<FMochiArticulationContactOverride>& UMochiArticulation::GetContactOverrides() const {
   return ContactOverrides;
 }

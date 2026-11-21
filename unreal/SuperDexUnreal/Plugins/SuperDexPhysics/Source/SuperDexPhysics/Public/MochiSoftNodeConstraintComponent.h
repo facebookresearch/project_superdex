@@ -86,7 +86,9 @@ class SUPERDEXPHYSICS_API UMochiSoftNodeConstraintComponent : public UMochiConst
       meta =
           (EditCondition = "Type != EMochiSoftNodeConstraintType::NodePosition",
            EditConditionHides))
-  EMochiSoftNodeSelection NodeSelection = EMochiSoftNodeSelection::Index;
+  EMochiSoftNodeSelection NodeSelection = mochi::DeformableNodeToRigidConstraintParams{}.findClosest
+      ? EMochiSoftNodeSelection::Closest
+      : EMochiSoftNodeSelection::Index;
   // The node of Body.
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mochi Constraint", meta = (ClampMin = "0"))
   int32 NodeIndex = 0;
@@ -110,7 +112,7 @@ class SUPERDEXPHYSICS_API UMochiSoftNodeConstraintComponent : public UMochiConst
           (EditCondition =
                "Type == EMochiSoftNodeConstraintType::NodeToRigid && NodeSelection != EMochiSoftNodeSelection::InsideRigidBounds",
            EditConditionHides))
-  bool bFixToDeformablePosition = true;
+  bool bFixToDeformablePosition = mochi::DeformableNodeToRigidConstraintParams{}.fixToDeformablePos;
   // The point on the rigid body [cm], in its local frame: where the node ties, or the point the
   // closest node is found from.
   UPROPERTY(

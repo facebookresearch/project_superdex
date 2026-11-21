@@ -33,23 +33,25 @@ class SUPERDEXPHYSICS_API UMochiSoftMeshComponent : public UMochiDeformableMeshC
   UPROPERTY(EditAnywhere, Category = "Mochi")
   UMochiMaterialParams* MaterialParams = nullptr;
   UPROPERTY(EditAnywhere, Category = "Mochi", meta = (ValidEnumValues = "None, Auto, Sdf"))
-  EMochiColliderType ColliderType = EMochiColliderType::None;
+  EMochiColliderType ColliderType =
+      ::ToUnreal(mochi::experimental::ExperimentalSoftActorParams{}.colliderType);
   // The boundary element type used for the soft actor's surface discretization.
   UPROPERTY(
       EditAnywhere,
       Category = "Mochi",
       meta = (ValidEnumValues = "P1Q1, P1Q3, P1Q6, Default"))
-  EMochiActorBoundaryElementType BoundaryElementType = EMochiActorBoundaryElementType::Default;
+  EMochiActorBoundaryElementType BoundaryElementType =
+      ::ToUnreal(mochi::SoftActorParams{}.boundaryElementType);
   // Use the model's embedded contact skin for contact. Rendering does not depend on this setting:
   // without a visual mesh, the model's contact skin is rendered whenever it has skinning data.
   UPROPERTY(EditAnywhere, Category = "Mochi", meta = (EditCondition = "!bEnableRom"))
-  bool bUseContactSkin = false;
+  bool bUseContactSkin = mochi::SoftActorParams{}.useContactSkin;
   // Modifiers for individual elements that get applied during initialization
   UPROPERTY(EditAnywhere, Category = "Mochi")
   UMochiModelMaterialModifiers* MaterialModifiers = nullptr;
   // Recomputes local soft actor frame for more optimal performance.
   UPROPERTY(EditAnywhere, Category = "Mochi")
-  bool bUseRecentering = true;
+  bool bUseRecentering = mochi::experimental::ExperimentalSoftActorParams{}.useRecentering;
   // Enable volume node positions query.
   UPROPERTY(EditAnywhere, Category = "Mochi")
   bool bEnableVolumeNodePositionsQuery = false;

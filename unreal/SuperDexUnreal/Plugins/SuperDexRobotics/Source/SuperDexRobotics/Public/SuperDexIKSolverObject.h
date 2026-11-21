@@ -114,7 +114,8 @@ class SUPERDEXROBOTICS_API USuperDexIKSolverObject : public UObject {
       bool bFixedBase,
       const FMochiIKSolverParams& IKSolverParams,
       const TArray<FMochiJointCoupling>& JointCouplings = {},
-      bool bExcludeCollisionShapes = false);
+      bool bExcludeCollisionShapes =
+          superdex::robotics::BotIKCreateParams{}.excludeCollisionShapes);
 
   /**
   Create a position target for a specific link. The mochi API restricts this to one constraint

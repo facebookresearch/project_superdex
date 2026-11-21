@@ -20,6 +20,8 @@
 #include "CoreMinimal.h"
 #include "MochiMeshComponentInterface.h"
 
+#include <mochi_physics/mochi_physics.h>
+
 #include <memory>
 
 #include "MochiRodConstraintComponent.generated.h"
@@ -57,14 +59,14 @@ class SUPERDEXPHYSICS_API UMochiRodConstraintComponent : public USceneComponent 
       EditAnywhere,
       Category = "Mochi Rod Constraint|Position Constraint",
       meta = (EditCondition = "bConstrainPosition"))
-  float PositionStiffness = 1e4f;
+  float PositionStiffness = mochi::DeformableNodeToRigidConstraintParams{}.stiffness;
 
   // Damping for position constraint.
   UPROPERTY(
       EditAnywhere,
       Category = "Mochi Rod Constraint|Position Constraint",
       meta = (EditCondition = "bConstrainPosition"))
-  float PositionDamping = 0.0f;
+  float PositionDamping = mochi::DeformableNodeToRigidConstraintParams{}.damping;
 
   //----------------------------------------------------------------------------
   // ROTATION CONSTRAINT
@@ -79,14 +81,14 @@ class SUPERDEXPHYSICS_API UMochiRodConstraintComponent : public USceneComponent 
       EditAnywhere,
       Category = "Mochi Rod Constraint|Rotation Constraint",
       meta = (EditCondition = "bConstrainRotation"))
-  float RotationStiffness = 1e2f;
+  float RotationStiffness = mochi::RodElementRotationToRigidConstraintParams{}.stiffness;
 
   // Damping for rotation constraint.
   UPROPERTY(
       EditAnywhere,
       Category = "Mochi Rod Constraint|Rotation Constraint",
       meta = (EditCondition = "bConstrainRotation"))
-  float RotationDamping = 0.0f;
+  float RotationDamping = mochi::RodElementRotationToRigidConstraintParams{}.damping;
 
  public:
   // Set the position constraint stiffness.

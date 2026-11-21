@@ -44,21 +44,25 @@ SUPERDEXPHYSICS_API int32 GetArticulatedJointNumDofs(EMochiArticulatedJointType 
 USTRUCT(BlueprintType)
 struct SUPERDEXPHYSICS_API FMochiArticulatedJointFriction {
   GENERATED_BODY()
+
+  FMochiArticulatedJointFriction() {
+    FromMochi(mochi::ArticulatedJointFrictionParams{});
+  }
   // Viscous friction coefficient [N*s/m or N*m*s/rad].
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Friction")
-  double Viscous = 0;
+  double Viscous;
   // Coulomb friction coefficient [N or N*m].
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Friction")
-  double Coulomb = 0;
+  double Coulomb;
   // Displacement from the friction anchor at which dry friction reaches its static peak [m or rad].
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Friction")
-  double PreslidingDisplacement = 1e-4;
+  double PreslidingDisplacement;
   // [Experimental] Extra stiction force/torque [N or N*m].
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Friction", AdvancedDisplay)
-  double StictionExtra = 0;
+  double StictionExtra;
   // [Experimental] Stribeck velocity [m/s or rad/s].
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Friction", AdvancedDisplay)
-  double StribeckVel = 0;
+  double StribeckVel;
 
   mochi::ArticulatedJointFrictionParams ToMochi() const;
   void FromMochi(const mochi::ArticulatedJointFrictionParams& Mochi);
@@ -137,10 +141,10 @@ struct SUPERDEXPHYSICS_API FMochiArticulatedJoint {
   FVector MaxLimit = FVector::ZeroVector;
   // Stiffness of the joint limit constraints [N/m or N*m/rad].
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Limits")
-  double LimitStiffness = 100;
+  double LimitStiffness = mochi::ArticulatedJointParams{}.limitStiffness;
   // Damping of the joint limit constraints [N*s/m or N*m*s/rad].
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Limits")
-  double LimitDamping = 0;
+  double LimitDamping = mochi::ArticulatedJointParams{}.limitDamping;
 
  public:
   // Number of DOFs this joint contributes to a Mochi articulated actor.
@@ -204,7 +208,7 @@ struct SUPERDEXPHYSICS_API FMochiArticulatedLink {
       BlueprintReadWrite,
       Category = "Contact",
       meta = (ValidEnumValues = "None, Auto, Sphere, Box, Mesh, Plane, Sdf"))
-  EMochiColliderType ColliderType = EMochiColliderType::Auto;
+  EMochiColliderType ColliderType = ::ToUnreal(mochi::ArticulatedLinkParams{}.colliderType);
   // Contact params of the link. Defaults to those of the articulation component when null.
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Contact")
   TObjectPtr<UMochiContactParams> ContactParams = nullptr;
@@ -214,7 +218,8 @@ struct SUPERDEXPHYSICS_API FMochiArticulatedLink {
       BlueprintReadWrite,
       Category = "Contact",
       meta = (ValidEnumValues = "P1Q1, P1Q3, P1Q6, Default"))
-  EMochiActorBoundaryElementType BoundaryElementType = EMochiActorBoundaryElementType::Default;
+  EMochiActorBoundaryElementType BoundaryElementType =
+      ::ToUnreal(mochi::ArticulatedLinkParams{}.boundaryElementType);
   UPROPERTY(
       EditAnywhere,
       BlueprintReadWrite,
@@ -230,7 +235,7 @@ struct SUPERDEXPHYSICS_API FMochiArticulatedLink {
   FMochiBoundarySubsamplingParams BoundarySubsampling;
   // Whether the link is affected by gravity.
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inertial")
-  bool bHasGravity = true;
+  bool bHasGravity = mochi::ArticulatedLinkParams{}.hasGravity;
   UPROPERTY(
       EditAnywhere,
       BlueprintReadWrite,
@@ -323,7 +328,8 @@ struct SUPERDEXPHYSICS_API FMochiArticulatedSkin {
       BlueprintReadWrite,
       Category = "Skin",
       meta = (ValidEnumValues = "P1Q1, P1Q3, P1Q6, Default"))
-  EMochiActorBoundaryElementType BoundaryElementType = EMochiActorBoundaryElementType::Default;
+  EMochiActorBoundaryElementType BoundaryElementType =
+      ::ToUnreal(mochi::ArticulatedSkinParams{}.boundaryElementType);
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Skin", meta = (InlineEditConditionToggle))
   bool bEnableBoundarySubsampling = false;
   // Boundary subsampling parameters.
@@ -368,7 +374,7 @@ struct SUPERDEXPHYSICS_API FMochiArticulatedCycleJoint {
   FTransform JointFromChildLink = FTransform::Identity;
   // Stiffness of the cycle-closing constraint [N/m].
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cycle")
-  double Stiffness = 50000;
+  double Stiffness = mochi::ArticulatedCycleJointParams{}.stiffness;
 
   mochi::ArticulatedCycleJointParams ToMochi(const FUnrealToMochiConverter& U2M) const;
   void FromMochi(

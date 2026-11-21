@@ -62,7 +62,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationJointConstraintComponent
            EditCondition =
                "Type == EMochiArticulationJointConstraintType::Target || Type == EMochiArticulationJointConstraintType::Range",
            EditConditionHides))
-  int32 Dof = 0;
+  int32 Dof = mochi::ArticulatedSingleDofTargetConstraintParams{}.dofIndex;
   // Target value of the DOF [m or rad].
   UPROPERTY(
       EditAnywhere,
@@ -71,7 +71,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationJointConstraintComponent
       meta =
           (EditCondition = "Type == EMochiArticulationJointConstraintType::Target",
            EditConditionHides))
-  double TargetValue = 0.0;
+  double TargetValue = mochi::ArticulatedSingleDofTargetConstraintParams{}.targetValue;
   // Range of the DOF [m or rad].
   UPROPERTY(
       EditAnywhere,
@@ -80,7 +80,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationJointConstraintComponent
       meta =
           (EditCondition = "Type == EMochiArticulationJointConstraintType::Range",
            EditConditionHides))
-  double MinValue = 0.0;
+  double MinValue = mochi::ArticulatedSingleDofRangeConstraintParams{}.minValue;
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
@@ -88,7 +88,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationJointConstraintComponent
       meta =
           (EditCondition = "Type == EMochiArticulationJointConstraintType::Range",
            EditConditionHides))
-  double MaxValue = 0.0;
+  double MaxValue = mochi::ArticulatedSingleDofRangeConstraintParams{}.maxValue;
   // Target rotation of the joint relative to its rest orientation, in the joint frame.
   UPROPERTY(
       EditAnywhere,

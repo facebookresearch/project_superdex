@@ -100,6 +100,10 @@ void FSuperDexBotIKSolverParams::FromNative(const mochi::experimental::IKSolverP
   MaxElapsedTimeSeconds = static_cast<double>(Params.maxElapsedTimeSeconds);
 }
 
+FSuperDexBotIKCreateParams::FSuperDexBotIKCreateParams() {
+  FromNative(superdex::robotics::BotIKConfig{}.createParams);
+}
+
 superdex::robotics::BotIKCreateParams FSuperDexBotIKCreateParams::ToNative() const {
   superdex::robotics::BotIKCreateParams Params;
   Params.fixedBase = bFixedBase;
@@ -112,6 +116,10 @@ void FSuperDexBotIKCreateParams::FromNative(const superdex::robotics::BotIKCreat
   bFixedBase = Params.fixedBase;
   bExcludeCollisionShapes = Params.excludeCollisionShapes;
   SolverParams.FromNative(Params.solverParams);
+}
+
+FSuperDexBotIKGoalConfig::FSuperDexBotIKGoalConfig() {
+  FromNative(superdex::robotics::BotIKGoalConfig{});
 }
 
 superdex::robotics::BotIKGoalConfig FSuperDexBotIKGoalConfig::ToNative() const {
@@ -140,6 +148,10 @@ void FSuperDexBotIKGoalConfig::FromNative(const superdex::robotics::BotIKGoalCon
   RotationStiffness = Goal.rotationStiffness;
 }
 
+FSuperDexBotIKJointCouplingConfig::FSuperDexBotIKJointCouplingConfig() {
+  FromNative(superdex::robotics::BotIKJointCouplingConfig{});
+}
+
 superdex::robotics::BotIKJointCouplingConfig FSuperDexBotIKJointCouplingConfig::ToNative() const {
   superdex::robotics::BotIKJointCouplingConfig Coupling;
   Coupling.jointA = TCHAR_TO_UTF8(*JointA);
@@ -157,6 +169,10 @@ void FSuperDexBotIKJointCouplingConfig::FromNative(
   Ratio = Coupling.ratio;
   Stiffness = Coupling.stiffness;
   bEnabled = Coupling.enabled;
+}
+
+USuperDexBotIKConfig::USuperDexBotIKConfig() {
+  FromNative(superdex::robotics::BotIKConfig{});
 }
 
 superdex::robotics::BotIKConfig USuperDexBotIKConfig::ToNative() const {

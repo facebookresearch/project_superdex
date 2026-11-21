@@ -37,7 +37,7 @@ class SUPERDEXPHYSICS_API UMochiDeformableMeshComponent : public UDynamicMeshCom
   UMochiModel* Model = nullptr;
   // Should this mesh be influenced by scene gravity?
   UPROPERTY(EditAnywhere, Category = "Mochi")
-  bool bHasGravity = true;
+  bool bHasGravity = mochi::SoftActorParams{}.hasGravity;
   // The layer this object is simulated on.
   UPROPERTY(EditAnywhere, Category = "Mochi")
   FName Layer = FMochiLayer::GenericObject;

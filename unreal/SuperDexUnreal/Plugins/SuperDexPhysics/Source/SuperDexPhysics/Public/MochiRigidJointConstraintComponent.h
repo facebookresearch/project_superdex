@@ -118,7 +118,10 @@ class SUPERDEXPHYSICS_API UMochiRigidJointConstraintComponent
       meta =
           (EditCondition = "Type == EMochiRigidJointConstraintType::RotationRange",
            EditConditionHides))
-  FVector MinAngles = FVector(-360.0);
+  FVector MinAngles = FVector(
+      FMath::RadiansToDegrees(mochi::JointRotationRangeConstraintParams{}.angleRangeX[0]),
+      FMath::RadiansToDegrees(mochi::JointRotationRangeConstraintParams{}.angleRangeY[0]),
+      FMath::RadiansToDegrees(mochi::JointRotationRangeConstraintParams{}.angleRangeZ[0]));
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
@@ -126,7 +129,10 @@ class SUPERDEXPHYSICS_API UMochiRigidJointConstraintComponent
       meta =
           (EditCondition = "Type == EMochiRigidJointConstraintType::RotationRange",
            EditConditionHides))
-  FVector MaxAngles = FVector(360.0);
+  FVector MaxAngles = FVector(
+      FMath::RadiansToDegrees(mochi::JointRotationRangeConstraintParams{}.angleRangeX[1]),
+      FMath::RadiansToDegrees(mochi::JointRotationRangeConstraintParams{}.angleRangeY[1]),
+      FMath::RadiansToDegrees(mochi::JointRotationRangeConstraintParams{}.angleRangeZ[1]));
   // Whether the ranges are relative to the bodies' relative rotation when the constraint is
   // created, rather than to this component's frame.
   UPROPERTY(
@@ -136,7 +142,7 @@ class SUPERDEXPHYSICS_API UMochiRigidJointConstraintComponent
       meta =
           (EditCondition = "Type == EMochiRigidJointConstraintType::RotationRange",
            EditConditionHides))
-  bool bRangeAroundRest = true;
+  bool bRangeAroundRest = mochi::JointRotationRangeConstraintParams{}.rangeAroundRest;
 
   // Set the target rotation of body B relative to body A of a Rotation Tracking constraint.
   UFUNCTION(BlueprintCallable, Category = "Mochi Constraint")

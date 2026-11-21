@@ -93,7 +93,7 @@ class SUPERDEXPHYSICS_API UMochiSceneObject : public UObject {
   // This function is just a wrapper around the Mochi API.
   void CancelCallback(mochi::CallbackHandle handle) const;
 
-  // Set scene gravity vector (default = FVector(0, 0, -9.81)).
+  // Set scene gravity vector [m/s^2].
   void SetGravity(const FVector& GravityVector) const;
   // Set or change an entry in the scene's contact matrix.
   void SetContactMatrixEntry(const FMochiContactMatrixEntry& Entry) const;

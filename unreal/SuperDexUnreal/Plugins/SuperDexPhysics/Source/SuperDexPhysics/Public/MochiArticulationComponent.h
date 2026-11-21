@@ -60,7 +60,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationComponent : public UPoseableMeshComp
   UMochiContactParams* ContactParams = nullptr;
   // Whether the articulation should be simulated under the influence of gravity.
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mochi Articulation")
-  bool bGravityEnabled = true;
+  bool bGravityEnabled = mochi::ArticulatedLinkParams{}.hasGravity;
   // Enable contact queries and events.
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mochi Articulation")
   bool bEnableContacts = false;

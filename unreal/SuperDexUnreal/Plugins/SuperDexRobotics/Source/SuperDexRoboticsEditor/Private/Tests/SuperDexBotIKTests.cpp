@@ -876,12 +876,49 @@ bool FSuperDexBotIKConversionTest::RunTest(const FString& Parameters) {
       0);
   TestTrue(
       TEXT("FromNative clears absent input-bot references"), Asset->InputBotReference.IsEmpty());
-  FSuperDexBotIKCreateParams Defaults;
-  TestTrue(TEXT("Config defaults fix the base"), Defaults.bFixedBase);
+  const auto NativeDefaults = superdex::robotics::BotIKConfig{};
+  const FSuperDexBotIKCreateParams Defaults;
+  TestTrue(
+      TEXT("Config defaults fix the base like the native document"),
+      Defaults.bFixedBase == NativeDefaults.createParams.fixedBase);
+  TestTrue(
+      TEXT("Config defaults exclude collision shapes like the native document"),
+      Defaults.bExcludeCollisionShapes == NativeDefaults.createParams.excludeCollisionShapes);
   TestEqual(
-      TEXT("Config defaults retain the solve budget"),
+      TEXT("Config defaults retain the native solve budget"),
       Defaults.SolverParams.MaxElapsedTimeSeconds,
-      0.01);
+      NativeDefaults.createParams.solverParams.maxElapsedTimeSeconds);
+  const auto NativeGoal = superdex::robotics::BotIKGoalConfig{};
+  const FSuperDexBotIKGoalConfig Goal;
+  TestTrue(TEXT("Goal defaults enable like native"), Goal.bEnabled == NativeGoal.enabled);
+  TestEqual(
+      TEXT("Goal defaults use native position stiffness"),
+      Goal.PositionStiffness,
+      static_cast<double>(NativeGoal.positionStiffness));
+  TestEqual(
+      TEXT("Goal defaults use native rotation stiffness"),
+      Goal.RotationStiffness,
+      static_cast<double>(NativeGoal.rotationStiffness));
+  const auto NativeCoupling = superdex::robotics::BotIKJointCouplingConfig{};
+  const FSuperDexBotIKJointCouplingConfig Coupling;
+  TestEqual(
+      TEXT("Coupling defaults use native ratio"),
+      Coupling.Ratio,
+      static_cast<double>(NativeCoupling.ratio));
+  TestEqual(
+      TEXT("Coupling defaults use native stiffness"),
+      Coupling.Stiffness,
+      static_cast<double>(NativeCoupling.stiffness));
+  TestTrue(
+      TEXT("Coupling defaults enable like native"), Coupling.bEnabled == NativeCoupling.enabled);
+  TStrongObjectPtr<USuperDexBotIKConfig> NewAsset(NewObject<USuperDexBotIKConfig>());
+  TestEqual(
+      TEXT("New assets use the native input-bot scale"),
+      NewAsset->InputBotScale,
+      static_cast<double>(NativeDefaults.inputBotScale));
+  TestTrue(
+      TEXT("New assets use the native identity base frame"),
+      NewAsset->OutputBaseFrameFromInputBaseFrame.Equals(FTransform::Identity));
   return VerifyLegacyV8Fixture(*this) && RecordColdLoadedConfigs(*this);
 }
 

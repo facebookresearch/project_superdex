@@ -581,9 +581,8 @@ USuperDexIKSolverObject* USuperDexIKSolverObject::CreateIKSolver(
             mochi::experimental::DisplacementControlActuatorParams actuatorParams;
             actuatorParams.targetDisplacement = static_cast<mochi::real>(-coupling.Offset);
             actuatorParams.stiffness = static_cast<mochi::real>(coupling.Stiffness);
-            // Damping is deliberately left at zero: the IK solve steps with an infinite time
-            // step, so any damping term contributes nothing.
-            actuatorParams.damping = static_cast<mochi::real>(0.0);
+            // Damping keeps its native default of zero: the IK solve steps with an infinite
+            // time step, so any damping term contributes nothing.
             // A joint coupling is a rigid linkage, so it must be able to push as well as pull.
             // Left false, the actuator clamps to zero force on one side and only half couples.
             actuatorParams.allowCompressiveForce = true;

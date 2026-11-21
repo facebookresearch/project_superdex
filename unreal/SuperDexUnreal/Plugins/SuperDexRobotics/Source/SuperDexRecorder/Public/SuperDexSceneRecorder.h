@@ -58,7 +58,10 @@ struct FSuperDexSkeletonSource {
   TArray<FString> KeypointNames;
   /* Each keypoint's parent keypoint index, which must be lower than its own, or -1 for none. */
   TArray<int32> ParentIndices;
-  FColor Color = FColor(242, 140, 38);
+  FColor Color = [] {
+    const auto Rgba = superdex::recorder::SkeletonShadowConfig{}.colorRgba;
+    return FColor(Rgba[0], Rgba[1], Rgba[2], Rgba[3]);
+  }();
   /*
    * Called on the Mochi thread after every step until EndCapture returns. Writes one finite Mochi
    * world position per keypoint and returns true, or returns false while the skeleton is untracked,
@@ -109,7 +112,7 @@ struct FSuperDexSceneRecorderConfig {
   FString TaskPath;
   TMap<FString, FString> Properties;
   /* Records Mochi's contact forces directly, at a cost per contact point in every step. */
-  bool bRecordContactForces = false;
+  bool bRecordContactForces = superdex::recorder::PhysicsRecorderConfig{}.recordContactForces;
   /* The task spawn name of each Mochi actor that a scene task spawned. */
   TArray<TPair<mochi::ActorHandle, FString>> SpawnNames;
   /* Skeletons recorded as shadows of recorded robots, or on their own when they have no robot.

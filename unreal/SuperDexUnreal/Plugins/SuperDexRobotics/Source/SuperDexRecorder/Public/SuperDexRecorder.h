@@ -85,7 +85,7 @@ class SUPERDEXRECORDER_API ASuperDexRecorder : public AActor {
 
   /* Records Mochi's contact forces, at a cost per contact point in every step. */
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex|Recording")
-  bool bRecordContactForces = false;
+  bool bRecordContactForces = superdex::recorder::PhysicsRecorderConfig{}.recordContactForces;
 
   /* Other actors whose USuperDexRecordingSourceComponents this recorder uses. */
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex|Recording")

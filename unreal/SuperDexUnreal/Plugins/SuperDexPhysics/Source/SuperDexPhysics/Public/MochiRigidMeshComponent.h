@@ -49,24 +49,25 @@ class SUPERDEXPHYSICS_API UMochiRigidMeshComponent : public UStaticMeshComponent
   UMochiModel* Model = nullptr;
   // Is this a static Mochi actor (i.e. non-simulated)?
   UPROPERTY(EditAnywhere, Category = "Mochi")
-  bool bIsStatic = false;
+  bool bIsStatic = mochi::RigidActorParams{}.isStatic;
   // Should this mesh be influenced by scene gravity?
   UPROPERTY(EditAnywhere, meta = (EditCondition = "!bIsStatic"), Category = "Mochi")
-  bool bHasGravity = true;
+  bool bHasGravity = mochi::RigidActorParams{}.hasGravity;
   // The layer this object is simulated on.
   UPROPERTY(EditAnywhere, Category = "Mochi")
   FName Layer = FMochiLayer::GenericObject;
-  // The Mochi collider type. Prefer to use Sdf in most cases.
+  // The Mochi collider type. Auto collides meshes as an Sdf.
   UPROPERTY(
       EditAnywhere,
       Category = "Mochi",
       meta = (ValidEnumValues = "None, Auto, Sphere, Box, Mesh, Plane, Sdf"))
-  EMochiColliderType ColliderType = EMochiColliderType::Sdf;
+  EMochiColliderType ColliderType = ::ToUnreal(mochi::RigidActorParams{}.colliderType);
   // Optionally override default grid SDF params
   UPROPERTY(
       EditAnywhere,
       meta =
-          (EditCondition = "ColliderType==EMochiColliderType::Sdf && bUseStaticMeshAsMochiModel",
+          (EditCondition =
+               "(ColliderType==EMochiColliderType::Sdf || ColliderType==EMochiColliderType::Auto) && bUseStaticMeshAsMochiModel",
            EditConditionHides),
       Category = "Mochi")
   FMochiGridSdfParams GridSdfParams = {};
@@ -75,7 +76,8 @@ class SUPERDEXPHYSICS_API UMochiRigidMeshComponent : public UStaticMeshComponent
       EditAnywhere,
       Category = "Mochi",
       meta = (ValidEnumValues = "P1Q1, P1Q3, P1Q6, Default"))
-  EMochiActorBoundaryElementType BoundaryElementType = EMochiActorBoundaryElementType::Default;
+  EMochiActorBoundaryElementType BoundaryElementType =
+      ::ToUnreal(mochi::RigidActorParams{}.boundaryElementType);
   // Enable boundary subsampling to reduce contact sample count.
   UPROPERTY(EditAnywhere, Category = "Mochi")
   bool bEnableBoundarySubsampling = false;

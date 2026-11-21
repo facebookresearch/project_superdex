@@ -31,30 +31,33 @@ class SUPERDEXPHYSICS_API UMochiShellMeshComponent : public UMochiDeformableMesh
   UPROPERTY(EditAnywhere, Category = "Mochi")
   UMochiShellMaterialParams* ShellMaterialParams = nullptr;
   UPROPERTY(EditAnywhere, Category = "Mochi", meta = (ValidEnumValues = "None, Auto, PointCloud"))
-  EMochiColliderType ColliderType = EMochiColliderType::PointCloud;
+  EMochiColliderType ColliderType =
+      ::ToUnreal(mochi::experimental::ShellActorParams{}.colliderType);
   // Use the shell's authored contact skin for contact sampling instead of the physics mesh.
   UPROPERTY(EditAnywhere, Category = "Mochi")
-  bool bUseContactSkin = false;
+  bool bUseContactSkin = mochi::experimental::ShellActorParams{}.useContactSkin;
   UPROPERTY(
       EditAnywhere,
       Category = "Mochi",
       meta = (ValidEnumValues = "P1Q1, P1Q3, P1Q6, Default"))
-  EMochiActorBoundaryElementType ContactElementType = EMochiActorBoundaryElementType::Default;
+  EMochiActorBoundaryElementType ContactElementType =
+      ::ToUnreal(mochi::experimental::ShellActorParams{}.contactElementType);
 
   // Point-cloud collider interaction radius [m]. Contact samples spaced further apart than this
   // may allow nodes to slip through. Increase for coarser meshes.
   UPROPERTY(EditAnywhere, Category = "Mochi|Point Cloud Collider", meta = (Units = "m"))
-  float PointCloudRadius = 0.01f;
+  float PointCloudRadius = mochi::PointCloudColliderParams{}.radius;
   // Enable self-contact for the shell. Experimental - may degrade performance.
   UPROPERTY(EditAnywhere, Category = "Mochi|Point Cloud Collider")
-  bool bPointCloudSelfContact = false;
+  bool bPointCloudSelfContact = mochi::PointCloudColliderParams{}.selfContact;
   // Self-contact exclusion ratio. Contact samples within (radius * ratio) of a node are excluded
   // from self-contact. Should be > 1.
   UPROPERTY(
       EditAnywhere,
       Category = "Mochi|Point Cloud Collider",
       meta = (EditCondition = "bPointCloudSelfContact"))
-  float PointCloudSelfContactExclusionRatio = 1.5f;
+  float PointCloudSelfContactExclusionRatio =
+      mochi::PointCloudColliderParams{}.selfContactExclusionRatio;
   // Unset uses one collider point per node; a value selects quadrature-based placement.
   UPROPERTY(EditAnywhere, Category = "Mochi|Point Cloud Collider")
   TOptional<EMochiActorBoundaryElementType> PointCloudColliderTriangleElementType;

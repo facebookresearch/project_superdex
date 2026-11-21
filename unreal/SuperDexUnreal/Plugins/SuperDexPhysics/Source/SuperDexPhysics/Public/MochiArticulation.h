@@ -97,6 +97,9 @@ class SUPERDEXPHYSICS_API UMochiArticulation : public UMochiArticulationBase {
   // Soft links to attach to rigid links
   UPROPERTY(EditAnywhere, Category = "Articulation", BlueprintReadOnly, AssetRegistrySearchable)
   TArray<FMochiArticulationSoftLink> SoftLinks;
+  // Whether the rigid links also collide with other actors when there are soft links.
+  UPROPERTY(EditAnywhere, Category = "Articulation", BlueprintReadOnly)
+  bool bEnableCollidingLinks = mochi::SoftSkinnedActorParams{}.enableCollidingLinks;
 
   // The SkeletalMesh asset associated with the articulation. Can be regenerated with Generate
   // Skeletal Mesh.
@@ -142,6 +145,8 @@ class SUPERDEXPHYSICS_API UMochiArticulation : public UMochiArticulationBase {
   // Get the list of *soft* links.
   UFUNCTION(BlueprintPure, Category = "Mochi|Articulation")
   const TArray<FMochiArticulationSoftLink>& GetSoftLinks() const;
+  // Whether the rigid links also collide with other actors when there are soft links.
+  bool GetEnableCollidingLinks() const;
   // Get the link contact overrides.
   UFUNCTION(BlueprintPure, Category = "Mochi|Articulation")
   const TArray<FMochiArticulationContactOverride>& GetContactOverrides() const;

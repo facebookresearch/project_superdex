@@ -279,6 +279,12 @@ UMochiArticulatedActorObject* UMochiArticulatedActorObject::CreateArticulation(
       InitialJointVelocities);
   skeletonParams.name = TCHAR_TO_ANSI(*nameStr);
   skeletonParams.worldFromRoot = u2m.TransformToMochi_RT(WorldFromRoot);
+  TArray<mochi::SoftMaterialParams> softMaterials;
+  for (const FMochiArticulationSoftLink& softLink : Articulation->GetSoftLinks()) {
+    softMaterials.Add(
+        softLink.MaterialParams ? softLink.MaterialParams->ToMochi() : mochi::SoftMaterialParams{});
+  }
+  const bool bEnableCollidingLinks = Articulation->GetEnableCollidingLinks();
   // queue command to create actor
   Scene->QueueOrExecuteCommand([&](mochi::Scene* SyncScene) {
     mochi::Actor* articulatedActor = nullptr;
@@ -292,16 +298,14 @@ UMochiArticulatedActorObject* UMochiArticulatedActorObject::CreateArticulation(
       // create soft params
       mochi::SoftActorParams softParamsCommon;
       softParamsCommon.layer = TCHAR_TO_ANSI(*layerStr);
-      softParamsCommon.material.type = mochi::SoftMaterialType::NeoHookean;
-      softParamsCommon.material.neoHookean.youngsModulus = 3e5_r;
+      // Mochi takes the gravity of soft-skinned actors from SoftSkinnedActorParams::hasGravity.
       softParamsCommon.hasGravity = false;
-      softParamsCommon.hasInertia = true;
-      softParamsCommon.hasStress = true;
       TArray<mochi::SoftActorParams> softParams;
       softParams.Init(softParamsCommon, numSoftLinks);
       for (int i = 0; i < numSoftLinks; ++i) {
         softParams[i].shape = softShapes[i];
         softParams[i].name = TCHAR_TO_ANSI(*Articulation->GetSoftLinks()[i].Name.ToString());
+        softParams[i].material = softMaterials[i];
       }
       softSkinnedParams.softParams = ToMochiSpan(softParams);
       // initialize soft attachments
@@ -311,11 +315,7 @@ UMochiArticulatedActorObject* UMochiArticulatedActorObject::CreateArticulation(
         softAttachLinks[i] = TCHAR_TO_ANSI(*Articulation->GetSoftLinks()[i].ParentName.ToString());
       }
       softSkinnedParams.softAttachLinks = ToMochiSpan(softAttachLinks);
-      // initialize other global params
-      softSkinnedParams.enableCollidingLinks = true;
-      softSkinnedParams.hasGravity = false;
-      softSkinnedParams.hasInertia = false;
-      softSkinnedParams.hasStress = false;
+      softSkinnedParams.enableCollidingLinks = bEnableCollidingLinks;
       // create articulated actor
       articulatedActor = SyncScene->CreateSoftSkinnedActor(softSkinnedParams, e);
     }

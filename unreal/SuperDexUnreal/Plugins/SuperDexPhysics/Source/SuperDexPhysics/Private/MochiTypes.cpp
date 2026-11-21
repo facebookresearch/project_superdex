@@ -17,12 +17,15 @@
 #include "MochiTypes.h"
 
 #include "MochiConversions.h"
+#include "MochiGenSupport.h"
 #include "MochiPhysicsModule.h"
 
 #include "Components/SceneComponent.h"
 #include "Serialization/CustomVersion.h"
 
 #include <mochi_physics/mochi_physics.h>
+
+#include <variant>
 
 // Unique Mochi Object version id
 // Arbitrary, permanent, and matches nothing elsewhere
@@ -33,6 +36,31 @@ static FCustomVersionRegistration GRegisterMochiObjectVersion(
     FMochiObjectVersion::GUID,
     FMochiObjectVersion::LatestVersion,
     TEXT("MochiObjectVer"));
+
+FMochiRomParams::FMochiRomParams() {
+  FromMochi(mochi::experimental::RomParams{});
+}
+
+void FMochiRomParams::FromMochi(const mochi::experimental::RomParams& Mochi) {
+  Source = MochiGenSupport::ToUnrealString(Mochi.source);
+  HyperReductionStrategy = EMochiHyperReductionStrategy::NoHyperReduction;
+  auto sampling = mochi::experimental::SampleMeshInitRandomSampling{};
+  if (Mochi.hyperReduction) {
+    if (const auto* randomSampling = std::get_if<mochi::experimental::SampleMeshInitRandomSampling>(
+            &Mochi.hyperReduction->initializationStrategy)) {
+      HyperReductionStrategy =
+          EMochiHyperReductionStrategy::StaticHyperReductionUsingRandomSampling;
+      sampling = *randomSampling;
+    } else {
+      UE_LOG(
+          LogMochiPhysics,
+          Warning,
+          TEXT("FMochiRomParams only supports random-sampling hyper-reduction; ignoring it."));
+    }
+  }
+  StepSizeForBoundaryElementsSelection = sampling.stepSizeForBoundaryElementsSelection;
+  StepSizeForInteriorElementsSelection = sampling.stepSizeForInteriorElementsSelection;
+}
 
 mochi::experimental::RomParams FMochiRomParams::ToMochi() const {
   mochi::experimental::RomParams params;

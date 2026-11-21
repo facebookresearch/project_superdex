@@ -29,6 +29,7 @@
 // FORWARDS
 //------------------------------------------------------------------------------
 
+class UMochiMaterialParams;
 class UMochiModel;
 
 //------------------------------------------------------------------------------
@@ -344,13 +345,14 @@ struct SUPERDEXPHYSICS_API FMochiContactMatrixEntry {
 USTRUCT(BlueprintType)
 struct SUPERDEXPHYSICS_API FMochiRomParams {
   GENERATED_BODY()
+
+  FMochiRomParams();
   // Specifies a ROM inside the rom group of a .mochi.h5 file.
   UPROPERTY(EditAnywhere, Category = "Mochi")
   FString Source;
   // Hyper-reduction quadrature strategy for this ROM.
   UPROPERTY(EditAnywhere, Category = "Mochi")
-  EMochiHyperReductionStrategy HyperReductionStrategy =
-      EMochiHyperReductionStrategy::StaticHyperReductionUsingRandomSampling;
+  EMochiHyperReductionStrategy HyperReductionStrategy;
   // Parameter that defines a sample mesh when subsampling the boundary elements.
   UPROPERTY(
       EditAnywhere,
@@ -359,7 +361,7 @@ struct SUPERDEXPHYSICS_API FMochiRomParams {
                "HyperReductionStrategy == EMochiHyperReductionStrategy::StaticHyperReductionUsingRandomSampling",
            EditConditionHides),
       Category = "Mochi")
-  int StepSizeForBoundaryElementsSelection = 1;
+  int StepSizeForBoundaryElementsSelection;
   // Parameter that defines a sample mesh when subsampling the interior elements.
   UPROPERTY(
       EditAnywhere,
@@ -368,11 +370,13 @@ struct SUPERDEXPHYSICS_API FMochiRomParams {
                "HyperReductionStrategy == EMochiHyperReductionStrategy::StaticHyperReductionUsingRandomSampling",
            EditConditionHides),
       Category = "Mochi")
-  int StepSizeForInteriorElementsSelection = 1;
+  int StepSizeForInteriorElementsSelection;
 
  public:
   // Convert to native Mochi type.
   mochi::experimental::RomParams ToMochi() const;
+  // Convert from native Mochi type.
+  void FromMochi(const mochi::experimental::RomParams& Mochi);
 };
 
 // Moments of inertia in kg * cm^2
@@ -470,18 +474,21 @@ struct SUPERDEXPHYSICS_API FMochiMomentOfInertia {
 USTRUCT(BlueprintType)
 struct SUPERDEXPHYSICS_API FMochiShapeTargetTensor {
   GENERATED_BODY()
+  FMochiShapeTargetTensor() {
+    FromMochi(mochi::ActiveShapeTargetingArapMaterialParams{}.shapeTargetTensor);
+  }
   UPROPERTY(EditAnywhere, Category = "Mochi")
-  float XX = 0.0f;
+  float XX;
   UPROPERTY(EditAnywhere, Category = "Mochi")
-  float XY = 0.0f;
+  float XY;
   UPROPERTY(EditAnywhere, Category = "Mochi")
-  float XZ = 0.0f;
+  float XZ;
   UPROPERTY(EditAnywhere, Category = "Mochi")
-  float YY = 0.0f;
+  float YY;
   UPROPERTY(EditAnywhere, Category = "Mochi")
-  float YZ = 0.0f;
+  float YZ;
   UPROPERTY(EditAnywhere, Category = "Mochi")
-  float ZZ = 0.0f;
+  float ZZ;
 
   mochi::Real6 ToMochi() const;
   void FromMochi(const mochi::Real6& Mochi);
@@ -516,6 +523,9 @@ struct FMochiArticulationSoftLink {
   // nodes, which currently cannot be authored in Unreal.
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
   UMochiModel* Model = nullptr;
+  // Material of the soft link. Uses Mochi's default material when null.
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UMochiMaterialParams* MaterialParams = nullptr;
   // Scale applied to the Mochi Model when its shape is loaded.
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
   FVector ModelScale = FVector::OneVector;
@@ -562,13 +572,13 @@ struct FMochiArticulationConstraint {
   FVector LinkBPosition = FVector::ZeroVector;
   // Stiffness of constraint [N/m]
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
-  float Stiffness = 10000.0f;
+  float Stiffness = mochi::RigidSphericalJointConstraintParams{}.stiffness;
   // Damping on the constraint limit [Ns/m]
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
-  float Damping = 0.0f;
+  float Damping = mochi::RigidSphericalJointConstraintParams{}.damping;
   // Displacement at which the constraint stiffness saturates, -1 for no saturation
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
-  float Saturation = -1.0f;
+  float Saturation = mochi::RigidSphericalJointConstraintParams{}.saturation;
 };
 
 // Enables or disables contact between two links of an articulation, after the articulation is

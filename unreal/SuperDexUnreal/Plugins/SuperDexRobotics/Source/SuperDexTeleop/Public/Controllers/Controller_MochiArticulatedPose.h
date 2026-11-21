@@ -64,16 +64,16 @@ struct FMochiPoseTrackingParams {
   GENERATED_BODY()
 
   UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (Tooltip = "Spring stiffness [N/m or Nm/rad]"))
-  double Stiffness = 0;
+  double Stiffness = mochi::PoseTrackingParams{}.stiffness;
 
   UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (Tooltip = "Damping coefficient"))
-  double Damping = 0;
+  double Damping = mochi::PoseTrackingParams{}.damping;
 
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
       meta = (Tooltip = "Force/torque saturation cap (-1 = no limit)"))
-  double Saturation = -1;
+  double Saturation = mochi::PoseTrackingParams{}.saturation;
 };
 
 // Details struct mirroring mochi::PoseControllerParams

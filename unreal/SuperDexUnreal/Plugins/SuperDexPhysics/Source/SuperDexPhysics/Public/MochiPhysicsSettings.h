@@ -45,7 +45,11 @@ struct FMochiSceneSettings {
 
   // Gravity vector in m/s^2.
   UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Scene")
-  FVector GravityVector = FVector(0, 0, -9.81);
+  FVector GravityVector = TMochiSpaceConverter<double>(kMochiSpace, kUnrealMetersSpace)
+                              .DirectionToOutput(FVector(
+                                  mochi::kDefaultGravity[0],
+                                  mochi::kDefaultGravity[1],
+                                  mochi::kDefaultGravity[2]));
 
   // Parameters that control how the scene steps on the simulation thread.
   UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Scene")

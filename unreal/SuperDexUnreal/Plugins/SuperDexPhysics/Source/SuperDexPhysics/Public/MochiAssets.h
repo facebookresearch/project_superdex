@@ -172,15 +172,15 @@ class SUPERDEXPHYSICS_API UMochiShellMaterialParams : public UObject {
 #if WITH_EDITORONLY_DATA
   // Young's modulus of the 3D solid material.
   UPROPERTY(EditAnywhere, meta = (ForceUnits = "Pa"), Category = "Estimate from 3D Parameters")
-  float YoungModulus3D = 100000.0f;
+  float YoungModulus3D = mochi::kDefaultYoungsModulus;
 
   // Poisson's ratio of the 3D solid material.
   UPROPERTY(EditAnywhere, Category = "Estimate from 3D Parameters")
-  float PoissonsRatio3D = 0.3f;
+  float PoissonsRatio3D = mochi::kDefaultPoissonRatio;
 
   // Volumetric density of the 3D solid material.
   UPROPERTY(EditAnywhere, meta = (ForceUnits = "kg/m^3"), Category = "Estimate from 3D Parameters")
-  float Density3D = 1000.0f;
+  float Density3D = mochi::kDefaultDensity;
 
   // Shell thickness.
   UPROPERTY(EditAnywhere, meta = (ForceUnits = "m"), Category = "Estimate from 3D Parameters")

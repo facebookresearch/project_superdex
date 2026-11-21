@@ -52,7 +52,7 @@ class SUPERDEXROBOTICS_API USuperDexBotComponent : public UPoseableMeshComponent
   FString LayerOverride;
   // Whether the bot should be simulated under the influence of gravity.
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SuperDex Bot")
-  bool bHasGravity = true;
+  bool bHasGravity = mochi::ArticulatedLinkParams{}.hasGravity;
   // Enable contact queries and events.
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SuperDex Bot")
   bool bEnableContacts = false;

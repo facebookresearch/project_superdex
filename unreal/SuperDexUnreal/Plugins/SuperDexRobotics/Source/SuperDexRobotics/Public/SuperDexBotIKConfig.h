@@ -68,11 +68,13 @@ USTRUCT(BlueprintType)
 struct SUPERDEXROBOTICS_API FSuperDexBotIKCreateParams {
   GENERATED_BODY()
 
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "IK Creation")
-  bool bFixedBase = true;
+  FSuperDexBotIKCreateParams();
 
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "IK Creation")
-  bool bExcludeCollisionShapes = true;
+  bool bFixedBase;
+
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "IK Creation")
+  bool bExcludeCollisionShapes;
 
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "IK Creation")
   FSuperDexBotIKSolverParams SolverParams;
@@ -85,6 +87,8 @@ USTRUCT(BlueprintType)
 struct SUPERDEXROBOTICS_API FSuperDexBotIKGoalConfig {
   GENERATED_BODY()
 
+  FSuperDexBotIKGoalConfig();
+
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "IK Goal")
   FString Name;
 
@@ -92,18 +96,18 @@ struct SUPERDEXROBOTICS_API FSuperDexBotIKGoalConfig {
   FString OutputBotLink;
 
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "IK Goal")
-  bool bEnabled = true;
+  bool bEnabled;
 
   /** Constraint frame expressed in InputBotLink when bound, otherwise the output base frame.
    * Translation is in centimetres; scale is ignored by rigid conversion.
    */
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "IK Goal")
-  FTransform BaseOrInputLinkFrameFromConstraintFrame = FTransform::Identity;
+  FTransform BaseOrInputLinkFrameFromConstraintFrame;
 
   /** Constraint frame expressed in the output bot link. Translation is in centimetres; scale is
    * ignored. */
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "IK Goal")
-  FTransform LinkFrameFromConstraintFrame = FTransform::Identity;
+  FTransform LinkFrameFromConstraintFrame;
 
   /** Exact-case input-bot link binding; empty selects the output base frame. */
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "IK Goal")
@@ -111,11 +115,11 @@ struct SUPERDEXROBOTICS_API FSuperDexBotIKGoalConfig {
 
   /** Native translational stiffness in N/m. Zero disables the position constraint. */
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "IK Goal")
-  double PositionStiffness = 100.0;
+  double PositionStiffness;
 
   /** Native rotational stiffness in N m/rad. Zero disables the rotation constraint. */
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "IK Goal")
-  double RotationStiffness = 100.0;
+  double RotationStiffness;
 
   superdex::robotics::BotIKGoalConfig ToNative() const;
   void FromNative(const superdex::robotics::BotIKGoalConfig& Goal);
@@ -125,6 +129,8 @@ USTRUCT(BlueprintType)
 struct SUPERDEXROBOTICS_API FSuperDexBotIKJointCouplingConfig {
   GENERATED_BODY()
 
+  FSuperDexBotIKJointCouplingConfig();
+
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "IK Joint Coupling")
   FString JointA;
 
@@ -133,7 +139,7 @@ struct SUPERDEXROBOTICS_API FSuperDexBotIKJointCouplingConfig {
 
   /** Soft bilateral relationship: qB = Ratio * qA, measured from authored joint zero. */
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "IK Joint Coupling")
-  double Ratio = 1.0;
+  double Ratio;
 
   /** Native N*m/rad for revolute pairs, N/m for prismatic pairs. Zero disables the penalty. */
   UPROPERTY(
@@ -141,10 +147,10 @@ struct SUPERDEXROBOTICS_API FSuperDexBotIKJointCouplingConfig {
       BlueprintReadWrite,
       Category = "IK Joint Coupling",
       meta = (ClampMin = "0"))
-  double Stiffness = 10.0;
+  double Stiffness;
 
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "IK Joint Coupling")
-  bool bEnabled = true;
+  bool bEnabled;
 
   superdex::robotics::BotIKJointCouplingConfig ToNative() const;
   void FromNative(const superdex::robotics::BotIKJointCouplingConfig& Coupling);
@@ -155,6 +161,8 @@ class SUPERDEXROBOTICS_API USuperDexBotIKConfig : public UObject {
   GENERATED_BODY()
 
  public:
+  USuperDexBotIKConfig();
+
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Output Bot")
   TObjectPtr<USuperDexBot> OutputBot;
 
@@ -173,11 +181,11 @@ class SUPERDEXROBOTICS_API USuperDexBotIKConfig : public UObject {
    * Scale must be identity; use InputBotScale for retarget geometry scaling.
    */
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input Bot")
-  FTransform OutputBaseFrameFromInputBaseFrame = FTransform::Identity;
+  FTransform OutputBaseFrameFromInputBaseFrame;
 
   /** Positive uniform retarget scale, independent of either bot prefab's scale. */
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input Bot")
-  double InputBotScale = 1.0;
+  double InputBotScale;
 
   /** Original document references, retained even when editor resolution fails. Never opened at
    * runtime. */
