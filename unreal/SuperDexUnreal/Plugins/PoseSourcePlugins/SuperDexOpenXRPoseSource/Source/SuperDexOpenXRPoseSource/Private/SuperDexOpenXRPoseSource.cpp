@@ -15,7 +15,10 @@
  */
 
 #include "SuperDexOpenXRPoseSource.h"
+#include "SuperDexOpenXRPoseSourceSettings.h"
 
+#include "MochiTypes.h"
+#include "Skeletons/SuperDexOpenXRPinch.h"
 #include "Skeletons/SuperDexSkeletonBots.h"
 #include "Skeletons/SuperDexSkeleton_OpenXR.h"
 #include "SuperDexPoseFunctionLibrary.h"
@@ -146,6 +149,38 @@ bool USuperDexOpenXRPoseSource::ConvertHandKeypointsToPose(
       GetSkeletonBot_OpenXR(Handedness), LinkToParent, OutPose);
 }
 
+bool USuperDexOpenXRPoseSource::CorrectPinch(
+    const ESuperDexHandedness Handedness,
+    TConstArrayView<FTransform> BoneToWrist,
+    FSuperDexPose& InOutPose) {
+  constexpr int32 NumBones = static_cast<int32>(ESuperDexBone_OXR::Count);
+  TArray<FTransform> LinkToParent;
+  if (BoneToWrist.Num() != NumBones || InOutPose.Bot.Get() != GetSkeletonBot_OpenXR(Handedness) ||
+      !USuperDexPoseFunctionLibrary::ComputeSuperDexPoseLinkToParentTransforms(
+          InOutPose, LinkToParent) ||
+      LinkToParent.Num() != NumBones) {
+    return false;
+  }
+  TArray<FQuat> Rotations;
+  Rotations.Reserve(NumBones);
+  for (const FTransform& Link : LinkToParent) {
+    Rotations.Add(Link.GetRotation());
+  }
+  // The root link is the pose root, not a joint position.
+  Rotations[0] = FQuat::Identity;
+  if (!ApplyOpenXRPinchCorrection(
+          Handedness, BoneToWrist[static_cast<int32>(ESuperDexBone_OXR::ThumbDistal)], Rotations)) {
+    return false;
+  }
+  FSuperDexPose Corrected = InOutPose;
+  if (!USuperDexPoseFunctionLibrary::SetSuperDexPoseFromLinkRotations(
+          GetSkeletonBot_OpenXR(Handedness), Rotations, Corrected)) {
+    return false;
+  }
+  InOutPose = MoveTemp(Corrected);
+  return true;
+}
+
 void USuperDexOpenXRPoseSource::CachePose(const ESuperDexHandedness Handedness) {
   FSuperDexPose& Cache = (Handedness == ESuperDexHandedness::Left) ? LeftPoseCache : RightPoseCache;
   Cache = FSuperDexPose();
@@ -184,7 +219,25 @@ void USuperDexOpenXRPoseSource::CachePose(const ESuperDexHandedness Handedness) 
           Rotations, Locations[(int32)EHandKeypoint::Wrist], Handedness, Cache)) {
     return;
   }
-  Cache.SkeletonRootToVrRoot.SetScale3D(FVector(EstimateHandScale(Locations)));
+  const double Scale = EstimateHandScale(Locations);
+  Cache.SkeletonRootToVrRoot.SetScale3D(FVector(Scale));
+
+  // The pose holds the tracked joint rotations. The runtime's thumb base moves with a CMC joint the
+  // bot lacks, so optionally refit the thumb and blend nearby fingers into pinches.
+  if (ShouldApplyOpenXRPinchCorrection(
+          GetDefault<USuperDexOpenXRPoseSourceSettings>()->bAccountForQuestHandTrackingPinch)) {
+    // Tracked bone frames relative to the wrist bone, at the bot's nominal size.
+    const FQuat& RootRotation = Cache.SkeletonRootToVrRoot.GetRotation();
+    const FVector RootPosition = Cache.SkeletonRootToVrRoot.GetTranslation();
+    TArray<FTransform, TInlineAllocator<static_cast<int32>(ESuperDexBone_OXR::Count)>> BoneToWrist;
+    for (int32 Bone = 0; Bone < static_cast<int32>(ESuperDexBone_OXR::Count); ++Bone) {
+      const int32 Joint = GetXrHandJointOfBone_OXR(static_cast<ESuperDexBone_OXR>(Bone));
+      BoneToWrist.Emplace(
+          (RootRotation.Inverse() * Rotations[Joint] * GetJointToBoneRotation()).GetNormalized(),
+          RootRotation.UnrotateVector(Locations[Joint] - RootPosition) / Scale);
+    }
+    CorrectPinch(Handedness, BoneToWrist, Cache);
+  }
 
   Cache.bIsTrackingEnabled = true;
   Cache.bIsTrackingConfident = State.TrackingStatus == ETrackingStatus::Tracked;

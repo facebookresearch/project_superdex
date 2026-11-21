@@ -24,6 +24,7 @@ public class SuperDexOpenXRPoseSource : ModuleRules
 
         PublicDependencyModuleNames.AddRange(new string[] {
             "Core",
+            "DeveloperSettings",
             "SuperDexPose",
         });
 

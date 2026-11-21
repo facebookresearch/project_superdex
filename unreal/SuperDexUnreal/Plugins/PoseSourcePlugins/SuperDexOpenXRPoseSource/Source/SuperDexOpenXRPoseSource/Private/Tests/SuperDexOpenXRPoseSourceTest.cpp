@@ -17,6 +17,7 @@
 #include "SuperDexOpenXRPoseSource.h"
 #include "Skeletons/SuperDexSkeletonBots.h"
 #include "Skeletons/SuperDexSkeleton_OpenXR.h"
+#include "SuperDexPoseFunctionLibrary.h"
 
 #include "MochiArticulationBase.h"
 #include "MochiConversions.h"
@@ -273,6 +274,88 @@ bool FOpenXRPoseSourceHandScaleTest::RunTest(const FString& Parameters) {
   TArray<FVector> Degenerate;
   Degenerate.Init(FVector(1, 2, 3), EHandKeypointCount);
   TestEqual(TEXT("Degenerate"), USuperDexOpenXRPoseSource::EstimateHandScale(Degenerate), 1.0);
+  return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FOpenXRPoseSourceCorrectPinchTest,
+    "SuperDexOpenXRPoseSource.CorrectPinchFitsTheThumbToTheTrackedDistalFrame",
+    OPENXR_POSE_SOURCE_TEST_FLAGS)
+
+bool FOpenXRPoseSourceCorrectPinchTest::RunTest(const FString& Parameters) {
+  // The runtime's thumb metacarpal and proximal frames follow a CMC joint the bot lacks, so their
+  // rotations alone do not bring the bot's thumb distal to the tracked one. Model that by turning
+  // the tracked metacarpal and proximal frames off the bot's while keeping a thumb distal frame the
+  // bot can reach: the correction must reach it exactly and keep its orientation.
+  constexpr int32 ThumbBase = static_cast<int32>(ESuperDexBone_OXR::ThumbMetacarpal);
+  constexpr int32 ThumbProximal = static_cast<int32>(ESuperDexBone_OXR::ThumbProximal);
+  constexpr int32 ThumbDistal = static_cast<int32>(ESuperDexBone_OXR::ThumbDistal);
+  FRandomStream Rng(7);
+  for (const ESuperDexHandedness Handedness :
+       {ESuperDexHandedness::Left, ESuperDexHandedness::Right}) {
+    UMochiArticulationBase* Bot = GetSkeletonBot_OpenXR(Handedness);
+    if (!TestNotNull(TEXT("Bot"), Bot)) {
+      continue;
+    }
+    int32 Reached = 0;
+    for (int32 Trial = 0; Trial < 16; ++Trial) {
+      TArray<double> Dofs;
+      Dofs.SetNum(Bot->GetNumDofs());
+      for (double& Position : Dofs) {
+        Position = Rng.FRandRange(-0.2, 0.5);
+      }
+      TArray<FTransform> BoneToWrist;
+      if (!TestTrue(TEXT("FK"), Bot->ComputeLinkToArticulationRootTransforms(Dofs, BoneToWrist))) {
+        return false;
+      }
+      for (const int32 Bone : {ThumbBase, ThumbProximal}) {
+        const FQuat Off(Rng.GetUnitVector(), FMath::DegreesToRadians(8.0));
+        BoneToWrist[Bone].SetRotation((Off * BoneToWrist[Bone].GetRotation()).GetNormalized());
+      }
+      FSuperDexPose Pose;
+      if (!TestTrue(
+              TEXT("Rotations"),
+              USuperDexPoseFunctionLibrary::SetSuperDexPoseFromLinkToSkeletonRootTransforms(
+                  Bot, BoneToWrist, Pose))) {
+        return false;
+      }
+      const FSuperDexPose RotationsOnly = Pose;
+      if (!TestTrue(
+              TEXT("Correction"),
+              USuperDexOpenXRPoseSource::CorrectPinch(Handedness, BoneToWrist, Pose))) {
+        return false;
+      }
+      TArray<FTransform> Before, After;
+      USuperDexPoseFunctionLibrary::ComputeSuperDexPoseLinkToSkeletonRootTransforms(
+          RotationsOnly, Before);
+      USuperDexPoseFunctionLibrary::ComputeSuperDexPoseLinkToSkeletonRootTransforms(Pose, After);
+      if (!TestEqual(TEXT("FK"), After.Num(), BoneToWrist.Num()) ||
+          !TestEqual(TEXT("FK"), Before.Num(), BoneToWrist.Num())) {
+        return false;
+      }
+      const FString What = FString::Printf(TEXT("Trial %d"), Trial);
+      TestTrue(
+          What + TEXT(" root kept"),
+          Pose.SkeletonRootToVrRoot.Equals(RotationsOnly.SkeletonRootToVrRoot, 1e-9));
+      const double MissBefore =
+          FVector::Dist(Before[ThumbDistal].GetLocation(), BoneToWrist[ThumbDistal].GetLocation());
+      const double MissAfter =
+          FVector::Dist(After[ThumbDistal].GetLocation(), BoneToWrist[ThumbDistal].GetLocation());
+      AddInfo(
+          FString::Printf(TEXT("%s miss before %.4f after %.4f cm"), *What, MissBefore, MissAfter));
+      TestTrue(What + TEXT(" rotations alone miss the thumb distal"), MissBefore > 0.1);
+      TestTrue(
+          What + TEXT(" the correction nears the tracked thumb distal"), MissAfter < MissBefore);
+      // Of two MCP angles at the tracked distance, the fit takes the one nearer the tracked MCP
+      // rotation, which the turned frames can mislead; most trials must still land exactly.
+      Reached += MissAfter < 0.01 ? 1 : 0;
+      TestTrue(
+          What + TEXT(" tracked thumb distal orientation kept"),
+          AngleBetween(After[ThumbDistal].GetRotation(), BoneToWrist[ThumbDistal].GetRotation()) <
+              1e-4);
+    }
+    TestTrue(TEXT("Most trials reach the tracked thumb distal exactly"), Reached >= 12);
+  }
   return true;
 }
 

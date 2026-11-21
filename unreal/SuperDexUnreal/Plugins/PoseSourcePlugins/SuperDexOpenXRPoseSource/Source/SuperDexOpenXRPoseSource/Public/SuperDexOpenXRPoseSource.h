@@ -90,6 +90,23 @@ class SUPERDEXOPENXRPOSESOURCE_API USuperDexOpenXRPoseSource : public USuperDexP
    */
   static double EstimateHandScale(TConstArrayView<FVector> KeypointLocations);
 
+  /**
+   * Corrects a pose built from tracked joint rotations (ConvertHandKeypointsToPose) for pinches:
+   * refits the OpenXR bot's thumb to the tracked thumb distal frame and blends nearby fingers into
+   * the pinch (ApplyOpenXRPinchCorrection). The pose source applies it when the project setting
+   * USuperDexOpenXRPoseSourceSettings::bAccountForQuestHandTrackingPinch is on.
+   *
+   * @param BoneToWrist The tracked frame of every ESuperDexBone_OXR relative to the wrist bone, in
+   *   nominal bot units (tracking-space positions divided by the hand scale, EstimateHandScale).
+   * @param InOutPose A pose of the hand on the OpenXR skeleton bot. Its joint positions are
+   * replaced; SkeletonRootToVrRoot and the rest are kept.
+   * @return false, leaving InOutPose unchanged, if the pose or the frames do not fit the bot.
+   */
+  static bool CorrectPinch(
+      ESuperDexHandedness Handedness,
+      TConstArrayView<FTransform> BoneToWrist,
+      FSuperDexPose& InOutPose);
+
   /** FTickableGameObject interface */
   virtual UWorld* GetTickableGameObjectWorld() const override;
   virtual ETickableTickType GetTickableTickType() const override;
