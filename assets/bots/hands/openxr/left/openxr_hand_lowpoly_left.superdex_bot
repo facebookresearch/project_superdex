@@ -1037,5 +1037,8 @@
       "parentLink": 24
     }
   ],
-  "name": "openxr_hand_lowpoly_left"
+  "name": "openxr_hand_lowpoly_left",
+  "skin": {
+    "renderModel": "render/openxr_proxy_hand_left.glb"
+  }
 }

@@ -49,6 +49,8 @@ Differences:
 
 `render/openxr_proxy_hand_<side>.glb` is a skinned mesh of the user's hand for showing tracked OpenXR poses, such as the hand a Roboperator mirrors. Its joints are the bot's links, in link order, and its bind pose is the bot's rest pose, so it shares the bones and reference pose of the bot's skeletal mesh in Unreal.
 
+Each bot uses it as a render-only skin: it is drawn in place of the links' render meshes, and the links' colliders are unchanged.
+
 It is the TeleOperator hand mesh (`intermediates/source_hand_<side>.glb`, exported from Unreal) re-skinned and scaled by 0.74 onto the bot by [`openxr_proxy_hand_from_nimble.py`](../../../../superdex_robotics/tools/internal/openxr_proxy_hand_from_nimble.py):
 
 ```

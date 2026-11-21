@@ -171,6 +171,19 @@ void InitLODMesh(
   }
 }
 
+// Whether every vertex instance of Mesh has a nonzero vector in Vectors, e.g. the normals of a file
+// that stores them.
+bool HasAllVectors(
+    const FMeshDescription& Mesh,
+    TVertexInstanceAttributesConstRef<FVector3f> Vectors) {
+  for (const FVertexInstanceID ID : Mesh.VertexInstances().GetElementIDs()) {
+    if (Vectors[ID].IsNearlyZero()) {
+      return false;
+    }
+  }
+  return true;
+}
+
 // Appends Mesh, a mesh with vertex skin weights whose bone indices index the skeleton's bones, to
 // Target, a LOD mesh description set up by InitLODMesh for a skeleton with NumBones bones.
 void AppendMeshPart(
@@ -404,17 +417,33 @@ USkeletalMesh* FMochiArticulationAssetUtils::GenerateSkeletalMesh(
   for (const FMeshDescription& lodMesh : lodMeshes) {
     lodMeshPointers.Add(&lodMesh);
   }
-  // The render models come with the normals and tangents of their own build. A mesh made only of
-  // skinned parts has its normals and tangents recomputed.
-  const bool bRecompute = rigidLinks.IsEmpty();
+  // The render models come with the normals and tangents of their own build, and the skinned parts
+  // with those of their files. A mesh made only of skinned parts has them recomputed only if a part
+  // lacks them: recomputing splits the normals along the parts' UV seams.
+  bool bSkinNormals = true;
+  bool bSkinTangents = true;
+  for (const FMochiArticulationSkinnedPart& skinnedPart : SkinnedParts) {
+    const FStaticMeshConstAttributes attributes(skinnedPart.Mesh);
+    bSkinNormals =
+        bSkinNormals && HasAllVectors(skinnedPart.Mesh, attributes.GetVertexInstanceNormals());
+    bSkinTangents =
+        bSkinTangents && HasAllVectors(skinnedPart.Mesh, attributes.GetVertexInstanceTangents());
+  }
+  const bool bRecomputeNormals = rigidLinks.IsEmpty() && !bSkinNormals;
+  const bool bRecomputeTangents = rigidLinks.IsEmpty() && !bSkinTangents;
 #if UE_VERSION_OLDER_THAN(5, 8, 0)
   const bool bBuilt = FStaticToSkeletalMeshConverter::InitializeSkeletalMeshFromMeshDescriptions(
-      skeletalMesh, lodMeshPointers, materials.Materials, refSkeleton, bRecompute, bRecompute);
+      skeletalMesh,
+      lodMeshPointers,
+      materials.Materials,
+      refSkeleton,
+      bRecomputeNormals,
+      bRecomputeTangents);
 #else
   FStaticToSkeletalMeshConverter::FInitializationParams initParams;
   initParams.Materials = materials.Materials;
-  initParams.bRecomputeNormals = bRecompute;
-  initParams.bRecomputeTangents = bRecompute;
+  initParams.bRecomputeNormals = bRecomputeNormals;
+  initParams.bRecomputeTangents = bRecomputeTangents;
   const bool bBuilt = FStaticToSkeletalMeshConverter::InitializeSkeletalMeshFromMeshDescriptions(
       skeletalMesh, lodMeshPointers, refSkeleton, initParams);
 #endif
