@@ -155,6 +155,27 @@ EMochiPoseTargetResult UController_MochiArticulatedPose::BuildPoseTarget(
   return EMochiPoseTargetResult::Built;
 }
 
+void UController_MochiArticulatedPose::ComputeTargetWorldFromLinks(
+    const mochi::Actor* ArticulatedActor,
+    const superdex::robotics::ControllerMochiArticulatedPose::Target& Target,
+    mochi::DynamicArray<mochi::TransformRT>& OutWorldFromLinks,
+    mochi::Error& Error) {
+  const mochi::ArticulatedShapeInfo ShapeInfo = ArticulatedActor->GetArticulatedShapeInfo(Error);
+  MOCHI_ERROR_RETURN(Error);
+  const int NumLinks = mochi::isize(ShapeInfo.parents);
+  MOCHI_ERROR_IF(
+      mochi::isize(Target.localToParentTransforms) != NumLinks,
+      Error,
+      "Target localToParentTransforms size does not match link count");
+  MOCHI_ERROR_RETURN(Error);
+  OutWorldFromLinks.resize(NumLinks);
+  for (int i = 0; i < NumLinks; ++i) {
+    const int Parent = ShapeInfo.parents[i];
+    OutWorldFromLinks[i] = (Parent < 0 ? Target.worldFromRoot : OutWorldFromLinks[Parent]) *
+        Target.localToParentTransforms[i];
+  }
+}
+
 void UController_MochiArticulatedPose::CacheBotGeometry(const USuperDexBotComponent* Component) {
   const USuperDexBot* BotAsset = Component->GetBotAsset();
   if (BotAsset == nullptr) {
@@ -312,6 +333,9 @@ void UController_MochiArticulatedPose::TickController(
   FScopeLock lock(&TargetMutex);
   CachedTarget = MoveTemp(Target);
   CachedParams = MoveTemp(params);
+  CachedTeleportDistanceThreshold = TeleportDistanceThreshold;
+  CachedTeleportAngleThreshold = TeleportAngleThreshold;
+  bCachedTargetTracked = !Pose.bIsTrackingEnabled || Pose.bIsTrackingConfident;
   bHasCachedTarget = true;
 }
 
@@ -334,6 +358,8 @@ bool UController_MochiArticulatedPose::StepController(
   // deep -- Target owns its pose data -- so it stays valid for the ComputeOutput call below.
   superdex::robotics::ControllerMochiArticulatedPose::Target target;
   superdex::robotics::ControllerMochiArticulatedPose::Params params;
+  double teleportDistanceThreshold = 0.0;
+  double teleportAngleThreshold = 0.0;
   {
     FScopeLock lock(&TargetMutex);
     if (!bHasCachedTarget) {
@@ -341,9 +367,39 @@ bool UController_MochiArticulatedPose::StepController(
     }
     target = CachedTarget;
     params = CachedParams;
+    if (bCachedTargetTracked) {
+      teleportDistanceThreshold = CachedTeleportDistanceThreshold;
+      teleportAngleThreshold = CachedTeleportAngleThreshold;
+    }
   }
 
   mochi::Error err;
+  if (teleportDistanceThreshold > 0.0 || teleportAngleThreshold > 0.0) {
+    thread_local mochi::DynamicArray<mochi::TransformRT> worldFromTargets;
+    ComputeTargetWorldFromLinks(ArticulatedActor, target, worldFromTargets, err);
+    if (err.IsOK()) {
+      const FTransform RootTarget =
+          FMochiToUnrealConverter{}.TransformToUnreal(worldFromTargets[0]);
+      const bool bTooFar = teleportDistanceThreshold > 0.0 &&
+          FVector::Dist(State.BaseTransform.GetLocation(), RootTarget.GetLocation()) >
+              teleportDistanceThreshold;
+      const bool bTooTurned = teleportAngleThreshold > 0.0 &&
+          FMath::RadiansToDegrees(State.BaseTransform.GetRotation().AngularDistance(
+              RootTarget.GetRotation())) > teleportAngleThreshold;
+      if (bTooFar || bTooTurned) {
+        TeleportArticulatedActor(ArticulatedActor, worldFromTargets, err);
+      }
+    }
+    if (!err.IsOK()) {
+      UE_LOG(
+          LogSuperDexTeleop,
+          Error,
+          TEXT("[UController_MochiArticulatedPose] Teleport failed: %hs"),
+          err.GetDescription());
+      return false;
+    }
+  }
+
   PoseController->SetParams(params, err);
   if (!err.IsOK()) {
     UE_LOG(

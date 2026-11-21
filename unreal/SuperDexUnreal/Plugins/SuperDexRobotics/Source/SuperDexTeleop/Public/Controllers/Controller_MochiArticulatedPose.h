@@ -119,6 +119,26 @@ class SUPERDEXTELEOP_API UController_MochiArticulatedPose : public USuperDexBotC
       meta = (Tooltip = "Remove existing ArticulatedPoseController on actor if present"))
   bool bRemoveExistingController = true;
 
+  // When the bot's root link is farther than this from its target [cm], teleport the bot to the
+  // target at rest before driving it, e.g. when it spawns away from the tracked hand or tracking
+  // jumps. Only confidently tracked targets teleport the bot. 0 never teleports on distance.
+  UPROPERTY(
+      EditAnywhere,
+      BlueprintReadWrite,
+      Category = "Pose Controller",
+      meta = (ClampMin = "0", Units = "cm"))
+  double TeleportDistanceThreshold = 0.0;
+
+  // Teleports the bot like TeleportDistanceThreshold when the angle between its root link and its
+  // target exceeds this [deg], e.g. when it spawns near the tracked hand but turned away from it. 0
+  // never teleports on angle.
+  UPROPERTY(
+      EditAnywhere,
+      BlueprintReadWrite,
+      Category = "Pose Controller",
+      meta = (ClampMin = "0", ClampMax = "180", Units = "deg"))
+  double TeleportAngleThreshold = 0.0;
+
  public:
   UController_MochiArticulatedPose();
 
@@ -174,6 +194,15 @@ class SUPERDEXTELEOP_API UController_MochiArticulatedPose : public USuperDexBotC
   // matches the bot's geometry at its scale. See BuildPoseTarget.
   void CacheBotGeometry(const USuperDexBotComponent* Component);
 
+  // The world transforms of a target's links on an articulated actor: its root transform composed
+  // down the actor's link tree, as ControllerMochiArticulatedPose::ComputeOutput composes them.
+  // Fails if the target does not have one transform per link. Call on the Mochi thread.
+  static void ComputeTargetWorldFromLinks(
+      const mochi::Actor* ArticulatedActor,
+      const superdex::robotics::ControllerMochiArticulatedPose::Target& Target,
+      mochi::DynamicArray<mochi::TransformRT>& OutWorldFromLinks,
+      mochi::Error& Error);
+
  protected:
   // Written on the game thread (OnBotSpawned/Shutdown) and read on the Mochi simulation thread
   // (StepController), so it is atomic to avoid a data race on the lifecycle gate.
@@ -199,5 +228,9 @@ class SUPERDEXTELEOP_API UController_MochiArticulatedPose : public USuperDexBotC
   mutable FCriticalSection TargetMutex;
   superdex::robotics::ControllerMochiArticulatedPose::Target CachedTarget;
   superdex::robotics::ControllerMochiArticulatedPose::Params CachedParams;
+  double CachedTeleportDistanceThreshold = 0.0;
+  double CachedTeleportAngleThreshold = 0.0;
+  // Whether CachedTarget comes from a confidently tracked pose (or one without tracking).
+  bool bCachedTargetTracked = false;
   bool bHasCachedTarget = false;
 };

@@ -862,12 +862,7 @@ void UMochiArticulatedActorObject::SetRootTransform(
     articulatedActor->GetArticulatedLinkTransforms(transforms, e);
     MOCHI_ERROR_RETURN(e);
     transforms[0] = u2m.TransformToMochi_RT(WorldFromLocal);
-    articulatedActor->SetArticulatedPoseFromLinks(transforms, e);
-    MOCHI_ERROR_RETURN(e);
-    const int numDofs = articulatedActor->GetNumDofs();
-    std::vector<mochi::real> zeroVel(numDofs, 0);
-    articulatedActor->SetArticulatedJointVelocities(zeroVel, e);
-    MOCHI_ERROR_RETURN(e);
+    TeleportArticulatedActor(articulatedActor, transforms, e);
   });
   if (bBlocking) {
     MochiSceneObject->WaitForQueuedCommands();

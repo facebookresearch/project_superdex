@@ -37,6 +37,13 @@ ExtractArticulatedActorState(const mochi::Actor* ArticulatedActor);
 SUPERDEXPHYSICS_API void SetArticulatedActorJointEfforts(
     mochi::Actor* ArticulatedActor,
     const TArray<mochi::real>& JointEfforts);
+// Teleport an articulated actor: place its links at WorldFromLinks (one per link, projected onto
+// its joints) at rest. Mochi resets the target of its pose controller, if it has one, to the new
+// pose. Call on the Mochi thread.
+SUPERDEXPHYSICS_API void TeleportArticulatedActor(
+    mochi::Actor* ArticulatedActor,
+    mochi::Span<const mochi::TransformRT> WorldFromLinks,
+    mochi::Error& Error);
 SUPERDEXPHYSICS_API TArray<mochi::real> BuildPoseControllerTargets(
     const mochi::Actor* ArticulatedActor,
     const FTransform& BaseTransformTarget,

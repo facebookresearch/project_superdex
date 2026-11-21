@@ -120,11 +120,15 @@ class SUPERDEXTELEOP_API ATeleopRoboperatorActor : public ASuperDexPoseableActor
     FSpawnSettle Settle;
     // Whether a failed spawn has been reported; failed spawns are retried every tick.
     bool bReportedFailure = false;
+    // Whether the bot was visible before it was hidden until it spawns.
+    bool bWasVisible = false;
   };
 
   // Advances one pending spawn; returns true once it is resolved (spawned, or handed back to the
   // bot's own auto-spawn).
   bool UpdatePendingBotSpawn(FPendingBotSpawn& Pending, float DeltaSeconds);
+  // Shows a pending bot again if it was visible before it was hidden until it spawns.
+  static void RestoreVisibility(const FPendingBotSpawn& Pending);
 
   TArray<FPendingBotSpawn> PendingBotSpawns;
 };

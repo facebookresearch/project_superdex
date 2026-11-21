@@ -50,12 +50,22 @@ void ATeleopRoboperatorActor::PostInitializeComponents() {
   if (!bSpawnBotsAtTrackedHand) {
     return;
   }
-  // Before Begin Play, so no bot is created at the actor before its hand is seen.
+  // Before Begin Play, so no bot is created at the actor before its hand is seen. Until then the
+  // bot's mesh would show its rest pose at the actor, so it is hidden.
   TArray<USuperDexBotComponent*> Bots;
   GetComponents<USuperDexBotComponent>(Bots);
   for (USuperDexBotComponent* Bot : Bots) {
     Bot->SetAutoSpawn(false);
-    PendingBotSpawns.Add({Bot});
+    FPendingBotSpawn& Pending = PendingBotSpawns.AddDefaulted_GetRef();
+    Pending.Bot = Bot;
+    Pending.bWasVisible = Bot->IsVisible();
+    Bot->SetVisibility(false);
+  }
+}
+
+void ATeleopRoboperatorActor::RestoreVisibility(const FPendingBotSpawn& Pending) {
+  if (USuperDexBotComponent* Bot = Pending.Bot.Get(); Bot != nullptr && Pending.bWasVisible) {
+    Bot->SetVisibility(true);
   }
 }
 
@@ -94,6 +104,7 @@ double ATeleopRoboperatorActor::AdvanceSpawnSettle(
 bool ATeleopRoboperatorActor::UpdatePendingBotSpawn(FPendingBotSpawn& Pending, float DeltaSeconds) {
   USuperDexBotComponent* Bot = Pending.Bot.Get();
   if (Bot == nullptr || Bot->IsBotSpawned()) {
+    RestoreVisibility(Pending);
     return true;
   }
   if (!Pending.Source.IsValid()) {
@@ -119,6 +130,7 @@ bool ATeleopRoboperatorActor::UpdatePendingBotSpawn(FPendingBotSpawn& Pending, f
           *GetName(),
           *Bot->GetName());
       Bot->SetAutoSpawn(true);
+      RestoreVisibility(Pending);
       return true;
     }
     Pending.Source = Source;
@@ -162,6 +174,7 @@ bool ATeleopRoboperatorActor::UpdatePendingBotSpawn(FPendingBotSpawn& Pending, f
   ActorToWorld.SetScale3D(FVector::OneVector);
   const FTransform RootToWorld = Pose.SkeletonRootToVrRoot * ActorToWorld;
   if (Bot->SpawnBot(RootToWorld, static_cast<float>(Scale))) {
+    RestoreVisibility(Pending);
     UE_LOG(
         LogSuperDexTeleop,
         Log,

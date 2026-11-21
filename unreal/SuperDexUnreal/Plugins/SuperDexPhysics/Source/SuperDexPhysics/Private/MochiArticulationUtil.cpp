@@ -121,6 +121,17 @@ void SetArticulatedActorJointEfforts(
   ArticulatedActor->SetExternalForcesOnDofs(jointDofIndices, jointEfforts, e);
 }
 
+void TeleportArticulatedActor(
+    mochi::Actor* ArticulatedActor,
+    mochi::Span<const mochi::TransformRT> WorldFromLinks,
+    mochi::Error& Error) {
+  ArticulatedActor->SetArticulatedPoseFromLinks(WorldFromLinks, Error);
+  MOCHI_ERROR_RETURN(Error);
+  thread_local std::vector<mochi::real> zeroVelocities;
+  zeroVelocities.assign(ArticulatedActor->GetNumDofs(), 0);
+  ArticulatedActor->SetArticulatedJointVelocities(zeroVelocities, Error);
+}
+
 TArray<mochi::real> BuildPoseControllerTargets(
     const mochi::Actor* ArticulatedActor,
     const FTransform& BaseTransformTarget,
