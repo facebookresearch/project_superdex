@@ -767,7 +767,75 @@ MOCHI_ANY MOCHI_FORCE_INLINE Simd<T, N> Ln(Simd<T, N> a) {
     // Simd<T, N>::Ln only implemented in this case.
     return Simd<T, N>::Ln(a);
   } else {
-    return MOCHI_SIMD_MEMBERWISE_FALLBACK(T, N, std::log, a);
+    // Cephes logf.c (float) and log.c (double,
+    // https://github.com/jeremybarnes/cephes/blob/master/cmath/log.c): for a = m 2^e with m in
+    // [sqrt(1/2), sqrt(2)), ln(a) = ln(1 + x) + e ln(2), where x = m - 1 and
+    // ln(1 + x) = x - x^2 / 2 + x^3 R(x). Cephes log switches to another approximation for
+    // |e| > 2; this one serves every e. ln(2) is split into a short high part, whose product with
+    // e is exact, and a small low part.
+    using V = Simd<T, N>;
+    using VI = Simd<std::conditional_t<std::is_same_v<T, float>, int32_t, int64_t>, N>;
+    using I = typename VI::Scalar;
+    constexpr int kMantissaBits = std::numeric_limits<T>::digits - 1;
+    constexpr int kExponentBias = std::numeric_limits<T>::max_exponent - 1;
+    V const one(T(1));
+
+    // Scale denormals into the normal range.
+    V const twoToMantissaBits(static_cast<T>(I{1} << kMantissaBits));
+    V const isDenormal = a < V(std::numeric_limits<T>::min());
+    VI const bits = ReinterpretCast<VI>(a * Select(isDenormal, twoToMantissaBits, one));
+
+    // m and e from the bits of a > 0 minus those of sqrt(1/2): their exponent field is e plus the
+    // bias, and their mantissa field, added to the bits of sqrt(1/2), gives m. OR-ing the exponent
+    // field into the mantissa of 2^kMantissaBits turns it into a value of T without an integer
+    // conversion.
+    VI const sqrtHalfBits = ReinterpretCast<VI>(V(T(0.707106781186547524)));
+    VI const reducedBits = bits - (sqrtHalfBits - VI(I{kExponentBias} << kMantissaBits));
+    V const x =
+        ReinterpretCast<V>((reducedBits & VI((I{1} << kMantissaBits) - 1)) + sqrtHalfBits) - one;
+    V e = ReinterpretCast<V>(
+              ShiftRight<kMantissaBits>(reducedBits) | ReinterpretCast<VI>(twoToMantissaBits)) -
+        (twoToMantissaBits + T(kExponentBias));
+    e -= isDenormal & V(T(kMantissaBits));
+
+    V const z = x * x;
+    V y;
+    if constexpr (std::is_same_v<T, float>) {
+      y = x * T(7.0376836292e-2) - T(1.1514610310e-1);
+      y = y * x + T(1.1676998740e-1);
+      y = y * x - T(1.2420140846e-1);
+      y = y * x + T(1.4249322787e-1);
+      y = y * x - T(1.6668057665e-1);
+      y = y * x + T(2.0000714765e-1);
+      y = y * x - T(2.4999993993e-1);
+      y = y * x + T(3.3333331174e-1);
+      y = y * x * z;
+    } else {
+      static_assert(std::is_same_v<T, double>);
+      V p = x * T(1.01875663804580931796e-4) + T(4.97494994976747001425e-1);
+      p = p * x + T(4.70579119878881725854e0);
+      p = p * x + T(1.44989225341610930846e1);
+      p = p * x + T(1.79368678507819816313e1);
+      p = p * x + T(7.70838733755885391666e0);
+
+      V q = x + T(1.12873587189167450590e1);
+      q = q * x + T(4.52279145837532221105e1);
+      q = q * x + T(8.29875266912776603211e1);
+      q = q * x + T(7.11544750618563894466e1);
+      q = q * x + T(2.31251620126765340583e1);
+      y = x * (z * p / q);
+    }
+
+    y -= e * T(2.121944400546905827679e-4);
+    y -= z * T(0.5);
+    V const result = x + y + e * T(0.693359375);
+
+    // ln(0) = -inf, ln(inf) = inf, and ln(a) is NaN for a < 0 and a NaN.
+    V const infinity(std::numeric_limits<T>::infinity());
+    return Select(
+        a >= V(T(0)),
+        Select(VEqual(a, V(T(0))), -infinity, Select(VEqual(a, infinity), infinity, result)),
+        V(std::numeric_limits<T>::quiet_NaN()));
   }
 }
 

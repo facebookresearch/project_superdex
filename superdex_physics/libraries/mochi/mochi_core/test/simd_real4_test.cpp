@@ -1119,7 +1119,7 @@ TEST(Vec4r, NdArrayConversion) {
 
 // clang-format off
 MOCHI_SIMD_TEST_LIMIT_RANGE_UNARY_FN_NEAR(Vec4r, Exp, ([](auto a) { return std::exp(a); }), -3_r, 3_r, kEps);
-MOCHI_SIMD_TEST_LIMIT_RANGE_UNARY_FN_NEAR(Vec4r, Ln, ([](auto a) { return std::log(a); }), 0.1_r, 10_r, kEps);
+TEST(Vec4r, Ln) { TestLn<Vec4r>(); }
 MOCHI_SIMD_TEST_UNARY_FN_NEAR(Vec4r, Tanh, ([](auto a) { return std::tanh(a); }), kEps);
 // clang-format on
 

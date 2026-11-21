@@ -17,6 +17,7 @@
 #pragma once
 
 #include <mochi_core/test/mochi_test_helpers.h>
+#include <mochi_core/utils/dynamic_array.h>
 #include <mochi_core/utils/half.h>
 #include <mochi_core/utils/math_utils.h>
 #include <mochi_core/utils/simd.h>
@@ -24,7 +25,9 @@
 #include <gtest/gtest.h>
 
 #include <array>
+#include <cmath>
 #include <functional>
+#include <limits>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -80,6 +83,56 @@ void TestUnaryFunction(
     for (int i = 0; i < VecType::kSize; ++i) {
       T actual = result[i];
       EXPECT_TRUE(compareFn(expected, actual));
+    }
+  }
+}
+
+// Test Ln against std::log over positive normal and denormal values of every exponent, every 2^-16
+// in [1/2, 2), values near 1 and special values, each special value next to a regular one.
+template <class VecType>
+void TestLn() {
+  using T = typename VecType::Scalar;
+  constexpr T kInf = std::numeric_limits<T>::infinity();
+  constexpr int kMaxUlps = details::kUseSvml ? 5 : 2; // SVML's Ln is off by up to 4 ulp in float.
+  DynamicArray<T> values = {std::numeric_limits<T>::max()};
+  for (T power = std::numeric_limits<T>::denorm_min(); power <= std::numeric_limits<T>::max() / 2;
+       power *= 2) {
+    for (T factor : {T(1), T(1.1), T(1.4142), T(1.5), T(1.99)}) {
+      values.push_back(power * factor);
+    }
+  }
+  for (int i = 0; i < 3 << 15; ++i) {
+    values.push_back(T(0.5) + T(i) / T(1 << 16));
+  }
+  for (T delta : {T(1e-6), T(1e-3), T(0.1)}) {
+    values.push_back(1 + delta);
+    values.push_back(1 - delta);
+  }
+  for (T special :
+       {T(0),
+        -T(0),
+        kInf,
+        -kInf,
+        T(-1),
+        -std::numeric_limits<T>::denorm_min(),
+        std::numeric_limits<T>::quiet_NaN()}) {
+    values.push_back(special);
+    values.push_back(T(2));
+  }
+  values.resize(RoundUp(isize(values), VecType::kSize), T(1));
+
+  for (int i = 0; i < isize(values); i += VecType::kSize) {
+    VecType const result = Ln(Load<VecType>(&values[i]));
+    for (int j = 0; j < VecType::kSize; ++j) {
+      T const expected = static_cast<T>(std::log(static_cast<double>(values[i + j])));
+      if (std::isnan(expected)) {
+        EXPECT_TRUE(std::isnan(result[j]));
+      } else if (std::isinf(expected)) {
+        EXPECT_EQ(expected, result[j]);
+      } else {
+        T const ulp = std::nextafter(Abs(expected), kInf) - Abs(expected);
+        EXPECT_LE(Abs(result[j] - expected), kMaxUlps * ulp);
+      }
     }
   }
 }

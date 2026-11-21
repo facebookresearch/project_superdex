@@ -1236,7 +1236,7 @@ MOCHI_SIMD_TEST_LIMIT_RANGE_UNARY_FN_NEAR(Vec8r, Tan, ([](auto a) { return std::
 MOCHI_SIMD_TEST_BINARY_BITWISE_OP(Vec8r, BitwiseXOR, ^);
 
 MOCHI_SIMD_TEST_LIMIT_RANGE_UNARY_FN_NEAR(Vec8r, Exp, ([](auto a) { return std::exp(a); }), -3_r, 3_r, kEps);
-MOCHI_SIMD_TEST_LIMIT_RANGE_UNARY_FN_NEAR(Vec8r, Ln, ([](auto a) { return std::log(a); }), 0.1_r, 10_r, kEps);
+TEST(Vec8r, Ln) { TestLn<Vec8r>(); }
 MOCHI_SIMD_TEST_UNARY_FN_NEAR(Vec8r, Tanh, ([](auto a) { return std::tanh(a); }), kEps);
 // clang-format on
 

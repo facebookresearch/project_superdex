@@ -592,6 +592,8 @@ MOCHI_ANY MOCHI_FORCE_INLINE Simd<T, N> ATan(Simd<T, N> a);
 // Math functions
 template <class T, int N>
 MOCHI_ANY MOCHI_FORCE_INLINE Simd<T, N> Exp(Simd<T, N> a);
+
+// Natural logarithm. Returns -inf for +-0, inf for inf, and NaN for negative and NaN inputs.
 template <class T, int N>
 MOCHI_ANY MOCHI_FORCE_INLINE Simd<T, N> Ln(Simd<T, N> a);
 
