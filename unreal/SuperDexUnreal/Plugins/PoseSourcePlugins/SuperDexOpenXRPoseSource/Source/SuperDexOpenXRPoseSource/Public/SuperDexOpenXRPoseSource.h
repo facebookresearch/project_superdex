@@ -25,8 +25,8 @@
 
 /**
  * Pose source for OpenXR (XR_EXT_hand_tracking) hand tracking through the active XR system, e.g.
- * Epic's OpenXR plugin with OpenXRHandTracking enabled. Produces poses on kSkeletonName_OpenXR,
- * which drive the openxr superdex hand bots directly.
+ * Epic's OpenXR plugin with OpenXRHandTracking enabled. Produces poses on the OpenXR skeleton bot
+ * (GetSkeletonBot_OpenXR), whose joint positions drive the openxr superdex hand bots directly.
  *
  * Hand tracking state is read on the game thread in Tick and cached.
  *
@@ -51,20 +51,26 @@ class SUPERDEXOPENXRPOSESOURCE_API USuperDexOpenXRPoseSource : public USuperDexP
 
   virtual bool GetPose(const ESuperDexHandedness Handedness, FSuperDexPose& OutPose) override;
 
+  /** The OpenXR skeleton bot of the hand (GetSkeletonBot_OpenXR). */
+  virtual UMochiArticulationBase* GetBot(const ESuperDexHandedness Handedness) const override;
+
   /**
-   * Builds an FSuperDexPose on kSkeletonName_OpenXR from OpenXR joint poses as UE's OpenXR plugin
-   * reports them.
+   * Builds an FSuperDexPose on the OpenXR skeleton bot of a hand from OpenXR joint poses as UE's
+   * OpenXR plugin reports them.
    *
    * @param KeypointRotations Joint rotations in EHandKeypoint (XrHandJointEXT) order, all in the
    *   space the pose's root is expressed in.
    * @param WristLocation Wrist joint location in that space.
-   * @param OutPose Receives BoneRotations (local to parent, ESuperDexBone_OXR order) and
-   *   SkeletonRootToVrRoot (the wrist bone, unit scale; the pose source sets the hand scale, see
-   *   EstimateHandScale). BoneLocations is left empty so consumers use the bot's rest offsets.
+   * @param Handedness The hand, Left or Right.
+   * @param OutPose Receives Bot (GetSkeletonBot_OpenXR), DofPositions (the bot's joint positions
+   *   that the joint rotations hold, relative to their parents) and SkeletonRootToVrRoot (the wrist
+   *   bone, unit scale; the pose source sets the hand scale, see EstimateHandScale).
+   * @return true if OutPose was built, false if the bot is missing.
    */
-  static void ConvertHandKeypointsToPose(
+  static bool ConvertHandKeypointsToPose(
       TConstArrayView<FQuat> KeypointRotations,
       const FVector& WristLocation,
+      const ESuperDexHandedness Handedness,
       FSuperDexPose& OutPose);
 
   /**

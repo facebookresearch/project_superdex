@@ -15,6 +15,7 @@
  */
 
 #include "SuperDexPoseModule.h"
+#include "Skeletons/SuperDexSkeletonBotsLifetime.h"
 
 #include "JsonObjectConverter.h"
 
@@ -111,10 +112,12 @@ bool FSuperDexPoseModule::SaveToJsonFile(
 
 void FSuperDexPoseModule::StartupModule() {
   UE_LOG(LogSuperDexPose, Display, TEXT("[%hs]"), __FUNCTION__);
+  CreateSkeletonBots();
 }
 
 void FSuperDexPoseModule::ShutdownModule() {
   UE_LOG(LogSuperDexPose, Display, TEXT("[%hs]"), __FUNCTION__);
+  DestroySkeletonBots();
 }
 
 #undef LOCTEXT_NAMESPACE

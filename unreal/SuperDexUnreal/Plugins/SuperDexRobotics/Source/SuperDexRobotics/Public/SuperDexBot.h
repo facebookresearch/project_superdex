@@ -148,6 +148,12 @@ class SUPERDEXROBOTICS_API USuperDexBot : public UMochiArticulationBase {
   /// (i.e. ComputeSourceHash() differs from the stored hash).
   bool IsOutOfSync() const;
 #endif
+  /// Creates a transient bot, not backed by an imported asset, from resolved BotPrefab JSON. Its
+  /// kinematics, the only part that does not need imported content, are exactly those of an
+  /// imported bot with the same links and joints, so the JSON can be a copy of an imported bot
+  /// pruned to them (no geometry, contact or mass). The BotPrefab is loaded here, so later
+  /// queries only read it. Returns nullptr if the JSON does not load.
+  static USuperDexBot* CreateTransient(UObject* Outer, const FString& InBotPrefabJson);
   /// Returns the bot name extracted from the BotPrefab JSON (e.g. "left_hand").
   UFUNCTION(BlueprintPure, Category = "SuperDex Bot")
   const FString& GetBotName() const;

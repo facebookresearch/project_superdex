@@ -53,20 +53,134 @@ bool USuperDexPoseFunctionLibrary::UpdateSuperDexPoseInAsset(
 }
 
 bool USuperDexPoseFunctionLibrary::ComputeSuperDexPoseFromJointPositions(
-    const UMochiArticulationBase* Articulation,
+    UMochiArticulationBase* Articulation,
     const TArray<double>& JointPositions,
     FSuperDexPose& OutPose) {
-  TArray<FTransform> LinkToParent;
-  if (Articulation == nullptr ||
-      !Articulation->ComputeLinkToParentTransforms(JointPositions, LinkToParent)) {
+  if (Articulation == nullptr || JointPositions.Num() != Articulation->GetNumDofs()) {
     return false;
   }
-  OutPose.BoneRotations.SetNum(LinkToParent.Num());
-  OutPose.BoneLocations.SetNum(LinkToParent.Num());
-  for (int32 I = 0; I < LinkToParent.Num(); ++I) {
-    OutPose.BoneRotations[I] = LinkToParent[I].GetRotation();
-    OutPose.BoneLocations[I] = LinkToParent[I].GetLocation();
+  OutPose.Bot = Articulation;
+  OutPose.DofPositions = JointPositions;
+  return true;
+}
+
+namespace {
+
+// SetSuperDexPoseFromLinkToParentTransforms and SetSuperDexPoseFromLinkToSkeletonRootTransforms:
+// DofPositions are the joint positions LinkTransforms hold.
+bool SetSuperDexPoseFromJointPositionsAndLinkTransforms(
+    UMochiArticulationBase& Bot,
+    const TArray<FTransform>& LinkTransforms,
+    TArray<double>&& DofPositions,
+    FSuperDexPose& Pose) {
+  // The root link's transform relative to the pose root, in either space, at the joint positions;
+  // the pose root moves so that it becomes LinkTransforms[0].
+  TArray<FTransform> RootLink;
+  if (!Bot.ComputeLinkToParentTransforms(
+          DofPositions,
+          RootLink,
+          /*AngleScale=*/1.0,
+          /*LengthScale=*/100.0,
+          /*FinalLinkIndex=*/0)) {
+    return false;
   }
+  Pose.SkeletonRootToVrRoot = RootLink[0].Inverse() * LinkTransforms[0] * Pose.SkeletonRootToVrRoot;
+  Pose.Bot = &Bot;
+  Pose.DofPositions = MoveTemp(DofPositions);
+  return true;
+}
+
+} // namespace
+
+bool USuperDexPoseFunctionLibrary::SetSuperDexPoseFromLinkToParentTransforms(
+    UMochiArticulationBase* Bot,
+    const TArray<FTransform>& LinkToParent,
+    FSuperDexPose& Pose) {
+  TArray<double> DofPositions;
+  return Bot != nullptr && !LinkToParent.IsEmpty() &&
+      LinkToParent.Num() == Bot->GetLinkNames().Num() &&
+      Bot->ComputeJointPositionsFromLinkToParentTransforms(LinkToParent, DofPositions) &&
+      SetSuperDexPoseFromJointPositionsAndLinkTransforms(
+             *Bot, LinkToParent, MoveTemp(DofPositions), Pose);
+}
+
+bool USuperDexPoseFunctionLibrary::SetSuperDexPoseFromLinkToSkeletonRootTransforms(
+    UMochiArticulationBase* Bot,
+    const TArray<FTransform>& LinkToSkeletonRoot,
+    FSuperDexPose& Pose) {
+  TArray<double> DofPositions;
+  return Bot != nullptr && !LinkToSkeletonRoot.IsEmpty() &&
+      LinkToSkeletonRoot.Num() == Bot->GetLinkNames().Num() &&
+      Bot->ComputeJointPositionsFromLinkToArticulationRootTransforms(
+          LinkToSkeletonRoot, DofPositions) &&
+      SetSuperDexPoseFromJointPositionsAndLinkTransforms(
+             *Bot, LinkToSkeletonRoot, MoveTemp(DofPositions), Pose);
+}
+
+bool USuperDexPoseFunctionLibrary::SetSuperDexPoseFromLinkRotations(
+    UMochiArticulationBase* Bot,
+    const TArray<FQuat>& LinkToParentRotations,
+    FSuperDexPose& Pose) {
+  TArray<FTransform> LinkToParent;
+  LinkToParent.Reserve(LinkToParentRotations.Num());
+  for (const FQuat& Rotation : LinkToParentRotations) {
+    LinkToParent.Emplace(Rotation);
+  }
+  return SetSuperDexPoseFromLinkToParentTransforms(Bot, LinkToParent, Pose);
+}
+
+bool USuperDexPoseFunctionLibrary::ComputeSuperDexPoseLinkToParentTransforms(
+    const FSuperDexPose& Pose,
+    TArray<FTransform>& OutLinkToParent) {
+  return IsSuperDexPoseOnBot(Pose) &&
+      Pose.Bot->ComputeLinkToParentTransforms(Pose.DofPositions, OutLinkToParent);
+}
+
+bool USuperDexPoseFunctionLibrary::ComputeSuperDexPoseLinkToSkeletonRootTransforms(
+    const FSuperDexPose& Pose,
+    TArray<FTransform>& OutLinkToSkeletonRoot) {
+  return IsSuperDexPoseOnBot(Pose) &&
+      Pose.Bot->ComputeLinkToArticulationRootTransforms(Pose.DofPositions, OutLinkToSkeletonRoot);
+}
+
+bool USuperDexPoseFunctionLibrary::IsSuperDexPoseOnBot(const FSuperDexPose& Pose) {
+  return Pose.Bot != nullptr && Pose.DofPositions.Num() == Pose.Bot->GetNumDofs();
+}
+
+int32 USuperDexPoseFunctionLibrary::FindSuperDexPoseLinkIndex(
+    const FSuperDexPose& Pose,
+    FName LinkName) {
+  return Pose.Bot != nullptr ? Pose.Bot->GetLinkNames().Find(LinkName) : INDEX_NONE;
+}
+
+bool USuperDexPoseFunctionLibrary::ComputeSuperDexPoseLinkToSkeletonRoot(
+    const FSuperDexPose& Pose,
+    int32 LinkIndex,
+    FTransform& OutLinkToSkeletonRoot) {
+  TArray<FTransform> LinkToRoot;
+  if (LinkIndex < 0 || !IsSuperDexPoseOnBot(Pose) ||
+      !Pose.Bot->ComputeLinkToArticulationRootTransforms(
+          Pose.DofPositions,
+          LinkToRoot,
+          /*AngleScale=*/1.0,
+          /*LengthScale=*/100.0,
+          /*FinalLinkIndex=*/LinkIndex) ||
+      !LinkToRoot.IsValidIndex(LinkIndex)) {
+    return false;
+  }
+  OutLinkToSkeletonRoot = LinkToRoot[LinkIndex];
+  return true;
+}
+
+bool USuperDexPoseFunctionLibrary::ComputeSuperDexPoseLinkToVrRoot(
+    const FSuperDexPose& Pose,
+    int32 LinkIndex,
+    FTransform& OutLinkToVrRoot) {
+  FTransform LinkToSkeletonRoot;
+  if (!ComputeSuperDexPoseLinkToSkeletonRoot(Pose, LinkIndex, LinkToSkeletonRoot)) {
+    return false;
+  }
+  OutLinkToVrRoot = LinkToSkeletonRoot * Pose.SkeletonRootToVrRoot;
   return true;
 }
 

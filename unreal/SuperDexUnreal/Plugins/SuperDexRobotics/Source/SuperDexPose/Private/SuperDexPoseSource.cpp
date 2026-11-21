@@ -25,6 +25,10 @@ bool USuperDexPoseSource::GetPose(const ESuperDexHandedness Handedness, FSuperDe
   return false;
 }
 
+UMochiArticulationBase* USuperDexPoseSource::GetBot(const ESuperDexHandedness Handedness) const {
+  return nullptr;
+}
+
 bool USuperDexPoseSource::ShouldCreatePoseSource(UWorld* World) const {
   return true;
 }

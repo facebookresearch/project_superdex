@@ -15,9 +15,12 @@
  */
 
 #include "SuperDexOpenXRPoseSource.h"
+#include "Skeletons/SuperDexSkeletonBots.h"
 #include "Skeletons/SuperDexSkeleton_OpenXR.h"
 
+#include "MochiArticulationBase.h"
 #include "MochiConversions.h"
+#include "MochiTypes.h"
 
 #include "HeadMountedDisplayTypes.h"
 #include "Math/RandomStream.h"
@@ -49,6 +52,13 @@ FQuat BotToUnreal(const FQuat& Bot) {
           static_cast<mochi::real>(Bot.W)));
 }
 
+// What the superdex importer made a right-handed bot rotation into, back in the bot's space.
+FQuat UnrealToBot(const FQuat& Unreal) {
+  const TUnrealToMochiConverter<double> U2M(kSuperDexSpace);
+  const mochi::Real4 V = U2M.RotationToMochi(Unreal).ToReal4();
+  return FQuat(V[0], V[1], V[2], V[3]);
+}
+
 // FQuat::AngularDistance takes acos of a value that rounds above 1 for equal rotations.
 double AngleBetween(const FQuat& A, const FQuat& B) {
   const FQuat D = A.Inverse() * B;
@@ -64,15 +74,16 @@ struct FRandomHand {
   TArray<FQuat> XrWorld; // tracking-from-joint, EHandKeypoint order
 };
 
-FRandomHand MakeRandomHand(FRandomStream& Rng) {
+// A hand with the given parent-from-joint rotations (ESuperDexBone_OXR order).
+FRandomHand MakeHand(TArray<FQuat> XrLocals) {
   constexpr int32 NumBones = static_cast<int32>(ESuperDexBone_OXR::Count);
+  check(XrLocals.Num() == NumBones);
   FRandomHand Hand;
-  Hand.XrLocals.SetNum(NumBones);
+  Hand.XrLocals = MoveTemp(XrLocals);
   Hand.XrWorld.SetNum(EHandKeypointCount);
   TArray<FQuat> BoneWorld;
   BoneWorld.SetNum(NumBones);
   for (int32 Bone = 0; Bone < NumBones; ++Bone) {
-    Hand.XrLocals[Bone] = RandomRotation(Rng);
     const ESuperDexBone_OXR Parent = kSuperDexBoneParents_OXR[Bone];
     BoneWorld[Bone] = Parent == ESuperDexBone_OXR::Invalid
         ? Hand.XrLocals[Bone]
@@ -82,38 +93,78 @@ FRandomHand MakeRandomHand(FRandomStream& Rng) {
   return Hand;
 }
 
-FSuperDexPose ConvertAsUnrealReportsIt(const FRandomHand& Hand) {
+FRandomHand MakeRandomHand(FRandomStream& Rng) {
+  TArray<FQuat> XrLocals;
+  for (int32 Bone = 0; Bone < static_cast<int32>(ESuperDexBone_OXR::Count); ++Bone) {
+    XrLocals.Add(RandomRotation(Rng));
+  }
+  return MakeHand(MoveTemp(XrLocals));
+}
+
+FSuperDexPose ConvertAsUnrealReportsIt(
+    FAutomationTestBase& Test,
+    const FRandomHand& Hand,
+    ESuperDexHandedness Handedness) {
   TArray<FQuat> UnrealRotations;
   for (const FQuat& Q : Hand.XrWorld) {
     UnrealRotations.Add(XrToUnreal(Q));
   }
   FSuperDexPose Pose;
-  USuperDexOpenXRPoseSource::ConvertHandKeypointsToPose(UnrealRotations, FVector(1, 2, 3), Pose);
+  Test.TestTrue(
+      TEXT("Converted"),
+      USuperDexOpenXRPoseSource::ConvertHandKeypointsToPose(
+          UnrealRotations, FVector(1, 2, 3), Handedness, Pose));
   return Pose;
 }
 
 } // namespace
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-    FOpenXRPoseSourceLocalsTest,
-    "SuperDexOpenXRPoseSource.LocalRotationsAreImportedOpenXRLocals",
+    FOpenXRPoseSourceJointPositionsTest,
+    "SuperDexOpenXRPoseSource.JointPositionsAreTheTrackedBotJointPositions",
     OPENXR_POSE_SOURCE_TEST_FLAGS)
 
-bool FOpenXRPoseSourceLocalsTest::RunTest(const FString& Parameters) {
+bool FOpenXRPoseSourceJointPositionsTest::RunTest(const FString& Parameters) {
   FRandomStream Rng(42);
-  for (int32 Trial = 0; Trial < 16; ++Trial) {
-    const FRandomHand Hand = MakeRandomHand(Rng);
-    const FSuperDexPose Pose = ConvertAsUnrealReportsIt(Hand);
-    TestEqual(TEXT("Skeleton"), Pose.SkeletonName, kSkeletonName_OpenXR);
-    TestEqual(
-        TEXT("Bone count"), Pose.BoneRotations.Num(), static_cast<int32>(ESuperDexBone_OXR::Count));
-    TestEqual(TEXT("No bone locations"), Pose.BoneLocations.Num(), 0);
-    for (int32 Bone = 1; Bone < Pose.BoneRotations.Num(); ++Bone) {
-      const FQuat Expected = BotToUnreal(Hand.XrLocals[Bone]);
-      TestTrue(
-          FString::Printf(
-              TEXT("Trial %d bone %s"), Trial, *kSuperDexBoneNames_OXR[Bone].ToString()),
-          AngleBetween(Pose.BoneRotations[Bone], Expected) < 1e-4);
+  for (const ESuperDexHandedness Handedness :
+       {ESuperDexHandedness::Left, ESuperDexHandedness::Right}) {
+    const TCHAR* Side = Handedness == ESuperDexHandedness::Left ? TEXT("Left") : TEXT("Right");
+    UMochiArticulationBase* Bot = GetSkeletonBot_OpenXR(Handedness);
+    if (!TestNotNull(TEXT("Bot"), Bot)) {
+      continue;
+    }
+    for (int32 Trial = 0; Trial < 16; ++Trial) {
+      // The OpenXR joint frames of the bot at random joint positions, as the runtime tracks them:
+      // the bot's link frames are the OpenXR joint frames.
+      TArray<double> Expected;
+      Expected.SetNum(Bot->GetNumDofs());
+      for (double& Position : Expected) {
+        Position = Rng.FRandRange(-0.5, 0.5);
+      }
+      TArray<FTransform> LinkToParent;
+      if (!TestTrue(
+              TEXT("Link transforms"),
+              Bot->ComputeLinkToParentTransforms(Expected, LinkToParent))) {
+        return false;
+      }
+      TArray<FQuat> XrLocals;
+      for (const FTransform& Link : LinkToParent) {
+        XrLocals.Add(UnrealToBot(Link.GetRotation()));
+      }
+
+      const FSuperDexPose Pose =
+          ConvertAsUnrealReportsIt(*this, MakeHand(MoveTemp(XrLocals)), Handedness);
+      TestTrue(TEXT("Bot"), Pose.Bot == Bot);
+      if (!TestEqual(TEXT("Joint position count"), Pose.DofPositions.Num(), Expected.Num())) {
+        continue;
+      }
+      for (int32 Dof = 0; Dof < Expected.Num(); ++Dof) {
+        TestNearlyEqual(
+            FString::Printf(TEXT("%s trial %d DOF %d"), Side, Trial, Dof),
+            Pose.DofPositions[Dof],
+            Expected[Dof],
+            1e-4);
+      }
     }
   }
   return true;
@@ -132,7 +183,7 @@ bool FOpenXRPoseSourceRootTest::RunTest(const FString& Parameters) {
   FRandomStream Rng(7);
   for (int32 Trial = 0; Trial < 16; ++Trial) {
     const FRandomHand Hand = MakeRandomHand(Rng);
-    const FSuperDexPose Pose = ConvertAsUnrealReportsIt(Hand);
+    const FSuperDexPose Pose = ConvertAsUnrealReportsIt(*this, Hand, ESuperDexHandedness::Right);
     const FQuat Wrist = Hand.XrWorld[static_cast<int32>(EHandKeypoint::Wrist)];
     const FQuat Expected = BotToUnreal(XrToBotWorld * Wrist);
     TestTrue(

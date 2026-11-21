@@ -23,6 +23,8 @@
 
 #include "SuperDexPoseTypes.generated.h"
 
+class UMochiArticulationBase;
+
 // Describes the source types that a SuperDexPoseableComponent can use to get its pose in the order
 // they are checked.
 UENUM(BlueprintType)
@@ -49,11 +51,6 @@ USTRUCT(BlueprintType) struct SUPERDEXPOSE_API FSuperDexPose {
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex")
   FName SourceName = "Invalid";
 
-  // The name associated with the skeleton topology being used. These are commonly defined alongside
-  // the enums that list bones.
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex")
-  FName SkeletonName = "Invalid";
-
   // Any additional string tags that we want to add to the pose. These include any tags coming from
   // the pose source or additional tags accumulated from systems along the pose pipeline. Tags can
   // be used by anyone when filtering or modifying pose for any reason. Ideally tag modifications
@@ -61,23 +58,27 @@ USTRUCT(BlueprintType) struct SUPERDEXPOSE_API FSuperDexPose {
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex")
   TArray<FName> tags;
 
-  // The bone rotations associated with the pose. These are in LocalToParent space and in bone index
-  // order for their specific skeleton. Whole pose requires knowing the position offsets of the
-  // bones gotten from the rest pose combined with the rotations provided here. Scale is fixed.
+  // The bot whose skeleton the pose is on. Its links are the skeleton's bones, DofPositions are its
+  // joint positions, and SkeletonRootToVrRoot places its root link. Pose sources report poses on
+  // the bots of their skeletons (USuperDexPoseSource::GetBot), such as the pose skeleton bots
+  // (Skeletons/SuperDexSkeletonBots.h); poses on the same skeleton share their bot.
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex")
-  TArray<FQuat> BoneRotations;
+  TObjectPtr<UMochiArticulationBase> Bot = nullptr;
 
-  // [Optional] The bone locations associated with the pose. These are in LocalToParent space and in
-  // bone index order for their specific skeleton. Whole pose requires knowing the position offsets
-  // of the bones gotten from the rest pose combined with the locations provided here. Scale is
-  // fixed. If you set this, it must be the same length as BoneRotations.
+  // The joint positions of Bot [rad or m], in its DOF order and excluding the DOFs of a Free root
+  // joint (UMochiArticulationBase::GetNumDofs): one for a revolute or prismatic joint, and three, a
+  // rotation vector in the joint frame, for a spherical joint. Prismatic positions are in nominal
+  // bot units, unaffected by the pose's scale. The bone transforms of the pose are Bot's link
+  // transforms at these joint positions
+  // (USuperDexPoseFunctionLibrary::ComputeSuperDexPoseLinkToParentTransforms).
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex")
-  TArray<FVector> BoneLocations;
+  TArray<double> DofPositions;
 
-  // The translation, rotation, and scale of the root of the skeleton relative to its actor's VrRoot
-  // location. For poseable actors attached to the pawn the actor is placed at the VrRoot scene
-  // component on the pawn. Mochi and other systems do not handle nonuniform scale well so scale
-  // should always be left uniform despite UE allowing for float3 scales.
+  // The translation, rotation, and scale of the root of the skeleton (Bot's root link) relative to
+  // its actor's VrRoot location. For poseable actors attached to the pawn the actor is placed at
+  // the VrRoot scene component on the pawn. The scale is the size of the pose relative to Bot.
+  // Mochi and other systems do not handle nonuniform scale well so scale should always be left
+  // uniform despite UE allowing for float3 scales.
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex")
   FTransform SkeletonRootToVrRoot = FTransform::Identity;
 

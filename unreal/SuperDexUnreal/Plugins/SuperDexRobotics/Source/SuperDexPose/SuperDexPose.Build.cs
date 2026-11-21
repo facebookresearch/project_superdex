@@ -47,7 +47,9 @@ public class SuperDexPose : ModuleRules
           "SlateCore",
           "Json",
           "JsonUtilities",
-          "Projects"
+          "Projects",
+          // USuperDexBot, the pose skeleton bots (Skeletons/SuperDexSkeletonBots.cpp)
+          "SuperDexRobotics"
             }
             );
 

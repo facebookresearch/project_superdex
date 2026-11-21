@@ -204,7 +204,7 @@ bool UClutchSkeletonRootToVrRootRetargeter::GetTransformedPose_Implementation(
   }
   TransformedPose = LastEnabledSourcePose;
   TransformedPose.tags.Add(TEXT("ClutchedPose"));
-  // Does not change the SkeletonName
+  // Does not change the bot or its joint positions
   TransformedPose.SkeletonRootToVrRoot = ClutchedSkeletonRootToVrRoot;
   // Since the SourcePose is guaranteed to be valid the transformed pose will also be valid
   return true;
@@ -322,7 +322,13 @@ bool UClutchSkeletonRootToVrRootRetargeter::InitializeClutchBasedOnLeafBoneInter
   const int EndEffectorBone = (InitializeClutchRelativeToBoneIndex >= 0)
       ? InitializeClutchRelativeToBoneIndex
       : LeafBones[0];
-  FTransform EndEffectorToWorld = RobotArmPosablePtr->GetBoneTransform(EndEffectorBone);
+  // The end effector link at the arm's cached joint positions, or its mesh bone without a cached
+  // pose on a bot with that link.
+  FTransform EndEffectorToWorld;
+  if (!RobotArmPosablePtr->GetCachedPoseLinkTransform(
+          skele.GetBoneName(EndEffectorBone), EndEffectorToWorld)) {
+    EndEffectorToWorld = RobotArmPosablePtr->GetBoneTransform(EndEffectorBone);
+  }
   FTransform VrRootToWorld = GetOwner()->GetActorTransform();
   if (UpdateClutchToLeafBoneTransform &&
       !bOverrideInitializeClutchSkeletonRootToPoseableEndEffector) {

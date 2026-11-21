@@ -126,6 +126,16 @@ bool USuperDexBot::IsOutOfSync() const {
 
 #endif // WITH_EDITOR
 
+USuperDexBot* USuperDexBot::CreateTransient(UObject* Outer, const FString& InBotPrefabJson) {
+  USuperDexBot* Bot = NewObject<USuperDexBot>(Outer, NAME_None, RF_Transient);
+  Bot->BotPrefabJson = InBotPrefabJson;
+  if (!Bot->EnsureBotPrefabCached()) {
+    return nullptr;
+  }
+  Bot->BotName = UTF8_TO_TCHAR(std::string(Bot->CachedBotPrefab.name).c_str());
+  return Bot;
+}
+
 const FString& USuperDexBot::GetBotName() const {
   return BotName;
 }
@@ -165,10 +175,6 @@ int USuperDexBot::GetNumDofs() const {
 
 const TArray<double>& USuperDexBot::GetDefaultJointPositions() const {
   if (EnsureBotPrefabCached()) {
-    CachedDefaultJointPositions.SetNum(CachedBotPrefab._numDofs);
-    for (int32 i = 0; i < CachedBotPrefab._numDofs; ++i) {
-      CachedDefaultJointPositions[i] = static_cast<double>(CachedBotPrefab.defaultPose[i]);
-    }
     return CachedDefaultJointPositions;
   }
   UE_LOG(
@@ -485,6 +491,11 @@ bool USuperDexBot::EnsureBotPrefabCached(bool bForceReload) const {
   }
   // NB: FSuperDexBotLoader::LoadBotPrefab already ran MaterializeSensorParamFiles on this
   // prefab, and reported a failure through `e` above.
+  // Filled here, once per load, so that GetDefaultJointPositions only reads it.
+  CachedDefaultJointPositions.SetNum(CachedBotPrefab._numDofs);
+  for (int32 i = 0; i < CachedBotPrefab._numDofs; ++i) {
+    CachedDefaultJointPositions[i] = static_cast<double>(CachedBotPrefab.defaultPose[i]);
+  }
   bHasCachedBotPrefab = true;
   return true;
 }

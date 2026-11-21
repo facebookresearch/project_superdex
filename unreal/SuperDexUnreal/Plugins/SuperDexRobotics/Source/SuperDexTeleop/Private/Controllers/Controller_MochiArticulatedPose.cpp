@@ -23,6 +23,7 @@
 #include "MochiPhysicsModule.h"
 #include "SuperDexBot.h"
 #include "SuperDexBotComponent.h"
+#include "SuperDexPoseFunctionLibrary.h"
 #include "SuperDexPoseableComponent.h"
 
 namespace {
@@ -108,45 +109,36 @@ EMochiPoseTargetResult UController_MochiArticulatedPose::BuildPoseTarget(
     const FTransform& VrRootToWorld,
     const FMochiArticulatedPoseGeometry& Geometry,
     superdex::robotics::ControllerMochiArticulatedPose::Target& OutTarget) {
-  const int NumBones = Pose.BoneRotations.Num();
-  if (NumBones == 0) {
-    return EMochiPoseTargetResult::EmptyPose;
+  TArray<FTransform> LinkToParent;
+  if (!USuperDexPoseFunctionLibrary::ComputeSuperDexPoseLinkToParentTransforms(
+          Pose, LinkToParent) ||
+      LinkToParent.IsEmpty()) {
+    return EMochiPoseTargetResult::NotOnBot;
   }
+  const int NumLinks = LinkToParent.Num();
 
   FUnrealToMochiConverter u2m;
 
-  // The pose may or may not carry per-bone translations. Sources like the OpenXR pose source
-  // fill only BoneRotations (and SkeletonRootToVrRoot), leaving BoneLocations empty. The
-  // link translations then come from the bot's own geometry at the scale it was spawned at, so the
-  // targets match the bot whatever size the tracked hand is. Substituting zero instead would drop
-  // the offsets and leave the first frames before the PD controller settles with grossly wrong link
-  // targets.
-  const bool bHasLocations = Pose.BoneLocations.Num() == NumBones;
-  if (!bHasLocations && Geometry.JointOffsets.Num() != NumBones) {
-    return EMochiPoseTargetResult::BoneCountMismatch;
+  // A pose on the bot gives its link translations too (in nominal bot units, scaled to the bot's
+  // scale), prismatic joint motion included. A pose on another bot, such as the OpenXR pose
+  // source's skeleton bot, gives only rotations: the link translations then come from the bot's
+  // own geometry at the scale it was spawned at, so the targets match the bot whatever size the
+  // tracked hand is.
+  const bool bPoseOnBot = Geometry.Bot != nullptr && Pose.Bot.Get() == Geometry.Bot;
+  if (!bPoseOnBot && Geometry.JointOffsets.Num() != NumLinks) {
+    return EMochiPoseTargetResult::LinkCountMismatch;
   }
 
-  // Bone locations supplied by the source are in its own skeleton units and presented at the pose's
-  // (uniform) scale, so the effective offset is scale * boneLocation.
-  const FVector PoseScale3D = Pose.SkeletonRootToVrRoot.GetScale3D();
-  double PoseScale = PoseScale3D.X;
-  if (!FMath::IsFinite(PoseScale) || FMath::IsNearlyZero(PoseScale)) {
-    PoseScale = 1.0;
-  }
-
-  // Build per-link local-to-parent transforms from the FSuperDexPose bone data
-  mochi::DynamicArray<mochi::TransformRT> LocalToParentTransforms(NumBones);
+  // Build per-link local-to-parent transforms from the pose's link transforms
+  mochi::DynamicArray<mochi::TransformRT> LocalToParentTransforms(NumLinks);
   const mochi::real Scale = static_cast<mochi::real>(Geometry.Scale);
-  for (int i = 0; i < NumBones; ++i) {
-    if (bHasLocations) {
-      const FTransform BoneTransform(Pose.BoneRotations[i], Pose.BoneLocations[i] * PoseScale);
-      LocalToParentTransforms[i] = u2m.TransformToMochi_RT(BoneTransform);
-    } else {
-      const mochi::Quaternion Rotation =
-          u2m.TransformToMochi_RT(FTransform(Pose.BoneRotations[i])).GetRotation();
-      LocalToParentTransforms[i] = mochi::TransformRT(
-          Rotation, (Geometry.JointOffsets[i] + Rotation * Geometry.LinkOffsets[i]) * Scale);
-    }
+  for (int i = 0; i < NumLinks; ++i) {
+    const mochi::TransformRT Link = u2m.TransformToMochi_RT(LinkToParent[i]);
+    const mochi::Quaternion Rotation = Link.GetRotation();
+    LocalToParentTransforms[i] = bPoseOnBot
+        ? mochi::TransformRT(Rotation, Link.GetTranslation() * Scale)
+        : mochi::TransformRT(
+              Rotation, (Geometry.JointOffsets[i] + Rotation * Geometry.LinkOffsets[i]) * Scale);
   }
 
   // Compose world-space root from the skeleton-root-to-vr-root and the source actor's world
@@ -172,6 +164,7 @@ void UController_MochiArticulatedPose::CacheBotGeometry(const USuperDexBotCompon
   }
   BotGeometry = FMochiArticulatedPoseGeometry::FromBotPrefab(
       BotAsset->GetBotPrefab(), Component->GetBotScale());
+  BotGeometry.Bot = BotAsset;
 }
 
 void UController_MochiArticulatedPose::OnBotSpawned(USuperDexBotComponent* Component) {
@@ -294,14 +287,15 @@ void UController_MochiArticulatedPose::TickController(
   superdex::robotics::ControllerMochiArticulatedPose::Target Target;
   const EMochiPoseTargetResult Result =
       BuildPoseTarget(Pose, SourcePoseable->GetOwner()->GetActorTransform(), BotGeometry, Target);
-  if (Result == EMochiPoseTargetResult::BoneCountMismatch && !bWarnedBoneCountMismatch) {
-    bWarnedBoneCountMismatch = true;
+  if (Result == EMochiPoseTargetResult::LinkCountMismatch && !bWarnedLinkCountMismatch) {
+    bWarnedLinkCountMismatch = true;
     UE_LOG(
         LogSuperDexTeleop,
         Error,
         TEXT(
-            "[UController_MochiArticulatedPose] Pose has %d bones but the bot has %d links; not driving the bot."),
-        Pose.BoneRotations.Num(),
+            "[UController_MochiArticulatedPose] Pose is on bot %s with %d links but the bot has %d links; not driving the bot."),
+        *Pose.Bot->GetName(),
+        Pose.Bot->GetLinkNames().Num(),
         BotGeometry.JointOffsets.Num());
   }
   if (Result != EMochiPoseTargetResult::Built) {

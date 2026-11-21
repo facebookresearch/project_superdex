@@ -22,6 +22,7 @@
 
 #include "SuperDexPoseableComponent.generated.h"
 
+class UMochiArticulationBase;
 class USuperDexPoseSubsystem;
 
 /**
@@ -107,9 +108,9 @@ class SUPERDEXPOSE_API USuperDexPoseableComponent : public UPoseableMeshComponen
   bool bEnableGetPose = true;
 
   /**
-   * Only used while in editor, not play. If set and the SuperDexPoseAsset matches the mesh bone
-   * count, the cache will be set allowing the mesh to be posed. Otherwise, the mesh will remain in
-   * its rest pose. Derived classes may override this pose based on their needs.
+   * Only used while in editor, not play. If set and the SuperDexPoseAsset holds joint positions of
+   * its bot, the cache will be set allowing the mesh to be posed. Otherwise, the mesh will remain
+   * in its rest pose. Derived classes may override this pose based on their needs.
    */
   UPROPERTY(
       EditAnywhere,
@@ -156,6 +157,13 @@ class SUPERDEXPOSE_API USuperDexPoseableComponent : public UPoseableMeshComponen
  private:
   /** Transform from each bone to the root in the skinned asset's rest pose. */
   mutable TArray<FTransform> BoneToRestPoseRootTransforms;
+
+  /** The bot and mesh MeshBonesOfLinks maps between. */
+  TWeakObjectPtr<const UMochiArticulationBase> MeshBonesOfLinksBot;
+  TWeakObjectPtr<const USkinnedAsset> MeshBonesOfLinksMesh;
+
+  /** The mesh bone each link of MeshBonesOfLinksBot poses, or INDEX_NONE. */
+  TArray<int32> MeshBonesOfLinks;
 
  public:
   USuperDexPoseableComponent();
@@ -256,9 +264,25 @@ class SUPERDEXPOSE_API USuperDexPoseableComponent : public UPoseableMeshComponen
       const;
 
   /**
-   * Get the transform of very tip of the finger(this is not the fingerpad): the finger's tip bone
-   * on the OpenXR hand skeleton (xr_05_thumb_tip, ...). Meshes without that bone or socket return
-   * the component transform.
+   * Get the world transform of a link of the cached pose's bot: its transform relative to the
+   * skeleton root at the cached pose's joint positions, placed by this component's transform (where
+   * the mesh shows the skeleton root). Game thread only.
+   *
+   * @param LinkName The name of a link of the cached pose's bot
+   * @param OutLinkToWorld The link's world transform. Unchanged if returning false.
+   * @return false if there is no cached pose on a bot, or its bot has no such link
+   */
+  UFUNCTION(
+      BlueprintCallable,
+      Category = "SuperDexPoseableComponent",
+      meta = (ReturnDisplayName = "Success"))
+  bool GetCachedPoseLinkTransform(FName LinkName, FTransform& OutLinkToWorld) const;
+
+  /**
+   * Get the transform of very tip of the finger(this is not the fingerpad): the finger's tip link
+   * on the OpenXR hand skeleton (xr_05_thumb_tip, ...) in the cached pose
+   * (GetCachedPoseLinkTransform). Poses without that link use the mesh's bone or socket of that
+   * name, and meshes without it return the component transform.
    *
    * @param Finger the finger to get the tip from
    * @return The transform of the tip of the corresponding finger
@@ -277,6 +301,12 @@ class SUPERDEXPOSE_API USuperDexPoseableComponent : public UPoseableMeshComponen
   /**
    * Applies the cached output pose to the mesh's BoneSpaceTransforms, directly posing the
    * UPoseableMeshComponent bones. Called each tick after OnTickManageCache updates the cache.
+   *
+   * Each link of the pose's bot poses the mesh bone of the same name (or, if no link names a bone
+   * of the mesh and the mesh has one bone per link, the bone of the same index) with its transform
+   * relative to its parent link at the pose's joint positions. The bones take the link rotations,
+   * and also the link translations if the mesh is the bot's own mesh (other meshes keep their
+   * proportions). A pose that is not on a bot leaves the mesh unchanged.
    */
   void ApplyCachedPoseToMesh();
 
@@ -353,4 +383,8 @@ class SUPERDEXPOSE_API USuperDexPoseableComponent : public UPoseableMeshComponen
    * @return true if already initialized or successfully initialized, false otherwise.
    */
   bool InitBoneToRestPoseRootTransforms() const;
+
+  /** The mesh bone each link of Bot poses (see ApplyCachedPoseToMesh), cached in MeshBonesOfLinks.
+   */
+  const TArray<int32>& GetMeshBonesOfLinks(const UMochiArticulationBase& Bot);
 };

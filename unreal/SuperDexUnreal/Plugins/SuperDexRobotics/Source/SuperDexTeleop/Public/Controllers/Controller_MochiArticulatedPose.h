@@ -27,6 +27,7 @@
 
 #include "Controller_MochiArticulatedPose.generated.h"
 
+class UMochiArticulationBase;
 class USuperDexPoseableComponent;
 struct FSuperDexPose;
 
@@ -34,12 +35,14 @@ struct FSuperDexPose;
 // UController_MochiArticulatedPose::BuildPoseTarget). Per link, in nominal bot units: the joint's
 // offset in its parent link (parentLinkFromJoint), and the link origin's offset from the joint
 // expressed in the link frame. A link's translation in its parent is then
-// Scale * (JointOffset + R * LinkOffset) for its local rotation R. Used when an incoming
-// FSuperDexPose omits BoneLocations.
+// Scale * (JointOffset + R * LinkOffset) for its local rotation R. Used for an incoming
+// FSuperDexPose on another bot than Bot (such as another bot of its skeleton).
 struct SUPERDEXTELEOP_API FMochiArticulatedPoseGeometry {
   TArray<mochi::Real3> JointOffsets;
   TArray<mochi::Real3> LinkOffsets;
   double Scale = 1.0;
+  // The bot asset of the geometry. Poses on it give the link translations themselves.
+  const UMochiArticulationBase* Bot = nullptr;
 
   // Empty offsets when the prefab's link and joint counts disagree.
   static FMochiArticulatedPoseGeometry FromBotPrefab(
@@ -49,10 +52,10 @@ struct SUPERDEXTELEOP_API FMochiArticulatedPoseGeometry {
 
 enum class EMochiPoseTargetResult : uint8 {
   Built,
-  // The pose carries no bones.
-  EmptyPose,
-  // The pose omits bone locations and its bone count differs from the bot's link count.
-  BoneCountMismatch,
+  // The pose holds no joint positions of a bot.
+  NotOnBot,
+  // The pose is on another bot than the geometry's, with another link count.
+  LinkCountMismatch,
 };
 
 // Details struct mirroring mochi::PoseTrackingParams
@@ -123,7 +126,10 @@ class SUPERDEXTELEOP_API UController_MochiArticulatedPose : public USuperDexBotC
       const FMochiPoseControllerParams& InParams);
 
   // Build the target that poses a bot like Pose, rooted at Pose.SkeletonRootToVrRoot under
-  // VrRootToWorld (whose scale is ignored). Call on the game thread: see TickController.
+  // VrRootToWorld (whose scale is ignored). The links take their rotations relative to their
+  // parents at the pose's joint positions; their translations are those too, at the geometry's
+  // scale, if the pose is on the geometry's bot, or else come from the geometry. Call on the game
+  // thread: see TickController.
   static EMochiPoseTargetResult BuildPoseTarget(
       const FSuperDexPose& Pose,
       const FTransform& VrRootToWorld,
@@ -163,9 +169,9 @@ class SUPERDEXTELEOP_API UController_MochiArticulatedPose : public USuperDexBotC
   USuperDexPoseableComponent* FindChildSourcePoseable(const USuperDexBotComponent* Component) const;
 
  protected:
-  // Caches the spawned bot's link geometry and scale. Pose sources like the OpenXR one fill only
-  // FSuperDexPose::BoneRotations; the link translations of the target then come from the bot
-  // itself, so the target always matches the bot's geometry at its scale. See BuildPoseTarget.
+  // Caches the spawned bot's link geometry and scale. Poses on another bot (like the OpenXR pose
+  // source's skeleton bot) take their link translations from the bot itself, so the target always
+  // matches the bot's geometry at its scale. See BuildPoseTarget.
   void CacheBotGeometry(const USuperDexBotComponent* Component);
 
  protected:
@@ -181,7 +187,7 @@ class SUPERDEXTELEOP_API UController_MochiArticulatedPose : public USuperDexBotC
   USuperDexPoseableComponent* SourcePoseable = nullptr;
 
   FMochiArticulatedPoseGeometry BotGeometry;
-  bool bWarnedBoneCountMismatch = false;
+  bool bWarnedLinkCountMismatch = false;
 
   // The controller target is sampled on the game thread in TickController() and consumed on the
   // Mochi simulation thread in StepController(), guarded by TargetMutex (so the Mochi thread never

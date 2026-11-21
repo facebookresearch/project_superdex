@@ -13,6 +13,11 @@ your project uses.
 - **Discovery.** The pose subsystem (`USuperDexPoseSubsystem`, SuperDexPose) creates one instance
   of every non-abstract `USuperDexPoseSource` class in the loaded modules. Enabling a pose source
   plugin is all it takes to make its sources available; nothing registers them.
+- **Skeleton.** A pose source reports poses on the bot of its skeleton (`GetBot`): a pose
+  (`FSuperDexPose`) holds that bot's joint positions, built from the device's link transforms with
+  `USuperDexPoseFunctionLibrary::SetSuperDexPoseFromLinkTransforms`. Sources on the OpenXR and
+  OculusXR skeletons use the bots SuperDexPose builds in (`Skeletons/SuperDexSkeletonBots.h`), so
+  they need no imported content.
 - **Missing SDKs.** A plugin's SDK plugins are optional dependencies (`"Optional": true` in its
   `.uplugin`), and its module only uses APIs that every Unreal Engine has (or compiles the SDK code
   out), so it builds and loads without them. Its pose source then overrides

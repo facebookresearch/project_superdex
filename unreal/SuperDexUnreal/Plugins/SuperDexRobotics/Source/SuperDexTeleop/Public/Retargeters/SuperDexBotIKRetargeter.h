@@ -38,14 +38,14 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
     Diagnostic);
 
 /** Input-bot pose -> fixed-output-base document-authored Bot IK, for any input bot with a Free/Hard
- * root and Hard/Revolute/Prismatic/Spherical joints. Input poses are parent-relative link
- * transforms in the input bot's link order (only their count is checked);
- * rotations suffice unless the input bot has prismatic joints. Each joint keeps what it can do of
+ * root and Hard/Revolute/Prismatic/Spherical joints. Input poses hold joint positions of the input
+ * bot, or of another bot of its skeleton: their parent-relative link transforms, in the input bot's
+ * link order (only their count is checked), pose the input bot. Each joint keeps what it can do of
  * its link's motion (see superdex::robotics::ComputePoseFromLinkTransforms). The root link's local
- * transform places the input bot's base. Root motion is carried via captured input/output
- * calibration, not a floating IK output base. Solves on the game thread. Physics consumers read
- * snapshots; they must not pull a solve. Configuration/model edits require InitializeRetargeter.
- * No recording is opened at runtime.
+ * transform places the input bot's base. Output poses hold joint positions of the output bot. Root
+ * motion is carried via captured input/output calibration, not a floating IK output base. Solves on
+ * the game thread. Physics consumers read snapshots; they must not pull a solve.
+ * Configuration/model edits require InitializeRetargeter. No recording is opened at runtime.
  */
 UCLASS(Blueprintable, meta = (BlueprintSpawnableComponent))
 class SUPERDEXTELEOP_API USuperDexBotIKRetargeter : public USuperDexRetargeter {
@@ -129,10 +129,6 @@ class SUPERDEXTELEOP_API USuperDexBotIKRetargeter : public USuperDexRetargeter {
   void PrepareBiasedCommandLimits();
   bool ApplyJointBiasAndLimits(TArray<double>& Positions) const;
   bool ValidateSourceProvider(FString& Diagnostic) const;
-  bool ComputeSuperDexPoseFromJointPositions(
-      TConstArrayView<double> DisplayPositions,
-      FSuperDexPose& OutPose,
-      FString& Diagnostic);
   void ReleaseSolver();
   void SetStatus(bool bValid, const FString& Diagnostic, bool bConfigurationError);
   void PublishPending();

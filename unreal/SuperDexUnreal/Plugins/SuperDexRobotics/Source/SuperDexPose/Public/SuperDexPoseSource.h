@@ -22,6 +22,7 @@
 
 #include "SuperDexPoseSource.generated.h"
 
+class UMochiArticulationBase;
 class UWorld;
 
 /** Invalid thread ID constant. */
@@ -37,6 +38,11 @@ constexpr uint32 kInvalidThreadId = std::numeric_limits<uint32>::max();
  * so a pose source in another plugin (see Plugins/PoseSourcePlugins) is available wherever that
  * plugin is enabled, with no registration. A subclass that can not work in some setup (no device
  * SDK, or not configured) overrides ShouldCreatePoseSource so that it is not created there.
+ *
+ * Every pose source has a skeleton, the skeleton of a bot (GetBot), and reports poses on that bot:
+ * the bot's joint positions (FSuperDexPose::DofPositions). A source typically gets its skeleton's
+ * link transforms from its device and turns them into joint positions with
+ * USuperDexPoseFunctionLibrary::SetSuperDexPoseFromLinkToParentTransforms.
  */
 UCLASS(Abstract)
 class SUPERDEXPOSE_API USuperDexPoseSource : public UObject {
@@ -55,6 +61,18 @@ class SUPERDEXPOSE_API USuperDexPoseSource : public UObject {
    */
   UFUNCTION(BlueprintCallable, Category = "SuperDexPoseSource")
   virtual bool GetPose(const ESuperDexHandedness Handedness, FSuperDexPose& OutPose);
+
+  /**
+   * Get the bot representing this source's skeleton for given handedness: every pose GetPose
+   * reports for that hand is on it (FSuperDexPose::Bot). It does not change while the source
+   * exists, and is safe to call from any thread.
+   *
+   * @param Handedness The handedness to get the bot for.
+   * @return The bot, or nullptr if the source has none for that hand (the default), such as a
+   * source that forwards poses from elsewhere, whose bot can change from pose to pose.
+   */
+  UFUNCTION(BlueprintCallable, Category = "SuperDexPoseSource")
+  virtual UMochiArticulationBase* GetBot(const ESuperDexHandedness Handedness) const;
 
   /**
    * Whether the pose subsystem of World should create this pose source, like
@@ -79,8 +97,14 @@ class SUPERDEXPOSE_API USuperDexPoseSource : public UObject {
   }
 
  protected:
-  /** Initialize this pose source. */
+  /**
+   * Initialize this pose source. The pose subsystem calls it on the game thread right after
+   * creating the source, before any GetPose or GetBot call: the place to load what the source
+   * needs, such as the bots of its settings.
+   */
   virtual void Initialize();
+
+  friend class USuperDexPoseSubsystem;
 
   /** Necessary thread ID to update the cache for this pose source. */
   uint32 NecessaryThreadId = kInvalidThreadId;

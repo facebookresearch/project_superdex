@@ -15,10 +15,12 @@
  */
 
 #include "SuperDexPoseSubsystem.h"
+#include "SuperDexPoseFunctionLibrary.h"
 #include "SuperDexPoseModule.h"
 
 #include "Kismet/GameplayStatics.h"
 #include "Misc/ScopeLock.h"
+#include "MochiArticulationBase.h"
 
 USuperDexPoseSubsystem::USuperDexPoseSubsystem() {}
 
@@ -75,6 +77,16 @@ inline double GetAccurateRealTime() {
   UGameplayStatics::GetAccurateRealTime(Seconds, PartialSeconds);
   double CurrentTime = Seconds + PartialSeconds;
   return CurrentTime;
+}
+
+// Whether a pose a source reported for a hand is on a bot, and on the source's bot if it has one.
+inline bool IsPoseOnSourceBot(
+    const USuperDexPoseSource& Source,
+    ESuperDexHandedness Handedness,
+    const FSuperDexPose& Pose) {
+  const UMochiArticulationBase* SourceBot = Source.GetBot(Handedness);
+  return USuperDexPoseFunctionLibrary::IsSuperDexPoseOnBot(Pose) &&
+      (SourceBot == nullptr || Pose.Bot == SourceBot);
 }
 } // namespace SuperDexPoseSubsystemInternal
 
@@ -150,8 +162,36 @@ bool USuperDexPoseSubsystem::GetPose(
     if (currentCacheKey != SourceAndCache->CacheKey) {
       for (int iChirality = 0; iChirality < static_cast<int>(ESuperDexHandedness::Count);
            iChirality++) {
-        bool haveValidPose = SourceAndCache->Source->GetPose(
-            static_cast<ESuperDexHandedness>(iChirality), SourceAndCache->CachedPose[iChirality]);
+        const ESuperDexHandedness Chirality = static_cast<ESuperDexHandedness>(iChirality);
+        FSuperDexPose Pose;
+        bool haveValidPose = SourceAndCache->Source->GetPose(Chirality, Pose);
+        // The cached pose must stay on its bot for consumers to read it. A pose the source calls
+        // valid that is not on its bot is ignored; an invalid one, which typically has no joint
+        // positions, still updates the tracking state but keeps the last joint positions.
+        FSuperDexPose& CachedPose = SourceAndCache->CachedPose[iChirality];
+        if (!SuperDexPoseSubsystemInternal::IsPoseOnSourceBot(
+                *SourceAndCache->Source, Chirality, Pose)) {
+          if (!haveValidPose) {
+            Pose.Bot = CachedPose.Bot;
+            Pose.DofPositions = MoveTemp(CachedPose.DofPositions);
+            CachedPose = MoveTemp(Pose);
+            continue;
+          }
+          if (!SourceAndCache->bHasRejectedPose) {
+            UE_LOG(
+                LogSuperDexPose,
+                Error,
+                TEXT(
+                    "GetPose: %s reported a pose that is not on its bot (%d joint positions for bot %s); ignoring it."
+                    " This message is only printed once for each pose source."),
+                *SourceAndCache->Source->GetClass()->GetName(),
+                Pose.DofPositions.Num(),
+                *GetNameSafe(Pose.Bot));
+            SourceAndCache->bHasRejectedPose = true;
+          }
+          continue;
+        }
+        CachedPose = MoveTemp(Pose);
         if (haveValidPose == true) {
           SourceAndCache->CacheKey = currentCacheKey;
           SourceAndCache->bIsInitialized[iChirality] = true;
@@ -165,6 +205,14 @@ bool USuperDexPoseSubsystem::GetPose(
     return true;
   }
   return false;
+}
+
+UMochiArticulationBase* USuperDexPoseSubsystem::GetBot(
+    TSubclassOf<USuperDexPoseSource> PoseSourceClass,
+    ESuperDexHandedness Handedness) const {
+  FScopeLock Lock(&MapLock);
+  USuperDexPoseSourceAndCache* const* SourceAndCache = PoseSourceAndCacheMap.Find(PoseSourceClass);
+  return SourceAndCache != nullptr ? (*SourceAndCache)->Source->GetBot(Handedness) : nullptr;
 }
 
 void USuperDexPoseSubsystem::Initialize(FSubsystemCollectionBase& Collection) {
@@ -192,6 +240,7 @@ void USuperDexPoseSubsystem::Initialize(FSubsystemCollectionBase& Collection) {
     USuperDexPoseSourceAndCache* HandPoseSourceAndCache =
         NewObject<USuperDexPoseSourceAndCache>(this);
     HandPoseSourceAndCache->Source = NewObject<USuperDexPoseSource>(this, PoseSourceClass);
+    HandPoseSourceAndCache->Source->Initialize();
 
     PoseSourceAndCacheMap.Add(PoseSourceClass, HandPoseSourceAndCache);
   }

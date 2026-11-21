@@ -21,9 +21,6 @@
 #include "SuperDexPoseUtils.h"
 #include "SuperDexTeleopModule.h"
 
-// Skeleton name of the Robotiq 2F-85 output pose (its skeleton enum header was deleted as unused).
-static const FName kSkeletonName_Robotiq2F_85 = "Robotiq2F_85";
-
 void UOpenXR2RobotiqRetargeter::BeginPlay() {
   Super::BeginPlay();
   // the articulation must exist to function
@@ -75,21 +72,16 @@ bool UOpenXR2RobotiqRetargeter::GetTransformedPose_Implementation(
   if ((bIssueRosCommands || bReceiveRosPoses) && (RosInterface == nullptr)) {
     return false;
   }
-  USuperDexPoseableComponent* openXrHand = GetChildSourcePoseable();
-  if (openXrHand == nullptr) {
+  double fingerTipDist = 0;
+  if (!ComputeFingerTipDistance(SourcePose, fingerTipDist)) {
     return false;
   }
 
   TransformedPose = SourcePose;
   TransformedPose.tags.Add(TEXT("OpenXR2Robotiq"));
-  TransformedPose.SkeletonName = kSkeletonName_Robotiq2F_85;
   TransformedPose.SkeletonRootToVrRoot =
       USuperDexPoseFunctionLibrary::MultiplyTransformsWithoutScalePreservingScale(
           RobotiqRootToSourceSkeletonRoot, SourcePose.SkeletonRootToVrRoot);
-  auto thumbTipLoc = openXrHand->GetSocketLocation(ThumbTipName);
-  auto indexTipLoc = openXrHand->GetSocketLocation(IndexTipName);
-  constexpr double fingerTipRadius = 0.6;
-  double fingerTipDist = (thumbTipLoc - indexTipLoc).Length() - 2 * fingerTipRadius;
   double theta = 0;
   constexpr double kMaxTheta = 0.8;
   constexpr double kMaxGripperDist = 8.5;
@@ -121,6 +113,42 @@ bool UOpenXR2RobotiqRetargeter::GetTransformedPose_Implementation(
     return validPose;
   }
   return false;
+}
+
+bool UOpenXR2RobotiqRetargeter::ComputeFingerTipDistance(
+    const FSuperDexPose& SourcePose,
+    double& OutDistance) const {
+  FTransform ThumbTipToVrRoot;
+  FTransform IndexTipToVrRoot;
+  if (!USuperDexPoseFunctionLibrary::ComputeSuperDexPoseLinkToVrRoot(
+          SourcePose,
+          USuperDexPoseFunctionLibrary::FindSuperDexPoseLinkIndex(SourcePose, ThumbTipName),
+          ThumbTipToVrRoot) ||
+      !USuperDexPoseFunctionLibrary::ComputeSuperDexPoseLinkToVrRoot(
+          SourcePose,
+          USuperDexPoseFunctionLibrary::FindSuperDexPoseLinkIndex(SourcePose, IndexTipName),
+          IndexTipToVrRoot)) {
+    if (!bLoggedMissingFingerTips) {
+      bLoggedMissingFingerTips = true;
+      UE_LOG(
+          LogSuperDexTeleop,
+          Error,
+          TEXT(
+              "[%hs] Component [%s]: the source pose is not on a bot with links [%s] and [%s] (bot"
+              " [%s]), so it has no finger tip distance. Set ThumbTipName and IndexTipName to"
+              " links of the source pose's bot."),
+          __FUNCTION__,
+          *GetName(),
+          *ThumbTipName.ToString(),
+          *IndexTipName.ToString(),
+          SourcePose.Bot != nullptr ? *SourcePose.Bot->GetName() : TEXT("None"));
+    }
+    return false;
+  }
+  constexpr double kFingerTipRadius = 0.6;
+  OutDistance = FVector::Dist(ThumbTipToVrRoot.GetLocation(), IndexTipToVrRoot.GetLocation()) -
+      2 * kFingerTipRadius;
+  return true;
 }
 
 #if WITH_EDITOR

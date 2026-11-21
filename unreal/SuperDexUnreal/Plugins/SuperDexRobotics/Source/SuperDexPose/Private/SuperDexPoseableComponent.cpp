@@ -18,6 +18,7 @@
 
 #include "Skeletons/SuperDexSkeleton_OpenXR.h"
 #include "SuperDexPlayerController.h"
+#include "SuperDexPoseFunctionLibrary.h"
 #include "SuperDexPoseModule.h"
 #include "SuperDexPoseSource.h"
 #include "SuperDexPoseSubsystem.h"
@@ -25,6 +26,8 @@
 #include "SuperDexPoseableActor.h"
 
 #include "Engine/SkeletalMesh.h"
+#include "MochiArticulationBase.h"
+#include "MochiTypes.h"
 #include "Net/UnrealNetwork.h"
 
 // #pragma optimize("", off)
@@ -274,12 +277,73 @@ FVector USuperDexPoseableComponent::TransformRestPoseBoneLocationToRoot(
   return BoneToRestPoseHandRoot.TransformPosition(BoneLocalLocation);
 }
 
+bool USuperDexPoseableComponent::GetCachedPoseLinkTransform(
+    FName LinkName,
+    FTransform& OutLinkToWorld) const {
+  FSuperDexPose Pose;
+  FTransform LinkToSkeletonRoot;
+  if (!GetCachedPose(Pose) ||
+      !USuperDexPoseFunctionLibrary::ComputeSuperDexPoseLinkToSkeletonRoot(
+          Pose,
+          USuperDexPoseFunctionLibrary::FindSuperDexPoseLinkIndex(Pose, LinkName),
+          LinkToSkeletonRoot)) {
+    return false;
+  }
+  OutLinkToWorld = LinkToSkeletonRoot * GetComponentTransform();
+  return true;
+}
+
 FTransform USuperDexPoseableComponent::GetFingerTipTransform(ESuperDexFinger Finger) const {
   const ESuperDexBone_OXR TipBone = GetFingerTipBone_OXR(Finger);
   if (TipBone == ESuperDexBone_OXR::Invalid) {
     return GetComponentTransform();
   }
-  return GetSocketTransform(kSuperDexBoneNames_OXR[static_cast<int32>(TipBone)]);
+  const FName TipName = kSuperDexBoneNames_OXR[static_cast<int32>(TipBone)];
+  FTransform TipToWorld;
+  if (GetCachedPoseLinkTransform(TipName, TipToWorld)) {
+    return TipToWorld;
+  }
+  return GetSocketTransform(TipName);
+}
+
+const TArray<int32>& USuperDexPoseableComponent::GetMeshBonesOfLinks(
+    const UMochiArticulationBase& Bot) {
+  const USkinnedAsset* Mesh = GetSkinnedAsset();
+  if (MeshBonesOfLinksBot.Get() == &Bot && MeshBonesOfLinksMesh.Get() == Mesh) {
+    return MeshBonesOfLinks;
+  }
+  MeshBonesOfLinksBot = &Bot;
+  MeshBonesOfLinksMesh = Mesh;
+  const FReferenceSkeleton& RefSkeleton = Mesh->GetRefSkeleton();
+  const TArray<FName> LinkNames = Bot.GetLinkNames();
+  MeshBonesOfLinks.Init(INDEX_NONE, LinkNames.Num());
+  bool bAnyLinkHasBone = false;
+  for (int32 Link = 0; Link < LinkNames.Num(); ++Link) {
+    MeshBonesOfLinks[Link] = RefSkeleton.FindBoneIndex(LinkNames[Link]);
+    bAnyLinkHasBone |= MeshBonesOfLinks[Link] != INDEX_NONE;
+  }
+  if (!bAnyLinkHasBone) {
+    if (LinkNames.Num() == RefSkeleton.GetNum()) {
+      // A mesh of the bot's skeleton with other bone names, such as a Nimble hand mesh showing
+      // OculusXR poses: its bones are the links in order.
+      for (int32 Link = 0; Link < LinkNames.Num(); ++Link) {
+        MeshBonesOfLinks[Link] = Link;
+      }
+    } else {
+      UE_LOG(
+          LogSuperDexPose,
+          Warning,
+          TEXT(
+              "Component [%s]: no bone of mesh [%s] is a link of bot [%s], and they have %d bones"
+              " and %d links. The mesh does not show its poses."),
+          *GetName(),
+          *Mesh->GetName(),
+          *Bot.GetName(),
+          RefSkeleton.GetNum(),
+          LinkNames.Num());
+    }
+  }
+  return MeshBonesOfLinks;
 }
 
 void USuperDexPoseableComponent::ApplyCachedPoseToMesh() {
@@ -287,25 +351,30 @@ void USuperDexPoseableComponent::ApplyCachedPoseToMesh() {
     return;
   }
 
-  FReadScopeLock Lock(CacheLock);
-
-  for (int iBone = 0;
-       iBone < CachedOutputPose.BoneRotations.Num() && iBone < BoneSpaceTransforms.Num();
-       iBone++) {
-    const FQuat& BoneRotation = CachedOutputPose.BoneRotations[iBone];
-    if (!BoneRotation.ContainsNaN()) {
-      BoneSpaceTransforms[iBone].SetRotation(BoneRotation);
+  UMochiArticulationBase* Bot = nullptr;
+  TArray<FTransform> LinkToParent;
+  {
+    FReadScopeLock Lock(CacheLock);
+    if (!USuperDexPoseFunctionLibrary::ComputeSuperDexPoseLinkToParentTransforms(
+            CachedOutputPose, LinkToParent)) {
+      return;
     }
+    Bot = CachedOutputPose.Bot;
   }
 
-  if (CachedOutputPose.BoneLocations.Num() == CachedOutputPose.BoneRotations.Num()) {
-    for (int iBone = 0;
-         iBone < CachedOutputPose.BoneLocations.Num() && iBone < BoneSpaceTransforms.Num();
-         iBone++) {
-      const FVector& BoneLocation = CachedOutputPose.BoneLocations[iBone];
-      if (!BoneLocation.ContainsNaN()) {
-        BoneSpaceTransforms[iBone].SetLocation(BoneLocation);
-      }
+  const TArray<int32>& MeshBones = GetMeshBonesOfLinks(*Bot);
+  const bool bSetLocations = Bot->GetSkeletalMesh() == GetSkinnedAsset();
+  for (int32 Link = 0; Link < LinkToParent.Num() && Link < MeshBones.Num(); ++Link) {
+    const int32 Bone = MeshBones[Link];
+    if (!BoneSpaceTransforms.IsValidIndex(Bone)) {
+      continue;
+    }
+    const FTransform& LinkTransform = LinkToParent[Link];
+    if (!LinkTransform.GetRotation().ContainsNaN()) {
+      BoneSpaceTransforms[Bone].SetRotation(LinkTransform.GetRotation());
+    }
+    if (bSetLocations && !LinkTransform.GetLocation().ContainsNaN()) {
+      BoneSpaceTransforms[Bone].SetLocation(LinkTransform.GetLocation());
     }
   }
 
@@ -339,10 +408,9 @@ void USuperDexPoseableComponent::WhenNotPlayingInitPoseCache() {
   if (GetOwner() == nullptr) {
     return;
   }
-  int numBones = GetNumBones();
 
   if (EditorViewportPose != nullptr) {
-    if (numBones == EditorViewportPose->Pose.BoneRotations.Num()) {
+    if (USuperDexPoseFunctionLibrary::IsSuperDexPoseOnBot(EditorViewportPose->Pose)) {
       // Write the pose to cache and set initialized true, then apply to mesh for editor preview.
       FWriteScopeLock lock(CacheLock);
       CachedOutputPose = EditorViewportPose->Pose;
@@ -352,7 +420,7 @@ void USuperDexPoseableComponent::WhenNotPlayingInitPoseCache() {
           LogSuperDexPose,
           Error,
           TEXT(
-              "[%hs::%d] EditorViewportPose contains a different number of bones than the SkeletalMesh on component [%s] on actor [%s]."
+              "[%hs::%d] EditorViewportPose has no joint positions of a bot, on component [%s] on actor [%s]."
               " The EditorViewportPose will not be used."),
           __FUNCTION__,
           __LINE__,
@@ -360,23 +428,16 @@ void USuperDexPoseableComponent::WhenNotPlayingInitPoseCache() {
           *GetOwner()->GetName());
     }
   } else {
-    // EditorViewportPose == nullptr
-    FReferenceSkeleton const& skele = SkelMesh->GetRefSkeleton();
-    TArray<FTransform> bonesInRestPose = skele.GetRefBonePose();
+    // EditorViewportPose == nullptr: the mesh shows its rest pose. The cached pose has no bot, so
+    // it only holds the pose metadata.
+    BoneSpaceTransforms = SkelMesh->GetRefSkeleton().GetRefBonePose();
+    MarkRefreshTransformDirty();
 
-    // Populate the CachedOutputPose so we can pose the skeleton in editor
     FWriteScopeLock lock(CacheLock);
+    CachedOutputPose = FSuperDexPose();
     CachedOutputPose.SourceName = TEXT("RefSkeleton");
-    CachedOutputPose.SkeletonName = *SkelMesh->GetName();
     CachedOutputPose.tags.Add(TEXT("InEditorOnly"));
     CachedOutputPose.SkeletonRootToVrRoot = FTransform::Identity;
-    CachedOutputPose.BoneLocations.SetNum(numBones);
-    CachedOutputPose.BoneRotations.SetNum(numBones);
-    for (int iBone = 0; iBone < bonesInRestPose.Num(); iBone++) {
-      FTransform bonePose = bonesInRestPose[iBone];
-      CachedOutputPose.BoneLocations[iBone] = bonePose.GetLocation();
-      CachedOutputPose.BoneRotations[iBone] = bonePose.GetRotation();
-    }
     CachedOutputPose.TrackingConfidence = 1;
     CachedOutputPose.bIsTrackingConfident = true;
     CachedOutputPose.bIsTrackingEnabled = true;

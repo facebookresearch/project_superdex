@@ -46,12 +46,12 @@ class SUPERDEXTELEOP_API UOpenXR2RobotiqRetargeter : public USuperDexRetargeter 
       meta = (EditCondition = "bOverrideRobotiqRootToSourceSkeletonRoot"),
       Category = "Teleop")
   FTransform RobotiqRootToSourceSkeletonRoot = FTransform::Identity;
-  // The thumb tip socket (or bone) of the source hand mesh; its distance to the index tip drives
-  // the gripper. The default is the OpenXR hand's (xr_05_thumb_tip).
+  // The thumb tip link of the source pose's bot; its distance to the index tip at the source pose's
+  // joint positions drives the gripper. The default is the OpenXR hand's (xr_05_thumb_tip).
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Teleop")
   FName ThumbTipName = kSuperDexBoneNames_OXR[static_cast<int32>(ESuperDexBone_OXR::ThumbTip)];
-  // The index finger tip socket (or bone) of the source hand mesh. The default is the OpenXR
-  // hand's (xr_10_index_tip).
+  // The index finger tip link of the source pose's bot. The default is the OpenXR hand's
+  // (xr_10_index_tip).
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Teleop")
   FName IndexTipName = kSuperDexBoneNames_OXR[static_cast<int32>(ESuperDexBone_OXR::IndexTip)];
   // Default behavior is to directly map
@@ -102,4 +102,17 @@ class SUPERDEXTELEOP_API UOpenXR2RobotiqRetargeter : public USuperDexRetargeter 
 
   /** A cache containing the last valid joint positions from GetTransformedPose. */
   TArray<double> JointPositionsCache;
+
+ protected:
+  /**
+   * The distance between the surfaces of the thumb and index finger tips (ThumbTipName and
+   * IndexTipName) of a source pose, in its VrRoot: the distance between the tip links at its joint
+   * positions, scaled by its SkeletonRootToVrRoot, less the radius of each tip. Fails if the pose
+   * is not on a bot with those links.
+   */
+  bool ComputeFingerTipDistance(const FSuperDexPose& SourcePose, double& OutDistance) const;
+
+ private:
+  /** Whether ComputeFingerTipDistance has logged a pose without the tip links. */
+  mutable bool bLoggedMissingFingerTips = false;
 };

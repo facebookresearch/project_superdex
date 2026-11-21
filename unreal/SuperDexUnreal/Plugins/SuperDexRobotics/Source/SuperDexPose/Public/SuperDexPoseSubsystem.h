@@ -78,6 +78,10 @@ class USuperDexPoseSourceAndCache : public UObject {
    */
   TMap<uint32, double> PriorityToLastRequestTimeMap;
 
+  /** Whether a pose the source reported has been rejected for not being on its bot yet, so that it
+   * is only logged once. */
+  bool bHasRejectedPose = false;
+
   /** Pose source associated with this cache. */
   UPROPERTY()
   USuperDexPoseSource* Source;
@@ -130,6 +134,20 @@ class SUPERDEXPOSE_API USuperDexPoseSubsystem : public UWorldSubsystem {
       TSubclassOf<USuperDexPoseSource> PoseSourceClass,
       ESuperDexHandedness Handedness,
       FSuperDexPose& OutPose);
+
+  /**
+   * Get the bot of given pose source class for given handedness (USuperDexPoseSource::GetBot): the
+   * bot of every pose GetPose returns from it for that hand, known before any pose arrives.
+   *
+   * @param PoseSourceClass The pose source class to get the bot of.
+   * @param Handedness The handedness to get the bot for.
+   * @return The bot, or nullptr if the pose source does not exist in this world or has no fixed
+   * bot for that hand.
+   */
+  UFUNCTION(BlueprintCallable, Category = "SuperDexPoseSubsystem")
+  UMochiArticulationBase* GetBot(
+      TSubclassOf<USuperDexPoseSource> PoseSourceClass,
+      ESuperDexHandedness Handedness) const;
 
   /**
    * Register a thread to have a priority and cache key callback function.

@@ -30,7 +30,7 @@ bool UTransformSkeletonRootToVrRootTransformRetargeter::GetTransformedPose_Imple
 
   TransformedPose = SourcePose;
   TransformedPose.tags.Add(TEXT("TransformPoseTransform"));
-  // Does not change the SkeletonName
+  // Does not change the bot or its joint positions
   TransformedPose.SkeletonRootToVrRoot =
       SkeletonOutRootToSkeletonInRoot * SourcePose.SkeletonRootToVrRoot * VrInRootToVrOutRoot;
   // Since the SourcePose is guaranteed to be valid the transformed pose will also be valid

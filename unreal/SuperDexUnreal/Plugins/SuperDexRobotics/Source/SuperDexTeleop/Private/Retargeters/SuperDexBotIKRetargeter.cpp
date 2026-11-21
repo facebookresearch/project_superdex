@@ -48,8 +48,8 @@ constexpr double kMaxInputTranslationResidual = 1e-4; // [nominal InputBot units
 constexpr int32 kInputResidualLogInterval = 200;
 
 // Logs (throttled by LargeResidualFrames) when an input pose leaves larger residuals than rounding
-// error. Translations are only checked when the pose has BoneLocations: a rotation-only pose has
-// none to fit.
+// error. Translations are only checked when the InputBot has prismatic joints: its rotational
+// joints ignore them, so the link offsets of a pose on another bot of its skeleton may differ.
 void LogLargeInputResiduals(
     const UObject& Retargeter,
     const superdex::robotics::BotPrefab& InputBot,
@@ -88,7 +88,7 @@ void LogLargeInputResiduals(
       UTF8_TO_TCHAR(InputBot.links[Worst].name.c_str()),
       FMath::RadiansToDegrees(static_cast<double>(Residuals[Worst].rotation)),
       static_cast<double>(Residuals[Worst].translation),
-      bCheckTranslations ? TEXT("") : TEXT(" (not checked: the pose has no BoneLocations)"));
+      bCheckTranslations ? TEXT("") : TEXT(" (not checked: the InputBot has no prismatic joints)"));
 }
 
 bool ValidInputTree(const superdex::robotics::BotPrefab& Bot, FString& Diagnostic) {
@@ -345,7 +345,8 @@ bool USuperDexBotIKRetargeter::InitializeRetargeter() {
       ? nullptr
       : (SourcePoseableOverride ? SourcePoseableOverride : GetChildSourcePoseable());
   if (Source) {
-    auto WorldFrameFromOutputRootFrame = GetBoneTransform(0);
+    // The output bot's root link is its skeleton root, where this component is.
+    auto WorldFrameFromOutputRootFrame = GetComponentTransform();
     auto WorldFrameFromInputRootFrame = Source->GetComponentTransform();
     WorldFrameFromOutputRootFrame.SetScale3D(FVector::OneVector);
     WorldFrameFromInputRootFrame.SetScale3D(FVector::OneVector);
@@ -402,16 +403,15 @@ bool USuperDexBotIKRetargeter::GetTransformedPose_Implementation(
     return false;
   }
   const int32 InputLinks = static_cast<int32>(InputModel.links.size());
-  const bool bHasLocations = !SourcePose.BoneLocations.IsEmpty();
-  if (SourcePose.BoneRotations.Num() != InputLinks ||
-      (bHasLocations && SourcePose.BoneLocations.Num() != InputLinks)) {
-    SetStatus(false, TEXT("Input pose bone count must match the InputBot link count."), true);
-    return false;
-  }
-  if (bInputBotHasPrismatic && !bHasLocations) {
+  // The input pose's links relative to their parents, at its joint positions: the InputBot's own
+  // poses, or those of another bot of its skeleton (one link per InputBot link, in its order).
+  TArray<FTransform> SourceLinkToParent;
+  if (!USuperDexPoseFunctionLibrary::ComputeSuperDexPoseLinkToParentTransforms(
+          SourcePose, SourceLinkToParent) ||
+      SourceLinkToParent.Num() != InputLinks) {
     SetStatus(
         false,
-        TEXT("InputBot prismatic joints need input pose BoneLocations; rotations can't pose them."),
+        TEXT("Input pose must hold joint positions of a bot with the InputBot's link count."),
         true);
     return false;
   }
@@ -419,11 +419,7 @@ bool USuperDexBotIKRetargeter::GetTransformedPose_Implementation(
   FUnrealToMochiConverter ToNative(kSuperDexSpace);
   mochi::DynamicArray<mochi::TransformRT> ParentFromLinks(InputLinks);
   for (int32 I = 0; I < InputLinks; ++I) {
-    ParentFromLinks[I] = mochi::TransformRT(
-        ToNative.RotationToMochi(SourcePose.BoneRotations[I]),
-        bHasLocations
-            ? ToNative.TranslationToMochi(SourcePose.BoneLocations[I]) * (1 / InputModel.scale)
-            : mochi::Real3{});
+    ParentFromLinks[I] = ToNative.TransformToMochi_RT(SourceLinkToParent[I]);
   }
   // The root link's local transform moves the whole input bot, so it places its base.
   const mochi::TransformRT InputRootLocal(
@@ -443,7 +439,7 @@ bool USuperDexBotIKRetargeter::GetTransformedPose_Implementation(
       &InputResiduals);
   if (Error.IsOK()) {
     LogLargeInputResiduals(
-        *this, InputModel, InputResiduals, bHasLocations, LargeInputResidualFrames);
+        *this, InputModel, InputResiduals, bInputBotHasPrismatic, LargeInputResidualFrames);
   }
   if (!Error.IsOK() ||
       !Solver->SetBotInputConfiguration(
@@ -494,7 +490,6 @@ bool USuperDexBotIKRetargeter::GetTransformedPose_Implementation(
     }
   }
   FSuperDexPose Candidate = SourcePose;
-  Candidate.SkeletonName = FName(*InitializedOutputBot->GetName());
   Candidate.tags.AddUnique(FName(TEXT("SuperDexBotIK")));
   Candidate.SkeletonRootToVrRoot =
       USuperDexPoseFunctionLibrary::MultiplyTransformsWithoutScalePreservingScale(
@@ -503,9 +498,9 @@ bool USuperDexBotIKRetargeter::GetTransformedPose_Implementation(
     SetStatus(false, TEXT("Output root composition must remain finite."), true);
     return false;
   }
-  FString PackingDiagnostic;
-  if (!ComputeSuperDexPoseFromJointPositions(DisplayPositions, Candidate, PackingDiagnostic)) {
-    SetStatus(false, PackingDiagnostic, true);
+  if (!USuperDexPoseFunctionLibrary::ComputeSuperDexPoseFromJointPositions(
+          InitializedOutputBot, DisplayPositions, Candidate)) {
+    SetStatus(false, TEXT("IK result width does not match the output bot."), true);
     return false;
   }
   TransformedPose = MoveTemp(Candidate);
@@ -517,43 +512,6 @@ bool USuperDexBotIKRetargeter::GetTransformedPose_Implementation(
     ++SolutionSequence;
   }
   SetStatus(true, Reached ? TEXT("Goals reached") : TEXT("Best effort: goals unreached"), false);
-  return true;
-}
-
-bool USuperDexBotIKRetargeter::ComputeSuperDexPoseFromJointPositions(
-    TConstArrayView<double> DisplayPositions,
-    FSuperDexPose& OutPose,
-    FString& Diagnostic) {
-  // Same contract as USuperDexPoseFunctionLibrary::ComputeSuperDexPoseFromJointPositions: pack
-  // parent-relative bones ONLY, leaving the caller's root/metadata intact. Use native snapshots,
-  // not the legacy metadata FK: native prefab scale, prismatic coordinates and nonidentity child
-  // rest frames must survive.
-  mochi::DynamicArray<mochi::TransformRT> Links;
-  for (const auto& Link : Solver->GetOutputBotWorldFromLinks()) {
-    Links.push_back(Link);
-  }
-  // Solved commands and optional feedback visualization stay distinct; native FK restores the
-  // solver's warm start. Never splice a 20-coordinate hand pose into 27 arm+hand bones.
-  if (JointAngleMultiplier != 1.0 || bSubscribeToTeleopHandJointPositions) {
-    if (!Solver->CopyOutputBotFKAtJointConfiguration(DisplayPositions, Links)) {
-      Diagnostic = TEXT("Native hand feedback/bias FK failed.");
-      return false;
-    }
-  }
-  if (Links.size() != OutputModel.links.size()) {
-    Diagnostic = TEXT("Solved link snapshots do not match the output robot topology.");
-    return false;
-  }
-  FMochiToUnrealConverter ToUnreal(kSuperDexSpace);
-  OutPose.BoneRotations.SetNum(static_cast<int32>(Links.size()));
-  OutPose.BoneLocations.SetNum(static_cast<int32>(Links.size()));
-  for (int32 I = 0; I < OutPose.BoneRotations.Num(); ++I) {
-    const auto Local = I == 0 ? mochi::TransformRT::Identity()
-                              : mochi::Invert(Links[OutputModel.links[I].parentLink]) * Links[I];
-    const auto Link = ToUnreal.TransformToUnreal(Local);
-    OutPose.BoneRotations[I] = Link.GetRotation();
-    OutPose.BoneLocations[I] = Link.GetTranslation();
-  }
   return true;
 }
 

@@ -75,6 +75,5 @@ bool UZeroOrderHoldRetargeter::GetTransformedPose_Implementation(
   TransformedPose.bIsTrackingConfident = result;
   TransformedPose.TrackingConfidence = result ? 1.0f : 0.0f;
   TransformedPose.tags.Add(TEXT("ZeroOrderHold"));
-  TransformedPose.SkeletonName = FName(Articulation->GetArticulationName());
   return result;
 }

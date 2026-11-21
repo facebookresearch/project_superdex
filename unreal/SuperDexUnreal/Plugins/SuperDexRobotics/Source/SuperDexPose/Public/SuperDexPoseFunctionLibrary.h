@@ -69,13 +69,92 @@ class SUPERDEXPOSE_API USuperDexPoseFunctionLibrary : public UBlueprintFunctionL
   UFUNCTION(BlueprintCallable, Category = "SuperDex")
   static bool UpdateSuperDexPoseInAsset(USuperDexPoseAsset* Asset, FSuperDexPose Pose);
 
-  // Sets OutPose's bones (one per link, parent-relative) to an articulation's link transforms at a
-  // joint configuration [rad or m]. Leaves the rest of OutPose unchanged.
+  // Sets OutPose to a joint configuration [rad or m] of an articulation: OutPose.Bot becomes the
+  // articulation and OutPose.DofPositions the joint positions. Fails, leaving OutPose unchanged, if
+  // there is not one joint position per DOF of the articulation. Leaves the rest of OutPose
+  // unchanged.
   UFUNCTION(BlueprintCallable, Category = "SuperDex")
   static bool ComputeSuperDexPoseFromJointPositions(
-      const UMochiArticulationBase* Articulation,
+      UMochiArticulationBase* Articulation,
       const TArray<double>& JointPositions,
       FSuperDexPose& OutPose);
+
+  // Sets Pose to the joint configuration of Bot that its links' transforms relative to their
+  // parents hold (one per link, in nominal bot space, as
+  // UMochiArticulationBase::ComputeJointPositionsFromLinkToParentTransforms takes them): Pose.Bot
+  // becomes Bot and Pose.DofPositions its joint positions. What the joints can't produce, such as a
+  // link's swing off its revolute axis, is discarded. The root link's transform is not a joint
+  // position, so it is composed into Pose.SkeletonRootToVrRoot: the pose places the root link where
+  // LinkToParent places it relative to the pose root Pose had. Fails, leaving Pose unchanged, if
+  // there is not one transform per link of Bot. Leaves the rest of Pose unchanged.
+  UFUNCTION(BlueprintCallable, Category = "SuperDex")
+  static bool SetSuperDexPoseFromLinkToParentTransforms(
+      UMochiArticulationBase* Bot,
+      const TArray<FTransform>& LinkToParent,
+      UPARAM(ref) FSuperDexPose& Pose);
+
+  // SetSuperDexPoseFromLinkToParentTransforms for the links' transforms relative to the skeleton
+  // root (UMochiArticulationBase::ComputeJointPositionsFromLinkToArticulationRootTransforms).
+  UFUNCTION(BlueprintCallable, Category = "SuperDex")
+  static bool SetSuperDexPoseFromLinkToSkeletonRootTransforms(
+      UMochiArticulationBase* Bot,
+      const TArray<FTransform>& LinkToSkeletonRoot,
+      UPARAM(ref) FSuperDexPose& Pose);
+
+  // SetSuperDexPoseFromLinkToParentTransforms for link rotations relative to their parents
+  // (link-to-parent transforms with no translation), such as a hand tracker's bone rotations. Only
+  // prismatic joints read translations, so the rotations of a bot without them hold all its joint
+  // positions.
+  UFUNCTION(BlueprintCallable, Category = "SuperDex")
+  static bool SetSuperDexPoseFromLinkRotations(
+      UMochiArticulationBase* Bot,
+      const TArray<FQuat>& LinkToParentRotations,
+      UPARAM(ref) FSuperDexPose& Pose);
+
+  // The transforms of a pose's links relative to their parents: its Bot's links at its
+  // DofPositions (UMochiArticulationBase::ComputeLinkToParentTransforms), in nominal bot space
+  // [cm]. SkeletonRootToVrRoot scales and places them. Fails if the pose is not on a bot
+  // (IsSuperDexPoseOnBot).
+  UFUNCTION(BlueprintCallable, Category = "SuperDex")
+  static bool ComputeSuperDexPoseLinkToParentTransforms(
+      const FSuperDexPose& Pose,
+      TArray<FTransform>& OutLinkToParent);
+
+  // The transforms of a pose's links relative to its skeleton root (its Bot's articulation root,
+  // UMochiArticulationBase::ComputeLinkToArticulationRootTransforms), as
+  // ComputeSuperDexPoseLinkToParentTransforms.
+  UFUNCTION(BlueprintCallable, Category = "SuperDex")
+  static bool ComputeSuperDexPoseLinkToSkeletonRootTransforms(
+      const FSuperDexPose& Pose,
+      TArray<FTransform>& OutLinkToSkeletonRoot);
+
+  // Whether a pose is on a bot: it has a Bot and one joint position per DOF of it.
+  UFUNCTION(BlueprintPure, Category = "SuperDex")
+  static bool IsSuperDexPoseOnBot(const FSuperDexPose& Pose);
+
+  // The index of the link of a pose's Bot named LinkName (UMochiArticulationBase::GetLinkNames), or
+  // INDEX_NONE if the pose has no Bot or its Bot has no such link.
+  UFUNCTION(BlueprintPure, Category = "SuperDex")
+  static int32 FindSuperDexPoseLinkIndex(const FSuperDexPose& Pose, FName LinkName);
+
+  // The transform of a link of a pose relative to its skeleton root: the link's transform relative
+  // to its Bot's root at the pose's DofPositions (nominal size, in cm). Fails if the pose is not on
+  // a bot (IsSuperDexPoseOnBot) or LinkIndex is not one of its links.
+  UFUNCTION(BlueprintCallable, Category = "SuperDex")
+  static bool ComputeSuperDexPoseLinkToSkeletonRoot(
+      const FSuperDexPose& Pose,
+      int32 LinkIndex,
+      FTransform& OutLinkToSkeletonRoot);
+
+  // The transform of a link of a pose relative to its VrRoot: its transform relative to the
+  // skeleton root (ComputeSuperDexPoseLinkToSkeletonRoot), scaled and placed by
+  // SkeletonRootToVrRoot. Where a mesh showing the pose puts that link's bone, relative to the
+  // VrRoot.
+  UFUNCTION(BlueprintCallable, Category = "SuperDex")
+  static bool ComputeSuperDexPoseLinkToVrRoot(
+      const FSuperDexPose& Pose,
+      int32 LinkIndex,
+      FTransform& OutLinkToVrRoot);
 
   //----------------------------------------------------------------------------
   // LATENT ACTIONS (FIRE AND FORGET)

@@ -16,7 +16,9 @@
 
 #include "SuperDexOpenXRPoseSource.h"
 
+#include "Skeletons/SuperDexSkeletonBots.h"
 #include "Skeletons/SuperDexSkeleton_OpenXR.h"
+#include "SuperDexPoseFunctionLibrary.h"
 
 #include "DrawDebugHelpers.h"
 #include "Engine/Engine.h"
@@ -110,9 +112,15 @@ bool USuperDexOpenXRPoseSource::GetPose(
   return OutPose.bIsTrackingEnabled;
 }
 
-void USuperDexOpenXRPoseSource::ConvertHandKeypointsToPose(
+UMochiArticulationBase* USuperDexOpenXRPoseSource::GetBot(
+    const ESuperDexHandedness Handedness) const {
+  return GetSkeletonBot_OpenXR(Handedness);
+}
+
+bool USuperDexOpenXRPoseSource::ConvertHandKeypointsToPose(
     TConstArrayView<FQuat> KeypointRotations,
     const FVector& WristLocation,
+    const ESuperDexHandedness Handedness,
     FSuperDexPose& OutPose) {
   check(KeypointRotations.Num() == EHandKeypointCount);
   const FQuat& C = GetJointToBoneRotation();
@@ -126,23 +134,22 @@ void USuperDexOpenXRPoseSource::ConvertHandKeypointsToPose(
     BoneToTracking[Bone] = (Joint.GetNormalized() * C).GetNormalized();
   }
 
-  OutPose.SkeletonName = kSkeletonName_OpenXR;
-  OutPose.BoneLocations.Reset();
-  OutPose.BoneRotations.SetNum(NumBones);
-  OutPose.BoneRotations[0] = FQuat::Identity;
+  TArray<FQuat> LinkToParent;
+  LinkToParent.SetNum(NumBones);
+  LinkToParent[0] = FQuat::Identity;
   for (int32 Bone = 1; Bone < NumBones; ++Bone) {
     const int32 Parent = static_cast<int32>(kSuperDexBoneParents_OXR[Bone]);
-    OutPose.BoneRotations[Bone] =
-        (BoneToTracking[Parent].Inverse() * BoneToTracking[Bone]).GetNormalized();
+    LinkToParent[Bone] = (BoneToTracking[Parent].Inverse() * BoneToTracking[Bone]).GetNormalized();
   }
   OutPose.SkeletonRootToVrRoot = FTransform(BoneToTracking[0], WristLocation, FVector::OneVector);
+  return USuperDexPoseFunctionLibrary::SetSuperDexPoseFromLinkRotations(
+      GetSkeletonBot_OpenXR(Handedness), LinkToParent, OutPose);
 }
 
 void USuperDexOpenXRPoseSource::CachePose(const ESuperDexHandedness Handedness) {
   FSuperDexPose& Cache = (Handedness == ESuperDexHandedness::Left) ? LeftPoseCache : RightPoseCache;
   Cache = FSuperDexPose();
   Cache.SourceName = TEXT("OpenXR");
-  Cache.SkeletonName = kSkeletonName_OpenXR;
   Cache.tags.Add(TEXT("OpenXR"));
   Cache.tags.Add((Handedness == ESuperDexHandedness::Left) ? TEXT("Left") : TEXT("Right"));
 
@@ -173,7 +180,10 @@ void USuperDexOpenXRPoseSource::CachePose(const ESuperDexHandedness Handedness) 
     Rotations[i] = (FTransform(State.HandKeyRotations[i]) * WorldToTracking).GetRotation();
     Locations[i] = WorldToTracking.TransformPosition(State.HandKeyLocations[i]);
   }
-  ConvertHandKeypointsToPose(Rotations, Locations[(int32)EHandKeypoint::Wrist], Cache);
+  if (!ConvertHandKeypointsToPose(
+          Rotations, Locations[(int32)EHandKeypoint::Wrist], Handedness, Cache)) {
+    return;
+  }
   Cache.SkeletonRootToVrRoot.SetScale3D(FVector(EstimateHandScale(Locations)));
 
   Cache.bIsTrackingEnabled = true;

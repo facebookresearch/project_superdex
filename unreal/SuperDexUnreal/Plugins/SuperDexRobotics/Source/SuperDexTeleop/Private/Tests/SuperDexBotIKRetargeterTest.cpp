@@ -26,6 +26,7 @@
 #include "ReferenceSkeleton.h"
 #include "SuperDexBot.h"
 #include "SuperDexIKSolverObject.h"
+#include "SuperDexPoseFunctionLibrary.h"
 #include "SuperDexPoseSource.h"
 #include "UObject/StrongObjectPtr.h"
 #include "UObject/UnrealType.h"
@@ -131,28 +132,19 @@ USuperDexBotIKConfig* GenericConfig(USuperDexBot* Input, USuperDexBot* Output) {
 }
 
 FSuperDexPose GenericNativePose(USuperDexBot* Input, const TArray<double>& Q) {
-  superdex::robotics::BotIKCreateParams Params;
-  Params.fixedBase = true;
-  FGenericNativeIK FK(
-      USuperDexIKSolverObject::CreateBotIKSolver(GetTransientPackage(), Input, Params));
-  check(FK.Get());
-  mochi::DynamicArray<mochi::TransformRT> Links;
-  check(FK->CopyOutputBotFKAtJointConfiguration(Q, Links));
-  const auto& Model = Input->GetBotPrefab();
-  FMochiToUnrealConverter Converter(kSuperDexSpace);
   FSuperDexPose Pose;
   Pose.SourceName = TEXT("NativeBotFK");
-  Pose.SkeletonName = FName(*Input->GetName());
-  // This real native FK producer result deliberately keeps default false tracking flags.
-  for (int I = 0; I < static_cast<int>(Links.size()); ++I) {
-    const auto Local =
-        I == 0 ? mochi::TransformRT{} : mochi::Invert(Links[Model.links[I].parentLink]) * Links[I];
-    const auto Frame = Converter.TransformToUnreal(Local);
-    Pose.BoneRotations.Add(Frame.GetRotation());
-    Pose.BoneLocations.Add(Frame.GetTranslation());
-  }
-  FK->DestroyMochiResources();
+  // This pose deliberately keeps default false tracking flags.
+  check(USuperDexPoseFunctionLibrary::ComputeSuperDexPoseFromJointPositions(Input, Q, Pose));
   return Pose;
+}
+
+// A pose's links relative to their parents, at its joint positions.
+TArray<FTransform> PoseLinkToParent(const FSuperDexPose& Pose) {
+  TArray<FTransform> LinkToParent;
+  check(
+      USuperDexPoseFunctionLibrary::ComputeSuperDexPoseLinkToParentTransforms(Pose, LinkToParent));
+  return LinkToParent;
 }
 
 bool MatchGenericQ(
@@ -200,16 +192,7 @@ bool FGenericBotIKNativeChainTest::RunTest(const FString&) {
             Ret->GetTransformedPose_Implementation(Pose, true, First)))
       return false;
     MatchGenericQ(*this, Ret.Get(), Q);
-    auto Negated = Pose;
-    for (int I = 1; I < Negated.BoneRotations.Num(); ++I) {
-      const auto R = Negated.BoneRotations[I];
-      Negated.BoneRotations[I] = FQuat(-R.X, -R.Y, -R.Z, -R.W);
-    }
-    FSuperDexPose NegatedOutput;
-    TestTrue(
-        TEXT("Full native antipodal quaternion pose accepts hard/rev/prism/spherical rotations"),
-        Ret->GetTransformedPose_Implementation(Negated, true, NegatedOutput));
-    MatchGenericQ(*this, Ret.Get(), Q);
+    TestTrue(TEXT("Output pose is on the output bot"), First.Bot.Get() == Output.Get());
     TestTrue(
         TEXT("Tracked/input root scale does not rescale prismatic q"),
         First.SkeletonRootToVrRoot.Equals(Pose.SkeletonRootToVrRoot, 1e-5));
@@ -229,25 +212,17 @@ bool FGenericBotIKNativeChainTest::RunTest(const FString&) {
     TestTrue(
         TEXT("Chain root placement remains separate and composed once"),
         Second.SkeletonRootToVrRoot.Equals(First.SkeletonRootToVrRoot, 1e-5));
-    Pose.SkeletonName = FName(*Input->GetPathName());
-    TestTrue(
-        TEXT("Full asset identity is accepted"),
-        Ret->GetTransformedPose_Implementation(Pose, true, First));
     for (double Angle : {3.13, -3.13}) {
       const auto NearPi = GenericNativePose(Input.Get(), {Angle, 0.025, Angle, 0.0, 0.0});
-      auto Antipodal = NearPi;
-      for (int I = 1; I < Antipodal.BoneRotations.Num(); ++I) {
-        const auto R = Antipodal.BoneRotations[I];
-        Antipodal.BoneRotations[I] = FQuat(-R.X, -R.Y, -R.Z, -R.W);
-      }
       TestTrue(
-          TEXT("Near-pi full pose remains projectable on either quaternion hemisphere"),
-          Ret->GetTransformedPose_Implementation(Antipodal, true, First));
-      for (int I = 1; I < First.BoneRotations.Num(); ++I) {
+          TEXT("Near-pi full pose remains projectable"),
+          Ret->GetTransformedPose_Implementation(NearPi, true, First));
+      const TArray<FTransform> Expected = PoseLinkToParent(NearPi);
+      const TArray<FTransform> Actual = PoseLinkToParent(First);
+      for (int I = 1; I < Actual.Num(); ++I) {
         TestTrue(
-            TEXT("Near-pi solve preserves physical local frame rather than quaternion sign"),
-            FTransform(First.BoneRotations[I], First.BoneLocations[I])
-                .Equals(FTransform(NearPi.BoneRotations[I], NearPi.BoneLocations[I]), 0.05));
+            TEXT("Near-pi solve preserves physical local frame"),
+            Actual[I].Equals(Expected[I], 0.05));
       }
     }
   }
@@ -283,19 +258,16 @@ bool FGenericBotIKInvalidInputTest::RunTest(const FString&) {
         TEXT("Rejected input preserves output"), Out.SourceName, FName(TEXT("UnchangedOutput")));
   };
   auto Bad = Good;
-  Bad.BoneLocations.Reset();
-  Reject(Bad, TEXT("prismatic joints need input pose BoneLocations"));
+  Bad.DofPositions.Pop();
+  Reject(Bad, TEXT("must hold joint positions of a bot"));
   Bad = Good;
-  Bad.BoneRotations.Pop();
-  Reject(Bad, TEXT("bone count must match"));
+  Bad.Bot = nullptr;
+  Reject(Bad, TEXT("must hold joint positions of a bot"));
   FSuperDexPose Out;
-  for (const FName Name : {FName(TEXT("WrongSameWidth")), FName(*Other->GetPathName())}) {
-    auto Renamed = Good;
-    Renamed.SkeletonName = Name;
-    TestTrue(
-        TEXT("Any skeleton name with the input bot's bone count is accepted"),
-        Ret->GetTransformedPose_Implementation(Renamed, true, Out));
-  }
+  TestTrue(
+      TEXT("A pose on another bot with the input bot's link count is accepted"),
+      Ret->GetTransformedPose_Implementation(
+          GenericNativePose(Other.Get(), {0.3, 0.025, 0.1, -0.2, 0.05}), true, Out));
   TStrongObjectPtr<USuperDexBotIKTestPoseSource> Provider(
       NewObject<USuperDexBotIKTestPoseSource>());
   Provider->SetSkinnedAssetAndUpdate(Other->GetSkeletalMesh());
@@ -333,16 +305,18 @@ bool FGenericBotIKRotationProjectionTest::RunTest(const FString&) {
   TStrongObjectPtr<USuperDexBotIKRetargeter> Ret(NewObject<USuperDexBotIKRetargeter>());
   Ret->Config = Config.Get();
   TestTrue(TEXT("Hard-root rotational tree initializes"), Ret->InitializeRetargeter());
+  // A bot of the same skeleton whose revolute link frame is swung about an axis perpendicular to
+  // the revolute (Z) axis: its link 2 turns Q[0] about the axis, then swings, which is discarded.
+  auto Swung = Model;
+  Swung.links[2].parentJointFromLink =
+      mochi::TransformRT{mochi::Quaternion::RotationX(0.6_r), mochi::Real3{}} *
+      Swung.links[2].parentJointFromLink;
+  mochi::Error Error;
+  superdex::robotics::RebuildBotData(Swung, Error);
+  TestTrue(TEXT("Swung bot rebuilds"), Error.IsOK());
+  TStrongObjectPtr<USuperDexBot> SwungBot(GenericAsset(Swung, TEXT("GenericSwungRotations")));
   const TArray<double> Q{0.2, 0.1, -0.2, 0.05};
-  auto Pose = GenericNativePose(Input.Get(), Q);
-  Pose.BoneLocations.Reset();
-  const auto A = Model.joints[2].parentLinkFromJoint.GetRotation();
-  const auto B = Model.links[2].parentJointFromLink.GetRotation();
-  // Q[0] about the revolute (Z) axis, then a swing about a perpendicular axis, which is discarded.
-  Pose.BoneRotations[2] = FMochiToUnrealConverter(kSuperDexSpace)
-                              .RotationToUnreal(
-                                  A * mochi::Quaternion::RotationZ(static_cast<mochi::real>(Q[0])) *
-                                  mochi::Quaternion::RotationX(0.6_r) * B);
+  const auto Pose = GenericNativePose(SwungBot.Get(), Q);
   // The discarded swing is logged on the first such frame, then every 200th: 3 times in 401.
   AddExpectedMessagePlain(
       TEXT("the input pose doesn't fit the InputBot's joints"),
