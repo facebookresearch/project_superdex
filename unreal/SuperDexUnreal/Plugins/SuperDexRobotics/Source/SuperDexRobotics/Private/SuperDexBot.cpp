@@ -439,7 +439,10 @@ bool USuperDexBot::MaterializeSensorParamFiles(superdex::robotics::BotPrefab& Pr
         bOk = false;
         continue;
       }
-      Sensor.params = mochi::DynamicString(TCHAR_TO_UTF8(**OutPath));
+      // Mochi opens this file itself, outside Unreal's file system. On Android a "full" Unreal path
+      // is still relative ("../../../<Project>/..."), so convert it to the physical path.
+      Sensor.params = mochi::DynamicString(TCHAR_TO_UTF8(
+          *IFileManager::Get().ConvertToAbsolutePathForExternalAppForRead(**OutPath)));
     }
   }
   if (!bOk) {
