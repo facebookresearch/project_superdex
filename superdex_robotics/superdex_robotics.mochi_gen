@@ -1220,6 +1220,18 @@ struct bots::SensorUniformNoiseParams [no_reflection] {
   bots::SensorRandomParams random;
 }
 
+// @brief Outlier injection parameters.
+struct bots::SensorOutlierInjectionParams [no_reflection] {
+  // @brief Probability that a capture is replaced by an outlier.
+  double probability = 0.0;
+  // @brief An outlier's values are uniform in [-range, range).
+  double range = 0.0;
+  // @brief With rotation, the input is two rows of a rotation matrix (6 values) and an outlier is
+  // two rows of a uniformly random rotation instead.
+  bool rotation = false;
+  bots::SensorRandomParams random;
+}
+
 // @brief Ordered, sensor-link-frame positions for a tactile taxel layout.
 struct bots::TactileTaxelLayout [no_reflection] {
   // @brief Taxel positions [m] in the sensor link frame. Their order is the taxel identity.
@@ -1570,6 +1582,13 @@ class bots::SensorUniformNoise(bots::SensorBase) [no_init, no_destruct, no_refle
   fn TypeName() -> StringView [static];
   fn GetParams() -> bots::SensorUniformNoiseParams [const];
   fn SetParams(bots::SensorUniformNoiseParams const& params) -> void [mochi_error];
+}
+
+// @brief Replaces whole input captures by outliers with a fixed probability.
+class bots::SensorOutlierInjection(bots::SensorBase) [no_init, no_destruct, no_reflection] {
+  fn TypeName() -> StringView [static];
+  fn GetParams() -> bots::SensorOutlierInjectionParams [const];
+  fn SetParams(bots::SensorOutlierInjectionParams const& params) -> void [mochi_error];
 }
 
 // @brief Create a @ref Bot runtime object from a @ref BotPrefab. Builds the underlying

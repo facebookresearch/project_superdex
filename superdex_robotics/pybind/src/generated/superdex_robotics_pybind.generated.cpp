@@ -114,6 +114,7 @@ void mochi::DeclareSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module
   registry.StoreClass(nb::class_<superdex::robotics::SensorRandomParams>(m_bots, "SensorRandomParams", "Episode seed and stable acquisition stream identity."));
   registry.StoreClass(nb::class_<superdex::robotics::SensorGaussianNoiseParams>(m_bots, "SensorGaussianNoiseParams", "Additive zero-mean Gaussian noise parameters."));
   registry.StoreClass(nb::class_<superdex::robotics::SensorUniformNoiseParams>(m_bots, "SensorUniformNoiseParams", "Additive uniform noise parameters."));
+  registry.StoreClass(nb::class_<superdex::robotics::SensorOutlierInjectionParams>(m_bots, "SensorOutlierInjectionParams", "Outlier injection parameters."));
   registry.StoreClass(nb::class_<superdex::robotics::TactileTaxelLayout>(m_bots, "TactileTaxelLayout", "Ordered, sensor-link-frame positions for a tactile taxel layout."));
   registry.StoreClass(nb::class_<superdex::robotics::TactileTaxelForces>(m_bots, "TactileTaxelForces", "Dense per-taxel force observation for one tactile site."));
   registry.StoreClass(nb::class_<superdex::robotics::TactileAggregateForce>(m_bots, "TactileAggregateForce", "Aggregate force observation for one tactile site."));
@@ -137,6 +138,7 @@ void mochi::DeclareSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module
   registry.StoreClass(nb::class_<superdex::robotics::SensorDelayLine, superdex::robotics::SensorBase>(m_bots, "SensorDelayLine", "Deterministic time-domain delay over one fixed CPU sensor output.", nb::never_destruct()));
   registry.StoreClass(nb::class_<superdex::robotics::SensorGaussianNoise, superdex::robotics::SensorBase>(m_bots, "SensorGaussianNoise", "Independent additive noise on new input captures.", nb::never_destruct()));
   registry.StoreClass(nb::class_<superdex::robotics::SensorUniformNoise, superdex::robotics::SensorBase>(m_bots, "SensorUniformNoise", "Independent additive uniform noise on new input captures.", nb::never_destruct()));
+  registry.StoreClass(nb::class_<superdex::robotics::SensorOutlierInjection, superdex::robotics::SensorBase>(m_bots, "SensorOutlierInjection", "Replaces whole input captures by outliers with a fixed probability.", nb::never_destruct()));
   registry.StoreClass(nb::class_<superdex::robotics::BotSceneMetadata>(m_bots, "BotSceneMetadata", "Human-readable metadata for a .superdex_scene file. Not consumed by the runtime."));
   registry.StoreClass(nb::class_<superdex::robotics::PrefabEntry>(m_bots, "PrefabEntry", "A named reference to a spawnable scene, prefab, bot, or bot archive."));
   registry.StoreClass(nb::class_<superdex::robotics::BaseSceneParams>(m_bots, "BaseSceneParams", "Scene definition within a .superdex_scene.\n\nThe base_scene is optional — a scene under construction may not have one yet.\nWhen present it is the authoritative source for all simulation physics\nparameters (gravity, solver config, contact filtering, collision layers, etc.);\nwhen absent the scene keeps its default parameters."));
@@ -1487,6 +1489,30 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_rw("random", &superdex::robotics::SensorUniformNoiseParams::random)
   ;
 
+  registry.GetClass<superdex::robotics::SensorOutlierInjectionParams>()
+    .def("__init__", [](superdex::robotics::SensorOutlierInjectionParams* self, nb::object probability, nb::object range, nb::object rotation, nb::object random) {
+      superdex::robotics::SensorOutlierInjectionParams result{};
+      result.probability = nb::cast<double>(probability);
+      result.range = nb::cast<double>(range);
+      result.rotation = nb::cast<bool>(rotation);
+      result.random = nb::cast<superdex::robotics::SensorRandomParams>(random);
+      new (self) superdex::robotics::SensorOutlierInjectionParams(std::move(result));
+    }
+      , nb::kw_only()
+      , nb::arg("probability") = superdex::robotics::SensorOutlierInjectionParams{}.probability
+      , nb::arg("range") = superdex::robotics::SensorOutlierInjectionParams{}.range
+      , nb::arg("rotation") = superdex::robotics::SensorOutlierInjectionParams{}.rotation
+      , nb::arg("random").sig("...") = superdex::robotics::SensorOutlierInjectionParams{}.random
+    )
+    .def(nb::init<>())
+    .def("__copy__", [](superdex::robotics::SensorOutlierInjectionParams const& self) { return superdex::robotics::SensorOutlierInjectionParams(self); })
+    .def("__deepcopy__", [](superdex::robotics::SensorOutlierInjectionParams const& self, nb::dict) { return superdex::robotics::SensorOutlierInjectionParams(self); })
+    .def_rw("probability", &superdex::robotics::SensorOutlierInjectionParams::probability, "Probability that a capture is replaced by an outlier.")
+    .def_rw("range", &superdex::robotics::SensorOutlierInjectionParams::range, "An outlier's values are uniform in [-range, range).")
+    .def_rw("rotation", &superdex::robotics::SensorOutlierInjectionParams::rotation, "With rotation, the input is two rows of a rotation matrix (6 values) and an\noutlier is two rows of a uniformly random rotation instead.")
+    .def_rw("random", &superdex::robotics::SensorOutlierInjectionParams::random)
+  ;
+
   registry.GetClass<superdex::robotics::TactileTaxelLayout>()
     .def("__init__", [](superdex::robotics::TactileTaxelLayout* self, nb::object positions) {
       superdex::robotics::TactileTaxelLayout result{};
@@ -1935,6 +1961,22 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def("get_params", &superdex::robotics::SensorUniformNoise::GetParams
     )
     .def("set_params", [](superdex::robotics::SensorUniformNoise& self, superdex::robotics::SensorUniformNoiseParams const& params) {
+      mochi::Error error;
+      self.SetParams(params, error);
+      if (!error.IsOK()) {
+        throw MochiErrorException(error);
+      }
+    }
+      , nb::arg("params")
+    )
+  ;
+
+  registry.GetClass<superdex::robotics::SensorOutlierInjection, superdex::robotics::SensorBase>()
+    .def_static("type_name", &superdex::robotics::SensorOutlierInjection::TypeName
+    )
+    .def("get_params", &superdex::robotics::SensorOutlierInjection::GetParams
+    )
+    .def("set_params", [](superdex::robotics::SensorOutlierInjection& self, superdex::robotics::SensorOutlierInjectionParams const& params) {
       mochi::Error error;
       self.SetParams(params, error);
       if (!error.IsOK()) {

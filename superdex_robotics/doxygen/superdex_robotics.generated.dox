@@ -1049,6 +1049,26 @@
 /// @brief Upper bound of each value's draw (exclusive), in input element units.
 ///
 
+/// @struct superdex::robotics::SensorOutlierInjectionParams
+///
+/// @brief Outlier injection parameters.
+///
+
+/// @var superdex::robotics::SensorOutlierInjectionParams::probability
+///
+/// @brief Probability that a capture is replaced by an outlier.
+///
+
+/// @var superdex::robotics::SensorOutlierInjectionParams::range
+///
+/// @brief An outlier's values are uniform in [-range, range).
+///
+
+/// @var superdex::robotics::SensorOutlierInjectionParams::rotation
+///
+/// @brief With rotation, the input is two rows of a rotation matrix (6 values) and an outlier is two rows of a uniformly random rotation instead.
+///
+
 /// @struct superdex::robotics::TactileTaxelLayout
 ///
 /// @brief Ordered, sensor-link-frame positions for a tactile taxel layout.
@@ -1467,6 +1487,11 @@
 /// @class superdex::robotics::SensorUniformNoise
 ///
 /// @brief Independent additive uniform noise on new input captures.
+///
+
+/// @class superdex::robotics::SensorOutlierInjection
+///
+/// @brief Replaces whole input captures by outliers with a fixed probability.
 ///
 
 /// @struct superdex::robotics::BotSceneArchiveMetadata

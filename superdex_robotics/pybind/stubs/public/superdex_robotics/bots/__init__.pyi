@@ -2544,6 +2544,29 @@ class SensorUniformNoiseParams:
         random: SensorRandomParams = ...,
     ) -> None: ...
 
+class SensorOutlierInjectionParams:
+    """Outlier injection parameters."""
+    probability: float
+    """Probability that a capture is replaced by an outlier."""
+    range: float
+    """An outlier's values are uniform in [-range, range)."""
+    rotation: bool
+    """With rotation, the input is two rows of a rotation matrix (6 values) and an
+    outlier is two rows of a uniformly random rotation instead.
+    """
+    random: SensorRandomParams
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(
+        self,
+        *,
+        probability: float = ...,
+        range: float = ...,
+        rotation: bool = ...,
+        random: SensorRandomParams = ...,
+    ) -> None: ...
+
 class TactileTaxelLayout:
     """Ordered, sensor-link-frame positions for a tactile taxel layout."""
     @property
@@ -3082,6 +3105,13 @@ class SensorUniformNoise(SensorBase):
     def type_name() -> str: ...
     def get_params(self) -> SensorUniformNoiseParams: ...
     def set_params(self, params: SensorUniformNoiseParams) -> None: ...
+
+class SensorOutlierInjection(SensorBase):
+    """Replaces whole input captures by outliers with a fixed probability."""
+    @staticmethod
+    def type_name() -> str: ...
+    def get_params(self) -> SensorOutlierInjectionParams: ...
+    def set_params(self, params: SensorOutlierInjectionParams) -> None: ...
 
 class BotSceneMetadata:
     """Human-readable metadata for a .superdex_scene file. Not consumed by the runtime.
