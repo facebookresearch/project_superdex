@@ -411,8 +411,8 @@ struct RecordSpec {
   MOCHI_STRUCT_END()
 };
 
-// Matches SuperDex Studio (Z-up) so CLI and Studio runs agree.
-inline Real3 const kDefaultGravity{0.0f, 0.0f, -9.81f};
+// Mochi's default gravity in SuperDex Studio's Z-up frame, so CLI and Studio runs agree.
+inline Real3 const kDefaultGravity{0.0f, 0.0f, mochi::kDefaultGravity[1]};
 
 struct RunSpec {
   double dt = 0.01;
@@ -445,7 +445,7 @@ struct RunSpec {
   MOCHI_FIELD(gravity) MOCHI_ATTRIBUTE(Units("m/s^2"));
   MOCHI_ATTRIBUTE(Description(
       "Overrides the prefab's scene gravity when set. Unset: the prefab's gravity, else "
-      "(0, 0, -9.81)."));
+      "Mochi's default gravity along -Z."));
   MOCHI_FIELD(groundPlane)
   MOCHI_ATTRIBUTE(Description("Add a static ground plane (normal +Z) at Ground Height."));
   MOCHI_FIELD(groundHeight) MOCHI_ATTRIBUTE(Units("m"));

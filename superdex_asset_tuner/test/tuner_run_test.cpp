@@ -412,7 +412,7 @@ TEST_F(TunerTest, StopConditionsEndTheRunWhenTheyTrigger) {
   fell.comparison = StopComparison::Below;
   fell.threshold = -0.2f;
 
-  // Leaving the box: z = -0.5 is reached after sqrt(2 * 0.5 / 9.81) ~ 0.32 s.
+  // Leaving the box: z = -0.5 is reached after sqrt(2 * 0.5 / 9.8) ~ 0.32 s.
   TunerSpec leaves = fallingCube();
   leaves.stopConditions.push_back(box);
   RunCapture const leftBox = Run(leaves);
@@ -440,7 +440,7 @@ TEST_F(TunerTest, StopConditionsEndTheRunWhenTheyTrigger) {
 
 TEST_F(TunerTest, EntersBoxStopsWhenTheBodyReachesTheBox) {
   // A free-falling cube (no ground) reaches a box spanning z in [-0.5, -0.3] after
-  // sqrt(2 * 0.3 / 9.81) ~ 0.25 s; it starts outside, so it does not trigger at once.
+  // sqrt(2 * 0.3 / 9.8) ~ 0.25 s; it starts outside, so it does not trigger at once.
   TunerSpec spec = MakeSpec(kRigidCubePrefab);
   spec.run.gravity = kDefaultGravity;
   spec.run.duration = 1.0;

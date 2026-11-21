@@ -545,7 +545,8 @@ struct StudioPhysicsSettings {
 // The scene-level half of the simulation settings. Solver params sit alongside rather than inside,
 // so every place that edits these shows Scene and Solver as sibling sections.
 struct PhysicsSceneSettings {
-  mochi::Real3 gravity{0_r, 0_r, -9.81_r};
+  // Mochi's default gravity, from its Y-up frame into Studio's Z-up one.
+  mochi::Real3 gravity{0_r, 0_r, mochi::kDefaultGravity[1]};
   bool useFixedTimeStep = false;
   double fixedTimeStepSeconds = 0.01;
   bool throttleToRealTime = false;

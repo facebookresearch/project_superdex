@@ -223,7 +223,7 @@ A threshold's channel must be produced by a probe or load. If it isn't, the run 
 | `dt` | 0.01 | Fixed time step to use. |
 | `duration` | 2 | Simulation time. |
 | `singleThreaded` | true | Run SuperDex Physics on one thread |
-| `gravity` | unset | Overrides the prefab's scene gravity. Unset: the prefab's, otherwise (0, 0, \-9.81). |
+| `gravity` | unset | Overrides the prefab's scene gravity. Unset: the prefab's, otherwise Mochi's default gravity along \-Z. |
 | `groundPlane` | true | Add a static ground plane, normal \+Z. |
 | `groundHeight` | unset | Ground plane height. Unset: the lowest point of the prefab's bodies. |
 | `groundContact` | unset | The ground plane's contact parameters (SuperDex Physics' `ContactParams` fields, e.g. `{ "coulombFrictionCoefficient": 0.8, "penaltySmoothingHalfDistance": 1e-5 }`). Unset: SuperDex defaults. |

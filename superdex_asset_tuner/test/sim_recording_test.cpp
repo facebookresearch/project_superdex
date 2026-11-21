@@ -144,7 +144,7 @@ TEST_F(SimRecordingTest, KeepsTheResolvedSpecAndSummary) {
 
 TEST_F(SimRecordingTest, RecordsContactForcesOnlyWhenAsked) {
   TunerSpec spec = MakeSpec(kRigidCubePrefab);
-  spec.run.gravity = Real3{0.0f, 0.0f, -9.81f};
+  spec.run.gravity = kDefaultGravity;
   spec.run.groundPlane = true;
   spec.run.duration = 0.1;
   auto const recordsContacts = [&](bool contactForces) {
