@@ -1051,6 +1051,59 @@ BotSensorPrefab const* FindBotSensorPrefab(
   return nullptr;
 }
 
+/* @brief Resolve one declared bot-sensor input against its owner `bot/link`. A relative input has
+ * exactly one of two shapes: `./<sensor>` (same link) or `../<link>/<sensor>` (same bot). Any other
+ * input starting with `.` is rejected; other inputs are returned unchanged and resolved by the
+ * graph as complete node names. */
+DynamicString ResolveBotSensorInput(
+    std::string_view botName,
+    std::string_view linkName,
+    std::string_view input,
+    Error& error) {
+  auto const isName = [](std::string_view part) {
+    return !part.empty() && part != "." && part != ".." && part.find('/') == std::string_view::npos;
+  };
+  if (input.starts_with("./")) {
+    std::string_view const sensor = input.substr(2);
+    if (isName(sensor)) {
+      return DynamicString(
+          std::string(botName) + "/" + std::string(linkName) + "/" + std::string(sensor));
+    }
+  } else if (input.starts_with("../")) {
+    std::string_view const rest = input.substr(3);
+    size_t const slash = rest.find('/');
+    if (slash != std::string_view::npos && isName(rest.substr(0, slash)) &&
+        isName(rest.substr(slash + 1))) {
+      return DynamicString(std::string(botName) + "/" + std::string(rest));
+    }
+  } else if (!input.starts_with(".")) {
+    return DynamicString(std::string(input));
+  }
+  MOCHI_LOG_ERROR(
+      "Bot sensor input '%.*s' on '%.*s/%.*s' is not './<sensor>', '../<link>/<sensor>' or complete",
+      static_cast<int>(input.size()),
+      input.data(),
+      static_cast<int>(botName.size()),
+      botName.data(),
+      static_cast<int>(linkName.size()),
+      linkName.data());
+  MOCHI_ERROR_SET(error, "Bot sensor input is not './<sensor>', '../<link>/<sensor>' or complete");
+  return {};
+}
+
+/* @brief Graph node names are `bot/link/sensor`; each part must therefore be free of '/'. */
+void ValidateNodeNamePart(std::string_view kind, std::string_view part, Error& error) {
+  if (part.find('/') != std::string_view::npos) {
+    MOCHI_LOG_ERROR(
+        "BotScene %.*s name '%.*s' must not contain '/'",
+        static_cast<int>(kind.size()),
+        kind.data(),
+        static_cast<int>(part.size()),
+        part.data());
+    MOCHI_ERROR_SET(error, "BotScene bot, link and sensor names must not contain '/'");
+  }
+}
+
 void CollectBotSensorNodes(
     BotScene::Impl& impl,
     std::string_view botName,
@@ -1073,9 +1126,20 @@ void CollectBotSensorNodes(
     BotSensorPrefab const* const entry =
         FindBotSensorPrefab(bot.GetBotPrefab(), linkName, sensor->GetName());
     if (entry != nullptr) {
+      ValidateNodeNamePart("bot", botName, error);
+      ValidateNodeNamePart("link", linkName, error);
+      ValidateNodeNamePart("sensor", sensor->GetName(), error);
+      MOCHI_ERROR_RETURN(error);
       std::string const name =
           std::string(botName) + "/" + linkName + "/" + std::string(sensor->GetName());
-      nodes.push_back({DynamicString(name), handle, sensor, entry->inputs});
+      DynamicArray<DynamicString> inputs;
+      inputs.reserve(entry->inputs.size());
+      for (DynamicString const& input : entry->inputs) {
+        inputs.push_back(ResolveBotSensorInput(
+            botName, linkName, std::string_view(input.c_str(), input.size()), error));
+        MOCHI_ERROR_RETURN(error);
+      }
+      nodes.push_back({DynamicString(name), handle, sensor, std::move(inputs)});
     }
   }
 }
@@ -1115,6 +1179,17 @@ void BuildSensorGraph(BotScene::Impl& impl, Error& error, Span<DynamicString con
     if (sensor == nullptr) {
       MOCHI_ERROR_SET(error, "BotScene contains an invalid scene sensor handle");
       return;
+    }
+    for (DynamicString const& input : entry.inputs) {
+      std::string_view const inputName(input.c_str(), input.size());
+      if (inputName.empty() || inputName.starts_with('.')) {
+        MOCHI_LOG_ERROR(
+            "Scene sensor '%s' input '%s' must be a nonempty complete node name",
+            entry.name.c_str(),
+            input.c_str());
+        MOCHI_ERROR_SET(error, "Scene sensor inputs must be nonempty complete node names");
+        return;
+      }
     }
     nodes.push_back({entry.name, handle->second, sensor, entry.inputs});
   }

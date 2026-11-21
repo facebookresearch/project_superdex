@@ -9,6 +9,9 @@ new tools for recording episodes, authoring robot scenes, and processing CAD.
 
 ### What's New
 
+- **Bot-relative sensor inputs.** Bot-owned inputs accept `./<sensor>` and
+  `../<link>/<sensor>`, resolved once into complete graph names when the scene
+  loads. A bot file can be reused under different scene instance names.
 - **Python 3.13 and 3.14 support.** Native wheels now use the CPython stable ABI
   and support standard CPython 3.12+. The nanobind port preserves the Python API
   and enables parallel calls in free-threaded CPython source builds.

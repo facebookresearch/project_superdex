@@ -288,6 +288,15 @@ source's capture identity. `Reset()` is final; implement an explicit empty `Rese
 stateless sensor. Implement `GetTypeName()` from `ComponentBase` and keep construction parameters
 typed on the concrete sensor.
 
+## Bot-relative inputs
+
+A bot file can refer to another sensor on the same link with `./force`, or one on another
+link of the same bot with `../front_pad/force`. `BotScene` resolves these inputs once, using
+the scene's bot instance name, into complete `bot/link/sensor` graph names. The same bot file
+can therefore be instantiated under different scene names without editing its input paths.
+Scene-owned sensors use complete names. Other relative path shapes are rejected; missing
+inputs and cycles fail graph construction. Graph node declarations own their input-name strings.
+
 ## Release scope and integration
 
 Stack 1 supports synchronous numeric CPU observations, including image-like tactile tensors.

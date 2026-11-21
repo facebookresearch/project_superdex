@@ -28,6 +28,7 @@
 #include <cstdio>
 #include <string>
 #include <string_view>
+#include <utility>
 
 #if MOCHI_ASSERT_ENABLED && MOCHI_PHYSICS_DYNAMICALLY_LINKED
 #if MOCHI_PLATFORM_WINDOWS
@@ -449,6 +450,28 @@ TEST(SensorGraphTest, ExtensionWithNoEnabledNamesLeavesAddedNodesInactive) {
   EXPECT_EQ(added.resetCalls, 1);
   EXPECT_EQ(added.stepCalls, 1);
   EXPECT_EQ(added.Latest().captureStep, 502);
+}
+
+TEST(SensorGraphTest, NodeDeclarationOwnsInputsAfterSourceStorageIsReleased) {
+  Error error;
+  CountingSource source(error);
+  DoubleSensor derived(error);
+  SensorGraphNode node;
+  {
+    auto inputs = Inputs({"source"});
+    node = {.name = "derived", .sensor = &derived, .inputs = inputs};
+    inputs[0] = "missing";
+  }
+  SensorGraphNode const moved = std::move(node);
+  SensorGraph graph;
+  graph.Add("source", &source, error);
+  graph.Add(moved, error);
+  graph.SetOutputEnabled("derived", true, error);
+  graph.Build({}, error);
+  graph.Reset(error);
+  ASSERT_TRUE(error.IsOK()) << error.ToString();
+  ASSERT_TRUE(graph.Step({.t = 0.01, .dt = 0.01, .step = 1}, error)) << error.ToString();
+  EXPECT_FLOAT_EQ(derived.Latest().Floats()[0], 2.0F);
 }
 
 TEST(SensorGraphTest, BuildWithNoEnabledOutputsCanExtendWithAnEnabledDependentSensor) {

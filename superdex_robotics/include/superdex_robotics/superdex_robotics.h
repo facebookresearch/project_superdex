@@ -106,7 +106,7 @@ struct BotSensorPrefab {
   /* Human-readable, findable identifier for this sensor instance. */
   DynamicString name;
 
-  /* Sensor graph inputs. Unqualified names resolve on this sensor's link. */
+  /* Sensor graph inputs: `./sensor` (same link), `../link/sensor` (same bot) or a complete name. */
   DynamicArray<DynamicString> inputs;
 
   /* Sensor pose relative to the associated link's actor (aFromB convention: maps sensor-frame

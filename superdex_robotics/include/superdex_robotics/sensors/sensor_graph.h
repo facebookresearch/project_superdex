@@ -40,7 +40,7 @@ struct SensorGraphNode {
   DynamicString name;
   SensorHandle handle;
   SensorBase* sensor = nullptr;
-  Span<DynamicString const> inputs;
+  DynamicArray<DynamicString> inputs;
 };
 
 struct SensorGraphNodeIdentity {

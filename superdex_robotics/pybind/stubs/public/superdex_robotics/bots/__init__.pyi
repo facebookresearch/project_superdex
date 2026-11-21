@@ -701,11 +701,10 @@ class BotSensorPrefab:
     """Human-readable, findable identifier for this sensor instance."""
     @property
     def inputs(self) -> mochi_physics.DynamicArrayString:
-        """Sensor graph inputs. `source` resolves on this sensor's bot and link;
-        `other_link/source` resolves on the same bot; `other_bot/link/source` is already
-        canonical; and `/other_bot/link/source` resolves from the graph root. A
-        root-qualified scene sensor such as `/overhead` is also accepted. Every resolved
-        name must identify a graph node during Build().
+        """Sensor graph inputs. `./sensor` names a sensor on this sensor's link,
+        `../link/sensor` a sensor on another link of the same bot, and any name not
+        starting with `.` is a complete graph node name (`bot/link/sensor` or a scene
+        sensor's name). Other relative forms are rejected.
         """
     @inputs.setter
     def inputs(self, value: mochi_physics.ArrayLikeString) -> None: ...
