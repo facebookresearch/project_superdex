@@ -19,14 +19,14 @@
     0,
     0,
     0.027839748188853264,
-    0.055977944284677505,
+    0.062140706926584244,
+    0,
+    0,
+    0.017331119626760483,
     0,
     0,
     0,
-    0,
-    0,
-    0,
-    0,
+    0.011554080061614513,
     0.054454270750284195,
     0,
     0,
@@ -88,7 +88,7 @@
   ],
   "inputBot": "../../openxr/left/openxr_hand_lowpoly_left.superdex_bot",
   "inputBotConfiguration": [],
-  "inputBotScale": 1.25,
+  "inputBotScale": 1.2300000190734863,
   "goals": [
     {
       "enabled": true,
@@ -101,14 +101,14 @@
           0.9998543879618518
         ],
         "translation": [
-          -0.001822143793106079,
-          0.002159982919692993,
-          0.0009768754243850708
+          -7.1220099925994873e-05,
+          -0.0032530128955841064,
+          0.015284538269042969
         ]
       },
       "name": "link_08_thumb_tip",
       "positionStiffness": 1000,
-      "rotationStiffness": 1,
+      "rotationStiffness": 0.5,
       "inputBotLink": "xr_05_thumb_tip",
       "baseOrInputLinkFrameFromConstraintFrame": {
         "rotation": [
@@ -119,7 +119,7 @@
         ],
         "translation": [
           0,
-          0,
+          -0.004999999888241291,
           0
         ]
       }
@@ -129,20 +129,20 @@
       "outputBotLink": "link_15_index_finger_tip",
       "linkFrameFromConstraintFrame": {
         "rotation": [
-          0.0503564095565095,
-          0.0543948660139957,
-          0.013211376686228307,
-          0.9971614162681743
+          -0.050315462052822113,
+          -0.051321979612112045,
+          -0.013366495259106159,
+          -0.99732428789138794
         ],
         "translation": [
-          -0.0012631937861442566,
-          0.0024014748632907867,
-          0.0021813958883285522
+          -0.0008218027651309967,
+          -0.0042104162275791168,
+          0.012497559189796448
         ]
       },
       "name": "link_15_index_finger_tip",
       "positionStiffness": 1000,
-      "rotationStiffness": 1,
+      "rotationStiffness": 0.5,
       "inputBotLink": "xr_10_index_tip",
       "baseOrInputLinkFrameFromConstraintFrame": {
         "rotation": [
@@ -153,7 +153,7 @@
         ],
         "translation": [
           0,
-          0,
+          -0.004999999888241291,
           0
         ]
       }
@@ -163,20 +163,20 @@
       "outputBotLink": "link_22_middle_finger_tip",
       "linkFrameFromConstraintFrame": {
         "rotation": [
-          0.056653785584925356,
-          0.013535884974730012,
-          0.007749995985683369,
-          0.9982720400567523
+          -0.065302141010761261,
+          -0.013468220829963684,
+          -0.007866973988711834,
+          -0.99774366617202759
         ],
         "translation": [
-          -0.0006789974868297577,
-          0.001230090856552124,
-          0.003980398178100586
+          -0.00081837922334671021,
+          -0.0027464497834444046,
+          0.0095697194337844849
         ]
       },
       "name": "link_22_middle_finger_tip",
       "positionStiffness": 1000,
-      "rotationStiffness": 1,
+      "rotationStiffness": 0.5,
       "inputBotLink": "xr_15_middle_tip",
       "baseOrInputLinkFrameFromConstraintFrame": {
         "rotation": [
@@ -187,8 +187,8 @@
         ],
         "translation": [
           0,
-          0,
-          0.0099999997764825821
+          -0.004999999888241291,
+          0.004999999888241291
         ]
       }
     },
@@ -197,20 +197,20 @@
       "outputBotLink": "link_29_ring_finger_tip",
       "linkFrameFromConstraintFrame": {
         "rotation": [
-          -0.003225357426195481,
-          -0.04069708188834776,
-          0.012593942388372706,
-          0.9990869517766534
+          -0.0025506655219942331,
+          0.040770057588815689,
+          -0.01267317496240139,
+          -0.99908488988876343
         ],
         "translation": [
-          0.0005629444494843483,
-          0.0017188005149364471,
-          0.0017583966255187988
+          0.00061521958559751511,
+          -0.00383714959025383,
+          0.0080281496047973633
         ]
       },
       "name": "link_29_ring_finger_tip",
       "positionStiffness": 1000,
-      "rotationStiffness": 1,
+      "rotationStiffness": 0.5,
       "inputBotLink": "xr_20_ring_tip",
       "baseOrInputLinkFrameFromConstraintFrame": {
         "rotation": [
@@ -221,8 +221,8 @@
         ],
         "translation": [
           0,
-          0,
-          0.004999999888241291
+          -0.004999999888241291,
+          0
         ]
       }
     },
@@ -237,14 +237,14 @@
           0.9973120609353284
         ],
         "translation": [
-          -0.0019678995013237,
-          0.0031450390815734863,
-          0.010247588157653809
+          -0.00086838006973266602,
+          -0.0030161589384078979,
+          0.00810261070728302
         ]
       },
       "name": "link_36_pinky_tip",
       "positionStiffness": 1000,
-      "rotationStiffness": 1,
+      "rotationStiffness": 0.5,
       "inputBotLink": "xr_25_little_tip",
       "baseOrInputLinkFrameFromConstraintFrame": {
         "rotation": [
@@ -255,8 +255,8 @@
         ],
         "translation": [
           0,
-          0,
-          0
+          -0.004999999888241291,
+          -0.0099999997764825821
         ]
       }
     }

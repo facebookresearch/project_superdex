@@ -1,15 +1,15 @@
 {
   "outputBaseFrameFromInputBaseFrame": {
     "rotation": [
-      0.731864333152771,
-      -0.680957555770874,
-      -0.020134305581450462,
-      -0.01631258986890316
+      0.73160934448242188,
+      -0.68109238147735596,
+      -0.027900127694010735,
+      -0.0090849427506327629
     ],
     "translation": [
-      -0.005135249346494675,
-      0.008467634208500385,
-      0.03724374249577522
+      -0.0075431256555020809,
+      0.0084675773978233337,
+      0.037243600934743881
     ]
   },
   "outputBot": "dg5f_long_seed_left.superdex_bot",
@@ -20,14 +20,14 @@
     0,
     0,
     0.02491108328104019,
-    0.013925982639193535,
+    0.047888346016407013,
     0,
     -0.06963340193033218,
-    0,
+    0.014465290121734142,
     0,
     0,
     -0.1800987869501114,
-    0.01349314022809267,
+    0.037707842886447906,
     0,
     0,
     -0.11281110346317291,
@@ -88,27 +88,27 @@
   ],
   "inputBot": "../../openxr/left/openxr_hand_lowpoly_left.superdex_bot",
   "inputBotConfiguration": [],
-  "inputBotScale": 1.375,
+  "inputBotScale": 1.3400000333786011,
   "goals": [
     {
       "enabled": true,
       "outputBotLink": "dg5f_link_1_4_seed_mount",
       "linkFrameFromConstraintFrame": {
         "rotation": [
-          0.6145723350346088,
-          -0.7866606824100018,
-          0.028889019042253494,
-          -0.05129585787653923
+          0.608477845788002,
+          -0.7910448759794235,
+          0.02540898323059082,
+          -0.057940781116485596
         ],
         "translation": [
-          0.001825530081987381,
-          0.0005438271909952164,
-          0.010499179363250732
+          -0.0007540135629747746,
+          -0.0011247752557972772,
+          0.005545484884728898
         ]
       },
       "name": "dg5f_link_1_4_seed_mount",
       "positionStiffness": 1000,
-      "rotationStiffness": 1,
+      "rotationStiffness": 0.5,
       "inputBotLink": "xr_05_thumb_tip",
       "baseOrInputLinkFrameFromConstraintFrame": {
         "rotation": [
@@ -120,7 +120,7 @@
         "translation": [
           0,
           -0.004999999888241291,
-          0.009999999776482582
+          0
         ]
       }
     },
@@ -129,20 +129,20 @@
       "outputBotLink": "dg5f_link_2_4_seed_mount",
       "linkFrameFromConstraintFrame": {
         "rotation": [
-          0.7250053882598877,
-          -0.6866703033447266,
-          0.05205047130584717,
-          -0.011917524971067905
+          0.72465908527374268,
+          -0.68658053874969482,
+          0.05666651576757431,
+          -0.016290230676531792
         ],
         "translation": [
-          0.005224970169365406,
-          -0.00036381371319293976,
-          0.014245033264160156
+          0.0056598149240016937,
+          0.0007755868136882782,
+          -0.00029277801513671875
         ]
       },
       "name": "dg5f_link_2_4_seed_mount",
       "positionStiffness": 1000,
-      "rotationStiffness": 1,
+      "rotationStiffness": 0.5,
       "inputBotLink": "xr_10_index_tip",
       "baseOrInputLinkFrameFromConstraintFrame": {
         "rotation": [
@@ -163,55 +163,21 @@
       "outputBotLink": "dg5f_link_3_4_seed_mount",
       "linkFrameFromConstraintFrame": {
         "rotation": [
-          0.6956095695495605,
-          -0.7171092629432678,
-          0.03225161135196686,
-          -0.029009686782956123
+          0.69624310731887817,
+          -0.71668863296508789,
+          0.029900485649704933,
+          -0.026624113321304321
         ],
         "translation": [
-          0.0023553967475891113,
-          2.5715678930282593e-05,
-          0.012385040521621704
+          0.0025301696732640266,
+          0.0006493888795375824,
+          0.0027582347393035889
         ]
       },
       "name": "dg5f_link_3_4_seed_mount",
       "positionStiffness": 1000,
-      "rotationStiffness": 1,
+      "rotationStiffness": 0.5,
       "inputBotLink": "xr_15_middle_tip",
-      "baseOrInputLinkFrameFromConstraintFrame": {
-        "rotation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "translation": [
-          0,
-          -0.004999999888241291,
-          0.009999999776482582
-        ]
-      }
-    },
-    {
-      "enabled": true,
-      "outputBotLink": "dg5f_link_4_4_seed_mount",
-      "linkFrameFromConstraintFrame": {
-        "rotation": [
-          0.6710028648376465,
-          -0.7409690618515015,
-          -0.026103463023900986,
-          0.006216511130332947
-        ],
-        "translation": [
-          0.006645158864557743,
-          0.0012434571981430054,
-          0.011179715394973755
-        ]
-      },
-      "name": "dg5f_link_4_4_seed_mount",
-      "positionStiffness": 1000,
-      "rotationStiffness": 1,
-      "inputBotLink": "xr_20_ring_tip",
       "baseOrInputLinkFrameFromConstraintFrame": {
         "rotation": [
           0,
@@ -228,24 +194,24 @@
     },
     {
       "enabled": true,
-      "outputBotLink": "dg5f_link_5_4_seed_mount",
+      "outputBotLink": "dg5f_link_4_4_seed_mount",
       "linkFrameFromConstraintFrame": {
         "rotation": [
-          0.664940595626831,
-          -0.7467732429504395,
-          -0.00856575183570385,
-          -0.01051165908575058
+          0.67245191335678101,
+          -0.73970335721969604,
+          -0.024937495589256287,
+          0.0050641712732613087
         ],
         "translation": [
-          0.0071289148181676865,
-          -0.0001809932291507721,
-          0.011041983962059021
+          0.0065253805369138718,
+          0.0011020585661754012,
+          0.0017143785953521729
         ]
       },
-      "name": "dg5f_link_5_4_seed_mount",
+      "name": "dg5f_link_4_4_seed_mount",
       "positionStiffness": 1000,
-      "rotationStiffness": 1,
-      "inputBotLink": "xr_25_little_tip",
+      "rotationStiffness": 0.5,
+      "inputBotLink": "xr_20_ring_tip",
       "baseOrInputLinkFrameFromConstraintFrame": {
         "rotation": [
           0,
@@ -257,6 +223,40 @@
           0,
           -0.004999999888241291,
           0
+        ]
+      }
+    },
+    {
+      "enabled": true,
+      "outputBotLink": "dg5f_link_5_4_seed_mount",
+      "linkFrameFromConstraintFrame": {
+        "rotation": [
+          0.66664814949035645,
+          -0.74522989988327026,
+          -0.01444723829627037,
+          -0.0019828665535897017
+        ],
+        "translation": [
+          0.0088513446971774101,
+          -0.00020209141075611115,
+          0.0038347989320755005
+        ]
+      },
+      "name": "dg5f_link_5_4_seed_mount",
+      "positionStiffness": 1000,
+      "rotationStiffness": 0.5,
+      "inputBotLink": "xr_25_little_tip",
+      "baseOrInputLinkFrameFromConstraintFrame": {
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "translation": [
+          0,
+          -0.004999999888241291,
+          -0.004999999888241291
         ]
       }
     }
