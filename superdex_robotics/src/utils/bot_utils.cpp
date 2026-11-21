@@ -396,8 +396,21 @@ void superdex::robotics::ApplyMod(
       error,
       "Cannot attach a skinned bot onto a bot that already has a skin (a bot supports at most one skin).");
   MOCHI_ERROR_RETURN(error);
+  if (mod.attachLinearTransmissions) {
+    for (auto const& transmission : child.linearTransmissions) {
+      for (int jointIdx : transmission.jointIndices) {
+        MOCHI_ERROR_IF(
+            jointIdx <= 0 || jointIdx >= isize(child.joints),
+            error,
+            "AttachBot::attachLinearTransmissions: a linear transmission of the attached bot names a "
+            "joint index that is out of range or is its world joint (0)");
+        MOCHI_ERROR_RETURN(error);
+      }
+    }
+  }
   // Record current link count for index offset
   int const linkOffset = isize(botPrefab.links);
+  int const jointOffset = isize(botPrefab.joints);
   // Append child joints, replacing child's world joint (index 0) with connecting joint
   for (int iJoint = 0; iJoint < isize(child.joints); ++iJoint) {
     BotJointPrefab prefixedJoint;
@@ -466,6 +479,16 @@ void superdex::robotics::ApplyMod(
       offsetCycle.childLink += linkOffset;
     }
     botPrefab.cycles.push_back(offsetCycle);
+  }
+  if (mod.attachLinearTransmissions) {
+    for (auto const& transmission : child.linearTransmissions) {
+      BotLinearTransmissionPrefab offsetTransmission = transmission;
+      offsetTransmission.name = mod.prefix + transmission.name;
+      for (int& jointIdx : offsetTransmission.jointIndices) {
+        jointIdx += jointOffset;
+      }
+      botPrefab.linearTransmissions.push_back(std::move(offsetTransmission));
+    }
   }
   // Adopt the child's skin (the base has none; verified above). Record the composed link name each
   // skin bone binds to (_skinBoneLinks) so the skin's baked bone indices can be remapped onto the

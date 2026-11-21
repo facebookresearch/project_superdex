@@ -243,6 +243,7 @@ struct bots::AttachBot(bots::BotModBase) [no_python, no_reflection] {
   bots::BotJointPrefab joint [no_serialize_defaults];
   String prefix [no_serialize_defaults];
   String path;
+  bool attachLinearTransmissions [no_serialize_defaults] = false;
 }
 
 // @brief Attach a single link to a parent link.

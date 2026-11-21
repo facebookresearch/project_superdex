@@ -569,6 +569,94 @@ TEST_F(SortBotPrefabTest, RemoveLinkAndDescendants_UpdatesCycles) {
   EXPECT_EQ(bp.links[bp.cycles[0].childLink].name, "C");
 }
 
+namespace {
+// Base: root -> link1 (revolute). Child: croot -> tipA, croot -> tipB, coupled by a transmission.
+void MakeTransmissionAttachBots(BotPrefab& base, InMemoryBotLoader& loader) {
+  base.name = "base";
+  base.links.push_back(MakeLink("root", kIndexNone));
+  base.links.push_back(MakeLink("link1", 0));
+  base.joints.push_back(MakeHardJoint("root_joint"));
+  base.joints.push_back(MakeRevoluteJoint("joint1"));
+  base.defaultPose = {0.0_r};
+  RebuildBotData(base, ExpectOK{});
+
+  loader.child.name = "child";
+  loader.child.links.push_back(MakeLink("croot", kIndexNone));
+  loader.child.links.push_back(MakeLink("tipA", 0));
+  loader.child.links.push_back(MakeLink("tipB", 0));
+  loader.child.joints.push_back(MakeHardJoint("croot_joint"));
+  loader.child.joints.push_back(MakeRevoluteJoint("tipA_joint"));
+  loader.child.joints.push_back(MakeRevoluteJoint("tipB_joint"));
+  loader.child.defaultPose = {0.0_r, 0.0_r};
+  BotLinearTransmissionPrefab coupling;
+  coupling.name = "coupling";
+  coupling.jointIndices = {1, 2};
+  coupling.jointCoefficients = {1.0_r, 1.0_r};
+  coupling.jointAxisDisps = {0.0_r, 0.0_r};
+  coupling.stiffness = 1000.0_r;
+  coupling.allowCompressiveForce = true;
+  loader.child.linearTransmissions.push_back(coupling);
+  RebuildBotData(loader.child, ExpectOK{});
+}
+
+AttachBot MakeTransmissionAttachMod(bool attachLinearTransmissions) {
+  AttachBot mod;
+  mod.parentLinkName = "link1";
+  mod.prefix = "g/";
+  mod.path = "child.superdex_bot";
+  mod.joint = MakeHardJoint("attach_joint");
+  mod.attachLinearTransmissions = attachLinearTransmissions;
+  return mod;
+}
+} // namespace
+
+// With attachLinearTransmissions, ApplyMod(AttachBot) keeps the child's linear transmissions on the
+// child's (prefixed) joints.
+TEST_F(SortBotPrefabTest, ApplyMod_AttachBot_AttachLinearTransmissionsKeepsCoupling) {
+  BotPrefab base;
+  InMemoryBotLoader loader;
+  MakeTransmissionAttachBots(base, loader);
+  ApplyMod(base, MakeTransmissionAttachMod(true), loader, /*validate=*/true, ExpectOK{});
+  RebuildBotData(base, ExpectOK{});
+  Validate(base, nullptr, ExpectOK{});
+
+  ASSERT_EQ(isize(base.linearTransmissions), 1);
+  auto const& t = base.linearTransmissions[0];
+  EXPECT_EQ(t.name, "g/coupling");
+  ASSERT_EQ(isize(t.jointIndices), 2);
+  EXPECT_EQ(base.joints[t.jointIndices[0]].name, "g/tipA_joint");
+  EXPECT_EQ(base.joints[t.jointIndices[1]].name, "g/tipB_joint");
+  EXPECT_EQ(t.jointCoefficients, (DynamicArray<real>{1.0_r, 1.0_r}));
+  EXPECT_EQ(t.stiffness, 1000.0_r);
+  EXPECT_TRUE(t.allowCompressiveForce);
+}
+
+// By default ApplyMod(AttachBot) drops the child's linear transmissions.
+TEST_F(SortBotPrefabTest, ApplyMod_AttachBot_DropsTransmissionsByDefault) {
+  BotPrefab base;
+  InMemoryBotLoader loader;
+  MakeTransmissionAttachBots(base, loader);
+  ApplyMod(base, MakeTransmissionAttachMod(false), loader, /*validate=*/true, ExpectOK{});
+  RebuildBotData(base, ExpectOK{});
+
+  EXPECT_TRUE(base.linearTransmissions.empty());
+  EXPECT_EQ(isize(base.joints), 5);
+}
+
+// With attachLinearTransmissions, a child transmission naming the child's world joint (0) or an
+// index past its joints is an error.
+TEST_F(SortBotPrefabTest, ApplyMod_AttachBot_AttachLinearTransmissionsRejectsBadJointIndex) {
+  for (int badIndex : {0, 3}) {
+    BotPrefab base;
+    InMemoryBotLoader loader;
+    MakeTransmissionAttachBots(base, loader);
+    loader.child.linearTransmissions[0].jointIndices[1] = badIndex;
+    Error error;
+    ApplyMod(base, MakeTransmissionAttachMod(true), loader, /*validate=*/false, error);
+    EXPECT_FALSE(error.IsOK()) << "joint index " << badIndex;
+  }
+}
+
 // ApplyMod(AttachBot) appends the attached child's cycle joints, offsetting their
 // link indices into the merged link array.
 TEST_F(SortBotPrefabTest, ApplyMod_AttachBot_OffsetsCycleIndices) {

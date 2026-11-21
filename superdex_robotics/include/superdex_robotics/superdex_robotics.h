@@ -408,12 +408,18 @@ struct AttachBot : BotModBase {
   /// File path to the .superdex_bot file to attach.
   DynamicString path;
 
+  /* @brief Also attach the bot's linear transmissions, with their joint indices moved to the
+   * attached joints. Off by default: without it the attached bot's linear transmissions are
+   * dropped. Spatial tendons are dropped either way. */
+  bool attachLinearTransmissions = false;
+
   MOCHI_STRUCT_BEGIN(superdex::robotics::AttachBot)
   MOCHI_BASE_CLASS(superdex::robotics::BotModBase)
   MOCHI_FIELD(parentLinkName)
   MOCHI_FIELD(joint) MOCHI_ATTRIBUTE(NoSerializeDefaults);
   MOCHI_FIELD(prefix) MOCHI_ATTRIBUTE(NoSerializeDefaults);
   MOCHI_FIELD(path)
+  MOCHI_FIELD(attachLinearTransmissions) MOCHI_ATTRIBUTE(NoSerializeDefaults);
   MOCHI_STRUCT_END()
 };
 
