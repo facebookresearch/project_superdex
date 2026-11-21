@@ -80,6 +80,26 @@ FTransform LerpTransform(const FTransform& A, const FTransform& B, float Alpha) 
       FMath::Lerp(A.GetScale3D(), B.GetScale3D(), Alpha));
 }
 
+void UClutchSkeletonRootToVrRootRetargeter::StartJointBlend(double Now, double Duration) {
+  JointBlendFromBot = LastEnabledSourcePose.Bot;
+  JointBlendFromDofPositions = LastEnabledSourcePose.DofPositions;
+  JointBlendStartTime = Now;
+  JointBlendDuration = Duration;
+}
+
+void UClutchSkeletonRootToVrRootRetargeter::BlendJointPositions(double Now, FSuperDexPose& Pose)
+    const {
+  if (JointBlendDuration <= 0.001 || Pose.Bot != JointBlendFromBot ||
+      Pose.DofPositions.Num() != JointBlendFromDofPositions.Num()) {
+    return;
+  }
+  const double Alpha = FMath::Clamp((Now - JointBlendStartTime) / JointBlendDuration, 0.0, 1.0);
+  for (int32 Dof = 0; Dof < Pose.DofPositions.Num(); ++Dof) {
+    Pose.DofPositions[Dof] =
+        FMath::Lerp(JointBlendFromDofPositions[Dof], Pose.DofPositions[Dof], Alpha);
+  }
+}
+
 bool UClutchSkeletonRootToVrRootRetargeter::GetTransformedPose_Implementation(
     FSuperDexPose const& SourcePose,
     bool bSourceIsValid,
@@ -120,6 +140,8 @@ bool UClutchSkeletonRootToVrRootRetargeter::GetTransformedPose_Implementation(
 
         // Reset our lerp start time
         LastClutchEnableTime = GetWorld()->GetTimeSeconds();
+        // The joint positions held while disengaged lerp to the source's over the same time.
+        StartJointBlend(LastClutchEnableTime, TimeInSecondsToLerpToAbsolute);
 
         // lower the flag now that we have updated the clutch position
         bUpdateClutchRelativeTransform = false;
@@ -188,17 +210,21 @@ bool UClutchSkeletonRootToVrRootRetargeter::GetTransformedPose_Implementation(
 
       // only update clutch transform if we have not hit our safety checks
       if (clutchEnabled) {
-        LastEnabledSourcePose = SourcePose;
-
         // If the clutch was paused and is now enabled, we need to capture the relative position
         // between the clutch transforms so we can lerp instead of teleport
         if (bClutchWasPaused) {
           UnpausedClutchedSkeletonRootToClutchRoot =
               ClutchedSkeletonRootToVrRoot * ClutchRootToVrRoot.Inverse();
           LastClutchUnpauseTime = GetWorld()->GetTimeSeconds();
+          // The joint positions held while paused lerp to the source's over the same time.
+          StartJointBlend(LastClutchUnpauseTime, TimeInSecondsToLerpOnUnpause);
           bClutchWasPaused = false;
           PauseChanges.Add(bClutchWasPaused);
         }
+
+        // Hold what is output, so that disengaging or pausing mid-blend does not jump.
+        LastEnabledSourcePose = SourcePose;
+        BlendJointPositions(GetWorld()->GetTimeSeconds(), LastEnabledSourcePose);
 
         double currentUnpauseTime = GetWorld()->GetTimeSeconds();
         double unpauseDeltaTime = currentUnpauseTime - LastClutchUnpauseTime;
@@ -219,7 +245,7 @@ bool UClutchSkeletonRootToVrRootRetargeter::GetTransformedPose_Implementation(
     }
     TransformedPose = LastEnabledSourcePose;
     TransformedPose.tags.Add(TEXT("ClutchedPose"));
-    // Does not change the bot or its joint positions
+    // The held or blended joint positions, on the source's bot
     TransformedPose.SkeletonRootToVrRoot = ClutchedSkeletonRootToVrRoot;
   }
   if (NewClutchState.IsSet()) {

@@ -55,6 +55,8 @@ class SUPERDEXTELEOP_API UClutchSkeletonRootToVrRootRetargeter : public USuperDe
    * engaged the clutch with a 90 degree rotation between your input and current output. If you hold
    * still, the output rotation will slowly lerp from its initial position toward your current
    * position over the specified time.
+   * The joint positions, which the clutch holds while disengaged, lerp from the held ones to the
+   * source's over this same time whatever the ClutchType.
    */
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex")
   double TimeInSecondsToLerpToAbsolute = 1.0;
@@ -78,7 +80,7 @@ class SUPERDEXTELEOP_API UClutchSkeletonRootToVrRootRetargeter : public USuperDe
    * current position with the new clutch position over this amount of time. Effectively bleeding
    * off the delta transform over time rather than instantly teleporting to the new position. This
    * helps smooth out any bumps or jitters that may be caused by intermittent or flaky hand
-   * tracking.
+   * tracking. The joint positions, held while paused, lerp to the source's over the same time.
    * NOTE: The pose must be valid to unpause so it must be both confident and within
    * DisengageClutchIfDeltaDistanceOverAmount_cm of the original paused location.
    */
@@ -263,7 +265,21 @@ class SUPERDEXTELEOP_API UClutchSkeletonRootToVrRootRetargeter : public USuperDe
   FTransform ClutchedSkeletonRootToVrRoot = FTransform::Identity;
   FTransform UnpausedClutchedSkeletonRootToClutchRoot = FTransform::Identity;
 
-  // Source pose used for clutching so that bones stay stationary when clutch is disabled
+  // Source pose used for clutching so that bones stay stationary when clutch is disabled: the last
+  // pose output while engaged, with its joint positions as output (blended, see below).
   FSuperDexPose LastEnabledSourcePose;
   bool bLastEnabledSourcePoseInitialized = false;
+
+  // Starts lerping the output joint positions from the held ones (LastEnabledSourcePose's) to the
+  // source's over Duration seconds from Now.
+  void StartJointBlend(double Now, double Duration);
+  // Lerps Pose's joint positions from the held ones while a blend runs.
+  void BlendJointPositions(double Now, FSuperDexPose& Pose) const;
+
+  // The joint positions held when the clutch last engaged or unpaused, and their bot (identity
+  // only).
+  TArray<double> JointBlendFromDofPositions;
+  const UMochiArticulationBase* JointBlendFromBot = nullptr;
+  double JointBlendStartTime = 0;
+  double JointBlendDuration = 0;
 };
