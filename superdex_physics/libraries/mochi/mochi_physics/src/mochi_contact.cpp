@@ -3925,8 +3925,16 @@ Graph<int, int> mochi::MakeContactGraph(
     auto const* elementMap = reg.try_get<CLinearContactSkinElementMap const>(e);
     int const mappedDofOffset = elementMap ? reg.get<CDofOffset const>(e).dofsOffset : 0;
 
+    // A row of a mapped contact holds the DoFs of its element's physics nodes, plus in sync contact
+    // those of the contact's collider Jacobians. So the contacts of a physics-node set can share
+    // one row: across all pairs in async contact, and within a pair in sync contact unless the
+    // pair's collider Jacobians have different DoFs per contact. setRowKeys marks the sets that
+    // already have a row with the current key: 0 in async contact, the pair index in sync contact.
+    DynamicArray<int> setRowKeys;
+
     // Traverse colliding entities
-    for (auto const& coll : *activeCollisions) {
+    for (int pairIndex = 0; pairIndex < isize(*activeCollisions); ++pairIndex) {
+      auto const& coll = (*activeCollisions)[pairIndex];
       [[maybe_unused]] JacData const* colliderJacData = nullptr;
       if constexpr (kIsSync) {
         colliderJacData =
@@ -3935,9 +3943,31 @@ Graph<int, int> mochi::MakeContactGraph(
 
       if (elementMap) {
         auto const& query = coll.collisionResult;
+        if (query.sampleIndices.empty()) {
+          continue;
+        }
+
+        bool sharesSetRows = true;
+        if constexpr (kIsSync) {
+          colliderJacData->ForEachActiveJac(
+              [&](ContactJac const& jac) { sharesSetRows = sharesSetRows && jac.hasSharedDoFs; });
+        }
+        int const rowKey = kIsSync ? pairIndex : 0;
+        if (sharesSetRows && setRowKeys.empty()) {
+          setRowKeys.resize(elementMap->numNodeSets, -1);
+        }
+
         for (int contactIndex = 0; contactIndex < isize(query.sampleIndices); ++contactIndex) {
           int const elementIndex =
               query.sampleIndices[contactIndex] / elementMap->samplesPerElement;
+          if (sharesSetRows) {
+            int& setRowKey = setRowKeys[elementMap->nodeSetIndices[elementIndex]];
+            if (setRowKey == rowKey) {
+              continue;
+            }
+            setRowKey = rowKey;
+          }
+
           int const rowBegin = isize(targetIndices);
           AppendLinearContactSkinElementIndices<kBlockSize>(
               targetIndices, *elementMap, elementIndex, mappedDofOffset);
@@ -4010,8 +4040,11 @@ Graph<int, int> mochi::MakeContactGraph(
   return Traverse(Reverse(cToN), cToN).SortTargets();
 }
 
-// Template specialization used outside this file
+// Template specializations used outside this file
 template Graph<int, int> mochi::MakeContactGraph<1, /*kIsSync*/ true>(
+    entt::registry const& reg,
+    Span<entt::entity const> actors);
+template Graph<int, int> mochi::MakeContactGraph<3, /*kIsSync*/ true>(
     entt::registry const& reg,
     Span<entt::entity const> actors);
 

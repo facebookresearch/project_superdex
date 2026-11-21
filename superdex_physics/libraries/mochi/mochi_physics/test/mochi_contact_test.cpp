@@ -1097,12 +1097,15 @@ class MochiContactTestBase : public test::MochiSceneTestBase,
   bool _largeColliders = false;
   static constexpr real kLargeColliderScale = 3_r;
 
-  // A collider cube of scale kShallowColliderScale with ShallowColliderTransform() lies under the
-  // colliding unit cube and overlaps its bottom face by less than the penalty threshold.
+  // A collider cube of scale kShallowColliderScale with ShallowColliderTransform(axis) lies below
+  // the colliding unit cube along axis and overlaps its face there by less than the penalty
+  // threshold.
   static constexpr real kShallowColliderScale = 3_r;
-  static TransformRT ShallowColliderTransform() {
+  static TransformRT ShallowColliderTransform(int axis = 2) {
     real constexpr kOverlap = 1e-3_r;
-    return TransformRT{Real3{-1_r, -1_r, kOverlap - kShallowColliderScale}};
+    Real3 translation{-1_r, -1_r, -1_r};
+    translation[axis] = kOverlap - kShallowColliderScale;
+    return TransformRT{translation};
   }
 
  public:
@@ -1684,7 +1687,7 @@ class MochiContactTestBase : public test::MochiSceneTestBase,
       caparams.shape =
           _scene->GetContext()->CreateModelShape(CreateMixedContactSkinModel(), test::ExpectOK{});
       caparams.useContactSkin = true;
-      // Several samples per element, so element blocks accumulate more than one sample.
+      // Several samples per element, so that sums accumulate more than one sample.
       caparams.boundaryElementType = _collidingBoundaryElementType;
     } else {
       auto&& [unitCubeCoordinates, unitCubeConnectivity] = test::CreateMinimalTetMeshUnitCube();
@@ -3411,8 +3414,8 @@ INSTANTIATE_TEST_SUITE_P(
     [](::testing::TestParamInfo<TestParams> const& info) { return info.param.name; });
 
 // An enlarged rigid cube under the soft cube overlaps it by less than the penalty threshold, so
-// that all samples of its bottom face have a nonzero response and the coupling blocks of each
-// element sum several contacts.
+// that all samples of its bottom face have a nonzero response and the coupling blocks sum
+// several contacts.
 class MochiDenseSkinnedSoftRigidContact : public MochiSkinnedSoftRigidContact {
  public:
   MochiDenseSkinnedSoftRigidContact() {
@@ -3502,14 +3505,14 @@ INSTANTIATE_TEST_SUITE_P(
         TestParams{.name = "Viscous", .viscousCoefficient = 1_r, .ignoreColliderDres = true}),
     [](::testing::TestParamInfo<TestParams> const& info) { return info.param.name; });
 
-// An enlarged child link under the soft cube overlaps it by less than the penalty threshold, so
-// that all samples of its bottom face have a nonzero response and the coupling blocks of each
-// element sum several contacts.
+// An enlarged child link beside the soft cube overlaps its x = 0 face by less than the penalty
+// threshold, so that all samples of that face have a nonzero response. Both triangles of the face
+// depend on all 8 physics nodes, so the coupling blocks of their contacts share one set's sum.
 class MochiDenseSkinnedSoftLinkContact : public MochiSkinnedSoftLinkContact {
  public:
   MochiDenseSkinnedSoftLinkContact() {
     _childLinkScale = kShallowColliderScale;
-    _childLinkTransform = ShallowColliderTransform();
+    _childLinkTransform = ShallowColliderTransform(/*axis*/ 0);
   }
 };
 
@@ -3777,6 +3780,25 @@ INSTANTIATE_TEST_SUITE_P(
             .dresTol = 1e-1_r,
             .frictionWithColliderNormal = false,
             .colliderStretch = 0.05_r}),
+    [](::testing::TestParamInfo<TestParams> const& info) { return info.param.name; });
+
+// Soft cube A contacts soft cube B through a linear contact skin, in sync contact. Each contact
+// has its own collider DoFs, so its skin-collider coupling blocks are scattered on their own.
+class MochiSkinnedSoftSoftContact : public MochiSoftSoftContact {
+ public:
+  MochiSkinnedSoftSoftContact() {
+    _useContactSkin = true;
+  }
+};
+
+TEST_P(MochiSkinnedSoftSoftContact, MappedMatchesLegacyAssembly) {
+  RunMappedVsLegacyContactSkinTest</*kIsSync*/ true>();
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    FrictionVariations,
+    MochiSkinnedSoftSoftContact,
+    ::testing::Values(TestParams{.name = "Coulomb", .coulombCoefficient = 0.5_r}),
     [](::testing::TestParamInfo<TestParams> const& info) { return info.param.name; });
 
 class MochiSoftSoftContactDeepFlow : public MochiSoftSoftContact {

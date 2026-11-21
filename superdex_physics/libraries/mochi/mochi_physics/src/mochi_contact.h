@@ -469,6 +469,11 @@ struct CLinearContactSkinElementMap : public NoCopy {
   int samplesPerElement = 0;
   SparseMatrix<Real3> weights;
 
+  // Index of each element's set of physics nodes among the distinct sets. A contact skin finer than
+  // its physics mesh has many elements per set, e.g. all those embedded in one tetrahedron.
+  DynamicArray<int> nodeSetIndices;
+  int numNodeSets = 0;
+
   [[nodiscard]] int NumElements() const {
     return weights.Rows();
   }

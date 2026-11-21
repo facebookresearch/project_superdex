@@ -33,7 +33,7 @@ namespace {
 using Influence = std::pair<int, real>;
 
 CContactSkinningData MakeSkinningData(
-    std::array<std::initializer_list<Influence>, 4> const& influences,
+    std::array<std::initializer_list<Influence>, 5> const& influences,
     int numPhysicsNodes) {
   DynamicArray<int> rowPointers;
   DynamicArray<int> columnIndices;
@@ -60,13 +60,15 @@ CContactSkinningData MakeSkinningData(
   return skinning;
 }
 
+// Elements 1 and 2 have the same physics nodes.
 struct LinearMapFixture {
-  std::array<Real3, 4> coordinates = {
+  std::array<Real3, 5> coordinates = {
       Real3{0_r, 0_r, 0_r},
       Real3{1_r, 0_r, 0_r},
       Real3{0_r, 1_r, 0_r},
-      Real3{1_r, 1_r, 0_r}};
-  std::array<Int3, 2> connectivity = {Int3{0, 1, 2}, Int3{2, 1, 3}};
+      Real3{1_r, 1_r, 0_r},
+      Real3{2_r, 2_r, 0_r}};
+  std::array<Int3, 3> connectivity = {Int3{0, 1, 2}, Int3{2, 1, 3}, Int3{2, 3, 4}};
   TriangularMesh mesh{MakeConstSpan(coordinates), MakeConstSpan(connectivity)};
 
   static CContactSkinningData MakeValidSkinning() {
@@ -74,7 +76,8 @@ struct LinearMapFixture {
         {{{Influence{0, 0.5_r}, Influence{1, 0.5_r}},
           {Influence{1, 1_r}},
           {Influence{2, 1_r}},
-          {Influence{3, 0.25_r}, Influence{4, 0.75_r}}}},
+          {Influence{3, 0.25_r}, Influence{4, 0.75_r}},
+          {Influence{1, 0.5_r}, Influence{4, 0.5_r}}}},
         /*numPhysicsNodes=*/5);
   }
 
@@ -112,10 +115,11 @@ TEST(CLinearContactSkinElementMap, BuildsOverlappingVariableWidthMapsForSupporte
     CLinearContactSkinElementMap const map = fixture.Build(elementType);
 
     EXPECT_EQ(samplesPerElement, map.samplesPerElement);
-    EXPECT_SPAN_EQ(MakeConstSpan(std::array{0, 3, 7}), map.weights.Pointers());
+    EXPECT_SPAN_EQ(MakeConstSpan(std::array{0, 3, 7, 11}), map.weights.Pointers());
     EXPECT_EQ(5, map.weights.Cols());
     EXPECT_SPAN_EQ(MakeConstSpan(std::array{0, 1, 2}), map.PhysicsNodeIndices(0));
     EXPECT_SPAN_EQ(MakeConstSpan(std::array{1, 2, 3, 4}), map.PhysicsNodeIndices(1));
+    EXPECT_SPAN_EQ(MakeConstSpan(std::array{1, 2, 3, 4}), map.PhysicsNodeIndices(2));
     ExpectWeights(
         map.SkinNodeWeights(0),
         {Real3{0.5_r, 0_r, 0_r}, Real3{0.5_r, 1_r, 0_r}, Real3{0_r, 0_r, 1_r}});
@@ -125,7 +129,15 @@ TEST(CLinearContactSkinElementMap, BuildsOverlappingVariableWidthMapsForSupporte
          Real3{1_r, 0_r, 0_r},
          Real3{0_r, 0_r, 0.25_r},
          Real3{0_r, 0_r, 0.75_r}});
-    EXPECT_DOUBLE_EQ(10.5, map.AverageDofsPerElement());
+    ExpectWeights(
+        map.SkinNodeWeights(2),
+        {Real3{0_r, 0_r, 0.5_r},
+         Real3{1_r, 0_r, 0_r},
+         Real3{0_r, 0.25_r, 0_r},
+         Real3{0_r, 0.75_r, 0.5_r}});
+    EXPECT_DOUBLE_EQ(11.0, map.AverageDofsPerElement());
+    EXPECT_SPAN_EQ(MakeConstSpan(std::array{0, 1, 1}), MakeConstSpan(map.nodeSetIndices));
+    EXPECT_EQ(2, map.numNodeSets);
   }
 }
 
@@ -173,14 +185,55 @@ TEST(CLinearContactSkinElementMap, AppliesDofOffsetOnlyWhenBuildingScalarAndBsr3
     ExpectGraphRow(bsr3, 7, {4, 5, 6, 7});
   };
 
-  // One contact per element.
-  collisions.front().collisionResult.sampleIndices = {0, 3};
+  // One contact per element. Elements 1 and 2 have the same physics nodes, so only the first of
+  // their contacts adds a row.
+  collisions.front().collisionResult.sampleIndices = {0, 6, 3};
   expectGraphs();
 
   // With three samples per element, this repeats element 0 in adjacent contacts, which collapse
   // into one row, and again after element 1. The coupled DoFs must not change.
   collisions.front().collisionResult.sampleIndices = {0, 1, 2, 3, 0};
   expectGraphs();
+}
+
+// Each pair contacts elements 1 and 2, which have the same physics nodes. The first two colliders
+// have one DoF block each for both contacts, and the third one a DoF block per contact.
+TEST(CLinearContactSkinElementMap, CouplesEachSyncContactWithItsColliderDofs) {
+  LinearMapFixture fixture;
+  entt::registry reg;
+  entt::entity const actor = reg.create();
+  reg.emplace<CLinearContactSkinElementMap>(actor, fixture.Build(ActorBoundaryElementType::P1Q1));
+  reg.emplace<CDofOffset>(actor);
+  std::array const colliders = {reg.create(), reg.create(), reg.create()};
+  auto& collisions = reg.emplace<CActiveCollisions</*kIsSync*/ true, TimeStep::Current>>(actor, 1);
+  collisions.SetUp(MakeConstSpan(colliders));
+  ASSERT_EQ(isize(colliders), isize(collisions));
+
+  // The collider DoFs of the two contacts of each pair, after the 15 DoFs of the actor.
+  std::array<std::array<int, 2>, 3> const colliderDofs = {{{15, 15}, {18, 18}, {21, 24}}};
+  for (int pair = 0; pair < isize(collisions); ++pair) {
+    ActiveCollision& collision = collisions[pair];
+    collision.collisionResult.sampleIndices = {1, 2};
+    auto& jacs = reg.emplace<CCollJacs<CollRole::Collider>>(collision.colliderEntity);
+    jacs.emplace_back(
+        /*isSync*/ true, &collision.collisionResult, /*useContactSums*/ false, actor, 0);
+    ContactJac& jac = jacs[0].PrepareJacs(1)[0];
+    auto const [firstDof, secondDof] = colliderDofs[pair];
+    jac.Resize(/*sharedDoFs*/ firstDof == secondDof, /*sharedJacs*/ false, 1, 2);
+    jac.Inds(0)[0] = firstDof;
+    jac.Inds(1)[0] = secondDof;
+  }
+
+  Graph<int, int> const bsr3 =
+      MakeContactGraph<3, /*kIsSync*/ true>(reg, MakeSingletonConstSpan(actor));
+  ASSERT_EQ(9, bsr3.size());
+  EXPECT_TRUE(bsr3[0].empty());
+  for (int row = 1; row < 5; ++row) {
+    ExpectGraphRow(bsr3, row, {1, 2, 3, 4, 5, 6, 7, 8});
+  }
+  for (int row = 5; row < 9; ++row) {
+    ExpectGraphRow(bsr3, row, {1, 2, 3, 4, row});
+  }
 }
 
 TEST(LinearContactSkin, SortContactsBySample) {
