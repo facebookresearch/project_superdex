@@ -581,6 +581,33 @@ bool ImGui::NameInputWithCollisionCheck(
   return changed;
 }
 
+bool ImGui::DeferredNameInput(
+    char const* label,
+    mochi::DynamicString const& name,
+    DeferredNameEdit& edit) {
+  edit.commit.reset();
+  auto const end = [&edit] {
+    edit.active = false;
+    if (!edit.commit && edit.buffer != edit.original) {
+      edit.commit = DeferredNameEdit::Commit{std::string(edit.original), std::string(edit.buffer)};
+    }
+  };
+  // Focus moved on without this field seeing it (not drawn), or the field now shows another name.
+  if (edit.active && (GetActiveID() != GetID(label) || name != edit.original)) {
+    end();
+  }
+  if (!edit.active) {
+    edit.buffer = name;
+    edit.original = name;
+  }
+  NameInputWithCollisionCheck(label, edit.buffer, edit.active && edit.collides);
+  edit.active = IsItemActive();
+  if (IsItemDeactivatedAfterEdit()) {
+    end();
+  }
+  return edit.commit.has_value();
+}
+
 bool ImGui::ActorNameCombo(
     char const* label,
     mochi::DynamicString& value,
@@ -3587,11 +3614,16 @@ bool ImGui::ArticulatedLinkEditor(
     SuperDexStudio* studio,
     AssetManager const& assetManager,
     bool acceptDragDropPayload,
-    bool& modelChanged) {
+    bool& modelChanged,
+    DeferredNameEdit* nameEdit) {
   bool changed = false;
 
   ImGui::SeparatorText("Info");
-  changed |= ImGui::InputText("Name", &link.name, ImGuiInputTextFlags_CharsNoBlank);
+  if (nameEdit != nullptr) {
+    DeferredNameInput("Name", link.name, *nameEdit);
+  } else {
+    changed |= ImGui::InputText("Name", &link.name, ImGuiInputTextFlags_CharsNoBlank);
+  }
   changed |= ImGui::InputText("Layer", &link.layer, ImGuiInputTextFlags_CharsNoBlank);
   changed |= ImGui::Checkbox("Has Gravity", &link.hasGravity);
   ImGui::SeparatorText("Local Transform (Parent Joint From Link)");

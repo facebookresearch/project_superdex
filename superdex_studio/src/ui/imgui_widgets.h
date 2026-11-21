@@ -196,6 +196,28 @@ bool InputTextMultiline(
 // @p collides is true. Returns true if the text changed. Shared by the actor detail panels.
 bool NameInputWithCollisionCheck(char const* label, mochi::DynamicString& name, bool collides);
 
+// Caller-owned state for DeferredNameInput; keep it alive across frames.
+struct DeferredNameEdit {
+  mochi::DynamicString buffer; // the text being typed
+  mochi::DynamicString original; // the name when the edit started
+  bool active = false; // the field was being edited as of its last draw
+  bool collides = false; // in: highlight `buffer` as a name conflict
+  // out: set by the DeferredNameInput call that ends an edit with a new name
+  struct Commit {
+    std::string from;
+    std::string to;
+  };
+  std::optional<Commit> commit;
+};
+
+// Name field for names whose edits are expensive or reorder data (e.g. bot links, which are sorted
+// by name): typing edits `edit.buffer`, never `name`. The edit ends when the field loses focus
+// (Enter, Tab, click away); Escape reverts. If the field was not drawn when it lost focus, or now
+// shows a different name (e.g. the selection changed), the edit ends on its next draw. Sets
+// `edit.commit` (old -> new name) and returns true when an edit ends with a new name; apply it to
+// the item named `commit->from`, which need not be the one now shown.
+bool DeferredNameInput(char const* label, mochi::DynamicString const& name, DeferredNameEdit& edit);
+
 // Combo that picks @p value from @p names. A non-empty value that is not one of @p names (an actor
 // that no longer exists) is highlighted with kNameConflictColor. Returns true if the value changed.
 bool ActorNameCombo(
@@ -570,12 +592,15 @@ bool CollisionContact(
 // and render model editors (cross-wired so their transforms stay in sync), and collision/contact.
 // Does not push an ID scope; callers should wrap in a PushID to disambiguate from sibling editors.
 // Sets `modelChanged` when a model asset path changes. Returns true if any value changed.
+// With `nameEdit`, the Name field is a DeferredNameInput: name edits are not applied to `link` nor
+// reported through the return value; the caller applies `nameEdit->commit`.
 bool ArticulatedLinkEditor(
     mochi::prefab::ArticulatedLinkPrefab& link,
     superdex::studio::SuperDexStudio* studio,
     superdex::studio::AssetManager const& assetManager,
     bool acceptDragDropPayload,
-    bool& modelChanged);
+    bool& modelChanged,
+    DeferredNameEdit* nameEdit = nullptr);
 
 // Renders the editable widgets for an articulated joint's shared (base-class) fields: Info
 // (name + joint-type combo, filtered by `isRoot`), the "Parent Link From Joint" transform, the

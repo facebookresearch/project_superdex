@@ -87,6 +87,10 @@ class BotEditor : public AssetEditor {
   void AddBotLink(int iLink);
   void DeleteBotLink(int iLink);
   void ReparentBotLink(int linkIdx, int newParentIdx, bool preserveWorldTransform = true);
+  // Renames a link and every reference to it by name (contact overrides, skin link lists, skin bone
+  // bindings). The rebuild re-sorts sibling links by name, so the selection follows its link by
+  // name. No-op for an empty or unchanged name, or one another link or the skin (bot name) uses.
+  void RenameBotLink(int linkIdx, std::string const& newName);
 
   //------------------------------------------------------------------------------------------------
   // Viewport
@@ -123,7 +127,8 @@ class BotEditor : public AssetEditor {
       superdex::robotics::BotLinkPrefab& link,
       AssetManager const& assetManager,
       bool acceptDragDropPayload,
-      bool& modelChanged);
+      bool& modelChanged,
+      ImGui::DeferredNameEdit* nameEdit = nullptr);
   bool ShowBotPrefabEditorWidgets(superdex::robotics::BotPrefab& botPrefab);
   bool ShowModBotPrefabEditorWidgets(
       superdex::robotics::ModBotPrefab& modBotPrefab,
@@ -220,6 +225,11 @@ class BotEditor : public AssetEditor {
   std::optional<SkinSimSync> _skinSync;
   // UI state
   int _selectedBotLinkIndex = -1;
+  // The Bot Link Details Name field; a rename is applied when the field loses focus (see
+  // RenameBotLink), not per keystroke.
+  ImGui::DeferredNameEdit _linkNameEdit;
+  // The Bot Details Name field; renamed on focus loss so skin contact overrides follow the name.
+  ImGui::DeferredNameEdit _botNameEdit;
   bool _forceLinkFocus = false;
   // Index of the first mod bot modification that fails to build, or
   // superdex::robotics::kIndexNone when the recipe builds and validates cleanly. Cached;

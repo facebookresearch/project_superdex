@@ -43,6 +43,7 @@
 #include <string_view>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 namespace superdex::studio {
@@ -620,7 +621,8 @@ void BotEditor::ShowMainMenuItems() {
     ImGui::Separator(ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
     // Batch Rename Links & Joints: mirror of the asset browser's batch-rename dialog, operating on
     // a bot's link and joint names (with reference fixups) instead of files.
-    if (ImGui::MenuItem("Batch Rename Links & Joints...")) {
+    if (ImGui::MenuItem(
+            "Batch Rename Links & Joints...", nullptr, false, !_mochiScene.IsSimulating())) {
       OpenBatchRenameLinksJointsModal();
     }
     // Bake Inertia: compute centerOfMass and momentOfInertia from mesh for links with mass/density.
@@ -769,8 +771,65 @@ void BotEditor::ShowBatchRenameTabContents(
   }
 }
 
+// Renames a name-valued field through `nameMap` (old -> new) if it holds a changed name. Uses
+// assign() to preserve the DynamicString's allocator.
+static void RemapName(
+    std::map<std::string, std::string> const& nameMap,
+    mochi::DynamicString& value) {
+  auto const it = nameMap.find(std::string(value));
+  if (it != nameMap.end()) {
+    value.assign(it->second.c_str(), it->second.size());
+  }
+}
+
+// The skin names the links it stands in for.
+static void RemapSkinLinkNames(
+    std::map<std::string, std::string> const& nameMap,
+    mochi::prefab::ArticulatedSkinPrefab& skin) {
+  for (auto* links : {&skin.nonCollidingLinks, &skin.hiddenLinks}) {
+    if (links->has_value()) {
+      for (auto& name : **links) {
+        RemapName(nameMap, name);
+      }
+    }
+  }
+}
+
+// Renames the links of a (non-mod) bot through `nameMap`, along with every reference to them by
+// name. Valid bots have unique names, so one pass is unambiguous.
+static void RemapBotLinkNames(
+    std::map<std::string, std::string> const& nameMap,
+    superdex::robotics::BotPrefab& botPrefab) {
+  for (auto& link : botPrefab.links) {
+    RemapName(nameMap, link.name);
+  }
+  for (auto& contactOverride : botPrefab.contactOverrides) {
+    RemapName(nameMap, contactOverride.linkA);
+    RemapName(nameMap, contactOverride.linkB);
+  }
+  if (botPrefab.skin.has_value()) {
+    RemapSkinLinkNames(nameMap, *botPrefab.skin);
+  }
+  for (auto& name : botPrefab._skinBoneLinks) {
+    RemapName(nameMap, name);
+  }
+}
+
+// Whether a link cannot take `name`: another link has it, or the skin does (contact overrides
+// reference the skin by the bot's name).
+static bool IsLinkNameTaken(superdex::robotics::BotPrefab const& botPrefab, std::string_view name) {
+  return superdex::robotics::FindLinkIndexByName(botPrefab, name) !=
+      superdex::robotics::kIndexNone ||
+      (botPrefab.skin.has_value() && name == superdex::robotics::GetBotSkinName(botPrefab));
+}
+
 void BotEditor::ApplyBatchRename(bool applyLinks) {
   using namespace superdex::robotics;
+  // Renaming restages the bot, which must not happen while the physics actors (with the old
+  // names) are simulating.
+  if (_mochiScene.IsSimulating()) {
+    return;
+  }
   // Build the old->new map of changed names for the active category only.
   std::vector<std::string> const& originalNames =
       applyLinks ? _batchRename.linkNames : _batchRename.jointNames;
@@ -788,24 +847,23 @@ void BotEditor::ApplyBatchRename(bool applyLinks) {
     return;
   }
 
-  // Remap a name-valued field through the map if it matches a changed (old) name. Uses assign() to
-  // preserve the DynamicString's allocator.
-  auto remap = [&nameMap](mochi::DynamicString& value) {
-    auto const it = nameMap.find(std::string(value));
-    if (it != nameMap.end()) {
-      value.assign(it->second.c_str(), it->second.size());
-    }
+  // Remap a name-valued field through the map if it matches a changed (old) name.
+  auto remap = [&nameMap](mochi::DynamicString& value) { RemapName(nameMap, value); };
+  auto remapSkinLinks = [&nameMap](mochi::prefab::ArticulatedSkinPrefab& skin) {
+    RemapSkinLinkNames(nameMap, skin);
   };
-  // The skin names the links it stands in for.
-  auto remapSkinLinks = [&remap](mochi::prefab::ArticulatedSkinPrefab& skin) {
-    for (auto* links : {&skin.nonCollidingLinks, &skin.hiddenLinks}) {
-      if (links->has_value()) {
-        for (auto& name : **links) {
-          remap(name);
-        }
-      }
+
+  // The rebuild below may re-sort links by their new names; the selection follows its link.
+  std::string selectedName;
+  {
+    auto const& links = _botAsset->GetBotPrefab().links;
+    if (applyLinks && _selectedBotLinkIndex >= 0 &&
+        _selectedBotLinkIndex < static_cast<int>(links.size())) {
+      mochi::DynamicString name = links[_selectedBotLinkIndex].name;
+      remap(name);
+      selectedName = std::string(name);
     }
-  };
+  }
 
   if (_botAsset->GetBotFileType() == BotFileType::ModBotPrefab) {
     ModBotPrefab& modBotPrefab = _botAsset->GetModBotPrefab();
@@ -840,16 +898,7 @@ void BotEditor::ApplyBatchRename(bool applyLinks) {
   } else {
     BotPrefab& botPrefab = _botAsset->GetBotPrefab();
     if (applyLinks) {
-      for (auto& link : botPrefab.links) {
-        remap(link.name);
-      }
-      for (auto& contactOverride : botPrefab.contactOverrides) {
-        remap(contactOverride.linkA);
-        remap(contactOverride.linkB);
-      }
-      if (botPrefab.skin.has_value()) {
-        remapSkinLinks(*botPrefab.skin);
-      }
+      RemapBotLinkNames(nameMap, botPrefab);
     } else {
       for (auto& joint : botPrefab.joints) {
         remap(joint.name);
@@ -859,6 +908,12 @@ void BotEditor::ApplyBatchRename(bool applyLinks) {
 
   _botAsset->Rebuild(_studio->GetBotLoader());
   _botAsset->SetDirty(true);
+  if (applyLinks) {
+    // Link indices may have changed: restage so staged actors match the links again.
+    _selectedBotLinkIndex =
+        selectedName.empty() ? -1 : FindLinkIndexByName(_botAsset->GetBotPrefab(), selectedName);
+    RestageBot();
+  }
   _undoStack.PushNow();
   // Refresh snapshots so the preview reflects the applied names and further edits map correctly.
   SnapshotBatchRenameNames();
@@ -913,7 +968,7 @@ void BotEditor::ShowBatchRenameLinksJointsModal() {
     }
 
     ImGui::Separator();
-    ImGui::BeginDisabled(!canApply);
+    ImGui::BeginDisabled(!canApply || _mochiScene.IsSimulating());
     if (ImGui::Button("Apply", ImVec2(120, 0))) {
       ApplyBatchRename(activeIsLinks);
     }
@@ -1198,6 +1253,40 @@ void BotEditor::ReparentBotLink(int linkIdx, int newParentIdx, bool preserveWorl
   } else {
     botPrefab.links[linkIdx].parentLink = prevParentLink;
     botPrefab.joints[linkIdx].parentLinkFromJoint = prevParentLinkFromJoint;
+    _botAsset->Rebuild(_studio->GetBotLoader());
+  }
+}
+
+void BotEditor::RenameBotLink(int linkIdx, std::string const& newName) {
+  using namespace superdex::robotics;
+  if (_stage.IsEmpty() || _botAsset->GetBotFileType() == BotFileType::ModBotPrefab ||
+      _botAsset->IsReadOnly() || _mochiScene.IsSimulating()) {
+    return;
+  }
+  auto& botPrefab = _botAsset->GetBotPrefab();
+  int const numLinks = static_cast<int>(botPrefab.links.size());
+  if (linkIdx < 0 || linkIdx >= numLinks || newName.empty() ||
+      IsLinkNameTaken(botPrefab, newName)) {
+    return;
+  }
+  std::string const oldName(botPrefab.links[linkIdx].name);
+  RemapBotLinkNames({{oldName, newName}}, botPrefab);
+  // RebuildBotData sorts sibling links by name, so indices can change: track the selection by name.
+  std::string selectedName;
+  if (_selectedBotLinkIndex >= 0 && _selectedBotLinkIndex < numLinks) {
+    selectedName = std::string(botPrefab.links[_selectedBotLinkIndex].name);
+  }
+  bool buildOk = false;
+  _botAsset->Rebuild(_studio->GetBotLoader(), &buildOk);
+  if (buildOk) {
+    _selectedBotLinkIndex =
+        selectedName.empty() ? -1 : FindLinkIndexByName(botPrefab, selectedName);
+    _botAsset->SetDirty(true);
+    _botAsset->MarkThumbnailDirty();
+    RestageBot();
+    GetUndoStack().PushNow();
+  } else {
+    RemapBotLinkNames({{newName, oldName}}, botPrefab);
     _botAsset->Rebuild(_studio->GetBotLoader());
   }
 }
@@ -1782,8 +1871,29 @@ void BotEditor::ShowBotDetailsWindow(bool* open) {
   bool const isBuiltBot = _botAsset->GetBotFileType() == BotFileType::ModBotPrefab;
   bool const isReadOnly = _botAsset->IsReadOnly();
   bool modsChanged = false;
-  bool paramsChanged =
-      ImGui::InputText("Name", &_botAsset->GetBotName(), ImGuiInputTextFlags_CharsNoBlank);
+  // Rename on focus loss, not per keystroke: skin contact overrides name the skin by the bot's name
+  // (GetBotSkinName), and the rebuild drops overrides whose names it cannot find. An empty name, or
+  // a link's name on a skinned bot, is rejected (the field reverts).
+  bool paramsChanged = false;
+  ImGui::DeferredNameInput("Name", _botAsset->GetBotName(), _botNameEdit);
+  if (auto const commit = std::exchange(_botNameEdit.commit, std::nullopt)) {
+    auto const& [oldName, newName] = *commit;
+    bool const hasSkin = _botAsset->GetBotPrefab().skin.has_value();
+    if (!newName.empty() &&
+        !(hasSkin && FindLinkIndexByName(_botAsset->GetBotPrefab(), newName) != kIndexNone)) {
+      _botAsset->GetBotName().assign(newName.c_str(), newName.size());
+      if (hasSkin) {
+        std::map<std::string, std::string> const nameMap{{oldName, newName}};
+        auto& overrides = isBuiltBot ? _botAsset->GetModBotPrefab().contactOverrides
+                                     : _botAsset->GetBotPrefab().contactOverrides;
+        for (auto& contactOverride : overrides) {
+          RemapName(nameMap, contactOverride.linkA);
+          RemapName(nameMap, contactOverride.linkB);
+        }
+      }
+      paramsChanged = true;
+    }
+  }
   if (isBuiltBot) {
     ImGui::PushStyleColor(ImGuiCol_ChildBg, IM_COL32_BLACK_TRANS);
     ImGui::BeginChild("Bot Details", ImVec2(0, 0));
@@ -2139,13 +2249,17 @@ void BotEditor::ShowBotLinkDetailsWindow(bool* open) {
   }
   if (ImGui::CollapsingHeader("Link", ImGuiTreeNodeFlags_DefaultOpen)) {
     ImGui::BeginDisabled(isBuiltBot || isReadOnly);
-    paramsChanged |=
-        ShowBotLinkEditorWidgets(link, _studio->GetAssetManager(), !isBuiltBot, modelChanged);
+    paramsChanged |= ShowBotLinkEditorWidgets(
+        link, _studio->GetAssetManager(), !isBuiltBot, modelChanged, &_linkNameEdit);
     ImGui::EndDisabled(); // isBuiltBot
   }
   ImGui::EndChild();
   ImGui::PopStyleColor(); // ImGuiCol_ChildBg
   ImGui::PopID();
+  // The edit may have been started on another link (the selection changed mid-edit).
+  if (auto const commit = std::exchange(_linkNameEdit.commit, std::nullopt)) {
+    RenameBotLink(FindLinkIndexByName(_botAsset->GetBotPrefab(), commit->from), commit->to);
+  }
   if (reparentNewParent != kIndexNone) {
     ReparentBotLink(_selectedBotLinkIndex, reparentNewParent);
   }
@@ -2201,11 +2315,19 @@ bool BotEditor::ShowBotLinkEditorWidgets(
     superdex::robotics::BotLinkPrefab& link,
     AssetManager const& assetManager,
     bool acceptDragDropPayload,
-    bool& modelChanged) {
+    bool& modelChanged,
+    ImGui::DeferredNameEdit* nameEdit) {
   bool changed = false;
+  if (nameEdit != nullptr) {
+    // Flag a name RenameBotLink would reject: empty, another link's, or the skin's (bot) name.
+    auto const& botPrefab = _botAsset->GetBotPrefab();
+    std::string_view const name(nameEdit->buffer);
+    nameEdit->collides =
+        name != std::string_view(link.name) && (name.empty() || IsLinkNameTaken(botPrefab, name));
+  }
   ImGui::PushID("Link");
   changed |= ImGui::ArticulatedLinkEditor(
-      link, _studio, assetManager, acceptDragDropPayload, modelChanged);
+      link, _studio, assetManager, acceptDragDropPayload, modelChanged, nameEdit);
   ImGui::PopID(); // Link
   return changed;
 }
