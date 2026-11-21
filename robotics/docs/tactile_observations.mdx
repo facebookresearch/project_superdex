@@ -18,8 +18,8 @@ without depending on a particular policy or training framework.
 
 The aggregate-force baseline is deliberately simple. It sums per-vertex forces
 without applying a learned response, sensor calibration, threshold, or torque
-model. The graph aggregate sensors remain internal while their serialized API
-is reviewed; the underlying C++ aggregation functions are public.
+model. `SensorAggregateForce` and the underlying C++ aggregation functions are
+public; `SensorAggregateWrench` remains internal.
 
 ## Vertex-force layout contract
 
