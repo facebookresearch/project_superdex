@@ -1414,6 +1414,30 @@
 /// @return Current acquisition parameters.
 ///
 
+/// @struct superdex::robotics::SensorAggregateForceParams
+///
+/// @brief This sensor has no configurable parameters; this struct shows where developers can add them.
+///
+
+/// @class superdex::robotics::SensorAggregateForce
+///
+/// @brief Sum one per-vertex force input into a three-axis force.
+///
+
+/// @fn std::string_view superdex::robotics::SensorAggregateForce::TypeName()
+///
+/// @brief Canonical serialized sensor type identifier.
+///
+/// @return Stable type identifier.
+///
+
+/// @fn SensorAggregateForceParams const& superdex::robotics::SensorAggregateForce::GetParams() const
+///
+/// @brief Get aggregation parameters.
+///
+/// @return Current parameters.
+///
+
 /// @class superdex::robotics::ActuatorBase
 ///
 /// @brief Base class for robot actuators.

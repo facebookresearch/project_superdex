@@ -1497,6 +1497,22 @@ class bots::SensorLinkVertexForce(bots::SensorBase) [no_init, no_destruct, no_re
   // @return Current acquisition parameters.
   fn GetParams() -> bots::SensorLinkVertexForceParams const& [const];
 }
+// @brief This sensor has no configurable parameters; this struct shows where developers can add
+// them.
+struct bots::SensorAggregateForceParams [no_reflection] {
+}
+
+// @brief Sum one per-vertex force input into a three-axis force.
+class bots::SensorAggregateForce(bots::SensorBase) [no_init, no_destruct, no_reflection] {
+  // @brief Canonical serialized sensor type identifier.
+  // @return Stable type identifier.
+  fn TypeName() -> StringView [static];
+
+  // @brief Get aggregation parameters.
+  // @return Current parameters.
+  fn GetParams() -> bots::SensorAggregateForceParams const& [const];
+}
+
 // @brief Base class for robot actuators.
 //
 // Mirrors @ref ControllerBase and @ref SensorBase: derives from ComponentBase for common lifecycle

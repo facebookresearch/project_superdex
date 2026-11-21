@@ -130,6 +130,8 @@ void mochi::DeclareSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module
   registry.StoreClass(nb::class_<superdex::robotics::SensorArticulatedJointWrench, superdex::robotics::SensorBase>(m_bots, "SensorArticulatedJointWrench", "Actor-wide source of every measurable articulated-joint wrench.\n\nEmits one row per non-static joint. Static links are excluded and named in typed\nobservation metadata because Mochi does not compute their contact forces.", nb::never_destruct()));
   registry.StoreClass(nb::class_<superdex::robotics::SensorLinkVertexForceParams>(m_bots, "SensorLinkVertexForceParams", "Acquisition cadence for a link vertex-force source."));
   registry.StoreClass(nb::class_<superdex::robotics::SensorLinkVertexForce, superdex::robotics::SensorBase>(m_bots, "SensorLinkVertexForce", "Vertex-force point cloud derived from one link's ordered contact vertices.", nb::never_destruct()));
+  registry.StoreClass(nb::class_<superdex::robotics::SensorAggregateForceParams>(m_bots, "SensorAggregateForceParams", "This sensor has no configurable parameters; this struct shows where developers\ncan add them."));
+  registry.StoreClass(nb::class_<superdex::robotics::SensorAggregateForce, superdex::robotics::SensorBase>(m_bots, "SensorAggregateForce", "Sum one per-vertex force input into a three-axis force.", nb::never_destruct()));
   registry.StoreClass(nb::class_<superdex::robotics::ActuatorBase, superdex::robotics::ComponentBase>(m_bots, "ActuatorBase", "Base class for robot actuators.\n\nMirrors :class:`~superdex.robotics.ControllerBase` and\n:class:`~superdex.robotics.SensorBase`: derives from ComponentBase for common\nlifecycle (validity, actor, destroy). No concrete actuators exist yet; this\nestablishes the contract early so the first actuator follows the same shape as\ncontrollers and sensors.\n\nRegistration contract (a ``RoboticsContext::RegisterActuator<T>`` template lands\nwith the first concrete actuator, mirroring RegisterController/RegisterSensor):\nevery actuator must declare static constexpr std::string_view TypeName() {\nreturn \"...\"; } (used by the registration templates and for the generated Python\ntype_name() binding), implement std::string_view GetTypeName() const override;\n// returns TypeName() and provide a uniform constructor ActuatorX(Actor* actor,\nstd::string_view paramArgs, Error& error); that loads its own params from the\npath or inline JSON. An (Actor*, Params const&, Error&) overload is recommended\nfor programmatic / non-filesystem construction.\n\nTeardown contract (mirrors :class:`~superdex.robotics.ControllerBase` /\n:class:`~superdex.robotics.SensorBase`):\n:meth:`~superdex.robotics.ComponentBase.get_actor` resolves the live actor on\ndemand and yields None once the owning mochi Scene (or the actor) is gone, so an\nactuator that outlives its Scene (Scene destroyed before the RoboticsContext)\nsees :meth:`~superdex.robotics.ComponentBase.get_actor` == None in its\ndestructor. Any concrete actuator whose destructor releases actor-held resources\nmust therefore guard on GetActor() != None (or, for context-owned resources,\nresolve via GetContext()) so teardown never dereferences a dangling Actor*.", nb::never_destruct()));
   registry.StoreClass(nb::class_<superdex::robotics::SensorCamera, superdex::robotics::SensorBase>(m_bots, "SensorCamera", "Camera sensor runtime object. Stores intrinsics/extrinsics for use by renderers\n(UE, etc.). No ComputeSignal — cameras don't produce data in the mochi physics\nloop; renderers query GetParams() to configure their camera actors.", nb::never_destruct()));
   registry.StoreClass(nb::class_<superdex::robotics::SensorSeedRectMap, superdex::robotics::SensorBase>(m_bots, "SensorSeedRectMap", "Image-like force map derived from one vertex-force point-cloud sensor.", nb::never_destruct()));
@@ -1843,6 +1845,22 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     )
     .def("get_params", &superdex::robotics::SensorLinkVertexForce::GetParams
       , "Get acquisition parameters.\n\nReturns:\n    Current acquisition parameters."
+      , nb::rv_policy::reference
+    )
+  ;
+
+  registry.GetClass<superdex::robotics::SensorAggregateForceParams>()
+    .def(nb::init<>())
+    .def("__copy__", [](superdex::robotics::SensorAggregateForceParams const& self) { return superdex::robotics::SensorAggregateForceParams(self); })
+    .def("__deepcopy__", [](superdex::robotics::SensorAggregateForceParams const& self, nb::dict) { return superdex::robotics::SensorAggregateForceParams(self); })
+  ;
+
+  registry.GetClass<superdex::robotics::SensorAggregateForce, superdex::robotics::SensorBase>()
+    .def_static("type_name", &superdex::robotics::SensorAggregateForce::TypeName
+      , "Canonical serialized sensor type identifier.\n\nReturns:\n    Stable type identifier."
+    )
+    .def("get_params", &superdex::robotics::SensorAggregateForce::GetParams
+      , "Get aggregation parameters.\n\nReturns:\n    Current parameters."
       , nb::rv_policy::reference
     )
   ;

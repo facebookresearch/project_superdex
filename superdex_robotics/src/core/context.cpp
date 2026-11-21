@@ -18,6 +18,7 @@
 #include <superdex_robotics/controllers/controller_basic_osc_pd.h>
 #include <superdex_robotics/controllers/controller_mochi_articulated_pose.h>
 #include <superdex_robotics/core/context.h>
+#include <superdex_robotics/sensors/sensor_aggregate_force.h>
 #include <superdex_robotics/sensors/sensor_articulated_joint_wrench.h>
 #include <superdex_robotics/sensors/sensor_camera.h>
 #include <superdex_robotics/sensors/sensor_gaussian_noise.h>
@@ -689,6 +690,7 @@ void RoboticsContext::RegisterBuiltinTypes() {
   RegisterController<ControllerMochiArticulatedPose>();
   RegisterController<ControllerBasicJscPd>();
   RegisterController<ControllerBasicOscPd>();
+  RegisterSensor<SensorAggregateForce>();
   RegisterSensor<SensorArticulatedJointWrench>();
   RegisterSensor<SensorCamera>();
   RegisterSensor<SensorGaussianNoise>();

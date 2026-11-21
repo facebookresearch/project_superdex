@@ -101,6 +101,7 @@ Matching shape alone does not establish compatible units, frames or row identiti
 | [`SensorLinkVertexForce`](./sensor_link_vertex_force.h) | Surface contact forces, with vertex positions and normals in metadata | `[N, 3]` |
 | [`SensorArticulatedJointWrench`](./sensor_articulated_joint_wrench.h) | Solver-backed joint forces and torques, with row-to-joint metadata | `[N, 6]` |
 | [`SensorSeedV1MLP`](./sensor_seed_v1_mlp.h) | Contact acquisition and an optional MLP response model | `[3]` |
+| [`SensorAggregateForce`](./sensor_aggregate_force.h) | Sum a borrowed vertex-force input | `[3]` |
 | [`SensorSeedRectMap`](./sensor_seed_rect_map.h) | CPU force map from a vertex-force input and its spatial metadata | `[H, W, 3]` |
 
 Joint wrench rows omit joints whose child link is welded to the world through an entirely static
@@ -312,3 +313,11 @@ Some sensors retain specialized `ComputeSignal()` methods for compatibility. Der
 `SensorBase` alone does not make an existing implementation usable in a graph; unsupported graph
 initialization is rejected explicitly. Python sensors keep the required `reset()` method, invoked
 through the shared adapter after the common publication has been cleared.
+
+### Force aggregation
+
+`SensorAggregateForce` sums one borrowed `[N,3]` input directly, without copying
+its tensor, and preserves the input's capture identity and interaction sense.
+It transforms the supplied signal; it does not query physics or recover contact
+contributions absent from its input. Use a total-contact-force source when the
+required signal is the link's net physical contact force.

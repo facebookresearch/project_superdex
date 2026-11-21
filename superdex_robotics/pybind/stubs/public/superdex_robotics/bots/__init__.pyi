@@ -2993,6 +2993,28 @@ class SensorLinkVertexForce(SensorBase):
             Current acquisition parameters.
         """
 
+class SensorAggregateForceParams:
+    """This sensor has no configurable parameters; this struct shows where developers
+    can add them.
+    """
+    def __init__(self) -> None: ...
+
+class SensorAggregateForce(SensorBase):
+    """Sum one per-vertex force input into a three-axis force."""
+    @staticmethod
+    def type_name() -> str:
+        """Canonical serialized sensor type identifier.
+
+        Returns:
+            Stable type identifier.
+        """
+    def get_params(self) -> SensorAggregateForceParams:
+        """Get aggregation parameters.
+
+        Returns:
+            Current parameters.
+        """
+
 class ActuatorBase(ComponentBase):
     """Base class for robot actuators.
 
