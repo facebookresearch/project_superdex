@@ -23,6 +23,7 @@
 #include "internal/mochi_operational_space_controller.h"
 #endif
 #include "mochi_scene.h"
+#include "mochi_scene_table.h"
 #include "mochi_shape.h"
 
 #include <mochi_core/utils/task_scheduler.h>
@@ -231,6 +232,9 @@ class ContextImpl final : public Context {
   std::atomic<Handle::ValueType> _nextHandle{1};
   std::unordered_map<ShapeHandle::ValueType, ConstShapePtr> _shapes;
   std::unordered_map<SceneHandle::ValueType, std::unique_ptr<SceneImpl>> _scenes;
+  // Holds exactly the scenes in _scenes and changes with them under _mutex. GetScene reads it
+  // without any lock.
+  SceneTable _sceneTable;
   std::vector<std::unique_ptr<IKSolverImpl>> _ikSolvers;
 #if MOCHI_USE_OSC
   std::vector<std::unique_ptr<OperationalSpaceControllerImpl>> _OSCs;

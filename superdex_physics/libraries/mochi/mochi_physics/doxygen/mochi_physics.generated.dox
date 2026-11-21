@@ -5155,6 +5155,7 @@
 /// @return Pointer to the new scene. Call @ref mochi::Context::DestroyScene "DestroyScene" when done with it.
 ///
 /// @note Call on any thread.
+/// @note A @ref mochi::Context "Context" holds at most 65,536 scenes at once. Over its life it creates at most about 4 billion, fewer when many scenes stay alive. Creating more fails an assertion.
 ///
 /// @see @ref mochi::Context::DestroyScene "DestroyScene"
 ///
@@ -5183,7 +5184,7 @@
 /// @param[in] handle Handle to the scene.
 /// @return Pointer to the scene, or nullptr if the handle is invalid in this context.
 ///
-/// @note Call on any thread.
+/// @note Call on any thread. Never blocks.
 ///
 
 /// @fn Scene const* mochi::Context::GetScene(SceneHandle handle) const
@@ -5193,7 +5194,7 @@
 /// @param[in] handle Handle to the scene.
 /// @return Const pointer to the scene, or nullptr if the handle is invalid in this context.
 ///
-/// @note Call on any thread.
+/// @note Call on any thread. Never blocks.
 ///
 
 /// @fn bool mochi::Context::IsValidScene(Scene const* scene) const

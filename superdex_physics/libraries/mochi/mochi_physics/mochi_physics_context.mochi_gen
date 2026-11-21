@@ -875,6 +875,8 @@ class Context [no_init, no_destruct, singleton] {
   // @return Pointer to the new scene. Call @ref DestroyScene when done with it.
   //
   // @note Call on any thread.
+  // @note A @ref Context holds at most 65,536 scenes at once. Over its life it creates at most about
+  // 4 billion, fewer when many scenes stay alive. Creating more fails an assertion.
   //
   // @see DestroyScene
   fn CreateScene(StringView name) -> Scene* [pure, virtual, nodiscard];
@@ -901,7 +903,7 @@ class Context [no_init, no_destruct, singleton] {
   //
   // @return Pointer to the scene, or nullptr if the handle is invalid in this context.
   //
-  // @note Call on any thread.
+  // @note Call on any thread. Never blocks.
   fn GetScene(SceneHandle handle) -> Scene* [pure, virtual, overloaded, nullable];
 
   // @brief Get a const pointer to a scene by its handle.
@@ -910,7 +912,7 @@ class Context [no_init, no_destruct, singleton] {
   //
   // @return Const pointer to the scene, or nullptr if the handle is invalid in this context.
   //
-  // @note Call on any thread.
+  // @note Call on any thread. Never blocks.
   fn GetScene(SceneHandle handle) -> Scene const* [pure, virtual, const, overloaded, no_python, nullable];
 
   // @brief Check if a scene is valid (not destroyed), and belongs to this @ref Context.

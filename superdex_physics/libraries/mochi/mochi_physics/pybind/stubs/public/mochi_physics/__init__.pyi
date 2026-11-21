@@ -10108,6 +10108,11 @@ def create_scene(name: str) -> Scene:
     Note:
         Call on any thread.
 
+    Note:
+        A Mochi context holds at most 65,536 scenes at once. Over its life it
+        creates at most about 4 billion, fewer when many scenes stay alive. Creating
+        more fails an assertion.
+
     See Also:
         :func:`~superdex.physics.destroy_scene`
     """
@@ -10159,7 +10164,7 @@ def get_scene(handle: SceneHandle) -> Optional[Scene]:
         Pointer to the scene, or None if the handle is invalid in this context.
 
     Note:
-        Call on any thread.
+        Call on any thread. Never blocks.
     """
 
 def is_valid_scene(scene: Optional[Scene]) -> bool:

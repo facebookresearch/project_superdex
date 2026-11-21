@@ -565,7 +565,7 @@ void mochi::DefineMochiPhysics_MochiPhysicsContext([[maybe_unused]] nb::module_&
       return result;
     }
       , nb::arg("name")
-      , "Create a new :class:`~superdex.physics.Scene`.\n\nA scene is a collection of actors and constraints, which can be stepped to\nadvance the simulation. Each scene is independent. Actors from one scene cannot\naffect another scene.\n\nYou can create a new scene on any thread, but that scene must only be accessed\nfrom one thread at a time. All reads and writes to the scene must be synchronous\nand well ordered. However, if you have multiple scenes, then it is safe to step\nthem concurrently.\n\nArgs:\n    name (str): Name of the new scene (for debugging).\n\nReturns:\n    Pointer to the new scene. Call :func:`~superdex.physics.destroy_scene` when\n    done with it.\n\nNote:\n    Call on any thread.\n\nSee Also:\n    :func:`~superdex.physics.destroy_scene`"
+      , "Create a new :class:`~superdex.physics.Scene`.\n\nA scene is a collection of actors and constraints, which can be stepped to\nadvance the simulation. Each scene is independent. Actors from one scene cannot\naffect another scene.\n\nYou can create a new scene on any thread, but that scene must only be accessed\nfrom one thread at a time. All reads and writes to the scene must be synchronous\nand well ordered. However, if you have multiple scenes, then it is safe to step\nthem concurrently.\n\nArgs:\n    name (str): Name of the new scene (for debugging).\n\nReturns:\n    Pointer to the new scene. Call :func:`~superdex.physics.destroy_scene` when\n    done with it.\n\nNote:\n    Call on any thread.\n\nNote:\n    A Mochi context holds at most 65,536 scenes at once. Over its life it\n    creates at most about 4 billion, fewer when many scenes stay alive. Creating\n    more fails an assertion.\n\nSee Also:\n    :func:`~superdex.physics.destroy_scene`"
       , nb::rv_policy::reference
     );
 
@@ -583,7 +583,7 @@ void mochi::DefineMochiPhysics_MochiPhysicsContext([[maybe_unused]] nb::module_&
       return result;
     }
       , nb::arg("handle")
-      , "Get a pointer to a scene by its handle.\n\nArgs:\n    handle (SceneHandle): Handle to the scene.\n\nReturns:\n    Pointer to the scene, or None if the handle is invalid in this context.\n\nNote:\n    Call on any thread."
+      , "Get a pointer to a scene by its handle.\n\nArgs:\n    handle (SceneHandle): Handle to the scene.\n\nReturns:\n    Pointer to the scene, or None if the handle is invalid in this context.\n\nNote:\n    Call on any thread. Never blocks."
       , nb::rv_policy::reference
     );
 

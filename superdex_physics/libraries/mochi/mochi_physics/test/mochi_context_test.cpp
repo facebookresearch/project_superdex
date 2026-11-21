@@ -1427,6 +1427,10 @@ TEST_P(MochiContextTest, GetScene) {
   EXPECT_FALSE(_mochiContext->IsValidScene(scene1));
   EXPECT_EQ(nullptr, _mochiContext->GetScene(handle1));
 
+  // Handles increase with creation order; the debugger picks the newest scene by its handle.
+  EXPECT_LT(handle1.value, handle2.value);
+  EXPECT_LT(handle2.value, _mochiContext->CreateScene("Scene 3")->GetHandle().value);
+
   // Try to recover from an invalid handle.
   auto invalidHandle = SceneHandle{};
   EXPECT_FALSE(invalidHandle.IsValid());
@@ -1501,15 +1505,18 @@ TEST_P(MochiContextTest, GetSceneWhileOtherThreadsCreateAndDestroyScenes) {
   }
 }
 
-TEST(Context, DestroyContextWhileSceneDestructionCallsIsValidScene) {
+TEST(Context, DestroyContextWhileSceneDestructionLooksUpScenes) {
   Context* const context = CreateContext(/*numWorkerThreads*/ 0);
   Scene* const scenes[] = {context->CreateScene("A"), context->CreateScene("B")};
+  SceneHandle const handles[] = {scenes[0]->GetHandle(), scenes[1]->GetHandle()};
   int numValid = 0;
+  int numFound = 0;
   for (Scene* const scene : scenes) {
     // A callback capture whose deleter runs when DestroyContext destroys the scene.
     std::shared_ptr<void> capture(nullptr, [&](void*) {
-      for (Scene const* const other : scenes) {
-        numValid += context->IsValidScene(other) ? 1 : 0;
+      for (int i = 0; i < 2; ++i) {
+        numValid += context->IsValidScene(scenes[i]) ? 1 : 0;
+        numFound += context->GetScene(handles[i]) != nullptr ? 1 : 0;
       }
     });
     EXPECT_TRUE(
@@ -1522,6 +1529,33 @@ TEST(Context, DestroyContextWhileSceneDestructionCallsIsValidScene) {
 
   // A scene leaves the context before it is destroyed; the first one destroyed finds the other.
   EXPECT_EQ(numValid, 1);
+  EXPECT_EQ(numFound, 1);
+}
+
+TEST(Context, DestroySceneWhileSceneDestructionLooksUpScenes) {
+  Context* const context = CreateContext(/*numWorkerThreads*/ 0);
+  Scene* const scenes[] = {context->CreateScene("A"), context->CreateScene("B")};
+  SceneHandle const handles[] = {scenes[0]->GetHandle(), scenes[1]->GetHandle()};
+  int numValid = 0;
+  int numFound = 0;
+  // A callback capture whose deleter runs when DestroyScene destroys scene A.
+  std::shared_ptr<void> capture(nullptr, [&](void*) {
+    for (int i = 0; i < 2; ++i) {
+      numValid += context->IsValidScene(scenes[i]) ? 1 : 0;
+      numFound += context->GetScene(handles[i]) != nullptr ? 1 : 0;
+    }
+  });
+  EXPECT_TRUE(
+      scenes[0]
+          ->RegisterPreStepCallback("Capture", [capture = std::move(capture)](StepInfo const&) {})
+          .IsValid());
+
+  context->DestroyScene(scenes[0]);
+
+  // A scene leaves the context before it is destroyed, so only B is found.
+  EXPECT_EQ(numValid, 1);
+  EXPECT_EQ(numFound, 1);
+  DestroyContext(context);
 }
 
 TEST(Context, DestroyContextWhileSceneDestructionCreatesAScene) {
@@ -1897,6 +1931,27 @@ TEST(MochiAsyncScene, CreateIKSolver_AsyncSceneOwnedSceneReturnsError) {
   EXPECT_EQ(gravity, observedGravity);
 
   experimental::DestroyIKSolver(solver, context, ErrorAssert{});
+}
+
+// DestroyScene refuses a scene an AsyncScene owns, and the scene stays findable.
+TEST(MochiAsyncScene, RefusedDestroySceneKeepsTheSceneFindable) {
+  Context* const context = CreateContext(2);
+  ASSERT_NE(nullptr, context);
+  MOCHI_DEFER(DestroyContext(context));
+  AsyncScene* const asyncScene = context->CreateAsyncScenePaused("Async", ExpectOK{});
+  ASSERT_NE(nullptr, asyncScene);
+  MOCHI_DEFER(context->DestroyAsyncScene(asyncScene));
+  Scene* owned = nullptr;
+  asyncScene->QueueCommand([&](Scene* scene) { owned = scene; });
+  asyncScene->WaitForQueuedCommands();
+  ASSERT_NE(nullptr, owned);
+
+  {
+    ExpectLoggingInScope expectWarning(context, LogChannel::Warning);
+    context->DestroyScene(owned);
+  }
+  EXPECT_TRUE(context->IsValidScene(owned));
+  EXPECT_EQ(context->GetScene(owned->GetHandle()), owned);
 }
 
 namespace {

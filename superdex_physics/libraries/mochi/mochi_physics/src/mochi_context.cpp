@@ -150,6 +150,7 @@ void ContextImpl::PreShutDown() {
   // Remove scenes one at a time so a scene's destructor can call back into the Context.
   while (!_scenes.empty()) {
     auto const scene = std::move(_scenes.extract(_scenes.begin()).mapped());
+    _sceneTable.Release(scene->GetHandle());
     _debugServer->OnRemoveScene(scene.get());
   }
   _shapes.clear();
@@ -584,16 +585,31 @@ void ContextImpl::ClearFileFromCache(std::string_view filePath) {
 }
 
 Scene* ContextImpl::CreateScene(std::string_view name) {
+  SceneHandle handle;
+  {
+    std::scoped_lock lock(_mutex);
+    handle = _sceneTable.Reserve();
+    MOCHI_ASSERT(
+        handle.IsValid(),
+        "No scene handle left, with %zu scenes alive. A Context holds at most 65,536 scenes at "
+        "once and creates at most about 4 billion over its life.",
+        _scenes.size());
+  }
+  if (!handle.IsValid()) {
+    return nullptr; // Reached only if the assertion failure callback lets execution continue.
+  }
+
   // Create a new scene
-  auto newScene = std::make_unique<SceneImpl>(this, name, GenerateNewHandle());
+  auto newScene = std::make_unique<SceneImpl>(this, name, handle.value);
   Scene* sceneRawPtr = newScene.get();
 
   std::scoped_lock lock(_mutex);
 
   // Add it to the collection
   [[maybe_unused]] bool const inserted =
-      _scenes.try_emplace(sceneRawPtr->GetHandle().value, std::move(newScene)).second;
+      _scenes.try_emplace(handle.value, std::move(newScene)).second;
   MOCHI_ASSERT(inserted, "SceneHandle not unique!");
+  _sceneTable.Publish(handle, sceneRawPtr);
 
   // Notify debug server
   _debugServer->OnAddScene(sceneRawPtr);
@@ -622,6 +638,7 @@ void ContextImpl::DestroyScene(Scene* scene) {
       }
     }
 
+    _sceneTable.Release(SceneHandle{it->first});
     sceneToDestroy = std::move(it->second);
     _debugServer->OnRemoveScene(sceneToDestroy.get());
     _scenes.erase(it);
@@ -1247,20 +1264,11 @@ ArticulatedShapeInfo ContextImpl::GetArticulatedShapeInfo(ShapeHandle shape, Err
 }
 
 Scene* ContextImpl::GetScene(SceneHandle handle) {
-  if (!handle.IsValid()) {
-    return nullptr;
-  }
-  std::scoped_lock lock(_mutex);
-  auto it = _scenes.find(handle.value);
-  if (it != _scenes.end()) {
-    return it->second.get();
-  }
-  return nullptr;
+  return _sceneTable.Find(handle);
 }
 
 Scene const* ContextImpl::GetScene(SceneHandle handle) const {
-  // Shared implementation with non-const overload
-  return const_cast<ContextImpl*>(this)->GetScene(handle);
+  return _sceneTable.Find(handle);
 }
 
 bool ContextImpl::IsValidScene(Scene const* scene) const {
