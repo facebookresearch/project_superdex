@@ -69,6 +69,47 @@ USuperDexPoseableComponent::~USuperDexPoseableComponent() {
   gLoopDetectionMap.Remove(this);
 }
 
+FSuperDexPoseCacheWriteScope::FSuperDexPoseCacheWriteScope(
+    const USuperDexPoseableComponent& InComponent)
+    : Component(InComponent) {
+  Component.CacheLock.WriteLock();
+  // Only the writing thread ever finds its own id here, so relaxed ordering suffices.
+  Component.CacheWriterThreadId.store(
+      FPlatformTLS::GetCurrentThreadId(), std::memory_order_relaxed);
+}
+
+FSuperDexPoseCacheWriteScope::~FSuperDexPoseCacheWriteScope() {
+  Component.CacheWriterThreadId.store(0, std::memory_order_relaxed);
+  Component.CacheLock.WriteUnlock();
+}
+
+bool USuperDexPoseableComponent::IsCacheWriterThread() const {
+  return CacheWriterThreadId.load(std::memory_order_relaxed) == FPlatformTLS::GetCurrentThreadId();
+}
+
+bool USuperDexPoseableComponent::GetCachedPose(FSuperDexPose& OutPose) const {
+  if (IsCacheWriterThread()) {
+    // This thread is writing the cache and has it to itself.
+    if (CacheInitialized) {
+      OutPose = CachedOutputPose;
+    }
+    return CacheInitialized;
+  }
+  FReadScopeLock Lock(CacheLock);
+  if (CacheInitialized) {
+    OutPose = CachedOutputPose;
+  }
+  return CacheInitialized;
+}
+
+FTransform USuperDexPoseableComponent::GetVrRootToWorld() const {
+  if (IsCacheWriterThread()) {
+    return CachedVrRootToWorld;
+  }
+  FReadScopeLock Lock(CacheLock);
+  return CachedVrRootToWorld;
+}
+
 bool USuperDexPoseableComponent::GetPose(FSuperDexPose& OutPose) {
   if (bEnableGetPose == false) {
     return false;

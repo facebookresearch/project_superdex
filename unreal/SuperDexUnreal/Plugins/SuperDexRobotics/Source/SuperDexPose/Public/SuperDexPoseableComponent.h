@@ -16,12 +16,15 @@
 
 #pragma once
 
+#include <atomic>
+
 #include "Components/PoseableMeshComponent.h"
 #include "SuperDexPoseSource.h"
 #include "SuperDexPoseTypes.h"
 
 #include "SuperDexPoseableComponent.generated.h"
 
+class FSuperDexPoseCacheWriteScope;
 class UMochiArticulationBase;
 class USuperDexPoseSubsystem;
 
@@ -221,13 +224,7 @@ class SUPERDEXPOSE_API USuperDexPoseableComponent : public UPoseableMeshComponen
       BlueprintPure,
       Category = "SuperDexPoseableComponent",
       meta = (ReturnDisplayName = "Success"))
-  virtual bool GetCachedPose(FSuperDexPose& OutPose) const {
-    FReadScopeLock Lock(CacheLock);
-    if (CacheInitialized) {
-      OutPose = CachedOutputPose;
-    }
-    return CacheInitialized;
-  }
+  virtual bool GetCachedPose(FSuperDexPose& OutPose) const;
 
   /**
    * Get the VrRoot pose in world space. The component updates its relative pose each tick so that
@@ -237,10 +234,7 @@ class SUPERDEXPOSE_API USuperDexPoseableComponent : public UPoseableMeshComponen
    * time of capture.
    */
   UFUNCTION(BlueprintPure, Category = "SuperDexPoseableComponent")
-  FTransform GetVrRootToWorld() const {
-    FWriteScopeLock lock(CacheLock);
-    return CachedVrRootToWorld;
-  }
+  FTransform GetVrRootToWorld() const;
 
   /**
    * Get the transform from a bone to the root in the skinned asset's rest pose.
@@ -359,6 +353,13 @@ class SUPERDEXPOSE_API USuperDexPoseableComponent : public UPoseableMeshComponen
   bool CheckIfInInfiniteLoop(FSuperDexPose& Pose);
 
   /**
+   * Whether the calling thread holds CacheLock for writing through an FSuperDexPoseCacheWriteScope.
+   * Reads of the cache on that thread take no lock: CacheLock is not reentrant, and the thread
+   * already has the cache to itself.
+   */
+  bool IsCacheWriterThread() const;
+
+  /**
    * An inner function that figures out by connection what the source of the pose should be and
    * calls GetPose() on it. Derived classes that are not modifying the pose between the input and
    * output should be calling Super::GetPose().
@@ -377,6 +378,11 @@ class SUPERDEXPOSE_API USuperDexPoseableComponent : public UPoseableMeshComponen
   TSet<USuperDexPoseableComponent*> ChildSourcePoseableExcludeList;
 
  private:
+  friend class FSuperDexPoseCacheWriteScope;
+
+  /** The thread holding CacheLock through an FSuperDexPoseCacheWriteScope, or 0. */
+  mutable std::atomic<uint32> CacheWriterThreadId{0};
+
   /**
    * Initialize BoneToRestPoseRootTransforms if not already initialized.
    *
@@ -387,4 +393,21 @@ class SUPERDEXPOSE_API USuperDexPoseableComponent : public UPoseableMeshComponen
   /** The mesh bone each link of Bot poses (see ApplyCachedPoseToMesh), cached in MeshBonesOfLinks.
    */
   const TArray<int32>& GetMeshBonesOfLinks(const UMochiArticulationBase& Bot);
+};
+
+/**
+ * Holds a poseable component's CacheLock for writing, and marks the calling thread as its writer,
+ * while in scope. Use it to write the cache while computing the pose that goes in it: that can run
+ * code that reads the cache, such as Blueprint or C++ overrides and delegates, and those reads
+ * (GetCachedPose and everything built on it, such as GetCachedPoseLinkTransform) then read the
+ * cache directly instead of waiting on the lock their own thread holds.
+ */
+class SUPERDEXPOSE_API FSuperDexPoseCacheWriteScope {
+ public:
+  explicit FSuperDexPoseCacheWriteScope(const USuperDexPoseableComponent& InComponent);
+  ~FSuperDexPoseCacheWriteScope();
+  UE_NONCOPYABLE(FSuperDexPoseCacheWriteScope);
+
+ private:
+  const USuperDexPoseableComponent& Component;
 };

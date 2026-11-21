@@ -547,8 +547,12 @@ bool USuperDexBotIKRetargeter::GetPose(FSuperDexPose& OutPose) {
 }
 
 bool USuperDexBotIKRetargeter::GetCachedPose(FSuperDexPose& OutPose) const {
-  // Same lock order as GetTransformedPose: SuperDexPose cache first, result snapshot second.
-  FReadScopeLock CacheGuard(CacheLock);
+  // Same lock order as GetTransformedPose: SuperDexPose cache first, result snapshot second. A
+  // thread computing this retargeter's pose already holds the cache.
+  TOptional<FReadScopeLock> CacheGuard;
+  if (!IsCacheWriterThread()) {
+    CacheGuard.Emplace(CacheLock);
+  }
   FScopeLock ResultGuard(&ResultMutex);
   if (!CacheInitialized || !bCurrentValid) {
     return false;

@@ -75,7 +75,9 @@ bool USuperDexRetargeter::GetPose(FSuperDexPose& OutPose) {
     return false;
   }
 
-  FWriteScopeLock Lock1(CacheLock);
+  // GetTransformedPose runs under this lock and may read the cache (GetCachedPose and the functions
+  // built on it); the scope lets those reads on this thread through.
+  FSuperDexPoseCacheWriteScope Lock1(*this);
   // Get cache and thread priorities
   uint32 PriorityNeededToUpdateCache =
       GetHighestPriorityLastCalledWithin(CurrentTime, kPriorityCacheHoldDurationSeconds);
