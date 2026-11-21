@@ -370,19 +370,23 @@ bool UClutchSkeletonRootToVrRootRetargeter::InitializeClutchBasedOnLeafBoneInter
   const int EndEffectorBone = (InitializeClutchRelativeToBoneIndex >= 0)
       ? InitializeClutchRelativeToBoneIndex
       : LeafBones[0];
-  // The end effector link at the arm's cached joint positions, or its mesh bone without a cached
-  // pose on a bot with that link.
+  // The end effector's mesh bone. The clutch reaches the arm through attachments to the arm's mesh
+  // (its sockets), so its offset from the end effector is read against the same mesh: that is the
+  // authored relative transform whatever pose the mesh shows at the time.
+  const FTransform EndEffectorBoneToWorld = RobotArmPosablePtr->GetBoneTransform(EndEffectorBone);
+  // Where the arm's joint positions put the end effector: the link at the arm's cached joint
+  // positions, or its mesh bone without a cached pose on a bot with that link.
   FTransform EndEffectorToWorld;
   if (!RobotArmPosablePtr->GetCachedPoseLinkTransform(
           skele.GetBoneName(EndEffectorBone), EndEffectorToWorld)) {
-    EndEffectorToWorld = RobotArmPosablePtr->GetBoneTransform(EndEffectorBone);
+    EndEffectorToWorld = EndEffectorBoneToWorld;
   }
   FTransform VrRootToWorld = GetOwner()->GetActorTransform();
   if (UpdateClutchToLeafBoneTransform &&
       !bOverrideInitializeClutchSkeletonRootToPoseableEndEffector) {
     FTransform ClutchToWorld = GetComponentTransform();
     InitializeClutchSkeletonRootToPoseableEndEffector =
-        ClutchToWorld * EndEffectorToWorld.Inverse();
+        ClutchToWorld * EndEffectorBoneToWorld.Inverse();
   }
   FTransform ClutchToRoot = InitializeClutchSkeletonRootToPoseableEndEffector * EndEffectorToWorld *
       VrRootToWorld.Inverse();
