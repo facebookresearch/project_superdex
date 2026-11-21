@@ -23,6 +23,7 @@
 #include "SuperDexBot.h"
 #include "SuperDexBotLoader.h"
 
+#include "Engine/Engine.h"
 #include "Engine/GameInstance.h"
 #include "Engine/SkeletalMesh.h"
 #include "Engine/World.h"
@@ -66,6 +67,7 @@ void USuperDexBotComponent::SetBotAsset(USuperDexBot* InBot) {
     return;
   }
   LastBotCreationFailure.Reset();
+  bBotCreationFailed = false;
   if (InBot) {
     Bot = InBot;
     if (Bot->GetSkeletalMesh()) {
@@ -248,7 +250,7 @@ void USuperDexBotComponent::TickComponent(
       Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
       return;
     }
-    if (ArticulatedActorObject == nullptr && Bot && bAutoSpawn) {
+    if (ArticulatedActorObject == nullptr && Bot && bAutoSpawn && !bBotCreationFailed) {
       CreateBotAndArticulatedActor();
     }
     if (ArticulatedActorObject) {
@@ -295,6 +297,9 @@ void USuperDexBotComponent::EndPlay(const EEndPlayReason::Type EndPlayReason) {
   SetController(nullptr);
   Super::EndPlay(EndPlayReason);
   DestroyBotAndArticulatedActor();
+  if (GEngine) {
+    GEngine->RemoveOnScreenDebugMessage(static_cast<uint64>(GetUniqueID()));
+  }
 }
 
 void USuperDexBotComponent::CreateBotAndArticulatedActor() {
@@ -413,16 +418,28 @@ void USuperDexBotComponent::CreateBotAndArticulatedActor() {
       ErrorDescription = "Unknown bot creation failure";
     }
     const FString Failure = FString::Printf(TEXT("CreateBot:%hs"), ErrorDescription);
+    bBotCreationFailed = true;
     if (LastBotCreationFailure != Failure) {
+      const FString Message = FString::Printf(
+          TEXT("SuperDex bot '%s' on '%s' failed to spawn and will not be retried: %hs"),
+          *GetNameSafe(Bot),
+          *GetNameSafe(GetOwner()),
+          ErrorDescription);
+      if (GEngine) {
+        // Shown until the bot spawns or the component ends play.
+        GEngine->AddOnScreenDebugMessage(
+            static_cast<uint64>(GetUniqueID()), 1.0e6f, FColor::Red, Message);
+      }
       UE_LOG(
           LogMochiPhysics,
           Error,
-          TEXT("[%hs] Failed to add bot '%s' (component '%s' on actor '%s') to scene: %hs"),
+          TEXT(
+              "[%hs] %s (bot '%s', component '%s' on actor '%s'). Call SetBotAsset or SpawnBot to retry."),
           __FUNCTION__,
+          *Message,
           *GetPathNameSafe(Bot),
           *GetName(),
-          *GetNameSafe(GetOwner()),
-          ErrorDescription);
+          *GetNameSafe(GetOwner()));
       // superdex_robotics only emits this exact error for a filesystem params load. List the
       // paths once; unrelated bot-creation failures should not implicate every file-backed sensor.
       const bool bParamsLoadFailure =
@@ -467,6 +484,9 @@ void USuperDexBotComponent::CreateBotAndArticulatedActor() {
     return;
   }
   LastBotCreationFailure.Reset();
+  if (GEngine) {
+    GEngine->RemoveOnScreenDebugMessage(static_cast<uint64>(GetUniqueID()));
+  }
   // wrap with UE infrastructure
   ArticulatedActorObject = UMochiArticulatedActorObject::CreateFromExistingArticulatedActor(
       this,
@@ -520,6 +540,7 @@ bool USuperDexBotComponent::SpawnBot(const FTransform& WorldFromRoot, float Scal
   }
   SetWorldLocationAndRotation(WorldFromRoot.GetLocation(), WorldFromRoot.GetRotation());
   SetWorldScale3D(FVector(Scale));
+  bBotCreationFailed = false;
   CreateBotAndArticulatedActor();
   return IsBotSpawned();
 }

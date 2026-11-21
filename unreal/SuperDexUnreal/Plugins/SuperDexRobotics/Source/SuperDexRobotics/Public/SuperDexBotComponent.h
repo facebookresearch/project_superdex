@@ -300,6 +300,9 @@ class SUPERDEXROBOTICS_API USuperDexBotComponent : public UPoseableMeshComponent
   TObjectPtr<UMochiArticulatedActorObject> ArticulatedActorObject = nullptr;
   std::atomic<bool> bArticulatedActorReady = false;
   FString LastBotCreationFailure;
+  // Set when the scene rejects the bot. Auto-spawn then stops retrying, since each attempt reloads
+  // the bot's shapes on the game thread. SetBotAsset or SpawnBot tries again.
+  bool bBotCreationFailed = false;
 
   FMochiContactEventHandler ContactEventHandler;
   FMochiNestedContactEventHandler NestedContactEventHandler;
