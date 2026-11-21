@@ -186,12 +186,7 @@ const TArray<double>& USuperDexBot::GetDefaultJointPositions() const {
 
 TArray<FName> USuperDexBot::GetLinkNames() const {
   if (EnsureBotPrefabCached()) {
-    TArray<FName> Names;
-    Names.SetNum(static_cast<int32>(CachedBotPrefab.links.size()));
-    for (int32 i = 0; i < Names.Num(); ++i) {
-      Names[i] = FName(UTF8_TO_TCHAR(std::string(CachedBotPrefab.links[i].name).c_str()));
-    }
-    return Names;
+    return CachedLinkNames;
   }
   UE_LOG(
       LogMochiPhysics,
@@ -202,12 +197,7 @@ TArray<FName> USuperDexBot::GetLinkNames() const {
 
 TArray<FName> USuperDexBot::GetJointNames() const {
   if (EnsureBotPrefabCached()) {
-    TArray<FName> Names;
-    Names.SetNum(static_cast<int32>(CachedBotPrefab.joints.size()));
-    for (int32 i = 0; i < Names.Num(); ++i) {
-      Names[i] = FName(UTF8_TO_TCHAR(std::string(CachedBotPrefab.joints[i].name).c_str()));
-    }
-    return Names;
+    return CachedJointNames;
   }
   UE_LOG(
       LogMochiPhysics,
@@ -460,6 +450,11 @@ bool USuperDexBot::MaterializeSensorParamFiles(superdex::robotics::BotPrefab& Pr
 }
 
 bool USuperDexBot::EnsureBotPrefabCached(bool bForceReload) const {
+  if (!bForceReload && bHasCachedBotPrefab.load(std::memory_order_acquire)) {
+    return true;
+  }
+  // Pose consumers on several threads may ask a bot for its kinematics first at the same time.
+  FScopeLock LoadLock(&BotPrefabLoadMutex);
   if (bForceReload) {
     bHasCachedBotPrefab = false;
     FScopeLock Lock(&SensorParamFilesMaterializationMutex);
@@ -491,12 +486,21 @@ bool USuperDexBot::EnsureBotPrefabCached(bool bForceReload) const {
   }
   // NB: FSuperDexBotLoader::LoadBotPrefab already ran MaterializeSensorParamFiles on this
   // prefab, and reported a failure through `e` above.
-  // Filled here, once per load, so that GetDefaultJointPositions only reads it.
+  // Filled here, once per load, so that GetDefaultJointPositions, GetLinkNames and GetJointNames
+  // only read them.
   CachedDefaultJointPositions.SetNum(CachedBotPrefab._numDofs);
   for (int32 i = 0; i < CachedBotPrefab._numDofs; ++i) {
     CachedDefaultJointPositions[i] = static_cast<double>(CachedBotPrefab.defaultPose[i]);
   }
-  bHasCachedBotPrefab = true;
+  CachedLinkNames.SetNum(static_cast<int32>(CachedBotPrefab.links.size()));
+  for (int32 i = 0; i < CachedLinkNames.Num(); ++i) {
+    CachedLinkNames[i] = FName(UTF8_TO_TCHAR(std::string(CachedBotPrefab.links[i].name).c_str()));
+  }
+  CachedJointNames.SetNum(static_cast<int32>(CachedBotPrefab.joints.size()));
+  for (int32 i = 0; i < CachedJointNames.Num(); ++i) {
+    CachedJointNames[i] = FName(UTF8_TO_TCHAR(std::string(CachedBotPrefab.joints[i].name).c_str()));
+  }
+  bHasCachedBotPrefab.store(true, std::memory_order_release);
   return true;
 }
 

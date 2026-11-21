@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <atomic>
 #include "CoreMinimal.h"
 #include "EditorFramework/AssetImportData.h"
 #include "MochiArticulationBase.h"
@@ -286,10 +287,15 @@ class SUPERDEXROBOTICS_API USuperDexBot : public UMochiArticulationBase {
   const TArray<FBoxSphereBounds>& GetLinkBounds() const;
 
  private:
+  /// Guards loading CachedBotPrefab and everything filled with it. Once bHasCachedBotPrefab is set,
+  /// readers on any thread only read them.
+  mutable FCriticalSection BotPrefabLoadMutex;
   mutable superdex::robotics::BotPrefab CachedBotPrefab;
-  mutable bool bHasCachedBotPrefab = false;
+  mutable std::atomic<bool> bHasCachedBotPrefab{false};
   mutable FCriticalSection SensorParamFilesMaterializationMutex;
   mutable FString CachedMaterializedSensorParamFilesDir;
   mutable double NextSensorParamFilesMaterializationAttemptSeconds = 0.0;
   mutable TArray<double> CachedDefaultJointPositions;
+  mutable TArray<FName> CachedLinkNames;
+  mutable TArray<FName> CachedJointNames;
 };
