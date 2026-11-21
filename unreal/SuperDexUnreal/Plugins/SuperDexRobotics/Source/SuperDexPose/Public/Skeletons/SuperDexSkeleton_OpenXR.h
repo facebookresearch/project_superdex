@@ -152,3 +152,30 @@ constexpr ESuperDexBone_OXR GetFingerTipBone_OXR(ESuperDexFinger Finger) {
   }
   return ESuperDexBone_OXR::Invalid;
 }
+
+/**
+ * Radius (cm, at the bots' nominal scale) of the fingertip sphere centered on a finger's tip bone
+ * (GetFingerTipBone_OXR) in the low-poly openxr hand bots: the sphere touches the finger pad, the
+ * fingertip and the sides of the distal segment (fit to the bots' distal render meshes), for
+ * example for fingertip contact or press detection. Scale it with the pose or bot scale. The
+ * high-poly bots still place their tip bones at the skin, as the runtime bind skeleton does.
+ * Returns 0 for an invalid finger.
+ */
+constexpr float GetFingerTipRadius_OXR(ESuperDexFinger Finger) {
+  switch (Finger) {
+    case ESuperDexFinger::Thumb:
+      return 0.90f;
+    case ESuperDexFinger::Index:
+      return 0.62f;
+    case ESuperDexFinger::Middle:
+      return 0.68f;
+    case ESuperDexFinger::Ring:
+      return 0.61f;
+    case ESuperDexFinger::Pinky:
+      return 0.52f;
+    case ESuperDexFinger::Count:
+    case ESuperDexFinger::Invalid:
+      break;
+  }
+  return 0.f;
+}

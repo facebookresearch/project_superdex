@@ -204,9 +204,9 @@
           1.0000001192092896
         ],
         "translation": [
-          0.00067037716507911682,
-          0.0010269861668348312,
-          -0.024590782821178436
+-0.0004,
+0.0014,
+-0.0151
         ]
       },
       "type": "Hard"
@@ -341,9 +341,9 @@
           1.0000002384185791
         ],
         "translation": [
-          0.00029561296105384827,
-          0.0010250695049762726,
-          -0.022363379597663879
+0.0008,
+0.0012,
+-0.0164
         ]
       },
       "type": "Hard"
@@ -478,9 +478,9 @@
           0.99999988079071045
         ],
         "translation": [
-          0.00030864682048559189,
-          0.0011372976005077362,
-          -0.02496492862701416
+0.0004,
+0.0017,
+-0.0178
         ]
       },
       "type": "Hard"
@@ -615,9 +615,9 @@
           1.0000001192092896
         ],
         "translation": [
-          0.00025791139341890812,
-          0.0016081711510196328,
-          -0.024326100945472717
+0.0,
+0.0011,
+-0.0171
         ]
       },
       "type": "Hard"
@@ -771,9 +771,9 @@
           0.99999988079071045
         ],
         "translation": [
-          -0.00024647451937198639,
-          0.0012160874903202057,
-          -0.021922379732131958
+-0.0002,
+0.001,
+-0.0161
         ]
       },
       "type": "Hard"
@@ -806,7 +806,7 @@
       "density": 980,
       "name": "xr_02_thumb_metacarpal",
       "parentLink": 0,
-      "renderModel": "render/xr_02_thumb_metacarpal_render.glb",
+      "renderModel": "render/xr_02_thumb_metacarpal_lowpoly_render.glb",
       "shape": "collision/xr_02_thumb_metacarpal_highpoly_collision.mochi.h5"
     },
     {
@@ -819,7 +819,7 @@
       "density": 980,
       "name": "xr_03_thumb_proximal",
       "parentLink": 2,
-      "renderModel": "render/xr_03_thumb_proximal_render.glb",
+      "renderModel": "render/xr_03_thumb_proximal_lowpoly_render.glb",
       "shape": "collision/xr_03_thumb_proximal_highpoly_collision.mochi.h5"
     },
     {
@@ -832,7 +832,7 @@
       "density": 980,
       "name": "xr_04_thumb_distal",
       "parentLink": 3,
-      "renderModel": "render/xr_04_thumb_distal_render.glb",
+      "renderModel": "render/xr_04_thumb_distal_lowpoly_render.glb",
       "shape": "collision/xr_04_thumb_distal_highpoly_collision.mochi.h5"
     },
     {
@@ -853,7 +853,7 @@
       "density": 980,
       "name": "xr_07_index_proximal",
       "parentLink": 6,
-      "renderModel": "render/xr_07_index_proximal_render.glb",
+      "renderModel": "render/xr_07_index_proximal_lowpoly_render.glb",
       "shape": "collision/xr_07_index_proximal_highpoly_collision.mochi.h5"
     },
     {
@@ -866,7 +866,7 @@
       "density": 980,
       "name": "xr_08_index_intermediate",
       "parentLink": 7,
-      "renderModel": "render/xr_08_index_intermediate_render.glb",
+      "renderModel": "render/xr_08_index_intermediate_lowpoly_render.glb",
       "shape": "collision/xr_08_index_intermediate_highpoly_collision.mochi.h5"
     },
     {
@@ -879,7 +879,7 @@
       "density": 980,
       "name": "xr_09_index_distal",
       "parentLink": 8,
-      "renderModel": "render/xr_09_index_distal_render.glb",
+      "renderModel": "render/xr_09_index_distal_lowpoly_render.glb",
       "shape": "collision/xr_09_index_distal_highpoly_collision.mochi.h5"
     },
     {
@@ -900,7 +900,7 @@
       "density": 980,
       "name": "xr_12_middle_proximal",
       "parentLink": 11,
-      "renderModel": "render/xr_12_middle_proximal_render.glb",
+      "renderModel": "render/xr_12_middle_proximal_lowpoly_render.glb",
       "shape": "collision/xr_12_middle_proximal_highpoly_collision.mochi.h5"
     },
     {
@@ -913,7 +913,7 @@
       "density": 980,
       "name": "xr_13_middle_intermediate",
       "parentLink": 12,
-      "renderModel": "render/xr_13_middle_intermediate_render.glb",
+      "renderModel": "render/xr_13_middle_intermediate_lowpoly_render.glb",
       "shape": "collision/xr_13_middle_intermediate_highpoly_collision.mochi.h5"
     },
     {
@@ -926,7 +926,7 @@
       "density": 980,
       "name": "xr_14_middle_distal",
       "parentLink": 13,
-      "renderModel": "render/xr_14_middle_distal_render.glb",
+      "renderModel": "render/xr_14_middle_distal_lowpoly_render.glb",
       "shape": "collision/xr_14_middle_distal_highpoly_collision.mochi.h5"
     },
     {
@@ -947,7 +947,7 @@
       "density": 980,
       "name": "xr_17_ring_proximal",
       "parentLink": 16,
-      "renderModel": "render/xr_17_ring_proximal_render.glb",
+      "renderModel": "render/xr_17_ring_proximal_lowpoly_render.glb",
       "shape": "collision/xr_17_ring_proximal_highpoly_collision.mochi.h5"
     },
     {
@@ -960,7 +960,7 @@
       "density": 980,
       "name": "xr_18_ring_intermediate",
       "parentLink": 17,
-      "renderModel": "render/xr_18_ring_intermediate_render.glb",
+      "renderModel": "render/xr_18_ring_intermediate_lowpoly_render.glb",
       "shape": "collision/xr_18_ring_intermediate_highpoly_collision.mochi.h5"
     },
     {
@@ -973,7 +973,7 @@
       "density": 980,
       "name": "xr_19_ring_distal",
       "parentLink": 18,
-      "renderModel": "render/xr_19_ring_distal_render.glb",
+      "renderModel": "render/xr_19_ring_distal_lowpoly_render.glb",
       "shape": "collision/xr_19_ring_distal_highpoly_collision.mochi.h5"
     },
     {
@@ -1003,7 +1003,7 @@
       "density": 980,
       "name": "xr_22_little_proximal",
       "parentLink": 21,
-      "renderModel": "render/xr_22_little_proximal_render.glb",
+      "renderModel": "render/xr_22_little_proximal_lowpoly_render.glb",
       "shape": "collision/xr_22_little_proximal_highpoly_collision.mochi.h5"
     },
     {
@@ -1016,7 +1016,7 @@
       "density": 980,
       "name": "xr_23_little_intermediate",
       "parentLink": 22,
-      "renderModel": "render/xr_23_little_intermediate_render.glb",
+      "renderModel": "render/xr_23_little_intermediate_lowpoly_render.glb",
       "shape": "collision/xr_23_little_intermediate_highpoly_collision.mochi.h5"
     },
     {
@@ -1029,7 +1029,7 @@
       "density": 980,
       "name": "xr_24_little_distal",
       "parentLink": 23,
-      "renderModel": "render/xr_24_little_distal_render.glb",
+      "renderModel": "render/xr_24_little_distal_lowpoly_render.glb",
       "shape": "collision/xr_24_little_distal_highpoly_collision.mochi.h5"
     },
     {

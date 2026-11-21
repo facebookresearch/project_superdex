@@ -514,4 +514,53 @@ TEST_P(OpenXrHandBotMirrorTest, LeftIsTheMirrorOfRight) {
 
 INSTANTIATE_TEST_SUITE_P(Hands, OpenXrHandBotMirrorTest, ::testing::Values("highpoly", "lowpoly"));
 
+/* Each left hand is generated as the exact mirror of the right one
+ * (scale_openxr_hand_geometry.py --mirror-left), joint parameters included: axes and limit rotation
+ * vectors negate y and z, spherical box limits reordered per component. */
+class OpenXrHandBotExactMirrorTest : public ::testing::TestWithParam<std::string> {};
+
+TEST_P(OpenXrHandBotExactMirrorTest, LeftJointsAndLinksMirrorRight) {
+  BotPrefab const left = LoadBotPrefabFromFile(BotPath("openxr", "left", GetParam()), ExpectOK{});
+  BotPrefab const right = LoadBotPrefabFromFile(BotPath("openxr", "right", GetParam()), ExpectOK{});
+  ASSERT_EQ(left.joints.size(), right.joints.size());
+  auto mirror = [](Real3 const& v) { return Real3{v[0], -v[1], -v[2]}; };
+  auto expectNear = [](Real3 const& a, Real3 const& b, char const* what, char const* joint) {
+    for (int k = 0; k < 3; ++k) {
+      EXPECT_NEAR(a[k], b[k], 1e-6_r) << what << " " << joint << " [" << k << "]";
+    }
+  };
+  for (size_t i = 0; i < left.joints.size(); ++i) {
+    auto const& l = left.joints[i];
+    auto const& r = right.joints[i];
+    char const* name = l.name.c_str();
+    EXPECT_EQ(l.type, r.type) << name;
+    expectNear(l.axis, mirror(r.axis), "axis", name);
+    ASSERT_EQ(l.minLimit.has_value(), r.minLimit.has_value()) << name;
+    ASSERT_EQ(l.maxLimit.has_value(), r.maxLimit.has_value()) << name;
+    if (r.minLimit && r.maxLimit) {
+      Real3 lo = mirror(*r.minLimit);
+      Real3 hi = mirror(*r.maxLimit);
+      if (r.type == ArticulatedJointType::Spherical) {
+        for (int k = 0; k < 3; ++k) {
+          real const a = lo[k];
+          lo[k] = Min(a, hi[k]);
+          hi[k] = Max(a, hi[k]);
+        }
+      }
+      expectNear(*l.minLimit, lo, "minLimit", name);
+      expectNear(*l.maxLimit, hi, "maxLimit", name);
+    }
+    EXPECT_EQ(l.limitStiffness, r.limitStiffness) << name;
+    EXPECT_EQ(l.limitDamping, r.limitDamping) << name;
+  }
+  for (size_t i = 0; i < left.links.size(); ++i) {
+    EXPECT_EQ(left.links[i].density, right.links[i].density) << left.links[i].name.c_str();
+  }
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    Hands,
+    OpenXrHandBotExactMirrorTest,
+    ::testing::Values("highpoly", "lowpoly"));
+
 } // namespace
