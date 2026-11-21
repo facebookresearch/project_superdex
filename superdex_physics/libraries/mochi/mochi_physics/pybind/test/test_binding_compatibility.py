@@ -61,6 +61,13 @@ class TestBindingCompatibility(MochiTestBase):
         release_buffer.restype = None
         release_buffer(ctypes.byref(view))
 
+    def test_canonical_string_container_aliases(self):
+        self.assertEqual("DynamicArrayReal", mochi.DynamicArrayReal.__name__)
+        self.assertEqual("DynamicArrayString", mochi.DynamicArrayString.__name__)
+        self.assertEqual("SpanConstString", mochi.SpanConstString.__name__)
+        self.assertIs(mochi.DynamicArrayDynamicString, mochi.DynamicArrayString)
+        self.assertIs(mochi.SpanConstDynamicString, mochi.SpanConstString)
+
     def test_dynamic_array_buffer_is_mutable_and_zero_copy(self):
         values = mochi.DynamicArrayInt([1, 2, 3])
 

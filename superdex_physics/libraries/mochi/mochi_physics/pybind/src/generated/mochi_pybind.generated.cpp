@@ -99,7 +99,6 @@ namespace mochi {
     DefDynamicArray<mochi::prefab::DeformableNodePositionConstraintPrefab>(m_prefab, "DynamicArrayDeformableNodePositionConstraintPrefab");
     DefDynamicArray<mochi::prefab::DeformableNodeToDeformableNodeConstraintPrefab>(m_prefab, "DynamicArrayDeformableNodeToDeformableNodeConstraintPrefab");
     DefDynamicArray<mochi::prefab::DeformableNodeToRigidConstraintPrefab>(m_prefab, "DynamicArrayDeformableNodeToRigidConstraintPrefab");
-    DefDynamicArray<mochi::DynamicString>(m, "DynamicArrayDynamicString");
     DefDynamicArray<mochi::experimental::ExperimentalSoftActorParams>(m_experimental, "DynamicArrayExperimentalSoftActorParams");
     DefDynamicArray<int>(m, "DynamicArrayInt");
     DefDynamicArray<mochi::prefab::JointRotationRangeConstraintPrefab>(m_prefab, "DynamicArrayJointRotationRangeConstraintPrefab");
@@ -141,7 +140,6 @@ namespace mochi {
     DefSpan<mochi::Color const>(m, "SpanConstColor");
     DefSpan<mochi::ContactPoint const>(m, "SpanConstContactPoint");
     DefSpan<mochi::experimental::ControlType const>(m_experimental, "SpanConstControlType");
-    DefSpan<mochi::DynamicString const>(m, "SpanConstDynamicString");
     DefSpan<int const>(m, "SpanConstInt");
     DefSpan<mochi::NodeContactForce const>(m, "SpanConstNodeContactForce");
     DefSpan<mochi::PoseConstraintInfo const>(m, "SpanConstPoseConstraintInfo");
@@ -155,6 +153,8 @@ namespace mochi {
     DefSpan<mochi::Real2>(m, "SpanReal2");
     DefSpan<mochi::Real3>(m, "SpanReal3");
     DefSpan<mochi::TransformRT>(m, "SpanTransformRT");
+    m.attr("DynamicArrayDynamicString") = m.attr("DynamicArrayString");
+    m.attr("SpanConstDynamicString") = m.attr("SpanConstString");
   }
 
   inline void DefineFinalize([[maybe_unused]] nb::module_& m) {
