@@ -48,20 +48,29 @@ void UClutchSkeletonRootToVrRootRetargeter::AttemptToInitialize_RecursiveOnTick(
 }
 
 bool UClutchSkeletonRootToVrRootRetargeter::SetClutchEnabled(bool clutchEnabled) {
-  FWriteScopeLock lock(ClutchLock);
-  // only allowed to do things if initialized
-  if (bClutchInitialized) {
-    if (bClutchEnabled != clutchEnabled) {
-      if (clutchEnabled == true) {
-        // if the clutch just went from disabled to enabled then flag that we should collect a new
-        // relative transform
-        bUpdateClutchRelativeTransform = true;
+  bool bChanged = false;
+  bool bNowEnabled = false;
+  {
+    FWriteScopeLock lock(ClutchLock);
+    // only allowed to do things if initialized
+    if (bClutchInitialized) {
+      if (bClutchEnabled != clutchEnabled) {
+        if (clutchEnabled == true) {
+          // if the clutch just went from disabled to enabled then flag that we should collect a new
+          // relative transform
+          bUpdateClutchRelativeTransform = true;
+        }
+        bClutchEnabled = clutchEnabled;
+        bChanged = true;
       }
-      bClutchEnabled = clutchEnabled;
-      OnClutchStateChanged.Broadcast(this, clutchEnabled);
     }
+    bNowEnabled = bClutchEnabled;
   }
-  return bClutchEnabled;
+  // Listeners may read or change the clutch, so they run without ClutchLock.
+  if (bChanged) {
+    OnClutchStateChanged.Broadcast(this, bNowEnabled);
+  }
+  return bNowEnabled;
 }
 
 FTransform LerpTransform(const FTransform& A, const FTransform& B, float Alpha) {
@@ -79,133 +88,146 @@ bool UClutchSkeletonRootToVrRootRetargeter::GetTransformedPose_Implementation(
     return false;
   }
 
-  FWriteScopeLock lock(ClutchLock);
-  if (bClutchInitialized == false) {
-    return false;
-  }
-
-  if (bLastEnabledSourcePoseInitialized == false) {
-    LastEnabledSourcePose = SourcePose;
-    bLastEnabledSourcePoseInitialized = true;
-  }
-  // ClutchRootToSkeletonRoot_location =
-  //     ClutchedSkeletonRootToVrRoot * SourcePose.SkeletonRootToVrRoot.Inverse();
-
-  //  A*B
-  //	Q(AxB) = Q(B)*Q(A)
-  //	S(AxB) = S(A)*S(B)
-  //	T(AxB) = Q(B)*S(B)*T(A)*-Q(B) + T(B)
-  if (bClutchEnabled) {
-    if (bUpdateClutchRelativeTransform) {
-      InitialClutchRootToSkeletonRoot_location = FTransform(
-          ClutchedSkeletonRootToVrRoot.GetLocation() -
-          SourcePose.SkeletonRootToVrRoot.GetLocation());
-      InitialClutchVrRootToVrRoot_rotation = FTransform(
-          ClutchedSkeletonRootToVrRoot.GetRotation().Inverse() *
-          SourcePose.SkeletonRootToVrRoot.GetRotation());
-
-      // Reset our lerp start time
-      LastClutchEnableTime = GetWorld()->GetTimeSeconds();
-
-      // lower the flag now that we have updated the clutch position
-      bUpdateClutchRelativeTransform = false;
+  // Listeners may read or change the clutch, so its state changes are broadcast after ClutchLock is
+  // released.
+  TOptional<bool> NewClutchState;
+  TArray<bool, TInlineAllocator<2>> PauseChanges;
+  {
+    FWriteScopeLock lock(ClutchLock);
+    if (bClutchInitialized == false) {
+      return false;
     }
 
-    double currentClutchTime = GetWorld()->GetTimeSeconds();
-    double deltaTime = currentClutchTime - LastClutchEnableTime;
-    double lerpFraction = 1.0;
-    if ((deltaTime < TimeInSecondsToLerpToAbsolute) && (TimeInSecondsToLerpToAbsolute > 0.001)) {
-      lerpFraction = FMath::Clamp(deltaTime / TimeInSecondsToLerpToAbsolute, 0.0, 1.0);
-    }
-    FTransform ClutchRootToSkeletonRoot_location = InitialClutchRootToSkeletonRoot_location;
-    FTransform ClutchVrRootToVrRoot_rotation = InitialClutchVrRootToVrRoot_rotation;
-    // Identity out the transforms that are meant to be absolute
-    switch (ClutchType) {
-      case ESuperDexClutchType::RelativeTranslationAbsoluteRotation:
-        ClutchVrRootToVrRoot_rotation =
-            LerpTransform(InitialClutchVrRootToVrRoot_rotation, FTransform::Identity, lerpFraction);
-        break;
-
-      case ESuperDexClutchType::RelativeTranslationRelativeRotation:
-        break;
-
-      case ESuperDexClutchType::AbsoluteTranslationRelativeRotation:
-        ClutchRootToSkeletonRoot_location = LerpTransform(
-            InitialClutchRootToSkeletonRoot_location, FTransform::Identity, lerpFraction);
-        break;
-
-      case ESuperDexClutchType::AbsoluteTranslationAbsoluteRotation:
-        ClutchRootToSkeletonRoot_location = LerpTransform(
-            InitialClutchRootToSkeletonRoot_location, FTransform::Identity, lerpFraction);
-        ClutchVrRootToVrRoot_rotation =
-            LerpTransform(InitialClutchVrRootToVrRoot_rotation, FTransform::Identity, lerpFraction);
-        break;
-    }
-
-    static_assert(static_cast<int>(ESuperDexClutchType::Count) == 4);
-    // compute the general transform, if we expand ESuperDexClutchType we may want to add a switch
-    // here too
-    FTransform ClutchRootToVrRoot = FTransform(
-        SourcePose.SkeletonRootToVrRoot.GetRotation() *
-            ClutchVrRootToVrRoot_rotation.GetRotation().Inverse(),
-        SourcePose.SkeletonRootToVrRoot.GetLocation() +
-            ClutchRootToSkeletonRoot_location.GetLocation(),
-        SourcePose.SkeletonRootToVrRoot.GetScale3D());
-
-    // Check our safety checks to disengage the clutch prior to setting it.
-    bool clutchEnabled = bClutchEnabled;
-    FVector deltaPos =
-        ClutchRootToVrRoot.GetLocation() - ClutchedSkeletonRootToVrRoot.GetLocation();
-    clutchEnabled &= (deltaPos.Length() <= DisengageClutchIfDeltaDistanceOverAmount_cm);
-    clutchEnabled &=
-        (SourcePose.TrackingConfidence >= DisengageClutchIfSourceConfidenceBelowAmount);
-    clutchEnabled &= (SourcePose.bIsTrackingConfident || !bDisengageClutchIfSourceIsNotConfident);
-
-    // check if the clutch changed state due to safety checks
-    if (clutchEnabled != bClutchEnabled) {
-      if (bPauseClutchInsteadOfAutoDisengaging == false) {
-        bClutchEnabled = clutchEnabled;
-        OnClutchStateChanged.Broadcast(this, bClutchEnabled);
-      } else {
-        bClutchWasPaused = true;
-        OnClutchPauseUpause.Broadcast(this, bClutchWasPaused);
-      }
-    }
-
-    // only update clutch transform if we have not hit our safety checks
-    if (clutchEnabled) {
+    if (bLastEnabledSourcePoseInitialized == false) {
       LastEnabledSourcePose = SourcePose;
-
-      // If the clutch was paused and is now enabled, we need to capture the relative position
-      // between the clutch transforms so we can lerp instead of teleport
-      if (bClutchWasPaused) {
-        UnpausedClutchedSkeletonRootToClutchRoot =
-            ClutchedSkeletonRootToVrRoot * ClutchRootToVrRoot.Inverse();
-        LastClutchUnpauseTime = GetWorld()->GetTimeSeconds();
-        bClutchWasPaused = false;
-        OnClutchPauseUpause.Broadcast(this, bClutchWasPaused);
-      }
-
-      double currentUnpauseTime = GetWorld()->GetTimeSeconds();
-      double unpauseDeltaTime = currentUnpauseTime - LastClutchUnpauseTime;
-      double unpauseLerpFraction = 1.0;
-      if ((unpauseDeltaTime < TimeInSecondsToLerpOnUnpause) &&
-          (TimeInSecondsToLerpOnUnpause > 0.001)) {
-        unpauseLerpFraction =
-            FMath::Clamp(unpauseDeltaTime / TimeInSecondsToLerpOnUnpause, 0.0, 1.0);
-      }
-
-      // Set the clutch transform to ClutchRootToVrRoot plus any residual from unpausing
-      ClutchedSkeletonRootToVrRoot =
-          LerpTransform(
-              UnpausedClutchedSkeletonRootToClutchRoot, FTransform::Identity, unpauseLerpFraction) *
-          ClutchRootToVrRoot;
+      bLastEnabledSourcePoseInitialized = true;
     }
+    // ClutchRootToSkeletonRoot_location =
+    //     ClutchedSkeletonRootToVrRoot * SourcePose.SkeletonRootToVrRoot.Inverse();
+
+    //  A*B
+    //	Q(AxB) = Q(B)*Q(A)
+    //	S(AxB) = S(A)*S(B)
+    //	T(AxB) = Q(B)*S(B)*T(A)*-Q(B) + T(B)
+    if (bClutchEnabled) {
+      if (bUpdateClutchRelativeTransform) {
+        InitialClutchRootToSkeletonRoot_location = FTransform(
+            ClutchedSkeletonRootToVrRoot.GetLocation() -
+            SourcePose.SkeletonRootToVrRoot.GetLocation());
+        InitialClutchVrRootToVrRoot_rotation = FTransform(
+            ClutchedSkeletonRootToVrRoot.GetRotation().Inverse() *
+            SourcePose.SkeletonRootToVrRoot.GetRotation());
+
+        // Reset our lerp start time
+        LastClutchEnableTime = GetWorld()->GetTimeSeconds();
+
+        // lower the flag now that we have updated the clutch position
+        bUpdateClutchRelativeTransform = false;
+      }
+
+      double currentClutchTime = GetWorld()->GetTimeSeconds();
+      double deltaTime = currentClutchTime - LastClutchEnableTime;
+      double lerpFraction = 1.0;
+      if ((deltaTime < TimeInSecondsToLerpToAbsolute) && (TimeInSecondsToLerpToAbsolute > 0.001)) {
+        lerpFraction = FMath::Clamp(deltaTime / TimeInSecondsToLerpToAbsolute, 0.0, 1.0);
+      }
+      FTransform ClutchRootToSkeletonRoot_location = InitialClutchRootToSkeletonRoot_location;
+      FTransform ClutchVrRootToVrRoot_rotation = InitialClutchVrRootToVrRoot_rotation;
+      // Identity out the transforms that are meant to be absolute
+      switch (ClutchType) {
+        case ESuperDexClutchType::RelativeTranslationAbsoluteRotation:
+          ClutchVrRootToVrRoot_rotation = LerpTransform(
+              InitialClutchVrRootToVrRoot_rotation, FTransform::Identity, lerpFraction);
+          break;
+
+        case ESuperDexClutchType::RelativeTranslationRelativeRotation:
+          break;
+
+        case ESuperDexClutchType::AbsoluteTranslationRelativeRotation:
+          ClutchRootToSkeletonRoot_location = LerpTransform(
+              InitialClutchRootToSkeletonRoot_location, FTransform::Identity, lerpFraction);
+          break;
+
+        case ESuperDexClutchType::AbsoluteTranslationAbsoluteRotation:
+          ClutchRootToSkeletonRoot_location = LerpTransform(
+              InitialClutchRootToSkeletonRoot_location, FTransform::Identity, lerpFraction);
+          ClutchVrRootToVrRoot_rotation = LerpTransform(
+              InitialClutchVrRootToVrRoot_rotation, FTransform::Identity, lerpFraction);
+          break;
+      }
+
+      static_assert(static_cast<int>(ESuperDexClutchType::Count) == 4);
+      // compute the general transform, if we expand ESuperDexClutchType we may want to add a switch
+      // here too
+      FTransform ClutchRootToVrRoot = FTransform(
+          SourcePose.SkeletonRootToVrRoot.GetRotation() *
+              ClutchVrRootToVrRoot_rotation.GetRotation().Inverse(),
+          SourcePose.SkeletonRootToVrRoot.GetLocation() +
+              ClutchRootToSkeletonRoot_location.GetLocation(),
+          SourcePose.SkeletonRootToVrRoot.GetScale3D());
+
+      // Check our safety checks to disengage the clutch prior to setting it.
+      bool clutchEnabled = bClutchEnabled;
+      FVector deltaPos =
+          ClutchRootToVrRoot.GetLocation() - ClutchedSkeletonRootToVrRoot.GetLocation();
+      clutchEnabled &= (deltaPos.Length() <= DisengageClutchIfDeltaDistanceOverAmount_cm);
+      clutchEnabled &=
+          (SourcePose.TrackingConfidence >= DisengageClutchIfSourceConfidenceBelowAmount);
+      clutchEnabled &= (SourcePose.bIsTrackingConfident || !bDisengageClutchIfSourceIsNotConfident);
+
+      // check if the clutch changed state due to safety checks
+      if (clutchEnabled != bClutchEnabled) {
+        if (bPauseClutchInsteadOfAutoDisengaging == false) {
+          bClutchEnabled = clutchEnabled;
+          NewClutchState = bClutchEnabled;
+        } else {
+          bClutchWasPaused = true;
+          PauseChanges.Add(bClutchWasPaused);
+        }
+      }
+
+      // only update clutch transform if we have not hit our safety checks
+      if (clutchEnabled) {
+        LastEnabledSourcePose = SourcePose;
+
+        // If the clutch was paused and is now enabled, we need to capture the relative position
+        // between the clutch transforms so we can lerp instead of teleport
+        if (bClutchWasPaused) {
+          UnpausedClutchedSkeletonRootToClutchRoot =
+              ClutchedSkeletonRootToVrRoot * ClutchRootToVrRoot.Inverse();
+          LastClutchUnpauseTime = GetWorld()->GetTimeSeconds();
+          bClutchWasPaused = false;
+          PauseChanges.Add(bClutchWasPaused);
+        }
+
+        double currentUnpauseTime = GetWorld()->GetTimeSeconds();
+        double unpauseDeltaTime = currentUnpauseTime - LastClutchUnpauseTime;
+        double unpauseLerpFraction = 1.0;
+        if ((unpauseDeltaTime < TimeInSecondsToLerpOnUnpause) &&
+            (TimeInSecondsToLerpOnUnpause > 0.001)) {
+          unpauseLerpFraction =
+              FMath::Clamp(unpauseDeltaTime / TimeInSecondsToLerpOnUnpause, 0.0, 1.0);
+        }
+
+        // Set the clutch transform to ClutchRootToVrRoot plus any residual from unpausing
+        ClutchedSkeletonRootToVrRoot = LerpTransform(
+                                           UnpausedClutchedSkeletonRootToClutchRoot,
+                                           FTransform::Identity,
+                                           unpauseLerpFraction) *
+            ClutchRootToVrRoot;
+      }
+    }
+    TransformedPose = LastEnabledSourcePose;
+    TransformedPose.tags.Add(TEXT("ClutchedPose"));
+    // Does not change the bot or its joint positions
+    TransformedPose.SkeletonRootToVrRoot = ClutchedSkeletonRootToVrRoot;
   }
-  TransformedPose = LastEnabledSourcePose;
-  TransformedPose.tags.Add(TEXT("ClutchedPose"));
-  // Does not change the bot or its joint positions
-  TransformedPose.SkeletonRootToVrRoot = ClutchedSkeletonRootToVrRoot;
+  if (NewClutchState.IsSet()) {
+    OnClutchStateChanged.Broadcast(this, NewClutchState.GetValue());
+  }
+  for (const bool bIsNowPaused : PauseChanges) {
+    OnClutchPauseUpause.Broadcast(this, bIsNowPaused);
+  }
   // Since the SourcePose is guaranteed to be valid the transformed pose will also be valid
   return true;
 }
