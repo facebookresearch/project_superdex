@@ -1,0 +1,26 @@
+{
+  "base": "//arms/tianji_m6/right/Marvin_M6_S_R_CCS_696_V40.superdex_bot",
+  "modifications": [
+    {
+      "AttachBot": {
+        "enabled": true,
+        "joint": {
+          "name": "wuji",
+          "parentLinkFromJoint": {
+            "rotation": [
+              0,
+              0,
+              -0.70710676908493042,
+              0.70710676908493042
+            ]
+          },
+          "type": "Hard"
+        },
+        "name": "wuji",
+        "parentLinkName": "TCP_Link_R",
+        "path": "//hands/wuji_hand2_beta1/right/wuji_hand2_beta1_skinned_right.superdex_bot"
+      }
+    }
+  ],
+  "name": "tianji_m6_wuji2_beta1_right"
+}
