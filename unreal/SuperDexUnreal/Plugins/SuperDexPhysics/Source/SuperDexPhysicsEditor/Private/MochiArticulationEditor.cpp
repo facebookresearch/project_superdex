@@ -549,6 +549,11 @@ FMochiArticulationEditorViewportClient::FMochiArticulationEditorViewportClient(
   AdvancedPreviewScene = static_cast<FAdvancedPreviewScene*>(PreviewScene);
   SetPreviewMesh(InArticulation, InPreviewMeshComponent);
   SetViewModes(VMI_Lit, VMI_Lit);
+  // Fix the exposure rather than inherit the host project's auto exposure: against the mostly empty
+  // preview background, eye adaptation keeps brightening the bot until it washes out. EV100 -1
+  // matches a project with r.DefaultFeature.AutoExposure=False and the default exposure bias of 1.
+  ExposureSettings.bFixed = true;
+  ExposureSettings.FixedEV100 = -1.0f;
   OverrideNearClipPlane(1.0f);
   // Setup defaults for the common draw helper if user wants to show grid.
   bUsesDrawHelper = true;
