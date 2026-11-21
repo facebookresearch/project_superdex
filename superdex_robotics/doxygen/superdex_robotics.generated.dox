@@ -1034,6 +1034,21 @@
 /// @brief Additive zero-mean Gaussian noise parameters.
 ///
 
+/// @struct superdex::robotics::SensorUniformNoiseParams
+///
+/// @brief Additive uniform noise parameters.
+///
+
+/// @var superdex::robotics::SensorUniformNoiseParams::low
+///
+/// @brief Lower bound of each value's draw, in input element units.
+///
+
+/// @var superdex::robotics::SensorUniformNoiseParams::high
+///
+/// @brief Upper bound of each value's draw (exclusive), in input element units.
+///
+
 /// @struct superdex::robotics::TactileTaxelLayout
 ///
 /// @brief Ordered, sensor-link-frame positions for a tactile taxel layout.
@@ -1447,6 +1462,11 @@
 /// @class superdex::robotics::SensorGaussianNoise
 ///
 /// @brief Independent additive noise on new input captures.
+///
+
+/// @class superdex::robotics::SensorUniformNoise
+///
+/// @brief Independent additive uniform noise on new input captures.
 ///
 
 /// @struct superdex::robotics::BotSceneArchiveMetadata

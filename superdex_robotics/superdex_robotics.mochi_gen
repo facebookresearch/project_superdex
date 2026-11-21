@@ -1211,6 +1211,15 @@ struct bots::SensorGaussianNoiseParams [no_reflection] {
   bots::SensorRandomParams random;
 }
 
+// @brief Additive uniform noise parameters.
+struct bots::SensorUniformNoiseParams [no_reflection] {
+  // @brief Lower bound of each value's draw, in input element units.
+  double low = 0.0;
+  // @brief Upper bound of each value's draw (exclusive), in input element units.
+  double high = 0.0;
+  bots::SensorRandomParams random;
+}
+
 // @brief Ordered, sensor-link-frame positions for a tactile taxel layout.
 struct bots::TactileTaxelLayout [no_reflection] {
   // @brief Taxel positions [m] in the sensor link frame. Their order is the taxel identity.
@@ -1554,6 +1563,13 @@ class bots::SensorGaussianNoise(bots::SensorBase) [no_init, no_destruct, no_refl
   fn TypeName() -> StringView [static];
   fn GetParams() -> bots::SensorGaussianNoiseParams [const];
   fn SetParams(bots::SensorGaussianNoiseParams const& params) -> void [mochi_error];
+}
+
+// @brief Independent additive uniform noise on new input captures.
+class bots::SensorUniformNoise(bots::SensorBase) [no_init, no_destruct, no_reflection] {
+  fn TypeName() -> StringView [static];
+  fn GetParams() -> bots::SensorUniformNoiseParams [const];
+  fn SetParams(bots::SensorUniformNoiseParams const& params) -> void [mochi_error];
 }
 
 // @brief Create a @ref Bot runtime object from a @ref BotPrefab. Builds the underlying

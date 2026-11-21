@@ -24,6 +24,7 @@
 #include <superdex_robotics/sensors/sensor_link_vertex_force.h>
 #include <superdex_robotics/sensors/sensor_seed_rect_map.h>
 #include <superdex_robotics/sensors/sensor_seed_v1_mlp.h>
+#include <superdex_robotics/sensors/sensor_uniform_noise.h>
 #if MOCHI_INTERNAL
 #include <superdex_robotics/actuators/internal/actuators_internal.h>
 #include <superdex_robotics/controllers/internal/controllers_internal.h>
@@ -693,6 +694,7 @@ void RoboticsContext::RegisterBuiltinTypes() {
   RegisterSensor<SensorLinkVertexForce>();
   RegisterSensor<SensorSeedRectMap>();
   RegisterSensor<SensorSeedV1MLP>();
+  RegisterSensor<SensorUniformNoise>();
 }
 
 /* --- Sensors --- */

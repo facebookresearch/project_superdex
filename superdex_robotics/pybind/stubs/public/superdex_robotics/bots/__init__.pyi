@@ -2526,6 +2526,24 @@ class SensorGaussianNoiseParams:
         random: SensorRandomParams = ...,
     ) -> None: ...
 
+class SensorUniformNoiseParams:
+    """Additive uniform noise parameters."""
+    low: float
+    """Lower bound of each value's draw, in input element units."""
+    high: float
+    """Upper bound of each value's draw (exclusive), in input element units."""
+    random: SensorRandomParams
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(
+        self,
+        *,
+        low: float = ...,
+        high: float = ...,
+        random: SensorRandomParams = ...,
+    ) -> None: ...
+
 class TactileTaxelLayout:
     """Ordered, sensor-link-frame positions for a tactile taxel layout."""
     @property
@@ -3057,6 +3075,13 @@ class SensorGaussianNoise(SensorBase):
     def type_name() -> str: ...
     def get_params(self) -> SensorGaussianNoiseParams: ...
     def set_params(self, params: SensorGaussianNoiseParams) -> None: ...
+
+class SensorUniformNoise(SensorBase):
+    """Independent additive uniform noise on new input captures."""
+    @staticmethod
+    def type_name() -> str: ...
+    def get_params(self) -> SensorUniformNoiseParams: ...
+    def set_params(self, params: SensorUniformNoiseParams) -> None: ...
 
 class BotSceneMetadata:
     """Human-readable metadata for a .superdex_scene file. Not consumed by the runtime.

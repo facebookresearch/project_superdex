@@ -30,6 +30,7 @@
 #include <superdex_robotics/sensors/sensor_seed_rect_map.h>
 #include <superdex_robotics/sensors/sensor_seed_v1_mlp.h>
 #include <superdex_robotics/sensors/sensor_temporal_window.h>
+#include <superdex_robotics/sensors/sensor_uniform_noise.h>
 #include <superdex_robotics/superdex_robotics.h>
 #include <superdex_robotics/utils/bot_utils.h>
 #include <superdex_robotics/utils/superdex_robotics_api_checks.generated.h>
