@@ -106,8 +106,9 @@ bool FSuperDexEEGoalPublisherArmDofsTest::RunTest(const FString& Parameters) {
   // The FR3 V2 arm with a DG-5F hand: 7 arm DOFs followed by 20 hand DOFs.
   const auto* Combo = LoadObject<USuperDexBot>(
       nullptr,
-      TEXT("/SuperDexAssets/bots/arm_hand_combos/fr3_v2_dg5f_long_seed/right/"
-           "SDB_fr3_v2_dg5f_long_seed_right.SDB_fr3_v2_dg5f_long_seed_right"));
+      TEXT(
+          "/SuperDexAssets/bots/arm_hand_combos/fr3_v2_dg5f_long_seed/right/"
+          "SDB_fr3_v2_dg5f_long_seed_right.SDB_fr3_v2_dg5f_long_seed_right"));
   if (!TestNotNull(TEXT("Combined arm + hand bot"), Combo))
     return false;
   const USkinnedAsset* Mesh = Combo->GetSkeletalMesh();
@@ -162,7 +163,8 @@ bool FSuperDexEEGoalPublisherArmDofsTest::RunTest(const FString& Parameters) {
   Reason.Reset();
   TestFalse(
       TEXT("An end effector that is not a link"),
-      USuperDexEEGoalPublisher::ComputeArmDofIndices(Combo, Mesh, TEXT("not_a_link"), Arm, &Reason));
+      USuperDexEEGoalPublisher::ComputeArmDofIndices(
+          Combo, Mesh, TEXT("not_a_link"), Arm, &Reason));
   TestFalse(TEXT("A reason is reported"), Reason.IsEmpty());
   TestTrue(TEXT("No arm joints on failure"), Arm.IsEmpty());
   TestFalse(

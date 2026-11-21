@@ -172,7 +172,8 @@ class SUPERDEXTELEOP_API USuperDexBotIKRetargeter : public USuperDexRetargeter {
   bool ComputeSourcePlacement(
       const USuperDexPoseableComponent& Source,
       FTransform& OutSourceRelative) const;
-  // The output root in the source root's frame implied by Config->OutputBaseFrameFromInputBaseFrame.
+  // The output root in the source root's frame implied by
+  // Config->OutputBaseFrameFromInputBaseFrame.
   FTransform ComputeInputRootFrameFromOutputRootFrame() const;
   // Place an attached component source per ComputeSourcePlacement.
   void PlaceSourceAtConfigInputBaseFrame();

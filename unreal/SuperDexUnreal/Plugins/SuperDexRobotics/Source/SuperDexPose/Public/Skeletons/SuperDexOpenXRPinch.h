@@ -23,9 +23,9 @@
 /*
  * Pinch correction for poses on the OpenXR skeleton bot (GetSkeletonBot_OpenXR).
  *
- * Hand trackers built on the Meta hand skeleton (the OculusXR skeleton; the Meta OpenXR runtime's
- * XR_EXT_hand_tracking joints are that skeleton's joints) move the thumb metacarpal's origin with a
- * trapezium (CMC) joint. The OpenXR bot keeps it at a fixed pivot,
+ * Hand trackers built on the OculusXR skeleton (including the Quest OpenXR runtime's
+ * XR_EXT_hand_tracking joints) move the thumb metacarpal's origin with a trapezium (CMC) joint.
+ * The OpenXR bot keeps it at a fixed pivot,
  * so a pose transferred by bone rotations leaves its thumb short of the tracked one and opens
  * tracked pinches. FitOpenXRThumbToDistalFrame refits the thumb to the tracked thumb distal frame;
  * BlendOpenXRFingersIntoPinch then moves the fingers near the thumb by what the thumb still cannot

@@ -28,8 +28,8 @@ class SUPERDEXOPENXRPOSESOURCE_API USuperDexOpenXRPoseSourceSettings : public UD
 
  public:
   /**
-   * Account for the Meta (Quest) hand tracking runtime's thumb in pinches. The runtime's hand is
-   * the Meta hand skeleton, whose thumb metacarpal origin moves with a trapezium (CMC) joint that
+   * Account for the Quest hand tracking runtime's thumb in pinches. The runtime uses the OculusXR
+   * hand skeleton, whose thumb metacarpal origin moves with a trapezium (CMC) joint that
    * the OpenXR bot lacks, so the bot's thumb falls short of the tracked one and tracked pinches
    * open. When true, the thumb is refit to the tracked thumb distal frame and nearby fingers are
    * blended into the pinch (ApplyOpenXRPinchCorrection). When false, the pose holds the tracked

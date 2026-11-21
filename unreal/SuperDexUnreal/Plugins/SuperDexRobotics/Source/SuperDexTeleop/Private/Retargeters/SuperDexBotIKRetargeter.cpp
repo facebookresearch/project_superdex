@@ -190,9 +190,8 @@ USuperDexBotIKRetargeter::USuperDexBotIKRetargeter() {
   bShow_EditorViewportPose = false;
   ErrorMessageKey = reinterpret_cast<uint64>(this);
   // Same default as UMochiIKRetargeter's input pose skeleton: the translucent tracked-hand look.
-  static ConstructorHelpers::FObjectFinder<UMaterialInterface> DefaultInputPoseSkeletonMaterial(
-      TEXT(
-          "/Script/Engine.MaterialInstanceConstant'/SuperDexRobotics/Teleop/Operator/MI_Operator_TrackedHand.MI_Operator_TrackedHand'"));
+  static ConstructorHelpers::FObjectFinder<UMaterialInterface> DefaultInputPoseSkeletonMaterial(TEXT(
+      "/Script/Engine.MaterialInstanceConstant'/SuperDexRobotics/Teleop/Operator/MI_Operator_TrackedHand.MI_Operator_TrackedHand'"));
   DebugDrawInputPoseSkeletonMaterialOverride = DefaultInputPoseSkeletonMaterial.Object;
 }
 
@@ -653,8 +652,8 @@ bool USuperDexBotIKRetargeter::ComputeSourcePlacement(
   if (Config == nullptr || Source.GetAttachParent() != this) {
     return false;
   }
-  // UE order throughout: A * B is A expressed in B's frame. Each bot's base is its root link, at its
-  // component (the skeleton root of the poses it shows).
+  // UE order throughout: A * B is A expressed in B's frame. Each bot's base is its root link, at
+  // its component (the skeleton root of the poses it shows).
   FTransform SourceInComponent = Config->OutputBaseFrameFromInputBaseFrame;
   SourceInComponent.SetScale3D(FVector::OneVector);
   FTransform ComponentInAttachFrame = FTransform::Identity;
@@ -727,8 +726,7 @@ void USuperDexBotIKRetargeter::CaptureDebugGoalFrames(
     if (!Goal.enabled || (Goal.positionStiffness <= 0 && Goal.rotationStiffness <= 0)) {
       continue;
     }
-    const int OutputLink =
-        superdex::robotics::FindLinkIndexByName(OutputModel, Goal.outputBotLink);
+    const int OutputLink = superdex::robotics::FindLinkIndexByName(OutputModel, Goal.outputBotLink);
     if (OutputLink < 0 || OutputLink >= static_cast<int>(WorldFromOutputLinks.size())) {
       continue;
     }
@@ -751,8 +749,7 @@ void USuperDexBotIKRetargeter::CaptureDebugGoalFrames(
     Frames.ConstraintInOutputBase =
         InOutputBase(WorldFromOutputLinks[OutputLink] * Goal.linkFrameFromConstraintFrame);
     if (!Goal.inputBotLink.empty()) {
-      const int InputLink =
-          superdex::robotics::FindLinkIndexByName(InputModel, Goal.inputBotLink);
+      const int InputLink = superdex::robotics::FindLinkIndexByName(InputModel, Goal.inputBotLink);
       if (InputLink >= 0 && InputLink < static_cast<int>(WorldFromInputLinks.size())) {
         Frames.InputLinkInOutputBase = InOutputBase(WorldFromInputLinks[InputLink]);
         Frames.InputLinkName = FName(UTF8_TO_TCHAR(Goal.inputBotLink.c_str()));
@@ -766,8 +763,8 @@ void USuperDexBotIKRetargeter::CaptureDebugGoalFrames(
 void USuperDexBotIKRetargeter::CaptureDebugInputPose(
     const mochi::TransformRT& WorldFrameFromInputBaseFrame) {
   bHasDebugInputPose = false;
-  const auto WorldFromOutputLinks = Solver ? Solver->GetOutputBotWorldFromLinks()
-                                           : mochi::Span<mochi::TransformRT const>{};
+  const auto WorldFromOutputLinks =
+      Solver ? Solver->GetOutputBotWorldFromLinks() : mochi::Span<mochi::TransformRT const>{};
   if (WorldFromOutputLinks.empty()) {
     return;
   }
@@ -831,8 +828,9 @@ void USuperDexBotIKRetargeter::UpdateDebugInputPoseMesh(bool bFreshSolve) {
       UE_LOG(
           LogSuperDexTeleop,
           Warning,
-          TEXT("[%hs] Input bot mesh [%s] bones do not follow the input bot's links; the input"
-               " pose skeleton is not drawn."),
+          TEXT(
+              "[%hs] Input bot mesh [%s] bones do not follow the input bot's links; the input"
+              " pose skeleton is not drawn."),
           __FUNCTION__,
           *Mesh->GetName());
     }
@@ -882,20 +880,19 @@ void USuperDexBotIKRetargeter::DrawDebugGoalFrames() const {
         -1.f,
         SDPG_Foreground);
   };
-  const auto DrawLink = [&](const FTransform& LinkToWorld,
-                            const FTransform& FrameToWorld,
-                            FColor Color) {
-    DrawDebugLine(
-        World,
-        FrameToWorld.GetLocation(),
-        LinkToWorld.GetLocation(),
-        Color,
-        false,
-        -1.f,
-        SDPG_Foreground);
-    DrawDebugCircle(
-        World, LinkToWorld.GetLocation(), kLinkRadius, 16, Color, false, -1.f, SDPG_Foreground);
-  };
+  const auto DrawLink =
+      [&](const FTransform& LinkToWorld, const FTransform& FrameToWorld, FColor Color) {
+        DrawDebugLine(
+            World,
+            FrameToWorld.GetLocation(),
+            LinkToWorld.GetLocation(),
+            Color,
+            false,
+            -1.f,
+            SDPG_Foreground);
+        DrawDebugCircle(
+            World, LinkToWorld.GetLocation(), kLinkRadius, 16, Color, false, -1.f, SDPG_Foreground);
+      };
   for (const FDebugGoalFrames& Frames : DebugGoalFrames) {
     const FTransform Goal = Frames.GoalInOutputBase * OutputBaseToWorld;
     const FTransform Constraint = Frames.ConstraintInOutputBase * OutputBaseToWorld;

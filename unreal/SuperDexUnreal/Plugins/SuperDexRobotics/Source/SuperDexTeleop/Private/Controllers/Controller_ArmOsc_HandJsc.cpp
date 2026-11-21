@@ -36,8 +36,7 @@ TArray<double> Gather(TConstArrayView<mochi::real> Values, TConstArrayView<int32
 }
 } // namespace
 
-superdex::robotics::ControllerBasicOscPd::Params UController_ArmOsc_HandJsc::MakeArmParams()
-    const {
+superdex::robotics::ControllerBasicOscPd::Params UController_ArmOsc_HandJsc::MakeArmParams() const {
   superdex::robotics::ControllerBasicOscPd::Params Params;
   Params.Kp_p = static_cast<mochi::real>(ArmPositionStiffness);
   Params.Kd_p = static_cast<mochi::real>(ArmPositionDamping);
@@ -369,8 +368,9 @@ bool UController_ArmOsc_HandJsc::StepController(
       UE_LOG(
           LogSuperDexTeleop,
           Warning,
-          TEXT("[UController_ArmOsc_HandJsc] The end effector's Jacobian has %d entries, not 6 x %d;"
-               " no null space bias."),
+          TEXT(
+              "[UController_ArmOsc_HandJsc] The end effector's Jacobian has %d entries, not 6 x %d;"
+              " no null space bias."),
           static_cast<int32>(ArmObsv.eeJacobian.size()),
           NumDofs);
     }

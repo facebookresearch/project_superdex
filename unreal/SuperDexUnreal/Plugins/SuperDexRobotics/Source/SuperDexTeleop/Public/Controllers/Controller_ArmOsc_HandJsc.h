@@ -31,9 +31,9 @@ class UTeleopNodeRobotComponent;
 /**
  * Drives an arm + hand robot from a Roboperator's TeleopNode: an operational-space PD controller
  * (superdex::robotics::ControllerBasicOscPd) moves the arm's end effector to the arm pose target,
- * and a joint-space PD controller (superdex::robotics::ControllerBasicJscPd) moves the hand's joints
- * to the hand joint targets. Their joint efforts are summed and applied every simulation step, and
- * the robot's joint states are published back to the operator.
+ * and a joint-space PD controller (superdex::robotics::ControllerBasicJscPd) moves the hand's
+ * joints to the hand joint targets. Their joint efforts are summed and applied every simulation
+ * step, and the robot's joint states are published back to the operator.
  *
  * The arm is the chain of joints from BaseLinkName to EELinkName; the hand is every other joint.
  * Their joint counts must match the robot-side TeleopNode's NumArmJoints and NumHandJoints. Until
