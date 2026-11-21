@@ -1,0 +1,572 @@
+{
+  "contactOverrides": [
+    {
+      "enable": false,
+      "linkA": "Base_L",
+      "linkB": "Link2_L"
+    },
+    {
+      "enable": false,
+      "linkA": "Base_L",
+      "linkB": "Link3_L"
+    },
+    {
+      "enable": false,
+      "linkA": "Base_L",
+      "linkB": "Link4_L"
+    },
+    {
+      "enable": false,
+      "linkA": "Base_L",
+      "linkB": "TCP_Link_L"
+    },
+    {
+      "enable": false,
+      "linkA": "Link1_L",
+      "linkB": "Link3_L"
+    },
+    {
+      "enable": false,
+      "linkA": "Link1_L",
+      "linkB": "Link4_L"
+    },
+    {
+      "enable": false,
+      "linkA": "Link1_L",
+      "linkB": "Link5_L"
+    },
+    {
+      "enable": false,
+      "linkA": "Link1_L",
+      "linkB": "Link6_L"
+    },
+    {
+      "enable": false,
+      "linkA": "Link1_L",
+      "linkB": "Link7_L"
+    },
+    {
+      "enable": false,
+      "linkA": "Link1_L",
+      "linkB": "TCP_Link_L"
+    },
+    {
+      "enable": false,
+      "linkA": "Link2_L",
+      "linkB": "Link4_L"
+    },
+    {
+      "enable": false,
+      "linkA": "Link2_L",
+      "linkB": "Link5_L"
+    },
+    {
+      "enable": false,
+      "linkA": "Link2_L",
+      "linkB": "Link6_L"
+    },
+    {
+      "enable": false,
+      "linkA": "Link2_L",
+      "linkB": "Link7_L"
+    },
+    {
+      "enable": false,
+      "linkA": "Link2_L",
+      "linkB": "TCP_Link_L"
+    },
+    {
+      "enable": false,
+      "linkA": "Link3_L",
+      "linkB": "Link5_L"
+    },
+    {
+      "enable": false,
+      "linkA": "Link3_L",
+      "linkB": "Link6_L"
+    },
+    {
+      "enable": false,
+      "linkA": "Link3_L",
+      "linkB": "Link7_L"
+    },
+    {
+      "enable": false,
+      "linkA": "Link3_L",
+      "linkB": "TCP_Link_L"
+    },
+    {
+      "enable": false,
+      "linkA": "Link4_L",
+      "linkB": "Link6_L"
+    },
+    {
+      "enable": false,
+      "linkA": "Link4_L",
+      "linkB": "Link7_L"
+    },
+    {
+      "enable": false,
+      "linkA": "Link4_L",
+      "linkB": "TCP_Link_L"
+    },
+    {
+      "enable": false,
+      "linkA": "Link5_L",
+      "linkB": "TCP_Link_L"
+    },
+    {
+      "enable": false,
+      "linkA": "Link6_L",
+      "linkB": "TCP_Link_L"
+    },
+    {
+      "enable": false,
+      "linkA": "Link7_L",
+      "linkB": "TCP_Link_L"
+    }
+  ],
+  "defaultPose": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "joints": [
+    {
+      "name": "world_joint",
+      "type": "Hard"
+    },
+    {
+      "axis": [
+        0,
+        0,
+        1
+      ],
+      "effortLimit": 108,
+      "friction": {
+        "coulomb": 0.69128,
+        "viscous": 0.0643958
+      },
+      "inertia": 0.474971,
+      "maxLimit": [
+        0,
+        0,
+        3.1066999435424805
+      ],
+      "minLimit": [
+        0,
+        0,
+        -3.1066999435424805
+      ],
+      "name": "Joint1_L",
+      "parentLinkFromJoint": {
+        "translation": [
+          0,
+          0,
+          0.1745000034570694
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "axis": [
+        0,
+        0,
+        1
+      ],
+      "effortLimit": 108,
+      "friction": {
+        "coulomb": 0.720546,
+        "viscous": 0.0
+      },
+      "inertia": 0.460209,
+      "maxLimit": [
+        0,
+        0,
+        2.0943999290466309
+      ],
+      "minLimit": [
+        0,
+        0,
+        -2.0943999290466309
+      ],
+      "name": "Joint2_L",
+      "parentLinkFromJoint": {
+        "rotation": [
+          0.70710808038711548,
+          0,
+          0,
+          0.70710545778274536
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "axis": [
+        0,
+        0,
+        1
+      ],
+      "effortLimit": 66,
+      "friction": {
+        "coulomb": 0.378139,
+        "viscous": 0.0
+      },
+      "inertia": 0.230254,
+      "maxLimit": [
+        0,
+        0,
+        3.1066999435424805
+      ],
+      "minLimit": [
+        0,
+        0,
+        -3.1066999435424805
+      ],
+      "name": "Joint3_L",
+      "parentLinkFromJoint": {
+        "rotation": [
+          -0.70710808038711548,
+          0,
+          0,
+          0.70710545778274536
+        ],
+        "translation": [
+          0,
+          0.28700000047683716,
+          0
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "axis": [
+        0,
+        0,
+        1
+      ],
+      "effortLimit": 66,
+      "friction": {
+        "coulomb": 0.331935,
+        "viscous": 0.0078385
+      },
+      "inertia": 0.228106,
+      "maxLimit": [
+        0,
+        0,
+        1.0471999645233154
+      ],
+      "minLimit": [
+        0,
+        0,
+        -2.5306999683380127
+      ],
+      "name": "Joint4_L",
+      "parentLinkFromJoint": {
+        "rotation": [
+          -2.5973529318434885e-06,
+          0.70710808038711548,
+          -0.70710545778274536,
+          2.5973433821491199e-06
+        ],
+        "translation": [
+          0.017999999225139618,
+          0,
+          0
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "axis": [
+        0,
+        0,
+        1
+      ],
+      "effortLimit": 18,
+      "friction": {
+        "coulomb": 0.160382,
+        "viscous": 0.0
+      },
+      "inertia": 0.267745,
+      "maxLimit": [
+        0,
+        0,
+        3.1066999435424805
+      ],
+      "minLimit": [
+        0,
+        0,
+        -3.1066999435424805
+      ],
+      "name": "Joint5_L",
+      "parentLinkFromJoint": {
+        "rotation": [
+          -2.5973529318434885e-06,
+          0.70710808038711548,
+          -0.70710545778274536,
+          2.5973433821491199e-06
+        ],
+        "translation": [
+          0.017999999225139618,
+          -0.31400001049041748,
+          0
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "axis": [
+        0,
+        0,
+        1
+      ],
+      "effortLimit": 18,
+      "friction": {
+        "coulomb": 0.414014,
+        "viscous": 0.0
+      },
+      "inertia": 0.221859,
+      "maxLimit": [
+        0,
+        0,
+        1.0471999645233154
+      ],
+      "minLimit": [
+        0,
+        0,
+        -1.0471999645233154
+      ],
+      "name": "Joint6_L",
+      "parentLinkFromJoint": {
+        "rotation": [
+          0.5,
+          -0.5,
+          0.50000184774398804,
+          0.49999815225601196
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "axis": [
+        0,
+        0,
+        1
+      ],
+      "effortLimit": 18,
+      "friction": {
+        "coulomb": 0.19228,
+        "viscous": 0.0
+      },
+      "inertia": 0.255365,
+      "maxLimit": [
+        0,
+        0,
+        1.5707999467849731
+      ],
+      "minLimit": [
+        0,
+        0,
+        -1.5707999467849731
+      ],
+      "name": "Joint7_L",
+      "parentLinkFromJoint": {
+        "rotation": [
+          -0.5,
+          0.5,
+          -0.50000184774398804,
+          -0.49999815225601196
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "name": "JointTCP_L",
+      "parentLinkFromJoint": {
+        "rotation": [
+          0.5,
+          -0.5,
+          0.50000184774398804,
+          0.49999815225601196
+        ],
+        "translation": [
+          0,
+          -0.094999998807907104,
+          0
+        ]
+      },
+      "type": "Hard"
+    }
+  ],
+  "links": [
+    {
+      "centerOfMass": [
+        0.00034374257666058838,
+        -8.6394375102827325e-06,
+        0.041152123361825943
+      ],
+      "mass": 0.75349998474121094,
+      "momentOfInertia": [
+        0.00081475003389641643,
+        -8.4935464883528766e-07,
+        5.8869941312877927e-06,
+        0.00080867571523413062,
+        1.0451529988131369e-06,
+        0.00077133096056059003
+      ],
+      "name": "Base_L",
+      "renderModel": "render/Base_L_render.glb",
+      "shape": "collision/Base_L_collision.mochi.h5"
+    },
+    {
+      "centerOfMass": [
+        2.3470000087399967e-05,
+        0.0055714999325573444,
+        -0.030759980902075768
+      ],
+      "mass": 1.9704999923706055,
+      "momentOfInertia": [
+        0.00492293,
+        5.5e-06,
+        1.93e-06,
+        0.00526513,
+        0.00033232,
+        0.00193738
+      ],
+      "name": "Link1_L",
+      "parentLink": 0,
+      "renderModel": "render/Link1_L_render.glb",
+      "shape": "collision/Link1_L_collision.mochi.h5"
+    },
+    {
+      "centerOfMass": [
+        0.00013482999929692596,
+        0.061704598367214203,
+        0.0095063904300332069
+      ],
+      "mass": 2.2439799308776855,
+      "momentOfInertia": [
+        0.0112927,
+        -0.000229899,
+        0.000137675,
+        0.0041259,
+        0.00331811,
+        0.0132598
+      ],
+      "name": "Link2_L",
+      "parentLink": 1,
+      "renderModel": "render/Link2_L_render.glb",
+      "shape": "collision/Link2_L_collision.mochi.h5"
+    },
+    {
+      "centerOfMass": [
+        0.0096856197342276573,
+        0.0024659899063408375,
+        -0.046273019164800644
+      ],
+      "mass": 1.9242000579833984,
+      "momentOfInertia": [
+        0.00784976,
+        -0.000159623,
+        0.000146334,
+        0.00757539,
+        -0.000636878,
+        0.000467393
+      ],
+      "name": "Link3_L",
+      "parentLink": 2,
+      "renderModel": "render/Link3_L_render.glb",
+      "shape": "collision/Link3_L_collision.mochi.h5"
+    },
+    {
+      "centerOfMass": [
+        0.0085041103884577751,
+        -0.047182228416204453,
+        0.0094150900840759277
+      ],
+      "mass": 1.6085000038146973,
+      "momentOfInertia": [
+        0.00492524,
+        0.000499694,
+        0.000142615,
+        0.0019455,
+        -0.00218781,
+        0.00398558
+      ],
+      "name": "Link4_L",
+      "parentLink": 3,
+      "renderModel": "render/Link4_L_render.glb",
+      "shape": "collision/Link4_L_collision.mochi.h5"
+    },
+    {
+      "centerOfMass": [
+        0.00051127001643180847,
+        0.0010106399422511458,
+        -0.1127173900604248
+      ],
+      "mass": 2.0882999897003174,
+      "momentOfInertia": [
+        0.00164007,
+        7.91156e-05,
+        -0.00100575,
+        0.00383493,
+        0.000668941,
+        0.0034929
+      ],
+      "name": "Link5_L",
+      "parentLink": 4,
+      "renderModel": "render/Link5_L_render.glb",
+      "shape": "collision/Link5_L_collision.mochi.h5"
+    },
+    {
+      "centerOfMass": [
+        0.00032659000135026872,
+        0.0053133601322770119,
+        -0.00030181999318301678
+      ],
+      "mass": 0.72496002912521362,
+      "momentOfInertia": [
+        0.000584311,
+        0.000208075,
+        -0.000328973,
+        0.00070068,
+        0.000135121,
+        0.00056887
+      ],
+      "name": "Link6_L",
+      "parentLink": 5,
+      "renderModel": "render/Link6_L_render.glb",
+      "shape": "collision/Link6_L_collision.mochi.h5"
+    },
+    {
+      "centerOfMass": [
+        -9.1080000856891274e-05,
+        -0.031532548367977142,
+        0.0088937096297740936
+      ],
+      "mass": 0.68606001138687134,
+      "momentOfInertia": [
+        0.00133612,
+        9.61099e-05,
+        0.000339792,
+        0.00109506,
+        -0.000341033,
+        0.000482595
+      ],
+      "name": "Link7_L",
+      "parentLink": 6,
+      "renderModel": "render/Link7_L_render.glb",
+      "shape": "collision/Link7_L_collision.mochi.h5"
+    },
+    {
+      "name": "TCP_Link_L",
+      "parentLink": 7
+    }
+  ],
+  "name": "Marvin_M6_S_L_CCS_696_V40"
+}
