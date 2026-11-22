@@ -15,8 +15,10 @@
 from __future__ import annotations
 
 import importlib
+import importlib.machinery
 import importlib.util
 import os
+import platform
 import sys
 import sysconfig
 from collections.abc import Callable, Mapping, Sequence
@@ -26,6 +28,8 @@ from typing import Any, NamedTuple, NoReturn
 
 from superdex.physics.environment import (
     get_env_var_value,
+    ISA_ENV_VAR,
+    LEGACY_ISA_ENV_VAR,
     LEGACY_PRECISION_ENV_VAR,
     PRECISION_ENV_VAR,
     set_env_var_value,
@@ -33,6 +37,51 @@ from superdex.physics.environment import (
 
 _PACKAGED_NATIVE_SEARCH_PATHS: set[Path] = set()
 _PACKAGED_NATIVE_DLL_DIR_HANDLES: list[object] = []
+
+
+def _resolve_isa() -> str:
+    machine = platform.machine().lower()
+    if machine in {"x86_64", "amd64"}:
+        default = "avx2"
+        compatible_isas = {"avx2", "avx512"}
+    elif machine in {"arm64", "aarch64"}:
+        default = "neon"
+        compatible_isas = {"neon"}
+    else:
+        raise ImportError(f"Unsupported target architecture {machine!r}.")
+    isa = (get_env_var_value(ISA_ENV_VAR, LEGACY_ISA_ENV_VAR) or "").strip().lower()
+    if not isa:
+        # Unpinned launchers may carry only the AVX-512 build's native runtime.
+        if (
+            default == "avx2"
+            and not _physics_runtime_is_present("avx2")
+            and _physics_runtime_is_present("avx512")
+        ):
+            default = "avx512"
+        isa = default
+    if isa not in {"avx2", "avx512", "neon"}:
+        raise ImportError(
+            f"Unknown {ISA_ENV_VAR}={isa!r}; expected 'avx2', 'avx512', or 'neon'."
+        )
+    if isa not in compatible_isas:
+        raise ImportError(
+            f"{ISA_ENV_VAR}={isa} is incompatible with target architecture {machine!r}."
+        )
+    for name in ("mochi.loader", "superdex.physics.loader"):
+        selected = getattr(sys.modules.get(name), "ISA", None)
+        if selected is not None and selected != isa:
+            raise ImportError(
+                f"Mochi ISA is already selected as {selected}; cannot switch to {isa}."
+            )
+    return isa
+
+
+def _runtime_is_present(name: str) -> bool:
+    module = sys.modules.get(name)
+    if module is not None:
+        return not module_is_stub_only(module)
+    spec = importlib.util.find_spec(name)
+    return spec is not None and spec.origin is not None
 
 
 ########################################################################################
@@ -81,6 +130,13 @@ class NativePayload(NamedTuple):
     subpackage: str
     distribution: str
     fp64_package: str
+
+
+PHYSICS_NATIVE_PAYLOAD = NativePayload(
+    subpackage="physics",
+    distribution="superdex-physics",
+    fp64_package="superdex_physics_fp64",
+)
 
 
 def _superdex_namespace_root() -> Path:
@@ -198,29 +254,11 @@ def _ensure_packaged_native_search_path(payload: NativePayload) -> Path | None:
 ########################################################################################
 
 
-def precision_variant_for_module(module_name: str) -> str:
-    """Return a module name for the selected precision."""
-    # Precision is process-wide for SuperDex Physics Python facades; every native module lookup uses
-    # the same suffix rule so mixed FP32/FP64 extension state is not introduced.
-    return f"{module_name}_double" if USE_DOUBLE_PRECISION else module_name
-
-
-def module_is_present(module_name: str, *, payload: NativePayload) -> bool:
-    """Return whether Python can resolve a runtime implementation of a module."""
-
-    # Query the precision-selected runtime name; the facade name may be stable, but the
-    # extension module it forwards to depends on USE_DOUBLE_PRECISION.
-    precision_module_name = precision_variant_for_module(module_name)
-    _ensure_packaged_native_search_path(payload)
-    loaded_module = sys.modules.get(precision_module_name)
-    if loaded_module is not None:
-        # A cached namespace package from type stubs is not a usable native module.
-        return not module_is_stub_only(loaded_module)
-
-    # Namespace packages have no origin, so require a concrete origin before declaring
-    # that runtime code is available.
-    spec = importlib.util.find_spec(precision_module_name)
-    return spec is not None and spec.origin is not None
+def selected_native_module_name(module_name: str) -> str:
+    """Return the process-wide precision and ISA variant's import name."""
+    precision = "_double" if USE_DOUBLE_PRECISION else ""
+    isa = "_avx512" if ISA == "avx512" else ""
+    return module_name + precision + isa
 
 
 def module_is_stub_only(module: ModuleType) -> bool:
@@ -229,11 +267,35 @@ def module_is_stub_only(module: ModuleType) -> bool:
     return getattr(module, "__file__", None) is None and hasattr(module, "__path__")
 
 
+def _physics_runtime_is_present(isa: str) -> bool:
+    name = "mochi_physics" + ("_double" if USE_DOUBLE_PRECISION else "")
+    if isa == "avx512":
+        name += "_avx512"
+    if _runtime_is_present(name):
+        return True
+    roots = _packaged_native_roots(PHYSICS_NATIVE_PAYLOAD)
+    roots.append(Path(__file__).absolute().parents[2] / "mochi_native" / isa)
+    return any(
+        (spec := importlib.machinery.PathFinder.find_spec(name, [str(root)]))
+        is not None
+        and spec.origin is not None
+        for root in roots
+    )
+
+
+# ISA discovery needs the selected precision and native-payload lookup helpers.
+ISA = _resolve_isa()
+
+
 ########################################################################################
 
 
 class NativeModuleNotFoundError(ImportError):
     """Raised when no requested native module has a runtime implementation."""
+
+
+class NativeVariantUnavailableError(NativeModuleNotFoundError):
+    """An installed component does not provide the selected precision and ISA."""
 
 
 def _try_get_source_build_tools() -> ModuleType | None:
@@ -267,7 +329,9 @@ def _load_selected_runtime_module(
         try:
             module = importlib.import_module(precision_module_name)
         except ModuleNotFoundError as error:
-            if error.name != precision_module_name:
+            if error.name != precision_module_name or _runtime_is_present(
+                precision_module_name
+            ):
                 raise
             missing_error = error
             module = None
@@ -292,7 +356,9 @@ def _build_selected_runtime_module(
     try:
         module = importlib.import_module(precision_module_name)
     except ModuleNotFoundError as error:
-        if error.name != precision_module_name:
+        if error.name != precision_module_name or _runtime_is_present(
+            precision_module_name
+        ):
             raise
         return None, error, False
 
@@ -302,13 +368,14 @@ def _build_selected_runtime_module(
 
 
 def _missing_payload_guidance(payload: NativePayload) -> str:
-    """Name the distribution that carries the payload for the selected precision.
+    """Suggest installing a missing baseline precision payload.
 
-    Only produced when the *other* precision is packaged; in a source tree no packaged
-    payload is expected and the advice would be wrong. Keep it self-contained -- it
-    surfaces partway down a chained traceback.
+    Only emit advice when another packaged precision is present.
+    Do not recommend baseline wheel installs for an AVX-512 request.
     """
 
+    if ISA == "avx512":
+        return ""
     available_precisions = _available_packaged_precisions(payload)
     if not available_precisions:
         return ""
@@ -345,10 +412,65 @@ def _raise_missing_native_module(
         message += f"; build error: {build_error}"
     if payload is not None:
         message += _missing_payload_guidance(payload)
+    variants = _unselected_native_modules(module_name, payload)
+    if variants:
+        message += (
+            f". Selected SUPERDEX_PRECISION={'fp64' if USE_DOUBLE_PRECISION else 'fp32'}, "
+            f"SUPERDEX_ISA={ISA}. Installed variants: {', '.join(variants)}. "
+            "Select an installed variant using SUPERDEX_PRECISION and SUPERDEX_ISA, "
+            "or install/build the requested precision and ISA."
+        )
+        raise NativeVariantUnavailableError(message) from (build_error or missing_error)
     # Preserve the last miss as the cause: prefer the build failure when a source build
     # was attempted, otherwise the original import miss. Parenthesized so the `from` cause
     # is unambiguously the result of the `or`, not a precedence surprise.
     raise NativeModuleNotFoundError(message) from (build_error or missing_error)
+
+
+def _unselected_native_modules(
+    module_name: str, payload: NativePayload | None
+) -> list[str]:
+    roots = (
+        []
+        if payload is None
+        else _fp32_native_roots(payload) + _fp64_native_roots(payload)
+    )
+    selected = selected_native_module_name(module_name)
+    variants = []
+    for suffix in ("", "_double", "_avx512", "_double_avx512"):
+        name = module_name + suffix
+        if name == selected:
+            continue
+        if _runtime_is_present(name) or any(
+            (spec := importlib.machinery.PathFinder.find_spec(name, [str(root)]))
+            is not None
+            and spec.origin is not None
+            for root in roots
+        ):
+            variants.append(name)
+    return variants
+
+
+def import_optional_module(
+    module_name: str, *, payload: NativePayload | None = None
+) -> ModuleType | None:
+    """Import the selected variant, returning None only if no variant is installed."""
+    selected = selected_native_module_name(module_name)
+    if payload is not None:
+        _ensure_packaged_native_search_path(payload)
+    module, error, stub_only = _load_selected_runtime_module(selected)
+    if module is not None:
+        return module
+    if not _unselected_native_modules(module_name, payload):
+        return None
+    _raise_missing_native_module(
+        module_name,
+        selected,
+        payload=payload,
+        found_stub_only=stub_only,
+        missing_error=error,
+        build_error=None,
+    )
 
 
 def import_module(
@@ -362,7 +484,7 @@ def import_module(
     With ``allow_source_build``, a missing extension is built with Buck and retried.
     """
 
-    precision_module_name = precision_variant_for_module(module_name)
+    precision_module_name = selected_native_module_name(module_name)
     if payload is not None:
         _ensure_packaged_native_search_path(payload)
 
@@ -466,6 +588,8 @@ def lazy_import_resolver(
             raise AttributeError(f"module {module_name!r} has no attribute {name!r}")
         try:
             module = importlib.import_module(lazy_module_name)
+        except NativeVariantUnavailableError:
+            raise
         except (NativeModuleNotFoundError, ModuleNotFoundError) as error:
             if (
                 isinstance(error, ModuleNotFoundError)

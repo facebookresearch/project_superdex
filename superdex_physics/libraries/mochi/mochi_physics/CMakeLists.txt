@@ -37,15 +37,6 @@ target_include_directories(mochi_diffsim_headers INTERFACE
 # External consumers (hello_world, samples, pybind, etc.) always link to this.
 #-----------------------------------------------------------------------------
 mochi_add_library(mochi_physics)
-
-# The two precisions ship as separate wheels that can share a sys.path, and are resolved by
-# SONAME, so they must not share one. Otherwise the loader binds whichever was dlopen'ed first,
-# and a double-precision extension silently runs against float symbols. No SOVERSION is set
-# anywhere, so the SONAME follows OUTPUT_NAME.
-if (MOCHI_USE_DOUBLE_PRECISION)
-    set_target_properties(mochi_physics PROPERTIES OUTPUT_NAME "mochi_physics_double")
-endif ()
-
 target_link_libraries(mochi_physics
     PUBLIC
     mochi_core

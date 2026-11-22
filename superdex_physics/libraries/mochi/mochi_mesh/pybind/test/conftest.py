@@ -15,15 +15,10 @@
 import unittest
 
 import numpy as np
+from superdex import physics
 
-try:
-    import mochi_mesh  # @manual
-
-    np_real = np.float32
-except ImportError:
-    import mochi_mesh_double as mochi_mesh  # @manual  # noqa: F401
-
-    np_real = np.float64
+mochi_mesh = physics.mesh
+np_real = np.float64 if physics.uses_double_precision() else np.float32
 
 
 def create_cube_vertices() -> np.ndarray:

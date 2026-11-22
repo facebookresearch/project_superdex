@@ -1648,6 +1648,26 @@ print("recorder smoke ok:", "fp64" if reported else "fp32", sdrec.__file__)
 """
 )
 
+MISSING_ISA_PAYLOAD_TEST = """
+import platform
+import sys
+
+if platform.machine().lower() in {"arm64", "aarch64"}:
+    expected = "incompatible with target architecture"
+else:
+    expected = "Select an installed variant using SUPERDEX_PRECISION and SUPERDEX_ISA"
+
+try:
+    import superdex.physics
+except ImportError as error:
+    message = str(error)
+    assert expected in message, message
+    assert not any(name.startswith("mochi_physics") for name in sys.modules)
+    print("unavailable ISA rejected before native loading")
+else:
+    raise AssertionError("Current wheels should not provide AVX-512 companions")
+"""
+
 MISSING_PAYLOAD_TEST = """
 import sys
 
@@ -1810,6 +1830,24 @@ def check_complete_install(workspace: Path, wheelhouse: Path, deps: Path) -> Non
             python,
             script,
             {"SUPERDEX_EXPECT_DOUBLE": "1", "SUPERDEX_PRECISION": "fp64"},
+        )
+    baseline_isa = (
+        "neon" if platform.machine().lower() in {"arm64", "aarch64"} else "avx2"
+    )
+    for precision in ("fp32", "fp64"):
+        _run_script(
+            python,
+            SMOKE_TEST,
+            {
+                "SUPERDEX_ISA": baseline_isa,
+                "SUPERDEX_PRECISION": precision,
+                "SUPERDEX_EXPECT_DOUBLE": "1" if precision == "fp64" else "0",
+            },
+        )
+        _run_script(
+            python,
+            MISSING_ISA_PAYLOAD_TEST,
+            {"SUPERDEX_ISA": "avx512", "SUPERDEX_PRECISION": precision},
         )
 
 

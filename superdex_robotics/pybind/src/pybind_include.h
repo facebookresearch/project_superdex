@@ -16,6 +16,8 @@
 
 #pragma once
 
+#include <mochi_core/pybind/pybind_module_name.h>
+
 // Re-use the physics module helpers (NdArray, Span, StringView, etc.).
 #include <mochi_physics/pybind/src/pybind_dynamic_array.h>
 #include <mochi_physics/pybind/src/pybind_helpers.h>
@@ -57,9 +59,4 @@
 #include <superdex_robotics/sensors/internal/sensors_internal.h>
 #endif
 
-// Module name for single- or double-precision
-#if MOCHI_USE_DOUBLE_PRECISION
-#define SUPERDEX_ROBOTICS_MODULE_NAME superdex_robotics_double
-#else
-#define SUPERDEX_ROBOTICS_MODULE_NAME superdex_robotics
-#endif
+#define SUPERDEX_ROBOTICS_MODULE_NAME MOCHI_PYBIND_MODULE_NAME(superdex_robotics)

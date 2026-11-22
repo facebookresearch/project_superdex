@@ -78,6 +78,36 @@ if (MOCHI_INTERNAL)
 endif ()
 set(MOCHI_INTERNAL OFF CACHE BOOL "Only external builds are supported with CMake." FORCE)
 
+if (MOCHI_USE_AVX512 AND NOT MOCHI_ARCH_X64)
+    message(FATAL_ERROR "[Mochi] MOCHI_USE_AVX512 requires an x64 target architecture.")
+endif ()
+
+# AVX-512 builds append "_avx512" to library file names based on MOCHI_USE_AVX512, but to pybind
+# module init symbols based on the compiler's AVX-512 macros (MOCHI_ARCH_X64_AVX512). Reject
+# user-supplied flags (e.g. -march=native) that enable AVX-512 without the option, since the
+# resulting Python modules would not import. The probe compiles only if AVX-512 is detected, so
+# an unrelated probe failure does not block configuration.
+if (MOCHI_ARCH_X64 AND NOT MOCHI_USE_AVX512)
+    try_compile(_mochi_flags_enable_avx512
+        SOURCE_FROM_CONTENT mochi_avx512_probe.cpp
+[[#include <mochi_core/mochi_platform.h>
+#if !MOCHI_ARCH_X64_AVX512
+#error AVX-512 not enabled
+#endif
+int main() { return 0; }
+]]
+        CMAKE_FLAGS "-DINCLUDE_DIRECTORIES=${CMAKE_CURRENT_LIST_DIR}/../mochi_core/include")
+    if (_mochi_flags_enable_avx512)
+        message(FATAL_ERROR
+            "[Mochi] The compiler flags enable AVX-512, but MOCHI_USE_AVX512 is OFF.\n"
+            "CMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}\n"
+            "Either remove the AVX-512 flags (e.g. -march=native) from CXXFLAGS/CMAKE_CXX_FLAGS, or "
+            "configure with -DMOCHI_USE_AVX512=ON (with uv/pip: CMAKE_ARGS=-DMOCHI_USE_AVX512=ON) and "
+            "set SUPERDEX_ISA=avx512 at runtime.")
+    endif ()
+    unset(_mochi_flags_enable_avx512)
+endif ()
+
 #-----------------------------------------------------------------------------
 # Compiler Settings
 #-----------------------------------------------------------------------------

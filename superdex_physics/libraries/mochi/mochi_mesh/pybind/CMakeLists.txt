@@ -28,17 +28,8 @@ mochi_set_pybind_rpath(mochi_mesh_pybind)
 
 # Output name must match the PyInit_ symbol selected by the precision build flag, so both
 # variants can be bundled side by side in one wheel.
-if (MOCHI_USE_DOUBLE_PRECISION)
-    set(mochi_mesh_pybind_output_name "mochi_mesh_double")
-else ()
-    set(mochi_mesh_pybind_output_name "mochi_mesh")
-endif ()
-set_target_properties(mochi_mesh_pybind PROPERTIES
-    PREFIX ""
-    OUTPUT_NAME "${mochi_mesh_pybind_output_name}"
-    # The extension and shared library share an output name, but must not share debug symbols.
-    PDB_NAME "${mochi_mesh_pybind_output_name}.pyd"
-)
+mochi_set_variant_output_name(mochi_mesh_pybind "mochi_mesh")
+set_target_properties(mochi_mesh_pybind PROPERTIES PREFIX "")
 if (WIN32)
     set_target_properties(mochi_mesh_pybind PROPERTIES SUFFIX ".pyd")
 elseif (NOT SKBUILD_SABI_VERSION)

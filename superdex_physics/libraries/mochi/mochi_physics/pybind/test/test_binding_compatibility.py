@@ -17,6 +17,7 @@ import gc
 import importlib
 import pickle
 
+from mochi import loader
 from test.conftest import mochi, MochiTestBase, np, np_real
 
 
@@ -183,18 +184,14 @@ class TestBindingCompatibility(MochiTestBase):
         value = mochi.Real3(1.0, 2.0, 3.0)
         constructor = value.__reduce__()[0]
 
-        expected_module = (
-            "mochi_physics_double" if mochi.uses_double_precision() else "mochi_physics"
-        )
+        expected_module = loader.selected_native_module_name("mochi_physics")
         self.assertEqual(expected_module, constructor.__module__)
         restored = pickle.loads(pickle.dumps(value))
         self.assertIs(type(value), type(restored))
         self.assertEqual(value, restored)
 
     def test_shutdown_callback_has_stable_identity(self):
-        expected_module = (
-            "mochi_physics_double" if mochi.uses_double_precision() else "mochi_physics"
-        )
+        expected_module = loader.selected_native_module_name("mochi_physics")
         native_module = importlib.import_module(expected_module)
         callback = native_module._mochi_shutdown_global_context_atexit
         self.assertEqual("_mochi_shutdown_global_context_atexit", callback.__name__)

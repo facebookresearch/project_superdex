@@ -38,7 +38,7 @@ from superdex.physics.environment import (
     LEGACY_VIEWER_APP_PATH_ENV_VAR,
     VIEWER_APP_PATH_ENV_VAR,
 )
-from superdex.physics.loader import precision_variant_for_module
+from superdex.physics.loader import selected_native_module_name
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -64,7 +64,7 @@ def _loaded_mochi_extension_module() -> ModuleType | None:
     extension module, so the extension's on-disk location anchors the executable
     search without relying on any environment variable.
     """
-    return sys.modules.get(precision_variant_for_module("mochi_physics"))
+    return sys.modules.get(selected_native_module_name("mochi_physics"))
 
 
 def _superdex_physics_package_root() -> Path | None:

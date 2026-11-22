@@ -29,9 +29,10 @@ target_sources(mochi_physics_pybind PRIVATE ${mochi_physics_srcs})
 # context state (g_context, the MochiErrorException RTTI, the context lifecycle, and the ordered
 # teardown registry). Both extensions (physics, bots) dynamically link it, so they share one
 # g_context and one exported MochiErrorException — the CMake analogue of the Buck
-# core:pybind_core shared library. Built SHARED unconditionally: its whole purpose is to be a
+# core:mochi_pybind_core shared library. Built SHARED unconditionally: its whole purpose is to be a
 # single shared instance.
 add_library(mochi_pybind_core SHARED core/pybind_core.cpp)
+mochi_set_variant_output_name(mochi_pybind_core "mochi_pybind_core")
 mochi_set_hidden_symbol_visibility(mochi_pybind_core)
 # Each extension gets nanobind directly from nanobind_add_module(); keep this copy private so it
 # does not propagate a duplicate static archive onto the extension link line.
@@ -47,11 +48,6 @@ mochi_set_output_directories(mochi_pybind_core)
 # Resolve the sibling shared libs (libmochi_physics) from the library's own dir.
 mochi_set_pybind_rpath(mochi_pybind_core)
 target_compile_definitions(mochi_pybind_core PRIVATE "MOCHI_USE_REFLECTION=1")
-# Same reason as mochi_physics: the two precisions ship in separate wheels and are resolved
-# across wheel directories by SONAME, so they must not share one.
-if (MOCHI_USE_DOUBLE_PRECISION)
-    set_target_properties(mochi_pybind_core PROPERTIES OUTPUT_NAME "mochi_pybind_core_double")
-endif ()
 
 target_link_libraries(mochi_physics_pybind PUBLIC mochi_physics mochi_pybind_core)
 # Restricted diffsim header, used by pybind_include.h and the generated bindings. Linked PRIVATE
@@ -71,19 +67,8 @@ mochi_set_pybind_rpath(mochi_physics_pybind)
 target_compile_definitions(mochi_physics_pybind PRIVATE "MOCHI_USE_REFLECTION=1")
 
 # Output name must match MOCHI_PHYSICS_MODULE_NAME's PyInit_ symbol (pybind_helpers.h).
-if (MOCHI_USE_DOUBLE_PRECISION)
-    set(mochi_physics_pybind_output_name "mochi_physics_double")
-else ()
-    set(mochi_physics_pybind_output_name "mochi_physics")
-endif ()
-set_target_properties(mochi_physics_pybind PROPERTIES
-    PREFIX ""
-    OUTPUT_NAME "${mochi_physics_pybind_output_name}"
-    # MSVC names the PDB after OUTPUT_NAME, and the mochi_physics *library* target emits into the
-    # same bin/ directory. Both would write mochi_physics.pdb, and the loser silently loses its
-    # symbols. Only the PDB is renamed; the wheel repair exclusions match on OUTPUT_NAME.
-    PDB_NAME "${mochi_physics_pybind_output_name}.pyd"
-)
+mochi_set_variant_output_name(mochi_physics_pybind "mochi_physics")
+set_target_properties(mochi_physics_pybind PROPERTIES PREFIX "")
 if (WIN32)
     set_target_properties(mochi_physics_pybind PROPERTIES SUFFIX ".pyd")
 elseif (NOT SKBUILD_SABI_VERSION)

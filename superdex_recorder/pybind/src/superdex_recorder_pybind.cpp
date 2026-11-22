@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include <mochi_core/pybind/pybind_module_name.h>
 #include <superdex_recorder/episode_reader.h>
 #include <superdex_recorder/episode_restorer.h>
 #include <superdex_recorder/frame_bank.h>
@@ -50,11 +51,7 @@
 
 namespace nb = nanobind;
 
-#if MOCHI_USE_DOUBLE_PRECISION
-#define SUPERDEX_RECORDER_MODULE_NAME superdex_recorder_double
-#else
-#define SUPERDEX_RECORDER_MODULE_NAME superdex_recorder
-#endif
+#define SUPERDEX_RECORDER_MODULE_NAME MOCHI_PYBIND_MODULE_NAME(superdex_recorder)
 
 namespace {
 

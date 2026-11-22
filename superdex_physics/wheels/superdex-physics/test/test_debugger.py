@@ -270,18 +270,50 @@ class DebuggerTest(unittest.TestCase):
             signal.set_wakeup_fd(existing_wakeup_fd)
             signal.signal(signal.SIGINT, previous_sigint_handler)
 
-    def test_debugger_exe_name_tracks_selected_precision(self) -> None:
-        with patch.object(
-            debugger,
-            "precision_variant_for_module",
-            return_value="mochi_debugger_double",
+    def test_debugger_exe_names_track_selected_precision(self) -> None:
+        for use_double, stems in (
+            (False, ("mochi_debugger",)),
+            (True, ("mochi_debugger_double", "mochi_debugger")),
         ):
-            expected_name = (
-                "mochi_debugger_double.exe"
-                if debugger.platform.system() == "Windows"
-                else "mochi_debugger_double"
-            )
-            self.assertEqual(expected_name, debugger._debugger_exe_name())
+            for system, suffix in (("Linux", ""), ("Windows", ".exe")):
+                with (
+                    self.subTest(use_double=use_double, system=system),
+                    patch.object(debugger, "USE_DOUBLE_PRECISION", use_double),
+                    patch.object(debugger.platform, "system", return_value=system),
+                ):
+                    expected = tuple(stem + suffix for stem in stems)
+                    self.assertEqual(expected[0], debugger._debugger_exe_name())
+                    self.assertEqual(expected, debugger._debugger_exe_names())
+
+    def test_fp64_debugger_preference_and_plain_fallback(self) -> None:
+        for has_double in (True, False):
+            with (
+                self.subTest(has_double=has_double),
+                tempfile.TemporaryDirectory() as temp_dir,
+            ):
+                plain_dir = Path(temp_dir) / "plain"
+                double_dir = Path(temp_dir) / "double"
+                plain_dir.mkdir()
+                double_dir.mkdir()
+                plain_path = plain_dir / debugger._executable_name("mochi_debugger")
+                double_path = double_dir / debugger._executable_name(
+                    "mochi_debugger_double"
+                )
+                plain_path.touch()
+                if has_double:
+                    double_path.touch()
+                with (
+                    patch.object(debugger, "USE_DOUBLE_PRECISION", True),
+                    patch.object(
+                        debugger,
+                        "_candidate_dirs",
+                        return_value=[plain_dir, double_dir],
+                    ),
+                ):
+                    expected = double_path if has_double else plain_path
+                    self.assertEqual(
+                        expected.resolve(), debugger._find_debugger_executable()
+                    )
 
     def test_candidate_paths_prefer_superdex_env_override(self) -> None:
         with tempfile.TemporaryDirectory() as canonical_dir:

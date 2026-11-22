@@ -47,6 +47,12 @@ PRECISION_ENV_VAR = "SUPERDEX_PRECISION"
 LEGACY_PRECISION_ENV_VAR = "MOCHI_PRECISION"
 """Deprecated environment variable alias for bindings precision."""
 
+# ISA selection.
+ISA_ENV_VAR = "SUPERDEX_ISA"
+"""Environment variable used to select the native ISA (avx2, avx512, neon)."""
+LEGACY_ISA_ENV_VAR = "MOCHI_ISA"
+"""Deprecated environment variable alias for bindings ISA."""
+
 
 def get_env_var_value(primary: str, legacy: str) -> str | None:
     """Return a canonical env value, falling back to the deprecated alias.

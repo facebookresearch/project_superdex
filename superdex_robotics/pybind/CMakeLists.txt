@@ -46,19 +46,8 @@ target_compile_definitions(superdex_robotics_pybind PRIVATE "MOCHI_USE_REFLECTIO
 # (Linux/Mac regular ABI), or superdex_robotics.pyd (Windows). The output name must match the
 # PyInit_ symbol selected by SUPERDEX_ROBOTICS_MODULE_NAME in pybind_include.h, which is
 # superdex_robotics_double for double-precision builds.
-if (MOCHI_USE_DOUBLE_PRECISION)
-    set(superdex_robotics_pybind_output_name "superdex_robotics_double")
-else ()
-    set(superdex_robotics_pybind_output_name "superdex_robotics")
-endif ()
-set_target_properties(superdex_robotics_pybind PROPERTIES
-    PREFIX ""
-    OUTPUT_NAME "${superdex_robotics_pybind_output_name}"
-    # Same collision as mochi_physics_pybind: the superdex_robotics library target emits
-    # superdex_robotics.dll into this same bin/, so without a rename both linker PDBs would be
-    # superdex_robotics.pdb and one would overwrite the other.
-    PDB_NAME "${superdex_robotics_pybind_output_name}.pyd"
-)
+mochi_set_variant_output_name(superdex_robotics_pybind "superdex_robotics")
+set_target_properties(superdex_robotics_pybind PROPERTIES PREFIX "")
 if (WIN32)
     set_target_properties(superdex_robotics_pybind PROPERTIES SUFFIX ".pyd")
 elseif (NOT SKBUILD_SABI_VERSION)

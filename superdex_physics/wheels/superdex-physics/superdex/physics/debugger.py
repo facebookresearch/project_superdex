@@ -32,7 +32,7 @@ from superdex.physics.environment import (
     get_env_var_value,
     LEGACY_DEBUGGER_PATH_ENV_VAR,
 )
-from superdex.physics.loader import native_roots, precision_variant_for_module
+from superdex.physics.loader import native_roots, USE_DOUBLE_PRECISION
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -243,15 +243,12 @@ def _executable_name(stem: str) -> str:
 
 def _debugger_exe_name() -> str:
     """Name a CMake build emits for the selected precision."""
-    return _executable_name(precision_variant_for_module("mochi_debugger"))
+    stem = "mochi_debugger_double" if USE_DOUBLE_PRECISION else "mochi_debugger"
+    return _executable_name(stem)
 
 
 def _debugger_exe_names() -> tuple[str, ...]:
-    """Executable names to look for, most specific first.
-
-    CMake suffixes the FP64 build so one wheel can carry both variants. A Buck
-    link tree only ever stages one debugger, under the unsuffixed name.
-    """
+    """Prefer the CMake precision name, then the plain Buck/wheel name."""
     precision_name = _debugger_exe_name()
     plain_name = _executable_name("mochi_debugger")
     if precision_name == plain_name:
@@ -305,7 +302,7 @@ def _candidate_dirs() -> list[Path]:
 def _physics_extension() -> ModuleType:
     """Return the native extension the ``superdex.physics`` facade imported.
 
-    A CMake build emits ``mochi_debugger`` into the extension module's ``bin/`` directory,
+    A CMake build emits the debugger into the extension module's ``bin/`` directory,
     so the extension's location anchors the executable search. Imported lazily because
     ``superdex.physics`` reaches this module through its own lazy-import table.
     """

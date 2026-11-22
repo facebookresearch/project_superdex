@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING
 from superdex.physics.loader import (
     forward_module,
     import_module,
-    module_is_present,
+    import_optional_module,
     NativePayload,
 )
 
@@ -52,14 +52,11 @@ __all__ = forward_module(_public_module, globals())
 
 # Register torch-dependent sensor types if available. Its docstring is appended to the
 # robotics docstring, and it may not silently shadow any symbol already forwarded.
-if module_is_present(
+_torch_extension = import_optional_module(
     "superdex_robotics_torch_sensors",
     payload=_ROBOTICS_NATIVE_PAYLOAD,
-):
-    _torch_extension = import_module(
-        "superdex_robotics_torch_sensors",
-        payload=_ROBOTICS_NATIVE_PAYLOAD,
-    )
+)
+if _torch_extension is not None:
     __all__ += forward_module(_torch_extension, globals(), reserved_names=__all__)
 
 # Generated canonical stubs describe the shared public API for static type checking.

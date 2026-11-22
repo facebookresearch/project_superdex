@@ -57,12 +57,101 @@ def _find_spec_for(installed: dict[str, Path]) -> object:
     return find_spec
 
 
+class IsaFallbackTest(unittest.TestCase):
+    def test_default_uses_only_matching_precision_runtimes(self) -> None:
+        cases = (
+            ((), "avx2"),
+            (("avx2",), "avx2"),
+            (("avx512",), "avx512"),
+            (("avx2", "avx512"), "avx2"),
+            (("stub_avx2", "avx512"), "avx512"),
+            (("stub_avx512",), "avx2"),
+        )
+        for double in (False, True):
+            for layout in ("importable", "packaged", "bundle"):
+                for available, expected in cases:
+                    with self.subTest(
+                        double=double, layout=layout, available=available
+                    ):
+                        self._check_default(double, layout, available, expected)
+
+    def _check_default(
+        self, double: bool, layout: str, available: tuple[str, ...], expected: str
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            package = root / "superdex" / "physics"
+            site = root / "site-packages"
+            with (
+                patch.object(loader, "__file__", str(package / "loader.py")),
+                patch.object(loader, "site_packages_root", return_value=site),
+                patch.object(loader, "USE_DOUBLE_PRECISION", double),
+                patch.object(loader.platform, "machine", return_value="x86_64"),
+                patch.object(loader.sys, "path", []),
+                patch.dict(os.environ, {}, clear=True),
+                patch.dict(
+                    loader.sys.modules,
+                    {"mochi.loader": None, "superdex.physics.loader": None},
+                ),
+            ):
+                for suffix in ("", "_double", "_avx512", "_double_avx512"):
+                    loader.sys.modules.pop("mochi_physics" + suffix, None)
+                if layout == "importable":
+                    directory = root / "extensions"
+                    loader.sys.path.append(str(directory))
+                elif layout == "packaged":
+                    directory = (
+                        site / "superdex_physics_fp64" / "_native"
+                        if double
+                        else package / "_native"
+                    )
+                else:
+                    directory = root / "mochi_native"
+                # Other-precision runtimes must not influence the selection.
+                variants = [(isa, not double) for isa in ("avx2", "avx512")]
+                variants += [(isa, double) for isa in available]
+                for variant, precision in variants:
+                    isa = variant.removeprefix("stub_")
+                    destination = directory / isa if layout == "bundle" else directory
+                    destination.mkdir(parents=True, exist_ok=True)
+                    name = "mochi_physics" + ("_double" if precision else "")
+                    name += "_avx512" if isa == "avx512" else ""
+                    if variant.startswith("stub_"):
+                        (destination / name).mkdir()
+                    else:
+                        (destination / (name + ".py")).write_text(
+                            "raise AssertionError('ISA discovery must not import runtimes')\n"
+                        )
+                self.assertEqual(loader._resolve_isa(), expected)
+                self.assertEqual(dict(os.environ), {})
+
+    def test_explicit_isa_does_not_fall_back_to_available_runtime(self) -> None:
+        for variable in ("SUPERDEX_ISA", "MOCHI_ISA"):
+            with (
+                self.subTest(variable=variable),
+                patch.object(loader.platform, "machine", return_value="x86_64"),
+                patch.dict(os.environ, {variable: "avx2"}, clear=True),
+                patch.dict(
+                    loader.sys.modules,
+                    {"mochi.loader": None, "superdex.physics.loader": None},
+                ),
+                patch.object(loader.importlib.util, "find_spec") as find_spec,
+            ):
+                self.assertEqual(loader._resolve_isa(), "avx2")
+                find_spec.assert_not_called()
+
+
 class LoaderTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         # The import_module tests patch importlib.import_module, which sysconfig's lazy
         # first load goes through; a failed first load breaks sysconfig for the process.
         sysconfig.get_config_vars()
+
+    def setUp(self):
+        isa_patch = patch.object(loader, "ISA", "avx2")
+        isa_patch.start()
+        self.addCleanup(isa_patch.stop)
 
     def test_packaged_native_dir_uses_the_flat_base_payload_for_fp32(
         self,
@@ -347,14 +436,19 @@ class LoaderTest(unittest.TestCase):
             "runtime_module", loader=None, origin="runtime_module.pyd"
         )
         with patch.object(loader.importlib.util, "find_spec", return_value=spec):
-            self.assertTrue(
-                loader.module_is_present("runtime_module", payload=_PHYSICS_PAYLOAD)
-            )
+            self.assertTrue(loader._runtime_is_present("runtime_module"))
 
     def test_import_module_reports_missing_runtime_module(self) -> None:
         error = ModuleNotFoundError(name="runtime_module")
         with (
+            tempfile.TemporaryDirectory() as temp_dir,
             patch.object(loader, "USE_DOUBLE_PRECISION", False),
+            patch.object(
+                loader,
+                "site_packages_root",
+                return_value=Path(temp_dir) / "site-packages",
+            ),
+            patch.object(loader.importlib.util, "find_spec", _find_spec_for({})),
             patch.object(loader.importlib, "import_module", side_effect=error),
             self.assertRaisesRegex(
                 loader.NativeModuleNotFoundError,
@@ -393,6 +487,30 @@ class LoaderTest(unittest.TestCase):
 
             self.assertIn("installed: fp32", str(context.exception))
             self.assertIs(context.exception.__cause__, error)
+
+    def test_avx512_omits_baseline_wheel_install_guidance(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            package = root / "superdex" / "physics"
+            (package / "_native").mkdir(parents=True)
+            with (
+                patch.object(loader, "__file__", str(package / "loader.py")),
+                patch.object(
+                    loader, "site_packages_root", return_value=root / "absent"
+                ),
+                patch.object(loader, "USE_DOUBLE_PRECISION", True),
+                patch.object(loader, "PRECISION_NAME", "fp64"),
+                patch.object(loader.importlib.util, "find_spec", _find_spec_for({})),
+            ):
+                for isa in ("avx2", "avx512"):
+                    with self.subTest(isa=isa), patch.object(loader, "ISA", isa):
+                        guidance = loader._missing_payload_guidance(_PHYSICS_PAYLOAD)
+                        if isa == "avx2":
+                            self.assertIn(
+                                "pip install 'superdex-physics[fp64]'", guidance
+                            )
+                        else:
+                            self.assertEqual(guidance, "")
 
     def test_import_module_names_the_robotics_fp64_extra(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -433,6 +551,11 @@ class LoaderTest(unittest.TestCase):
                 patch.object(loader, "__file__", str(package_dir / "loader.py")),
                 patch.object(loader, "PRECISION_NAME", "fp64"),
                 patch.object(loader, "USE_DOUBLE_PRECISION", True),
+                patch.object(
+                    loader,
+                    "site_packages_root",
+                    return_value=Path(temp_dir) / "site-packages",
+                ),
                 patch.object(loader.importlib.util, "find_spec", _find_spec_for({})),
                 patch.object(loader.importlib, "import_module", side_effect=error),
                 self.assertRaises(loader.NativeModuleNotFoundError) as context,
@@ -446,7 +569,13 @@ class LoaderTest(unittest.TestCase):
         runtime_module.__file__ = "runtime_module.pyd"
 
         with (
+            tempfile.TemporaryDirectory() as temp_dir,
             patch.object(loader, "USE_DOUBLE_PRECISION", False),
+            patch.object(
+                loader,
+                "site_packages_root",
+                return_value=Path(temp_dir) / "site-packages",
+            ),
             patch.object(loader, "_try_get_source_build_tools", return_value=None),
             patch.object(
                 loader.importlib, "import_module", return_value=runtime_module
@@ -476,3 +605,234 @@ class LoaderTest(unittest.TestCase):
             "Facade documentation.\n\nNative module documentation.",
             namespace["__doc__"],
         )
+
+    def test_resolve_isa(self) -> None:
+        cases = [
+            ("x86_64", {}, "avx2", None),
+            ("x86_64", {"SUPERDEX_ISA": ""}, "avx2", None),
+            ("x86_64", {"SUPERDEX_ISA": " AVX2 "}, "avx2", None),
+            ("x86_64", {"SUPERDEX_ISA": " AVX512 "}, "avx512", None),
+            ("AMD64", {}, "avx2", None),
+            ("AMD64", {"SUPERDEX_ISA": ""}, "avx2", None),
+            ("arm64", {}, "neon", None),
+            ("AARCH64", {}, "neon", None),
+            ("AARCH64", {"SUPERDEX_ISA": ""}, "neon", None),
+            ("arm64", {"SUPERDEX_ISA": "avx512"}, None, "target architecture"),
+            ("arm64", {"SUPERDEX_ISA": "avx2"}, None, "target architecture"),
+            ("x86_64", {"SUPERDEX_ISA": "neon"}, None, "target architecture"),
+            ("x86_64", {"SUPERDEX_ISA": "other"}, None, "Unknown SUPERDEX_ISA"),
+            (
+                "x86_64",
+                {"SUPERDEX_ISA": " AVX512 ", "MOCHI_ISA": "avx2"},
+                "avx512",
+                None,
+            ),
+            ("x86_64", {"SUPERDEX_ISA": "", "MOCHI_ISA": "avx512"}, "avx2", None),
+            ("x86_64", {"MOCHI_ISA": "avx512"}, "avx512", None),
+            ("x86_64", {"SUPERDEX_ISA": "avx512"}, "avx512", None),
+        ]
+        cases.extend(
+            (
+                machine,
+                {} if value is None else {"SUPERDEX_ISA": value},
+                None,
+                "target architecture",
+            )
+            for machine in ("riscv64", "i686", "armv7l")
+            for value in (None, "", "avx2", "avx512", "neon")
+        )
+        for machine, env, expected, error in cases:
+            with (
+                self.subTest(machine=machine, env=env),
+                patch.object(loader.platform, "machine", return_value=machine),
+                patch.object(loader, "_physics_runtime_is_present", return_value=False),
+                patch.dict(os.environ, env, clear=True),
+                patch.dict(
+                    loader.sys.modules,
+                    {"mochi.loader": None, "superdex.physics.loader": None},
+                ),
+            ):
+                if error is None:
+                    self.assertEqual(loader._resolve_isa(), expected)
+                else:
+                    with self.assertRaisesRegex(ImportError, error):
+                        loader._resolve_isa()
+                self.assertEqual(dict(os.environ), env)
+
+    def test_precision_before_isa_suffix(self) -> None:
+        for isa in ("avx2", "avx512", "neon"):
+            for double in (False, True):
+                with (
+                    self.subTest(isa=isa, double=double),
+                    patch.object(loader, "ISA", isa),
+                    patch.object(loader, "USE_DOUBLE_PRECISION", double),
+                ):
+                    expected = (
+                        "native"
+                        + ("_double" if double else "")
+                        + ("_avx512" if isa == "avx512" else "")
+                    )
+                    self.assertEqual(
+                        loader.selected_native_module_name("native"), expected
+                    )
+
+    def test_cached_static_native_module_remains_present(self) -> None:
+        module = ModuleType("static_native")
+        with patch.dict(loader.sys.modules, {"static_native": module}):
+            self.assertTrue(loader._runtime_is_present("static_native"))
+            module.__path__ = []
+            self.assertFalse(loader._runtime_is_present("static_native"))
+
+    def test_mismatch_is_symmetric(self) -> None:
+        for double in (False, True):
+            for isa in ("avx2", "avx512"):
+                selected = (
+                    "native"
+                    + ("_double" if double else "")
+                    + ("_avx512" if isa == "avx512" else "")
+                )
+                other = (
+                    "native"
+                    + ("_double" if not double else "")
+                    + ("_avx512" if isa != "avx512" else "")
+                )
+                spec = importlib.machinery.ModuleSpec(
+                    other, loader=None, origin=other + ".so"
+                )
+                with (
+                    self.subTest(selected=selected),
+                    patch.object(loader, "USE_DOUBLE_PRECISION", double),
+                    patch.object(loader, "ISA", isa),
+                    patch.object(
+                        loader.importlib,
+                        "import_module",
+                        side_effect=ModuleNotFoundError(name=selected),
+                    ),
+                    patch.object(
+                        loader.importlib.util,
+                        "find_spec",
+                        side_effect=lambda name, other=other, spec=spec: spec
+                        if name == other
+                        else None,
+                    ),
+                    self.assertRaises(loader.NativeVariantUnavailableError) as caught,
+                ):
+                    loader.import_module("native")
+                message = str(caught.exception)
+                precision = "fp64" if double else "fp32"
+                self.assertIn(f"SUPERDEX_PRECISION={precision}", message)
+                self.assertIn(f"SUPERDEX_ISA={isa}", message)
+                self.assertIn(f"Installed variants: {other}", message)
+                self.assertIn(
+                    "Select an installed variant using SUPERDEX_PRECISION and SUPERDEX_ISA",
+                    message,
+                )
+                self.assertNotIn("Current wheels", message)
+
+    def test_initializer_missing_its_own_name_is_propagated(self) -> None:
+        error = ModuleNotFoundError(name="runtime_module")
+        spec = importlib.machinery.ModuleSpec(
+            "runtime_module", loader=None, origin="runtime_module.so"
+        )
+        with (
+            patch.object(loader, "USE_DOUBLE_PRECISION", False),
+            patch.object(loader.importlib, "import_module", side_effect=error),
+            patch.object(loader.importlib.util, "find_spec", return_value=spec),
+            self.assertRaises(ModuleNotFoundError) as caught,
+        ):
+            loader.import_module("runtime_module")
+        self.assertIs(caught.exception, error)
+
+    def test_lazy_import_preserves_variant_mismatch(self) -> None:
+        error = loader.NativeVariantUnavailableError("wrong ISA/precision")
+        resolve = loader.lazy_import_resolver(
+            lazy_imports={"mesh": "superdex.physics.mesh"},
+            namespace={},
+            module_name="superdex.physics",
+        )
+        with (
+            patch.object(loader.importlib, "import_module", side_effect=error),
+            self.assertRaises(loader.NativeVariantUnavailableError) as caught,
+        ):
+            resolve("mesh")
+        self.assertIs(caught.exception, error)
+
+    def test_optional_absence_and_initialization_failure(self) -> None:
+        with (
+            patch.object(
+                loader.importlib,
+                "import_module",
+                side_effect=ModuleNotFoundError(name="native"),
+            ),
+            patch.object(loader.importlib.util, "find_spec", return_value=None),
+            patch.object(loader, "USE_DOUBLE_PRECISION", False),
+        ):
+            self.assertIsNone(loader.import_optional_module("native"))
+        error = ImportError("undefined symbol")
+        with (
+            patch.object(loader.importlib, "import_module", side_effect=error),
+            self.assertRaises(ImportError) as caught,
+        ):
+            loader.import_optional_module("native")
+        self.assertIs(caught.exception, error)
+
+    def test_optional_mismatch_finds_unselected_payload_outside_sys_path(self) -> None:
+        for variant in ("native_double", "native_double_avx512"):
+            with (
+                self.subTest(variant=variant),
+                tempfile.TemporaryDirectory() as temp_dir,
+            ):
+                root = Path(temp_dir)
+                facade = root / "superdex" / "physics"
+                facade.mkdir(parents=True)
+                payload = root / "superdex_physics_fp64"
+                native = payload / "_native"
+                native.mkdir(parents=True)
+                (native / (variant + ".py")).write_text(
+                    "raise AssertionError('Optional discovery must not import another runtime')\n"
+                )
+                search_path = list(loader.sys.path)
+                error = ModuleNotFoundError(name="native")
+                with (
+                    patch.object(loader, "USE_DOUBLE_PRECISION", False),
+                    patch.object(loader, "__file__", str(facade / "loader.py")),
+                    patch.object(
+                        loader, "site_packages_root", return_value=root / "absent"
+                    ),
+                    patch.object(loader.sys, "path", search_path),
+                    patch.object(
+                        loader.importlib.util,
+                        "find_spec",
+                        _find_spec_for({"superdex_physics_fp64": payload}),
+                    ),
+                    patch.object(
+                        loader.importlib, "import_module", side_effect=error
+                    ) as imports,
+                    self.assertRaises(loader.NativeVariantUnavailableError) as caught,
+                ):
+                    self.assertNotIn(str(native), loader.sys.path)
+                    loader.import_optional_module("native", payload=_PHYSICS_PAYLOAD)
+                self.assertIn(variant, str(caught.exception))
+                self.assertIs(caught.exception.__cause__, error)
+                self.assertNotIn(str(native), search_path)
+                imports.assert_called_once_with("native")
+
+    def test_optional_mismatch_raises(self) -> None:
+        spec = importlib.machinery.ModuleSpec(
+            "native_avx512", loader=None, origin="native_avx512.so"
+        )
+        with (
+            patch.object(loader, "USE_DOUBLE_PRECISION", False),
+            patch.object(
+                loader.importlib,
+                "import_module",
+                side_effect=ModuleNotFoundError(name="native"),
+            ),
+            patch.object(
+                loader.importlib.util,
+                "find_spec",
+                side_effect=lambda name: spec if name == "native_avx512" else None,
+            ),
+            self.assertRaises(loader.NativeVariantUnavailableError),
+        ):
+            loader.import_optional_module("native")

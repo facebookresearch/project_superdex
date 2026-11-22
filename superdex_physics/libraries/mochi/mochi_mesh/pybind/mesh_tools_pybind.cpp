@@ -16,6 +16,7 @@
 
 #include <mochi_core/geometry/mesh_data.h>
 #include <mochi_core/geometry/model_data.h>
+#include <mochi_core/pybind/pybind_module_name.h>
 #include <mochi_core/utils/basic_utils.h>
 #include <mochi_core/utils/error.h>
 #include <mochi_mesh/isosurface_reconstruction.h>
@@ -40,11 +41,7 @@ namespace nb = nanobind;
 using namespace mochi;
 using namespace mochi::mesh;
 
-#if MOCHI_USE_DOUBLE_PRECISION
-#define MODULE_NAME mochi_mesh_double
-#else
-#define MODULE_NAME mochi_mesh
-#endif
+#define MODULE_NAME MOCHI_PYBIND_MODULE_NAME(mochi_mesh)
 
 namespace {
 

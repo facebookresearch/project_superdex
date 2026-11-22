@@ -16,7 +16,7 @@ import subprocess
 import sys
 import unittest
 
-import mochi_physics as mochi
+from superdex import physics as mochi
 
 
 class MochiPhysicsFreeThreadedTest(unittest.TestCase):
@@ -33,7 +33,11 @@ class MochiPhysicsFreeThreadedTest(unittest.TestCase):
             [
                 sys.executable,
                 "-c",
-                "import mochi_physics as mochi; mochi.initialize(num_worker_threads=0)",
+                "import sys\n"
+                "from superdex import physics as mochi\n"
+                "mochi.initialize(num_worker_threads=0)\n"
+                "assert mochi.is_initialized()\n"
+                "assert not sys._is_gil_enabled()\n",
             ],
             capture_output=True,
             check=False,

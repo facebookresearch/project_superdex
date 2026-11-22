@@ -17,10 +17,6 @@
 
 from __future__ import annotations
 
-from superdex.physics.loader import NativePayload
+from superdex.physics.loader import PHYSICS_NATIVE_PAYLOAD
 
-PHYSICS_NATIVE_PAYLOAD = NativePayload(
-    subpackage="physics",
-    distribution="superdex-physics",
-    fp64_package="superdex_physics_fp64",
-)
+__all__ = ["PHYSICS_NATIVE_PAYLOAD"]

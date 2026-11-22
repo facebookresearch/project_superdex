@@ -27,16 +27,8 @@ mochi_set_compiler_options(superdex_recorder_pybind)
 mochi_set_output_directories(superdex_recorder_pybind)
 mochi_set_pybind_rpath(superdex_recorder_pybind)
 
-if (MOCHI_USE_DOUBLE_PRECISION)
-    set(superdex_recorder_pybind_output_name "superdex_recorder_double")
-else ()
-    set(superdex_recorder_pybind_output_name "superdex_recorder")
-endif ()
-set_target_properties(superdex_recorder_pybind PROPERTIES
-    PREFIX ""
-    OUTPUT_NAME "${superdex_recorder_pybind_output_name}"
-    PDB_NAME "${superdex_recorder_pybind_output_name}.pyd"
-)
+mochi_set_variant_output_name(superdex_recorder_pybind "superdex_recorder")
+set_target_properties(superdex_recorder_pybind PROPERTIES PREFIX "")
 if (WIN32)
     set_target_properties(superdex_recorder_pybind PROPERTIES SUFFIX ".pyd")
 elseif (NOT SKBUILD_SABI_VERSION)

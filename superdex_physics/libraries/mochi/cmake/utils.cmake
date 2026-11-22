@@ -398,7 +398,34 @@ function (mochi_remove_link_library target_name library_name)
 endfunction ()
 
 #-----------------------------------------------------------------------------
-# function (_mochi_add_library_impl lib_name lib_type)
+# mochi_set_variant_output_name
+#-----------------------------------------------------------------------------
+
+# Variants coexist on the native search path. Distinct library names keep the
+# dynamic loader from binding an extension to another precision or ISA graph.
+function (mochi_set_variant_output_name target basename)
+    get_target_property(kind ${target} TYPE)
+    if (kind STREQUAL "SHARED_LIBRARY" OR kind STREQUAL "MODULE_LIBRARY")
+        set(name "${basename}")
+        if (MOCHI_USE_DOUBLE_PRECISION)
+            string(APPEND name "_double")
+        endif ()
+        if (MOCHI_USE_AVX512)
+            string(APPEND name "_avx512")
+        endif ()
+        # Extensions and their shared libraries may use the same output basename.
+        # Include .pyd in the extension's PDB name to avoid collisions on Windows.
+        if (kind STREQUAL "MODULE_LIBRARY")
+            set(pdb_name "${name}.pyd")
+        else ()
+            set(pdb_name "${name}")
+        endif ()
+        set_target_properties(${target} PROPERTIES OUTPUT_NAME "${name}" PDB_NAME "${pdb_name}")
+    endif ()
+endfunction ()
+
+#-----------------------------------------------------------------------------
+# _mochi_add_library_impl
 #-----------------------------------------------------------------------------
 
 # Used to implement mochi_add_library and mochi_add_static_library
@@ -421,6 +448,7 @@ function (_mochi_add_library_impl lib_name lib_type)
     endif ()
 
     add_library(${lib_name} ${lib_type})
+    mochi_set_variant_output_name(${lib_name} "${lib_name}")
 
     target_sources(${lib_name}
         PRIVATE

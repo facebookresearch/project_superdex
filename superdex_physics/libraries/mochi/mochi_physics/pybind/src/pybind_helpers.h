@@ -34,6 +34,7 @@
 #include <typeindex>
 #include <unordered_map>
 
+#include <mochi_core/pybind/pybind_module_name.h>
 #include <mochi_core/utils/dynamic_array.h>
 #include <mochi_physics/mochi_physics.h>
 #include <mochi_physics/mochi_physics_experimental.h>
@@ -43,14 +44,8 @@ namespace mochi {
 
 namespace nb = nanobind;
 
-// Name of the module for single- or double-precision
-#if MOCHI_USE_DOUBLE_PRECISION
-#define MOCHI_PHYSICS_MODULE_NAME mochi_physics_double
-#define MOCHI_PHYSICS_MODULE_NAME_STR "mochi_physics_double"
-#else
-#define MOCHI_PHYSICS_MODULE_NAME mochi_physics
-#define MOCHI_PHYSICS_MODULE_NAME_STR "mochi_physics"
-#endif
+#define MOCHI_PHYSICS_MODULE_NAME MOCHI_PYBIND_MODULE_NAME(mochi_physics)
+#define MOCHI_PHYSICS_MODULE_NAME_STR MOCHI_PP_STRINGIFY(MOCHI_PHYSICS_MODULE_NAME)
 
 // Use reflection to format the Python __str__ for any supported type.
 template <typename T>
