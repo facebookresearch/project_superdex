@@ -126,8 +126,8 @@ class TestCoreTypes(MochiTestBase):
         self.assertEqual(2, a.size())
         self.assertEqual(0, a[0])
         self.assertEqual(123, a[1])
-        a.resize(1)
-        self.assertEqual(1, a.size())
+        a.resize(1, 7)
+        self.assertEqual([0], a.tolist())
         a.resize(0)
         self.assertEqual(0, a.size())
 
@@ -918,6 +918,17 @@ class TestCoreTypes(MochiTestBase):
         arr[1] = mochi.TransformRT(mochi.Quaternion.identity(), mochi.Real3(4, 5, 6))
         self.assertEqual(arr[1].translation, mochi.Real3(4, 5, 6))
 
+        # Growing a full array from a reference to one of its own elements
+        v = mochi.Real3(1, 2, 3)
+        for grow in (
+            lambda a: a.append(a[0]),
+            lambda a: a.extend([a[0]]),
+            lambda a: a.resize(2, a[0]),
+        ):
+            a = mochi.DynamicArrayReal3([v])
+            grow(a)
+            self.assertEqual(mochi.DynamicArrayReal3([v, v]), a)
+
         # --- Arithmetic type (int): __getitem__ returns a value copy ---
         int_arr = mochi.DynamicArrayInt([10, 20, 30])
 
@@ -938,6 +949,10 @@ class TestCoreTypes(MochiTestBase):
         # Must use __setitem__ to modify arithmetic arrays
         int_arr[0] = 42
         self.assertEqual(int_arr[0], 42)
+
+        # Growing a full array from a view of its own storage
+        int_arr.extend(np.asarray(int_arr))
+        self.assertEqual([42, 20, 30, 42, 20, 30], int_arr.tolist())
 
     def test_span_getitem_returns_reference(self):
         """Verify __getitem__ and __iter__ behavior for Span.

@@ -18,6 +18,8 @@
 
 #include "pybind_helpers.h"
 
+#include <iterator>
+
 namespace mochi {
 
 inline constexpr char kDynamicArrayDoc[] = R"doc(A resizable array with contiguous storage.
@@ -62,6 +64,16 @@ T CastDynamicArrayItem(nanobind::handle item) {
 }
 
 template <class T>
+DynamicArray<T> CastDynamicArray(nanobind::handle sequence) {
+  DynamicArray<T> result;
+  result.reserve(nanobind::len(sequence));
+  for (auto item : sequence) {
+    result.push_back(CastDynamicArrayItem<T>(item));
+  }
+  return result;
+}
+
+template <class T>
 inline auto DefDynamicArray(nanobind::module_& m, char const* pyName) {
   namespace nb = nanobind;
   using DynamicArrayT = DynamicArray<T>;
@@ -90,12 +102,10 @@ inline auto DefDynamicArray(nanobind::module_& m, char const* pyName) {
   c.def(
       "__init__",
       [](DynamicArrayT* self, nb::sequence sequence) {
-        DynamicArrayT result;
-        result.reserve(nb::len(sequence));
-        for (auto item : sequence) {
-          result.push_back(CastDynamicArrayItem<T>(item));
-        }
-        new (self) DynamicArrayT(std::move(result));
+        // Convert into a local first: the conversion runs Python code, which could reenter
+        // __init__ on a half-built *self.
+        DynamicArrayT items = CastDynamicArray<T>(sequence);
+        new (self) DynamicArrayT(std::move(items));
       },
       nb::arg("sequence"));
   if constexpr (std::is_arithmetic_v<T>) {
@@ -180,14 +190,18 @@ inline auto DefDynamicArray(nanobind::module_& m, char const* pyName) {
     }
     return nb::make_tuple(nb::type<DynamicArrayT>(), nb::make_tuple(values));
   });
-  c.def("append", nb::overload_cast<T const&>(&DynamicArrayT::push_back), nb::arg("item"));
+
+  // Inputs can reference self's storage (see __getitem__ and the buffer protocol), so append,
+  // extend and resize copy them before the array grows.
+  c.def(
+      "append",
+      [](DynamicArrayT& self, T const& item) { self.push_back(T(item)); },
+      nb::arg("item"));
   c.def(
       "extend",
       [](DynamicArrayT& self, nb::sequence sequence) {
-        self.reserve(self.size() + nb::len(sequence));
-        for (auto item : sequence) {
-          self.push_back(CastDynamicArrayItem<T>(item));
-        }
+        DynamicArrayT items = CastDynamicArray<T>(sequence);
+        self.append(std::make_move_iterator(items.begin()), std::make_move_iterator(items.end()));
       },
       nb::arg("sequence"));
   c.def(
@@ -205,7 +219,13 @@ inline auto DefDynamicArray(nanobind::module_& m, char const* pyName) {
       nb::arg("size"));
   c.def(
       "resize",
-      static_cast<void (DynamicArrayT::*)(size_t, T const&)>(&DynamicArrayT::resize),
+      [](DynamicArrayT& self, size_t size, T const& value) {
+        if (size > self.size()) {
+          self.resize(size, T(value));
+        } else {
+          self.resize(size);
+        }
+      },
       nb::arg("size"),
       nb::arg("value"));
   c.def("tolist", [](DynamicArrayT const& self) {
