@@ -1235,10 +1235,20 @@ void mochi::InitRigidActor(
       }
     } else if (
         auto const* implicitShape = dynamic_cast<ImplicitRigidShape const*>(shapePtr.get())) {
+      // An implicit shape collides as itself or not at all.
+      auto const resolveColliderType = [&](ColliderType shapeColliderType) {
+        if (colliderType != ColliderType::Auto && colliderType != ColliderType::None &&
+            colliderType != shapeColliderType) {
+          MOCHI_LOG_WARNING(
+              "Rigid actor \"%s\" requested a collider type that its implicit shape does not support. Using the shape's own collider type.",
+              std::string(params.name).c_str());
+        }
+        return colliderType == ColliderType::None ? colliderType : shapeColliderType;
+      };
       if (std::get_if<Sphere>(&implicitShape->shape)) {
-        colliderType = ColliderType::Sphere; // Must collide as a sphere
+        colliderType = resolveColliderType(ColliderType::Sphere);
       } else if (std::get_if<Plane>(&implicitShape->shape)) {
-        colliderType = ColliderType::Plane; // Must collide as a plane
+        colliderType = resolveColliderType(ColliderType::Plane);
       } else {
         MOCHI_ERROR_SET(error, "Not a supported ImplicitRigidShape type");
       }
