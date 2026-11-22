@@ -2379,8 +2379,8 @@ void SceneImpl::CreateArticulatedActorJointLimitsImpl(
       case ArticulatedJointType::Revolute: {
         // Compute axis-aligned limits, necessary for 1D joints
         Real3 const& axis = jointsData->jointAxes[i];
-        real minValue = Dot(axis, minLimit);
-        real maxValue = Dot(axis, maxLimit);
+        real minValue = minLimit == -kInf3 ? -kInf : Dot(axis, minLimit);
+        real maxValue = maxLimit == kInf3 ? kInf : Dot(axis, maxLimit);
         if (minValue > maxValue) {
           std::swap(minValue, maxValue); // Possibly swap, e.g. if the axis is negative
         }

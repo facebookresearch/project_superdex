@@ -49,6 +49,7 @@
 #include <functional>
 #include <iterator>
 #include <numeric>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <variant>
@@ -211,6 +212,25 @@ TEST_F(
   _scene->DestroyActor(actorHandle);
   EXPECT_EQ(0, _scene->GetNumActors());
   EXPECT_EQ(0, _scene->GetNumConstraints());
+}
+
+// A one-sided limit bounds its own side of the joint range, even on an axis with three negative
+// components.
+TEST_F(ArticulatedRigidTest, OneSidedJointLimitsOnNegativeAxis) {
+  Real3 const axis = Normalize(Real3{-1_r, -1_r, -1_r});
+  ArticulatedActorParams params;
+  params.joints = {
+      {.type = ArticulatedJointType::Revolute, .axis = axis, .maxLimit = 0.5_r * axis},
+      {.type = ArticulatedJointType::Revolute, .axis = axis, .minLimit = -0.5_r * axis}};
+  params.links = {{.parentLink = -1, .shape = _cubeShape}, {.parentLink = 0, .shape = _cubeShape}};
+  std::array<Real2, 2> limits;
+  _scene->CreateArticulatedActor(params, test::ExpectOK{})
+      ->GetArticulatedDofLimits(limits, test::ExpectOK{});
+
+  EXPECT_EQ(-kInf, limits[0][0]);
+  EXPECT_NEAR(0.5_r, limits[0][1], kTolerance);
+  EXPECT_NEAR(-0.5_r, limits[1][0], kTolerance);
+  EXPECT_EQ(kInf, limits[1][1]);
 }
 
 TEST_F(ArticulatedRigidTest, Rigid_EntitySetSolution) {
