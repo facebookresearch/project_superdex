@@ -87,6 +87,11 @@ std::tuple<int, double, double, IterationStatus> CudaGMRes_impl(
   CudaMatrix<Scalar> d_Q(nPadded, restartSize + 2);
   int const ldq = d_Q.LeadDim();
   Scalar* const Q = d_Q.data();
+  // GemvT reads whole float4/double2 chunks of each column, so the padding rows must be zero.
+  if (nPadded > n) {
+    MOCHI_CUDA_CHECK(cudaMemset2DAsync(
+        Q + n, ldq * sizeof(Scalar), 0, (nPadded - n) * sizeof(Scalar), d_Q.Cols(), mainStream));
+  }
   //
   CudaVectorView<Scalar> wv(d_Q.Col(restartSize + 1).data(), n);
   //
