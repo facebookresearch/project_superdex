@@ -213,10 +213,10 @@ The Coefficients column lists $(\alpha,\beta)$ and the Butcher tableau $(A,b,c)$
 | `BDF2` | 2 | 1 | 2 | A-stable | $((4/3,-1/3),2/3)$; $\left[1\mid1\right]$; $b^T=(1)$ |
 | `BDF3` | 3 | 1 | 3 | Not A-stable | $((18/11,-9/11,2/11),6/11)$; $\left[1\mid1\right]$; $b^T=(1)$ |
 | `DIRK22` | 1 | 2 | 2 | L-stable | $((1),1)$; $\begin{bmatrix}\gamma_2&0&\gamma_2\\1-\gamma_2&\gamma_2&1\end{bmatrix}$; $b^T=(1-\gamma_2,\gamma_2)$ |
-| `DIRK23` | 1 | 2 | 3 | A-stable, not L-stable | $((1),1)$; $\begin{bmatrix}\gamma_3&0&\gamma_3\\-1/\sqrt3&\gamma_3&1-\gamma_3\end{bmatrix}$; $b^T=(1/2,1/2)$ |
+| **(Experimental)** `DIRK23` | 1 | 2 | 3 | A-stable, not L-stable | $((1),1)$; $\begin{bmatrix}\gamma_3&0&\gamma_3\\-1/\sqrt3&\gamma_3&1-\gamma_3\end{bmatrix}$; $b^T=(1/2,1/2)$ |
 | `DIRK33` | 1 | 3 | 3 | L-stable | $((1),1)$; $\begin{bmatrix}\gamma&0&0&\gamma\\c_2-\gamma&\gamma&0&c_2\\b_1&b_2&\gamma&1\end{bmatrix}$; $b^T=(b_1,b_2,\gamma)$ |
-| `SymplecticDIRK12` (implicit midpoint) | 1 | 1 | 2 | A-stable, symplectic | $((1),1)$; $\left[1/2\mid1/2\right]$; $b^T=(1)$ |
-| `SymplecticDIRK22` | 1 | 2 | 2 | A-stable, symplectic | $((1),1)$; $\begin{bmatrix}1/4&0&1/4\\1/2&1/4&3/4\end{bmatrix}$; $b^T=(1/2,1/2)$ |
+| **(Experimental)** `SymplecticDIRK12` (implicit midpoint) | 1 | 1 | 2 | A-stable, symplectic | $((1),1)$; $\left[1/2\mid1/2\right]$; $b^T=(1)$ |
+| **(Experimental)** `SymplecticDIRK22` | 1 | 2 | 2 | A-stable, symplectic | $((1),1)$; $\begin{bmatrix}1/4&0&1/4\\1/2&1/4&3/4\end{bmatrix}$; $b^T=(1/2,1/2)$ |
 
 The DIRK constants are
 
