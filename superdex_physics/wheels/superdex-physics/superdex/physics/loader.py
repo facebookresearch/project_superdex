@@ -359,7 +359,8 @@ def _load_selected_runtime_module(
                 precision_module_name
             ):
                 raise
-            missing_error = error
+            # Drop the traceback so the stored miss does not keep the importing frames alive.
+            missing_error = error.with_traceback(None)
             module = None
 
     if module is None:

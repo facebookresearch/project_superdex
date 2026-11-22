@@ -14,12 +14,14 @@
 
 from __future__ import annotations
 
+import gc
 import importlib.machinery
 import json
 import os
 import sysconfig
 import tempfile
 import unittest
+import weakref
 from pathlib import Path
 from types import ModuleType
 from unittest.mock import patch
@@ -815,6 +817,24 @@ class LoaderTest(unittest.TestCase):
         ):
             loader.import_optional_module("native")
         self.assertIs(caught.exception, error)
+
+    def test_optional_absence_releases_importing_frames(self) -> None:
+        class Local:
+            pass
+
+        def import_with_local(local: Local) -> ModuleType | None:
+            return loader.import_optional_module("superdex_loader_test_absent")
+
+        local = Local()
+        local_ref = weakref.ref(local)
+        # Without the cyclic collector, only plain reference counting can free `local`.
+        gc.disable()
+        try:
+            self.assertIsNone(import_with_local(local))
+            del local
+            self.assertIsNone(local_ref())
+        finally:
+            gc.enable()
 
     def test_optional_mismatch_finds_unselected_payload_outside_sys_path(self) -> None:
         for variant in ("native_double", "native_double_avx512"):
