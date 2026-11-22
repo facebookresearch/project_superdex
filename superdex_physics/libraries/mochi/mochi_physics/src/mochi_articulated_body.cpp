@@ -3595,14 +3595,16 @@ void articulated::rigid::EntityPostStage(
   if (convergence.stageStatus == ConvergenceStatus::Diverged) {
     // The state of the articulated actor and its internal rigid actors is always in sync due to
     // PostNewSolution systems. The exception is if the solver diverged, in which case the
-    // articulated actor was reset to a safe state but its internal rigid actors were not.
+    // articulated actor was reset to a safe state at rest but its internal rigid actors were not.
     auto actorSol = fullPoseRef.value.MiddleRows(rigidDofOffset.poseOffset, RigidSize::kAll);
     mochi::rigid::EntitySetSolution(actorSol, {}, {}, currPose);
+    currVel.value.SetZero();
+  } else {
+    // Compute velocity (differential variable) at the end of the stage.
+    mochi::rigid::ComputeVelocityAtStageEnd(intState, stageStartPose, currPose, currVel);
   }
 
-  // Compute velocity (differential variable) at the end of the stage, and push it to the vector
-  // containing its value at the end of each stage.
-  mochi::rigid::ComputeVelocityAtStageEnd(intState, stageStartPose, currPose, currVel);
+  // Push the velocity to the vector containing its value at the end of each stage.
   intRigidVels.stages[intState.currentStage].value = currVel.value;
 }
 
