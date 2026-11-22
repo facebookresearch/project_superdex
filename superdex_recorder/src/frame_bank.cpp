@@ -21,6 +21,9 @@
 
 #include <mochi_core/utils/reflection.h>
 
+#include <algorithm>
+#include <array>
+#include <cstdint>
 #include <fstream>
 #include <string>
 #include <utility>
@@ -84,13 +87,57 @@ namespace {
 constexpr uint64_t kMagicMask = 0x00FF'FFFF'FFFF'FFFF;
 constexpr uint64_t kMagic = 0x004B'4E41'4258'4453 | (uint64_t{sizeof(mochi::real)} << 56);
 
-/* A hash of the bank structs' reflected names, types, sizes and offsets. */
+/* Whether `type` is a number, whose width the bank's bytes depend on. */
+bool IsArithmetic(SReflect::CoreType type) {
+  return type >= SReflect::CoreType::CT_bool && type <= SReflect::CoreType::CT_double;
+}
+
+/* Appends what the bank's bytes depend on to `out`: the name of `type`, a number's width, a
+ * struct's fields in order with their names, and an array's element type, recursively. Offsets and
+ * container sizes vary with the platform and struct packing, and the bytes do not depend on them.
+ */
+void AppendLayout(SReflect::TypeInfo const& type, std::string& out) {
+  out += type._nameWithNamespace;
+  if (IsArithmetic(type._coreType)) {
+    out += ':';
+    out += std::to_string(type._sizeInBytes);
+  } else if (type._coreType == SReflect::CoreType::CT_struct) {
+    out += " {";
+    for (SReflect::FieldTypeInfo const* field :
+         static_cast<SReflect::StructTypeInfo const&>(type)._fields) {
+      out += ' ';
+      out += field->_name;
+      out += ": ";
+      AppendLayout(*field->_innerTypeInfo, out);
+      out += ';';
+    }
+    out += " }";
+  } else if (type._coreType == SReflect::CoreType::CT_array) {
+    out += " [";
+    AppendLayout(*static_cast<SReflect::ArrayTypeInfo const&>(type)._innerTypeInfo, out);
+    out += ']';
+  }
+}
+
+/* A hash of the bank structs' layout (AppendLayout). Unlike a hash of TypeInfoToJson, it does not
+ * change when simple_reflection describes types in more detail. */
 uint64_t GetSchema() {
   static uint64_t const schema = [] {
-    std::string const json = SReflect::GetTypeInfo<FrameBank>().TypeInfoToJson(false);
-    return SReflect::CalcHash64(json.data(), json.size());
+    std::string layout;
+    AppendLayout(SReflect::GetTypeInfo<FrameBank>(), layout);
+    return SReflect::CalcHash64(layout.data(), layout.size());
   }();
   return schema;
+}
+
+/* Schemas earlier builds wrote for this same layout, hashing TypeInfoToJson: before and after
+ * simple_reflection's D125296135 added fields' isProperty and isReadOnly to it (16 Nov 2026). Their
+ * banks load as they are. Remove them when the layout changes (FrameBankTest pins the schema). */
+constexpr std::array<uint64_t, 2> kLegacySchemas{0x83C7'7162'05B2'E53C, 0x8C14'6B6C'489E'4C6E};
+
+bool IsKnownSchema(uint64_t schema) {
+  return schema == GetSchema() ||
+      std::find(kLegacySchemas.begin(), kLegacySchemas.end(), schema) != kLegacySchemas.end();
 }
 
 std::filesystem::path GetAbsolutePath(std::filesystem::path const& path) {
@@ -189,7 +236,7 @@ std::shared_ptr<FrameBank const> LoadFrameBank(
         "'%s' was packed with another Mochi precision; re-pack it with %s.",
         name.c_str(),
         sizeof(mochi::real) == 4 ? "fp32" : "fp64");
-  } else if (!SReflect::FromBytes(reader, schema) || schema != GetSchema()) {
+  } else if (!SReflect::FromBytes(reader, schema) || !IsKnownSchema(schema)) {
     SUPERDEX_ERROR_SET(
         error,
         "'%s' was packed by another build or an older format; re-pack it from its recordings.",

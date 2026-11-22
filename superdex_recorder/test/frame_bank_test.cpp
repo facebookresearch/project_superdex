@@ -26,6 +26,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstdint>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <functional>
@@ -214,6 +215,22 @@ void WriteBytes(std::filesystem::path const& path, std::string const& bytes) {
   file.write(bytes.data(), static_cast<std::streamsize>(bytes.size()));
 }
 
+/* The schema hash a bank file's header holds, after its magic. */
+uint64_t SchemaOf(std::string const& bytes) {
+  uint64_t schema = 0;
+  std::memcpy(&schema, bytes.data() + sizeof(uint64_t), sizeof(schema));
+  return schema;
+}
+
+std::string WithSchema(std::string bytes, uint64_t schema) {
+  std::memcpy(bytes.data() + sizeof(uint64_t), &schema, sizeof(schema));
+  return bytes;
+}
+
+/* The schemas earlier builds wrote for the bank structs of today: the hash of their reflection
+ * description before and after simple_reflection's D125296135. */
+constexpr std::array<uint64_t, 2> kLegacySchemas{0x83C7'7162'05B2'E53C, 0x8C14'6B6C'489E'4C6E};
+
 class FrameBankTest : public testing::Test {
  protected:
   /* Saves TwoEpisodes(), applies `edit` to the file's bytes, and returns the error of loading it.
@@ -252,6 +269,34 @@ TEST_F(FrameBankTest, LoadsWhatWasSavedAndSavesItToTheSameBytes) {
   EXPECT_EQ(second.actors[3].rootTranslations, (Values{0.6_r, -0.5_r, 0_r}));
   EXPECT_EQ(second.actors[2].displacements, TwoEpisodes().episodes[1].actors[2].displacements);
   EXPECT_TRUE(std::isnan(loaded->episodes[0].controllers[0].targets[0].values[0]));
+}
+
+// The hash of the bank structs' layout. Changing the structs changes it: update it here, and remove
+// frame_bank.cpp's legacy schemas, which hold for this layout only.
+TEST_F(FrameBankTest, WritesTheHashOfTheBankStructsLayout) {
+  mochi::Error error;
+
+  SaveFrameBank(TwoEpisodes(), path, error);
+
+  ASSERT_TRUE(error.IsOK()) << error.ToString();
+  EXPECT_EQ(SchemaOf(ReadBytes(path)), uint64_t{0xE6B5'0867'CE8A'BE7D});
+}
+
+TEST_F(FrameBankTest, LoadsBanksOfTheEarlierSchemasOfTheSameLayoutToTheSameBank) {
+  mochi::Error error;
+  std::filesystem::path const legacy = directory.Path() / "legacy.superdex_framebank";
+  std::filesystem::path const again = directory.Path() / "again.superdex_framebank";
+  SaveFrameBank(TwoEpisodes(), path, error);
+  ASSERT_TRUE(error.IsOK()) << error.ToString();
+
+  for (uint64_t const schema : kLegacySchemas) {
+    WriteBytes(legacy, WithSchema(ReadBytes(path), schema));
+    auto const loaded = LoadFrameBank(legacy, error);
+    ASSERT_NE(loaded, nullptr) << error.ToString();
+    SaveFrameBank(*loaded, again, error);
+
+    EXPECT_EQ(ReadBytes(again), ReadBytes(path)) << std::hex << schema;
+  }
 }
 
 TEST_F(FrameBankTest, RefusesFilesThatAreNotBanks) {
@@ -491,6 +536,53 @@ TEST_F(FrameBankSceneTest, PlacesStaticActorsAtTheirEpisodesPoses) {
     EXPECT_NEAR(translation[1], -0.5, 1e-6) << "episode " << episode;
   }
   EXPECT_TRUE(error.IsOK()) << error.ToString();
+}
+
+TEST_F(FrameBankSceneTest, RestoresBanksOfTheEarlierSchemasBitwise) {
+  AddActorsOfTwoEpisodes();
+  TemporaryDirectory const directory;
+  std::filesystem::path const current = directory.Path() / "current.superdex_framebank";
+  std::filesystem::path const legacy = directory.Path() / "legacy.superdex_framebank";
+  SaveFrameBank(TwoEpisodes(), current, error);
+  ASSERT_TRUE(error.IsOK()) << error.ToString();
+  // Loads `path`, restores episode 0's second frame and returns every restored value.
+  auto const restore = [&](std::filesystem::path const& path) {
+    std::vector<real> state;
+    auto const bank = LoadFrameBank(path, error);
+    auto const restorer = bank != nullptr ? EpisodeRestorer::Create(*scene, bank, error) : nullptr;
+    if (restorer == nullptr) {
+      ADD_FAILURE() << error.ToString();
+      return state;
+    }
+    restorer->RestoreFrame(0, 1, error);
+    std::array<real, 2> joints{};
+    arm->GetArticulatedPose(mochi::Span<real>{joints.data(), joints.size()}, error);
+    state.insert(state.end(), joints.begin(), joints.end());
+    for (real const value : duck->GetDisplacements(error)) {
+      state.push_back(value);
+    }
+    mochi::TransformRT const com = cube->GetCenterOfMassTransform(error);
+    for (mochi::Real3 const& v :
+         {com.GetTranslation(),
+          cube->GetLinearVelocity(error),
+          cube->GetAngularVelocity(error),
+          table->GetRootTransform().GetTranslation()}) {
+      state.insert(state.end(), {v[0], v[1], v[2]});
+    }
+    for (int i = 0; i < 4; ++i) {
+      state.push_back(com.GetRotation().data[i]);
+    }
+    EXPECT_TRUE(error.IsOK()) << error.ToString();
+    return state;
+  };
+
+  std::vector<real> const expected = restore(current);
+
+  ASSERT_FALSE(expected.empty());
+  for (uint64_t const schema : kLegacySchemas) {
+    WriteBytes(legacy, WithSchema(ReadBytes(current), schema));
+    EXPECT_EQ(restore(legacy), expected) << std::hex << schema;
+  }
 }
 
 TEST_F(FrameBankSceneTest, StepsOnAMovedStaticActorAsIfItHadBeenThere) {

@@ -104,7 +104,8 @@ FrameBank PackFrameBank(mochi::Span<std::filesystem::path const> recordings, moc
 void SaveFrameBank(FrameBank const& bank, std::filesystem::path const& path, mochi::Error& error);
 
 /* @brief Reads a bank file. Refuses a file written with other bank structs or another Mochi
- * precision: re-pack it from its recordings. */
+ * precision: re-pack it from its recordings. Banks written before the layout hash, whose header
+ * holds the hash of the same structs' reflection description, load as they are. */
 std::shared_ptr<FrameBank const> LoadFrameBank(
     std::filesystem::path const& path,
     mochi::Error& error);
