@@ -674,7 +674,8 @@ TEST_F(ArticulatedBodyTest, Articulated_EntityPostNewSolution) {
   EXPECT_TRUE(test::NearEqualSpan(fullDofsSpan, expectedFullSolSpan));
 }
 
-// Test whether the data in CArticulatedLinkTransforms and the per-link rigid state are in sync.
+// Test whether the data in CArticulatedLinkTransforms, the per-link rigid state and the links' DoF
+// values are in sync.
 TEST_F(ArticulatedBodyTest, Articulated_LinkTransformsInSync) {
   auto runChecks = [&]() {
     entt::registry& reg = GetRegistry();
@@ -686,6 +687,12 @@ TEST_F(ArticulatedBodyTest, Articulated_LinkTransformsInSync) {
       auto const& rbState = reg.get<CRigidState<TimeStep::Current> const>(aE).value;
       EXPECT_EQ(skeletonPoseCurr[i].GetRotation(), rbState.GetRotation());
       EXPECT_EQ(skeletonPoseCurr[i].GetTranslation(), rbState.GetTranslation());
+
+      std::array<real, RigidSize::kDAll> dofs{};
+      _scene->GetActor(GetActorHandle(aE, _scene->GetHandle()))
+          ->GetDofValues({}, dofs, test::ExpectOK{});
+      EXPECT_NEAR_EQ(rbState.GetTranslation(), (Real3{dofs[0], dofs[1], dofs[2]}));
+      EXPECT_NEAR_EQ(rbState.GetRotation().ToRotationVector(), (Real3{dofs[3], dofs[4], dofs[5]}));
     }
   };
 
@@ -703,6 +710,13 @@ TEST_F(ArticulatedBodyTest, Articulated_LinkTransformsInSync) {
   auto const& links = reg.get<CGroupMembers const>(_eAC).actors;
   EXPECT_GT(descendants.rigidActors.size(), links.size());
   EXPECT_EQ(links, descendants.articulatedLinkActors);
+
+  // Compare after moving and rotating the root, so that world and root-relative values differ.
+  TransformRT const worldFromRoot{
+      Quaternion::FromRotationVector(Real3{0.1_r, 0.2_r, 0.3_r}), Real3{1_r, 2_r, 3_r}};
+  _scene->GetActor(GetActorHandle(_eAC, _scene->GetHandle()))
+      ->SetRootTransform(worldFromRoot, test::ExpectOK{});
+  runChecks();
 }
 
 // Guards link-authored pose projection from republishing off-manifold transforms.

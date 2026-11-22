@@ -11295,7 +11295,8 @@ class Actor:
             Number of degrees of freedom of the actor.
 
         Note:
-            Returns zero for actors without degrees of freedom (e.g., static actors).
+            Returns zero for actors without degrees of freedom (e.g., standalone static
+            actors).
 
         Note:
             For rod actors, there are 4 DoFs per node, in the layout of
@@ -11322,8 +11323,16 @@ class Actor:
             :class:`~superdex.physics.Error`: If an error occurs.
 
         Note:
-            Not supported for static actors, even when both input and output spans are
-            empty.
+            Not supported for standalone static actors, even when both input and output
+            spans are empty.
+
+        Note:
+            For dynamic rigid actors and nested link actors (see
+            :meth:`~superdex.physics.Actor.get_nested_link_actors`), the 6 DoF values
+            are the world-space center-of-mass position [m] followed by the
+            world-from-local orientation as a rotation vector (axis multiplied by angle
+            [rad]). The DoFs of a nested link actor are derived from those of its
+            articulated actor.
 
         Note:
             For rod actors, each node has 4 DoF values: the (x, y, z) displacement [m]

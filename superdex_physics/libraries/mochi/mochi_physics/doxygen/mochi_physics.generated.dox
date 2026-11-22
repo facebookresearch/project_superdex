@@ -5891,7 +5891,7 @@
 ///
 /// @return Number of degrees of freedom of the actor.
 ///
-/// @note Returns zero for actors without degrees of freedom (e.g., static actors).
+/// @note Returns zero for actors without degrees of freedom (e.g., standalone static actors).
 /// @note For rod actors, there are 4 DoFs per node, in the layout of @ref mochi::Actor::GetDofValues "GetDofValues".
 ///
 
@@ -5903,7 +5903,8 @@
 /// @param[out] outDofValues Output buffer for the DoF values. Size must equal @ref mochi::Actor::GetNumDofs "GetNumDofs" when @p dofIndices is empty, or the size of @p dofIndices otherwise.
 /// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
 ///
-/// @note Not supported for static actors, even when both input and output spans are empty.
+/// @note Not supported for standalone static actors, even when both input and output spans are empty.
+/// @note For dynamic rigid actors and nested link actors (see @ref mochi::Actor::GetNestedLinkActors "GetNestedLinkActors"), the 6 DoF values are the world-space center-of-mass position [m] followed by the world-from-local orientation as a rotation vector (axis multiplied by angle [rad]). The DoFs of a nested link actor are derived from those of its articulated actor.
 /// @note For rod actors, each node has 4 DoF values: the (x, y, z) displacement [m] and a twist angle [rad]. The twist angle at node i belongs to element i, except for the last node of an open (non-closed-loop) rod, whose twist angle is padding and is always zero. It is the twist about the element's tangent accumulated since the start of the most recent time step, and it is reset to zero at the start of each time step and by @ref mochi::Actor::SetRodPose "SetRodPose". It is already included in the element frame axes of @ref mochi::Actor::GetRodPose "GetRodPose", so it is not a total twist.
 ///
 /// @see @ref mochi::Actor::GetNumDofs "GetNumDofs"

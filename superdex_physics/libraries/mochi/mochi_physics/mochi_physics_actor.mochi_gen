@@ -597,7 +597,7 @@ class Actor [no_init, no_destruct, use_scene] {
   //
   // @return Number of degrees of freedom of the actor.
   //
-  // @note Returns zero for actors without degrees of freedom (e.g., static actors).
+  // @note Returns zero for actors without degrees of freedom (e.g., standalone static actors).
   // @note For rod actors, there are 4 DoFs per node, in the layout of @ref GetDofValues.
   fn GetNumDofs() -> int [pure, virtual, const, batchable, nodiscard];
 
@@ -609,7 +609,12 @@ class Actor [no_init, no_destruct, use_scene] {
   // @param[out] outDofValues Output buffer for the DoF values. Size must equal @ref GetNumDofs
   // when @ref dofIndices is empty, or the size of @ref dofIndices otherwise.
   //
-  // @note Not supported for static actors, even when both input and output spans are empty.
+  // @note Not supported for standalone static actors, even when both input and output spans are
+  // empty.
+  // @note For dynamic rigid actors and nested link actors (see @ref GetNestedLinkActors), the 6 DoF
+  // values are the world-space center-of-mass position [m] followed by the world-from-local
+  // orientation as a rotation vector (axis multiplied by angle [rad]). The DoFs of a nested link
+  // actor are derived from those of its articulated actor.
   // @note For rod actors, each node has 4 DoF values: the (x, y, z) displacement [m] and a twist
   // angle [rad]. The twist angle at node i belongs to element i, except for the last node of an
   // open (non-closed-loop) rod, whose twist angle is padding and is always zero. It is the twist

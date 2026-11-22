@@ -868,8 +868,15 @@ class ActorInterfaceImpl : public ActorInterface {
       poseContainer.resize(dofInfo->poseSize);
       pose = poseContainer;
     }
-    GetSolutions(
-        AsView(pose), reg, MakeSingletonConstSpan(e), reg.get<CDofOffset const>(e).poseOffset);
+
+    // GetSolutions skips links, whose pose is part of the articulated actor's solution.
+    if (reg.all_of<TagArticulatedLinkActor>(e)) {
+      auto const& state = reg.get<CRigidState<TimeStep::Current> const>(e).value;
+      TransformToRawPose(state, AsView(pose).TopRows<RigidSize::kAll>(RigidSize::kAll));
+    } else {
+      GetSolutions(
+          AsView(pose), reg, MakeSingletonConstSpan(e), reg.get<CDofOffset const>(e).poseOffset);
+    }
 
     // Check if we're done
     if (poseContainer.empty()) {
