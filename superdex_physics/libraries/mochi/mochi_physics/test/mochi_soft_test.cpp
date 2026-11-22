@@ -655,12 +655,25 @@ TEST_F(MochiSoftContactSkin, UseContactSkinSelectsContactRepresentation) {
   entt::entity const skin = GetEntity(CreateActor(true, ActorBoundaryElementType::P1Q6));
   EXPECT_TRUE(reg.all_of<TagUseDeformableContactSkin>(skin));
   EXPECT_FALSE(reg.all_of<CFemBoundaryDiscretization>(skin));
+  int constexpr kNumQuads = 6;
   int const numElements = reg.get<CContactSkinMesh const>(skin).mesh->GetNumElements();
-  EXPECT_EQ(
-      6 * numElements, isize(reg.get<CContactSamples<TimeStep::Current> const>(skin).positions));
+  auto const& samples = reg.get<CContactSamples<TimeStep::Current> const>(skin);
+  ASSERT_EQ(kNumQuads * numElements, isize(samples.positions));
+  ASSERT_EQ(kNumQuads * numElements, isize(samples.weights));
   auto const& elementMap = reg.get<CLinearContactSkinElementMap const>(skin);
-  EXPECT_EQ(6, elementMap.samplesPerElement);
+  ASSERT_EQ(kNumQuads, elementMap.samplesPerElement);
   EXPECT_EQ(numElements, elementMap.NumElements());
+
+  // The six quadrature points have unequal weights, which their samples carry.
+  ecs::InvokeOnEntity(linear_contact_skin::UpdatePositionsAndSamples<TimeStep::Current>, reg, skin);
+  reg.get<CFemSurfaceDiscretization const>(skin).Visit([&](auto const& disc) {
+    for (int element = 0; element < numElements; ++element) {
+      for (int q = 0; q < kNumQuads; ++q) {
+        EXPECT_EQ(
+            disc.femElements[element].quadWeights[q], samples.weights[kNumQuads * element + q]);
+      }
+    }
+  });
 }
 
 TEST_F(MochiSoftContactSkin, AuthoredSkinIsExposedIndependentlyOfContactSelection) {
@@ -703,6 +716,19 @@ TEST_F(MochiSoftContactSkin, AuthoredSkinIsExposedIndependentlyOfContactSelectio
     ASSERT_EQ(contactSkin.GetNumNodes(), isize(skinPositions));
     for (int node = 0; node < isize(skinPositions); ++node) {
       EXPECT_NEAR_EQ(expectedSkinPositions[node], skinPositions[node]);
+    }
+
+    // The contact path updates its own copy of the skin nodes.
+    if (useContactSkin) {
+      auto& reg = GetRegistry();
+      entt::entity const entity = GetEntity(actor);
+      ecs::InvokeOnEntity(linear_contact_skin::UpdateBounds<TimeStep::Current>, reg, entity);
+      auto const contactPositions = Unflatten<Real3 const>(
+          MakeConstSpan(reg.get<CDeformedContactSkinNodes const>(entity).positions));
+      ASSERT_EQ(contactSkin.GetNumNodes(), isize(contactPositions));
+      for (int node = 0; node < isize(contactPositions); ++node) {
+        EXPECT_NEAR_EQ(expectedSkinPositions[node], contactPositions[node]);
+      }
     }
   }
 }

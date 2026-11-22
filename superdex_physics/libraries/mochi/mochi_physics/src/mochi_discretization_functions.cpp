@@ -25,6 +25,7 @@
 #include <mochi_core/utils/rand_utils.h>
 
 #include <algorithm>
+#include <climits>
 #include <cmath>
 #include <unordered_set>
 #include <utility>
@@ -93,11 +94,34 @@ void mochi::UpdateQueryNodePositions(
   // Compute reference positions + displacements.
   ArrayAdd(MakeSpan(outQuery.nodePositions), referencePositions, displacements);
 }
+
+// Computes the positions of the embedded nodes in [begin, end). The spans are passed by value: read
+// through captured references, they would be reloaded after every store that may alias them.
+static void UpdateLinearEmbeddedNodePositions(
+    Span<int const> indices,
+    Span<real const> weights,
+    int weightsPerNode,
+    Span<Real3 const> embeddedReferencePositions,
+    Span<Real3 const> displacements,
+    Span<Real3> outPositions,
+    int begin,
+    int end) {
+  for (int node = begin; node < end; ++node) {
+    Vec4r position = Load<3, Vec4r>(embeddedReferencePositions[node].data());
+    for (int influence = 0; influence < weightsPerNode; ++influence) {
+      int const embeddingIndex = node * weightsPerNode + influence;
+      int const sourceNode = indices[embeddingIndex];
+      MOCHI_ASSERT_VERBOSE(sourceNode >= 0 && sourceNode < isize(displacements));
+      position += weights[embeddingIndex] * Load<3, Vec4r>(displacements[sourceNode].data());
+    }
+    outPositions[node] = ToReal3(position);
+  }
+}
+
 void mochi::UpdateLinearEmbeddedNodePositionsFromDisplacements(
     LinearMeshEmbedding const& embedding,
     Span<Real3 const> embeddedReferencePositions,
     Span<Real3 const> displacements,
-    Span<int const> outputNodeIndices,
     Span<Real3> outPositions) {
   MOCHI_PROFILE_SCOPE();
 
@@ -105,25 +129,26 @@ void mochi::UpdateLinearEmbeddedNodePositionsFromDisplacements(
   Span<int const> const indices = embedding.GetIndices();
   Span<real const> const weights = embedding.GetWeights();
   int const numEmbeddedNodes = isize(indices) / weightsPerNode;
-  int const numOutputNodes =
-      outputNodeIndices.empty() ? numEmbeddedNodes : isize(outputNodeIndices);
-  MOCHI_ASSERT_VERBOSE(isize(outPositions) == numOutputNodes);
+  MOCHI_ASSERT_VERBOSE(isize(outPositions) == numEmbeddedNodes);
   MOCHI_ASSERT_VERBOSE(isize(embeddedReferencePositions) == numEmbeddedNodes);
 
   int constexpr kMinPerTask = 128;
-  ParallelForN(
-      "UpdateLinearEmbeddedNodePositions", numOutputNodes, kMinPerTask, [&](int outputNode) {
-        int const embeddedNode =
-            outputNodeIndices.empty() ? outputNode : outputNodeIndices[outputNode];
-        MOCHI_ASSERT_VERBOSE(embeddedNode >= 0 && embeddedNode < numEmbeddedNodes);
-        Real3 position = embeddedReferencePositions[embeddedNode];
-        for (int influence = 0; influence < weightsPerNode; ++influence) {
-          int const embeddingIndex = embeddedNode * weightsPerNode + influence;
-          int const sourceNode = indices[embeddingIndex];
-          MOCHI_ASSERT_VERBOSE(sourceNode >= 0 && sourceNode < isize(displacements));
-          position += weights[embeddingIndex] * displacements[sourceNode];
-        }
-        outPositions[outputNode] = position;
+  ParallelForRange(
+      "UpdateLinearEmbeddedNodePositions",
+      0,
+      numEmbeddedNodes,
+      kMinPerTask,
+      INT_MAX,
+      [&](int begin, int end) {
+        UpdateLinearEmbeddedNodePositions(
+            indices,
+            weights,
+            weightsPerNode,
+            embeddedReferencePositions,
+            displacements,
+            outPositions,
+            begin,
+            end);
       });
 }
 

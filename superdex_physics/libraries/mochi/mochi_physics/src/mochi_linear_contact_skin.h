@@ -55,7 +55,7 @@ void UpdateSamples(
     CDeformedContactSkinNodes const& deformedNodes,
     CContactSamples<kTimeStep>& outSamples);
 
-// Updates the deformed positions of the active contact-skin nodes, then runs @ref UpdateSamples.
+// Updates the deformed positions of the contact-skin nodes, then runs @ref UpdateSamples.
 template <TimeStep kTimeStep>
 void UpdatePositionsAndSamples(
     ecs::Excluded<TagRodActor>,

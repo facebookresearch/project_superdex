@@ -36,18 +36,21 @@
 
 using namespace mochi;
 
-// Evaluates the active contact-skin node positions for the given physics-mesh displacements.
+// Evaluates the contact-skin node positions for the given physics-mesh displacements.
 static void ComputeNodePositions(
     CContactSkinMesh const& contactSkin,
     CDeformedContactSkinNodes const& deformedNodes,
     ColumnVectorView<real const> displacements,
     Span<Real3> outPositions) {
   MOCHI_ASSERT_VERBOSE(contactSkin.embedding != nullptr, "Contact skin requires an embedding.");
+
+  // Model validation rejects unreferenced contact-skin nodes.
+  MOCHI_ASSERT_VERBOSE(contactSkin.mesh->GetNumActiveNodes() == contactSkin.mesh->GetNumNodes());
+
   UpdateLinearEmbeddedNodePositionsFromDisplacements(
       *contactSkin.embedding,
       Unflatten<Real3 const>(MakeConstSpan(deformedNodes.referencePositions)),
       Unflatten<Real3 const>(displacements.GetConstSpan()),
-      contactSkin.mesh->GetActiveNodes(),
       outPositions);
 }
 
@@ -66,7 +69,7 @@ void mochi::linear_contact_skin::EmplaceComponents(
   deformedNodes.referencePositions.resize_noinit(kSpaceDim3 * contactSkin.GetNumNodes());
   embedding.Update(
       physicsNodeCoordinates, Unflatten<Real3>(MakeSpan(deformedNodes.referencePositions)));
-  deformedNodes.positions.resize(kSpaceDim3 * contactSkin.GetNumActiveNodes());
+  deformedNodes.positions.resize(kSpaceDim3 * contactSkin.GetNumNodes());
   reg.emplace<TagUseDeformableContactSkin>(e);
   reg.emplace<CSkinnedContactSnle>(e);
   reg.emplace<TagSkinnedContact>(e);
@@ -259,7 +262,7 @@ void mochi::linear_contact_skin::SetupActiveCollisionNormals(
   DynamicArray<Real3> stageStartPositions(&allocator);
   Span<Real3 const> nodePositions = Unflatten<Real3 const>(MakeConstSpan(deformedNodes.positions));
   if (explicitNormals) {
-    stageStartPositions.resize_noinit(contactSkin.mesh->GetNumActiveNodes());
+    stageStartPositions.resize_noinit(contactSkin.mesh->GetNumNodes());
     ComputeNodePositions(
         contactSkin, deformedNodes, stageStartDispl.value, MakeSpan(stageStartPositions));
     nodePositions = MakeConstSpan(stageStartPositions);

@@ -53,6 +53,7 @@
 
 #include <algorithm>
 #include <array>
+#include <climits>
 #include <cmath>
 #include <cstdint>
 #include <functional>
@@ -3143,6 +3144,66 @@ void mochi::AssembleCollisionResponse(
       outDRes);
 }
 
+// Interpolates the samples of the elements, or of the active faces, in [begin, end) from their node
+// values: positions, or displacements added to the reference samples. Sets their weights to the
+// quadrature weights, scaled by the face weights for active faces, and copies the active-face
+// samples and their indices, in the order of the active faces, to the active positions and indices.
+// The spans are passed by value: read through captured references, they would be reloaded after
+// every store that may alias them.
+template <
+    bool kUpdateOnlyActiveFaces,
+    bool kNodeValuesArePositions,
+    int kNumFields,
+    typename ElementT>
+static void InterpolateCollisionSamples(
+    Span<ElementT const> elements,
+    Span<int const> activeFaces,
+    Span<real const> faceWeights,
+    Span<real const> nodeValues,
+    Span<Real3> outPositions,
+    Span<real> outWeights,
+    Span<Real3> outActivePositions,
+    Span<int> outActiveIndices,
+    int begin,
+    int end) {
+  static_assert(ElementT::kSpaceDim == 3, "Invalid spatial dimensions");
+  static_assert(kNumFields >= ElementT::kSpaceDim, "Not enough fields to define displacement");
+  int constexpr kNumQuads = ElementT::kNumQuadPoints;
+  int constexpr kNumNodes = ElementT::kNumNodes;
+
+  for (int j = begin; j < end; ++j) {
+    int const elementIndex = kUpdateOnlyActiveFaces ? activeFaces[j] : j;
+    int const sampleOffset = kNumQuads * elementIndex;
+    ElementT const& element = elements[elementIndex];
+    auto const nodes = element.Nodes();
+    auto const localNodes = element.LocalNodes();
+    NdArray<Vec4r, kNumNodes> values MOCHI_NO_INIT;
+    for (int i = 0; i < kNumNodes; ++i) {
+      values[i] = Load<3, Vec4r>(&nodeValues[kNumFields * nodes[i]]);
+    }
+
+    for (int q = 0; q < kNumQuads; ++q) {
+      Vec4r sample = kNodeValuesArePositions ? SimdZero<Vec4r>() : ToSimd(element.mapEvaluated[q]);
+      for (int i = 0; i < kNumNodes; ++i) {
+        sample += values[i] * element.basisEvaluated[q][localNodes[i]];
+      }
+
+      Real3 const position = ToReal3(sample);
+      outPositions[sampleOffset + q] = position;
+      if constexpr (kUpdateOnlyActiveFaces) {
+        int const activeSample = kNumQuads * j + q;
+        outActivePositions[activeSample] = position;
+        outActiveIndices[activeSample] = sampleOffset + q;
+      }
+    }
+
+    real const faceWeight = kUpdateOnlyActiveFaces ? faceWeights[elementIndex] : 1_r;
+    for (int q = 0; q < kNumQuads; ++q) {
+      outWeights[sampleOffset + q] = element.quadWeights[q] * faceWeight;
+    }
+  }
+}
+
 template <
     bool kUpdateOnlyActiveFaces,
     bool kNodeValuesArePositions,
@@ -3150,7 +3211,7 @@ template <
     int kNumFields>
 static void UpdateCollisionSamplePositionsImplInternal(
     ColumnVectorView<real const> nodeValues,
-    DiscretizationType const& boundaryDiscrVariant,
+    DiscretizationType const& discretization,
     CActiveBoundaryFaces const* activeBoundaryFaces,
     ContactSamples& outSamples) {
   MOCHI_PROFILE_SCOPE();
@@ -3158,72 +3219,53 @@ static void UpdateCollisionSamplePositionsImplInternal(
       !kUpdateOnlyActiveFaces || activeBoundaryFaces,
       "Cannot update active faces without CActiveBoundaryFaces component.");
 
-  boundaryDiscrVariant.Visit([&](auto const& boundaryDiscr) {
-    using DiscretizationT = std::decay_t<decltype(boundaryDiscr)>;
-    static int constexpr kSpaceDim = DiscretizationT::kSpaceDim;
-    static int constexpr kNumQuadsPerFace = DiscretizationT::kNumQuads;
-    static_assert(kSpaceDim == 3, "Invalid spatial dimensions");
-    static_assert(kNumFields >= kSpaceDim, "Not enough fields to define displacement");
-    int const numBoundaryFaces = isize(boundaryDiscr.femElements);
-    int const numBoundaryFacesToUpdate =
-        kUpdateOnlyActiveFaces ? isize(activeBoundaryFaces->ViewIndices()) : numBoundaryFaces;
+  discretization.Visit([&](auto const& disc) {
+    using ElementT = typename std::decay_t<decltype(disc)>::ElementT;
+    int constexpr kNumQuads = ElementT::kNumQuadPoints;
 
-    // Resize dynamic vectors.
+    Span<ElementT const> const elements = MakeConstSpan(disc.femElements);
+    Span<int const> const activeFaces =
+        kUpdateOnlyActiveFaces ? activeBoundaryFaces->ViewIndices() : Span<int const>{};
+    Span<real const> const faceWeights =
+        kUpdateOnlyActiveFaces ? activeBoundaryFaces->ViewWeights() : Span<real const>{};
+    int const numElementsToUpdate = kUpdateOnlyActiveFaces ? isize(activeFaces) : isize(elements);
+
     if constexpr (kUpdateOnlyActiveFaces) {
-      auto numSamplesToUpdate = static_cast<size_t>(numBoundaryFacesToUpdate) * kNumQuadsPerFace;
-      outSamples.activePositions.resize(numSamplesToUpdate);
-      outSamples.activeIndices.resize(numSamplesToUpdate);
+      size_t const numActiveSamples = static_cast<size_t>(numElementsToUpdate) * kNumQuads;
+      outSamples.activePositions.resize(numActiveSamples);
+      outSamples.activeIndices.resize(numActiveSamples);
     } else {
       outSamples.activePositions.clear();
       outSamples.activeIndices.clear();
     }
 
-    // For each element in the boundary discretization...
-    static int constexpr kMinPerTask =
-        600 / kNumQuadsPerFace; // At least 20 μs per task (assuming ~100 ns
-                                // per element with 3 quadrature points).
-    ParallelForN("CalcCollisionSample", numBoundaryFacesToUpdate, kMinPerTask, [&](int j) {
-      // Fetch element and indices of the degrees of freedom.
-      int const boundaryFaceIdx =
-          kUpdateOnlyActiveFaces ? activeBoundaryFaces->ViewIndices()[j] : j;
-      auto const& element = boundaryDiscr.femElements[boundaryFaceIdx];
-      using ElementType = std::decay_t<decltype(element)>;
-      int constexpr kNumNodesPerFace = ElementType::kNumNodes;
-      int const boundaryFaceOffset = boundaryFaceIdx * kNumQuadsPerFace;
-      int const activeOffset = j * kNumQuadsPerFace;
-      auto const dofIndices = kNumFields * element.Nodes();
-      auto const localNodes = element.LocalNodes();
+    Span<real const> const values = nodeValues.GetConstSpan();
+    Span<Real3> const positions = MakeSpan(outSamples.positions);
+    Span<real> const weights = MakeSpan(outSamples.weights);
+    Span<Real3> const activePositions = MakeSpan(outSamples.activePositions);
+    Span<int> const activeIndices = MakeSpan(outSamples.activeIndices);
 
-      NdArray<Vec4r, kNumNodesPerFace> elementNodeValues;
-      for (int i = 0; i < kNumNodesPerFace; ++i) {
-        elementNodeValues[i] = Load<3, Vec4r>(&nodeValues[dofIndices[i]]);
-      }
-
-      // Store the element quad weights scaled (if applicable) by the boundary face weight.
-      // These quad weights are copied below in outSamples.weights.
-      real const thisFaceWeight =
-          kUpdateOnlyActiveFaces ? activeBoundaryFaces->ViewWeights()[boundaryFaceIdx] : 1_r;
-      auto const quadWeights = element.quadWeights * thisFaceWeight;
-
-      // Interpolate the node values at quadrature points.
-      for (int q = 0; q < kNumQuadsPerFace; ++q) {
-        int const sampleIndex = boundaryFaceOffset + q;
-
-        Vec4r samplePos = kNodeValuesArePositions ? Vec4r{} : ToSimd(element.mapEvaluated[q]);
-        for (int i = 0; i < kNumNodesPerFace; ++i) {
-          samplePos += elementNodeValues[i] * element.basisEvaluated[q][localNodes[i]];
-        }
-        outSamples.positions[sampleIndex] = ToReal3(samplePos);
-
-        // Store the quadrature weight
-        outSamples.weights[sampleIndex] = quadWeights[q];
-
-        if constexpr (kUpdateOnlyActiveFaces) {
-          outSamples.activePositions[activeOffset + q] = ToReal3(samplePos);
-          outSamples.activeIndices[activeOffset + q] = sampleIndex;
-        }
-      }
-    });
+    // At least 20 μs per task (assuming ~100 ns per element with 3 quadrature points).
+    int constexpr kMinPerTask = 600 / kNumQuads;
+    ParallelForRange(
+        "CalcCollisionSample",
+        0,
+        numElementsToUpdate,
+        kMinPerTask,
+        INT_MAX,
+        [&](int begin, int end) {
+          InterpolateCollisionSamples<kUpdateOnlyActiveFaces, kNodeValuesArePositions, kNumFields>(
+              elements,
+              activeFaces,
+              faceWeights,
+              values,
+              positions,
+              weights,
+              activePositions,
+              activeIndices,
+              begin,
+              end);
+        });
   });
 
   MOCHI_ASSERT(

@@ -17,15 +17,18 @@
 #include <mochi_core/test/mochi_test_helpers.h>
 #include <mochi_core/utils/local_to_global_map.h>
 #include <mochi_core/utils/subset_map.h>
+#include <mochi_physics/src/mochi_contact.h>
 #include <mochi_physics/src/mochi_discretization_components.h>
 
 #include <gtest/gtest.h>
 
 #include <algorithm>
+#include <array>
 #include <memory>
 #include <numeric>
 #include <set>
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -528,6 +531,41 @@ TEST(MochiDiscretization, ActiveBoundaryFaces3) {
   auto uniqueNodes = actBdFaces.ViewUniqueVolumeNodes();
   auto goldActiveNodes = CollectGoldNodesFromSelectedTraces(*mesh, tracesVec, active);
   CheckNodes(uniqueNodes, goldActiveNodes);
+
+  // Without displacements, the active samples are the reference samples of the active faces, in the
+  // order of the active faces, with the quadrature weights scaled by the face weights.
+  auto const boundaryDisc =
+      CFemBoundaryDiscretization::Create(*mesh, femVolD, ActorBoundaryElementType::P1Q6);
+  ColumnVector<real> const displacements =
+      ColumnVector<real>::Zero(kSpaceDim3 * mesh->GetNumNodes());
+  ContactSamples samples(boundaryDisc.GetNumQuadPoints());
+  std::array constexpr kSampledFaces = {8, 1, 6};
+  std::array constexpr kFaceWeights = {0.5_r, 2_r, 3_r};
+  boundaryDisc.Visit([&](auto const& disc) {
+    CActiveBoundaryFaces const sampledFaces(
+        mesh,
+        MakeConstSpan(kSampledFaces),
+        MakeConstSpan(disc.femElements),
+        MakeConstSpan(kFaceWeights));
+    UpdateCollisionSamplePositionsFromNodeDisplacements<
+        /*kUpdateOnlyActiveFaces*/ true,
+        CFemBoundaryDiscretization,
+        kSpaceDim3>(AsConstView(displacements), boundaryDisc, &sampledFaces, samples);
+
+    int constexpr kNumQuads = std::decay_t<decltype(disc)>::ElementT::kNumQuadPoints;
+    ASSERT_EQ(kNumQuads * isize(kSampledFaces), isize(samples.activePositions));
+    ASSERT_EQ(kNumQuads * isize(kSampledFaces), isize(samples.activeIndices));
+    for (int j = 0; j < isize(kSampledFaces); ++j) {
+      int const face = kSampledFaces[j];
+      for (int q = 0; q < kNumQuads; ++q) {
+        int const sample = kNumQuads * face + q;
+        EXPECT_EQ(sample, samples.activeIndices[kNumQuads * j + q]);
+        EXPECT_EQ(disc.femElements[face].mapEvaluated[q], samples.positions[sample]);
+        EXPECT_EQ(samples.positions[sample], samples.activePositions[kNumQuads * j + q]);
+        EXPECT_EQ(disc.femElements[face].quadWeights[q] * kFaceWeights[j], samples.weights[sample]);
+      }
+    }
+  });
 }
 
 // ===================================================================================
