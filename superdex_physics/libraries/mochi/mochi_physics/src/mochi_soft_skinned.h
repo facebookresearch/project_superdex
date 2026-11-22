@@ -132,12 +132,12 @@ void AddArticulatedDResidual(
     CBlendedComposition const& composition,
     CActorSnle& outArticulatedSnle);
 
+// Initialize a nested soft actor attached by blended::AttachNestedSoftActors.
 void InitSkinnedActor(
     entt::registry& reg,
     entt::entity e,
     SoftSkinnedActorParams const& params,
     bool useContact,
-    ActorHandle articulatedHandle,
     Error& error);
 
 void EntityIncrementStep(

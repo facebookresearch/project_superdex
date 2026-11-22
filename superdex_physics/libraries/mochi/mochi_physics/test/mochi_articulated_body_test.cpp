@@ -3577,7 +3577,8 @@ TEST_F(CreateBlendedActorTest, ZeroDofHardSkeletonRejected) {
   EXPECT_EQ(nullptr, _scene->CreateSoftSkinnedActor(params, test::ExpectNotOK{}));
 }
 
-// Destroying the blended skeleton must also destroy the nested soft actors it owns.
+// Nested actors cannot be destroyed individually, and destroying the blended skeleton must also
+// destroy the nested soft actors it owns.
 TEST_F(CreateBlendedActorTest, DestroyBlendedActorDestroysNestedActors) {
   auto params = MakeMinimalBlendedParams(
       CreateUnitCubeTetBlendedSkinShape(_mochiContext, DynamicString{"soft"}));
@@ -3586,24 +3587,58 @@ TEST_F(CreateBlendedActorTest, DestroyBlendedActorDestroysNestedActors) {
   ASSERT_NE(nullptr, actor);
   EXPECT_GT(_scene->GetNumActors(), 1);
 
+  for (ActorHandle const nested :
+       {actor->GetNestedLinkActors(test::ExpectOK{})[0],
+        actor->GetNestedSoftActors(test::ExpectOK{})[0]}) {
+    {
+      test::ExpectLoggingInScope expectWarning(_mochiContext, LogChannel::Warning);
+      _scene->DestroyActor(nested);
+    }
+    ASSERT_NE(nullptr, _scene->GetActor(nested));
+  }
+
+  _scene->Step(1e-2_r);
+
   _scene->DestroyActor(actor->GetHandle());
 
   EXPECT_EQ(0, _scene->GetNumActors());
+  _scene->Step(1e-2_r);
 }
 
-TEST_F(CreateBlendedActorTest, MissingSecondSoftBlendingDataLeavesSceneUnchanged) {
+// Creation fails before any actor exists if the skin has no blending data for a soft actor, after
+// the nested soft actors are initialized if the skin subsampling is invalid, and after only the
+// first of two is initialized if the second has both posed and unposed inertia.
+TEST_F(CreateBlendedActorTest, FailedCreationLeavesSceneUnchanged) {
   auto params = MakeMinimalBlendedParams(
       CreateUnitCubeTetBlendedSkinShape(_mochiContext, DynamicString{"soft"}));
+
+  // A limited root joint gives the skeleton a joint-limit constraint for the rollback to destroy.
+  params.skeletonParams.joints[0].type = ArticulatedJointType::Spherical;
+  params.skeletonParams.joints[0].minLimit = Real3{-1_r, -1_r, -1_r};
+  params.skeletonParams.joints[0].maxLimit = Real3{1_r, 1_r, 1_r};
+
+  auto missingBlendingData = params;
   auto secondSoft = params.softParams[0];
   secondSoft.name = "other_soft";
-  params.softParams.push_back(std::move(secondSoft));
+  missingBlendingData.softParams.push_back(std::move(secondSoft));
+
+  auto invalidSubsampling = params;
+  invalidSubsampling.skeletonParams.skin->boundarySubsampling = MakeSubsampling(2_r);
+
+  // Without a skin, nothing fails before the second soft actor, which keeps its unposed inertia.
+  auto inertiaConflict = missingBlendingData;
+  inertiaConflict.skeletonParams.skin.reset();
+  inertiaConflict.hasInertia = true;
+  inertiaConflict.softParams[0].hasInertia = false;
+
   int const numActorsBefore = _scene->GetNumActors();
   int const numConstraintsBefore = _scene->GetNumConstraints();
 
-  // The skin has data for the first soft actor only, so blending fails after both are created.
-  Actor const* actor = _scene->CreateSoftSkinnedActor(params, test::ExpectNotOK{});
+  for (auto const& invalidParams : {missingBlendingData, invalidSubsampling, inertiaConflict}) {
+    EXPECT_EQ(nullptr, _scene->CreateSoftSkinnedActor(invalidParams, test::ExpectNotOK{}));
+    EXPECT_EQ(numActorsBefore, _scene->GetNumActors());
+    EXPECT_EQ(numConstraintsBefore, _scene->GetNumConstraints());
+  }
 
-  EXPECT_EQ(nullptr, actor);
-  EXPECT_EQ(numActorsBefore, _scene->GetNumActors());
-  EXPECT_EQ(numConstraintsBefore, _scene->GetNumConstraints());
+  _scene->Step(1e-2_r);
 }

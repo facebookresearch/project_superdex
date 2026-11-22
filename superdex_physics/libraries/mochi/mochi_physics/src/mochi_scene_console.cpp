@@ -149,9 +149,7 @@ static void ForEachActorEntry(SceneImpl& scene, Actor const* parent, Fn const& f
        {parent->GetNestedLinkActors(ErrorAssert{}), parent->GetNestedSoftActors(ErrorAssert{})}) {
     for (ActorHandle const child : children) {
       Actor* const actor = scene.GetActor(child);
-      if (actor == nullptr) {
-        continue; // Destroying a nested soft actor leaves its handle in the parent
-      }
+      MOCHI_ASSERT_VERBOSE(actor != nullptr, "A live actor's nested actor handles must resolve.");
       visit(actor);
     }
   }

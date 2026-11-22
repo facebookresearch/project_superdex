@@ -539,12 +539,12 @@ void skinned::InitSkinnedActor(
     entt::entity e,
     SoftSkinnedActorParams const& params,
     bool useContact,
-    ActorHandle articulatedHandle,
     Error& error) {
   MOCHI_ERROR_RETURN(error);
   MOCHI_PROFILE_SCOPE();
 
   MOCHI_ASSERT(reg.all_of<TagSoftActor const>(e), "Not a soft actor.");
+  MOCHI_ASSERT(reg.all_of<TagNestedSoftActor const>(e), "Not a nested soft actor.");
   MOCHI_ASSERT(
       (reg.any_of<CDofPositionsBC, TagRomActorFixRigidTransformInSolve>(e)),
       "Nested soft actor must have Dirichlet boundary conditions or it must be a ROM with no rigid DoFs.");
@@ -562,16 +562,6 @@ void skinned::InitSkinnedActor(
       error,
       "Nested soft actor cannot use both posed and unposed stress");
   MOCHI_ERROR_RETURN(error);
-
-  // Add composition component.
-  auto& composition = reg.emplace<CSkinnedComposition>(e);
-  auto articulated = GetEntity(reg, articulatedHandle, ErrorAssert{});
-  MOCHI_ASSERT(reg.all_of<TagArticulatedActor const>(articulated), "Not an articulated actor.");
-  composition.articulated = articulated;
-  composition.articulatedHandle = articulatedHandle;
-
-  // Add nested soft actor tag.
-  reg.emplace<TagNestedSoftActor>(e);
 
   InitSoftSkinnedMesh(reg, e, useContact, error);
   MOCHI_ERROR_RETURN(error);

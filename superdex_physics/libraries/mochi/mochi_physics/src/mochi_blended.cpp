@@ -270,28 +270,36 @@ void blended::UpdateBlendingVelocity(
   }
 }
 
-void blended::InitBlendedActor(
+void blended::AttachNestedSoftActors(
     entt::registry& reg,
     entt::entity e,
-    ArticulatedActorParams const& params,
-    Span<ActorHandle const> softHandles,
-    std::shared_ptr<Shape const> blendedShapePtr,
-    Error& error) {
-  MOCHI_ERROR_RETURN(error);
-  MOCHI_PROFILE_SCOPE();
-
+    Span<ActorHandle const> softHandles) {
   MOCHI_ASSERT(reg.all_of<TagArticulatedActor const>(e), "Not an articulated actor.");
 
-  // Add composition component.
+  auto const articulatedHandle = GetActorHandle(e, GetSceneHandle(reg));
   auto& composition = reg.emplace<CBlendedComposition>(e);
   composition.soft.reserve(softHandles.size());
   composition.softHandles.reserve(softHandles.size());
   for (auto handle : softHandles) {
     auto entity = GetEntity(reg, handle, ErrorAssert{});
-    MOCHI_ASSERT(reg.all_of<TagNestedSoftActor const>(entity), "Not a nested soft actor.");
+    auto& skinnedComposition = reg.emplace<CSkinnedComposition>(entity);
+    skinnedComposition.articulated = e;
+    skinnedComposition.articulatedHandle = articulatedHandle;
+    reg.emplace<TagNestedSoftActor>(entity);
+
     composition.soft.emplace_back(entity);
     composition.softHandles.emplace_back(handle);
   }
+}
+
+void blended::InitBlendedActor(
+    entt::registry& reg,
+    entt::entity e,
+    ArticulatedActorParams const& params,
+    std::shared_ptr<Shape const> blendedShapePtr,
+    Error& error) {
+  MOCHI_ERROR_RETURN(error);
+  MOCHI_PROFILE_SCOPE();
 
   // Add blended actor tag
   reg.emplace<TagBlendedActor>(e);

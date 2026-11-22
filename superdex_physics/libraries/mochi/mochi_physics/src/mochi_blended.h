@@ -25,8 +25,8 @@
 
 namespace mochi {
 
-// Nested soft actors driven by an articulated actor. Present even when there is no blended
-// surface.
+// Nested soft actors driven by an articulated actor, which owns them: destroying it destroys them.
+// Present even when there is no blended surface.
 struct CBlendedComposition : public NoCopy {
   std::vector<entt::entity> soft;
   std::vector<ActorHandle> softHandles;
@@ -43,12 +43,18 @@ Systems for a blended body
 */
 namespace blended {
 
-// Method to initialize a blended actor.
+// Attach soft actors to an articulated actor as its nested soft actors, to be initialized next by
+// skinned::InitSkinnedActor.
+void AttachNestedSoftActors(
+    entt::registry& reg,
+    entt::entity e,
+    Span<ActorHandle const> softHandles);
+
+// Initialize a blended actor after skinned::InitSkinnedActor on each of its nested soft actors.
 void InitBlendedActor(
     entt::registry& reg,
     entt::entity e,
     ArticulatedActorParams const& params,
-    Span<ActorHandle const> softHandles,
     std::shared_ptr<Shape const> blendedShapePtr,
     Error& error);
 

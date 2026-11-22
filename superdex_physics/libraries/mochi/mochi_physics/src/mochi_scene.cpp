@@ -107,7 +107,8 @@ class ScopedActorCreationRollback {
       auto const entity = GetEntityUnchecked(_actors[i]);
       auto const& registry = _scene.GetRegistry();
       MOCHI_ASSERT_VERBOSE(
-          !registry.valid(entity) || !registry.all_of<CGroupMemberInfo>(entity),
+          (!registry.valid(entity) ||
+           !registry.any_of<CGroupMemberInfo, CSkinnedComposition>(entity)),
           "Actor creation rollback cannot directly own a nested actor.");
 #endif // MOCHI_ASSERT_VERBOSE_ENABLED
       _scene.DestroyActor(_actors[i]);
@@ -143,6 +144,16 @@ DestroyAllItemsInArticulatedActor(SceneImpl& scene, entt::registry& registry, en
   MOCHI_ASSERT(
       registry.valid(e) && registry.all_of<TagArticulatedActor>(e),
       "Not a valid articulated actor.");
+
+  // Detach the nested soft actors, then destroy them (legal now that they are detached).
+  if (auto const* blended = registry.try_get<CBlendedComposition const>(e)) {
+    for (auto const soft : blended->soft) {
+      registry.erase<CSkinnedComposition>(soft);
+    }
+    for (auto const softHandle : blended->softHandles) {
+      scene.DestroyActor(softHandle);
+    }
+  }
 
   auto& groupMembers = registry.get<CGroupMembers>(e);
   std::vector<entt::entity> memberActorsCopy = groupMembers.actors;
@@ -185,7 +196,7 @@ static void DestroyActorEntity(SceneImpl& scene, entt::registry& registry, entt:
     RemoveActorFromCompound(registry, groupInfo->group, e, ErrorAssert{});
   }
 
-  // If this actor is an articulation, destroy its members.
+  // If this actor is an articulation, destroy its nested actors and constraints.
   if (registry.all_of<TagArticulatedActor>(e)) {
     DestroyAllItemsInArticulatedActor(scene, registry, e);
   }
@@ -2997,26 +3008,26 @@ Actor* SceneImpl::CreateSoftSkinnedActorImpl(
   DisableContactForAdjacentActors(this, nodes, edges, error);
   MOCHI_ERROR_RETURN(error, {});
 
+  // Once attached, the skeleton destroys its nested soft actors with itself, so it is the only
+  // rollback root needed.
+  auto const skeletonEntity = GetEntity(_registry, skeletonActor->GetHandle(), ErrorAssert{});
+  blended::AttachNestedSoftActors(_registry, skeletonEntity, softActors);
+  actorRollback.ReplaceWithOwner(skeletonActor->GetHandle());
+
   // Initialize the nested soft actor components. The entities are the same as the soft actors.
   bool const useNestedSoftContact = !blendedShapePtr;
   for (int i = 0; i < numSoftActors; ++i) {
     auto entity = GetEntity(_registry, softActors[i], error);
-    skinned::InitSkinnedActor(
-        _registry, entity, params, useNestedSoftContact, skeletonActor->GetHandle(), error);
+    skinned::InitSkinnedActor(_registry, entity, params, useNestedSoftContact, error);
     MOCHI_ERROR_RETURN(error, {});
   }
 
-  // Initialize the blended actor components. The entity is the same as the skeleton.
-  auto entity = GetEntity(_registry, skeletonActor->GetHandle(), error);
-  blended::InitBlendedActor(_registry, entity, skeletonParams, softActors, blendedShapePtr, error);
+  blended::InitBlendedActor(_registry, skeletonEntity, skeletonParams, blendedShapePtr, error);
   MOCHI_ERROR_RETURN(error, {});
-
-  // The skeleton can now destroy its nested soft actors, so it is the only rollback root needed.
-  actorRollback.ReplaceWithOwner(skeletonActor->GetHandle());
 
   // Store the soft attachment links in the ECS for export purposes
   if (!softLinkParents.empty()) {
-    _registry.emplace<CSoftAttachmentLinks>(entity, std::move(softLinkParents));
+    _registry.emplace<CSoftAttachmentLinks>(skeletonEntity, std::move(softLinkParents));
   }
 
   // Return the skeleton actor
@@ -3056,21 +3067,14 @@ void SceneImpl::DestroyActor(ActorHandle actorHandle) {
           _registry.all_of<TagArticulatedActor>(e),
       "Non-articulated compounds must not be accessible through the public API.");
 
-  // It is illegal to destroy a member of an articulated actor via the public interface.
-  // The user must destroy the entire articulated actor instead. Because the user may simply be
-  // trying to destroy all of their actors, in no particular order.
-  if (_registry.all_of<TagArticulatedLinkActor, CGroupMemberInfo>(e)) {
+  // Nested actors cannot be destroyed individually: the user must destroy their articulated actor
+  // instead, which detaches them before destroying them. This only warns because the user may be
+  // destroying all of their actors in any order.
+  if (_registry.all_of<TagArticulatedLinkActor, CGroupMemberInfo>(e) ||
+      _registry.all_of<TagNestedSoftActor, CSkinnedComposition>(e)) {
     MOCHI_LOG_WARNING(
-        "Articulated links cannot be destroyed individually. Please destroy the entire articulated actor instead.");
+        "Nested actors cannot be destroyed individually. Please destroy the entire articulated actor instead.");
     return;
-  }
-
-  // If this is an articulated actor with nested soft actors, destroy them first.
-  auto const* blended = _registry.try_get<CBlendedComposition const>(e);
-  if (blended) {
-    for (auto soft : blended->softHandles) {
-      DestroyActor(soft);
-    }
   }
 
   MOCHI_ASSERT(_numActors >= 1);
