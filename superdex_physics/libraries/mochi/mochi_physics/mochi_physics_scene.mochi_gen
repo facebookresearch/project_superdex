@@ -133,11 +133,12 @@ class Scene [no_init, no_destruct] {
   //   with the time step of the last step, and the result depends on the active integration method:
   //   - Backward Euler, BDF2 and BDF3: if the scene has not been modified since the last step, its
   //     forces are reproduced exactly.
-  //   - Multi-stage methods: intermediate stage states are not available, so forces are evaluated
-  //     with a single-stage Backward Euler discretization and a constant-velocity previous pose.
+  //   - DIRK and symplectic DIRK methods: intermediate stage states are not available, so forces are
+  //     evaluated with a single-stage Backward Euler discretization and a constant-velocity previous
+  //     pose.
   //
   // After a quasistatic step, Backward Euler and BDF methods evaluate forces quasistatically, while
-  // multi-stage methods use the default 10 ms time step.
+  // DIRK and symplectic DIRK methods use the default 10 ms time step.
   //
   // @note When forces are evaluated, prescribed inputs set since the last step (static actor poses
   // and velocities, controller and constraint targets, boundary condition targets) are applied as

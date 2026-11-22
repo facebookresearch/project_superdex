@@ -1891,7 +1891,7 @@ class IntegrationMethod:
     DIRK22: IntegrationMethod
     """DIRK(2,2): 1 step, 2 stages, 2nd order, L-stable."""
     DIRK23: IntegrationMethod
-    """DIRK(2,3): 1 step, 2 stages, 3rd order.
+    """[Experimental] DIRK(2,3): 1 step, 2 stages, 3rd order.
 
     Note:
         Its step does not end at its last stage, so its steps use
@@ -1899,12 +1899,16 @@ class IntegrationMethod:
         :attr:`~superdex.physics.ContactParams.prefer_elasto_plastic_friction`).
         Queries refreshed without a step approximate it with one BackwardEuler
         stage, which may use elasto-plastic friction.
+
+    Warning:
+        This is an experimental feature. It may be changed or removed in the future.
+        Use at your own risk.
     """
     DIRK33: IntegrationMethod
     """DIRK(3,3): 1 step, 3 stages, 3rd order, L-stable."""
     SYMPLECTIC_DIRK12: IntegrationMethod
-    """Symplectic DIRK(1,2): 1 step, 1 stage, 2nd order, A-stable. Also known as Gauss
-    and implicit midpoint.
+    """[Experimental] Symplectic DIRK(1,2): 1 step, 1 stage, 2nd order, A-stable. Also
+    known as Gauss and implicit midpoint.
 
     Note:
         Its step does not end at its last stage, so its steps use
@@ -1912,9 +1916,13 @@ class IntegrationMethod:
         :attr:`~superdex.physics.ContactParams.prefer_elasto_plastic_friction`).
         Queries refreshed without a step approximate it with one BackwardEuler
         stage, which may use elasto-plastic friction.
+
+    Warning:
+        This is an experimental feature. It may be changed or removed in the future.
+        Use at your own risk.
     """
     SYMPLECTIC_DIRK22: IntegrationMethod
-    """Symplectic DIRK(2,2): 1 step, 2 stages, 2nd order, A-stable.
+    """[Experimental] Symplectic DIRK(2,2): 1 step, 2 stages, 2nd order, A-stable.
 
     Note:
         Its step does not end at its last stage, so its steps use
@@ -1922,6 +1930,10 @@ class IntegrationMethod:
         :attr:`~superdex.physics.ContactParams.prefer_elasto_plastic_friction`).
         Queries refreshed without a step approximate it with one BackwardEuler
         stage, which may use elasto-plastic friction.
+
+    Warning:
+        This is an experimental feature. It may be changed or removed in the future.
+        Use at your own risk.
     """
     COUNT: IntegrationMethod
     """Number of time integration method enum values."""
@@ -14148,12 +14160,13 @@ class Scene:
           depends on the active integration method:
         - Backward Euler, BDF2 and BDF3: if the scene has not been modified since the
           last step, its forces are reproduced exactly.
-        - Multi-stage methods: intermediate stage states are not available, so forces
-          are evaluated with a single-stage Backward Euler discretization and a
-          constant-velocity previous pose.
+        - DIRK and symplectic DIRK methods: intermediate stage states are not available,
+          so forces are evaluated with a single-stage Backward Euler discretization and
+          a constant-velocity previous pose.
 
         After a quasistatic step, Backward Euler and BDF methods evaluate forces
-        quasistatically, while multi-stage methods use the default 10 ms time step.
+        quasistatically, while DIRK and symplectic DIRK methods use the default 10 ms
+        time step.
 
         Raises:
             :class:`~superdex.physics.Error`: If an error occurs.

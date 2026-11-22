@@ -876,30 +876,39 @@ enum class EMochiIntegrationMethod : uint8 {
   /** DIRK(2,2): 1 step, 2 stages, 2nd order, L-stable. */
   DIRK22 = 3,
   /**
-   * DIRK(2,3): 1 step, 2 stages, 3rd order.
+   * [Experimental] DIRK(2,3): 1 step, 2 stages, 3rd order.
    *
    * @note Its step does not end at its last stage, so its steps use velocity-regularized friction
    *   for all contacts (see ContactParams::preferElastoPlasticFriction). Queries refreshed without
    *   a step approximate it with one BackwardEuler stage, which may use elasto-plastic friction.
+   *
+   * @warning This is an experimental feature. It may be changed or removed in the future. Use at
+   *   your own risk.
    */
   DIRK23 = 4,
   /** DIRK(3,3): 1 step, 3 stages, 3rd order, L-stable. */
   DIRK33 = 5,
   /**
-   * Symplectic DIRK(1,2): 1 step, 1 stage, 2nd order, A-stable. Also known as Gauss and implicit
-   *   midpoint.
+   * [Experimental] Symplectic DIRK(1,2): 1 step, 1 stage, 2nd order, A-stable. Also known as Gauss
+   *   and implicit midpoint.
    *
    * @note Its step does not end at its last stage, so its steps use velocity-regularized friction
    *   for all contacts (see ContactParams::preferElastoPlasticFriction). Queries refreshed without
    *   a step approximate it with one BackwardEuler stage, which may use elasto-plastic friction.
+   *
+   * @warning This is an experimental feature. It may be changed or removed in the future. Use at
+   *   your own risk.
    */
   SymplecticDIRK12 = 6,
   /**
-   * Symplectic DIRK(2,2): 1 step, 2 stages, 2nd order, A-stable.
+   * [Experimental] Symplectic DIRK(2,2): 1 step, 2 stages, 2nd order, A-stable.
    *
    * @note Its step does not end at its last stage, so its steps use velocity-regularized friction
    *   for all contacts (see ContactParams::preferElastoPlasticFriction). Queries refreshed without
    *   a step approximate it with one BackwardEuler stage, which may use elasto-plastic friction.
+   *
+   * @warning This is an experimental feature. It may be changed or removed in the future. Use at
+   *   your own risk.
    */
   SymplecticDIRK22 = 7,
   /** Number of time integration method enum values. */

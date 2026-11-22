@@ -23,29 +23,68 @@
 namespace mochi {
 /** @brief Time integration methods. */
 enum struct IntegrationMethod {
-  BackwardEuler, ///< Backward Euler: 1 step, 1 stage, 1st order, L-stable. Also known as BDF1 and
-                 ///< DIRK11.
-  BDF2, ///< BDF2: 2 steps, 1 stage, 2nd order, A-stable.
-  BDF3, ///< BDF3: 3 steps, 1 stage, 3rd order.
-  DIRK22, ///< DIRK(2,2): 1 step, 2 stages, 2nd order, L-stable.
-  DIRK23, ///< DIRK(2,3): 1 step, 2 stages, 3rd order. Its step does not end at its last stage, so
-          ///< its steps use velocity-regularized friction for all contacts (see
-          ///< @ref ContactParams::preferElastoPlasticFriction). Queries refreshed without a step
-          ///< approximate it with one BackwardEuler stage, which may use elasto-plastic friction.
-  DIRK33, ///< DIRK(3,3): 1 step, 3 stages, 3rd order, L-stable.
-  SymplecticDIRK12, ///< Symplectic DIRK(1,2): 1 step, 1 stage, 2nd order, A-stable. Also known as
-                    ///< Gauss and implicit midpoint. Its step does not end at its last stage, so
-                    ///< its steps use velocity-regularized friction for all contacts (see
-                    ///< @ref ContactParams::preferElastoPlasticFriction). Queries refreshed
-                    ///< without a step approximate it with one BackwardEuler stage, which may use
-                    ///< elasto-plastic friction.
-  SymplecticDIRK22, ///< Symplectic DIRK(2,2): 1 step, 2 stages, 2nd order, A-stable. Its step does
-                    ///< not end at its last stage, so its steps use velocity-regularized friction
-                    ///< for all contacts (see @ref ContactParams::preferElastoPlasticFriction).
-                    ///< Queries refreshed without a step approximate it with one BackwardEuler
-                    ///< stage, which may use elasto-plastic friction.
-  Count, ///< Number of time integration method enum values.
-  Default = BackwardEuler, ///< Default time integration method.
+  /**
+   * @brief Backward Euler: 1 step, 1 stage, 1st order, L-stable. Also known as BDF1 and DIRK11.
+   */
+  BackwardEuler,
+
+  /** @brief BDF2: 2 steps, 1 stage, 2nd order, A-stable. */
+  BDF2,
+
+  /** @brief BDF3: 3 steps, 1 stage, 3rd order. */
+  BDF3,
+
+  /** @brief DIRK(2,2): 1 step, 2 stages, 2nd order, L-stable. */
+  DIRK22,
+
+  /**
+   * @brief [Experimental] DIRK(2,3): 1 step, 2 stages, 3rd order.
+   *
+   * @warning This is an experimental feature. It may be changed or removed in the future. Use at
+   * your own risk.
+   *
+   * @note Its step does not end at its last stage, so its steps use velocity-regularized friction
+   * for all contacts (see @ref ContactParams::preferElastoPlasticFriction). Queries refreshed
+   * without a step approximate it with one BackwardEuler stage, which may use elasto-plastic
+   * friction.
+   */
+  DIRK23,
+
+  /** @brief DIRK(3,3): 1 step, 3 stages, 3rd order, L-stable. */
+  DIRK33,
+
+  /**
+   * @brief [Experimental] Symplectic DIRK(1,2): 1 step, 1 stage, 2nd order, A-stable. Also known as
+   * Gauss and implicit midpoint.
+   *
+   * @warning This is an experimental feature. It may be changed or removed in the future. Use at
+   * your own risk.
+   *
+   * @note Its step does not end at its last stage, so its steps use velocity-regularized friction
+   * for all contacts (see @ref ContactParams::preferElastoPlasticFriction). Queries refreshed
+   * without a step approximate it with one BackwardEuler stage, which may use elasto-plastic
+   * friction.
+   */
+  SymplecticDIRK12,
+
+  /**
+   * @brief [Experimental] Symplectic DIRK(2,2): 1 step, 2 stages, 2nd order, A-stable.
+   *
+   * @warning This is an experimental feature. It may be changed or removed in the future. Use at
+   * your own risk.
+   *
+   * @note Its step does not end at its last stage, so its steps use velocity-regularized friction
+   * for all contacts (see @ref ContactParams::preferElastoPlasticFriction). Queries refreshed
+   * without a step approximate it with one BackwardEuler stage, which may use elasto-plastic
+   * friction.
+   */
+  SymplecticDIRK22,
+
+  /** @brief Number of time integration method enum values. */
+  Count,
+
+  /** @brief Default time integration method. */
+  Default = BackwardEuler,
 };
 } // namespace mochi
 
