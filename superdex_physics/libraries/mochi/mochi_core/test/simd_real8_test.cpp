@@ -1235,19 +1235,7 @@ MOCHI_SIMD_TEST_BINARY_OP_NEAR(Vec8r, Sub, -, kEps);
 MOCHI_SIMD_TEST_LIMIT_RANGE_UNARY_FN_NEAR(Vec8r, Tan, ([](auto a) { return std::tan(a); }), -1_r, 1_r, kEps);
 MOCHI_SIMD_TEST_BINARY_BITWISE_OP(Vec8r, BitwiseXOR, ^);
 
-MOCHI_SIMD_TEST_LIMIT_RANGE_UNARY_FN_NEAR(Vec8r, Exp, ([](auto a) { return std::exp(a); }), -3_r, 3_r, kEps);
+TEST(Vec8r, Exp) { TestExp<Vec8r>(); }
 TEST(Vec8r, Ln) { TestLn<Vec8r>(); }
 MOCHI_SIMD_TEST_UNARY_FN_NEAR(Vec8r, Tanh, ([](auto a) { return std::tanh(a); }), kEps);
 // clang-format on
-
-TEST(Vec8r, ExpExtreme) {
-  // Keep non-negative entries in array 'x'
-  std::array<real, 8> x({60.0, 65.123, 70.5, 75.3, 80.0, 84.123, 85.678, 86.35});
-  Vec8r v(x[0], x[1], x[2], x[3], x[4], x[5], x[6], x[7]);
-  auto expv = Exp(v), expmv = Exp(-v);
-  auto tol = real(2.0) * std::numeric_limits<real>::epsilon();
-  for (int i = 0; i < 8; ++i) {
-    EXPECT_NEAR_RTOL(expv[i], std::exp(x[i]), tol);
-    EXPECT_LE(Abs(expmv[i] - std::exp(-x[i])), Max(expmv[i], std::exp(-x[i])) * tol);
-  }
-}

@@ -18,9 +18,12 @@
 #include <mochi_core/utils/constants.h>
 
 #include <limits>
+#include <numbers>
 
 using namespace mochi;
 
 static_assert(NearEqual(kPI, Sqr(kSqrtPi), 2_r * std::numeric_limits<real>::epsilon()));
 static_assert(NearEqual(2_r, Sqr(kSqrt2), 2_r * std::numeric_limits<real>::epsilon()));
 static_assert(NearEqual(3_r, Sqr(2_r * kSqrt3Over2), 2_r * std::numeric_limits<real>::epsilon()));
+static_assert(kLn2<float> == std::numbers::ln2_v<float>);
+static_assert(kLn2<double> == std::numbers::ln2_v<double>);

@@ -589,7 +589,8 @@ MOCHI_ANY MOCHI_FORCE_INLINE Simd<T, N> ASin(Simd<T, N> a);
 template <class T, int N>
 MOCHI_ANY MOCHI_FORCE_INLINE Simd<T, N> ATan(Simd<T, N> a);
 
-// Math functions
+// Exponential. Returns 0 for -inf, inf for inf, and NaN for NaN inputs. Results may overflow to inf
+// up to ln(2)/2 early, and denormal results may flush to 0.
 template <class T, int N>
 MOCHI_ANY MOCHI_FORCE_INLINE Simd<T, N> Exp(Simd<T, N> a);
 

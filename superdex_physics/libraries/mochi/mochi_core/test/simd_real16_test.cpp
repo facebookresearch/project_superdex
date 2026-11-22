@@ -678,14 +678,14 @@ TEST(Vec16r, SinCos) {
   }
 }
 
+// clang-format off
 MOCHI_SIMD_TEST_LIMIT_RANGE_UNARY_FN_NEAR(Vec16r, ACos, std::acos, -1, 1, kEps);
 MOCHI_SIMD_TEST_LIMIT_RANGE_UNARY_FN_NEAR(Vec16r, ASin, std::asin, -1, 1, kEps);
 MOCHI_SIMD_TEST_LIMIT_RANGE_UNARY_FN_NEAR(Vec16r, ATan, std::atan, -16, 16, kEps);
 MOCHI_SIMD_TEST_LIMIT_RANGE_UNARY_FN_NEAR(Vec16r, Cos, std::cos, -1, 1, kEps);
-MOCHI_SIMD_TEST_LIMIT_RANGE_UNARY_FN_NEAR(Vec16r, Exp, std::exp, -5, 5, real{1e-5});
-TEST(Vec16r, Ln) {
-  TestLn<Vec16r>();
-}
+TEST(Vec16r, Exp) { TestExp<Vec16r>(); }
+TEST(Vec16r, Ln) { TestLn<Vec16r>(); }
 MOCHI_SIMD_TEST_LIMIT_RANGE_UNARY_FN_NEAR(Vec16r, Sin, std::sin, -1, 1, kEps);
 MOCHI_SIMD_TEST_LIMIT_RANGE_UNARY_FN_NEAR(Vec16r, Tan, std::tan, -1, 1, kEps);
 MOCHI_SIMD_TEST_LIMIT_RANGE_UNARY_FN_NEAR(Vec16r, Tanh, std::tanh, -5, 5, kEps);
+// clang-format on

@@ -17,6 +17,7 @@
 #pragma once
 
 #include <mochi_core/test/mochi_test_helpers.h>
+#include <mochi_core/utils/constants.h>
 #include <mochi_core/utils/dynamic_array.h>
 #include <mochi_core/utils/half.h>
 #include <mochi_core/utils/math_utils.h>
@@ -87,6 +88,34 @@ void TestUnaryFunction(
   }
 }
 
+// Expects vectorFn to match scalarFn, evaluated in double, at values: within maxUlps where the
+// result is finite, and exactly where it is inf or NaN.
+template <class VecType, class ScalarFn, class VectorFn>
+void ExpectMatchesDoubleFn(
+    ScalarFn scalarFn,
+    VectorFn vectorFn,
+    DynamicArray<typename VecType::Scalar> values,
+    int maxUlps) {
+  using T = typename VecType::Scalar;
+  values.resize(RoundUp(isize(values), VecType::kSize), T(1));
+
+  for (int i = 0; i < isize(values); i += VecType::kSize) {
+    VecType const result = vectorFn(Load<VecType>(&values[i]));
+    for (int j = 0; j < VecType::kSize; ++j) {
+      T const expected = static_cast<T>(scalarFn(static_cast<double>(values[i + j])));
+      if (std::isnan(expected)) {
+        EXPECT_TRUE(std::isnan(result[j]));
+      } else if (std::isinf(expected)) {
+        EXPECT_EQ(expected, result[j]);
+      } else {
+        T const ulp =
+            std::nextafter(Abs(expected), std::numeric_limits<T>::infinity()) - Abs(expected);
+        EXPECT_LE(Abs(result[j] - expected), maxUlps * ulp);
+      }
+    }
+  }
+}
+
 // Test Ln against std::log over positive normal and denormal values of every exponent, every 2^-16
 // in [1/2, 2), values near 1 and special values, each special value next to a regular one.
 template <class VecType>
@@ -119,22 +148,43 @@ void TestLn() {
     values.push_back(special);
     values.push_back(T(2));
   }
-  values.resize(RoundUp(isize(values), VecType::kSize), T(1));
 
-  for (int i = 0; i < isize(values); i += VecType::kSize) {
-    VecType const result = Ln(Load<VecType>(&values[i]));
-    for (int j = 0; j < VecType::kSize; ++j) {
-      T const expected = static_cast<T>(std::log(static_cast<double>(values[i + j])));
-      if (std::isnan(expected)) {
-        EXPECT_TRUE(std::isnan(result[j]));
-      } else if (std::isinf(expected)) {
-        EXPECT_EQ(expected, result[j]);
-      } else {
-        T const ulp = std::nextafter(Abs(expected), kInf) - Abs(expected);
-        EXPECT_LE(Abs(result[j] - expected), kMaxUlps * ulp);
-      }
-    }
+  ExpectMatchesDoubleFn<VecType>(
+      [](double a) { return std::log(a); },
+      [](VecType a) { return Ln(a); },
+      std::move(values),
+      kMaxUlps);
+}
+
+// Test Exp against std::exp at small values, special values (each next to a regular one), and every
+// 2^-16 of the range of normal results except its top 0.6 ln(2), where Exp may overflow early.
+template <class VecType>
+void TestExp() {
+  using T = typename VecType::Scalar;
+  constexpr T kInf = std::numeric_limits<T>::infinity();
+  constexpr int kMaxUlps = details::kUseSvml ? 4 : 1; // SVML's Exp is off by up to 3 ulp.
+  // std::log can round log(min) down, to an input whose result is denormal.
+  T const lo = std::nextafter(std::log(std::numeric_limits<T>::min()), T(0));
+  T const hi = std::log(std::numeric_limits<T>::max()) - T(0.6) * kLn2<T>;
+  DynamicArray<T> values;
+  for (int i = 0; i <= 1 << 16; ++i) {
+    values.push_back(lo + (hi - lo) * T(i) / T(1 << 16));
   }
+  for (T delta : {T(1e-6), T(1e-3)}) {
+    values.push_back(delta);
+    values.push_back(-delta);
+  }
+  for (T special :
+       {T(0), -T(0), kInf, -kInf, T(1000), T(-1000), std::numeric_limits<T>::quiet_NaN()}) {
+    values.push_back(special);
+    values.push_back(T(1));
+  }
+
+  ExpectMatchesDoubleFn<VecType>(
+      [](double a) { return std::exp(a); },
+      [](VecType a) { return Exp(a); },
+      std::move(values),
+      kMaxUlps);
 }
 
 // Test a unary Simd function by comparing it to a known scalar function, for a list of user-defined

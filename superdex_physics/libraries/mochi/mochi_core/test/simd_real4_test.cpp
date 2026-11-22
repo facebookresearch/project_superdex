@@ -1118,19 +1118,7 @@ TEST(Vec4r, NdArrayConversion) {
 }
 
 // clang-format off
-MOCHI_SIMD_TEST_LIMIT_RANGE_UNARY_FN_NEAR(Vec4r, Exp, ([](auto a) { return std::exp(a); }), -3_r, 3_r, kEps);
+TEST(Vec4r, Exp) { TestExp<Vec4r>(); }
 TEST(Vec4r, Ln) { TestLn<Vec4r>(); }
 MOCHI_SIMD_TEST_UNARY_FN_NEAR(Vec4r, Tanh, ([](auto a) { return std::tanh(a); }), kEps);
 // clang-format on
-
-TEST(Vec4r, ExpExtreme) {
-  // Keep non-negative entries in array 'x'
-  std::array<real, 4> x({60.0, 70.5, 80.0, 85.678});
-  Vec4r v(x[0], x[1], x[2], x[3]);
-  auto expv = Exp(v), expmv = Exp(-v);
-  auto tol = real(2.0) * std::numeric_limits<real>::epsilon();
-  for (int i = 0; i < 4; ++i) {
-    EXPECT_NEAR_RTOL(expv[i], std::exp(x[i]), tol);
-    EXPECT_LE(Abs(expmv[i] - std::exp(-x[i])), Max(expmv[i], std::exp(-x[i])) * tol);
-  }
-}

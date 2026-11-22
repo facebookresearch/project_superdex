@@ -25,6 +25,8 @@ namespace mochi {
 
 template <typename T>
 constexpr T kMinusOne = T{0} - 1;
+template <typename T>
+inline constexpr T kLn2 = T(0.693147180559945309417232121458176568L);
 inline constexpr real kPI = 3.14159265358979323846_r;
 inline constexpr real kRadiansPerDegree = kPI / 180_r;
 inline constexpr real kDegreesPerRadian = 180_r / kPI;
