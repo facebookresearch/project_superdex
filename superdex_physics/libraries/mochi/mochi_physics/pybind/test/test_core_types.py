@@ -176,6 +176,29 @@ class TestCoreTypes(MochiTestBase):
         all_bytes = bytes(range(256))
         self.assertEqual(all_bytes, bytes(mochi.DynamicArrayChar(all_bytes)))
 
+        # Construction from and extension by a DynamicArray of the same type, including itself, copy
+        # its elements in C++: converting them through Python would reject the non-ASCII chars and
+        # the long non-UTF-8 string, which also covers elements that own heap memory.
+        for array_type, values in (
+            (mochi.DynamicArrayChar, all_bytes),
+            (mochi.DynamicArrayString, ["a", b"\xff" * 64]),
+        ):
+            array = array_type(values)
+            copied = array_type(array)
+            copied.extend(array)
+            array.extend(array)
+            self.assertEqual(array_type(values * 2), copied)
+            self.assertEqual(array_type(values * 2), array)
+
+        # Subclasses convert through their __iter__
+        class Reversed(mochi.DynamicArrayInt):
+            def __iter__(self):
+                return reversed(self.tolist())
+
+        a = mochi.DynamicArrayInt(Reversed([1, 2]))
+        a.extend(Reversed([3, 4]))
+        self.assertEqual([2, 1, 4, 3], a.tolist())
+
         # pickle serialization, including an array type registered in a submodule and
         # element types whose NumPy scalars the item casters reject
         control_type = mochi.experimental.ControlType

@@ -63,8 +63,23 @@ T CastDynamicArrayItem(nanobind::handle item) {
   }
 }
 
+// The DynamicArray that sequence is, if it has exactly this type. Subclasses return nullptr, so
+// that the element path honors an overridden __iter__.
 template <class T>
-DynamicArray<T> CastDynamicArray(nanobind::handle sequence) {
+[[nodiscard]] DynamicArray<T> const* AsExactDynamicArray(nanobind::handle sequence) {
+  return sequence.type().is(nanobind::type<DynamicArray<T>>())
+      ? &nanobind::cast<DynamicArray<T> const&>(sequence)
+      : nullptr;
+}
+
+template <class T>
+[[nodiscard]] DynamicArray<T> CastDynamicArray(nanobind::handle sequence) {
+  // Copy a DynamicArray of this exact type in C++ instead of converting each element through
+  // Python.
+  if (auto const* array = AsExactDynamicArray<T>(sequence)) {
+    return *array;
+  }
+
   DynamicArray<T> result;
   result.reserve(nanobind::len(sequence));
   for (auto item : sequence) {
@@ -102,7 +117,7 @@ inline auto DefDynamicArray(nanobind::module_& m, char const* pyName) {
   c.def(
       "__init__",
       [](DynamicArrayT* self, nb::sequence sequence) {
-        // Convert into a local first: the conversion runs Python code, which could reenter
+        // Convert into a local first: the conversion can run Python code, which could reenter
         // __init__ on a half-built *self.
         DynamicArrayT items = CastDynamicArray<T>(sequence);
         new (self) DynamicArrayT(std::move(items));
@@ -192,7 +207,7 @@ inline auto DefDynamicArray(nanobind::module_& m, char const* pyName) {
   });
 
   // Inputs can reference self's storage (see __getitem__ and the buffer protocol), so append,
-  // extend and resize copy them before the array grows.
+  // extend and resize copy any input that can before the array grows.
   c.def(
       "append",
       [](DynamicArrayT& self, T const& item) { self.push_back(T(item)); },
@@ -200,13 +215,17 @@ inline auto DefDynamicArray(nanobind::module_& m, char const* pyName) {
   c.def(
       "extend",
       [](DynamicArrayT& self, nb::sequence sequence) {
+        // Another DynamicArray of this exact type can't reference self's storage, so it needs no
+        // staging copy.
+        auto const* array = AsExactDynamicArray<T>(sequence);
+        if (array != nullptr && array != &self) {
+          self.append(*array);
+          return;
+        }
+
         DynamicArrayT items = CastDynamicArray<T>(sequence);
         self.append(std::make_move_iterator(items.begin()), std::make_move_iterator(items.end()));
       },
-      nb::arg("sequence"));
-  c.def(
-      "extend",
-      [](DynamicArrayT& self, DynamicArrayT const& sequence) { self.append(sequence); },
       nb::arg("sequence"));
   c.def("clear", &DynamicArrayT::clear);
   c.def("empty", &DynamicArrayT::empty);
