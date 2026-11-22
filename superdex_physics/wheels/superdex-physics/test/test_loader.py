@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import importlib.machinery
+import json
 import os
 import sysconfig
 import tempfile
@@ -152,6 +153,45 @@ class LoaderTest(unittest.TestCase):
         isa_patch = patch.object(loader, "ISA", "avx2")
         isa_patch.start()
         self.addCleanup(isa_patch.stop)
+
+    def test_namespaced_bundle_import_uses_the_selected_image(self) -> None:
+        name = "superdex_renderer.mochi._mochi_paths"
+        images = {
+            "avx2": "avx2/libsuperdex_native.so",
+            "avx512": "avx512/libsuperdex_native_avx512.so",
+        }
+        precision = "double" if loader.USE_DOUBLE_PRECISION else "single"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            bundle = root / "mochi_native"
+            bundle.mkdir()
+            manifest = bundle / "manifest.json"
+            manifest.write_text(json.dumps({"precision": precision, "images": images}))
+            file_patch = patch.object(
+                loader, "__file__", str(root / "superdex" / "physics" / "loader.py")
+            )
+            for isa, image in images.items():
+                with (
+                    self.subTest(isa=isa),
+                    file_patch,
+                    patch.object(loader, "ISA", isa),
+                    patch.object(
+                        importlib.machinery.ExtensionFileLoader,
+                        "create_module",
+                        return_value=ModuleType(name),
+                    ),
+                    patch.object(
+                        importlib.machinery.ExtensionFileLoader, "exec_module"
+                    ) as execute_module,
+                ):
+                    module = loader.import_bundled_module(name)
+                    self.assertEqual(name, module.__spec__.name)
+                    self.assertEqual(str(bundle / image), module.__spec__.origin)
+                    execute_module.assert_called_once_with(module)
+            other = "single" if precision == "double" else "double"
+            manifest.write_text(json.dumps({"precision": other, "images": images}))
+            with file_patch, self.assertRaisesRegex(ImportError, "precision"):
+                loader.import_bundled_module(name)
 
     def test_packaged_native_dir_uses_the_flat_base_payload_for_fp32(
         self,
@@ -836,3 +876,23 @@ class LoaderTest(unittest.TestCase):
             self.assertRaises(loader.NativeVariantUnavailableError),
         ):
             loader.import_optional_module("native")
+
+    def test_bundle_preparation_adds_only_selected_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            for isa in ("avx2", "avx512"):
+                (root / "mochi_native" / isa).mkdir(parents=True)
+            for isa in ("avx2", "avx512"):
+                with (
+                    patch.object(
+                        loader,
+                        "__file__",
+                        str(root / "superdex" / "physics" / "loader.py"),
+                    ),
+                    patch.object(loader, "ISA", isa),
+                    patch.object(loader.sys, "path", []),
+                ):
+                    loader._prepare_native_bundle()
+                    self.assertEqual(
+                        [str(root / "mochi_native" / isa)], loader.sys.path
+                    )

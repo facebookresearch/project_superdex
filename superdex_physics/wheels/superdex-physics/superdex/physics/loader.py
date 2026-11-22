@@ -17,6 +17,7 @@ from __future__ import annotations
 import importlib
 import importlib.machinery
 import importlib.util
+import json
 import os
 import platform
 import sys
@@ -74,6 +75,31 @@ def _resolve_isa() -> str:
                 f"Mochi ISA is already selected as {selected}; cannot switch to {isa}."
             )
     return isa
+
+
+def _prepare_native_bundle() -> None:
+    """Add the selected bundle directory without preloading native code."""
+    directory = Path(__file__).absolute().parents[2] / "mochi_native" / ISA
+    if directory.is_dir() and str(directory) not in sys.path:
+        sys.path.insert(0, str(directory))
+
+
+def import_bundled_module(name: str) -> ModuleType:
+    """Load a namespaced extension from the process's selected merged native image."""
+    root = Path(__file__).absolute().parents[2] / "mochi_native"
+    manifest = json.loads((root / "manifest.json").read_text())
+    if (manifest["precision"] == "double") != USE_DOUBLE_PRECISION:
+        raise ImportError(
+            f"Bundled native module {name!r} requires {manifest['precision']} precision."
+        )
+    image = root / manifest["images"][ISA]
+    native_loader = importlib.machinery.ExtensionFileLoader(name, str(image))
+    # An explicit loader keeps the image loadable whatever the platform's suffixes are.
+    spec = importlib.util.spec_from_file_location(name, image, loader=native_loader)
+    assert spec is not None
+    module = importlib.util.module_from_spec(spec)
+    native_loader.exec_module(module)
+    return module
 
 
 def _runtime_is_present(name: str) -> bool:
@@ -455,6 +481,7 @@ def import_optional_module(
     module_name: str, *, payload: NativePayload | None = None
 ) -> ModuleType | None:
     """Import the selected variant, returning None only if no variant is installed."""
+    _prepare_native_bundle()
     selected = selected_native_module_name(module_name)
     if payload is not None:
         _ensure_packaged_native_search_path(payload)
@@ -484,6 +511,7 @@ def import_module(
     With ``allow_source_build``, a missing extension is built with Buck and retried.
     """
 
+    _prepare_native_bundle()
     precision_module_name = selected_native_module_name(module_name)
     if payload is not None:
         _ensure_packaged_native_search_path(payload)
