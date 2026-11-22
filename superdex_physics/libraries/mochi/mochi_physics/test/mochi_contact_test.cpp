@@ -732,9 +732,16 @@ void FarGroundRestingTest::ExpectCubesDoNotSlide(bool elastoPlasticFriction) {
   for (int step = 0; step < 500; ++step) {
     _scene->Step(0.001_r);
   }
+  // Single-precision poses 32 m from the origin lie on a 3.8 µm grid. Their rounding can sustain a
+  // tangential oscillation, which elasto-plastic friction stores elastically and damps only by
+  // slipping past the presliding displacement. So elasto-plastic cubes may oscillate by a few
+  // presliding displacements (up to 3.3 of them over 5,000 steps on Windows), while inconsistent
+  // current and stage-start positions make cubes creep by millimeters.
+  real const tolerance =
+      elastoPlasticFriction ? 5_r * ContactParams{}.preslidingDisplacement : 1e-4_r;
   for (int i = 0; i < isize(cubes); ++i) {
     Real3 const displacement = cubes[i]->GetRootTransform().GetTranslation() - starts[i];
-    EXPECT_LT(Norm(Real3{displacement[0], 0_r, displacement[2]}), 1e-4_r) << "cube " << i;
+    EXPECT_LT(Norm(Real3{displacement[0], 0_r, displacement[2]}), tolerance) << "cube " << i;
   }
 }
 
