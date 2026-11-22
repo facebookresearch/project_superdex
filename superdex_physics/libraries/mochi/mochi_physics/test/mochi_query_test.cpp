@@ -2435,6 +2435,11 @@ TEST_F(ActorQueryTest, QueryNodesInVolumeLocal) {
   }
 
   {
+    auto pending = softActor->RegisterQuery(QueryType::SurfaceNodePositions, test::ExpectOK{});
+    MOCHI_DEFER(softActor->CancelQuery(pending));
+    softActor->QueryNodesInVolumeLocal(
+        enclosingAabb, /*boundaryOnly=*/true, [](int, Real3) {}, test::ExpectNotOK{});
+
     auto query =
         softActor->RegisterQueryAndCompute(QueryType::SurfaceNodePositions, test::ExpectOK{});
     MOCHI_DEFER(softActor->CancelQuery(query));

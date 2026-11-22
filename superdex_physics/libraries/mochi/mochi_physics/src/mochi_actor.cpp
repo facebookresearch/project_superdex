@@ -166,6 +166,7 @@ static void QueryNodesInVolumeLocalImpl(
   if (boundaryOnly) {
     auto const* surfaceMeshComponent = MOCHI_TRY_GET(CSurfaceMesh, reg, e, error);
     MOCHI_ERROR_RETURN(error);
+    auto const& mesh = surfaceMeshComponent->mesh;
 
     auto const* queryPos = MOCHI_TRY_GET(CQuerySurfaceNodePositions, reg, e, error);
     MOCHI_ERROR_RETURN(error);
@@ -177,9 +178,12 @@ static void QueryNodesInVolumeLocalImpl(
             actorMeshSource != ActorMeshSource::Surface,
         error,
         "Boundary node indices cannot be represented in Actor::GetMesh ordering.");
+    MOCHI_ERROR_IF(
+        isize(positions) < mesh->GetNumActiveNodes(),
+        error,
+        "The data is not available. If you registered the query, then the results should be available after the next simulation step.");
     MOCHI_ERROR_RETURN(error);
 
-    auto const& mesh = surfaceMeshComponent->mesh;
     bool const usesCompactSurfaceNodeOrdering = actorMeshSource == ActorMeshSource::Surface;
     for (int i = 0; i < mesh->GetNumActiveNodes(); ++i) {
       if (ContainsPoint(volumeLocal, positions[i])) {
