@@ -50,8 +50,7 @@ static constexpr int kArticulatedIdx = CSkinnedInteractionSnle::kArticulatedIdx;
 void skinned::EntityAssembleBody(
     AssemblyParams const& params, // external parameter
     TaskSemaphore softAssemblySem,
-    TaskSemaphore artAssemblySem,
-    entt::registry& reg,
+    ecs::PartialRegistry<CDofOffset const> reg,
     ecs::CtxGlobal<CSceneGravity const> sceneGravity,
     ecs::OptionalTag<TagUseGravity> hasGravityTag,
     ecs::OptionalTag<TagUseInertia> hasInertiaTag,
@@ -159,8 +158,8 @@ void skinned::EntityAssembleBody(
     // Comments:
     // - There are 2 diagonal submatrices (JsoftT_A_Jsoft, JartT_A_Jart) and 2 off-diagonal
     //   submatrices (JsoftT_A_Jart, JartT_A_Jsoft). For performance reasons, the diagonal
-    //   submatrices are assembled into the soft and articulated dresiduals, and the off-diagonal
-    //   submatrices into the soft skinned dresidual.
+    //   submatrices are assembled into the soft and articulated dresiduals (the latter by
+    //   AddArticulatedDResidual), and the off-diagonal submatrices into the soft skinned dresidual.
     // - The off-diagonal submatrix JsoftT_A_Jart is computed as JsoftT * (A * Jart). This order of
     //   operations requires fewer FLOPs than (JsoftT * A) * Jart if artDofs < "average number of
     //   non-zeros per row in the FOM dresidual" (for FOMs) or if artDofs < romDofs (for ROMs).
@@ -170,8 +169,7 @@ void skinned::EntityAssembleBody(
         (std::holds_alternative<BlockSparseMatrix<real, 3>>(outSoftSkinnedSnle.fullDResidual)),
         "Expected block sparse dresidual.");
     auto const& A = std::get<BlockSparseMatrix<real, 3>>(outSoftSkinnedSnle.fullDResidual);
-    auto articulated = composition.articulated;
-    auto artOffset = reg.get<CDofOffset const>(articulated).dofsOffset;
+    auto artOffset = reg.get<CDofOffset const>(composition.articulated).dofsOffset;
     auto const& Jart = jacobianArticulated.dJoints;
 
     MOCHI_ASSERT(outInteractionSnle.dresiduals.size() == 2, "Expected 2 dresiduals.");
@@ -224,15 +222,28 @@ void skinned::EntityAssembleBody(
 
     {
       MOCHI_PROFILE_SCOPE_N("SoftSkinned: Assemble Articulated Matrix");
-      MOCHI_ASSERT_VERBOSE(
-          reg.get<CActorSnle>(articulated).UseReduced(), "Reduced SNLE must be enabled.");
-      auto& JartT_A_Jart =
-          std::get<Matrix<real>>(reg.get<CActorSnle>(articulated).reducedDResidual);
-      artAssemblySem.Wait(); // Wait for articulated assembly before modifying its dresidual.
-      JartT_A_Jart += Jart.Transpose() * scratchMemory.A_Jart;
+      scratchMemory.JartT_A_Jart = Jart.Transpose() * scratchMemory.A_Jart;
     }
 
     sem.Wait();
+  }
+}
+
+void skinned::AddArticulatedDResidual(
+    AssemblyParams const& params, // external parameter
+    ecs::PartialRegistry<CSoftSkinnedAssemblyScratchMemory const> reg,
+    CBlendedComposition const& composition,
+    CActorSnle& outArticulatedSnle) {
+  if (!params.assemDRes) {
+    return;
+  }
+
+  for (entt::entity const soft : composition.soft) {
+    // Nested soft actors without posed energy terms have no scratch memory.
+    if (auto const* scratchMemory = reg.try_get<CSoftSkinnedAssemblyScratchMemory const>(soft)) {
+      MOCHI_ASSERT_VERBOSE(outArticulatedSnle.UseReduced(), "Reduced SNLE must be enabled.");
+      std::get<Matrix<real>>(outArticulatedSnle.reducedDResidual) += scratchMemory->JartT_A_Jart;
+    }
   }
 }
 
@@ -385,6 +396,7 @@ InitEnergyTerms(entt::registry& reg, entt::entity e, SoftSkinnedActorParams cons
   auto& scratchMemory = reg.emplace<CSoftSkinnedAssemblyScratchMemory>(e);
   auto const& softSnleDResBsp = std::get<BlockSparseMatrix<real, 3>>(softSnle.fullDResidual);
   scratchMemory.A_Jart.Resize(softSnleDResBsp.Rows(), jacobianArticulated.dJoints.Cols());
+  scratchMemory.JartT_A_Jart.Resize(artDofs, artDofs);
   if (!softJacobianDynamic.IsBlockDiagonal()) {
     // A_Jsoft is only needed for ROMs.
     scratchMemory.A_Jsoft.Resize(softSnleDResBsp.Rows(), softJacobianDynamic.Cols());

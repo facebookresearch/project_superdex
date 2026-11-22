@@ -247,11 +247,9 @@ static void ExpectBodyUniformTranslationAssembly(
                           : static_cast<ActorSnle&>(reg.get<CActorSnle>(e));
   auto const assemble = [&](AssemblyParams const& params) {
     if (posed) {
-      // Nothing else assembles here, so the soft and articulated assemblies count as done. This
-      // also writes the projected terms into the interaction SNLE and the soft and articulated
-      // dresiduals, which go unchecked.
-      ecs::InvokeOnEntity<ecs::policy::AllowFullRegistryAccess>(
-          skinned::EntityAssembleBody, reg, e, std::cref(params), TaskSemaphore{}, TaskSemaphore{});
+      // Nothing else assembles here, so the soft assembly counts as done. The projected terms that
+      // this also writes go unchecked.
+      ecs::InvokeOnEntity(skinned::EntityAssembleBody, reg, e, std::cref(params), TaskSemaphore{});
     } else if (reg.all_of<TagShellActor>(e)) {
       ecs::InvokeOnEntity(shell::AssembleBody, reg, e, std::cref(params));
     } else {

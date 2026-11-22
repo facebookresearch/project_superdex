@@ -870,10 +870,10 @@ void mochi::solver::AssembleIslandPipeline(
   // Wait for constraint assembly to finish (but don't wait for anything else). Then, for each
   // articulated compound, schedule its assembly, which reads the full DoF values assembled from its
   // rigid bodies and constraints (already assembled by this point), the assembly of the posed
-  // energy terms of its nested soft actors, and the projection of its full residual, including its
-  // link-space residuals. Each projection waits only for the tasks of its own compound (and for
-  // contact). The tasks are scheduled in this order because they run immediately without worker
-  // threads.
+  // energy terms of its nested soft actors, and a task that adds their articulated blocks and
+  // projects its full residual, including its link-space residuals. That task waits only for the
+  // tasks of its own compound (and for contact). The tasks are scheduled in this order because they
+  // run immediately without worker threads.
   constraintSemaphore.Wait();
   [[maybe_unused]] int numNestedSoftActors = 0;
   for (auto e : descendants.compoundActors) {
@@ -882,40 +882,35 @@ void mochi::solver::AssembleIslandPipeline(
       continue;
     }
 
-    // Signals that the reduced dresidual is final, which is all that the nested soft actors'
-    // EntityAssembleBody needs. The reduced residual is completed later by ProjectFullResidual.
-    TaskSemaphore const assembledSem;
+    // Signals the assembly of the articulated actor and its nested soft actors, which
+    // AddArticulatedDResidual and ProjectFullResidual then complete.
+    TaskSemaphore assembledSem;
     Schedule(assembledSem, "articulated::compound::EntityAssemble", [&, e]() {
       ecs::InvokeOnEntity<ecs::policy::AllowReadWriteSameComponent>(
           articulated::compound::EntityAssemble, reg, e, std::cref(params));
     });
 
-    // The posed energy terms of a nested soft actor may need to wait for soft and/or articulated
-    // assembly to complete.
-    TaskSemaphore skinnedBodySem;
+    // The posed energy terms of a nested soft actor may need to wait for soft assembly to complete.
     if (auto const* blendedComposition = reg.try_get<CBlendedComposition const>(e)) {
       numNestedSoftActors += isize(blendedComposition->soft);
-      ecs::ScheduleInvokeForEach<ecs::policy::AllowFullRegistryAccess>(
-          skinnedBodySem,
+      ecs::ScheduleInvokeForEach(
+          assembledSem,
           "skinned::EntityAssembleBody",
           skinned::EntityAssembleBody,
           reg,
           MakeConstSpan(blendedComposition->soft),
           std::cref(params),
-          softCompletionSem,
-          assembledSem);
+          softCompletionSem);
     }
 
-    Schedule(
-        masterSemaphore,
-        "articulated::compound::ProjectFullResidual",
-        [&, e, assembledSem, skinnedBodySem]() {
-          assembledSem.Wait();
-          contactSemaphore.Wait();
-          skinnedBodySem.Wait();
-          ecs::TryInvokeOnEntity<ecs::policy::AllowFullRegistryAccess>(
-              articulated::compound::ProjectFullResidual, reg, e, std::cref(params));
-        });
+    Schedule(masterSemaphore, "FinishArticulatedActorAssembly", [&, e, assembledSem]() {
+      assembledSem.Wait();
+      contactSemaphore.Wait();
+
+      ecs::TryInvokeOnEntity(skinned::AddArticulatedDResidual, reg, e, std::cref(params));
+      ecs::TryInvokeOnEntity<ecs::policy::AllowFullRegistryAccess>(
+          articulated::compound::ProjectFullResidual, reg, e, std::cref(params));
+    });
   }
   MOCHI_ASSERT_VERBOSE(
       numNestedSoftActors == isize(descendants.nestedSoftActors),

@@ -16,6 +16,7 @@
 
 #include "mochi_articulated_test_scenes.h"
 #include "mochi_physics_test_fixture.h"
+#include "mochi_test_scene_builders.h"
 
 #include <mochi_core/test/mochi_test_helpers.h>
 #include <mochi_core/utils/dynamic_array.h>
@@ -884,6 +885,13 @@ DynamicArray<WrenchCase> GetThreadingCases() {
       cases.push_back(std::move(wrenchCase));
     }
   }
+#if MOCHI_USE_HDF5 && MOCHI_INTERNAL
+  // Nested soft actors of one articulated actor, whose posed body energies assemble in parallel.
+  cases.push_back(
+      {.name = "SoftAllegro",
+       .build = [](Context* context, Scene* scene) { return test::AddSoftAllegro(context, scene); },
+       .usesWorkerThreads = true});
+#endif // MOCHI_USE_HDF5 && MOCHI_INTERNAL
   return cases;
 }
 
@@ -955,6 +963,7 @@ TEST_P(ArticulatedJointWrenchThreadingTest, SameWrenchesWithAndWithoutWorkerThre
   };
   JointWrenches const single = run(true);
   JointWrenches const multi = run(false);
+  JointWrenches const multiAgain = run(false);
 
   // Keeps usesWorkerThreads in sync with the heuristic. TSAN builds check every case.
   auto const& reg = GetRegistry();
@@ -963,6 +972,10 @@ TEST_P(ArticulatedJointWrenchThreadingTest, SameWrenchesWithAndWithoutWorkerThre
       GetParam().usesWorkerThreads,
       !island::ShouldRunSingleThreaded(reg, island, reg.get<CIslandDescendants const>(island)));
 
+  // Results are reproducible for a given thread count only: runs with worker threads match exactly,
+  // and the run without them up to rounding.
+  EXPECT_EQ(multi.forces, multiAgain.forces);
+  EXPECT_EQ(multi.torques, multiAgain.torques);
   real scale = 1_r;
   for (Real3 const& force : single.forces) {
     scale = Max(scale, Norm(force));

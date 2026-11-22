@@ -70,10 +70,12 @@ struct CDenseArticulatedJacobian : public NoCopy {
   RowMatrix<real> value;
 };
 
-// Reusable memory used during skinned::EntityAssembleBody
+// Reusable memory used during skinned::EntityAssembleBody. JartT_A_Jart also passes its articulated
+// block to skinned::AddArticulatedDResidual.
 struct CSoftSkinnedAssemblyScratchMemory {
   RowMatrix<real> A_Jsoft; // Only needed for ROMs. Will be resized on the fly.
   RowMatrix<real> A_Jart; // Will be resized on the fly.
+  Matrix<real> JartT_A_Jart; // Will be resized on the fly.
 };
 
 // Component to store soft attachment links for soft skinned actors (for export purposes)
@@ -91,8 +93,7 @@ namespace skinned {
 void EntityAssembleBody(
     AssemblyParams const& params, // external parameter
     TaskSemaphore softAssemblySem,
-    TaskSemaphore artAssemblySem,
-    entt::registry& reg,
+    ecs::PartialRegistry<CDofOffset const> reg,
     ecs::CtxGlobal<CSceneGravity const> sceneGravity,
     ecs::OptionalTag<TagUseGravity> hasGravityTag,
     ecs::OptionalTag<TagUseInertia> hasInertiaTag,
@@ -120,6 +121,16 @@ void EntityAssembleBody(
     CSoftSkinnedUnposedSnle& outSoftSkinnedSnle,
     CArticulatedSkinnedBodyLinkResidual& outLinkResidual,
     CSkinnedInteractionSnle& outInteractionSnle);
+
+// Adds the articulated blocks of the nested soft actors' posed body energies, which their
+// EntityAssembleBody computes in parallel into their scratch memory, to the reduced dresidual of
+// the articulated actor, one at a time and in a fixed order. Must run after those
+// EntityAssembleBody and after articulated::compound::EntityAssemble, which resets that dresidual.
+void AddArticulatedDResidual(
+    AssemblyParams const& params, // external parameter
+    ecs::PartialRegistry<CSoftSkinnedAssemblyScratchMemory const> reg,
+    CBlendedComposition const& composition,
+    CActorSnle& outArticulatedSnle);
 
 void InitSkinnedActor(
     entt::registry& reg,
