@@ -380,22 +380,35 @@ Assign(LHS const& lhs_, RHS const& rhs_, IntOrEmpty<kRows> rows, IntOrEmpty<kCol
         kUseSimd && (kLhsCosts.first + kRhsCosts.first < kLhsCosts.second + kRhsCosts.second)) {
       // Column vectors are cheaper
       for (int c = 0; c < cols; ++c) {
-        int r = 0;
-        if constexpr (kRows == krylov::kDynamic || kRows >= kVecSize) {
+        if constexpr (kRows != krylov::kDynamic) {
+          // Compile-time loop bounds to help compilers unroll and inline fixed-size assignments.
+          constexpr int kFullEnd = (kRows / kVecSize) * kVecSize;
+          constexpr bool kHasHalf = VTypeHalf::kIsSupported && kRows - kFullEnd >= kVecSizeHalf;
+          constexpr int kTailBegin = kHasHalf ? kFullEnd + kVecSizeHalf : kFullEnd;
+
+          if constexpr (kFullEnd > 0) {
+            for (int r = 0; r < kFullEnd; r += kVecSize) {
+              lhs.StoreColVector(r, c, rhs.template ColVector<VType>(r, c));
+            }
+          }
+          if constexpr (kHasHalf) {
+            lhs.StoreColVector(kFullEnd, c, rhs.template ColVector<VTypeHalf>(kFullEnd, c));
+          }
+          if constexpr (kTailBegin < kRows) {
+            for (int r = kTailBegin; r < kRows; ++r) {
+              lhs.Store(r, c, rhs(r, c));
+            }
+          }
+        } else {
+          int r = 0;
           for (; r + kVecSize <= rows; r += kVecSize) {
             lhs.StoreColVector(r, c, rhs.template ColVector<VType>(r, c));
           }
-        }
-        if constexpr (
-            VTypeHalf::kIsSupported &&
-            (kRows == krylov::kDynamic || kRows % kVecSize >= kVecSizeHalf)) {
-          for (; r + kVecSizeHalf <= rows; r += kVecSizeHalf) {
-            lhs.StoreColVector(r, c, rhs.template ColVector<VTypeHalf>(r, c));
+          if constexpr (VTypeHalf::kIsSupported) {
+            for (; r + kVecSizeHalf <= rows; r += kVecSizeHalf) {
+              lhs.StoreColVector(r, c, rhs.template ColVector<VTypeHalf>(r, c));
+            }
           }
-        }
-        if constexpr (
-            kRows == krylov::kDynamic || (VTypeHalf::kIsSupported && kRows % kVecSizeHalf > 0) ||
-            (!VTypeHalf::kIsSupported && kRows % kVecSize > 0)) {
           for (; r < rows; ++r) {
             lhs.Store(r, c, rhs(r, c));
           }
@@ -405,22 +418,35 @@ Assign(LHS const& lhs_, RHS const& rhs_, IntOrEmpty<kRows> rows, IntOrEmpty<kCol
         kUseSimd && (kLhsCosts.first + kRhsCosts.first > kLhsCosts.second + kRhsCosts.second)) {
       // Row vectors are cheaper
       for (int r = 0; r < rows; ++r) {
-        int c = 0;
-        if constexpr (kCols == krylov::kDynamic || kCols >= kVecSize) {
+        if constexpr (kCols != krylov::kDynamic) {
+          // Compile-time loop bounds, as in the column case.
+          constexpr int kFullEnd = (kCols / kVecSize) * kVecSize;
+          constexpr bool kHasHalf = VTypeHalf::kIsSupported && kCols - kFullEnd >= kVecSizeHalf;
+          constexpr int kTailBegin = kHasHalf ? kFullEnd + kVecSizeHalf : kFullEnd;
+
+          if constexpr (kFullEnd > 0) {
+            for (int c = 0; c < kFullEnd; c += kVecSize) {
+              lhs.StoreRowVector(r, c, rhs.template RowVector<VType>(r, c));
+            }
+          }
+          if constexpr (kHasHalf) {
+            lhs.StoreRowVector(r, kFullEnd, rhs.template RowVector<VTypeHalf>(r, kFullEnd));
+          }
+          if constexpr (kTailBegin < kCols) {
+            for (int c = kTailBegin; c < kCols; ++c) {
+              lhs.Store(r, c, rhs(r, c));
+            }
+          }
+        } else {
+          int c = 0;
           for (; c + kVecSize <= cols; c += kVecSize) {
             lhs.StoreRowVector(r, c, rhs.template RowVector<VType>(r, c));
           }
-        }
-        if constexpr (
-            VTypeHalf::kIsSupported &&
-            (kCols == krylov::kDynamic || kCols % kVecSize >= kVecSizeHalf)) {
-          for (; c + kVecSizeHalf <= cols; c += kVecSizeHalf) {
-            lhs.StoreRowVector(r, c, rhs.template RowVector<VTypeHalf>(r, c));
+          if constexpr (VTypeHalf::kIsSupported) {
+            for (; c + kVecSizeHalf <= cols; c += kVecSizeHalf) {
+              lhs.StoreRowVector(r, c, rhs.template RowVector<VTypeHalf>(r, c));
+            }
           }
-        }
-        if constexpr (
-            kCols == krylov::kDynamic || (VTypeHalf::kIsSupported && kCols % kVecSizeHalf > 0) ||
-            (!VTypeHalf::kIsSupported && kCols % kVecSize > 0)) {
           for (; c < cols; ++c) {
             lhs.Store(r, c, rhs(r, c));
           }

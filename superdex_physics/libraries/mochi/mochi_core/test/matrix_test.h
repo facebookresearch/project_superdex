@@ -140,6 +140,16 @@ inline void TestMatrix(int numRows, int numCols, MatrixT&& mat) {
       }
     }
 
+    // Strided rows of col-major storage, added to contiguous copies: exercises the column-vector
+    // assignment path with a single compile-time row.
+    for (int r = 0; r < numRows; ++r) {
+      auto row = mat.Row(r).Duplicate();
+      row += Scalar{2} * mat.Row(r);
+      for (int c = 0; c < numCols; ++c) {
+        EXPECT_NEAR_EQ(Scalar{3} * mat(r, c), row[c]);
+      }
+    }
+
     auto scaled = mat.Duplicate();
     scaled *= Scalar{2};
     for (int c = 0; c < numCols; ++c) {
