@@ -167,7 +167,9 @@ class RepublishedCapture final : public SensorBase {
   }
 };
 
-TEST(SensorGaussianNoiseTest, RepublishedCaptureDoesNotRedraw) {
+// A source that republishes a held capture gets a new draw per publication, keyed by its published
+// step, and the noisy sample keeps the capture.
+TEST(SensorGaussianNoiseTest, RepublishedCaptureDrawsAgainPerPublication) {
   Error error;
   RepublishedCapture source(error);
   SensorGaussianNoise noise({.std = {0.25}, .random = {.processKey = "noise"}}, error);
@@ -179,15 +181,11 @@ TEST(SensorGaussianNoiseTest, RepublishedCaptureDoesNotRedraw) {
   graph.Build({}, error);
   graph.Reset(error);
   StepNoise(graph, 1, error);
-  float const first = noise.Latest().Floats()[0];
   StepNoise(graph, 2, error);
-  EXPECT_EQ(source.Latest().publishedStep, 2);
-  EXPECT_EQ(noise.Latest().publishedStep, 1);
-  EXPECT_FLOAT_EQ(noise.Latest().Floats()[0], first);
-  source.captureTime = 0.006;
-  StepNoise(graph, 3, error);
-  EXPECT_EQ(noise.Latest().publishedStep, 1);
-  EXPECT_FLOAT_EQ(noise.Latest().Floats()[0], first);
+  uint64_t state = Derive(0, "noise", 2);
+  EXPECT_EQ(noise.Latest().captureStep, 1);
+  EXPECT_EQ(noise.Latest().publishedStep, 2);
+  EXPECT_FLOAT_EQ(noise.Latest().Floats()[0], static_cast<float>(1.0 + 0.25 * Normal(state)));
 }
 
 TEST(SensorGaussianNoiseTest, ReflectedParamsPreserveFullWidthSeedsAndSigma) {

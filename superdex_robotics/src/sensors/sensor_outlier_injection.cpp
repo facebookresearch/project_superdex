@@ -98,13 +98,13 @@ SensorFormat SensorOutlierInjection::InitSensor(SensorScope const& /*scope*/, Er
 SensorStepResult SensorOutlierInjection::Step(StepTime const& now, Error& error) {
   MOCHI_ERROR_RETURN(error, SensorStepResult::NoUpdate);
   SensorSample const source = Inputs()[0]->Latest();
-  if (source.captureStep < 0 || source.captureStep == _lastCaptureStep) {
+  if (source.publishedStep < 0 || source.publishedStep == _lastInputPublishedStep) {
     return SensorStepResult::NoUpdate;
   }
   uint64_t state = Derive(
       EpisodeSeed(_params.random.episodeSeed),
       SensorStreamKey(_params.random, GraphName()),
-      static_cast<uint64_t>(source.captureStep));
+      static_cast<uint64_t>(source.publishedStep));
   bool const outlier = Uniform(state, 0.0, 1.0) < _params.probability;
   if (outlier) {
     if (_params.rotation) {
@@ -118,12 +118,12 @@ SensorStepResult SensorOutlierInjection::Step(StepTime const& now, Error& error)
   if (!PublishSample(now, outlier ? MakeConstSpan(_outlier) : source.Floats(), error, &source)) {
     return SensorStepResult::NoUpdate;
   }
-  _lastCaptureStep = source.captureStep;
+  _lastInputPublishedStep = source.publishedStep;
   return SensorStepResult::Published;
 }
 
 void SensorOutlierInjection::ResetSensor() {
-  _lastCaptureStep = -1;
+  _lastInputPublishedStep = -1;
 }
 
 Span<std::byte const> SensorOutlierInjection::TryGetMetadata(std::string_view key) const {

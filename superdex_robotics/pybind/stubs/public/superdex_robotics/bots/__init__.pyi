@@ -2475,10 +2475,19 @@ class SensorTemporalWindowParams:
     """Fixed oldest-first rolling-window configuration."""
     history_length: int
     """Number of native-rate samples in the output leading axis."""
+    pad_with_first: bool
+    """Rows before the first sample since a reset repeat that sample, its capture and
+    publication included, instead of holding zeros.
+    """
     @overload
     def __init__(self) -> None: ...
     @overload
-    def __init__(self, *, history_length: int = ...) -> None: ...
+    def __init__(
+        self,
+        *,
+        history_length: int = ...,
+        pad_with_first: bool = ...,
+    ) -> None: ...
 
 class SensorDelayLineParams:
     """Deterministic time-domain delay configuration."""
@@ -2550,7 +2559,7 @@ class SensorUniformNoiseParams:
 class SensorOutlierInjectionParams:
     """Outlier injection parameters."""
     probability: float
-    """Probability that a capture is replaced by an outlier."""
+    """Probability that an input sample is replaced by an outlier."""
     range: float
     """An outlier's values are uniform in [-range, range)."""
     rotation: bool
@@ -3118,21 +3127,21 @@ class SensorDelayLine(SensorBase):
         """
 
 class SensorGaussianNoise(SensorBase):
-    """Independent additive noise on new input captures."""
+    """Independent additive noise on new input publications."""
     @staticmethod
     def type_name() -> str: ...
     def get_params(self) -> SensorGaussianNoiseParams: ...
     def set_params(self, params: SensorGaussianNoiseParams) -> None: ...
 
 class SensorUniformNoise(SensorBase):
-    """Independent additive uniform noise on new input captures."""
+    """Independent additive uniform noise on new input publications."""
     @staticmethod
     def type_name() -> str: ...
     def get_params(self) -> SensorUniformNoiseParams: ...
     def set_params(self, params: SensorUniformNoiseParams) -> None: ...
 
 class SensorOutlierInjection(SensorBase):
-    """Replaces whole input captures by outliers with a fixed probability."""
+    """Replaces whole input samples by outliers with a fixed probability."""
     @staticmethod
     def type_name() -> str: ...
     def get_params(self) -> SensorOutlierInjectionParams: ...

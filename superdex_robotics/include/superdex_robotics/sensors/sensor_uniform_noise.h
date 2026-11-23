@@ -34,8 +34,8 @@ struct SensorUniformNoiseParams {
   MOCHI_STRUCT_END()
 };
 
-/* @brief Independent additive uniform noise, drawn once per input capture from the episode seed,
- * the stream key and the capture step. */
+/* @brief Independent additive uniform noise, drawn once per input publication from the episode
+ * seed, the stream key and the input's published step. */
 class MOCHI_API SensorUniformNoise final : public SensorBase {
  public:
   using Params = SensorUniformNoiseParams;
@@ -61,7 +61,7 @@ class MOCHI_API SensorUniformNoise final : public SensorBase {
 
   Params _params;
   DynamicArray<float> _values;
-  int64_t _lastCaptureStep = -1;
+  int64_t _lastInputPublishedStep = -1;
 };
 
 } // namespace superdex::robotics

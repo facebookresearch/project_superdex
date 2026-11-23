@@ -25,9 +25,13 @@ namespace superdex::robotics {
 struct SensorTemporalWindowParams {
   /* Number of native-rate samples in the oldest-first output window. */
   int32_t historyLength = 1;
+  /* Rows before the first sample since a reset repeat that sample, its capture and publication
+   * included, instead of holding zeros. */
+  bool padWithFirst = false;
 
   MOCHI_STRUCT_BEGIN(superdex::robotics::SensorTemporalWindowParams)
   MOCHI_FIELD(historyLength);
+  MOCHI_FIELD(padWithFirst);
   MOCHI_STRUCT_END()
 };
 
@@ -58,7 +62,8 @@ class MOCHI_API SensorTemporalWindow final : public SensorBase {
     return _params;
   }
 
-  /* Row metadata follows the output's oldest-first leading axis. Invalid rows have step -1. */
+  /* Row metadata follows the output's oldest-first leading axis. Invalid rows have step -1; with
+   * padWithFirst, rows before the first sample carry its metadata. */
   [[nodiscard]] Span<int64_t const> GetRowCaptureSteps() const {
     return _outputCaptureSteps;
   }

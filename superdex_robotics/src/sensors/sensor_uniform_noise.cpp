@@ -60,7 +60,7 @@ SensorFormat SensorUniformNoise::InitSensor(SensorScope const& /*scope*/, Error&
 SensorStepResult SensorUniformNoise::Step(StepTime const& now, Error& error) {
   MOCHI_ERROR_RETURN(error, SensorStepResult::NoUpdate);
   SensorSample const source = Inputs()[0]->Latest();
-  if (source.captureStep < 0 || source.captureStep == _lastCaptureStep) {
+  if (source.publishedStep < 0 || source.publishedStep == _lastInputPublishedStep) {
     return SensorStepResult::NoUpdate;
   }
   Span<float const> const values = source.Floats();
@@ -68,19 +68,19 @@ SensorStepResult SensorUniformNoise::Step(StepTime const& now, Error& error) {
   uint64_t state = Derive(
       EpisodeSeed(_params.random.episodeSeed),
       SensorStreamKey(_params.random, GraphName()),
-      static_cast<uint64_t>(source.captureStep));
+      static_cast<uint64_t>(source.publishedStep));
   for (std::size_t i = 0; i < values.size(); ++i) {
     _values[i] = values[i] + static_cast<float>(Uniform(state, _params.low, _params.high));
   }
   if (!PublishSample(now, MakeConstSpan(_values), error, &source)) {
     return SensorStepResult::NoUpdate;
   }
-  _lastCaptureStep = source.captureStep;
+  _lastInputPublishedStep = source.publishedStep;
   return SensorStepResult::Published;
 }
 
 void SensorUniformNoise::ResetSensor() {
-  _lastCaptureStep = -1;
+  _lastInputPublishedStep = -1;
 }
 
 Span<std::byte const> SensorUniformNoise::TryGetMetadata(std::string_view key) const {

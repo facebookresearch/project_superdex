@@ -134,6 +134,19 @@ void SensorTemporalWindow::MaterializeOutput(SensorSample const& source, Span<fl
   _outputCaptureTimes[newestOutput] = source.captureTime;
   _outputPublishedSteps[newestOutput] = source.publishedStep;
   _outputPublishedTimes[newestOutput] = source.publishedTime;
+  if (_params.padWithFirst) {
+    // Row firstOutput holds the first sample since the reset.
+    for (std::size_t row = 0; row < firstOutput; ++row) {
+      std::copy_n(
+          _output.data() + firstOutput * _elementsPerSample,
+          _elementsPerSample,
+          _output.data() + row * _elementsPerSample);
+      _outputCaptureSteps[row] = _outputCaptureSteps[firstOutput];
+      _outputCaptureTimes[row] = _outputCaptureTimes[firstOutput];
+      _outputPublishedSteps[row] = _outputPublishedSteps[firstOutput];
+      _outputPublishedTimes[row] = _outputPublishedTimes[firstOutput];
+    }
+  }
 }
 
 SensorStepResult SensorTemporalWindow::Step(StepTime const& now, Error& error) {

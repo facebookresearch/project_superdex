@@ -138,9 +138,9 @@ void mochi::DeclareSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module
   registry.StoreClass(nb::class_<superdex::robotics::SensorSeedV1MLP, superdex::robotics::SensorBase>(m_bots, "SensorSeedV1MLP", "SEED tactile sensor using Mochi-native MLP inference.", nb::never_destruct()));
   registry.StoreClass(nb::class_<superdex::robotics::SensorTemporalWindow, superdex::robotics::SensorBase>(m_bots, "SensorTemporalWindow", "Fixed oldest-first rolling window over one native-rate CPU float sensor.", nb::never_destruct()));
   registry.StoreClass(nb::class_<superdex::robotics::SensorDelayLine, superdex::robotics::SensorBase>(m_bots, "SensorDelayLine", "Deterministic time-domain delay over one fixed CPU sensor output.", nb::never_destruct()));
-  registry.StoreClass(nb::class_<superdex::robotics::SensorGaussianNoise, superdex::robotics::SensorBase>(m_bots, "SensorGaussianNoise", "Independent additive noise on new input captures.", nb::never_destruct()));
-  registry.StoreClass(nb::class_<superdex::robotics::SensorUniformNoise, superdex::robotics::SensorBase>(m_bots, "SensorUniformNoise", "Independent additive uniform noise on new input captures.", nb::never_destruct()));
-  registry.StoreClass(nb::class_<superdex::robotics::SensorOutlierInjection, superdex::robotics::SensorBase>(m_bots, "SensorOutlierInjection", "Replaces whole input captures by outliers with a fixed probability.", nb::never_destruct()));
+  registry.StoreClass(nb::class_<superdex::robotics::SensorGaussianNoise, superdex::robotics::SensorBase>(m_bots, "SensorGaussianNoise", "Independent additive noise on new input publications.", nb::never_destruct()));
+  registry.StoreClass(nb::class_<superdex::robotics::SensorUniformNoise, superdex::robotics::SensorBase>(m_bots, "SensorUniformNoise", "Independent additive uniform noise on new input publications.", nb::never_destruct()));
+  registry.StoreClass(nb::class_<superdex::robotics::SensorOutlierInjection, superdex::robotics::SensorBase>(m_bots, "SensorOutlierInjection", "Replaces whole input samples by outliers with a fixed probability.", nb::never_destruct()));
   registry.StoreClass(nb::class_<superdex::robotics::SensorFunction, superdex::robotics::SensorBase>(m_bots, "SensorFunction", "Source that publishes the values a C++ function writes at every step of its\ngraph, the reset step included. Scene and bot files cannot declare it.", nb::never_destruct()));
   registry.StoreClass(nb::class_<superdex::robotics::BotSceneMetadata>(m_bots, "BotSceneMetadata", "Human-readable metadata for a .superdex_scene file. Not consumed by the runtime."));
   registry.StoreClass(nb::class_<superdex::robotics::PrefabEntry>(m_bots, "PrefabEntry", "A named reference to a spawnable scene, prefab, bot, or bot archive."));
@@ -1400,18 +1400,21 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
   ;
 
   registry.GetClass<superdex::robotics::SensorTemporalWindowParams>()
-    .def("__init__", [](superdex::robotics::SensorTemporalWindowParams* self, nb::object history_length) {
+    .def("__init__", [](superdex::robotics::SensorTemporalWindowParams* self, nb::object history_length, nb::object pad_with_first) {
       superdex::robotics::SensorTemporalWindowParams result{};
       result.historyLength = nb::cast<int>(history_length);
+      result.padWithFirst = nb::cast<bool>(pad_with_first);
       new (self) superdex::robotics::SensorTemporalWindowParams(std::move(result));
     }
       , nb::kw_only()
       , nb::arg("history_length") = superdex::robotics::SensorTemporalWindowParams{}.historyLength
+      , nb::arg("pad_with_first") = superdex::robotics::SensorTemporalWindowParams{}.padWithFirst
     )
     .def(nb::init<>())
     .def("__copy__", [](superdex::robotics::SensorTemporalWindowParams const& self) { return superdex::robotics::SensorTemporalWindowParams(self); })
     .def("__deepcopy__", [](superdex::robotics::SensorTemporalWindowParams const& self, nb::dict) { return superdex::robotics::SensorTemporalWindowParams(self); })
     .def_rw("history_length", &superdex::robotics::SensorTemporalWindowParams::historyLength, "Number of native-rate samples in the output leading axis.")
+    .def_rw("pad_with_first", &superdex::robotics::SensorTemporalWindowParams::padWithFirst, "Rows before the first sample since a reset repeat that sample, its capture and\npublication included, instead of holding zeros.")
   ;
 
   registry.GetClass<superdex::robotics::SensorDelayLineParams>()
@@ -1510,7 +1513,7 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def(nb::init<>())
     .def("__copy__", [](superdex::robotics::SensorOutlierInjectionParams const& self) { return superdex::robotics::SensorOutlierInjectionParams(self); })
     .def("__deepcopy__", [](superdex::robotics::SensorOutlierInjectionParams const& self, nb::dict) { return superdex::robotics::SensorOutlierInjectionParams(self); })
-    .def_rw("probability", &superdex::robotics::SensorOutlierInjectionParams::probability, "Probability that a capture is replaced by an outlier.")
+    .def_rw("probability", &superdex::robotics::SensorOutlierInjectionParams::probability, "Probability that an input sample is replaced by an outlier.")
     .def_rw("range", &superdex::robotics::SensorOutlierInjectionParams::range, "An outlier's values are uniform in [-range, range).")
     .def_rw("rotation", &superdex::robotics::SensorOutlierInjectionParams::rotation, "With rotation, the input is two rows of a rotation matrix (6 values) and an\noutlier is two rows of a uniformly random rotation instead.")
     .def_rw("random", &superdex::robotics::SensorOutlierInjectionParams::random)

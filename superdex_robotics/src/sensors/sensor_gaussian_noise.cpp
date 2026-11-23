@@ -79,7 +79,7 @@ SensorFormat SensorGaussianNoise::InitSensor(SensorScope const& /*scope*/, Error
 SensorStepResult SensorGaussianNoise::Step(StepTime const& now, Error& error) {
   MOCHI_ERROR_RETURN(error, SensorStepResult::NoUpdate);
   SensorSample const source = Inputs()[0]->Latest();
-  if (source.captureStep < 0 || source.captureStep == _lastCaptureStep) {
+  if (source.publishedStep < 0 || source.publishedStep == _lastInputPublishedStep) {
     return SensorStepResult::NoUpdate;
   }
   Span<float const> const values = source.Floats();
@@ -90,20 +90,20 @@ SensorStepResult SensorGaussianNoise::Step(StepTime const& now, Error& error) {
   uint64_t state = Derive(
       EpisodeSeed(_params.random.episodeSeed),
       SensorStreamKey(_params.random, GraphName()),
-      static_cast<uint64_t>(source.captureStep));
+      static_cast<uint64_t>(source.publishedStep));
   for (std::size_t i = 0; i < values.size(); ++i) {
     double const sigma = _params.std[_params.std.size() == 1 ? 0 : i];
     _values[i] = static_cast<float>(values[i] + sigma * Normal(state));
   }
   bool const published = PublishSample(now, _values, error, &source);
   if (published) {
-    _lastCaptureStep = source.captureStep;
+    _lastInputPublishedStep = source.publishedStep;
   }
   return published ? SensorStepResult::Published : SensorStepResult::NoUpdate;
 }
 
 void SensorGaussianNoise::ResetSensor() {
-  _lastCaptureStep = -1;
+  _lastInputPublishedStep = -1;
 }
 Span<std::byte const> SensorGaussianNoise::TryGetMetadata(std::string_view key) const {
   return Inputs().size() == 1 ? Inputs()[0]->TryGetMetadata(key) : Span<std::byte const>{};
@@ -117,5 +117,5 @@ void SensorGaussianNoise::ConfigureRecording(SensorRecordingSink& sink, Error& e
       "process", "episode_seed", std::to_string(EpisodeSeed(_params.random.episodeSeed)), error);
   sink.WriteConstantText("process", "key", SensorStreamKey(_params.random, GraphName()), error);
   sink.WriteConstantText(
-      "process", "algorithm", "independent_gaussian_splitmix64_box_muller.v1", error);
+      "process", "algorithm", "independent_gaussian_splitmix64_box_muller.v2", error);
 }

@@ -1187,6 +1187,9 @@ struct bots::SensorSeedV1MLPResult {
 struct bots::SensorTemporalWindowParams [no_reflection] {
   // @brief Number of native-rate samples in the output leading axis.
   int historyLength = 1;
+  // @brief Rows before the first sample since a reset repeat that sample, its capture and
+  // publication included, instead of holding zeros.
+  bool padWithFirst = false;
 }
 
 // @brief Deterministic time-domain delay configuration.
@@ -1224,7 +1227,7 @@ struct bots::SensorUniformNoiseParams [no_reflection] {
 
 // @brief Outlier injection parameters.
 struct bots::SensorOutlierInjectionParams [no_reflection] {
-  // @brief Probability that a capture is replaced by an outlier.
+  // @brief Probability that an input sample is replaced by an outlier.
   double probability = 0.0;
   // @brief An outlier's values are uniform in [-range, range).
   double range = 0.0;
@@ -1588,21 +1591,21 @@ class bots::SensorDelayLine(bots::SensorBase) [no_init, no_destruct] {
   fn SetParams(bots::SensorDelayLineParams const& params) -> void [mochi_error];
 }
 
-// @brief Independent additive noise on new input captures.
+// @brief Independent additive noise on new input publications.
 class bots::SensorGaussianNoise(bots::SensorBase) [no_init, no_destruct, no_reflection] {
   fn TypeName() -> StringView [static];
   fn GetParams() -> bots::SensorGaussianNoiseParams [const];
   fn SetParams(bots::SensorGaussianNoiseParams const& params) -> void [mochi_error];
 }
 
-// @brief Independent additive uniform noise on new input captures.
+// @brief Independent additive uniform noise on new input publications.
 class bots::SensorUniformNoise(bots::SensorBase) [no_init, no_destruct, no_reflection] {
   fn TypeName() -> StringView [static];
   fn GetParams() -> bots::SensorUniformNoiseParams [const];
   fn SetParams(bots::SensorUniformNoiseParams const& params) -> void [mochi_error];
 }
 
-// @brief Replaces whole input captures by outliers with a fixed probability.
+// @brief Replaces whole input samples by outliers with a fixed probability.
 class bots::SensorOutlierInjection(bots::SensorBase) [no_init, no_destruct, no_reflection] {
   fn TypeName() -> StringView [static];
   fn GetParams() -> bots::SensorOutlierInjectionParams [const];

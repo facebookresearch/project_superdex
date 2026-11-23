@@ -363,6 +363,7 @@ static_assert(std::is_same_v<decltype(&superdex::robotics::SensorSeedV1MLPResult
 
 // struct superdex::robotics::SensorTemporalWindowParams
 static_assert(std::is_same_v<decltype(&superdex::robotics::SensorTemporalWindowParams::historyLength), int superdex::robotics::SensorTemporalWindowParams::*>, "\n  ERROR: Field superdex::robotics::SensorTemporalWindowParams::historyLength is out-of-sync with C++ definition.\n  Please check the field type, then run mochi_gen_py to regenerate this file.\n");
+static_assert(std::is_same_v<decltype(&superdex::robotics::SensorTemporalWindowParams::padWithFirst), bool superdex::robotics::SensorTemporalWindowParams::*>, "\n  ERROR: Field superdex::robotics::SensorTemporalWindowParams::padWithFirst is out-of-sync with C++ definition.\n  Please check the field type, then run mochi_gen_py to regenerate this file.\n");
 
 // struct superdex::robotics::SensorDelayLineParams
 static_assert(std::is_same_v<decltype(&superdex::robotics::SensorDelayLineParams::delayMs), double superdex::robotics::SensorDelayLineParams::*>, "\n  ERROR: Field superdex::robotics::SensorDelayLineParams::delayMs is out-of-sync with C++ definition.\n  Please check the field type, then run mochi_gen_py to regenerate this file.\n");

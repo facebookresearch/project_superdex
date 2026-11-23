@@ -22,7 +22,7 @@
 namespace superdex::robotics {
 
 struct SensorOutlierInjectionParams {
-  /* Probability that a capture is replaced by an outlier. */
+  /* Probability that an input sample is replaced by an outlier. */
   double probability = 0.0;
   /* An outlier's values are uniform in [-range, range). */
   double range = 0.0;
@@ -39,8 +39,9 @@ struct SensorOutlierInjectionParams {
   MOCHI_STRUCT_END()
 };
 
-/* @brief Replaces whole input captures by outliers with a fixed probability, drawn once per capture
- * from the episode seed, the stream key and the capture step. Other captures pass unchanged. */
+/* @brief Replaces whole input samples by outliers with a fixed probability, drawn once per input
+ * publication from the episode seed, the stream key and the input's published step. Other samples
+ * pass unchanged. */
 class MOCHI_API SensorOutlierInjection final : public SensorBase {
  public:
   using Params = SensorOutlierInjectionParams;
@@ -66,7 +67,7 @@ class MOCHI_API SensorOutlierInjection final : public SensorBase {
 
   Params _params;
   DynamicArray<float> _outlier;
-  int64_t _lastCaptureStep = -1;
+  int64_t _lastInputPublishedStep = -1;
 };
 
 } // namespace superdex::robotics

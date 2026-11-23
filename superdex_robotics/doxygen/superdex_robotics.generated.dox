@@ -1004,6 +1004,11 @@
 /// @brief Number of native-rate samples in the output leading axis.
 ///
 
+/// @var superdex::robotics::SensorTemporalWindowParams::padWithFirst
+///
+/// @brief Rows before the first sample since a reset repeat that sample, its capture and publication included, instead of holding zeros.
+///
+
 /// @struct superdex::robotics::SensorDelayLineParams
 ///
 /// @brief Deterministic time-domain delay configuration.
@@ -1061,7 +1066,7 @@
 
 /// @var superdex::robotics::SensorOutlierInjectionParams::probability
 ///
-/// @brief Probability that a capture is replaced by an outlier.
+/// @brief Probability that an input sample is replaced by an outlier.
 ///
 
 /// @var superdex::robotics::SensorOutlierInjectionParams::range
@@ -1510,17 +1515,17 @@
 
 /// @class superdex::robotics::SensorGaussianNoise
 ///
-/// @brief Independent additive noise on new input captures.
+/// @brief Independent additive noise on new input publications.
 ///
 
 /// @class superdex::robotics::SensorUniformNoise
 ///
-/// @brief Independent additive uniform noise on new input captures.
+/// @brief Independent additive uniform noise on new input publications.
 ///
 
 /// @class superdex::robotics::SensorOutlierInjection
 ///
-/// @brief Replaces whole input captures by outliers with a fixed probability.
+/// @brief Replaces whole input samples by outliers with a fixed probability.
 ///
 
 /// @class superdex::robotics::SensorFunction

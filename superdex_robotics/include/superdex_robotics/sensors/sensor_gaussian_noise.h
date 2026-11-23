@@ -32,7 +32,8 @@ struct SensorGaussianNoiseParams {
   MOCHI_STRUCT_END()
 };
 
-/* @brief Independent zero-mean Gaussian innovations, once per new input capture. */
+/* @brief Independent zero-mean Gaussian innovations, drawn once per input publication from the
+ * episode seed, the stream key and the input's published step. */
 class MOCHI_API SensorGaussianNoise final : public SensorBase {
  public:
   using Params = SensorGaussianNoiseParams;
@@ -59,7 +60,7 @@ class MOCHI_API SensorGaussianNoise final : public SensorBase {
   void ResetSensor() override;
   Params _params;
   DynamicArray<float> _values;
-  int64_t _lastCaptureStep = -1;
+  int64_t _lastInputPublishedStep = -1;
 };
 
 } // namespace superdex::robotics
