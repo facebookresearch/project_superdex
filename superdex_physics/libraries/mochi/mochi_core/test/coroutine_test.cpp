@@ -23,6 +23,7 @@
 #include <mochi_core/utils/basic_utils.h>
 #include <mochi_core/utils/task_scheduler.h>
 
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -37,6 +38,11 @@ Task<int> Triple(int n) {
 
 int MultiplyAdd(int factor, int n, int increment) {
   return factor * n + increment;
+}
+
+RootTask DestroyOwner(TaskSemaphore, std::optional<RootTask>& owner) {
+  owner.reset();
+  co_return;
 }
 
 RootTask VectorTest(TaskSemaphore, int n) {
@@ -62,13 +68,19 @@ RootTask VectorTest(TaskSemaphore, int n) {
   EXPECT_EQ(result2, expectedResult);
 }
 
-void TestExecutor() {
+void TestExecutor(bool localSingleThreaded) {
   TaskScheduler ts(Min(TaskScheduler::GetNumSupportedLogicalProcessors(), 8));
+  if (localSingleThreaded) {
+    TaskScheduler::PushLocalSingleThreadedMode();
+  }
   for (int n = 0; n < 300; n += 25) {
     TaskSemaphore sem{1};
     auto task = VectorTest(sem, n);
     task.Schedule(ts, "MainCoroutine");
     sem.Wait();
+  }
+  if (localSingleThreaded) {
+    TaskScheduler::PopLocalSingleThreadedMode();
   }
 }
 
@@ -345,8 +357,24 @@ void TestGenerator() {
 
 } // namespace
 
+// In local single-threaded mode, the coroutine runs before Schedule returns.
+TEST(Coroutines, ScheduledCoroutineCanDestroyItsRootTask) {
+  TaskSemaphore sem{1};
+  std::optional<RootTask> owner;
+  owner.emplace(DestroyOwner(sem, owner));
+  TaskScheduler scheduler(1);
+
+  TaskScheduler::PushLocalSingleThreadedMode();
+  owner->Schedule(scheduler);
+  TaskScheduler::PopLocalSingleThreadedMode();
+
+  EXPECT_FALSE(owner.has_value());
+  EXPECT_TRUE(sem.IsDone());
+}
+
 TEST(Coroutines, Execute) {
-  TestExecutor();
+  TestExecutor(false);
+  TestExecutor(true);
 }
 
 TEST(Coroutines, ExecuteExceptions) {

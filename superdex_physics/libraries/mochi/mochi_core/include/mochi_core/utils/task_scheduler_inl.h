@@ -19,6 +19,7 @@
 #include "task_scheduler.h" // Reverse include for Intellisense
 
 #include <mochi_core/utils/basic_utils.h>
+#include <mochi_core/utils/defer.h>
 
 #include <algorithm>
 #include <functional>
@@ -40,16 +41,13 @@ MOCHI_FORCE_INLINE void TaskScheduler::AddTask(
     FN&& fn) {
 #if MOCHI_TASK_PROFILE_VERBOSITY == MOCHI_TASK_PROFILE_VERBOSITY_HIGH
   AddTaskVerboseProfile(debugNameStringLiteral, std::forward<FN>(fn));
+#elif MOCHI_TASK_PROFILE_VERBOSITY == MOCHI_TASK_PROFILE_VERBOSITY_LOW
+  AddTaskNoProfile([fn = std::forward<FN>(fn)]() mutable {
+    MOCHI_PROFILE_SCOPE_N("RunTask");
+    fn();
+  });
 #else
-  bool const isSingleThreaded = (GetNumThreads() == 0);
-  AddTaskNoProfile(
-      [fn = std::forward<FN>(fn)]() mutable {
-#if MOCHI_TASK_PROFILE_VERBOSITY != MOCHI_TASK_PROFILE_VERBOSITY_NONE
-        MOCHI_PROFILE_SCOPE_N("RunTask");
-#endif
-        fn();
-      },
-      isSingleThreaded);
+  AddTaskNoProfile(TaskFn{std::forward<FN>(fn)});
 #endif
 }
 
@@ -61,20 +59,17 @@ MOCHI_FORCE_INLINE void TaskScheduler::AddTask(
   sem.Add(1);
 #if MOCHI_TASK_PROFILE_VERBOSITY == MOCHI_TASK_PROFILE_VERBOSITY_HIGH
   AddTaskVerboseProfile(debugNameStringLiteral, [sem = sem, fn = std::forward<FN>(fn)]() mutable {
+    MOCHI_DEFER(sem.Done());
     fn();
-    sem.Done();
   });
 #else
-  bool const isSingleThreaded = (GetNumThreads() == 0);
-  AddTaskNoProfile(
-      [sem = sem, fn = std::forward<FN>(fn)]() mutable {
+  AddTaskNoProfile([sem = sem, fn = std::forward<FN>(fn)]() mutable {
 #if MOCHI_TASK_PROFILE_VERBOSITY != MOCHI_TASK_PROFILE_VERBOSITY_NONE
-        MOCHI_PROFILE_SCOPE_N("RunTask");
+    MOCHI_PROFILE_SCOPE_N("RunTask");
 #endif
-        fn();
-        sem.Done();
-      },
-      isSingleThreaded);
+    MOCHI_DEFER(sem.Done());
+    fn();
+  });
 #endif
 }
 
@@ -191,14 +186,12 @@ void ParallelForRange(
       // profile labels.
       scheduler->AddTask(debugName, [claimRanges, claims]() { claimRanges(*claims); });
 #else
-      scheduler->AddTaskNoProfile(
-          [claimRanges, claims]() {
+      scheduler->AddTaskNoProfile([claimRanges, claims]() {
 #if MOCHI_TASK_PROFILE_VERBOSITY == MOCHI_TASK_PROFILE_VERBOSITY_LOW
-            MOCHI_PROFILE_SCOPE_N("RunTask");
+        MOCHI_PROFILE_SCOPE_N("RunTask");
 #endif
-            claimRanges(*claims);
-          },
-          false);
+        claimRanges(*claims);
+      });
 #endif
     }
   }

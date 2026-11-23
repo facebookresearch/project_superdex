@@ -15,9 +15,11 @@
  */
 
 #pragma once
-#include <coroutine>
 
 #include <mochi_core/utils/task_scheduler.h>
+
+#include <coroutine>
+#include <utility>
 
 namespace mochi {
 
@@ -55,11 +57,21 @@ class RootTask {
       _handle.destroy();
     }
   }
+
   /// @brief Schedule the coroutine onto the given TaskScheduler.
-  /// @details The coroutine will destroy its frame automatically when it completes.
+  /// @details The coroutine will destroy its frame automatically when it completes. Once it
+  /// starts, it may also destroy this RootTask. In local single-threaded mode, it starts before
+  /// Schedule returns.
   void Schedule(TaskScheduler& ts, std::string_view name = "RootCoroutine") {
-    ts.AddTask(name, _handle);
-    _handle = {};
+    // Release ownership first, since the coroutine may destroy this RootTask. If AddTask throws,
+    // the coroutine never ran.
+    auto const handle = std::exchange(_handle, {});
+    try {
+      ts.AddTask(name, handle);
+    } catch (...) {
+      _handle = handle;
+      throw;
+    }
   }
 
  private:

@@ -34,6 +34,7 @@
 #include <limits>
 #include <memory>
 #include <random>
+#include <stdexcept>
 #include <string>
 #include <thread>
 #include <tuple>
@@ -156,8 +157,8 @@ static void TestTaskSemaphore(TaskScheduler& scheduler) {
     sem.Wait();
   }
 
-  // Wait with timeout
-  {
+  // Wait with timeout. The task waits for the calling thread, so it cannot run inline.
+  if (!TaskScheduler::IsLocalSingleThreaded()) {
     TaskSemaphore startSem(1);
     TaskSemaphore stopSem(1);
     scheduler.AddTask("TestTaskSemaphore", [=]() {
@@ -173,6 +174,22 @@ static void TestTaskSemaphore(TaskScheduler& scheduler) {
 
     // Wait and expect success. Use a very generous timeout to be safe
     EXPECT_EQ(true, stopSem.WaitFor(TimeSpanFromSeconds(1.0)));
+  } else {
+    // Each task runs before the call that adds it returns, and releases its semaphore even if it
+    // throws.
+    TaskSemaphore sem;
+    scheduler.AddTask(sem, "TestTaskSemaphore", []() {});
+    ASSERT_TRUE(sem.IsDone());
+
+    EXPECT_THROW(
+        scheduler.AddTask(
+            sem, "TestTaskSemaphore", []() { throw std::runtime_error("Task failed"); }),
+        std::runtime_error);
+    EXPECT_TRUE(sem.IsDone());
+
+    sem.Add();
+    scheduler.AddTaskVerboseProfile("TestTaskSemaphore", [sem]() { sem.Done(); });
+    EXPECT_TRUE(sem.IsDone());
   }
 
   // Busy wait

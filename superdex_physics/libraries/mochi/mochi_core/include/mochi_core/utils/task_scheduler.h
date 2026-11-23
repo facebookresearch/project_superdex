@@ -146,8 +146,8 @@ class TaskScheduler final {
 
   /**
     Get the number of other threads to which concurrent work could be scheduled.
-    Return zero is there are no workers, or if the calling thread is the only worker
-    thread, or if single-threaded mode is enabled.
+    Returns zero if there are no workers, if the calling thread is the only worker thread, or if
+    global or local single-threaded mode is enabled.
   */
   [[nodiscard]] int GetNumOtherThreads() const;
 
@@ -176,8 +176,14 @@ class TaskScheduler final {
   void SetGlobalSingleThreadedMode(bool singleThreaded);
 
   /**
-    When forced into local single-threaded mode, all NEW tasks scheduled by the calling thread will
-    execute on the calling thread.
+    In local single-threaded mode, the calling thread runs each NEW task it schedules before the
+    scheduling call returns. Use it to disable nested parallelism, e.g. in tasks that own the
+    parallelization strategy.
+
+    WARNING: The mode is thread-local, but Marl's unit of execution is a fiber. While a fiber in
+    this mode is blocked, e.g. waiting for an incomplete TaskSemaphore or a TaskConditionVariable,
+    its thread may run unrelated tasks, which inherit the mode. To wait for work that other threads
+    can finish on their own, prefer spinning (see BusyWaitFor).
 
     Example:
       TaskScheduler::PushLocalSingleThreadedMode();
@@ -194,7 +200,9 @@ class TaskScheduler final {
 
   /**
     Schedule a function to be called on an available thread/fiber. If you need to wait for
-    completion, then you can use your own TaskSemaphore inside the function.
+    completion, then you can use your own TaskSemaphore inside the function. In local
+    single-threaded mode, the function is called before AddTask returns, so it must not wait for
+    anything the caller does afterwards, and its exceptions propagate to the caller.
 
     PERFORMANCE: The per-task overhead is significant. You may want to call the function directly
     instead of adding a task if there are no other threads that could perform the work concurrently.
@@ -205,7 +213,9 @@ class TaskScheduler final {
 
   /**
     Schedule a function to be called on an available thread/fiber. You can use the provided
-    TaskSemaphore to wait for completion.
+    TaskSemaphore to wait for completion. In local single-threaded mode, the function is called
+    before AddTask returns, so it must not wait for anything the caller does afterwards, and its
+    exceptions propagate to the caller.
 
     PERFORMANCE: The per-task overhead is significant. You may want to call the function directly
     instead of adding a task if there are no other threads that could perform the work concurrently.
@@ -215,14 +225,14 @@ class TaskScheduler final {
   void AddTask(TaskSemaphore const& sem, std::string_view debugNameStringLiteral, FN&& fn);
 
   /**
-    Add a task with no profiling overhead. Used to implement parallel algorithms that handle the
-    profiling labels for themselves.
+    Add a task like AddTask, with no profiling overhead. Used to implement parallel algorithms that
+    handle the profiling labels for themselves.
   */
-  void AddTaskNoProfile(TaskFn&& fn, bool isSingleThreaded);
+  void AddTaskNoProfile(TaskFn&& fn);
 
   /**
-    Add a task with verbose profiling. Used to implement parallel algorithms that handle the
-    other verbosity levels for themselves.
+    Add a task like AddTask, with verbose profiling. Used to implement parallel algorithms that
+    handle the other verbosity levels for themselves.
   */
   void AddTaskVerboseProfile(std::string_view debugNameStringLiteral, TaskFn&& fn);
 
@@ -257,7 +267,8 @@ class TaskScheduler final {
 
   /**
     Schedule dummy tasks to wake up more worker threads. Workers will then enter the spin-for-work
-    state and have the opportunity to steal tasks from other worker(s).
+    state and have the opportunity to steal tasks from other worker(s). Does nothing if
+    GetNumOtherThreads() is zero.
   */
   void TryToWakeUpMoreWorkers(int numWorkers, TimeSpan dummyTaskDuration = TimeSpanFromSeconds(0));
 
@@ -361,16 +372,18 @@ class TaskSemaphore {
 // TaskSemaphore inside the function.
 //
 // WARNING: The function will be called IMMEDIATELY if a TaskScheduler is not bound to this thread,
-// or if the TaskScheduler has no other threads that could performance the work concurrently. If you
-// have a task that must be scheduled to avoid deadlocks, then use TaskScheduler::AddTask directly.
+// or if the TaskScheduler has no other threads that could perform the work concurrently. If you
+// have a task that must be scheduled to avoid deadlocks, then use TaskScheduler::AddTask directly,
+// but not in local single-threaded mode, where it calls the function immediately too.
 template <typename FN>
 void Schedule(std::string_view debugNameStringLiteral, FN&& fn);
 
 // Add a task to call a function. You can use the provided TaskSemaphore to wait for completion.
 //
 // WARNING: The function will be called IMMEDIATELY if a TaskScheduler is not bound to this thread,
-// or if the TaskScheduler has no other threads that could performance the work concurrently. If you
-// have a task that must be scheduled to avoid deadlocks, then use TaskScheduler::AddTask directly.
+// or if the TaskScheduler has no other threads that could perform the work concurrently. If you
+// have a task that must be scheduled to avoid deadlocks, then use TaskScheduler::AddTask directly,
+// but not in local single-threaded mode, where it calls the function immediately too.
 template <typename FN>
 void Schedule(TaskSemaphore const& sem, std::string_view debugNameStringLiteral, FN&& fn);
 

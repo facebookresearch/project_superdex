@@ -591,12 +591,10 @@ static void DynamicLoadBalancingAssembly(
     auto* scheduler = TaskScheduler::TryGet();
     MOCHI_ASSERT(scheduler); // Must have succeeded if numThreads > 1.
     for (int threadId = 1; threadId < numThreads; ++threadId) {
-      scheduler->AddTaskNoProfile(
-          [&dynamicWork, sem, numThreads]() {
-            dynamicWork(numThreads);
-            sem.Done();
-          },
-          false);
+      scheduler->AddTaskNoProfile([&dynamicWork, sem, numThreads]() {
+        dynamicWork(numThreads);
+        sem.Done();
+      });
     }
   }
   dynamicWork(numThreads);

@@ -446,15 +446,23 @@ void TaskScheduler::PopLocalSingleThreadedMode() {
   return s_localSingleThreadedCount > 0;
 }
 
-void TaskScheduler::AddTaskNoProfile(TaskFn&& fn, bool isSingleThreaded) {
-  auto flags = isSingleThreaded ? marl::Task::Flags::SameThread : marl::Task::Flags::None;
+void TaskScheduler::AddTaskNoProfile(TaskFn&& fn) {
+  // Waiting for a pending task would block the fiber (see PushLocalSingleThreadedMode).
+  if (IsLocalSingleThreaded()) {
+    // Take ownership, as a queued task would: the function may destroy the object 'fn' refers to.
+    TaskFn const task = std::move(fn);
+    task();
+    return;
+  }
+
+  auto const flags =
+      (GetNumThreads() == 0) ? marl::Task::Flags::SameThread : marl::Task::Flags::None;
   _marl->enqueue(marl::Task{std::move(fn), flags});
 }
 
 void TaskScheduler::AddTaskVerboseProfile(
     [[maybe_unused]] std::string_view debugNameStringLiteral,
     TaskFn&& fn) {
-  auto flags = (GetNumThreads() == 0) ? marl::Task::Flags::SameThread : marl::Task::Flags::None;
   if (ProfilerIsConnected()) {
     MOCHI_PROFILE_SCOPE();
     uint64_t id = ++_profileTaskCounter; // Give each task a unique identifier
@@ -463,28 +471,27 @@ void TaskScheduler::AddTaskVerboseProfile(
     MOCHI_PROFILE_LABEL(zoneName);
     // "Replace "Add" with "Run"
     memcpy(zoneName.data(), "Run", 3);
-    _marl->enqueue(
-        marl::Task{
-            [fn = std::move(fn), zoneName = std::move(zoneName)]() {
-              MOCHI_PROFILE_SCOPE_N("RunTask");
-              MOCHI_PROFILE_LABEL(zoneName);
-              fn();
-            },
-            flags});
+    AddTaskNoProfile([fn = std::move(fn), zoneName = std::move(zoneName)]() {
+      MOCHI_PROFILE_SCOPE_N("RunTask");
+      MOCHI_PROFILE_LABEL(zoneName);
+      fn();
+    });
   } else {
-    _marl->enqueue(marl::Task{std::move(fn), flags});
+    AddTaskNoProfile(std::move(fn));
   }
 }
 
 void TaskScheduler::TryToWakeUpMoreWorkers(int numWorkers, TimeSpan dummyTaskDuration) {
+  if (GetNumOtherThreads() == 0) {
+    return;
+  }
+
   for (int i = 0; i < numWorkers; ++i) {
-    AddTaskNoProfile(
-        [dummyTaskDuration]() {
-          Timer timer = {};
-          while (ToNanoseconds(timer.GetElapsed()) < ToNanoseconds(dummyTaskDuration)) {
-          }
-        },
-        false);
+    AddTaskNoProfile([dummyTaskDuration]() {
+      Timer timer = {};
+      while (ToNanoseconds(timer.GetElapsed()) < ToNanoseconds(dummyTaskDuration)) {
+      }
+    });
   }
 }
 
