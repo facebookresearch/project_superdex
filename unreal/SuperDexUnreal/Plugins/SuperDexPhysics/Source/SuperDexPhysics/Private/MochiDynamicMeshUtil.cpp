@@ -90,6 +90,13 @@ static mochi::MeshDataView GetMeshDataForDynamicMesh(
   if (meshData.IsEmpty()) {
     meshData = mochiContext.GetShapeSurfaceMesh(shape, error);
     MOCHI_ERROR_RETURN(error, {});
+    if (meshData.IsEmpty()) {
+      const mochi::MeshDataView mesh = mochiContext.GetShapeMesh(shape, error);
+      MOCHI_ERROR_RETURN(error, {});
+      if (mesh.nodesPerElement == 2) {
+        return {};
+      }
+    }
   }
   MOCHI_ERROR_IF(
       meshData.IsEmpty(),

@@ -735,6 +735,22 @@ UMochiActorObject* UMochiActorObject::Create_Internal(
   Scene->QueueOrExecuteCommand([&](mochi::Scene* scene) {
     mochi::ErrorLog e{};
     if (const auto actor = scene->GetActor(ActorHandle)) {
+      if ((bQuerySurfaceNodePositions || bQueryNodeNormals) &&
+          actor->GetType() == mochi::ActorType::Rod &&
+          !(bUseVisualMeshIfPresent &&
+            actor->IsQuerySupported(mochi::QueryType::VisualNodePositions)) &&
+          !(bUseContactSkinIfPresent &&
+            actor->IsQuerySupported(mochi::QueryType::ContactSkinNodePositions))) {
+        UE_LOG(
+            LogMochiPhysics,
+            Warning,
+            TEXT(
+                "Rod actor '%hs' has no drawable visual mesh or contact skin and will only be "
+                "visible in Mochi debug draw."),
+            actor->GetName());
+        bQuerySurfaceNodePositions = false;
+        bQueryNodeNormals = false;
+      }
       bool useVisualMesh = bUseVisualMeshIfPresent && !actor->GetVisualMesh().IsEmpty();
       bool useContactSkin =
           !useVisualMesh && bUseContactSkinIfPresent && !actor->GetContactSkinMesh().IsEmpty();

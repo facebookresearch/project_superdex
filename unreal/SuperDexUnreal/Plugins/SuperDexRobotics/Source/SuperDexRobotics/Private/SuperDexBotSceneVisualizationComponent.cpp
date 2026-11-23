@@ -34,6 +34,7 @@
 #include "MochiConversions.h"
 #include "MochiDynamicMeshUtil.h"
 #include "MochiGameInstanceSubsystem.h"
+#include "MochiPhysicsModule.h"
 #include "MochiSceneObject.h"
 #include "SuperDexRuntimeRenderUtils.h"
 #include "UDynamicMesh.h"
@@ -741,11 +742,26 @@ UMeshComponent* USuperDexBotSceneVisualizationComponent::CreateShapeMeshComponen
       NewMesh->Copy(Tmp);
     }
     if (NewMesh->VertexCount() == 0) {
+      mochi::Error Error;
+      mochi::Context* Context = IMochiPhysicsModule::Get()->GetMochiContext();
+      if (Context && Context->GetShapeMesh(RefShape, Error).nodesPerElement == 2 && Error.IsOK()) {
+        UE_LOG(
+            LogTemp,
+            Warning,
+            TEXT(
+                "BotSceneViz: rod actor %llu has no drawable visual mesh or contact skin and "
+                "will only be visible in Mochi debug draw."),
+            HandleKey);
+        GeometryCache.Add(ShapeKey, MoveTemp(NewMesh));
+      }
       return nullptr;
     }
     ComputeOrDiscardVertexNormals(*NewMesh, /*bComputeNormals=*/true);
     PrepareDynamicMeshForRuntime(BakedGeometryScale, *NewMesh);
     CachedMesh = &GeometryCache.Add(ShapeKey, MoveTemp(NewMesh));
+  }
+  if ((*CachedMesh)->VertexCount() == 0) {
+    return nullptr;
   }
 
   UDynamicMeshComponent* DynComp =

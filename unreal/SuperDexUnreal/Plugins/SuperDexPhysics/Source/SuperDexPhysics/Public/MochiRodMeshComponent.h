@@ -48,43 +48,6 @@ class SUPERDEXPHYSICS_API UMochiRodMeshComponent : public UMochiDeformableMeshCo
   EMochiActorBoundaryElementType ContactSkinElementType =
       ::ToUnreal(mochi::RodActorParams{}.contactSkinElementType);
 
-  // When the assigned Mochi Model contains a contact skin, use it instead of
-  // generating a tube. If the model has no contact skin, a tube is generated from
-  // the radius and segment counts below.
-  UPROPERTY(
-      EditAnywhere,
-      Category = "Mochi|Contact Skin",
-      meta = (DisplayName = "Use Model Contact Skin (If Available)"))
-  bool bUseModelContactSkin = true;
-
-  // Read-only indicator of whether the assigned Mochi Model currently provides a
-  // contact skin. Refreshed whenever the model geometry is (re)loaded.
-  UPROPERTY(
-      VisibleAnywhere,
-      Transient,
-      Category = "Mochi|Contact Skin",
-      meta = (DisplayName = "Model Has Contact Skin"))
-  bool bModelHasContactSkin = false;
-
-  // Radius of the procedural tubular contact skin [m]. Only used when a tube is
-  // generated procedurally (see bUseModelContactSkin).
-  UPROPERTY(
-      EditAnywhere,
-      Category = "Mochi|Contact Skin",
-      meta = (Units = "m", EditCondition = "!bUseModelContactSkin || !bModelHasContactSkin"))
-  float ProceduralTubeRadius = 0.001f;
-  // Number of segments around the tube circumference. Only used when a tube is
-  // generated procedurally (see bUseModelContactSkin).
-  UPROPERTY(
-      EditAnywhere,
-      Category = "Mochi|Contact Skin",
-      meta =
-          (UIMin = 3,
-           UIMax = 32,
-           ClampMin = 3,
-           EditCondition = "!bUseModelContactSkin || !bModelHasContactSkin"))
-  int32 NumCrossSectionSegments = 8;
-
   // Point-cloud collider interaction radius [m].
   UPROPERTY(EditAnywhere, Category = "Mochi|Point Cloud Collider", meta = (Units = "m"))
   float PointCloudRadius = mochi::PointCloudColliderParams{}.radius;
@@ -106,49 +69,19 @@ class SUPERDEXPHYSICS_API UMochiRodMeshComponent : public UMochiDeformableMeshCo
   // Begin IMochiMeshComponentInterface
   virtual void CreateMochiActor() override;
 
- public:
-  UMochiRodMeshComponent(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
-
- public:
-  /// UObject lifecycle hooks that funnel through RebakeIfNeeded so the editor
-  /// preview tube radius stays in sync with the current ComponentToWorld scale.
-  virtual void PostLoad() override;
-  virtual void PostEditImport() override;
-  virtual void PostDuplicate(bool bDuplicateForPIE) override;
-
 #if WITH_EDITOR
-  virtual bool CanEditChange(const FProperty* InProperty) const override;
   virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
-  virtual void PostEditUndo() override;
 #endif
 
  protected:
   virtual void OnRegister() override;
-  virtual void OnUpdateTransform(EUpdateTransformFlags UpdateTransformFlags, ETeleportType Teleport)
-      override;
 
  private:
-  /// Rebuild the editor preview's dynamic mesh from the rod shape using the
-  /// component's current scale. Mirrors CreateMochiActor's build path so the
-  /// preview is WYSIWYG, and updates LastBakedScale. Skipped on archetypes/CDOs
-  /// to avoid creating a private UBodySetup on the Blueprint CDO.
+  /// Rebuild the editor preview's dynamic mesh from Model. Skipped on archetypes/CDOs to avoid
+  /// creating a private UBodySetup on the Blueprint CDO.
   void RebuildPreviewMesh();
-
-  /// Funnel for editor-only lifecycle hooks; skips on archetypes and after
-  /// BeginPlay.
-  void RebakeIfNeeded();
 
   /// Mark any UBodySetup on this component RF_Public so it serializes legally
   /// when attached to a Blueprint CDO. See body for the failure mode.
   void EnsureBodySetupPublic();
-
-  mochi::ShapeHandle CreateRodShape(const FVector& BakeScale, bool& bOutModelHasContactSkin) const;
-
-  /// Scale at which the editor preview mesh was last baked; initialized to an
-  /// impossible value so the first bake always occurs.
-  FVector LastBakedScale = FVector(TNumericLimits<double>::Lowest());
-
-  // One-shot guard so a continuously animated parent scale doesn't flood the
-  // log every frame after BeginPlay.
-  bool bWarnedRuntimeScaleChange = false;
 };
