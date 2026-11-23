@@ -229,10 +229,7 @@ TEST_P(SceneSettingsCallbackExceptionTest, ForceSingleThreadedReleasedAfterCallb
   MOCHI_DEFER(if (bindThread) { _context->UnbindThisThread(); });
 
   bool const applicationSingleThreaded = threadMode == StepThreadMode::BoundSingleThreaded;
-  if (applicationSingleThreaded) {
-    TaskScheduler::PushLocalSingleThreadedMode();
-  }
-  MOCHI_DEFER(if (applicationSingleThreaded) { TaskScheduler::PopLocalSingleThreadedMode(); });
+  ScopedLocalSingleThreadedMode const singleThreaded(applicationSingleThreaded);
 
   auto throwDuringStep = [&] {
     auto callback = [&](auto const&) {

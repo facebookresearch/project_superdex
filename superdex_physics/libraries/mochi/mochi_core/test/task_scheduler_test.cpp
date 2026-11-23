@@ -590,9 +590,7 @@ static void TestPendingJobsAtTimeOfShutdown(
   {
     TaskScheduler scheduler(numThreads);
     scheduler.SetGlobalSingleThreadedMode(globalSingleThreadedMode);
-    if (localSingleThreadedMode) {
-      TaskScheduler::PushLocalSingleThreadedMode();
-    }
+    ScopedLocalSingleThreadedMode const singleThreaded(localSingleThreadedMode);
 
     auto func = [&]() {
       // Don't do this normally! It will put the whole worker thread
@@ -632,6 +630,12 @@ static void TestLocalSingleThreadedMode(TaskScheduler& scheduler, bool expectLoc
   EXPECT_TRUE(TaskScheduler::IsLocalSingleThreaded());
   TaskScheduler::PopLocalSingleThreadedMode();
   EXPECT_EQ(expectLocalSingleThreaded, TaskScheduler::IsLocalSingleThreaded());
+
+  {
+    ScopedLocalSingleThreadedMode const singleThreaded;
+    EXPECT_TRUE(TaskScheduler::IsLocalSingleThreaded());
+  }
+  EXPECT_EQ(expectLocalSingleThreaded, TaskScheduler::IsLocalSingleThreaded());
 }
 
 static void TestTaskScheduler(TaskScheduler& scheduler, bool localSingleThreadedMode) {
@@ -640,9 +644,7 @@ static void TestTaskScheduler(TaskScheduler& scheduler, bool localSingleThreaded
   EXPECT_EQ(&scheduler, TaskScheduler::TryGet());
 
   // Set local single-threaded mode.
-  if (localSingleThreadedMode) {
-    TaskScheduler::PushLocalSingleThreadedMode();
-  }
+  ScopedLocalSingleThreadedMode const singleThreaded(localSingleThreadedMode);
 
   // Basic functionality:
   TestLocalSingleThreadedMode(scheduler, localSingleThreadedMode);
@@ -656,11 +658,6 @@ static void TestTaskScheduler(TaskScheduler& scheduler, bool localSingleThreaded
 
   // Utility functions built on TaskScheduler
   TestUtilityFunctions();
-
-  // Reset local single-threaded mode.
-  if (localSingleThreadedMode) {
-    TaskScheduler::PopLocalSingleThreadedMode();
-  }
 }
 
 static void TestTaskScheduler(
@@ -722,9 +719,7 @@ static void TestParallelBarrier(bool globalSingleThreadedMode, bool localSingleT
   int const numThreads = TaskScheduler::GetNumSupportedLogicalProcessors();
   TaskScheduler scheduler(numThreads);
   scheduler.SetGlobalSingleThreadedMode(globalSingleThreadedMode);
-  if (localSingleThreadedMode) {
-    TaskScheduler::PushLocalSingleThreadedMode();
-  }
+  ScopedLocalSingleThreadedMode const singleThreaded(localSingleThreadedMode);
 
   for (int numWorkers : {1, 2, numThreads, 2 * numThreads}) {
     EXPECT_GT(numWorkers, 0);

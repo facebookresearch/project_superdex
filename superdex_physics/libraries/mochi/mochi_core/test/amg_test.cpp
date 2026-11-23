@@ -55,9 +55,8 @@ template <typename Fn>
 static bool ParallelFor(int numWorkers, Fn const& forEach) {
   TaskSemaphore sem;
   TaskScheduler::BatchTaskFn task = [sem, &forEach](int workerIdx, int /*numWorkers*/) {
-    TaskScheduler::PushLocalSingleThreadedMode();
+    ScopedLocalSingleThreadedMode const singleThreaded;
     forEach(workerIdx);
-    TaskScheduler::PopLocalSingleThreadedMode();
     sem.Done();
   };
   TaskScheduler scheduler(numWorkers);

@@ -18,7 +18,6 @@
 
 #include <mochi_core/geometry/mesh_data.h>
 #include <mochi_core/test/wait_until.h>
-#include <mochi_core/utils/defer.h>
 #include <mochi_core/utils/span.h>
 #include <mochi_core/utils/task_scheduler.h>
 #include <mochi_physics/dbg/protocol.h>
@@ -1754,8 +1753,7 @@ TEST_P(SceneProfileThreadingTest, ReportsEffectiveWorkersForEachStep) {
   _context->SetIsSingleThreaded(false);
   checkStep(GetParam());
   {
-    TaskScheduler::PushLocalSingleThreadedMode();
-    MOCHI_DEFER(TaskScheduler::PopLocalSingleThreadedMode());
+    ScopedLocalSingleThreadedMode const singleThreaded;
     checkStep(0);
   }
   checkStep(GetParam());

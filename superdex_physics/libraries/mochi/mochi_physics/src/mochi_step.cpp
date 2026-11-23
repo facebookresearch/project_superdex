@@ -43,8 +43,8 @@
 #include "mochi_soft_skinned.h"
 #include "mochi_solve.h"
 
-#include <mochi_core/utils/defer.h>
 #include <mochi_core/utils/profile.h>
+#include <mochi_core/utils/task_scheduler.h>
 
 #include <algorithm>
 
@@ -564,11 +564,7 @@ void mochi::StepEcs(entt::registry& reg) {
           // Keep nested island parallelism under TSAN so CI exercises synchronization paths.
           bool const useLocalSingleThreadedMode =
               !MOCHI_COMPILER_TSAN && island::ShouldRunSingleThreaded(reg, island, descendants);
-          if (useLocalSingleThreadedMode) {
-            TaskScheduler::PushLocalSingleThreadedMode();
-          }
-          MOCHI_DEFER(
-              if (useLocalSingleThreadedMode) { TaskScheduler::PopLocalSingleThreadedMode(); });
+          ScopedLocalSingleThreadedMode const singleThreaded(useLocalSingleThreadedMode);
 
           if (auto* stats = reg.try_get<CIslandStats>(island)) {
             *stats = {};

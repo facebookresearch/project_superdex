@@ -70,17 +70,12 @@ RootTask VectorTest(TaskSemaphore, int n) {
 
 void TestExecutor(bool localSingleThreaded) {
   TaskScheduler ts(Min(TaskScheduler::GetNumSupportedLogicalProcessors(), 8));
-  if (localSingleThreaded) {
-    TaskScheduler::PushLocalSingleThreadedMode();
-  }
+  ScopedLocalSingleThreadedMode const singleThreaded(localSingleThreaded);
   for (int n = 0; n < 300; n += 25) {
     TaskSemaphore sem{1};
     auto task = VectorTest(sem, n);
     task.Schedule(ts, "MainCoroutine");
     sem.Wait();
-  }
-  if (localSingleThreaded) {
-    TaskScheduler::PopLocalSingleThreadedMode();
   }
 }
 
@@ -364,9 +359,10 @@ TEST(Coroutines, ScheduledCoroutineCanDestroyItsRootTask) {
   owner.emplace(DestroyOwner(sem, owner));
   TaskScheduler scheduler(1);
 
-  TaskScheduler::PushLocalSingleThreadedMode();
-  owner->Schedule(scheduler);
-  TaskScheduler::PopLocalSingleThreadedMode();
+  {
+    ScopedLocalSingleThreadedMode const singleThreaded;
+    owner->Schedule(scheduler);
+  }
 
   EXPECT_FALSE(owner.has_value());
   EXPECT_TRUE(sem.IsDone());

@@ -438,9 +438,8 @@ LinearSolverStatus ParallelPCG(
     TaskScheduler::BatchTaskFn task = [sem, &pcgWorkerTask](int workerIdx, int numWorkers) {
       // Disable nested parallelization in the worker threads during the execution of the
       // concurrent algorithm.
-      TaskScheduler::PushLocalSingleThreadedMode();
+      ScopedLocalSingleThreadedMode const singleThreaded;
       pcgWorkerTask(workerIdx, numWorkers);
-      TaskScheduler::PopLocalSingleThreadedMode();
       sem.Done();
     };
 

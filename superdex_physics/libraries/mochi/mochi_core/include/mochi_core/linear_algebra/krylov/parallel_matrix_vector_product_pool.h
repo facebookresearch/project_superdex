@@ -20,7 +20,6 @@
 #include <mochi_core/linear_algebra/matrix.h>
 #include <mochi_core/linear_algebra/utils/matrix_concepts.h>
 #include <mochi_core/solvers/island_operators.h>
-#include <mochi_core/utils/defer.h>
 #include <mochi_core/utils/task_scheduler.h>
 #include <mochi_core/utils/time.h>
 
@@ -184,8 +183,7 @@ class ParallelMatrixVectorProductPool {
     }
 
     if (_usePool) {
-      TaskScheduler::PushLocalSingleThreadedMode();
-      MOCHI_DEFER(TaskScheduler::PopLocalSingleThreadedMode());
+      ScopedLocalSingleThreadedMode const singleThreaded;
       MOCHI_ASSERT(
           std::this_thread::get_id() == _poolData->masterThreadId,
           "operator() must be called from the master thread.");
@@ -233,10 +231,7 @@ class ParallelMatrixVectorProductPool {
       InitializePool();
     }
 
-    bool const forceLocalSingleThreadedMode = _usePool;
-    if (forceLocalSingleThreadedMode) {
-      TaskScheduler::PushLocalSingleThreadedMode();
-    }
+    ScopedLocalSingleThreadedMode const singleThreaded(_usePool);
 
     beforeProduct();
     if (_usePool) {
@@ -256,10 +251,6 @@ class ParallelMatrixVectorProductPool {
     }
     afterProduct();
     _numIter++;
-
-    if (forceLocalSingleThreadedMode) {
-      TaskScheduler::PopLocalSingleThreadedMode();
-    }
   }
 
  protected:
@@ -313,13 +304,12 @@ class ParallelMatrixVectorProductPool {
       TaskScheduler::BatchTaskFn task = [&, poolData = _poolData](int workerIdx, int numWorkers) {
         // Disable nested parallelization in the worker threads during the execution of the
         // concurrent algorithm.
-        TaskScheduler::PushLocalSingleThreadedMode();
+        ScopedLocalSingleThreadedMode const singleThreaded;
         MatrixVectorProductTask(
             _problemData,
             *poolData,
             workerIdx,
             numWorkers + static_cast<int>(_masterPerformsProduct));
-        TaskScheduler::PopLocalSingleThreadedMode();
       };
 
       TaskSemaphore dummySem;

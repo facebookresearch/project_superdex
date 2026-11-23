@@ -189,6 +189,8 @@ class TaskScheduler final {
       TaskScheduler::PushLocalSingleThreadedMode();
       DoSingleThreadedWork();
       TaskScheduler::PopLocalSingleThreadedMode();
+
+    Prefer ScopedLocalSingleThreadedMode, which pops the mode when it goes out of scope.
   */
   static void PushLocalSingleThreadedMode();
   static void PopLocalSingleThreadedMode();
@@ -245,9 +247,8 @@ class TaskScheduler final {
     EXAMPLE:
     TaskSemaphore sem;
     auto task = [sem](int workerIdx, int numWorkers) {
-      TaskScheduler::PushLocalSingleThreadedMode();
+      ScopedLocalSingleThreadedMode const singleThreaded;
       // Do work in local single-threaded mode.
-      TaskScheduler::PopLocalSingleThreadedMode();
       sem.Done();
     }
     int minWorkers = 1;
@@ -281,6 +282,35 @@ class TaskScheduler final {
   marl::Scheduler* _marl = nullptr;
   std::atomic<bool> _isGlobalSingleThreaded{false};
   std::atomic<uint64_t> _profileTaskCounter{0};
+};
+
+/**************************************************************************************************
+  Enables local single-threaded mode (see TaskScheduler::PushLocalSingleThreadedMode) for the
+  lifetime of this object, if 'enabled'. The thread's first bind to a TaskScheduler and its last
+  unbind reset the mode, so neither may happen during the lifetime of an enabled guard.
+
+  Example:
+    ScopedLocalSingleThreadedMode const singleThreaded;
+    DoSingleThreadedWork();
+*/
+class [[nodiscard]] ScopedLocalSingleThreadedMode final {
+  MOCHI_DECLARE_NO_COPY_NO_MOVE(ScopedLocalSingleThreadedMode);
+
+ public:
+  explicit ScopedLocalSingleThreadedMode(bool enabled = true) : _enabled(enabled) {
+    if (_enabled) {
+      TaskScheduler::PushLocalSingleThreadedMode();
+    }
+  }
+
+  ~ScopedLocalSingleThreadedMode() {
+    if (_enabled) {
+      TaskScheduler::PopLocalSingleThreadedMode();
+    }
+  }
+
+ private:
+  bool const _enabled;
 };
 
 /**************************************************************************************************

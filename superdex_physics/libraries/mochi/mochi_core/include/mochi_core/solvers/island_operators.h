@@ -25,6 +25,7 @@
 #include <mochi_core/solvers/actor_preconditioner.h>
 #include <mochi_core/solvers/interaction_matrix_info.h>
 #include <mochi_core/solvers/per_actor_preconditioner.h>
+#include <mochi_core/utils/task_scheduler.h>
 
 #include <cstdint>
 #include <functional>
@@ -280,9 +281,8 @@ void IslandOperators<T>::Apply(InVector const& x, OutVector&& Ax) const {
   ParallelForN("IslandOperatorsApply", _numWorkers, 1, [&, this](int workerIdx) {
     // Disable nested parallelization. IslandOperators::Apply owns the parallelization strategy and
     // distribution of work.
-    TaskScheduler::PushLocalSingleThreadedMode();
+    ScopedLocalSingleThreadedMode const singleThreaded;
     ApplyToRange(x, Ax, _workerRowRanges[workerIdx], _workerRowRanges[workerIdx + 1]);
-    TaskScheduler::PopLocalSingleThreadedMode();
   });
 }
 

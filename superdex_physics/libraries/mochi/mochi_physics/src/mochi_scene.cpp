@@ -677,13 +677,10 @@ void SceneImpl::Step(double timeStepSec) {
   if (debugger) {
     debugger->OnPreStep(this, stepInfo);
   }
-  bool const forceSingleThreaded = debugger && debugger->IsForceSingleThreaded();
 
   {
-    if (forceSingleThreaded) {
-      TaskScheduler::PushLocalSingleThreadedMode();
-    }
-    MOCHI_DEFER(if (forceSingleThreaded) { TaskScheduler::PopLocalSingleThreadedMode(); });
+    ScopedLocalSingleThreadedMode const singleThreaded(
+        debugger && debugger->IsForceSingleThreaded());
 
     Timer totalStepTimer;
     Timer timer;
@@ -897,14 +894,11 @@ void SceneImpl::UpdateQueries(Error& error) {
         if (diverged) {
           return;
         }
+
         // Keep nested island parallelism under TSAN so CI exercises synchronization paths.
-        bool const useLocalSingleThreadedMode =
-            !MOCHI_COMPILER_TSAN && island::ShouldRunSingleThreaded(reg, island, descendants);
-        if (useLocalSingleThreadedMode) {
-          TaskScheduler::PushLocalSingleThreadedMode();
-        }
-        MOCHI_DEFER(
-            if (useLocalSingleThreadedMode) { TaskScheduler::PopLocalSingleThreadedMode(); });
+        ScopedLocalSingleThreadedMode const singleThreaded(
+            !MOCHI_COMPILER_TSAN && island::ShouldRunSingleThreaded(reg, island, descendants));
+
         PreStepIslandAsync(reg, descendants);
         ColumnVector<real> res(dofInfo.dofsSize);
         solver::AssembleIsland(reg, island, descendants, res, {});
