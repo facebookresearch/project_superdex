@@ -146,8 +146,7 @@ bool Path::IsDescendantOf(Path const& parent) const {
   if (_normalizedPathLowercase.size() < parent._normalizedPathLowercase.size()) {
     return false;
   }
-  if (_normalizedPathLowercase.compare(
-          0, parent._normalizedPathLowercase.size(), parent._normalizedPathLowercase) != 0) {
+  if (!_normalizedPathLowercase.starts_with(parent._normalizedPathLowercase)) {
     return false;
   }
   // Boundary: same length (equal) or next char is the separator.
