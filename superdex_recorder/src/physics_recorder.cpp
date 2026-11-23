@@ -44,7 +44,7 @@ ComponentField ActorField(std::string component) {
 }
 
 // Recorded in this order under superdex.physics.contact_param_names, with the Python field names.
-constexpr std::array<std::string_view, 17> kContactParamNames = {
+constexpr std::array<std::string_view, 16> kContactParamNames = {
     "penalty_coefficient",
     "penalty_smoothing_half_distance",
     "penalty_threshold_default",
@@ -55,7 +55,6 @@ constexpr std::array<std::string_view, 17> kContactParamNames = {
     "alignment_smoothing_fraction",
     "viscous_friction_coefficient",
     "coulomb_friction_coefficient",
-    "prefer_elasto_plastic_friction",
     "friction_falloff_vel",
     "presliding_displacement",
     "normal_viscous_damping_coefficient",
@@ -64,7 +63,8 @@ constexpr std::array<std::string_view, 17> kContactParamNames = {
     "colliding_penalty_length_scale",
 };
 
-// Mirrors mochi::ContactParams so that a new field fails to compile until it is recorded.
+// Mirrors mochi::ContactParams so that a new field fails to compile until it is recorded or
+// deliberately left out, like preferElastoPlasticFriction.
 struct RecordedContactParamsLayout {
   mochi::real penaltyCoefficient;
   mochi::real penaltySmoothingHalfDistance;
@@ -100,7 +100,6 @@ std::array<double, kContactParamNames.size()> ContactParamValues(mochi::ContactP
       p.alignmentSmoothingFraction,
       p.viscousFrictionCoefficient,
       p.coulombFrictionCoefficient,
-      p.preferElastoPlasticFriction ? 1.0 : 0.0,
       p.frictionFalloffVel,
       p.preslidingDisplacement,
       p.normalViscousDampingCoefficient,

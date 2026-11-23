@@ -134,12 +134,11 @@ def apply_recorded_physics(recording: EpisodeReader, scene: sdp.Scene) -> None:
     recorded center of mass must then match, which catches a link built without its
     recorded prefab edit.
 
-    Recordings made before ``prefer_elasto_plastic_friction`` was recorded used
-    velocity-regularized friction, the default then, so their bodies opt out of
-    elasto-plastic friction. The recorder never recorded the scene-wide opt-in that
-    preceded the preference.
+    Each body keeps its friction-model preference: the ``prefer_elasto_plastic_friction``
+    value that some recordings hold is ignored.
     """
-    names = recording.read_static_value("superdex.physics.contact_param_names")
+    recorded_names = recording.read_static_value("superdex.physics.contact_param_names")
+    names = [name for name in recorded_names if name != _PREFER_ELASTO_PLASTIC_FRICTION]
     template = sdp.ContactParams()
     unknown = [name for name in names if not hasattr(template, name)]
     if unknown:
@@ -156,10 +155,9 @@ def apply_recorded_physics(recording: EpisodeReader, scene: sdp.Scene) -> None:
     for sample in samples["superdex.physics.contact_params"]:
         actor = body(sample.entity_path)
         contact = actor.get_contact_params()
-        for name, value in zip(names, sample.value, strict=True):
-            setattr(contact, name, type(getattr(template, name))(value))
-        if _PREFER_ELASTO_PLASTIC_FRICTION not in names:
-            contact.prefer_elasto_plastic_friction = False
+        values = dict(zip(recorded_names, sample.value, strict=True))
+        for name in names:
+            setattr(contact, name, type(getattr(template, name))(values[name]))
         # Recorded as float64, but stored at Mochi's precision, which may be float32.
         requested = [float(getattr(contact, name)) for name in names]
         actor.set_contact_params(contact)

@@ -77,16 +77,22 @@ CENTER_OF_MASS_SHIFT = [0.002, -0.001, 0.003]
 CONTACT_PARAM_NAMES = "superdex.physics.contact_param_names"
 CONTACT_PARAMS = "superdex.physics.contact_params"
 PREFER_ELASTO_PLASTIC_FRICTION = "prefer_elasto_plastic_friction"
+# Recordings that hold the friction preference have it right before this parameter.
+AFTER_FRICTION_PREFERENCE = "friction_falloff_vel"
 
 
-class RecordingWithoutFrictionPreference(EpisodeReader):
-    """Reads a recording as if it was made before the recorder recorded
-    ``prefer_elasto_plastic_friction``."""
+class RecordingWithFrictionPreference(EpisodeReader):
+    """Reads a recording as if it held the friction preference `preference`."""
+
+    def __init__(self, path: Path, preference: bool) -> None:
+        super().__init__(path)
+        self.preference = preference
 
     def read_static_value(self, component: str) -> Any:
         value = super().read_static_value(component)
         if component == CONTACT_PARAM_NAMES:
-            value = [name for name in value if name != PREFER_ELASTO_PLASTIC_FRICTION]
+            index = value.index(AFTER_FRICTION_PREFERENCE)
+            value = value[:index] + [PREFER_ELASTO_PLASTIC_FRICTION] + value[index:]
         return value
 
     def component_samples_many(
@@ -101,10 +107,13 @@ class RecordingWithoutFrictionPreference(EpisodeReader):
         )
         if CONTACT_PARAMS in samples:
             names = super().read_static_value(CONTACT_PARAM_NAMES)
-            index = names.index(PREFER_ELASTO_PLASTIC_FRICTION)
+            index = names.index(AFTER_FRICTION_PREFERENCE)
             samples[CONTACT_PARAMS] = [
                 dataclasses.replace(
-                    sample, value=sample.value[:index] + sample.value[index + 1 :]
+                    sample,
+                    value=sample.value[:index]
+                    + [float(self.preference)]
+                    + sample.value[index:],
                 )
                 for sample in samples[CONTACT_PARAMS]
             ]
@@ -351,26 +360,47 @@ class RebuildSceneTest(unittest.TestCase):
         self.assertLess(error, tolerance)
         self.assertGreater(control, tolerance)
 
-    def test_rebuilds_old_recordings_with_velocity_regularized_friction(self) -> None:
-        """Recordings made before the friction preference was recorded used
-        velocity-regularized friction."""
+    def test_rebuild_keeps_friction_preference(self) -> None:
+        """Rebuilt bodies keep their own friction preference, whatever a recording holds,
+        and still get the other recorded contact parameters."""
         live, spawned = self.load_live_scene()
-        path, _ = self.record(physics_scene(live), spawned, 1)
+        live_scene = physics_scene(live)
+        randomize_physics(live_scene)
+        path, _ = self.record(live_scene, spawned, 1)
+        names = EpisodeReader(path).read_static_value(CONTACT_PARAM_NAMES)
+        self.assertNotIn(PREFER_ELASTO_PLASTIC_FRICTION, names)
+        live_bodies = colliding_bodies(live_scene)
 
-        for recording, expected in (
-            (EpisodeReader(path), True),
-            (RecordingWithoutFrictionPreference(path), False),
+        for recording in (
+            EpisodeReader(path),
+            RecordingWithFrictionPreference(path, False),
+            RecordingWithFrictionPreference(path, True),
         ):
             rebuilt = recorder.rebuild_scene(
                 recording, BOT_SCENE_PATH, self.context, bot_task_path=self.task_path
             )
-            bodies = colliding_bodies(physics_scene(rebuilt.bot_scene))
+            scene = physics_scene(rebuilt.bot_scene)
+            bodies = colliding_bodies(scene)
             self.assertTrue(bodies)
             for name, body in bodies.items():
-                with self.subTest(body=name, expected=expected):
-                    self.assertIs(
-                        body.get_contact_params().prefer_elasto_plastic_friction,
-                        expected,
+                contact = body.get_contact_params()
+                with self.subTest(body=name, recording=type(recording).__name__):
+                    self.assertTrue(contact.prefer_elasto_plastic_friction)
+                contact.prefer_elasto_plastic_friction = False
+                contact.coulomb_friction_coefficient /= FRICTION_SCALE
+                body.set_contact_params(contact)
+
+            recorder.apply_recorded_physics(recording, scene)
+            for name, body in bodies.items():
+                with self.subTest(body=name, recording=type(recording).__name__):
+                    self.assertFalse(
+                        body.get_contact_params().prefer_elasto_plastic_friction
+                    )
+                    self.assertEqual(
+                        physical_parameters(body, names),
+                        physical_parameters(
+                            live_bodies[name.removeprefix(f"{SPAWN_NAME}/")], names
+                        ),
                     )
 
     def test_applies_recorded_contact_parameters_of_a_skinned_hand(self) -> None:
