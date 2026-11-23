@@ -2552,6 +2552,34 @@ class SensorGaussianNoiseParams:
         random: SensorRandomParams = ...,
     ) -> None: ...
 
+class SensorJointEncoderParams:
+    """Joint-encoder configuration."""
+    @property
+    def joints(self) -> mochi_physics.DynamicArrayString:
+        """Names of the joints to read, in output order. Empty reads every one-DOF joint
+        of
+        the owning bot but its root, in the bot's order.
+        """
+    @joints.setter
+    def joints(self, value: mochi_physics.ArrayLikeString) -> None: ...
+    @property
+    def offset(self) -> mochi_physics.DynamicArrayReal:
+        """Calibration offset added to each joint's position [rad or m], in output
+        order;
+        empty is zeros.
+        """
+    @offset.setter
+    def offset(self, value: mochi_physics.ArrayLikeReal) -> None: ...
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(
+        self,
+        *,
+        joints: mochi_physics.ArrayLikeString = ...,
+        offset: mochi_physics.ArrayLikeReal = ...,
+    ) -> None: ...
+
 class SensorUniformNoiseParams:
     """Additive uniform noise parameters."""
     low: float
@@ -3164,6 +3192,24 @@ class SensorOutlierInjection(SensorBase):
     def type_name() -> str: ...
     def get_params(self) -> SensorOutlierInjectionParams: ...
     def set_params(self, params: SensorOutlierInjectionParams) -> None: ...
+
+class SensorJointEncoder(SensorBase):
+    """The owning bot's one-DOF joint states, published at every graph step, the reset
+    step included, as a [2, N] tensor: row 0 the positions plus per-joint
+    calibration offsets, row 1 the velocities, columns the joints. Declared on any
+    link of the bot.
+    """
+    @staticmethod
+    def type_name() -> str: ...
+    def get_params(self) -> SensorJointEncoderParams: ...
+    def set_params(self, params: SensorJointEncoderParams) -> None:
+        """Install new offsets, for example randomized ones. The joints cannot change
+        once
+        the graph has initialized the sensor.
+
+        Raises:
+            :class:`~superdex.physics.Error`: If an error occurs.
+        """
 
 class SensorFunction(SensorBase):
     """Source that publishes the values a C++ function writes at every step of its

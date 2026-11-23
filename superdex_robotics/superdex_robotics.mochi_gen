@@ -1224,6 +1224,16 @@ struct bots::SensorGaussianNoiseParams [no_reflection] {
   bots::SensorRandomParams random;
 }
 
+// @brief Joint-encoder configuration.
+struct bots::SensorJointEncoderParams [no_reflection] {
+  // @brief Names of the joints to read, in output order. Empty reads every one-DOF joint of the
+  // owning bot but its root, in the bot's order.
+  DynamicArray<String> joints [no_serialize_defaults];
+  // @brief Calibration offset added to each joint's position [rad or m], in output order; empty is
+  // zeros.
+  DynamicArray<real> offset [no_serialize_defaults];
+}
+
 // @brief Additive uniform noise parameters.
 struct bots::SensorUniformNoiseParams [no_reflection] {
   // @brief Lower bound of each value's draw, in input element units.
@@ -1620,6 +1630,17 @@ class bots::SensorOutlierInjection(bots::SensorBase) [no_init, no_destruct, no_r
   fn TypeName() -> StringView [static];
   fn GetParams() -> bots::SensorOutlierInjectionParams [const];
   fn SetParams(bots::SensorOutlierInjectionParams const& params) -> void [mochi_error];
+}
+
+// @brief The owning bot's one-DOF joint states, published at every graph step, the reset step
+// included, as a [2, N] tensor: row 0 the positions plus per-joint calibration offsets, row 1 the
+// velocities, columns the joints. Declared on any link of the bot.
+class bots::SensorJointEncoder(bots::SensorBase) [no_init, no_destruct, no_reflection] {
+  fn TypeName() -> StringView [static];
+  fn GetParams() -> bots::SensorJointEncoderParams const& [const];
+  // @brief Install new offsets, for example randomized ones. The joints cannot change once the
+  // graph has initialized the sensor.
+  fn SetParams(bots::SensorJointEncoderParams const& params) -> void [mochi_error];
 }
 
 // @brief Source that publishes the values a C++ function writes at every step of its graph, the

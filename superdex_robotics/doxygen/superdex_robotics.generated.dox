@@ -1054,6 +1054,21 @@
 /// @brief Additive zero-mean Gaussian noise parameters.
 ///
 
+/// @struct superdex::robotics::SensorJointEncoderParams
+///
+/// @brief Joint-encoder configuration.
+///
+
+/// @var superdex::robotics::SensorJointEncoderParams::joints
+///
+/// @brief Names of the joints to read, in output order. Empty reads every one-DOF joint of the owning bot but its root, in the bot's order.
+///
+
+/// @var superdex::robotics::SensorJointEncoderParams::offset
+///
+/// @brief Calibration offset added to each joint's position [rad or m], in output order; empty is zeros.
+///
+
 /// @struct superdex::robotics::SensorUniformNoiseParams
 ///
 /// @brief Additive uniform noise parameters.
@@ -1536,6 +1551,18 @@
 /// @class superdex::robotics::SensorOutlierInjection
 ///
 /// @brief Replaces whole input samples by outliers with a fixed probability.
+///
+
+/// @class superdex::robotics::SensorJointEncoder
+///
+/// @brief The owning bot's one-DOF joint states, published at every graph step, the reset step included, as a [2, N] tensor: row 0 the positions plus per-joint calibration offsets, row 1 the velocities, columns the joints. Declared on any link of the bot.
+///
+
+/// @fn void superdex::robotics::SensorJointEncoder::SetParams(SensorJointEncoderParams const& params, superdex::Error& error)
+///
+/// @brief Install new offsets, for example randomized ones. The joints cannot change once the graph has initialized the sensor.
+///
+/// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
 ///
 
 /// @class superdex::robotics::SensorFunction

@@ -113,6 +113,7 @@ void mochi::DeclareSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module
   registry.StoreClass(nb::class_<superdex::robotics::SensorRandomParams>(m_bots, "SensorRandomParams", "Episode seed and stable acquisition stream identity."));
   registry.StoreClass(nb::class_<superdex::robotics::SensorDelayLineParams>(m_bots, "SensorDelayLineParams", "Time-domain delay configuration, with optional seeded jitter."));
   registry.StoreClass(nb::class_<superdex::robotics::SensorGaussianNoiseParams>(m_bots, "SensorGaussianNoiseParams", "Additive zero-mean Gaussian noise parameters."));
+  registry.StoreClass(nb::class_<superdex::robotics::SensorJointEncoderParams>(m_bots, "SensorJointEncoderParams", "Joint-encoder configuration."));
   registry.StoreClass(nb::class_<superdex::robotics::SensorUniformNoiseParams>(m_bots, "SensorUniformNoiseParams", "Additive uniform noise parameters."));
   registry.StoreClass(nb::class_<superdex::robotics::SensorOutlierInjectionParams>(m_bots, "SensorOutlierInjectionParams", "Outlier injection parameters."));
   registry.StoreClass(nb::class_<superdex::robotics::TactileTaxelLayout>(m_bots, "TactileTaxelLayout", "Ordered, sensor-link-frame positions for a tactile taxel layout."));
@@ -141,6 +142,7 @@ void mochi::DeclareSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module
   registry.StoreClass(nb::class_<superdex::robotics::SensorGaussianNoise, superdex::robotics::SensorBase>(m_bots, "SensorGaussianNoise", "Independent additive noise on new input publications.", nb::never_destruct()));
   registry.StoreClass(nb::class_<superdex::robotics::SensorUniformNoise, superdex::robotics::SensorBase>(m_bots, "SensorUniformNoise", "Independent additive uniform noise on new input publications.", nb::never_destruct()));
   registry.StoreClass(nb::class_<superdex::robotics::SensorOutlierInjection, superdex::robotics::SensorBase>(m_bots, "SensorOutlierInjection", "Replaces whole input samples by outliers with a fixed probability.", nb::never_destruct()));
+  registry.StoreClass(nb::class_<superdex::robotics::SensorJointEncoder, superdex::robotics::SensorBase>(m_bots, "SensorJointEncoder", "The owning bot's one-DOF joint states, published at every graph step, the reset\nstep included, as a [2, N] tensor: row 0 the positions plus per-joint\ncalibration offsets, row 1 the velocities, columns the joints. Declared on any\nlink of the bot.", nb::never_destruct()));
   registry.StoreClass(nb::class_<superdex::robotics::SensorFunction, superdex::robotics::SensorBase>(m_bots, "SensorFunction", "Source that publishes the values a C++ function writes at every step of its\ngraph, the reset step included. Scene and bot files cannot declare it.", nb::never_destruct()));
   registry.StoreClass(nb::class_<superdex::robotics::BotSceneMetadata>(m_bots, "BotSceneMetadata", "Human-readable metadata for a .superdex_scene file. Not consumed by the runtime."));
   registry.StoreClass(nb::class_<superdex::robotics::PrefabEntry>(m_bots, "PrefabEntry", "A named reference to a spawnable scene, prefab, bot, or bot archive."));
@@ -1480,6 +1482,24 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_rw("random", &superdex::robotics::SensorGaussianNoiseParams::random)
   ;
 
+  registry.GetClass<superdex::robotics::SensorJointEncoderParams>()
+    .def("__init__", [](superdex::robotics::SensorJointEncoderParams* self, nb::object joints, nb::object offset) {
+      superdex::robotics::SensorJointEncoderParams result{};
+      result.joints = nb::cast<mochi::DynamicArray<mochi::DynamicString>>(joints);
+      result.offset = nb::cast<mochi::DynamicArray<mochi::real>>(offset);
+      new (self) superdex::robotics::SensorJointEncoderParams(std::move(result));
+    }
+      , nb::kw_only()
+      , nb::arg("joints").sig("...") = superdex::robotics::SensorJointEncoderParams{}.joints
+      , nb::arg("offset").sig("...") = superdex::robotics::SensorJointEncoderParams{}.offset
+    )
+    .def(nb::init<>())
+    .def("__copy__", [](superdex::robotics::SensorJointEncoderParams const& self) { return superdex::robotics::SensorJointEncoderParams(self); })
+    .def("__deepcopy__", [](superdex::robotics::SensorJointEncoderParams const& self, nb::dict) { return superdex::robotics::SensorJointEncoderParams(self); })
+    .def_prop_rw("joints", [](superdex::robotics::SensorJointEncoderParams& self) -> mochi::DynamicArray<mochi::DynamicString>& { return self.joints; }, [](superdex::robotics::SensorJointEncoderParams& self, nb::object val) { self.joints = nb::cast<mochi::DynamicArray<mochi::DynamicString>>(val); }, "Names of the joints to read, in output order. Empty reads every one-DOF joint of\nthe owning bot but its root, in the bot's order.")
+    .def_prop_rw("offset", [](superdex::robotics::SensorJointEncoderParams& self) -> mochi::DynamicArray<mochi::real>& { return self.offset; }, [](superdex::robotics::SensorJointEncoderParams& self, nb::object val) { self.offset = nb::cast<mochi::DynamicArray<mochi::real>>(val); }, "Calibration offset added to each joint's position [rad or m], in output order;\nempty is zeros.")
+  ;
+
   registry.GetClass<superdex::robotics::SensorUniformNoiseParams>()
     .def("__init__", [](superdex::robotics::SensorUniformNoiseParams* self, nb::object low, nb::object high, nb::object random) {
       superdex::robotics::SensorUniformNoiseParams result{};
@@ -2012,6 +2032,24 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
       }
     }
       , nb::arg("params")
+    )
+  ;
+
+  registry.GetClass<superdex::robotics::SensorJointEncoder, superdex::robotics::SensorBase>()
+    .def_static("type_name", &superdex::robotics::SensorJointEncoder::TypeName
+    )
+    .def("get_params", &superdex::robotics::SensorJointEncoder::GetParams
+      , nb::rv_policy::reference
+    )
+    .def("set_params", [](superdex::robotics::SensorJointEncoder& self, superdex::robotics::SensorJointEncoderParams const& params) {
+      mochi::Error error;
+      self.SetParams(params, error);
+      if (!error.IsOK()) {
+        throw MochiErrorException(error);
+      }
+    }
+      , nb::arg("params")
+      , "Install new offsets, for example randomized ones. The joints cannot change once\nthe graph has initialized the sensor.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
     )
   ;
 
