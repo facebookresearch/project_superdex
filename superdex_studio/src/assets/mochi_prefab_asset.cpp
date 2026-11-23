@@ -35,7 +35,7 @@
 namespace superdex::studio {
 
 // Compute the root directory used as `rootForRelativePath` when resolving non-"./" path
-// references: the nearest `.superdex_root`, matching BotSceneEditor. Every asset tree holding
+// references: the nearest `.superdex_root`, matching SceneEditor. Every asset tree holding
 // prefabs is expected to carry that marker at its root. There is deliberately no fallback root --
 // one would resolve rootless prefabs against an unrelated tree, so a missing marker is reported
 // instead.

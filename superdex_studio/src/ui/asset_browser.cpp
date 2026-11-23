@@ -19,7 +19,7 @@
 #include "assets/asset.h"
 #include "assets/bot_task_utils.h"
 #include "assets/ik_config.h"
-#include "editors/bot_scene_editor.h"
+#include "editors/scene_editor.h"
 
 #include <mochi_physics/utils/mochi_prefab.h>
 #include <superdex_asset_tuner/tuner_spec.h>
@@ -2354,11 +2354,11 @@ void AssetBrowser::ShowContents() {
         } else if (asset) {
           assetToOpen = asset;
         } else if (item.file->type == AssetType::BotTask) {
-          if (auto* sceneEditor = dynamic_cast<BotSceneEditor*>(_studio->GetActiveAssetEditor())) {
+          if (auto* sceneEditor = dynamic_cast<SceneEditor*>(_studio->GetActiveAssetEditor())) {
             sceneEditor->OpenTask(item.fullPath);
           } else {
             MOCHI_LOG_WARNING(
-                "Open a bot scene to load task '%s' into it.", item.fullPath.ToString().c_str());
+                "Open a scene to load task '%s' into it.", item.fullPath.ToString().c_str());
           }
         } else {
           if (auto* loaded = _assetManager->LoadAsset(item.fullPath)) {
@@ -2493,10 +2493,10 @@ void AssetBrowser::ShowContents() {
           ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
         ImGui::SetTooltip("This folder is already a root.");
       }
-      if (ImGui::Selectable("Bot Scene...")) {
+      if (ImGui::Selectable("Scene...")) {
         auto dir = _currentPath;
         std::string const extension{superdex::robotics::kBotSceneExtension};
-        std::string sceneName = MakeUniqueFileName("Bot Scene", dir, extension);
+        std::string sceneName = MakeUniqueFileName("Scene", dir, extension);
         auto newPath = dir / (sceneName + extension);
         superdex::robotics::BotScenePrefab prefab;
         prefab.metadata.name = sceneName;
@@ -2504,11 +2504,11 @@ void AssetBrowser::ShowContents() {
         BeginRenaming(newPath, sceneName, [this, extension](std::string const& newName) {
           RenameAsset(_renamingPath, newName);
           auto renamedPath = _renamingPath.GetParentPath() / (newName + extension);
-          auto* botScene = _assetManager->LoadBotSceneAsset(renamedPath);
-          if (botScene) {
-            botScene->GetPrefab().metadata.name = newName;
+          auto* sceneAsset = _assetManager->LoadSceneAsset(renamedPath);
+          if (sceneAsset) {
+            sceneAsset->GetPrefab().metadata.name = newName;
             // The file was written with a placeholder name before the user picked one.
-            botScene->Save();
+            sceneAsset->Save();
           }
         });
       }

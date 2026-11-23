@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-#include "assets/bot_scene_asset.h"
+#include "assets/scene_asset.h"
 #include "app/app.h"
 #include "assets/asset.h"
 #include "assets/asset_manager.h"
 #include "assets/asset_types.h"
 #include "assets/bot_asset.h"
 #include "assets/mochi_prefab_asset.h"
-#include "editors/bot_scene_editor.h"
+#include "editors/scene_editor.h"
 #include "rendering/scene_stage.h"
 
 #include <superdex_robotics/utils/archive_utils.h>
@@ -220,7 +220,7 @@ bool ImportExternalReferences(
   auto const workspaceRoot = std::filesystem::weakly_canonical(workspace);
   auto const sceneRoot = superdex::robotics::FindBotsRoot(sceneFile);
   if (!sceneRoot.has_value()) {
-    MOCHI_LOG_ERROR("Bot scene archive target has no .superdex_root");
+    MOCHI_LOG_ERROR("Scene archive target has no .superdex_root");
     return false;
   }
   auto const importFile = [&](std::filesystem::path const& file, std::filesystem::path& copy) {
@@ -359,8 +359,8 @@ bool ReplaceFileAfterSuccessfulWrite(
 
 } // namespace
 
-std::unique_ptr<BotSceneAsset>
-BotSceneAsset::Create(std::string const& name, mochi::Path const& path, AssetManager* manager) {
+std::unique_ptr<SceneAsset>
+SceneAsset::Create(std::string const& name, mochi::Path const& path, AssetManager* manager) {
   mochi::ErrorLog error;
 
   // Archive case: load from the shared extraction cache while keeping the archive as asset
@@ -374,7 +374,7 @@ BotSceneAsset::Create(std::string const& name, mochi::Path const& path, AssetMan
     auto targetPath = superdex::robotics::GetExtractedBotSceneArchiveTarget(extractedDir, error);
     auto metadata = superdex::robotics::ReadBotSceneArchiveMetadata(extractedDir, error);
     if (!error.IsOK()) {
-      MOCHI_LOG_ERROR("Failed to extract BotSceneAsset: %s", path.ToString().c_str());
+      MOCHI_LOG_ERROR("Failed to extract SceneAsset: %s", path.ToString().c_str());
       return nullptr;
     }
     extractedDirPath = std::string(extractedDir);
@@ -384,7 +384,7 @@ BotSceneAsset::Create(std::string const& name, mochi::Path const& path, AssetMan
 
   auto prefab = superdex::robotics::LoadBotScenePrefabFromFile(loadPath, error);
   if (!error.IsOK()) {
-    MOCHI_LOG_ERROR("Failed to load BotSceneAsset: %s", path.ToString().c_str());
+    MOCHI_LOG_ERROR("Failed to load SceneAsset: %s", path.ToString().c_str());
     return nullptr;
   }
 
@@ -410,8 +410,7 @@ BotSceneAsset::Create(std::string const& name, mochi::Path const& path, AssetMan
     }
   }
 
-  auto asset =
-      std::unique_ptr<BotSceneAsset>(new BotSceneAsset(name, path, AssetType::BotScene, manager));
+  auto asset = std::unique_ptr<SceneAsset>(new SceneAsset(name, path, AssetType::Scene, manager));
   asset->_prefab = std::move(prefab);
   asset->_isArchive = isArchive;
   if (isArchive) {
@@ -431,27 +430,27 @@ BotSceneAsset::Create(std::string const& name, mochi::Path const& path, AssetMan
   return asset;
 }
 
-char const* BotSceneAsset::GetTypeLabel() const {
-  return _isArchive ? "Bot Scene Arch." : "Bot Scene";
+char const* SceneAsset::GetTypeLabel() const {
+  return _isArchive ? "Scene Arch." : "Scene";
 }
 
-bool BotSceneAsset::RendersThumbnail() const {
+bool SceneAsset::RendersThumbnail() const {
   return true;
 }
 
-void BotSceneAsset::StageThumbnailScene(mochi_renderer::Scene& scene) {
-  SceneStage stage(_manager->GetStudio(), "BotSceneThumbnailStage");
+void SceneAsset::StageThumbnailScene(mochi_renderer::Scene& scene) {
+  SceneStage stage(_manager->GetStudio(), "SceneThumbnailStage");
   stage.BindRenderScene(&scene);
-  stage.StageBotScene(_prefab, StageType::RenderModelFallbackToMochiModel);
+  stage.StageScene(_prefab, StageType::RenderModelFallbackToMochiModel);
 }
 
-bool BotSceneAsset::IsSavable() const {
+bool SceneAsset::IsSavable() const {
   return !IsReadOnly();
 }
 
-bool BotSceneAsset::Save() {
+bool SceneAsset::Save() {
   if (IsReadOnly()) {
-    MOCHI_LOG_ERROR("Attempting to save read-only BotSceneAsset");
+    MOCHI_LOG_ERROR("Attempting to save read-only SceneAsset");
     return false;
   }
   if (!SaveControllerParams((_isArchive ? _archiveTargetPath : _path).GetParentPath())) {
@@ -469,15 +468,15 @@ bool BotSceneAsset::Save() {
   return error.IsOK();
 }
 
-std::unique_ptr<AssetEditor> BotSceneAsset::CreateEditor(SuperDexStudio* studio) {
-  return std::make_unique<BotSceneEditor>(studio, this);
+std::unique_ptr<AssetEditor> SceneAsset::CreateEditor(SuperDexStudio* studio) {
+  return std::make_unique<SceneEditor>(studio, this);
 }
 
-std::string const& BotSceneAsset::GetReferencerName() const {
+std::string const& SceneAsset::GetReferencerName() const {
   return GetName();
 }
 
-void BotSceneAsset::ForEachReferencedPath(
+void SceneAsset::ForEachReferencedPath(
     std::function<void(mochi::Path const&)> const& callback) const {
   auto visit = [&](mochi::DynamicString const& s) {
     if (!s.empty()) {
@@ -521,7 +520,7 @@ bool MaybeRewrite(
 
 } // namespace
 
-bool BotSceneAsset::RewriteReferencedPath(mochi::Path const& oldPath, mochi::Path const& newPath) {
+bool SceneAsset::RewriteReferencedPath(mochi::Path const& oldPath, mochi::Path const& newPath) {
   bool changed = false;
   changed |= MaybeRewrite(_prefab.scene.baseScene, oldPath, newPath);
   for (auto& entry : _prefab.scene.spawnablePrefabs) {
@@ -546,31 +545,31 @@ bool BotSceneAsset::RewriteReferencedPath(mochi::Path const& oldPath, mochi::Pat
   return changed;
 }
 
-superdex::robotics::BotScenePrefab const& BotSceneAsset::GetPrefab() const {
+superdex::robotics::BotScenePrefab const& SceneAsset::GetPrefab() const {
   return _prefab;
 }
 
-superdex::robotics::BotScenePrefab& BotSceneAsset::GetPrefab() {
+superdex::robotics::BotScenePrefab& SceneAsset::GetPrefab() {
   return _prefab;
 }
 
-ControllerParamsCache& BotSceneAsset::GetControllerParams() {
+ControllerParamsCache& SceneAsset::GetControllerParams() {
   return _controllerParams;
 }
 
-BotTaskCache& BotSceneAsset::GetTaskCache() {
+BotTaskCache& SceneAsset::GetTaskCache() {
   return _taskCache;
 }
 
-std::string const& BotSceneAsset::GetBotsRootPath() const {
+std::string const& SceneAsset::GetBotsRootPath() const {
   return _botsRootPath;
 }
 
-bool BotSceneAsset::IsArchive() const {
+bool SceneAsset::IsArchive() const {
   return _isArchive;
 }
 
-bool BotSceneAsset::SaveControllerParams(mochi::Path const& sceneDirectory) {
+bool SceneAsset::SaveControllerParams(mochi::Path const& sceneDirectory) {
   auto const choosePath = [&](superdex::robotics::BotEntry const& bot,
                               superdex::robotics::ControllerEntry const& controller) {
     std::array<char const*, 1> const filters{{"*.superdex_controller"}};
@@ -604,11 +603,11 @@ bool BotSceneAsset::SaveControllerParams(mochi::Path const& sceneDirectory) {
   return true;
 }
 
-bool BotSceneAsset::SupportsSaveAs() const {
+bool SceneAsset::SupportsSaveAs() const {
   return true;
 }
 
-bool BotSceneAsset::SaveAs(mochi::Path const& path) {
+bool SceneAsset::SaveAs(mochi::Path const& path) {
   if (!SaveControllerParams((_isArchive ? _archiveTargetPath : path).GetParentPath())) {
     return false;
   }
@@ -620,16 +619,16 @@ bool BotSceneAsset::SaveAs(mochi::Path const& path) {
   return error.IsOK();
 }
 
-bool BotSceneAsset::SaveArchiveCopy(mochi::Path const& path) const {
+bool SceneAsset::SaveArchiveCopy(mochi::Path const& path) const {
   if (!_isArchive || !superdex::robotics::IsSceneArchivePath(path.GetExtensionLowercase())) {
-    MOCHI_LOG_ERROR("Bot scene archive output must end with .superdex_scene_archive");
+    MOCHI_LOG_ERROR("Scene archive output must end with .superdex_scene_archive");
     return false;
   }
 
   std::filesystem::path const extractedRoot = _archiveExtractedDir.AsFilesystemPath();
   std::filesystem::path const extractedTarget = _archiveTargetPath.AsFilesystemPath();
   if (!IsPathInside(extractedTarget, extractedRoot)) {
-    MOCHI_LOG_ERROR("Bot scene archive target is outside its extracted root");
+    MOCHI_LOG_ERROR("Scene archive target is outside its extracted root");
     return false;
   }
 
@@ -656,7 +655,7 @@ bool BotSceneAsset::SaveArchiveCopy(mochi::Path const& path) const {
   mochi::ErrorLog error;
   superdex::robotics::SaveToFile(stagedPrefab, workspaceTarget.generic_string(), error);
   if (!error.IsOK()) {
-    MOCHI_LOG_ERROR("Failed to stage edited bot scene for archiving");
+    MOCHI_LOG_ERROR("Failed to stage edited scene for archiving");
     return false;
   }
 
@@ -673,14 +672,13 @@ bool BotSceneAsset::SaveArchiveCopy(mochi::Path const& path) const {
   superdex::robotics::ArchiveBotScene(params, error);
   if (!error.IsOK()) {
     std::filesystem::remove(temporaryArchive, removeError);
-    MOCHI_LOG_ERROR(
-        "Failed to create bot scene archive '%s'", destination.generic_string().c_str());
+    MOCHI_LOG_ERROR("Failed to create scene archive '%s'", destination.generic_string().c_str());
     return false;
   }
   return ReplaceFileAfterSuccessfulWrite(temporaryArchive, destination);
 }
 
-bool BotSceneAsset::ExtractArchiveToLooseFiles(mochi::Path const& directory, mochi::Path& scenePath)
+bool SceneAsset::ExtractArchiveToLooseFiles(mochi::Path const& directory, mochi::Path& scenePath)
     const {
   if (!_isArchive) {
     return false;
@@ -727,7 +725,7 @@ bool BotSceneAsset::ExtractArchiveToLooseFiles(mochi::Path const& directory, moc
   superdex::robotics::SaveToFile(editablePrefab, editableTarget.generic_string(), saveError);
   if (!saveError.IsOK()) {
     cleanup();
-    MOCHI_LOG_ERROR("Failed to save extracted editable bot scene");
+    MOCHI_LOG_ERROR("Failed to save extracted editable scene");
     return false;
   }
   std::filesystem::remove(destination / superdex::robotics::kSceneArchiveMetadataFile, error);

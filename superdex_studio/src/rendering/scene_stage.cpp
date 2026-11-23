@@ -1223,20 +1223,18 @@ bool SceneStage::StagePrefab(
   return ApplyStageRequests(requests, stageType);
 }
 
-bool SceneStage::StageBotScene(
-    superdex::robotics::BotScenePrefab const& scene,
-    StageType stageType) {
-  return StageBotSceneImpl(scene, nullptr, stageType);
+bool SceneStage::StageScene(superdex::robotics::BotScenePrefab const& scene, StageType stageType) {
+  return StageSceneImpl(scene, nullptr, stageType);
 }
 
 bool SceneStage::StageBotTask(
     superdex::robotics::BotScenePrefab const& scene,
     mochi::Span<ResolvedTaskSpawn const> taskSpawns,
     StageType stageType) {
-  return StageBotSceneImpl(scene, &taskSpawns, stageType);
+  return StageSceneImpl(scene, &taskSpawns, stageType);
 }
 
-bool SceneStage::StageBotSceneImpl(
+bool SceneStage::StageSceneImpl(
     superdex::robotics::BotScenePrefab const& scene,
     mochi::Span<ResolvedTaskSpawn const> const* taskSpawns,
     StageType stageType) {

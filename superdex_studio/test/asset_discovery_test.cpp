@@ -84,6 +84,12 @@ TEST_F(AssetDiscoveryTest, ClassifiesEveryKnownExtension) {
   EXPECT_EQ(ClassifyAssetTypeByFilename("x.mochi_scene"), AssetType::MochiPrefab);
   EXPECT_EQ(ClassifyAssetTypeByFilename("x.superdex_prefab"), AssetType::MochiPrefab);
   EXPECT_EQ(ClassifyAssetTypeByFilename("x.mochi_prefab"), AssetType::MochiPrefab);
+  EXPECT_EQ(ClassifyAssetTypeByFilename("x.superdex_scene"), AssetType::Scene);
+  EXPECT_EQ(ClassifyAssetTypeByFilename("x.superdex_scene_archive"), AssetType::Scene);
+#if MOCHI_INTERNAL
+  EXPECT_EQ(ClassifyAssetTypeByFilename("x.mochi_bot_scene"), AssetType::Scene);
+  EXPECT_EQ(ClassifyAssetTypeByFilename("x.mochi_bot_scene_archive"), AssetType::Scene);
+#endif
 
   EXPECT_EQ(ClassifyAssetTypeByFilename("x.h5"), AssetType::Unknown);
   EXPECT_EQ(ClassifyAssetTypeByFilename("x.urdf"), AssetType::Unknown);

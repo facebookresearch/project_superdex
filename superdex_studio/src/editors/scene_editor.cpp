@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-#include "editors/bot_scene_editor.h"
+#include "editors/scene_editor.h"
 #include "app/app.h"
 #include "assets/asset_manager.h"
 #include "assets/bot_asset.h"
-#include "assets/bot_scene_asset.h"
 #include "assets/controller_params.h"
 #include "assets/mochi_prefab_asset.h"
+#include "assets/scene_asset.h"
 #include "rendering/measure_tool.h"
 #include "rendering/stats.h"
 #include "ui/imgui_widgets.h"
@@ -343,8 +343,8 @@ bool ResolveTaskSpawns(
   for (auto const& prefab : scene.scene.spawnablePrefabs) {
     if (!prefabPaths.emplace(std::string(prefab.name), mochi::Path{std::string(prefab.path)})
              .second) {
-      error = "Bot scene declares more than one spawnable prefab named '" +
-          std::string(prefab.name) + "'";
+      error =
+          "Scene declares more than one spawnable prefab named '" + std::string(prefab.name) + "'";
       return false;
     }
   }
@@ -377,7 +377,7 @@ bool ResolveTaskSpawns(
     auto const prefab = prefabPaths.find(std::string(spawn.prefabName));
     if (prefab == prefabPaths.end()) {
       error = "Task spawn '" + std::string(spawn.name) + "' references '" +
-          std::string(spawn.prefabName) + "', which is not declared by this bot scene";
+          std::string(spawn.prefabName) + "', which is not declared by this scene";
       return false;
     }
 
@@ -425,7 +425,7 @@ ControllerEditResult ShowControllers(
     superdex::robotics::BotEntry& bot,
     BotAsset const* botAsset,
     SuperDexStudio* studio,
-    BotSceneAsset* sceneAsset,
+    SceneAsset* sceneAsset,
     std::function<std::string const&(std::string_view)> const& referenceProblem) {
   ControllerEditResult result;
   superdex::robotics::BotPrefab const* const botPrefab =
@@ -764,10 +764,10 @@ superdex::robotics::BotScenePrefab WithActiveSlotBots(
 
 } // namespace
 
-BotSceneEditor::BotSceneEditor(SuperDexStudio* studio, BotSceneAsset* asset)
-    : AssetEditor(studio, asset), _sceneAsset(asset), _stage(studio, "BotSceneEditorStage") {}
+SceneEditor::SceneEditor(SuperDexStudio* studio, SceneAsset* asset)
+    : AssetEditor(studio, asset), _sceneAsset(asset), _stage(studio, "SceneEditorStage") {}
 
-void BotSceneEditor::Initialize() {
+void SceneEditor::Initialize() {
   // Load referenced params files before the first undo snapshot so it records their values.
   auto& paramsCache = _sceneAsset->GetControllerParams();
   for (auto const& bot : _sceneAsset->GetPrefab().bots) {
@@ -799,7 +799,7 @@ void BotSceneEditor::Initialize() {
        .onToggle =
            [this] {
              _stageType = StageType::RenderModelOnly;
-             RestageBotScene();
+             RestageScene();
            },
        .getState = [this] { return _stageType == StageType::RenderModelOnly; },
        .shortcut = ImGuiKey_1});
@@ -808,7 +808,7 @@ void BotSceneEditor::Initialize() {
        .onToggle =
            [this] {
              _stageType = StageType::MochiModelOnly;
-             RestageBotScene();
+             RestageScene();
            },
        .getState = [this] { return _stageType == StageType::MochiModelOnly; },
        .shortcut = ImGuiKey_2});
@@ -817,7 +817,7 @@ void BotSceneEditor::Initialize() {
        .onToggle =
            [this] {
              _stageType = StageType::RenderModelFallbackToMochiModel;
-             RestageBotScene();
+             RestageScene();
            },
        .getState = [this] { return _stageType == StageType::RenderModelFallbackToMochiModel; },
        .shortcut = ImGuiKey_3});
@@ -826,12 +826,12 @@ void BotSceneEditor::Initialize() {
        .onToggle =
            [this] {
              _stageType = StageType::SdfFallbackToMochiModel;
-             RestageBotScene();
+             RestageScene();
            },
        .getState = [this] { return _stageType == StageType::SdfFallbackToMochiModel; },
        .shortcut = ImGuiKey_4});
   // Initialize Mochi scene and callbacks.
-  _mochiScene.Initialize(_studio->GetMochiContext(), "BotSceneEditor");
+  _mochiScene.Initialize(_studio->GetMochiContext(), "SceneEditor");
   _mochiScene.SetSettings(_studio->GetAppSettings().physics);
   _mochiScene.createPhysicsActors = [this](mochi::Scene* s) { CreatePhysicsActors(s); };
   _mochiScene.destroyPhysicsActors = [this](mochi::Scene* s) { DestroyPhysicsActors(s); };
@@ -853,7 +853,7 @@ void BotSceneEditor::Initialize() {
   // Force-drag (left-drag) of simulated rigid bodies / articulated links. The controller only
   // exists while a session is running, so the hooks read the slot on each event.
   BindSceneObjectDragHooks(*_viewport, _dragController);
-  // Bind the stage to the viewport's render scene and stage the bot scene.
+  // Bind the stage to the viewport's render scene and stage the scene.
   _stage.BindRenderScene(_viewport->GetRenderScene());
   // Measure tool (Ctrl+M): pick vertices/faces on the staged actors' render and collision meshes.
   BindSceneStageMeasureTargets(
@@ -861,17 +861,17 @@ void BotSceneEditor::Initialize() {
       _stage,
       [this] { return _mochiScene.IsSimulating(); },
       [this] { return _mochiScene.IsPaused(); });
-  RestageBotScene();
+  RestageScene();
   _viewport->FocusCameraOnScene();
 }
 
-void BotSceneEditor::OnHandleInputs() {
+void SceneEditor::OnHandleInputs() {
   if (CanSimulate()) {
     _mochiScene.HandleHotkeys();
   }
 }
 
-void BotSceneEditor::OnRender(Renderer const* renderer) {
+void SceneEditor::OnRender(Renderer const* renderer) {
   // Sync data from physics simulation.
   if (_mochiScene.IsSimulating()) {
     _mochiScene.UpdateStats();
@@ -891,7 +891,7 @@ void BotSceneEditor::OnRender(Renderer const* renderer) {
   _viewport->RenderScene(renderer);
 }
 
-void BotSceneEditor::Shutdown() {
+void SceneEditor::Shutdown() {
   if (_mochiScene.IsSimulating()) {
     _mochiScene.DestroyMochiScene();
   }
@@ -899,33 +899,33 @@ void BotSceneEditor::Shutdown() {
   _viewport.reset();
 }
 
-void BotSceneEditor::OnActivate() {
+void SceneEditor::OnActivate() {
   _referenceProblems.clear();
   // A referenced base scene, spawnable prefab, or bot may have been edited (and saved) in another
-  // tab while we were inactive. RestageBotScene reloads referenced assets and re-stages, so their
+  // tab while we were inactive. RestageScene reloads referenced assets and re-stages, so their
   // changes appear automatically when returning to this editor.
   if (!_mochiScene.IsSimulating()) {
-    RestageBotScene();
+    RestageScene();
   }
 }
 
-void BotSceneEditor::Refresh() {
+void SceneEditor::Refresh() {
   // A referenced base scene, spawnable prefab, or bot was replaced/renamed elsewhere in the app.
   // Stop any running simulation (restaging mid-sim is unsafe), then restage to reflect it.
   if (_mochiScene.IsSimulating()) {
     _mochiScene.DestroyMochiScene();
   }
-  RestageBotScene();
+  RestageScene();
 }
 
-void BotSceneEditor::OnDeactivate() {
+void SceneEditor::OnDeactivate() {
   // Stop simulation when the user changes to another editor.
   if (_mochiScene.IsSimulating()) {
     _mochiScene.DestroyMochiScene();
   }
 }
 
-void BotSceneEditor::ShowTabContents() {
+void SceneEditor::ShowTabContents() {
   ImGui::BeginChild("Viewport_Child", ImVec2(0, 0), 0, ImGuiWindowFlags_NoMove);
   // Force-drag only applies while the sim runs.
   _viewport->enableSceneObjectDrag = _mochiScene.IsSimulating();
@@ -937,29 +937,29 @@ void BotSceneEditor::ShowTabContents() {
   ImGui::EndChild(); // Viewport_Child
 }
 
-std::vector<AssetEditor::WindowDeclaration> BotSceneEditor::GetDefaultWindows() {
+std::vector<AssetEditor::WindowDeclaration> SceneEditor::GetDefaultWindows() {
   using Dock = AssetEditor::DockRegion;
   return {
-      {"Bot Scene Info", true, Dock::SidePanelTop},
+      {"Scene Info", true, Dock::SidePanelTop},
       {"Task Preview", true, Dock::SidePanelBottom},
       {"Physics Settings", false, Dock::SidePanelBottom},
       MeasureWindowDeclaration(),
       {"Scene Stage Debug", false, Dock::SidePanelTop, true}};
 }
 
-AssetSceneOverrides BotSceneEditor::GetAssetSceneOverrides() const {
+AssetSceneOverrides SceneEditor::GetAssetSceneOverrides() const {
   // A base scene is the authoritative source for every simulation physics parameter, so it supplies
   // both gravity and the solver.
   bool const hasBaseScene = !_sceneAsset->GetPrefab().scene.baseScene.empty();
   return {hasBaseScene, hasBaseScene};
 }
 
-std::vector<AssetEditor::WindowDeclaration> BotSceneEditor::GetAuxiliaryWindows() const {
+std::vector<AssetEditor::WindowDeclaration> SceneEditor::GetAuxiliaryWindows() const {
   return GetDefaultWindows();
 }
 
-void BotSceneEditor::ShowAuxiliaryWindows() {
-  if (bool& open = _studio->GetWindowVisible("Bot Scene Info")) {
+void SceneEditor::ShowAuxiliaryWindows() {
+  if (bool& open = _studio->GetWindowVisible("Scene Info")) {
     ShowInfoWindow(&open);
   }
   if (bool& open = _studio->GetWindowVisible("Physics Settings")) {
@@ -978,8 +978,8 @@ void BotSceneEditor::ShowAuxiliaryWindows() {
   }
 }
 
-void BotSceneEditor::ShowMainMenuItems() {
-  if (!ImGui::BeginMenu("Bot Scene")) {
+void SceneEditor::ShowMainMenuItems() {
+  if (!ImGui::BeginMenu("Scene")) {
     return;
   }
 
@@ -1009,17 +1009,17 @@ void BotSceneEditor::ShowMainMenuItems() {
   ImGui::EndMenu();
 }
 
-bool BotSceneEditor::CanUndoRedo() const {
+bool SceneEditor::CanUndoRedo() const {
   return !_mochiScene.IsSimulating();
 }
 
-void BotSceneEditor::ApplySceneViewSettings(mochi_renderer::SceneViewSettings const& viewSettings) {
+void SceneEditor::ApplySceneViewSettings(mochi_renderer::SceneViewSettings const& viewSettings) {
   if (_viewport && _viewport->GetRenderScene()) {
     _viewport->GetRenderScene()->ApplyViewSettings(viewSettings);
   }
 }
 
-void BotSceneEditor::OnAppSettingsChanged(AppSettings const& settings) {
+void SceneEditor::OnAppSettingsChanged(AppSettings const& settings) {
   // The drag controller snapshots its tuning per session, so a live one has to be told.
   if (_dragController) {
     _dragController->SetSettings(settings.physicsDrag);
@@ -1029,7 +1029,7 @@ void BotSceneEditor::OnAppSettingsChanged(AppSettings const& settings) {
 // Undo/Redo
 //--------------------------------------------------------------------------------------------------
 
-std::string BotSceneEditor::TakeUndoSnapshot() const {
+std::string SceneEditor::TakeUndoSnapshot() const {
   picojson::object params;
   for (auto const& [path, json] : _sceneAsset->GetControllerParams().CaptureValues()) {
     params[path] = picojson::value(json);
@@ -1046,7 +1046,7 @@ std::string BotSceneEditor::TakeUndoSnapshot() const {
   return picojson::value(snapshot).serialize();
 }
 
-void BotSceneEditor::RestoreUndoSnapshot(std::string const& json, int /*selectionIndex*/) {
+void SceneEditor::RestoreUndoSnapshot(std::string const& json, int /*selectionIndex*/) {
   picojson::value snapshot;
   std::string parseError;
   picojson::parse(snapshot, json.begin(), json.end(), &parseError);
@@ -1056,7 +1056,7 @@ void BotSceneEditor::RestoreUndoSnapshot(std::string const& json, int /*selectio
   auto const paramsField = fields.find("params");
   if (!parseError.empty() || sceneField == fields.end() || !sceneField->second.is<std::string>() ||
       paramsField == fields.end() || !paramsField->second.is<picojson::object>()) {
-    MOCHI_LOG_ERROR("Failed to parse bot scene undo snapshot: %s", parseError.c_str());
+    MOCHI_LOG_ERROR("Failed to parse scene undo snapshot: %s", parseError.c_str());
     return;
   }
   std::map<std::string, std::string> params;
@@ -1097,7 +1097,7 @@ void BotSceneEditor::RestoreUndoSnapshot(std::string const& json, int /*selectio
 
   // Reload referenced assets and refresh reference tracking, then re-stage the viewport.
   _studio->GetAssetManager().ResyncReferencer(_sceneAsset);
-  RestageBotScene();
+  RestageScene();
 
   // Save Task can leave the undo stack's saved state out of step with the task files.
   _sceneAsset->SetDirty(
@@ -1108,7 +1108,7 @@ void BotSceneEditor::RestoreUndoSnapshot(std::string const& json, int /*selectio
 // Staging
 //--------------------------------------------------------------------------------------------------
 
-void BotSceneEditor::RestageBotScene() {
+void SceneEditor::RestageScene() {
   // Scene edits, undo/redo, and renames can change the prefab each task spawn binds to. The physics
   // thread reads _taskSpawns, so bindings stay fixed for the duration of a simulation.
   if (_taskPrefab.has_value() && !_mochiScene.IsSimulating()) {
@@ -1119,7 +1119,7 @@ void BotSceneEditor::RestageBotScene() {
   if (_taskPrefab.has_value()) {
     _stage.StageBotTask(stagedPrefab, mochi::MakeConstSpan(_taskSpawns), _stageType);
   } else {
-    _stage.StageBotScene(stagedPrefab, _stageType);
+    _stage.StageScene(stagedPrefab, _stageType);
   }
   _stageStats = ComputeStageStats(
       _stage, _studio->GetAssetManager(), _studio->GetRendererToEditorSpaceConverter());
@@ -1129,7 +1129,7 @@ void BotSceneEditor::RestageBotScene() {
   _viewport->SetGroundPlaneHeight(_mochiScene.GetGroundPlaneHeight());
 }
 
-StatsText BotSceneEditor::BuildStats() const {
+StatsText SceneEditor::BuildStats() const {
   auto const& assets = _studio->GetAssetManager();
   auto const scene = WithActiveSlotBots(_sceneAsset->GetPrefab(), _activeSlotBots);
   std::vector<mochi::prefab::ScenePrefab const*> prefabs;
@@ -1159,7 +1159,7 @@ StatsText BotSceneEditor::BuildStats() const {
   return text.AddPrefabs(prefabs).AddRender(_stageStats.render).AddCollision(_stageStats.collision);
 }
 
-bool BotSceneEditor::BindTaskSpawns(
+bool SceneEditor::BindTaskSpawns(
     superdex::robotics::BotTaskPrefab const& task,
     std::vector<ResolvedTaskSpawn>& spawns,
     std::string& error) {
@@ -1187,7 +1187,7 @@ bool BotSceneEditor::BindTaskSpawns(
   return true;
 }
 
-bool BotSceneEditor::OpenTask(mochi::Path const& path) {
+bool SceneEditor::OpenTask(mochi::Path const& path) {
   if (_mochiScene.IsSimulating()) {
     MOCHI_LOG_WARNING("Stop the simulation before loading bot task '%s'.", path.ToString().c_str());
     return false;
@@ -1197,7 +1197,7 @@ bool BotSceneEditor::OpenTask(mochi::Path const& path) {
   return LoadTask(path);
 }
 
-bool BotSceneEditor::LoadTask(mochi::Path const& path) {
+bool SceneEditor::LoadTask(mochi::Path const& path) {
   std::string error;
   auto const* entry = _sceneAsset->GetTaskCache().GetOrLoad(path.ToString(), error);
   if (entry == nullptr) {
@@ -1212,12 +1212,12 @@ bool BotSceneEditor::LoadTask(mochi::Path const& path) {
   SReflect::FromJsonString(*_taskPrefab, entry->json);
   _showCurrentTaskTransforms = false;
   // A task that does not bind to this scene still loads, so it can be edited until it does.
-  RestageBotScene();
+  RestageScene();
   _viewport->FocusCameraOnScene();
   return true;
 }
 
-void BotSceneEditor::ClearTask() {
+void SceneEditor::ClearTask() {
   _taskPath = {};
   _taskPrefab.reset();
   _taskSpawns.clear();
@@ -1225,10 +1225,10 @@ void BotSceneEditor::ClearTask() {
   _taskLoadError.clear();
   _taskSaveError.clear();
   _showCurrentTaskTransforms = false;
-  RestageBotScene();
+  RestageScene();
 }
 
-void BotSceneEditor::SyncTaskFromCache() {
+void SceneEditor::SyncTaskFromCache() {
   if (!_taskPrefab.has_value()) {
     return;
   }
@@ -1238,7 +1238,7 @@ void BotSceneEditor::SyncTaskFromCache() {
   }
 }
 
-void BotSceneEditor::SaveTaskAs() {
+void SceneEditor::SaveTaskAs() {
   std::string const extension{superdex::robotics::kBotTaskExtension};
   std::array<char const*, 1> const filters{{"*.superdex_task"}};
   int const numFilters = MOCHI_PLATFORM_MACOS ? 0 : static_cast<int>(filters.size());
@@ -1267,14 +1267,14 @@ void BotSceneEditor::SaveTaskAs() {
   GetUndoStack().PushNow();
 }
 
-void BotSceneEditor::OnTaskEdited(bool structural) {
+void SceneEditor::OnTaskEdited(bool structural) {
   if (!_taskPrefab.has_value()) {
     return;
   }
   if (auto* entry = _sceneAsset->GetTaskCache().Find(_taskPath.ToString())) {
     entry->json = SReflect::ToJsonString(*_taskPrefab, true);
   }
-  RestageBotScene();
+  RestageScene();
   _sceneAsset->SetDirty(true);
   if (structural) {
     GetUndoStack().PushNow();
@@ -1287,11 +1287,11 @@ void BotSceneEditor::OnTaskEdited(bool structural) {
 // Mochi Scene
 //--------------------------------------------------------------------------------------------------
 
-bool BotSceneEditor::CanSimulate() const {
+bool SceneEditor::CanSimulate() const {
   return !_stage.IsEmpty();
 }
 
-void BotSceneEditor::CreatePhysicsActors(mochi::Scene* scene) {
+void SceneEditor::CreatePhysicsActors(mochi::Scene* scene) {
   auto* mochiContext = _studio->GetMochiContext();
   auto* botsContext = _studio->GetRoboticsContext();
 
@@ -1301,7 +1301,7 @@ void BotSceneEditor::CreatePhysicsActors(mochi::Scene* scene) {
   };
 
   mochi::ErrorLog e;
-  _botScene = superdex::robotics::LoadBotScene(
+  _scene = superdex::robotics::LoadBotScene(
       scene,
       _physicsScenePrefab,
       _sceneAsset->GetBotsRootPath(),
@@ -1311,8 +1311,8 @@ void BotSceneEditor::CreatePhysicsActors(mochi::Scene* scene) {
       findBotPrefab,
       &_studio->GetBotLoader());
   if (!e.IsOK()) {
-    MOCHI_LOG_ERROR("Failed to load bot scene physics");
-    _botScene.reset();
+    MOCHI_LOG_ERROR("Failed to load scene physics");
+    _scene.reset();
     return;
   }
 
@@ -1333,7 +1333,7 @@ void BotSceneEditor::CreatePhysicsActors(mochi::Scene* scene) {
   _taskBots.clear();
   _taskPrefabActors.clear();
   _taskPrefabConstraints.clear();
-  for (auto const& handle : _botScene->GetBaseSceneActorHandles()) {
+  for (auto const& handle : _scene->GetBaseSceneActorHandles()) {
     addActor(handle, {});
   }
 
@@ -1407,7 +1407,7 @@ void BotSceneEditor::CreatePhysicsActors(mochi::Scene* scene) {
     }
   }
   for (auto const& botEntry : prefab.bots) {
-    auto* bot = _botScene->GetBot(std::string(botEntry.name));
+    auto* bot = _scene->GetBot(std::string(botEntry.name));
     auto* actor = bot != nullptr ? bot->GetArticulatedActor() : nullptr;
     if (actor != nullptr) {
       auto const* botPrefab = findBotPrefab(std::string_view(botEntry.path));
@@ -1437,7 +1437,7 @@ void BotSceneEditor::CreatePhysicsActors(mochi::Scene* scene) {
   }
 }
 
-void BotSceneEditor::DestroyPhysicsActors(mochi::Scene* scene) {
+void SceneEditor::DestroyPhysicsActors(mochi::Scene* scene) {
   for (auto& skinSync : _skinSyncs) {
     skinSync.Untrack(scene);
   }
@@ -1457,13 +1457,13 @@ void BotSceneEditor::DestroyPhysicsActors(mochi::Scene* scene) {
   }
   _taskPrefabActors.clear();
   _taskRuntimeSpawns.clear();
-  _botScene.reset();
+  _scene.reset();
   _physicsActors.clear();
 }
 
-mochi::CallbackHandle BotSceneEditor::RegisterPostStepCallback(mochi::AsyncScene* scene) {
+mochi::CallbackHandle SceneEditor::RegisterPostStepCallback(mochi::AsyncScene* scene) {
   return scene->RegisterPostStepCallback(
-      "BotSceneEditor::ExtractActors", [this](mochi::StepInfo const& info) {
+      "SceneEditor::ExtractActors", [this](mochi::StepInfo const& info) {
         mochi::ErrorLog e;
         auto& data = _simData.GetProducerData();
         data.actorTransforms.clear();
@@ -1535,7 +1535,7 @@ mochi::CallbackHandle BotSceneEditor::RegisterPostStepCallback(mochi::AsyncScene
       });
 }
 
-std::string const& BotSceneEditor::GetReferenceProblem(std::string_view path) {
+std::string const& SceneEditor::GetReferenceProblem(std::string_view path) {
   static std::string const kNone;
   // Archives import external files when saved, so any reference works.
   if (path.empty() || _sceneAsset->IsArchive() || superdex::robotics::IsInlineJson(path) ||
@@ -1550,7 +1550,7 @@ std::string const& BotSceneEditor::GetReferenceProblem(std::string_view path) {
   return it->second;
 }
 
-void BotSceneEditor::OnStartPhysics() {
+void SceneEditor::OnStartPhysics() {
   // Staged from the same prefab, so the staged and physics actors stay in step.
   _physicsScenePrefab = WithActiveSlotBots(_sceneAsset->GetPrefab(), _activeSlotBots);
   _stagedSkinRows.clear();
@@ -1586,7 +1586,7 @@ void BotSceneEditor::OnStartPhysics() {
   }
 }
 
-void BotSceneEditor::OnStopPhysics() {
+void SceneEditor::OnStopPhysics() {
   // Tear down the per-session force-drag controller (its callback is already gone with the scene).
   _dragController.reset();
   _stage.ResetWorldTransforms(_studio->GetEditorToRendererSpaceConverter());
@@ -1596,7 +1596,7 @@ void BotSceneEditor::OnStopPhysics() {
   _showCurrentTaskTransforms = false;
 }
 
-void BotSceneEditor::SyncFromPhysics() {
+void SceneEditor::SyncFromPhysics() {
   if (_simData.Consume()) {
     auto const& data = _simData.GetConsumerData();
     auto const& converter = _studio->GetEditorToRendererSpaceConverter();
@@ -1610,7 +1610,7 @@ void BotSceneEditor::SyncFromPhysics() {
 // ImGui
 //--------------------------------------------------------------------------------------------------
 
-void BotSceneEditor::ShowTaskWindow(bool* open) {
+void SceneEditor::ShowTaskWindow(bool* open) {
   if (std::exchange(_focusTaskWindow, false)) {
     // Focusing a docked window does not select its tab, so select the tab directly.
     ImGuiWindow* const window = ImGui::FindWindowByName("Task Preview");
@@ -1748,7 +1748,7 @@ void BotSceneEditor::ShowTaskWindow(bool* open) {
   ImGui::End();
 }
 
-void BotSceneEditor::ShowTaskEditor() {
+void SceneEditor::ShowTaskEditor() {
   if (!_taskPrefab.has_value()) {
     return;
   }
@@ -1904,7 +1904,7 @@ void BotSceneEditor::ShowTaskEditor() {
   }
 }
 
-struct BotSceneEditor::SlotEditResult {
+struct SceneEditor::SlotEditResult {
   bool changed = false;
   bool structural = false;
   // Only the active slot bots changed: the scene itself did not.
@@ -1913,8 +1913,7 @@ struct BotSceneEditor::SlotEditResult {
 
 // Edits the scene's slots and picks each one's active bot. Warns about anything
 // LoadBotScenePrefabFromFile would reject, since a scene saved that way cannot be reopened.
-BotSceneEditor::SlotEditResult BotSceneEditor::ShowSlots(
-    superdex::robotics::BotScenePrefab& prefab) {
+SceneEditor::SlotEditResult SceneEditor::ShowSlots(superdex::robotics::BotScenePrefab& prefab) {
   SlotEditResult result;
   auto& slots = prefab.slots;
   std::set<std::string, std::less<>> botNames;
@@ -2062,10 +2061,10 @@ BotSceneEditor::SlotEditResult BotSceneEditor::ShowSlots(
   return result;
 }
 
-void BotSceneEditor::ShowInfoWindow(bool* open) {
+void SceneEditor::ShowInfoWindow(bool* open) {
   auto const windowFlags =
       _sceneAsset->IsDirty() ? ImGuiWindowFlags_UnsavedDocument : ImGuiWindowFlags_None;
-  ImGui::Begin("Bot Scene Info", open, windowFlags);
+  ImGui::Begin("Scene Info", open, windowFlags);
 
   auto& prefab = _sceneAsset->GetPrefab();
   auto& assetManager = _studio->GetAssetManager();
@@ -2077,7 +2076,7 @@ void BotSceneEditor::ShowInfoWindow(bool* open) {
   ImGui::PopFont();
   if (_sceneAsset->IsArchive()) {
     ImGui::TextWrapped(
-        "Editing an archive. Save overwrites the source archive; use the Bot Scene menu to save an "
+        "Editing an archive. Save overwrites the source archive; use the Scene menu to save an "
         "archive copy or extract an editable scene tree.");
   }
   ImGui::Separator();
@@ -2090,7 +2089,7 @@ void BotSceneEditor::ShowInfoWindow(bool* open) {
   bool activeSlotsChanged = false;
 
   ImGui::PushStyleColor(ImGuiCol_ChildBg, IM_COL32_BLACK_TRANS);
-  ImGui::BeginChild("BotSceneInfoChild", ImVec2(0, 0));
+  ImGui::BeginChild("SceneInfoChild", ImVec2(0, 0));
   ImGui::BeginDisabled(_sceneAsset->IsReadOnly() || _mochiScene.IsSimulating());
 
   // ---- Metadata ----
@@ -2371,14 +2370,14 @@ void BotSceneEditor::ShowInfoWindow(bool* open) {
   ImGui::EndChild();
   ImGui::PopStyleColor(); // ImGuiCol_ChildBg
 
-  // Edit epilogue: reflect edits in the viewport, mark dirty, and record undo state. A bot scene
+  // Edit epilogue: reflect edits in the viewport, mark dirty, and record undo state. A scene
   // needs no derived "build" step — references resolve live during staging. Active slot bots are a
   // view setting: they restage, but neither dirty the scene nor record undo state.
   if (changed || structural || activeSlotsChanged) {
     if (referencesChanged) {
       assetManager.ResyncReferencer(_sceneAsset);
     }
-    RestageBotScene();
+    RestageScene();
   }
   if (changed || structural) {
     _sceneAsset->SetDirty(true);

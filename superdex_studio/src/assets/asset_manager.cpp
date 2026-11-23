@@ -76,8 +76,8 @@ Asset* AssetManager::LoadAsset(mochi::Path const& path) {
       return LoadTunerAsset(path);
     case AssetType::IK:
       return LoadIKAsset(path);
-    case AssetType::BotScene:
-      return LoadBotSceneAsset(path);
+    case AssetType::Scene:
+      return LoadSceneAsset(path);
     case AssetType::BotTask:
     case AssetType::Unknown:
     case AssetType::Count:
@@ -200,22 +200,22 @@ IKAsset* AssetManager::LoadIKAsset(mochi::Path const& path) {
   return nullptr;
 }
 
-BotSceneAsset* AssetManager::LoadBotSceneAsset(mochi::Path const& path) {
+SceneAsset* AssetManager::LoadSceneAsset(mochi::Path const& path) {
   if (auto* existing = FindAssetByPath(path)) {
-    if (existing->GetType() == AssetType::BotScene) {
+    if (existing->GetType() == AssetType::Scene) {
       MOCHI_LOG_VERBOSE("Asset is already loaded from path: %s", path.ToString().c_str());
-      return static_cast<BotSceneAsset*>(existing);
+      return static_cast<SceneAsset*>(existing);
     }
     MOCHI_LOG_ERROR(
-        "Failed to cast previously loaded asset to BotSceneAsset: %s", path.ToString().c_str());
+        "Failed to cast previously loaded asset to SceneAsset: %s", path.ToString().c_str());
     return nullptr;
   }
   auto name = GetAssetNameFromPath(path);
-  auto asset = BotSceneAsset::Create(name, path, this);
+  auto asset = SceneAsset::Create(name, path, this);
   if (asset) {
-    return static_cast<BotSceneAsset*>(RegisterAsset(path, std::move(asset)));
+    return static_cast<SceneAsset*>(RegisterAsset(path, std::move(asset)));
   }
-  MOCHI_LOG_ERROR("Failed to load BotSceneAsset: %s", path.ToString().c_str());
+  MOCHI_LOG_ERROR("Failed to load SceneAsset: %s", path.ToString().c_str());
   return nullptr;
 }
 

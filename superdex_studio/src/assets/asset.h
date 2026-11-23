@@ -44,7 +44,7 @@ constexpr std::array<ImU32, kAssetTypeCount> kAssetTypeColors = {
     IM_COL32(0, 128, 255, 255), // MochiModel (blue)
     IM_COL32(128, 128, 255, 255), // MochiPrefab (purple)
     IM_COL32(255, 165, 0, 255), // Bot (orange)
-    IM_COL32(255, 96, 96, 255), // BotScene (red)
+    IM_COL32(255, 96, 96, 255), // Scene (red)
     IM_COL32(230, 110, 200, 255), // BotTask (pink)
     IM_COL32(0, 206, 209, 255), // CadModel (teal)
     IM_COL32(255, 215, 0, 255), // Tuner (gold)

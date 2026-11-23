@@ -3944,7 +3944,7 @@ void ModelEditor::UpdateReferenceModel(ReferenceModel& rm, bool assignDefaultCol
       break;
     case AssetType::MochiPrefab:
     case AssetType::Bot:
-    case AssetType::BotScene:
+    case AssetType::Scene:
     case AssetType::BotTask:
     case AssetType::Tuner:
     case AssetType::IK:

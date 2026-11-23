@@ -65,8 +65,8 @@ std::size_t AssetTypeExtensionIndex(std::string_view filename) {
   for (std::size_t i = 0; i < kAssetTypeExtensions.size(); ++i) {
     auto const& entry = kAssetTypeExtensions[i];
 #if !MOCHI_INTERNAL
-    // Only internal builds still read the legacy bot scene and task names.
-    if ((entry.type == AssetType::BotScene || entry.type == AssetType::BotTask) &&
+    // Only internal builds still read the legacy scene and task names.
+    if ((entry.type == AssetType::Scene || entry.type == AssetType::BotTask) &&
         entry.extension.starts_with(".mochi_bot_")) {
       continue;
     }
@@ -139,8 +139,8 @@ std::string_view AssetTypeToToken(AssetType type) {
       return "MochiPrefab";
     case AssetType::Bot:
       return "Bot";
-    case AssetType::BotScene:
-      return "BotScene";
+    case AssetType::Scene:
+      return "Scene";
     case AssetType::BotTask:
       return "BotTask";
     case AssetType::CadModel:
@@ -218,7 +218,7 @@ std::string_view AssetRoleFolderForType(AssetType type) {
       return superdex::robotics::kCollisionSubdir;
     case AssetType::MochiPrefab:
     case AssetType::Bot:
-    case AssetType::BotScene:
+    case AssetType::Scene:
     case AssetType::BotTask:
     case AssetType::Tuner:
     case AssetType::IK:

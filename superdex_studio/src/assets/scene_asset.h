@@ -29,9 +29,9 @@ namespace superdex::studio {
 
 class AssetManager;
 
-class BotSceneAsset : public Asset, public IAssetReferencer {
+class SceneAsset : public Asset, public IAssetReferencer {
  public:
-  ~BotSceneAsset() override = default;
+  ~SceneAsset() override = default;
 
   // Asset
   char const* GetTypeLabel() const override;
@@ -63,7 +63,7 @@ class BotSceneAsset : public Asset, public IAssetReferencer {
  private:
   friend class AssetManager;
   using Asset::Asset;
-  static std::unique_ptr<BotSceneAsset>
+  static std::unique_ptr<SceneAsset>
   Create(std::string const& name, mochi::Path const& path, AssetManager* manager);
   // Moves inline controller params to files (asking where, starting in @p sceneDirectory) and
   // writes modified params files. Runs before the scene is written, so an archive bundles them.

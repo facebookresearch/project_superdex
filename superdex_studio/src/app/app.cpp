@@ -60,10 +60,10 @@
 #include <thread>
 #include <utility>
 
-#include "editors/bot_scene_editor.h"
 #include "editors/ik_editor.h"
 #include "editors/model_editor.h"
 #include "editors/prefab_editor.h"
+#include "editors/scene_editor.h"
 #include "editors/tuner_editor.h"
 #include "io/mjcf_importer.h"
 #include "io/urdf_importer.h"
@@ -1032,7 +1032,7 @@ void SuperDexStudio::CreateSceneArchive(mochi::Path const& scenePath) {
       "Create Scene Archive",
       filters.data(),
       numFilters,
-      "Bot Scene Archive (*.superdex_scene_archive)",
+      "Scene Archive (*.superdex_scene_archive)",
       true,
       scenePath.GetParentPath() / (GetAssetNameFromPath(scenePath) + extension));
   if (selected.IsEmpty()) {
@@ -2571,7 +2571,7 @@ void SuperDexStudio::BuildDefaultDockLayout() {
   DockEditorDefaultWindows<PrefabEditor>(dock_right, dock_right_bottom, dock_bottom);
   DockEditorDefaultWindows<TunerEditor>(dock_right, dock_right_bottom, dock_bottom);
   DockEditorDefaultWindows<IKEditor>(dock_right, dock_right_bottom, dock_bottom);
-  DockEditorDefaultWindows<BotSceneEditor>(dock_right, dock_right_bottom, dock_bottom);
+  DockEditorDefaultWindows<SceneEditor>(dock_right, dock_right_bottom, dock_bottom);
   ImGui::DockBuilderFinish(dockSpaceId);
   // Reset all window visibility to defaults.
   _appSettings.windowVisibility.clear();

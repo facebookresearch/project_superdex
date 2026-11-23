@@ -35,18 +35,18 @@
 
 namespace superdex::studio {
 
-class BotSceneAsset;
+class SceneAsset;
 
 // Editor for .superdex_scene and .superdex_scene_archive files.
 // Visualizes and edits the base scene, spawnable prefabs, and placed bots, and can simulate them
 // (play/step/stop). Edits are undoable and restage the viewport live.
-class BotSceneEditor : public AssetEditor {
+class SceneEditor : public AssetEditor {
  public:
   //------------------------------------------------------------------------------------------------
   // AssetEditor
   //------------------------------------------------------------------------------------------------
 
-  BotSceneEditor(SuperDexStudio* studio, BotSceneAsset* asset);
+  SceneEditor(SuperDexStudio* studio, SceneAsset* asset);
   void Initialize() override;
   void OnHandleInputs() override;
   void OnRender(Renderer const* renderer) override;
@@ -82,8 +82,8 @@ class BotSceneEditor : public AssetEditor {
   // Staging
   //------------------------------------------------------------------------------------------------
 
-  void RestageBotScene();
-  // The viewport Stats overlay rows for what RestageBotScene stages.
+  void RestageScene();
+  // The viewport Stats overlay rows for what RestageScene stages.
   StatsText BuildStats() const;
   // Resolves @p task against the current scene and loads its prefabs. On failure, @p spawns is
   // empty and @p error says why.
@@ -125,12 +125,12 @@ class BotSceneEditor : public AssetEditor {
   // The editable spawn list, shown while not simulating.
   void ShowTaskEditor();
   struct SlotEditResult;
-  // The Slots section of the Bot Scene Info window.
+  // The Slots section of the Scene Info window.
   SlotEditResult ShowSlots(superdex::robotics::BotScenePrefab& prefab);
 
  private:
   // target asset
-  BotSceneAsset* _sceneAsset = nullptr;
+  SceneAsset* _sceneAsset = nullptr;
   // render scene state
   std::unique_ptr<Viewport> _viewport;
   SceneStage _stage;
@@ -139,7 +139,7 @@ class BotSceneEditor : public AssetEditor {
   StageType _stageType = StageType::RenderModelFallbackToMochiModel;
   // physics scene state
   MochiAsyncScene _mochiScene;
-  std::optional<superdex::robotics::BotScene> _botScene;
+  std::optional<superdex::robotics::BotScene> _scene;
   std::vector<mochi::ActorHandle> _physicsActors;
   // Bot prefabs rebuilt and copied from the AssetManager by OnStartPhysics, keyed by bot path, for
   // CreatePhysicsActors. Rebuilding mutates the asset, so it must happen on the UI thread.

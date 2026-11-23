@@ -244,7 +244,7 @@ struct StagedActor {
 
 using StagedActors = std::vector<StagedActor>;
 
-// One task-file spawn resolved against a bot scene and into world space. The scene editor owns the
+// One task-file spawn resolved against a scene and into world space. The scene editor owns the
 // loaded task; SceneStage only needs this render-staging view of it.
 struct ResolvedTaskSpawn {
   std::string name;
@@ -398,7 +398,7 @@ struct SceneStage {
       std::string const& rootPath,
       StageType stageType);
 
-  // Stage (or re-stage) a complete bot scene (base ScenePrefab + all placed bots) into the bound
+  // Stage (or re-stage) a complete scene (base ScenePrefab + all placed bots) into the bound
   // render scene at rest pose. Spawnable-prefab declarations are not instances and are omitted
   // until StageBotTask is called. The base scene and each bot are resolved internally via the
   // AssetManager. The staged-actor order is the base scene (prefab::AddToScene order) followed by
@@ -408,9 +408,9 @@ struct SceneStage {
   // stands in for are staged hidden, as StageBot does with hideSkinCoveredLinks. No-op if no scene
   // is bound.
   // Returns true if the staged objects were rebuilt (pointers invalidated), false if reused.
-  bool StageBotScene(superdex::robotics::BotScenePrefab const& scene, StageType stageType);
+  bool StageScene(superdex::robotics::BotScenePrefab const& scene, StageType stageType);
 
-  // Stage a bot scene with the declared spawnable-prefab previews replaced by the concrete object
+  // Stage a scene with the declared spawnable-prefab previews replaced by the concrete object
   // instances from a loaded task. An empty task intentionally stages no spawnables.
   bool StageBotTask(
       superdex::robotics::BotScenePrefab const& scene,
@@ -551,7 +551,7 @@ struct SceneStage {
 
   // Apply a list of staging requests: reuse existing staged objects when the actor set (by name)
   // and active model files are unchanged, otherwise rebuild. Shared by StageBot, StagePrefab, and
-  // StageBotScene.
+  // StageScene.
   // Returns true if the staged objects were rebuilt (existing SceneObjects destroyed and recreated,
   // invalidating external pointers); false if existing objects were reused.
   bool ApplyStageRequests(std::vector<StageRequest>& requests, StageType stageType);
@@ -573,7 +573,7 @@ struct SceneStage {
   // Moves a rod's collider spheres to its current pose.
   void UpdateRodColliderMesh(StagedActor const& actor) const;
 
-  bool StageBotSceneImpl(
+  bool StageSceneImpl(
       superdex::robotics::BotScenePrefab const& scene,
       mochi::Span<ResolvedTaskSpawn const> const* taskSpawns,
       StageType stageType);
