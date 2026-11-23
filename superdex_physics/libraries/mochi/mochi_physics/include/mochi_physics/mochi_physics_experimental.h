@@ -777,6 +777,9 @@ struct ExperimentalSoftActorParams {
    * @warning ROMs are an experimental feature and may change or be removed. Use at your own risk.
    * @warning ROM actor creation requires `MOCHI_ENABLE_ROM_ACTORS=1`. If disabled, @ref
    * CreateModelShapeWithLinearRom fails, and actor creation fails when this field is set.
+   * @warning ROM actors are inaccurate under integration methods whose step does not end at their
+   * last stage (e.g. @ref IntegrationMethod::DIRK23, @ref IntegrationMethod::SymplecticDIRK12 and
+   * @ref IntegrationMethod::SymplecticDIRK22).
    */
   std::optional<RomParams> rom;
 

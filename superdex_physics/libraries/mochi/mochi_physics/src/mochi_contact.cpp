@@ -5597,9 +5597,8 @@ void mochi::UpdateStageStartDataPipeline(
   ecs::InvokeForEach(&rom::UpdateMap<TimeStep::StageStart>, reg, descendants.softActors);
 
   // Update stage-start contact samples of soft and compound actors (with a tet-mesh skin).
-  // TODO: In most integration methods, the Newton solve is initialized with current state =
-  // stage-start state. Then, the initial current contact samples match the stage-start contact
-  // samples, so the values could just be copied over.
+  // TODO: When the Newton solve starts at the stage-start state, the initial current contact
+  // samples match the stage-start ones, so they could just be copied over.
   TaskSemaphore sem;
   std::array<Span<entt::entity const>, 2> softAndCompoundActors = {
       descendants.softActors, descendants.compoundActors};

@@ -1246,10 +1246,13 @@ static void ComputeFomStateAtStageStart(
 static void PreStagePrepareState(
     ecs::RequiredTag<TagRomActor>,
     ecs::OptionalTag<TagRomActorFixRigidTransformInSolve> isRigidTransformFixedInSolve,
+    CTimeIntegratorState const& intState,
     CRomModeAmplitudes& currentAmpl,
     CRomShiftVector& shift,
     CRigidState<TimeStep::Current>& currRigidTransform,
-    CDisplacementSlice<real, TimeStep::StageStart> const& fomDispl,
+    CDisplacementSlice<real, TimeStep::Previous> const& prevDispl,
+    CIntegrationDisplacementSlices const& intFomDispls,
+    CDisplacementSlice<real, TimeStep::StageStart> const& stageStartDispl,
     CLocal2GlobalMap const& l2g,
     CRigidTransformEvalPoint const& evalPoint,
     CTetrahedralMesh const& mesh,
@@ -1258,22 +1261,27 @@ static void PreStagePrepareState(
     CRigidState<TimeStep::StageStart>* stageStartRigidState = nullptr) {
   MOCHI_ASSERT_VERBOSE(mesh.mesh, "Missing mesh.");
 
-  // (1) Use the *stage start* FOM displ to evaluate the rigid transform.
-  auto& referencePivotFromDeformedPivot = currRigidTransform.value;
-  TransformRT referencePivotFromWorld(Quaternion::Identity(), -pivot.position);
-  TransformRT worldFromDeformedPivot;
-  soft::ComputeTransformAtEvalPoint(fomDispl.value, l2g, evalPoint, worldFromDeformedPivot);
-  referencePivotFromDeformedPivot = referencePivotFromWorld * worldFromDeformedPivot;
+  // (1) Evaluate the rigid transform of the FOM displ at the end of the previous stage, or of the
+  // previous step at the first stage. Not of the current FOM displ, which may since have been
+  // re-resolved on the active nodes only, or with another basis.
+  int const stage = intState.currentStage;
+  auto const& prevEndDispl = (stage == 0) ? prevDispl.value : intFomDispls.stages[stage - 1].value;
+  TransformRT const referencePivotFromWorld(Quaternion::Identity(), -pivot.position);
+  auto const referencePivotFromDeformedPivot = [&](ColumnVectorView<real const> displ) {
+    TransformRT worldFromDeformedPivot;
+    soft::ComputeTransformAtEvalPoint(displ, l2g, evalPoint, worldFromDeformedPivot);
+    return referencePivotFromWorld * worldFromDeformedPivot;
+  };
 
+  currRigidTransform.value = referencePivotFromDeformedPivot(prevEndDispl);
   if (!isRigidTransformFixedInSolve) {
     MOCHI_ASSERT(stageStartRigidState, "Missing CRigidState<TimeStep::StageStart>.");
-    // set the stage start RT equal to that
-    stageStartRigidState->value = currRigidTransform.value;
+    stageStartRigidState->value = referencePivotFromDeformedPivot(stageStartDispl.value);
   }
 
-  // (2) Set the ROM affine shift equal to the stage start displacements *without* the rigid
-  // transform contribution.
-  shift.value = fomDispl.value;
+  // (2) Set the ROM affine shift equal to the displacements of (1) *without* the rigid transform
+  // contribution.
+  shift.value = prevEndDispl;
   rom::rigid_transform::TransformDisplacements(
       *mesh.mesh,
       /* activeNodes */ Span<int const>{}, // Need to consider all nodes (not just the active ones)

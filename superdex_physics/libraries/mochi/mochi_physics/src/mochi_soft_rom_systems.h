@@ -245,8 +245,8 @@ void EntityPreFirstStage(
 
 void PreStagePipeline(entt::registry& reg, Span<entt::entity const> entities);
 
-// Updates velocity in ROM space by taking finite differences between the current and stage-start
-// ROM state as raw vectors. Called every time the solution is set.
+// For a fixed rigid transform, sets the velocity in ROM space to the mode amplitudes divided by
+// `dtStage`.
 void UpdateCurrentRomVelocity(
     ecs::Included<TagSoftActor, TagRomActor>,
     ecs::OptionalTag<TagRomActorFixRigidTransformInSolve> isRigidTransformFixedInSolve,
