@@ -22,6 +22,7 @@
 #include <superdex_robotics/controllers/controller_basic_jsc_pd.h>
 #include <superdex_robotics/controllers/controller_basic_osc_pd.h>
 #include <superdex_robotics/controllers/controller_mochi_articulated_pose.h>
+#include <superdex_robotics/domain_randomization/derive.h>
 #include <superdex_robotics/domain_randomization/domain_randomization_episode.h>
 #include <superdex_robotics/scene/bot_scene.h>
 #include <superdex_robotics/scene/bot_task.h>
@@ -669,15 +670,18 @@ static_assert(std::is_same_v<decltype(&superdex::robotics::DREpisodeEntry::scala
 static_assert(std::is_same_v<decltype(&superdex::robotics::DREpisodeEntry::value), mochi::DynamicArray<mochi::real> superdex::robotics::DREpisodeEntry::*>, "\n  ERROR: Field superdex::robotics::DREpisodeEntry::value is out-of-sync with C++ definition.\n  Please check the field type, then run mochi_gen_py to regenerate this file.\n");
 
 // struct superdex::robotics::DREpisode
-static_assert(std::is_same_v<decltype(&superdex::robotics::DREpisode::index), int superdex::robotics::DREpisode::*>, "\n  ERROR: Field superdex::robotics::DREpisode::index is out-of-sync with C++ definition.\n  Please check the field type, then run mochi_gen_py to regenerate this file.\n");
+static_assert(std::is_same_v<decltype(&superdex::robotics::DREpisode::index), int64_t superdex::robotics::DREpisode::*>, "\n  ERROR: Field superdex::robotics::DREpisode::index is out-of-sync with C++ definition.\n  Please check the field type, then run mochi_gen_py to regenerate this file.\n");
 static_assert(std::is_same_v<decltype(&superdex::robotics::DREpisode::episodeSeed), mochi::DynamicString superdex::robotics::DREpisode::*>, "\n  ERROR: Field superdex::robotics::DREpisode::episodeSeed is out-of-sync with C++ definition.\n  Please check the field type, then run mochi_gen_py to regenerate this file.\n");
 static_assert(std::is_same_v<decltype(&superdex::robotics::DREpisode::values), mochi::DynamicArray<superdex::robotics::DREpisodeEntry> superdex::robotics::DREpisode::*>, "\n  ERROR: Field superdex::robotics::DREpisode::values is out-of-sync with C++ definition.\n  Please check the field type, then run mochi_gen_py to regenerate this file.\n");
+static_assert(std::is_same_v<decltype(&superdex::robotics::DREpisode::appliedKeys), std::optional<mochi::DynamicArray<mochi::DynamicString>> superdex::robotics::DREpisode::*>, "\n  ERROR: Field superdex::robotics::DREpisode::appliedKeys is out-of-sync with C++ definition.\n  Please check the field type, then run mochi_gen_py to regenerate this file.\n");
 
 // struct superdex::robotics::DREpisodeList
 static_assert(std::is_same_v<decltype(&superdex::robotics::DREpisodeList::schemaVersion), int superdex::robotics::DREpisodeList::*>, "\n  ERROR: Field superdex::robotics::DREpisodeList::schemaVersion is out-of-sync with C++ definition.\n  Please check the field type, then run mochi_gen_py to regenerate this file.\n");
 static_assert(std::is_same_v<decltype(&superdex::robotics::DREpisodeList::specVersion), mochi::DynamicString superdex::robotics::DREpisodeList::*>, "\n  ERROR: Field superdex::robotics::DREpisodeList::specVersion is out-of-sync with C++ definition.\n  Please check the field type, then run mochi_gen_py to regenerate this file.\n");
 static_assert(std::is_same_v<decltype(&superdex::robotics::DREpisodeList::masterSeed), mochi::DynamicString superdex::robotics::DREpisodeList::*>, "\n  ERROR: Field superdex::robotics::DREpisodeList::masterSeed is out-of-sync with C++ definition.\n  Please check the field type, then run mochi_gen_py to regenerate this file.\n");
 static_assert(std::is_same_v<decltype(&superdex::robotics::DREpisodeList::episodes), mochi::DynamicArray<superdex::robotics::DREpisode> superdex::robotics::DREpisodeList::*>, "\n  ERROR: Field superdex::robotics::DREpisodeList::episodes is out-of-sync with C++ definition.\n  Please check the field type, then run mochi_gen_py to regenerate this file.\n");
+static_assert(std::is_same_v<decltype(&superdex::robotics::DREpisodeList::provenance), mochi::DynamicString superdex::robotics::DREpisodeList::*>, "\n  ERROR: Field superdex::robotics::DREpisodeList::provenance is out-of-sync with C++ definition.\n  Please check the field type, then run mochi_gen_py to regenerate this file.\n");
+static_assert(std::is_same_v<decltype(&superdex::robotics::DREpisodeList::metadata), mochi::DynamicString superdex::robotics::DREpisodeList::*>, "\n  ERROR: Field superdex::robotics::DREpisodeList::metadata is out-of-sync with C++ definition.\n  Please check the field type, then run mochi_gen_py to regenerate this file.\n");
 
 // struct superdex::robotics::ResolvedSpawn
 static_assert(std::is_same_v<decltype(&superdex::robotics::ResolvedSpawn::name), mochi::DynamicString superdex::robotics::ResolvedSpawn::*>, "\n  ERROR: Field superdex::robotics::ResolvedSpawn::name is out-of-sync with C++ definition.\n  Please check the field type, then run mochi_gen_py to regenerate this file.\n");
@@ -695,6 +699,9 @@ static_assert(std::is_same_v<decltype(&superdex::robotics::AssetSnapshot::scene)
 static_assert(std::is_same_v<decltype(&superdex::robotics::AssetSnapshot::createdAt), uint64_t superdex::robotics::AssetSnapshot::*>, "\n  ERROR: Field superdex::robotics::AssetSnapshot::createdAt is out-of-sync with C++ definition.\n  Please check the field type, then run mochi_gen_py to regenerate this file.\n");
 static_assert(std::is_same_v<decltype(&superdex::robotics::AssetSnapshot::sourceRevision), mochi::DynamicString superdex::robotics::AssetSnapshot::*>, "\n  ERROR: Field superdex::robotics::AssetSnapshot::sourceRevision is out-of-sync with C++ definition.\n  Please check the field type, then run mochi_gen_py to regenerate this file.\n");
 static_assert(std::is_same_v<decltype(&superdex::robotics::AssetSnapshot::files), mochi::DynamicArray<superdex::robotics::AssetSnapshotEntry> superdex::robotics::AssetSnapshot::*>, "\n  ERROR: Field superdex::robotics::AssetSnapshot::files is out-of-sync with C++ definition.\n  Please check the field type, then run mochi_gen_py to regenerate this file.\n");
+
+// free function superdex::robotics::Derive
+static_assert(std::is_same_v<decltype(&superdex::robotics::Derive), uint64_t (*)(uint64_t, std::string_view, std::optional<uint64_t>)>, "\n  ERROR: Function superdex::robotics::Derive is out-of-sync with C++.\n  Please check the function signature, then run mochi_gen_py to regenerate this file.\n");
 
 // free function superdex::robotics::LoadBotPrefabFromFile
 static_assert(std::is_same_v<decltype(&superdex::robotics::LoadBotPrefabFromFile), superdex::robotics::BotPrefab (*)(std::string_view, mochi::Error&)>, "\n  ERROR: Function superdex::robotics::LoadBotPrefabFromFile is out-of-sync with C++.\n  Please check the function signature, then run mochi_gen_py to regenerate this file.\n");
@@ -767,6 +774,12 @@ static_assert(std::is_same_v<decltype(&superdex::robotics::LoadDREpisodeListFrom
 
 // free function superdex::robotics::SaveDREpisodeListToFile
 static_assert(std::is_same_v<decltype(&superdex::robotics::SaveDREpisodeListToFile), void (*)(superdex::robotics::DREpisodeList const&, std::string_view, mochi::Error&)>, "\n  ERROR: Function superdex::robotics::SaveDREpisodeListToFile is out-of-sync with C++.\n  Please check the function signature, then run mochi_gen_py to regenerate this file.\n");
+
+// free function superdex::robotics::ParseSeed
+static_assert(std::is_same_v<decltype(&superdex::robotics::ParseSeed), uint64_t (*)(std::string_view, mochi::Error&)>, "\n  ERROR: Function superdex::robotics::ParseSeed is out-of-sync with C++.\n  Please check the function signature, then run mochi_gen_py to regenerate this file.\n");
+
+// free function superdex::robotics::ValidateDREpisodeList
+static_assert(std::is_same_v<decltype(&superdex::robotics::ValidateDREpisodeList), void (*)(superdex::robotics::DREpisodeList const&, mochi::Error&)>, "\n  ERROR: Function superdex::robotics::ValidateDREpisodeList is out-of-sync with C++.\n  Please check the function signature, then run mochi_gen_py to regenerate this file.\n");
 
 // free function superdex::robotics::SpawnPoseDRKey
 static_assert(std::is_same_v<decltype(&superdex::robotics::SpawnPoseDRKey), mochi::DynamicString (*)(std::string_view, std::string_view)>, "\n  ERROR: Function superdex::robotics::SpawnPoseDRKey is out-of-sync with C++.\n  Please check the function signature, then run mochi_gen_py to regenerate this file.\n");

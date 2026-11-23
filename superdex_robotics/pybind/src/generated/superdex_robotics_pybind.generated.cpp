@@ -161,8 +161,8 @@ void mochi::DeclareSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module
   registry.StoreClass(nb::class_<superdex::robotics::BotTaskPrefab>(m_bots, "BotTaskPrefab", "Complete parameter set for a .superdex_task file.\n\nA .superdex_task is a JSON config that declares which spawnable-prefab instances\nto place (and where) on top of a .superdex_scene. It is a declarative, swappable\ntask definition: one base scene can host many tasks."));
   registry.StoreClass(nb::class_<superdex::robotics::TerminationOutcome>(m_bots, "TerminationOutcome", "Both outcomes of a task."));
   registry.StoreClass(nb::class_<superdex::robotics::DREpisodeEntry>(m_bots, "DREpisodeEntry", "One DR draw: a stable key and its sampled value as a uniform array.\n\n`value` is always a list so it maps to a ``DynamicArray<real>``; a scalar draw\nrides as a length-1 list flagged by `scalar`. The flag lets a reader recover the\nexact scalar-vs-vector shape with no registry."));
-  registry.StoreClass(nb::class_<superdex::robotics::DREpisode>(m_bots, "DREpisode", "One episode's sampled DR: seed and the flat keyed values.\n\nPer-spawn pose DR is not a separate field — it rides in `values` under\n``dr/spawn/<name>/<dr_class>/pose`` keys, so a reader consumes it through the\nsame generic `{key -> value}` path. `episodeSeed` is a decimal string — a full\nuint64 can't round-trip as a JSON number, so parse it with ParseSeed."));
-  registry.StoreClass(nb::class_<superdex::robotics::DREpisodeList>(m_bots, "DREpisodeList", "A pre-randomized DR episode list — the neutral cross-language interchange.\n\nRead from a `dr_manifest.json` produced by the Python DR pipeline (schema v1).\n`profile`, `experiment_overrides`, and `pose_overrides` from the file are\nignored: a C++ applier consumes resolved per-episode values, not the config that\nproduced them, so :func:`~superdex.robotics.load_dr_episode_list_from_file`\ntolerates those unmodeled keys."));
+  registry.StoreClass(nb::class_<superdex::robotics::DREpisode>(m_bots, "DREpisode", "One episode's sampled DR: seed and the flat keyed values.\n\nPer-spawn pose DR is not a separate field — it rides in `values` under\n``dr/spawn/<name>/<dr_class>/pose`` keys, so a reader consumes it through the\nsame generic `{key -> value}` path. `episodeSeed` is a decimal string to\npreserve all uint64 bits across JSON consumers; parse it with ParseSeed."));
+  registry.StoreClass(nb::class_<superdex::robotics::DREpisodeList>(m_bots, "DREpisodeList", "Resolved schema-2 episodes with opaque producer metadata.\n\nValues use the native real precision: float32 or float64. This transport carries\nresolved values; it does not sample or apply them to a scene."));
   registry.StoreClass(nb::class_<superdex::robotics::ResolvedSpawn>(m_bots, "ResolvedSpawn", "One entry of a task's reset state, after its randomization was applied."));
   registry.StoreClass(nb::class_<superdex::robotics::AssetSnapshotEntry>(m_bots, "AssetSnapshotEntry", "One file an asset snapshot pins: the bot path a scene's references resolve to,\nand the bot path of the version to load in its place. Both are `//`- or\n`@tag/`-prefixed, relative to the scene's .superdex_root."));
   registry.StoreClass(nb::class_<superdex::robotics::AssetSnapshot>(m_bots, "AssetSnapshot", "The contents of a .superdex_scene_snapshot file: every file a scene uses, each\nmapped to a pinned version. Where the versions come from is up to whoever writes\nthe snapshot."));
@@ -2611,33 +2611,38 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
   ;
 
   registry.GetClass<superdex::robotics::DREpisode>()
-    .def("__init__", [](superdex::robotics::DREpisode* self, nb::object index, nb::object episode_seed, nb::object values) {
+    .def("__init__", [](superdex::robotics::DREpisode* self, nb::object index, nb::object episode_seed, nb::object values, nb::object applied_keys) {
       superdex::robotics::DREpisode result{};
-      result.index = nb::cast<int>(index);
+      result.index = nb::cast<int64_t>(index);
       result.episodeSeed = nb::cast<mochi::DynamicString>(episode_seed);
       result.values = nb::cast<mochi::DynamicArray<superdex::robotics::DREpisodeEntry>>(values);
+      result.appliedKeys = nb::cast<std::optional<mochi::DynamicArray<mochi::DynamicString>>>(applied_keys);
       new (self) superdex::robotics::DREpisode(std::move(result));
     }
       , nb::kw_only()
       , nb::arg("index") = superdex::robotics::DREpisode{}.index
       , nb::arg("episode_seed") = superdex::robotics::DREpisode{}.episodeSeed
       , nb::arg("values").sig("...") = superdex::robotics::DREpisode{}.values
+      , nb::arg("applied_keys").sig("...") = superdex::robotics::DREpisode{}.appliedKeys
     )
     .def(nb::init<>())
     .def("__copy__", [](superdex::robotics::DREpisode const& self) { return superdex::robotics::DREpisode(self); })
     .def("__deepcopy__", [](superdex::robotics::DREpisode const& self, nb::dict) { return superdex::robotics::DREpisode(self); })
-    .def_rw("index", &superdex::robotics::DREpisode::index)
+    .def_rw("index", &superdex::robotics::DREpisode::index, "Nonnegative signed-int64 episode identity, encoded as a JSON integer.")
     .def_rw("episode_seed", &superdex::robotics::DREpisode::episodeSeed)
     .def_prop_rw("values", [](superdex::robotics::DREpisode& self) -> mochi::DynamicArray<superdex::robotics::DREpisodeEntry>& { return self.values; }, [](superdex::robotics::DREpisode& self, nb::object val) { self.values = nb::cast<mochi::DynamicArray<superdex::robotics::DREpisodeEntry>>(val); })
+    .def_prop_rw("applied_keys", [](superdex::robotics::DREpisode& self) -> std::optional<mochi::DynamicArray<mochi::DynamicString>>& { return self.appliedKeys; }, [](superdex::robotics::DREpisode& self, nb::handle val) { self.appliedKeys = val.is_none() ? std::optional<mochi::DynamicArray<mochi::DynamicString>>{} : nb::cast<std::optional<mochi::DynamicArray<mochi::DynamicString>>>(val); }, "Observed application keys. Absent means unknown; an empty list means coverage\nwas recorded but no quantities were applied. Keys must occur in values.", nb::for_setter(nb::arg("value").none()))
   ;
 
   registry.GetClass<superdex::robotics::DREpisodeList>()
-    .def("__init__", [](superdex::robotics::DREpisodeList* self, nb::object schema_version, nb::object spec_version, nb::object master_seed, nb::object episodes) {
+    .def("__init__", [](superdex::robotics::DREpisodeList* self, nb::object schema_version, nb::object spec_version, nb::object master_seed, nb::object episodes, nb::object provenance, nb::object metadata) {
       superdex::robotics::DREpisodeList result{};
       result.schemaVersion = nb::cast<int>(schema_version);
       result.specVersion = nb::cast<mochi::DynamicString>(spec_version);
       result.masterSeed = nb::cast<mochi::DynamicString>(master_seed);
       result.episodes = nb::cast<mochi::DynamicArray<superdex::robotics::DREpisode>>(episodes);
+      result.provenance = nb::cast<mochi::DynamicString>(provenance);
+      result.metadata = nb::cast<mochi::DynamicString>(metadata);
       new (self) superdex::robotics::DREpisodeList(std::move(result));
     }
       , nb::kw_only()
@@ -2645,6 +2650,8 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
       , nb::arg("spec_version") = superdex::robotics::DREpisodeList{}.specVersion
       , nb::arg("master_seed") = superdex::robotics::DREpisodeList{}.masterSeed
       , nb::arg("episodes").sig("...") = superdex::robotics::DREpisodeList{}.episodes
+      , nb::arg("provenance") = superdex::robotics::DREpisodeList{}.provenance
+      , nb::arg("metadata") = superdex::robotics::DREpisodeList{}.metadata
     )
     .def(nb::init<>())
     .def("__copy__", [](superdex::robotics::DREpisodeList const& self) { return superdex::robotics::DREpisodeList(self); })
@@ -2653,6 +2660,8 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_rw("spec_version", &superdex::robotics::DREpisodeList::specVersion)
     .def_rw("master_seed", &superdex::robotics::DREpisodeList::masterSeed)
     .def_prop_rw("episodes", [](superdex::robotics::DREpisodeList& self) -> mochi::DynamicArray<superdex::robotics::DREpisode>& { return self.episodes; }, [](superdex::robotics::DREpisodeList& self, nb::object val) { self.episodes = nb::cast<mochi::DynamicArray<superdex::robotics::DREpisode>>(val); })
+    .def_rw("provenance", &superdex::robotics::DREpisodeList::provenance, "Optional JSON object of string-valued producer provenance; empty means absent.")
+    .def_rw("metadata", &superdex::robotics::DREpisodeList::metadata, "Opaque producer JSON object, emitted under metadata in schema 2. Empty means no\nextra fields. Numeric metadata uses signed-int64 or binary64; encode full uint64\nIDs as strings.")
   ;
 
   registry.GetClass<superdex::robotics::ResolvedSpawn>()
@@ -2725,6 +2734,13 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
   ;
 
     m_bots.attr("EFFORT_UNBOUNDED") = nb::cast(superdex::robotics::kEffortUnbounded);
+
+    m_bots.def("derive", &superdex::robotics::Derive
+      , nb::arg("seed")
+      , nb::arg("key")
+      , nb::arg("index").sig("...") = std::optional<uint64_t>{}
+      , "Deterministic 64-bit sub-seed from a master seed and a stable key.\n\nStateless and order-independent. Returns a seed for the caller's random\ngenerator; it does not sample values. Uses the FNV-1a key hash XOR seed,\nSplitMix64-finalized. Parity-locked to the Python DR derivation: both must match\nbit-for-bit, and the C++ and Python golden-vector sets must stay in sync. The\ngolden vectors in test/derive_test.cpp define the seed contract. Different keys\ncan collide; this is not a cryptographic hash.\n\nArgs:\n    seed (int): Master seed.\n    key (str): Stable string key, hashed as UTF-8 bytes.\n    index (Optional[int]): Optional index; None and 0 are distinct.\n\nReturns:\n    Deterministic 64-bit sub-seed in [0, 2^64)."
+    );
 
     m_bots.def("load_bot_prefab_from_file", [](std::string_view path) {
       mochi::Error error;
@@ -2994,7 +3010,7 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
       return result;
     }
       , nb::arg("path")
-      , "Load a pre-randomized DR episode list from a JSON manifest file.\n\nDeserializes a schema-v1 `dr_manifest.json` and validates it via\nValidateDREpisodeList. Unmodeled top-level keys (`experiment_overrides`,\n`pose_overrides`, `profile`) are ignored.\n\nArgs:\n    path (str): File path to the manifest.\n\nReturns:\n    Loaded :class:`~superdex.robotics.DREpisodeList`, or default-constructed on\n    failure.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+      , "Load and validate schema-2 resolved episodes using standard reflection.\n\nSchema 1 requires an explicit internal importer. Schema 2 uses an explicit\nmetadata object. Provenance is retained without interpreting its keys. Episode\nstructures are checked independently of task-specific specification, shape and\nrange rules.\n\nArgs:\n    path (str): Manifest file path.\n\nReturns:\n    Validated episode list; malformed input raises a Python exception.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
     );
 
     m_bots.def("save_dr_episode_list_to_file", [](superdex::robotics::DREpisodeList const& list, std::string_view path) {
@@ -3006,7 +3022,30 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     }
       , nb::arg("list")
       , nb::arg("path")
-      , "Save a :class:`~superdex.robotics.DREpisodeList` to a JSON manifest file.\n\nThe inverse of :func:`~superdex.robotics.load_dr_episode_list_from_file`:\nvalidates list via ValidateDREpisodeList, then serializes it to a schema-v1\n`dr_manifest.json`. Validating before writing makes a malformed list a hard\nerror rather than a bad file on disk. Only the modeled fields are emitted; the\noptional producer keys the loader tolerates (`experiment_overrides`,\n`pose_overrides`, `profile`) are not part of\n:class:`~superdex.robotics.DREpisodeList`, so they are absent.\n\nArgs:\n    list (DREpisodeList): The episode list to save.\n    path (str): Destination file path.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+      , "Validate and save resolved episodes, preserving provenance and metadata.\n\nJSON formatting and key order may change. Saving does not preserve source bytes.\n\nArgs:\n    list (DREpisodeList): Resolved episodes and opaque metadata.\n    path (str): Destination manifest file path.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+    );
+
+    m_bots.def("parse_seed", [](std::string_view seed) {
+      mochi::Error error;
+      auto result = superdex::robotics::ParseSeed(seed, error);
+      if (!error.IsOK()) {
+        throw MochiErrorException(error);
+      }
+      return result;
+    }
+      , nb::arg("seed")
+      , "Parse a decimal uint64 seed string.\n\nArgs:\n    seed (str): Decimal string; leading zeros are accepted here but rejected by\n        list validation.\n\nReturns:\n    Parsed unsigned seed.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+    );
+
+    m_bots.def("validate_dr_episode_list", [](superdex::robotics::DREpisodeList const& list) {
+      mochi::Error error;
+      superdex::robotics::ValidateDREpisodeList(list, error);
+      if (!error.IsOK()) {
+        throw MochiErrorException(error);
+      }
+    }
+      , nb::arg("list")
+      , "Check supported schema, unique episode indices, nonempty keys/values, scalar\nlength and finite values. Schema 2 requires a nonempty spec and canonical\ndecimal seeds. Distinct episode indices may reuse a seed.\n\nProvenance must be a JSON object of strings. Metadata must be a JSON object with\nopaque meaning. Task-specific semantics remain the applier's responsibility.\n\nArgs:\n    list (DREpisodeList): Episode list to validate.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
     );
 
     m_bots.def("spawn_pose_dr_key", &superdex::robotics::SpawnPoseDRKey

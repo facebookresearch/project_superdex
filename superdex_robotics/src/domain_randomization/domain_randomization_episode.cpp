@@ -17,23 +17,32 @@
 #include <superdex_robotics/domain_randomization/domain_randomization_episode.h>
 #include <superdex_robotics/utils/file_utils.h>
 
+#include <mochi_core/utils/json_utils.h>
+
 #include <charconv>
+#include <cmath>
 #include <string>
 #include <system_error>
 #include <unordered_set>
 
-#if !MOCHI_USE_REFLECTION
-#error Reflection is required for the mochi_bots library internals.
-#endif
-
 using namespace mochi;
-using namespace superdex::robotics;
 
 namespace superdex::robotics {
 namespace {
 
-// The only manifest schema version the C++ reader accepts.
-constexpr int32_t kSchemaVersion = 1;
+picojson::value ParsePayload(std::string_view text, Error& error) {
+  MOCHI_ERROR_RETURN(error, {});
+  if (text.empty()) {
+    return {picojson::object{}};
+  }
+  return ParseJsonFromString(text, error);
+}
+
+uint64_t ParseCanonicalSeed(std::string_view seed, Error& error) {
+  MOCHI_ERROR_RETURN(error, 0);
+  MOCHI_ERROR_IF(seed.size() > 1 && seed.front() == '0', error, "DREpisodeList: noncanonical seed");
+  return ParseSeed(seed, error);
+}
 
 } // namespace
 
@@ -53,57 +62,69 @@ uint64_t ParseSeed(std::string_view seed, Error& error) {
 
 void ValidateDREpisodeList(DREpisodeList const& list, Error& error) {
   MOCHI_ERROR_RETURN(error);
-  MOCHI_ERROR_IF(
-      list.schemaVersion != kSchemaVersion,
-      error,
-      "DREpisodeList: unsupported schema_version (expected 1)");
+  MOCHI_ERROR_IF(list.schemaVersion != 2, error, "DREpisodeList: expected schema_version 2");
+  MOCHI_ERROR_IF(list.specVersion.empty(), error, "DREpisodeList: empty spec_version");
+  (void)ParseCanonicalSeed(list.masterSeed, error);
+  auto const provenance = ParsePayload(list.provenance, error);
+  MOCHI_ERROR_IF_NOT(
+      provenance.is<picojson::object>(), error, "DREpisodeList: provenance must be an object");
+  auto const metadata = ParsePayload(list.metadata, error);
+  MOCHI_ERROR_IF_NOT(
+      metadata.is<picojson::object>(), error, "DREpisodeList: metadata must be an object");
   MOCHI_ERROR_RETURN(error);
-
-  (void)ParseSeed(list.masterSeed, error); // master_seed must be a valid uint64
+  for (auto const& [key, value] : provenance.get<picojson::object>()) {
+    MOCHI_ERROR_IF_NOT(
+        value.is<std::string>(), error, "DREpisodeList: provenance values must be strings");
+  }
   MOCHI_ERROR_RETURN(error);
-
+  std::unordered_set<int64_t> indices;
   for (auto const& episode : list.episodes) {
-    (void)ParseSeed(episode.episodeSeed, error); // episode_seed must be a valid uint64
+    (void)ParseCanonicalSeed(episode.episodeSeed, error);
+    MOCHI_ERROR_RETURN(error);
+    MOCHI_ERROR_IF(episode.index < 0, error, "DREpisodeList: negative episode index");
+    MOCHI_ERROR_IF(
+        !indices.insert(episode.index).second, error, "DREpisodeList: duplicate episode index");
     MOCHI_ERROR_RETURN(error);
     std::unordered_set<std::string> keys;
     for (auto const& entry : episode.values) {
       MOCHI_ERROR_IF(entry.key.empty(), error, "DREpisode: value entry has empty key");
       MOCHI_ERROR_IF(entry.value.empty(), error, "DREpisode: value entry has no elements");
       MOCHI_ERROR_IF(
-          entry.scalar && entry.value.size() != 1,
-          error,
-          "DREpisode: scalar value entry must have exactly one element");
-      MOCHI_ERROR_RETURN(error);
+          entry.scalar && entry.value.size() != 1, error, "DREpisode: scalar length must be one");
       MOCHI_ERROR_IF(
           !keys.insert(std::string(entry.key)).second, error, "DREpisode: duplicate value key");
       MOCHI_ERROR_RETURN(error);
+      for (auto const value : entry.value) {
+        MOCHI_ERROR_IF(!std::isfinite(value), error, "DREpisode: nonfinite value");
+      }
+      MOCHI_ERROR_RETURN(error);
+    }
+    if (episode.appliedKeys) {
+      std::unordered_set<std::string> applied;
+      for (auto const& key : *episode.appliedKeys) {
+        MOCHI_ERROR_IF(
+            keys.count(std::string(key)) == 0, error, "DREpisode: applied key has no value");
+        MOCHI_ERROR_IF(
+            !applied.insert(std::string(key)).second, error, "DREpisode: duplicate applied key");
+        MOCHI_ERROR_RETURN(error);
+      }
     }
   }
 }
 
 DREpisodeList LoadDREpisodeListFromFile(std::string_view path, Error& error) {
   MOCHI_ERROR_RETURN(error, {});
-
-  // allowPartial: the manifest carries top-level fields a C++ applier doesn't
-  // model (experiment_overrides, profile); tolerate them rather than fail.
-  // Structural correctness is enforced by ValidateDREpisodeList.
-  auto list = LoadParamsFromFile<DREpisodeList>(path, error, /*allowPartial=*/true);
+  auto list = LoadParamsFromFile<DREpisodeList>(path, error);
   MOCHI_ERROR_RETURN(error, {});
-
   ValidateDREpisodeList(list, error);
   MOCHI_ERROR_RETURN(error, {});
-
   return list;
 }
 
 void SaveDREpisodeListToFile(DREpisodeList const& list, std::string_view path, Error& error) {
   MOCHI_ERROR_RETURN(error);
-
-  // Validate before writing so a malformed list is a hard error rather than a
-  // bad manifest on disk — the write-side mirror of LoadDREpisodeListFromFile.
   ValidateDREpisodeList(list, error);
   MOCHI_ERROR_RETURN(error);
-
   SaveParamsToFile(list, path, error);
 }
 

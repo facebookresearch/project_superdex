@@ -31,6 +31,7 @@
 // Bots headers
 #include <superdex_robotics/controllers/controller_basic_jsc_pd.h>
 #include <superdex_robotics/core/context.h>
+#include <superdex_robotics/domain_randomization/derive.h>
 #include <superdex_robotics/domain_randomization/domain_randomization_episode.h>
 #include <superdex_robotics/scene/bot_scene.h>
 #include <superdex_robotics/scene/bot_task.h>
@@ -57,7 +58,6 @@
 // never names the codename headers; dropped from open-source builds with the rest of internal/.
 #if MOCHI_INTERNAL
 #include <superdex_robotics/controllers/internal/controllers_internal.h>
-#include <superdex_robotics/internal/domain_randomization/derive.h>
 #include <superdex_robotics/sensors/internal/sensors_internal.h>
 #endif
 

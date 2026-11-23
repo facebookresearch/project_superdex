@@ -4027,15 +4027,23 @@ class DREpisode:
 
     Per-spawn pose DR is not a separate field — it rides in `values` under
     ``dr/spawn/<name>/<dr_class>/pose`` keys, so a reader consumes it through the
-    same generic `{key -> value}` path. `episodeSeed` is a decimal string — a full
-    uint64 can't round-trip as a JSON number, so parse it with ParseSeed.
+    same generic `{key -> value}` path. `episodeSeed` is a decimal string to
+    preserve all uint64 bits across JSON consumers; parse it with ParseSeed.
     """
     index: int
+    """Nonnegative signed-int64 episode identity, encoded as a JSON integer."""
     episode_seed: str
     @property
     def values(self) -> DynamicArrayDREpisodeEntry: ...
     @values.setter
     def values(self, value: ArrayLikeDREpisodeEntry) -> None: ...
+    @property
+    def applied_keys(self) -> Optional[mochi_physics.DynamicArrayString]:
+        """Observed application keys. Absent means unknown; an empty list means coverage
+        was recorded but no quantities were applied. Keys must occur in values.
+        """
+    @applied_keys.setter
+    def applied_keys(self, value: Optional[mochi_physics.ArrayLikeString]) -> None: ...
     @overload
     def __init__(self) -> None: ...
     @overload
@@ -4045,16 +4053,14 @@ class DREpisode:
         index: int = ...,
         episode_seed: str = ...,
         values: ArrayLikeDREpisodeEntry = ...,
+        applied_keys: Optional[mochi_physics.ArrayLikeString] = ...,
     ) -> None: ...
 
 class DREpisodeList:
-    """A pre-randomized DR episode list — the neutral cross-language interchange.
+    """Resolved schema-2 episodes with opaque producer metadata.
 
-    Read from a `dr_manifest.json` produced by the Python DR pipeline (schema v1).
-    `profile`, `experiment_overrides`, and `pose_overrides` from the file are
-    ignored: a C++ applier consumes resolved per-episode values, not the config that
-    produced them, so :func:`~superdex.robotics.load_dr_episode_list_from_file`
-    tolerates those unmodeled keys.
+    Values use the native real precision: float32 or float64. This transport carries
+    resolved values; it does not sample or apply them to a scene.
     """
     schema_version: int
     spec_version: str
@@ -4063,6 +4069,13 @@ class DREpisodeList:
     def episodes(self) -> DynamicArrayDREpisode: ...
     @episodes.setter
     def episodes(self, value: ArrayLikeDREpisode) -> None: ...
+    provenance: str
+    """Optional JSON object of string-valued producer provenance; empty means absent."""
+    metadata: str
+    """Opaque producer JSON object, emitted under metadata in schema 2. Empty means no
+    extra fields. Numeric metadata uses signed-int64 or binary64; encode full uint64
+    IDs as strings.
+    """
     @overload
     def __init__(self) -> None: ...
     @overload
@@ -4073,6 +4086,8 @@ class DREpisodeList:
         spec_version: str = ...,
         master_seed: str = ...,
         episodes: ArrayLikeDREpisode = ...,
+        provenance: str = ...,
+        metadata: str = ...,
     ) -> None: ...
 
 class ResolvedSpawn:
@@ -4147,6 +4162,25 @@ EFFORT_UNBOUNDED: float
 """Sentinel :attr:`~superdex.robotics.BotJointPrefab.effort_limit` value: the
 joint's actuation effort is unbounded.
 """
+
+def derive(seed: int, key: str, index: Optional[int] = ...) -> int:
+    """Deterministic 64-bit sub-seed from a master seed and a stable key.
+
+    Stateless and order-independent. Returns a seed for the caller's random
+    generator; it does not sample values. Uses the FNV-1a key hash XOR seed,
+    SplitMix64-finalized. Parity-locked to the Python DR derivation: both must match
+    bit-for-bit, and the C++ and Python golden-vector sets must stay in sync. The
+    golden vectors in test/derive_test.cpp define the seed contract. Different keys
+    can collide; this is not a cryptographic hash.
+
+    Args:
+        seed (int): Master seed.
+        key (str): Stable string key, hashed as UTF-8 bytes.
+        index (Optional[int]): Optional index; None and 0 are distinct.
+
+    Returns:
+        Deterministic 64-bit sub-seed in [0, 2^64).
+    """
 
 def load_bot_prefab_from_file(path: str) -> BotPrefab:
     """Load bot parameters from a .superdex_bot file using the default file-based
@@ -4617,37 +4651,60 @@ def load_bot_task_prefab_from_file(path: str) -> BotTaskPrefab:
     """
 
 def load_dr_episode_list_from_file(path: str) -> DREpisodeList:
-    """Load a pre-randomized DR episode list from a JSON manifest file.
+    """Load and validate schema-2 resolved episodes using standard reflection.
 
-    Deserializes a schema-v1 `dr_manifest.json` and validates it via
-    ValidateDREpisodeList. Unmodeled top-level keys (`experiment_overrides`,
-    `pose_overrides`, `profile`) are ignored.
+    Schema 1 requires an explicit internal importer. Schema 2 uses an explicit
+    metadata object. Provenance is retained without interpreting its keys. Episode
+    structures are checked independently of task-specific specification, shape and
+    range rules.
 
     Args:
-        path (str): File path to the manifest.
+        path (str): Manifest file path.
 
     Returns:
-        Loaded :class:`~superdex.robotics.DREpisodeList`, or default-constructed on
-        failure.
+        Validated episode list; malformed input raises a Python exception.
 
     Raises:
         :class:`~superdex.physics.Error`: If an error occurs.
     """
 
 def save_dr_episode_list_to_file(list: DREpisodeList, path: str) -> None:
-    """Save a :class:`~superdex.robotics.DREpisodeList` to a JSON manifest file.
+    """Validate and save resolved episodes, preserving provenance and metadata.
 
-    The inverse of :func:`~superdex.robotics.load_dr_episode_list_from_file`:
-    validates list via ValidateDREpisodeList, then serializes it to a schema-v1
-    `dr_manifest.json`. Validating before writing makes a malformed list a hard
-    error rather than a bad file on disk. Only the modeled fields are emitted; the
-    optional producer keys the loader tolerates (`experiment_overrides`,
-    `pose_overrides`, `profile`) are not part of
-    :class:`~superdex.robotics.DREpisodeList`, so they are absent.
+    JSON formatting and key order may change. Saving does not preserve source bytes.
 
     Args:
-        list (DREpisodeList): The episode list to save.
-        path (str): Destination file path.
+        list (DREpisodeList): Resolved episodes and opaque metadata.
+        path (str): Destination manifest file path.
+
+    Raises:
+        :class:`~superdex.physics.Error`: If an error occurs.
+    """
+
+def parse_seed(seed: str) -> int:
+    """Parse a decimal uint64 seed string.
+
+    Args:
+        seed (str): Decimal string; leading zeros are accepted here but rejected by
+            list validation.
+
+    Returns:
+        Parsed unsigned seed.
+
+    Raises:
+        :class:`~superdex.physics.Error`: If an error occurs.
+    """
+
+def validate_dr_episode_list(list: DREpisodeList) -> None:
+    """Check supported schema, unique episode indices, nonempty keys/values, scalar
+    length and finite values. Schema 2 requires a nonempty spec and canonical
+    decimal seeds. Distinct episode indices may reuse a seed.
+
+    Provenance must be a JSON object of strings. Metadata must be a JSON object with
+    opaque meaning. Task-specific semantics remain the applier's responsibility.
+
+    Args:
+        list (DREpisodeList): Episode list to validate.
 
     Raises:
         :class:`~superdex.physics.Error`: If an error occurs.

@@ -1,5 +1,21 @@
 namespace bots;
 
+// @brief Deterministic 64-bit sub-seed from a master seed and a stable key.
+//
+// Stateless and order-independent. Returns a seed for the caller's random
+// generator; it does not sample values. Uses the FNV-1a key hash XOR seed,
+// SplitMix64-finalized. Parity-locked to the Python DR derivation: both must match
+// bit-for-bit, and the C++ and Python golden-vector sets must stay in sync.
+// The golden vectors in test/derive_test.cpp define the seed contract.
+// Different keys can collide; this is not a cryptographic hash.
+//
+// @param[in] seed Master seed.
+// @param[in] key Stable string key, hashed as UTF-8 bytes.
+// @param[in] index Optional index; None and 0 are distinct.
+//
+// @return Deterministic 64-bit sub-seed in [0, 2^64).
+fn bots::Derive(uint64 seed, StringView key, Optional<uint64> index = {}) -> uint64 [export];
+
 // @brief Shared base handle for bots, controllers, sensors, and actuators. The distinct derived
 // handle types below encode the component kind in the C++ type (compile-time safety); all share this
 // base's raw value and validity check.
@@ -2285,50 +2301,65 @@ struct bots::DREpisodeEntry [no_reflection] {
 // Per-spawn pose DR is not a separate field — it rides in `values` under
 // @code dr/spawn/<name>/<dr_class>/pose @endcode keys, so a reader consumes it
 // through the same generic `{key -> value}` path. `episodeSeed` is a decimal
-// string — a full uint64 can't round-trip as a JSON number, so parse it with
+// string to preserve all uint64 bits across JSON consumers; parse it with
 // ParseSeed.
 struct bots::DREpisode [no_reflection] {
-  int index;
+  // @brief Nonnegative signed-int64 episode identity, encoded as a JSON integer.
+  int64 index;
   String episodeSeed [reflection_name("episode_seed")];
   DynamicArray<bots::DREpisodeEntry> values;
+  // @brief Observed application keys. Absent means unknown; an empty list means
+  // coverage was recorded but no quantities were applied. Keys must occur in values.
+  Optional<DynamicArray<String>> appliedKeys [reflection_name("applied_keys"), no_serialize_defaults];
 }
 
-// @brief A pre-randomized DR episode list — the neutral cross-language interchange.
+// @brief Resolved schema-2 episodes with opaque producer metadata.
 //
-// Read from a `dr_manifest.json` produced by the Python DR pipeline
-// (schema v1). `profile`, `experiment_overrides`, and `pose_overrides` from the file are ignored: a
-// C++ applier consumes resolved per-episode values, not the config that produced
-// them, so @ref LoadDREpisodeListFromFile tolerates those unmodeled keys.
+// Values use the native real precision: float32 or float64. This transport
+// carries resolved values; it does not sample or apply them to a scene.
 struct bots::DREpisodeList [no_reflection] {
   int schemaVersion [reflection_name("schema_version")];
   String specVersion [reflection_name("spec_version")];
   String masterSeed [reflection_name("master_seed")];
   DynamicArray<bots::DREpisode> episodes;
+  // @brief Optional JSON object of string-valued producer provenance; empty means absent.
+  String provenance [json_string, no_serialize_defaults];
+  // @brief Opaque producer JSON object, emitted under metadata in schema 2.
+  // Empty means no extra fields.
+  // Numeric metadata uses signed-int64 or binary64; encode full uint64 IDs as strings.
+  String metadata [json_string, no_serialize_defaults];
 }
 
-// @brief Load a pre-randomized DR episode list from a JSON manifest file.
+// @brief Load and validate schema-2 resolved episodes using standard reflection.
 //
-// Deserializes a schema-v1 `dr_manifest.json` and validates it via
-// ValidateDREpisodeList. Unmodeled top-level keys
-// (`experiment_overrides`, `pose_overrides`, `profile`) are ignored.
-//
-// @param[in] path File path to the manifest.
-//
-// @return Loaded @ref DREpisodeList, or default-constructed on failure.
+// Schema 1 requires an explicit internal importer. Schema 2 uses an explicit
+// metadata object. Provenance is retained
+// without interpreting its keys. Episode structures are checked independently
+// of task-specific specification, shape and range rules.
+// @param[in] path Manifest file path.
+// @return Validated episode list; malformed input raises a Python exception.
 fn bots::LoadDREpisodeListFromFile(StringView path) -> bots::DREpisodeList [export, mochi_error];
 
-// @brief Save a @ref DREpisodeList to a JSON manifest file.
+// @brief Validate and save resolved episodes, preserving provenance and metadata.
 //
-// The inverse of @ref LoadDREpisodeListFromFile: validates list via
-// ValidateDREpisodeList, then serializes it to a schema-v1
-// `dr_manifest.json`. Validating before writing makes a malformed list a hard
-// error rather than a bad file on disk. Only the modeled fields are emitted;
-// the optional producer keys the loader tolerates (`experiment_overrides`,
-// `pose_overrides`, `profile`) are not part of @ref DREpisodeList, so they are absent.
-//
-// @param[in] list The episode list to save.
-// @param[in] path Destination file path.
+// JSON formatting and key order may change. Saving does not preserve source bytes.
+// @param[in] list Resolved episodes and opaque metadata.
+// @param[in] path Destination manifest file path.
 fn bots::SaveDREpisodeListToFile(bots::DREpisodeList const& list, StringView path) -> void [export, mochi_error];
+
+// @brief Parse a decimal uint64 seed string.
+// @param[in] seed Decimal string; leading zeros are accepted here but rejected by list validation.
+// @return Parsed unsigned seed.
+fn bots::ParseSeed(StringView seed) -> uint64 [export, mochi_error];
+
+// @brief Check supported schema, unique episode indices, nonempty keys/values,
+// scalar length and finite values. Schema 2 requires a nonempty spec and canonical
+// decimal seeds. Distinct episode indices may reuse a seed.
+//
+// Provenance must be a JSON object of strings. Metadata must be a JSON object
+// with opaque meaning. Task-specific semantics remain the applier's responsibility.
+// @param[in] list Episode list to validate.
+fn bots::ValidateDREpisodeList(bots::DREpisodeList const& list) -> void [export, mochi_error];
 
 # ---------------------------------------------------------------------------
 # Reset-state randomization (resolved from an episode's DR values)

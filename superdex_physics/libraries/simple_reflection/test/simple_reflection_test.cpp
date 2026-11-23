@@ -524,6 +524,54 @@ TEST(SReflect, PrimitiveTypes) {
   // clang-format on
 }
 
+template <typename T>
+static void ExpectIntegerJsonRangeError(std::string const& json) {
+  auto const* name = SReflect::GetTypeInfo<T>()._name;
+  SCOPED_TRACE(std::string(name) + " " + json);
+  T value{7};
+  SReflect::IssueList issues;
+  EXPECT_FALSE(
+      SReflect::FromJsonString(value, json, SReflect::DeserializeFlags::MaximumWarnings, &issues));
+  EXPECT_EQ(T{7}, value);
+  ASSERT_EQ(1, issues.size());
+  EXPECT_TRUE(issues.front()._path.empty());
+  EXPECT_EQ("Integer " + json + " is outside the range of " + name, issues.front()._description);
+}
+
+TEST(SReflect, UnsignedJsonRejectsNegativeValues) {
+  ExpectIntegerJsonRangeError<uint8_t>("-1");
+  ExpectIntegerJsonRangeError<uint16_t>("-1");
+  ExpectIntegerJsonRangeError<uint32_t>("-1");
+}
+
+TEST(SReflect, UInt64JsonPreservesSignedBitPatterns) {
+  TestAnyType<uint64_t>(
+      "uint64",
+      "uint64",
+      SReflect::CoreType::CT_uint64,
+      {{uint64_t{1} << 63, "-9223372036854775808"},
+       {0xABCDEF0123456789ull, "-6066930334832433271"},
+       {0xfedcba9876543210ull, "-81985529216486896"},
+       {UINT64_MAX, "-1"}});
+}
+
+TEST(SReflect, UnsignedJsonRejectsNarrowing) {
+  ExpectIntegerJsonRangeError<uint8_t>("256");
+  ExpectIntegerJsonRangeError<uint16_t>("65536");
+  ExpectIntegerJsonRangeError<uint32_t>("4294967296");
+  ExpectIntegerJsonRangeError<uint32_t>("5000000000");
+  ExpectIntegerJsonRangeError<uint32_t>("9223372036854775807");
+}
+
+TEST(SReflect, SignedJsonRejectsNarrowing) {
+  ExpectIntegerJsonRangeError<int8_t>("-129");
+  ExpectIntegerJsonRangeError<int8_t>("128");
+  ExpectIntegerJsonRangeError<int16_t>("-32769");
+  ExpectIntegerJsonRangeError<int16_t>("32768");
+  ExpectIntegerJsonRangeError<int32_t>("-2147483649");
+  ExpectIntegerJsonRangeError<int32_t>("2147483648");
+}
+
 TEST(SReflect, String) {
   TestAnyType<std::string>(
       "string", "std::string", SReflect::CoreType::CT_string, {{"", "\"\""}, {"woot", "\"woot\""}});

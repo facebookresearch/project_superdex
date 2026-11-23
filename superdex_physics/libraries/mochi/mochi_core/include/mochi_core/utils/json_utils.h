@@ -22,6 +22,7 @@
 
 #include <fstream>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -34,7 +35,12 @@ template <typename StreamT>
 [[nodiscard]] picojson::value ParseJsonFromStream(StreamT& instream, Error& error) {
   MOCHI_ERROR_RETURN(error, {});
   picojson::value jsonVal;
-  std::string errorStr = picojson::parse(jsonVal, instream);
+  std::string errorStr;
+  try {
+    errorStr = picojson::parse(jsonVal, instream);
+  } catch (std::overflow_error const& exception) {
+    errorStr = "JSON numeric overflow: " + std::string(exception.what());
+  }
   if (!errorStr.empty()) {
     // The picojson error string might describe the specific problem. Write it to the log
     // in addition to returning an Error.

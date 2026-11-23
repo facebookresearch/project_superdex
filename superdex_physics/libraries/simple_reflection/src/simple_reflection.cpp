@@ -38,6 +38,7 @@ SR_WARNING_POP()
 #include <stdexcept>
 #include <string_view>
 #include <unordered_map>
+#include <utility>
 
 // Reflection of this enum type could be moved to the header if it is needed elsewhere.
 // For now, it is restricted to the cpp file to reduce bloat.
@@ -222,8 +223,8 @@ std::string detail::FormatPathStep(std::string_view name) {
   auto const forcesQuotes = [](char c) {
     return c == '/' || c == '"' || static_cast<unsigned char>(c) < 0x20;
   };
-  bool const needsQuotes = name.empty() || name == "." || name == ".." ||
-      std::any_of(name.begin(), name.end(), forcesQuotes);
+  bool const needsQuotes =
+      name.empty() || name == "." || name == ".." || std::ranges::any_of(name, forcesQuotes);
   return needsQuotes ? QuoteJson(name) : std::string{name};
 }
 
@@ -275,7 +276,16 @@ static bool ReadJsonValue(picojson::value const& src, T& value, DeserializeConte
     if (!src.is<int64_t>()) {
       return ReportWrongJsonType(context, "integer", src);
     }
-    value = static_cast<T>(src.get<int64_t>());
+    int64_t const integer = src.get<int64_t>();
+    // UInt64 uses the signed JSON integer's bit pattern, including its high bit.
+    if constexpr (std::is_signed_v<T> || sizeof(T) < sizeof(int64_t)) {
+      if (!std::in_range<T>(integer)) {
+        context.ReportIssue(Format(
+            "Integer %" PRId64 " is outside the range of %s", integer, GetTypeInfo<T>()._name));
+        return false;
+      }
+    }
+    value = static_cast<T>(integer);
   } else if constexpr (std::is_floating_point_v<T>) {
     // Read any floating point value as double
     if (!src.is<double>()) {
