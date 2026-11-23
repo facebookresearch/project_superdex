@@ -2305,6 +2305,35 @@
 /// @brief The source revision the versions were read at.
 ///
 
+/// @struct superdex::robotics::SensorLinkContactForceParams
+///
+/// @brief Parameters for reading a link's total contact force.
+///
+
+/// @var superdex::robotics::SensorLinkContactForceParams::sampleRateHz
+///
+/// @brief Samples per second, or zero to capture every graph step.
+///
+
+/// @class superdex::robotics::SensorLinkContactForce
+///
+/// @brief Total contact force on a link, in the sensor frame, including contacts sampled on the other body.
+///
+
+/// @fn std::string_view superdex::robotics::SensorLinkContactForce::TypeName()
+///
+/// @brief Canonical serialized sensor type identifier.
+///
+/// @return Stable type identifier.
+///
+
+/// @fn SensorLinkContactForceParams const& superdex::robotics::SensorLinkContactForce::GetParams() const
+///
+/// @brief Get sensor parameters.
+///
+/// @return Current parameters.
+///
+
 /// @fn uint64_t superdex::robotics::Derive(uint64_t seed, std::string_view key, std::optional<uint64_t> index)
 ///
 /// @brief Deterministic 64-bit sub-seed from a master seed and a stable key.

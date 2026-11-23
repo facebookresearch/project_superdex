@@ -4158,6 +4158,33 @@ class AssetSnapshot:
         files: ArrayLikeAssetSnapshotEntry = ...,
     ) -> None: ...
 
+class SensorLinkContactForceParams:
+    """Parameters for reading a link's total contact force."""
+    sample_rate_hz: float
+    """Samples per second, or zero to capture every graph step."""
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(self, *, sample_rate_hz: float = ...) -> None: ...
+
+class SensorLinkContactForce(SensorBase):
+    """Total contact force on a link, in the sensor frame, including contacts sampled
+    on the other body.
+    """
+    @staticmethod
+    def type_name() -> str:
+        """Canonical serialized sensor type identifier.
+
+        Returns:
+            Stable type identifier.
+        """
+    def get_params(self) -> SensorLinkContactForceParams:
+        """Get sensor parameters.
+
+        Returns:
+            Current parameters.
+        """
+
 EFFORT_UNBOUNDED: float
 """Sentinel :attr:`~superdex.robotics.BotJointPrefab.effort_limit` value: the
 joint's actuation effort is unbounded.

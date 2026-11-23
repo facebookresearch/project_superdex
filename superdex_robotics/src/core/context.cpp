@@ -35,6 +35,7 @@
 #include <superdex_robotics/sensors/internal/sensors_internal.h>
 #endif // MOCHI_INTERNAL
 #include <superdex_robotics/core/loader.h>
+#include <superdex_robotics/sensors/sensor_link_contact_force.h>
 #include <superdex_robotics/superdex_robotics.h>
 #include <superdex_robotics/utils/bot_utils.h>
 
@@ -699,6 +700,7 @@ void RoboticsContext::RegisterBuiltinTypes() {
   RegisterSensor<SensorGaussianNoise>();
   RegisterSensor<SensorJointEncoder>();
   RegisterSensor<SensorLinkVertexForce>();
+  RegisterSensor<SensorLinkContactForce>();
   RegisterSensor<SensorOutlierInjection>();
   RegisterSensor<SensorSeedRectMap>();
   RegisterSensor<SensorSeedV1MLP>();

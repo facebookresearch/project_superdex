@@ -34,6 +34,7 @@
 #include <superdex_robotics/sensors/sensor_gaussian_noise.h>
 #include <superdex_robotics/sensors/sensor_graph.h>
 #include <superdex_robotics/sensors/sensor_joint_encoder.h>
+#include <superdex_robotics/sensors/sensor_link_contact_force.h>
 #include <superdex_robotics/sensors/sensor_link_vertex_force.h>
 #include <superdex_robotics/sensors/sensor_outlier_injection.h>
 #include <superdex_robotics/sensors/sensor_seed_rect_map.h>
@@ -699,6 +700,13 @@ static_assert(std::is_same_v<decltype(&superdex::robotics::AssetSnapshot::scene)
 static_assert(std::is_same_v<decltype(&superdex::robotics::AssetSnapshot::createdAt), uint64_t superdex::robotics::AssetSnapshot::*>, "\n  ERROR: Field superdex::robotics::AssetSnapshot::createdAt is out-of-sync with C++ definition.\n  Please check the field type, then run mochi_gen_py to regenerate this file.\n");
 static_assert(std::is_same_v<decltype(&superdex::robotics::AssetSnapshot::sourceRevision), mochi::DynamicString superdex::robotics::AssetSnapshot::*>, "\n  ERROR: Field superdex::robotics::AssetSnapshot::sourceRevision is out-of-sync with C++ definition.\n  Please check the field type, then run mochi_gen_py to regenerate this file.\n");
 static_assert(std::is_same_v<decltype(&superdex::robotics::AssetSnapshot::files), mochi::DynamicArray<superdex::robotics::AssetSnapshotEntry> superdex::robotics::AssetSnapshot::*>, "\n  ERROR: Field superdex::robotics::AssetSnapshot::files is out-of-sync with C++ definition.\n  Please check the field type, then run mochi_gen_py to regenerate this file.\n");
+
+// struct superdex::robotics::SensorLinkContactForceParams
+static_assert(std::is_same_v<decltype(&superdex::robotics::SensorLinkContactForceParams::sampleRateHz), mochi::real superdex::robotics::SensorLinkContactForceParams::*>, "\n  ERROR: Field superdex::robotics::SensorLinkContactForceParams::sampleRateHz is out-of-sync with C++ definition.\n  Please check the field type, then run mochi_gen_py to regenerate this file.\n");
+
+// class superdex::robotics::SensorLinkContactForce
+static_assert(std::is_same_v<decltype(&superdex::robotics::SensorLinkContactForce::TypeName), std::string_view (*)()>, "\n  ERROR: Function superdex::robotics::SensorLinkContactForce::TypeName is out-of-sync with C++.\n  Please check the function signature, then run mochi_gen_py to regenerate this file.\n");
+static_assert(std::is_same_v<decltype(&superdex::robotics::SensorLinkContactForce::GetParams), superdex::robotics::SensorLinkContactForceParams const& (superdex::robotics::SensorLinkContactForce::*)() const>, "\n  ERROR: Function superdex::robotics::SensorLinkContactForce::GetParams is out-of-sync with C++.\n  Please check the function signature, then run mochi_gen_py to regenerate this file.\n");
 
 // free function superdex::robotics::Derive
 static_assert(std::is_same_v<decltype(&superdex::robotics::Derive), uint64_t (*)(uint64_t, std::string_view, std::optional<uint64_t>)>, "\n  ERROR: Function superdex::robotics::Derive is out-of-sync with C++.\n  Please check the function signature, then run mochi_gen_py to regenerate this file.\n");

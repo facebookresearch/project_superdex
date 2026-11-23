@@ -30,61 +30,58 @@ topology while preserving surviving sensor state.
 
 ## Quick start
 
-This example maps surface forces on a fingertip to a rectangular tactile tensor. It assumes an
-existing `Scene& scene` and `Actor* linkActor` with a mesh or contact skin that supports vertex-force
-queries. Set the map center and orientation for the fingertip geometry; the defaults describe a
-hemisphere centered at the sensor origin, with its tip along +Z.
-
-The graph borrows these sensors, so declare it after them and keep the actor and scene alive
-throughout its use.
+This example reads the total contact force on a supported rigid actor or articulated link.
+It assumes an existing `Scene& scene`, `Actor* linkActor` and `Error& error`. Keep the actor and
+scene alive until the sensor is destroyed; declare the graph after its sensors.
 
 ```cpp
-#include <superdex_robotics/sensors/sensor_link_vertex_force.h>
-#include <superdex_robotics/sensors/sensor_seed_rect_map.h>
+#include <superdex_robotics/sensors/sensor_link_contact_force.h>
 #include <superdex_robotics/sensors/sensor_graph.h>
 
 using namespace superdex::robotics;
 
-SensorLinkVertexForce::Params forceParams;
-SensorLinkVertexForce forces(linkActor, forceParams, error);
-SensorSeedRectMap::Params mapParams;
-mapParams.width = 64;
-mapParams.height = 64;
-SensorSeedRectMap map(mapParams, error);
+SensorLinkContactForce::Params params;
+params.sampleRateHz = 60;
+SensorLinkContactForce forces(linkActor, params, error);
 if (error) {
   return;
 }
-
 SensorGraph graph;
-graph.Add("surface_forces", &forces, error);
-DynamicArray<DynamicString> mapInputs{"surface_forces"};
-graph.Add("force_map", &map, mapInputs, error);
-graph.SetOutputEnabled("force_map", true, error);
+graph.Add("link_force", &forces, error);
+graph.SetOutputEnabled("link_force", true, error);
 graph.Build({.scene = &scene}, error);
 graph.Reset(error);
 if (error) {
   return;
 }
-
 for (int64_t step = 1; step <= 20; ++step) {
   scene.Step(0.005);
   graph.Step({.t = step * 0.005, .dt = 0.005, .step = step}, error);
   if (error) {
     return;
   }
-  SensorSample const sample = map.Latest();
+  SensorSample const sample = forces.Latest();
   if (sample.captureStep < 0) {
-    continue; // The output has not published yet.
+    continue;
   }
   Span<float const> const values = sample.Floats();
-  // Consume values before the next graph step, or copy them into owning storage.
+  // Consume values before the next publication, or copy them into owning storage.
 }
 ```
 
-The source output is `[N, 3]`, with vertex positions and normals in metadata. The map uses that
-spatial metadata and publishes `[64, 64, 3]`. Only `force_map` is selected as an output;
-`surface_forces` runs as its dependency. Contact-based sources require an integration
-method that supports their queries.
+The output is `[Fx, Fy, Fz]` in newtons, expressed in the sensor frame. The force acts from the
+environment onto the queried actor. It includes all contacts on that actor, including contacts
+whose sampling points lie on the other body. It does not isolate a sensitive patch, provide a
+pressure map or include joint loads. A contact-free acquisition publishes a zero force.
+
+The source registers Mochi's `TotalContactForce` query. The actor must support that query, and the
+integration method must end its step at the last integration stage so the force and pose used for
+frame conversion describe the same state. `sampleRateHz = 0` captures on every positive-duration
+graph step; a positive rate is sampled on the available graph steps, without a separate clock or
+interpolation. Read `Latest()` between captures to obtain the held sample.
+
+Use `SensorLinkVertexForce` when contact location or spatial distribution is required, for example
+as the input to a `SensorSeedRectMap`.
 
 ## Available sensors
 
@@ -96,6 +93,7 @@ Matching shape alone does not establish compatible units, frames or row identiti
 
 | Sensor | Purpose | Output shape |
 |--------|---------|--------------|
+| [`SensorLinkContactForce`](./sensor_link_contact_force.h) | Whole-actor contact force in the sensor frame | `[3]` |
 | [`SensorLinkVertexForce`](./sensor_link_vertex_force.h) | Surface contact forces, with vertex positions and normals in metadata | `[N, 3]` |
 | [`SensorArticulatedJointWrench`](./sensor_articulated_joint_wrench.h) | Solver-backed joint forces and torques, with row-to-joint metadata | `[N, 6]` |
 | [`SensorJointEncoder`](./sensor_joint_encoder.h) | The owning bot's one-DOF joint positions (plus calibration offsets) and velocities | `[2, N]` |

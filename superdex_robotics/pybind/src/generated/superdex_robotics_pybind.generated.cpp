@@ -166,6 +166,8 @@ void mochi::DeclareSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module
   registry.StoreClass(nb::class_<superdex::robotics::ResolvedSpawn>(m_bots, "ResolvedSpawn", "One entry of a task's reset state, after its randomization was applied."));
   registry.StoreClass(nb::class_<superdex::robotics::AssetSnapshotEntry>(m_bots, "AssetSnapshotEntry", "One file an asset snapshot pins: the bot path a scene's references resolve to,\nand the bot path of the version to load in its place. Both are `//`- or\n`@tag/`-prefixed, relative to the scene's .superdex_root."));
   registry.StoreClass(nb::class_<superdex::robotics::AssetSnapshot>(m_bots, "AssetSnapshot", "The contents of a .superdex_scene_snapshot file: every file a scene uses, each\nmapped to a pinned version. Where the versions come from is up to whoever writes\nthe snapshot."));
+  registry.StoreClass(nb::class_<superdex::robotics::SensorLinkContactForceParams>(m_bots, "SensorLinkContactForceParams", "Parameters for reading a link's total contact force."));
+  registry.StoreClass(nb::class_<superdex::robotics::SensorLinkContactForce, superdex::robotics::SensorBase>(m_bots, "SensorLinkContactForce", "Total contact force on a link, in the sensor frame, including contacts sampled\non the other body.", nb::never_destruct()));
 }
 
 void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_& m, [[maybe_unused]] PybindRegistry& registry) {
@@ -2731,6 +2733,31 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_rw("created_at", &superdex::robotics::AssetSnapshot::createdAt, "When the snapshot was taken, as Unix time.")
     .def_rw("source_revision", &superdex::robotics::AssetSnapshot::sourceRevision, "The source revision the versions were read at.")
     .def_prop_rw("files", [](superdex::robotics::AssetSnapshot& self) -> mochi::DynamicArray<superdex::robotics::AssetSnapshotEntry>& { return self.files; }, [](superdex::robotics::AssetSnapshot& self, nb::object val) { self.files = nb::cast<mochi::DynamicArray<superdex::robotics::AssetSnapshotEntry>>(val); })
+  ;
+
+  registry.GetClass<superdex::robotics::SensorLinkContactForceParams>()
+    .def("__init__", [](superdex::robotics::SensorLinkContactForceParams* self, nb::object sample_rate_hz) {
+      superdex::robotics::SensorLinkContactForceParams result{};
+      result.sampleRateHz = nb::cast<mochi::real>(sample_rate_hz);
+      new (self) superdex::robotics::SensorLinkContactForceParams(std::move(result));
+    }
+      , nb::kw_only()
+      , nb::arg("sample_rate_hz") = superdex::robotics::SensorLinkContactForceParams{}.sampleRateHz
+    )
+    .def(nb::init<>())
+    .def("__copy__", [](superdex::robotics::SensorLinkContactForceParams const& self) { return superdex::robotics::SensorLinkContactForceParams(self); })
+    .def("__deepcopy__", [](superdex::robotics::SensorLinkContactForceParams const& self, nb::dict) { return superdex::robotics::SensorLinkContactForceParams(self); })
+    .def_rw("sample_rate_hz", &superdex::robotics::SensorLinkContactForceParams::sampleRateHz, "Samples per second, or zero to capture every graph step.")
+  ;
+
+  registry.GetClass<superdex::robotics::SensorLinkContactForce, superdex::robotics::SensorBase>()
+    .def_static("type_name", &superdex::robotics::SensorLinkContactForce::TypeName
+      , "Canonical serialized sensor type identifier.\n\nReturns:\n    Stable type identifier."
+    )
+    .def("get_params", &superdex::robotics::SensorLinkContactForce::GetParams
+      , "Get sensor parameters.\n\nReturns:\n    Current parameters."
+      , nb::rv_policy::reference
+    )
   ;
 
     m_bots.attr("EFFORT_UNBOUNDED") = nb::cast(superdex::robotics::kEffortUnbounded);

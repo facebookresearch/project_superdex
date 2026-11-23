@@ -2486,3 +2486,21 @@ fn bots::ApplyAssetSnapshot(bots::AssetSnapshot const& snapshot, StringView asse
 // @brief Stop applying the snapshot @ref ApplyAssetSnapshot applied, so files load from their tips
 // again. Loads already done are unaffected.
 fn bots::ClearAssetSnapshot() -> void [export];
+
+// @brief Parameters for reading a link's total contact force.
+struct bots::SensorLinkContactForceParams [no_reflection] {
+  // @brief Samples per second, or zero to capture every graph step.
+  real sampleRateHz [units("1/s")] = 0.0;
+}
+
+// @brief Total contact force on a link, in the sensor frame, including contacts sampled on the other
+// body.
+class bots::SensorLinkContactForce(bots::SensorBase) [no_init, no_destruct, no_reflection] {
+  // @brief Canonical serialized sensor type identifier.
+  // @return Stable type identifier.
+  fn TypeName() -> StringView [static];
+
+  // @brief Get sensor parameters.
+  // @return Current parameters.
+  fn GetParams() -> bots::SensorLinkContactForceParams const& [const];
+}
