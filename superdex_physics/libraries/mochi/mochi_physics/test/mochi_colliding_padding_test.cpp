@@ -239,4 +239,20 @@ TEST_F(MochiCollidingPadding, NegativeColliderPaddingDoesNotCullRotatedCube) {
   }
 }
 
+// A colliding actor's contacts use the collider's threshold, so its own negative threshold must not
+// shrink its conservative step bounds and cull those contacts.
+TEST_F(MochiCollidingPadding, NegativeColliderThresholdKeepsCollidingContacts) {
+  Actor* const ground = CreateGround(ColliderType::Box);
+  ContactParams cubeContact;
+  cubeContact.penaltyThresholdDefault = -kPadding;
+  Actor* const cube = CreateSmallCube(1e-3_r, cubeContact);
+
+  // The first step relaxes the conservative step bounds of new actors. Then the ground overlaps
+  // the cube by 1 mm.
+  _scene->Step(1e-3);
+  ground->SetRootTransform(TransformRT{Real3{0_r, -1_r + 2e-3_r, 0_r}}, test::ExpectOK{});
+  _scene->Step(1e-3);
+  EXPECT_GT(cube->GetLinearVelocity(test::ExpectOK{})[1], 0_r);
+}
+
 } // namespace

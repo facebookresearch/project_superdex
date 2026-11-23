@@ -5150,12 +5150,11 @@ Aabb mochi::ExpandConservativeBoundsWithContactPadding(
   // Bounds overlap if their distance is at most the sum of their paddings. Padding each actor by
   // the max of its collider and colliding paddings covers the threshold in both pair directions,
   // e.g., max(colliderA, collidingA) + max(colliderB, collidingB) >= colliderA + collidingB.
-  // Without colliding padding, keep the collider padding even if it is negative.
+  // Eroding the bounds can cull pairs in contact.
   if (contactParams) {
     real const colliderPadding = GetColliderPadding(*contactParams);
     real const collidingPadding = contactParams->collidingPenaltyThresholdPadding;
-    bounds = ExpandShape(
-        bounds, collidingPadding > 0_r ? Max(colliderPadding, collidingPadding) : colliderPadding);
+    bounds = ExpandShape(bounds, Max(0_r, colliderPadding, collidingPadding));
   }
 
   return ExpandShape(bounds, farSdfDistance);
