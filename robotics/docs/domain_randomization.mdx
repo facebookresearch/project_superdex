@@ -1,0 +1,130 @@
+---
+title: Domain randomization
+sidebar_label: Domain randomization
+---
+
+SuperDex Robotics provides deterministic keyed seed derivation, native distribution
+draws, and transport of resolved DR values. Clients own experiment distributions,
+parameter application and clocks.
+
+## Seed derivation
+
+`derive(seed, key, index=None)` derives an unsigned 64-bit seed from a run/episode
+seed, a stable key and an optional unsigned 64-bit index. The client chooses what
+the index identifies, such as an episode or sensor acquisition. Omitting the index
+and passing zero produce different seeds. Independent keys give independent streams;
+requesting another key does not advance a shared RNG. Python and C++ use the same
+native contract; the C++ function is named `Derive`.
+
+Keys identify streams; values identify selected parameters. Record both, along with
+the quantity specification and sampler/runtime versions. Clients also define parallel
+collector identities and worker-restart policies.
+
+## Native distribution draws
+
+C++ callers can use `domain_randomization/random.h` alongside
+`domain_randomization/derive.h`:
+
+```cpp
+#include <superdex_robotics/domain_randomization/derive.h>
+#include <superdex_robotics/domain_randomization/random.h>
+
+uint64_t state = superdex::robotics::Derive(episodeSeed, processKey, captureSequence);
+double innovation = superdex::robotics::Normal(state);
+```
+
+`Uniform(state, lo, hi)` draws from `[lo, hi)` using 53 random bits for a binary64 variate;
+`Normal(state)` produces a standard normal variate via Box–Muller;
+`UniformQuat(state)` produces a uniform SO(3) rotation as an XYZW quaternion.
+They advance caller-owned SplitMix64 state by one, two and three draws respectively.
+There is no process-global generator or hidden normal cache. Distribution bounds,
+mean/std scaling and the acquisition clock belong to the caller.
+
+For timed noise, the client installs the episode seed and stable process key;
+the sensor/process evaluator chooses its declared acquisition index. Repeated reads
+of the same acquired sample reuse its perturbation. A correlated process also needs
+its filter state and clock/reset rules; these primitives do not implement pink noise.
+Equal derived seeds do not make NumPy PCG64 and native SplitMix64 draw identical values.
+Normal and quaternion draws use transcendental functions, so bitwise equality across
+platforms is not promised.
+
+## Resolved episodes and application coverage
+
+Robotics exposes `DREpisodeList`, `DREpisode` and `DREpisodeEntry` through its
+[Python](./api_reference/python.mdx) and [C++](./api_reference/cpp.mdx) APIs.
+It transports values and metadata; the environment owns sampling and application.
+
+| JSON field | Contract |
+| --- | --- |
+| `schema_version` | Schema 2 only |
+| `spec_version` | Application-owned quantity contract; nonempty in schema 2 |
+| `master_seed` | Decimal uint64 string; schema 2 requires canonical spelling |
+| `episodes` | Records with unique producer-local `index`, decimal `episode_seed`, and `values` |
+| Episode `index` | Nonnegative int64 JSON integer, through `9223372036854775807` |
+| Each value | Stable `key`, boolean `scalar`, numeric `value` array; scalars have one element |
+| Episode `applied_keys` | Optional unique keys that occur in that episode's values |
+| `provenance` | Optional object of string-valued producer labels |
+| `metadata` | Optional opaque JSON object |
+
+Application coverage distinguishes three cases:
+
+- Missing `applied_keys`: application coverage is unknown, as in a legacy recording.
+- `applied_keys: []`: coverage was observed, but no quantities were applied.
+- A nonempty list: these quantities reached the application's recorded application points.
+
+Native `DREpisode.appliedKeys` is optional; Python exposes `applied_keys` as `None`
+or a string array. Saving preserves the distinction between absence and an observed
+empty array. Validation rejects duplicate applied keys and keys with no saved value.
+Coverage is the producer's evidence; transport does not verify simulator behavior.
+
+Value payloads use `DynamicArray<real>`: float32 in single-precision native builds
+and float64 in double-precision builds. A float32 load can round Python-sampled
+values; saving them cannot restore the original binary64 precision. Use the same
+native precision for recording and replay. Seeds and full uint64 metadata IDs
+should be decimal strings. Native validation also rejects nonfinite values,
+duplicate values/episode identities, malformed shapes and unsupported schemas.
+Application consumers must additionally validate their actual quantity/task contract.
+
+Native/Python `DREpisode.index` is a nonnegative signed 64-bit integer, encoded as
+an ordinary JSON integer. Public IO uses standard Mochi reflection. Native Mochi
+and Python preserve the full int64 range; decoders using binary64 need an
+integer-preserving path above `2^53`. Episode identity remains separate from
+uint64 seeds and run/rank/topology provenance.
+
+Public IO accepts schema 2 only. Seeds are canonical decimal uint64 strings;
+leading zeros are rejected except for `"0"`. Distinct episode indices may reuse
+the same reset seed. `JsonString` payloads may be objects or JSON object text on
+input and are emitted as objects. Sparse fields retain defaults and must still
+pass validation; a missing episode index defaults to -1 and is rejected.
+Convert existing schema-1 manifests to schema 2 before using these public helpers.
+
+## Producer-owned provenance
+
+`DREpisodeList.provenance` is a JSON-object string in the native/Python API. Producers
+may record their identity, quantity-specification hash, run or parent IDs.
+Schema 2 carries sampler specifications, checkpoint lineage or asset identifiers
+inside the `metadata` object. Robotics preserves its contents without interpreting
+their meaning. Unknown top-level and nested episode/value fields are rejected;
+producer extensions belong in `metadata`. Producers may keep bookkeeping in
+companion files, or include it here when it needs to travel with the episode list.
+This is serialized JSON ownership, not a literal pointer.
+
+```python
+from superdex import robotics
+
+plan = robotics.load_dr_episode_list_from_file("dr-episodes.json")
+robotics.save_dr_episode_list_to_file(plan, "transported.json")
+```
+
+JSON formatting/key order may change; source bytes are not preserved.
+
+## What repeatability means
+
+Under the same seed derivation, quantity specification and sampler version,
+deterministic DR reproduces parameter selection. Episode-result repeatability also
+requires fixed assets/runtime, reset or captured state, actions/policy/controller
+state, and observation semantics. For a learned policy, retain the checkpoint and
+preprocessing and compare selected episode metrics and trajectory hashes against a
+full evaluation.
+Exact equality is checked on the compatible runtime; it is not promised across
+hardware, releases or arbitrary worker-failure schedules.

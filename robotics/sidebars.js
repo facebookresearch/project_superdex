@@ -66,6 +66,7 @@ module.exports = {
     'bot_context_lifetime',
     'bot_components',
     'bot_assets',
+    'domain_randomization',
     ...internalCategoryItems(),
   ],
   examplesSidebar: [
