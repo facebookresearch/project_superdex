@@ -144,12 +144,6 @@ TEST(SensorGaussianNoiseTest, InvalidTypedParamsDoNotChangeEffectiveConfiguratio
   EXPECT_EQ(noise.GetParams().std.size(), 1);
 }
 
-TEST(SensorGaussianNoiseTest, RejectsMissingStreamIdentity) {
-  Error error;
-  SensorGaussianNoise noise({}, error);
-  EXPECT_FALSE(error.IsOK());
-}
-
 class RepublishedCapture final : public SensorBase {
  public:
   explicit RepublishedCapture(Error& error) : SensorBase(error) {}

@@ -1202,6 +1202,8 @@ struct bots::SensorDelayLineParams [no_reflection] {
 // @brief Episode seed and stable acquisition stream identity.
 struct bots::SensorRandomParams [no_reflection] {
   uint64 episodeSeed = 0;
+  // @brief Names the node's streams. Empty keys them by the node's graph name, the name its
+  // SensorGraph node was added under, so each node declared in an asset draws its own.
   String processKey;
 }
 
@@ -1605,6 +1607,12 @@ class bots::SensorOutlierInjection(bots::SensorBase) [no_init, no_destruct, no_r
   fn TypeName() -> StringView [static];
   fn GetParams() -> bots::SensorOutlierInjectionParams [const];
   fn SetParams(bots::SensorOutlierInjectionParams const& params) -> void [mochi_error];
+}
+
+// @brief Source that publishes the values a C++ function writes at every step of its graph, the
+// reset step included. Scene and bot files cannot declare it.
+class bots::SensorFunction(bots::SensorBase) [no_init, no_destruct, no_reflection] {
+  fn TypeName() -> StringView [static];
 }
 
 // @brief Create a @ref Bot runtime object from a @ref BotPrefab. Builds the underlying

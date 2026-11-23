@@ -141,6 +141,7 @@ void mochi::DeclareSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module
   registry.StoreClass(nb::class_<superdex::robotics::SensorGaussianNoise, superdex::robotics::SensorBase>(m_bots, "SensorGaussianNoise", "Independent additive noise on new input captures.", nb::never_destruct()));
   registry.StoreClass(nb::class_<superdex::robotics::SensorUniformNoise, superdex::robotics::SensorBase>(m_bots, "SensorUniformNoise", "Independent additive uniform noise on new input captures.", nb::never_destruct()));
   registry.StoreClass(nb::class_<superdex::robotics::SensorOutlierInjection, superdex::robotics::SensorBase>(m_bots, "SensorOutlierInjection", "Replaces whole input captures by outliers with a fixed probability.", nb::never_destruct()));
+  registry.StoreClass(nb::class_<superdex::robotics::SensorFunction, superdex::robotics::SensorBase>(m_bots, "SensorFunction", "Source that publishes the values a C++ function writes at every step of its\ngraph, the reset step included. Scene and bot files cannot declare it.", nb::never_destruct()));
   registry.StoreClass(nb::class_<superdex::robotics::BotSceneMetadata>(m_bots, "BotSceneMetadata", "Human-readable metadata for a .superdex_scene file. Not consumed by the runtime."));
   registry.StoreClass(nb::class_<superdex::robotics::PrefabEntry>(m_bots, "PrefabEntry", "A named reference to a spawnable scene, prefab, bot, or bot archive."));
   registry.StoreClass(nb::class_<superdex::robotics::BaseSceneParams>(m_bots, "BaseSceneParams", "Scene definition within a .superdex_scene.\n\nThe base_scene is optional — a scene under construction may not have one yet.\nWhen present it is the authoritative source for all simulation physics\nparameters (gravity, solver config, contact filtering, collision layers, etc.);\nwhen absent the scene keeps its default parameters."));
@@ -1449,7 +1450,7 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def("__copy__", [](superdex::robotics::SensorRandomParams const& self) { return superdex::robotics::SensorRandomParams(self); })
     .def("__deepcopy__", [](superdex::robotics::SensorRandomParams const& self, nb::dict) { return superdex::robotics::SensorRandomParams(self); })
     .def_rw("episode_seed", &superdex::robotics::SensorRandomParams::episodeSeed)
-    .def_rw("process_key", &superdex::robotics::SensorRandomParams::processKey)
+    .def_rw("process_key", &superdex::robotics::SensorRandomParams::processKey, "Names the node's streams. Empty keys them by the node's graph name, the name its\nSensorGraph node was added under, so each node declared in an asset draws its\nown.")
   ;
 
   registry.GetClass<superdex::robotics::SensorGaussianNoiseParams>()
@@ -2002,6 +2003,11 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
       }
     }
       , nb::arg("params")
+    )
+  ;
+
+  registry.GetClass<superdex::robotics::SensorFunction, superdex::robotics::SensorBase>()
+    .def_static("type_name", &superdex::robotics::SensorFunction::TypeName
     )
   ;
 

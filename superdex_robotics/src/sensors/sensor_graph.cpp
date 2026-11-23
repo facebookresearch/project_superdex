@@ -72,8 +72,9 @@ void SensorGraph::Add(
     node.inputNames.emplace_back(input.c_str(), input.size());
   }
   _nodes.push_back(std::move(node));
-  if (sensor != nullptr) {
-    ++sensor->_graphBorrowCount;
+  // The first graph to hold a sensor names it, until the last graph releases it.
+  if (sensor->_graphBorrowCount++ == 0) {
+    sensor->_graphName = DynamicString{nodeName};
   }
   _built = false;
 }
@@ -123,7 +124,7 @@ void SensorGraph::Extend(
   if (!error.IsOK()) {
     /* Failed additions release their borrows; surviving sensors never need a reset. */
     while (_nodes.size() > previousSize) {
-      --_nodes.back().sensor->_graphBorrowCount;
+      Release(_nodes.back());
       _nodes.pop_back();
     }
     _requestedOutputNames = previousOutputs;
@@ -187,7 +188,7 @@ DynamicArray<SensorGraphNodeIdentity> SensorGraph::Remove(
       if (_nodes[i].requestedOutput) {
         removedOutputs.push_back({DynamicString(_nodes[i].name), _nodes[i].handle});
       }
-      --_nodes[i].sensor->_graphBorrowCount;
+      Release(_nodes[i]);
     } else {
       surviving.push_back(std::move(_nodes[i]));
     }
@@ -197,11 +198,15 @@ DynamicArray<SensorGraphNodeIdentity> SensorGraph::Remove(
   return removedOutputs;
 }
 
+void SensorGraph::Release(Node const& node) {
+  if (--node.sensor->_graphBorrowCount == 0) {
+    node.sensor->_graphName = DynamicString{};
+  }
+}
+
 void SensorGraph::Clear() {
   for (Node const& node : _nodes) {
-    if (node.sensor != nullptr) {
-      --node.sensor->_graphBorrowCount;
-    }
+    Release(node);
   }
   _nodes.clear();
   _requestedOutputNames.clear();
@@ -454,6 +459,12 @@ void SensorGraph::Reset(Error& error) {
   _hasLastStep = false;
 }
 
+void SensorGraph::SetEpisodeSeed(uint64_t episodeSeed) {
+  for (Node const& node : _nodes) {
+    node.sensor->SetEpisodeSeed(episodeSeed);
+  }
+}
+
 bool SensorGraph::Step(StepTime const& now, Error& error) {
   MOCHI_ERROR_RETURN(error, false);
   if (!_built) {
@@ -484,6 +495,17 @@ bool SensorGraph::Step(StepTime const& now, Error& error) {
   _lastStep = now;
   _hasLastStep = true;
   return true;
+}
+
+DynamicArray<std::string_view> SensorGraph::GetNodeNames() const {
+  DynamicArray<std::string_view> names;
+  if (_built) {
+    names.reserve(_nodes.size());
+    for (Node const& node : _nodes) {
+      names.emplace_back(node.name);
+    }
+  }
+  return names;
 }
 
 SensorBase* SensorGraph::Find(std::string_view nodeName) const {

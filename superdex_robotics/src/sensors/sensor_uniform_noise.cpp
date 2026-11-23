@@ -42,8 +42,6 @@ void SensorUniformNoise::SetParams(Params const& params, Error& error) {
       std::isfinite(params.low) && std::isfinite(params.high) && params.low <= params.high,
       error,
       "SensorUniformNoise needs finite bounds with low <= high");
-  MOCHI_ERROR_IF(
-      params.random.processKey.empty(), error, "SensorUniformNoise requires a nonempty processKey");
   MOCHI_ERROR_RETURN(error);
   _params = params;
 }
@@ -68,8 +66,8 @@ SensorStepResult SensorUniformNoise::Step(StepTime const& now, Error& error) {
   Span<float const> const values = source.Floats();
   MOCHI_ASSERT_VERBOSE(values.size() == _values.size());
   uint64_t state = Derive(
-      _params.random.episodeSeed,
-      _params.random.processKey,
+      EpisodeSeed(_params.random.episodeSeed),
+      SensorStreamKey(_params.random, GraphName()),
       static_cast<uint64_t>(source.captureStep));
   for (std::size_t i = 0; i < values.size(); ++i) {
     _values[i] = values[i] + static_cast<float>(Uniform(state, _params.low, _params.high));

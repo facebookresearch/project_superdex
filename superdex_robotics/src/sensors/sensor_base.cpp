@@ -57,59 +57,6 @@ double SensorBase::GetPublicationFrequencyHzEstimate() const {
   return frequency;
 }
 
-namespace {
-
-std::size_t ValidateFormatAndGetElementCount(SensorFormat const& format, Error& error) {
-  if (format.kind.empty()) {
-    MOCHI_ERROR_SET(error, "Sensor output kind must not be empty");
-    return 0;
-  }
-  if (format.shape.empty()) {
-    MOCHI_ERROR_SET(error, "Sensor output shape must not be empty");
-    return 0;
-  }
-  if (format.axes.size() != format.shape.size()) {
-    MOCHI_ERROR_SET(error, "Sensor output axes must match the shape rank");
-    return 0;
-  }
-
-  std::size_t elementCount = 1;
-  bool hasUnits = false;
-  for (std::size_t i = 0; i < format.shape.size(); ++i) {
-    SensorDimension const dimension = format.shape[i];
-    if (dimension <= 0) {
-      MOCHI_ERROR_SET(error, "Sensor output dimensions must be positive");
-      return 0;
-    }
-    auto const size = static_cast<std::size_t>(dimension);
-    if (elementCount > std::numeric_limits<std::size_t>::max() / size) {
-      MOCHI_ERROR_SET(error, "Sensor output element count overflows size_t");
-      return 0;
-    }
-    elementCount *= size;
-
-    SensorAxis const& axis = format.axes[i];
-    if (axis.name.empty()) {
-      MOCHI_ERROR_SET(error, "Sensor output axis names must not be empty");
-      return 0;
-    }
-    if (!axis.labels.empty() && axis.labels.size() != size) {
-      MOCHI_ERROR_SET(error, "Sensor output axis labels must match their dimension");
-      return 0;
-    }
-    if (!axis.units.empty()) {
-      if (hasUnits || (axis.units.size() != 1 && axis.units.size() != size)) {
-        MOCHI_ERROR_SET(error, "Sensor output units must belong to one compatible axis");
-        return 0;
-      }
-      hasUnits = true;
-    }
-  }
-  return elementCount;
-}
-
-} // namespace
-
 void SensorBase::Init(
     Span<SensorBase const* const> inputs,
     SensorScope const& scope,
@@ -121,7 +68,7 @@ void SensorBase::Init(
 
 void SensorBase::PrepareOutput(SensorFormat format, Error& error) {
   MOCHI_ERROR_RETURN(error);
-  std::size_t const elementCount = ValidateFormatAndGetElementCount(format, error);
+  std::size_t const elementCount = GetSensorFormatElementCount(format, error);
   MOCHI_ERROR_RETURN(error);
   if (elementCount > static_cast<std::size_t>(std::numeric_limits<int64_t>::max())) {
     MOCHI_ERROR_SET(error, "Sensor output element count overflows int64_t");

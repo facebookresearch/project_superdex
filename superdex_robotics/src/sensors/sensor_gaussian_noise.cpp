@@ -56,10 +56,6 @@ void SensorGaussianNoise::SetParams(Params const& params, Error& error) {
       return;
     }
   }
-  if (params.random.processKey.empty()) {
-    MOCHI_ERROR_SET(error, "SensorGaussianNoise requires a nonempty stable processKey");
-    return;
-  }
   _params = params;
 }
 
@@ -92,8 +88,8 @@ SensorStepResult SensorGaussianNoise::Step(StepTime const& now, Error& error) {
     return SensorStepResult::NoUpdate;
   }
   uint64_t state = Derive(
-      _params.random.episodeSeed,
-      _params.random.processKey,
+      EpisodeSeed(_params.random.episodeSeed),
+      SensorStreamKey(_params.random, GraphName()),
       static_cast<uint64_t>(source.captureStep));
   for (std::size_t i = 0; i < values.size(); ++i) {
     double const sigma = _params.std[_params.std.size() == 1 ? 0 : i];
@@ -118,8 +114,8 @@ void SensorGaussianNoise::ConfigureRecording(SensorRecordingSink& sink, Error& e
   DynamicArray<double> const standardDeviations(_params.std.begin(), _params.std.end());
   sink.WriteConstantScalars("process", "std", standardDeviations, error);
   sink.WriteConstantText(
-      "process", "episode_seed", std::to_string(_params.random.episodeSeed), error);
-  sink.WriteConstantText("process", "key", _params.random.processKey, error);
+      "process", "episode_seed", std::to_string(EpisodeSeed(_params.random.episodeSeed)), error);
+  sink.WriteConstantText("process", "key", SensorStreamKey(_params.random, GraphName()), error);
   sink.WriteConstantText(
       "process", "algorithm", "independent_gaussian_splitmix64_box_muller.v1", error);
 }

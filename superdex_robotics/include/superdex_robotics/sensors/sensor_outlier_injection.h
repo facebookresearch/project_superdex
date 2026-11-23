@@ -40,7 +40,7 @@ struct SensorOutlierInjectionParams {
 };
 
 /* @brief Replaces whole input captures by outliers with a fixed probability, drawn once per capture
- * from the episode seed, the process key and the capture step. Other captures pass unchanged. */
+ * from the episode seed, the stream key and the capture step. Other captures pass unchanged. */
 class MOCHI_API SensorOutlierInjection final : public SensorBase {
  public:
   using Params = SensorOutlierInjectionParams;

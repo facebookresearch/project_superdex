@@ -252,6 +252,16 @@ changing the graph's initialization scope requires clearing it.
 
 See [`sensor_graph.h`](./sensor_graph.h) for the complete graph interface.
 
+### Random streams
+
+Noise and outlier nodes draw from `Derive(episodeSeed, key, step)`, where the key is the node's
+`random.processKey` or, when that is empty, its graph name. A sensor takes its graph name from
+`SensorGraph::Add`, and `SensorGraph::SetEpisodeSeed` seeds every such node of a graph. The graph's
+seed overrides `random.episodeSeed` and survives `SetParams`. Leave `processKey` out of scene and
+bot files: BotScene names nodes `<bot>/<link>/<sensor>`, so two instances of one bot draw
+independently, while a shared explicit key would give them identical noise. Set an explicit key only
+to name a stream across graphs or code changes.
+
 ## Recording hooks
 
 [`SensorRecordingSink`](./sensor_recording.h) provides a backend-neutral destination for constants
@@ -288,6 +298,25 @@ when no new input needs processing. Use `PublishSample(now, values, error, &sour
 source's capture identity. `Reset()` is final; implement an explicit empty `ResetSensor()` for a
 stateless sensor. Implement `GetTypeName()` from `ComponentBase` and keep construction parameters
 typed on the concrete sensor.
+
+A source computed by a C++ function needs no class of its own: [`SensorFunction`](./sensor_function.h)
+publishes the values its function writes at every graph step, the reset step included. The function
+returns the sample its values derive from, such as another node's `Latest()`, to keep that sample's
+capture step and time, or `std::nullopt` for values captured at the step. This mirror republishes a
+measurement node at every step of another graph, keeping its format and capture:
+
+```cpp
+SensorFunction mirror(
+    measured.GetFormat(),
+    [&measured](Span<float> out) -> std::optional<SensorSample> {
+      SensorSample const sample = measured.Latest();
+      std::copy_n(sample.Floats().data(), out.size(), out.data());
+      return sample;
+    },
+    error);
+```
+
+`SensorFunction::ValuesFormat(width)` is the format of `width` plain values.
 
 ## Bot-relative inputs
 

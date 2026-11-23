@@ -2503,6 +2503,10 @@ class SensorRandomParams:
     """Episode seed and stable acquisition stream identity."""
     episode_seed: int
     process_key: str
+    """Names the node's streams. Empty keys them by the node's graph name, the name its
+    SensorGraph node was added under, so each node declared in an asset draws its
+    own.
+    """
     @overload
     def __init__(self) -> None: ...
     @overload
@@ -3133,6 +3137,13 @@ class SensorOutlierInjection(SensorBase):
     def type_name() -> str: ...
     def get_params(self) -> SensorOutlierInjectionParams: ...
     def set_params(self, params: SensorOutlierInjectionParams) -> None: ...
+
+class SensorFunction(SensorBase):
+    """Source that publishes the values a C++ function writes at every step of its
+    graph, the reset step included. Scene and bot files cannot declare it.
+    """
+    @staticmethod
+    def type_name() -> str: ...
 
 class BotSceneMetadata:
     """Human-readable metadata for a .superdex_scene file. Not consumed by the runtime.

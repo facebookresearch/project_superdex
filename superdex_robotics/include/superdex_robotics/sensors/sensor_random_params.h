@@ -19,6 +19,7 @@
 #include <superdex_physics.h>
 
 #include <cstdint>
+#include <string_view>
 
 namespace superdex::robotics {
 
@@ -26,6 +27,8 @@ namespace superdex::robotics {
 struct SensorRandomParams {
   /* Reflected JSON preserves all bits as a signed integer; high-bit seeds appear negative. */
   uint64_t episodeSeed = 0;
+  /* Names the node's streams. Empty keys them by the node's graph name (SensorBase::GraphName), so
+   * each node declared in an asset draws its own. */
   DynamicString processKey;
 
   MOCHI_STRUCT_BEGIN(superdex::robotics::SensorRandomParams)
@@ -33,5 +36,13 @@ struct SensorRandomParams {
   MOCHI_FIELD(processKey);
   MOCHI_STRUCT_END()
 };
+
+/* @brief The key of a node's random streams: @p random's processKey, or @p graphName when that is
+ * empty. */
+[[nodiscard]] inline std::string_view SensorStreamKey(
+    SensorRandomParams const& random,
+    std::string_view graphName) {
+  return random.processKey.empty() ? graphName : std::string_view{random.processKey};
+}
 
 } // namespace superdex::robotics

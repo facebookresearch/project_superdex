@@ -1029,6 +1029,11 @@
 /// @brief Episode seed and stable acquisition stream identity.
 ///
 
+/// @var superdex::robotics::SensorRandomParams::processKey
+///
+/// @brief Names the node's streams. Empty keys them by the node's graph name, the name its SensorGraph node was added under, so each node declared in an asset draws its own.
+///
+
 /// @struct superdex::robotics::SensorGaussianNoiseParams
 ///
 /// @brief Additive zero-mean Gaussian noise parameters.
@@ -1516,6 +1521,11 @@
 /// @class superdex::robotics::SensorOutlierInjection
 ///
 /// @brief Replaces whole input captures by outliers with a fixed probability.
+///
+
+/// @class superdex::robotics::SensorFunction
+///
+/// @brief Source that publishes the values a C++ function writes at every step of its graph, the reset step included. Scene and bot files cannot declare it.
 ///
 
 /// @struct superdex::robotics::BotSceneArchiveMetadata

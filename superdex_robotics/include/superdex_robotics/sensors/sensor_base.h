@@ -24,6 +24,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <string_view>
 
 namespace superdex::robotics {
@@ -95,6 +96,12 @@ class MOCHI_API SensorBase : public ComponentBase {
   /* @brief Copy the latest flat payload for owning API and language-binding boundaries. */
   [[nodiscard]] DynamicArray<real> CopyLatestValues() const;
 
+  /* @brief Set the episode seed of this sensor's random streams, if it draws any. Apply before the
+   * graph's Reset(). It overrides the params' `random.episodeSeed` and survives SetParams. */
+  void SetEpisodeSeed(uint64_t episodeSeed) {
+    _episodeSeed = episodeSeed;
+  }
+
   /* @brief Query optional sensor-specific metadata by a stable library-owned key.
    * The bytes are an opaque borrowed view of one live producer-owned object, not a wire format.
    * Interpret them only through TryGetSensorMetadata() while this initialization remains live; do
@@ -142,6 +149,16 @@ class MOCHI_API SensorBase : public ComponentBase {
     return _inputs;
   }
 
+  /* @brief The node name of the first graph that holds this sensor; empty outside any graph. */
+  [[nodiscard]] std::string_view GraphName() const {
+    return {_graphName.c_str(), _graphName.size()};
+  }
+
+  /* @brief The seed of the sensor's random streams: SetEpisodeSeed's, else @p paramsSeed. */
+  [[nodiscard]] uint64_t EpisodeSeed(uint64_t paramsSeed) const {
+    return _episodeSeed.value_or(paramsSeed);
+  }
+
   /* @brief Complete the sensor's write stroke by copying one full sample into owned storage. */
   bool PublishSample(
       StepTime const& now,
@@ -162,6 +179,8 @@ class MOCHI_API SensorBase : public ComponentBase {
   void ClearOutput();
 
   int32_t _graphBorrowCount = 0;
+  DynamicString _graphName;
+  std::optional<uint64_t> _episodeSeed;
   SensorFormat _format;
   DynamicArray<SensorBase const*> _inputs;
   DynamicArray<float> _output;

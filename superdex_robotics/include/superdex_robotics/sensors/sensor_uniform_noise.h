@@ -35,7 +35,7 @@ struct SensorUniformNoiseParams {
 };
 
 /* @brief Independent additive uniform noise, drawn once per input capture from the episode seed,
- * the process key and the capture step. */
+ * the stream key and the capture step. */
 class MOCHI_API SensorUniformNoise final : public SensorBase {
  public:
   using Params = SensorUniformNoiseParams;

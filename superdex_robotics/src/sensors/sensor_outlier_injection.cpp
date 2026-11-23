@@ -71,10 +71,6 @@ void SensorOutlierInjection::SetParams(Params const& params, Error& error) {
       error,
       "SensorOutlierInjection needs a probability in [0, 1] and a finite nonnegative range");
   MOCHI_ERROR_IF(
-      params.random.processKey.empty(),
-      error,
-      "SensorOutlierInjection requires a nonempty processKey");
-  MOCHI_ERROR_IF(
       params.rotation && !_outlier.empty() && _outlier.size() != 6,
       error,
       "SensorOutlierInjection replaces rotations of 6 values only");
@@ -106,8 +102,8 @@ SensorStepResult SensorOutlierInjection::Step(StepTime const& now, Error& error)
     return SensorStepResult::NoUpdate;
   }
   uint64_t state = Derive(
-      _params.random.episodeSeed,
-      _params.random.processKey,
+      EpisodeSeed(_params.random.episodeSeed),
+      SensorStreamKey(_params.random, GraphName()),
       static_cast<uint64_t>(source.captureStep));
   bool const outlier = Uniform(state, 0.0, 1.0) < _params.probability;
   if (outlier) {

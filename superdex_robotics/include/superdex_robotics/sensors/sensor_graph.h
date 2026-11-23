@@ -20,6 +20,7 @@
 #include <superdex_robotics/sensors/sensor_base.h>
 
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -57,7 +58,8 @@ class MOCHI_API SensorGraph {
 
   MOCHI_DECLARE_NO_COPY_NO_MOVE(SensorGraph)
 
-  /* @brief Add a borrowed sensor under a nonempty, unique node name. Errors leave the graph
+  /* @brief Add a borrowed sensor under a nonempty, unique node name, which becomes the sensor's
+   * GraphName() and keys its random streams when its processKey is empty. Errors leave the graph
    * unchanged. */
   void Add(SensorGraphNode const& node, superdex::Error& error);
   void Add(std::string_view nodeName, SensorBase* sensor, superdex::Error& error) {
@@ -102,10 +104,20 @@ class MOCHI_API SensorGraph {
    * precede activation, which takes effect on Build() or Reset(). */
   [[nodiscard]] Span<SensorGraphNodeView const> GetEnabledNodes() const;
   void Reset(superdex::Error& error);
+  /* @brief Set the episode seed of every member sensor that draws random streams (noise and
+   * outliers, see SensorBase::SetEpisodeSeed). Apply before Reset(). */
+  void SetEpisodeSeed(uint64_t episodeSeed);
   bool Step(StepTime const& now, superdex::Error& error);
+  /* @brief The time of the last successful Step(); absent before the first and after Reset(). */
+  [[nodiscard]] std::optional<StepTime> LastStep() const {
+    return _hasLastStep ? std::optional<StepTime>{_lastStep} : std::nullopt;
+  }
 
   /* @brief Find a node in the currently built graph; returns null while the graph is unbuilt. */
   [[nodiscard]] SensorBase* Find(std::string_view nodeName) const;
+  /* @brief Names of every node in the built graph, active or not, in the order they were added;
+   * empty while unbuilt. The names are borrowed until graph mutation or destruction. */
+  [[nodiscard]] DynamicArray<std::string_view> GetNodeNames() const;
 
  private:
   struct Node {
@@ -119,6 +131,8 @@ class MOCHI_API SensorGraph {
     bool initialized = false;
   };
 
+  /* Releases the graph's borrow of the node's sensor and the graph name the node gave it. */
+  static void Release(Node const& node);
   void RebuildActiveOrder();
   void ResolveTopology(superdex::Error& error);
   void RebuildEnabledNodes();

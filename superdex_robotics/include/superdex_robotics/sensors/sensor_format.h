@@ -18,6 +18,7 @@
 
 #include <superdex_physics.h>
 
+#include <cstddef>
 #include <cstdint>
 #include <string_view>
 
@@ -69,6 +70,12 @@ struct SensorFormat {
 
   bool operator==(SensorFormat const& rhs) const = default;
 };
+
+/* @brief Check @p format against the rules above and return its element count; zero with @p error
+ * set when it breaks one. */
+[[nodiscard]] MOCHI_API std::size_t GetSensorFormatElementCount(
+    SensorFormat const& format,
+    superdex::Error& error);
 
 /* @brief Owning flat row-major tensor used at copying and serialization boundaries. */
 using SensorTensor = DynamicArray<float>;
