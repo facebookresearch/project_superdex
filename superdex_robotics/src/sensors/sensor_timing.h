@@ -18,6 +18,7 @@
 
 #include <superdex_robotics/sensors/sensor_base.h>
 
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <limits>
@@ -25,11 +26,17 @@
 
 namespace superdex::robotics::detail {
 
+/* Graph times carry rounding, such as a scene clock that sums its steps: times within this of each
+   other are the same instant. Far below any physics step. */
+inline constexpr double kSensorTimeToleranceSec = 1e-6; // 1 microsecond
+
 inline int64_t SensorPeriodIndex(double timeSeconds, real sampleRateHz) {
-  double const scaled = timeSeconds * static_cast<double>(sampleRateHz);
+  auto const rate = static_cast<double>(sampleRateHz);
+  double const scaled = timeSeconds * rate;
   double const nearest = std::round(scaled);
-  double const roundoffTolerance =
-      8.0 * static_cast<double>(std::numeric_limits<real>::epsilon()) * (1.0 + std::abs(scaled));
+  double const roundoffTolerance = std::max(
+      8.0 * static_cast<double>(std::numeric_limits<real>::epsilon()) * (1.0 + std::abs(scaled)),
+      kSensorTimeToleranceSec * rate);
   return static_cast<int64_t>(
       std::abs(scaled - nearest) <= roundoffTolerance ? nearest : std::floor(scaled));
 }

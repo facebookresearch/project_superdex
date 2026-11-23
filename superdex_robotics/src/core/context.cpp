@@ -21,6 +21,7 @@
 #include <superdex_robotics/sensors/sensor_aggregate_force.h>
 #include <superdex_robotics/sensors/sensor_articulated_joint_wrench.h>
 #include <superdex_robotics/sensors/sensor_camera.h>
+#include <superdex_robotics/sensors/sensor_delay_line.h>
 #include <superdex_robotics/sensors/sensor_gaussian_noise.h>
 #include <superdex_robotics/sensors/sensor_link_vertex_force.h>
 #include <superdex_robotics/sensors/sensor_outlier_injection.h>
@@ -693,6 +694,7 @@ void RoboticsContext::RegisterBuiltinTypes() {
   RegisterSensor<SensorAggregateForce>();
   RegisterSensor<SensorArticulatedJointWrench>();
   RegisterSensor<SensorCamera>();
+  RegisterSensor<SensorDelayLine>();
   RegisterSensor<SensorGaussianNoise>();
   RegisterSensor<SensorLinkVertexForce>();
   RegisterSensor<SensorOutlierInjection>();

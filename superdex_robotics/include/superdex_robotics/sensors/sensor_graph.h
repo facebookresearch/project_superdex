@@ -104,8 +104,8 @@ class MOCHI_API SensorGraph {
    * precede activation, which takes effect on Build() or Reset(). */
   [[nodiscard]] Span<SensorGraphNodeView const> GetEnabledNodes() const;
   void Reset(superdex::Error& error);
-  /* @brief Set the episode seed of every member sensor that draws random streams (noise and
-   * outliers, see SensorBase::SetEpisodeSeed). Apply before Reset(). */
+  /* @brief Set the episode seed of every member sensor that draws random streams (noise, outliers,
+   * delay jitter, see SensorBase::SetEpisodeSeed). Apply before Reset(). */
   void SetEpisodeSeed(uint64_t episodeSeed);
   bool Step(StepTime const& now, superdex::Error& error);
   /* @brief The time of the last successful Step(); absent before the first and after Reset(). */

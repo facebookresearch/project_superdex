@@ -1192,22 +1192,30 @@ struct bots::SensorTemporalWindowParams [no_reflection] {
   bool padWithFirst = false;
 }
 
-// @brief Deterministic time-domain delay configuration.
-struct bots::SensorDelayLineParams [no_reflection] {
-  // @brief Time from input publication to output publication [ms].
-  double delayMs = 0.0;
-  // @brief Pending-history duration used to size storage at Init [ms].
-  double bufferMs = 1000.0;
-  // @brief Fallback publication-rate estimate [Hz] when the input rate is unknown.
-  double bufferAssumedFrequencyHzEstimate = 100.0;
-}
-
 // @brief Episode seed and stable acquisition stream identity.
 struct bots::SensorRandomParams [no_reflection] {
   uint64 episodeSeed = 0;
   // @brief Names the node's streams. Empty keys them by the node's graph name, the name its
   // SensorGraph node was added under, so each node declared in an asset draws its own.
   String processKey;
+}
+
+// @brief Time-domain delay configuration, with optional seeded jitter.
+struct bots::SensorDelayLineParams [no_reflection] {
+  // @brief Time from input publication to output publication [ms]; delayMs + jitterMs fits in
+  // bufferMs.
+  double delayMs = 0.0;
+  // @brief Pending-history duration used to size storage at Init [ms].
+  double bufferMs = 1000.0;
+  // @brief Fallback publication-rate estimate [Hz] when the input rate is unknown.
+  double bufferAssumedFrequencyHzEstimate = 100.0;
+  // @brief Each sample is due delayMs plus its own draw in [0, jitterMs) after its input
+  // publication [ms] and publishes no earlier than the samples before it: delivery stays in order,
+  // so the extra delay is not uniform when samples arrive faster than the jitter.
+  double jitterMs = 0.0;
+  // @brief The jitter's stream, drawn once per sample keyed by its capture step; needed when
+  // jitterMs > 0.
+  bots::SensorRandomParams random;
 }
 
 // @brief Additive zero-mean Gaussian noise parameters.
@@ -1583,7 +1591,9 @@ class bots::SensorTemporalWindow(bots::SensorBase) [no_init, no_destruct] {
   fn GetParams() -> bots::SensorTemporalWindowParams const& [const];
 }
 
-// @brief Deterministic time-domain delay over one fixed CPU sensor output.
+// @brief Time-domain delay over one fixed CPU sensor output, with optional seeded jitter that keeps
+// the samples in order. The first input sample after a reset publishes at once and holds until
+// delayed samples follow. Storage is sized once at Init from bufferMs.
 class bots::SensorDelayLine(bots::SensorBase) [no_init, no_destruct] {
   fn TypeName() -> StringView [static];
   fn GetParams() -> bots::SensorDelayLineParams [const];

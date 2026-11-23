@@ -126,7 +126,9 @@ TEST(SensorDelayLineTest, ZeroDelayPreservesValuesAndIdentity) {
   EXPECT_DOUBLE_EQ(sample.publishedTime, 0.035);
 }
 
-TEST(SensorDelayLineTest, PublishesAfterExactMillisecondDelayWithoutInventingHistory) {
+// The first sample after a reset publishes at once and holds until the second is due, 10 ms after
+// its publication.
+TEST(SensorDelayLineTest, FirstSamplePublishesAtOnceAndLaterOnesAfterTheDelay) {
   Error constructionError;
   CadencedScalarSource source(1, constructionError);
   SensorDelayLine delay({.delayMs = 10_r}, constructionError);
@@ -139,24 +141,24 @@ TEST(SensorDelayLineTest, PublishesAfterExactMillisecondDelayWithoutInventingHis
   ASSERT_TRUE(error.IsOK()) << error.ToString();
 
   Step(graph, 1, error);
-  EXPECT_EQ(delay.Latest().captureStep, -1);
-  EXPECT_EQ(delay.Latest().publishedStep, -1);
-  Step(graph, 2, error);
-  EXPECT_EQ(delay.Latest().captureStep, -1);
-  Step(graph, 3, error);
   SensorSample const first = delay.Latest();
   ASSERT_EQ(first.Floats().size(), 1);
   EXPECT_FLOAT_EQ(first.Floats()[0], 1.0F);
   EXPECT_EQ(first.captureStep, 1);
   EXPECT_DOUBLE_EQ(first.captureTime, 0.005);
-  EXPECT_EQ(first.publishedStep, 3);
-  EXPECT_DOUBLE_EQ(first.publishedTime, 0.015);
+  EXPECT_EQ(first.publishedStep, 1);
+  EXPECT_DOUBLE_EQ(first.publishedTime, 0.005);
+  Step(graph, 2, error);
+  Step(graph, 3, error);
+  EXPECT_EQ(delay.Latest().captureStep, 1);
+  EXPECT_EQ(delay.Latest().publishedStep, 1);
 
   Step(graph, 4, error);
   SensorSample const second = delay.Latest();
   EXPECT_FLOAT_EQ(second.Floats()[0], 2.0F);
   EXPECT_EQ(second.captureStep, 2);
   EXPECT_EQ(second.publishedStep, 4);
+  EXPECT_DOUBLE_EQ(second.publishedTime, 0.02);
 }
 
 TEST(SensorDelayLineTest, ResetDiscardsSamplesInFlight) {
@@ -176,10 +178,12 @@ TEST(SensorDelayLineTest, ResetDiscardsSamplesInFlight) {
   EXPECT_EQ(delay.Latest().captureStep, -1);
   Step(graph, 2, error);
   Step(graph, 3, error);
-  EXPECT_EQ(delay.Latest().captureStep, -1);
   Step(graph, 4, error);
   EXPECT_EQ(delay.Latest().captureStep, 2);
-  EXPECT_EQ(delay.Latest().publishedStep, 4);
+  EXPECT_EQ(delay.Latest().publishedStep, 2);
+  Step(graph, 5, error);
+  EXPECT_EQ(delay.Latest().captureStep, 3);
+  EXPECT_EQ(delay.Latest().publishedStep, 5);
 }
 
 TEST(SensorDelayLineTest, DelaysOneHundredHertzSamplesBeforeTemporalWindow) {
@@ -233,11 +237,12 @@ TEST(SensorDelayLineTest, NonIntegralDelayPublishesAtTheFirstGraphBoundaryAfterD
 
   Step(graph, 1, error);
   Step(graph, 2, error);
-  EXPECT_EQ(delay.Latest().captureStep, -1);
   Step(graph, 3, error);
   EXPECT_EQ(delay.Latest().captureStep, 1);
-  EXPECT_DOUBLE_EQ(delay.Latest().captureTime, 0.005);
-  EXPECT_DOUBLE_EQ(delay.Latest().publishedTime, 0.015);
+  Step(graph, 4, error);
+  EXPECT_EQ(delay.Latest().captureStep, 2);
+  EXPECT_DOUBLE_EQ(delay.Latest().captureTime, 0.01);
+  EXPECT_DOUBLE_EQ(delay.Latest().publishedTime, 0.02);
 }
 
 TEST(SensorDelayLineTest, PendingSampleBoundFailsLoudlyWithoutDroppingAQueuedSample) {
@@ -253,14 +258,16 @@ TEST(SensorDelayLineTest, PendingSampleBoundFailsLoudlyWithoutDroppingAQueuedSam
   graph.Reset(error);
   ASSERT_TRUE(error.IsOK()) << error.ToString();
 
+  // The first sample publishes at once; the next two fill the ring's two slots.
   Step(graph, 1, error);
   Step(graph, 2, error);
-  EXPECT_EQ(delay.Latest().captureStep, -1);
+  Step(graph, 3, error);
+  EXPECT_EQ(delay.Latest().captureStep, 1);
 
   Error overflowError;
-  EXPECT_FALSE(graph.Step({.t = 0.015, .dt = 0.005, .step = 3}, overflowError));
+  EXPECT_FALSE(graph.Step({.t = 0.02, .dt = 0.005, .step = 4}, overflowError));
   EXPECT_FALSE(overflowError.IsOK());
-  EXPECT_EQ(delay.Latest().captureStep, -1);
+  EXPECT_EQ(delay.Latest().captureStep, 1);
 }
 
 TEST(SensorDelayLineTest, FallbackEstimateSupportsKilohertzInputWithOneSecondDelay) {
@@ -279,8 +286,9 @@ TEST(SensorDelayLineTest, FallbackEstimateSupportsKilohertzInputWithOneSecondDel
     double const t = static_cast<double>(step) / 1024.0;
     ASSERT_TRUE(graph.Step({.t = t, .dt = 1.0 / 1024.0, .step = step}, error)) << error.ToString();
     SensorSample const sample = delay.Latest();
-    if (step <= 1024) {
-      EXPECT_EQ(sample.publishedStep, -1);
+    if (step <= 1025) {
+      EXPECT_EQ(sample.captureStep, 1);
+      EXPECT_EQ(sample.publishedStep, 1);
     } else {
       ASSERT_EQ(sample.Floats().size(), 1);
       EXPECT_FLOAT_EQ(sample.Floats()[0], static_cast<float>(step - 1024));
@@ -317,7 +325,8 @@ TEST(SensorDelayLineTest, UpstreamEstimatePassesThroughTransformsAndOverridesFal
 TEST(SensorDelayLineTest, PublishesADueSampleBeforeReusingItsBoundedRingSlot) {
   Error constructionError;
   CadencedScalarSource source(1, constructionError);
-  SensorDelayLine delay({.delayMs = 5_r, .bufferMs = 0.0}, constructionError);
+  // Two slots: ceil(10 ms * 100 Hz) + 1.
+  SensorDelayLine delay({.delayMs = 10_r, .bufferMs = 10.0}, constructionError);
   ASSERT_TRUE(constructionError.IsOK()) << constructionError.ToString();
   SensorGraph graph;
   AddDelayGraph(graph, source, delay);
@@ -326,10 +335,15 @@ TEST(SensorDelayLineTest, PublishesADueSampleBeforeReusingItsBoundedRingSlot) {
   graph.Reset(error);
   ASSERT_TRUE(error.IsOK()) << error.ToString();
 
+  // Sample 1 publishes at once, samples 2 and 3 fill the ring, and sample 2, due at step 4, frees
+  // its slot for sample 4.
   Step(graph, 1, error);
   Step(graph, 2, error);
-  EXPECT_EQ(delay.Latest().captureStep, 1);
-  EXPECT_EQ(delay.Latest().publishedStep, 2);
+  Step(graph, 3, error);
+  Step(graph, 4, error);
+  ASSERT_TRUE(error.IsOK()) << error.ToString();
+  EXPECT_EQ(delay.Latest().captureStep, 2);
+  EXPECT_EQ(delay.Latest().publishedStep, 4);
 }
 
 TEST(SensorDelayLineTest, DrainsEveryDueSampleAfterAGraphTimeJump) {
@@ -348,7 +362,7 @@ TEST(SensorDelayLineTest, DrainsEveryDueSampleAfterAGraphTimeJump) {
   Step(graph, 1, error);
   Step(graph, 2, error);
   Step(graph, 3, error);
-  EXPECT_EQ(delay.Latest().captureStep, -1);
+  EXPECT_EQ(delay.Latest().publishedStep, 1);
 
   Step(graph, 100, error);
   EXPECT_EQ(delay.Latest().captureStep, 3);
@@ -376,13 +390,15 @@ TEST(SensorDelayLineTest, EpisodeParamsTakeEffectAfterExplicitReset) {
   graph.Build({}, error);
   graph.Reset(error);
   Step(graph, 1, error);
-  ASSERT_EQ(delay.Latest().captureStep, -1);
+  Step(graph, 2, error);
+  ASSERT_EQ(delay.Latest().captureStep, 1);
   delay.SetParams({.delayMs = 0.0}, error);
   graph.Reset(error);
-  Step(graph, 2, error);
+  Step(graph, 3, error);
+  Step(graph, 4, error);
   ASSERT_TRUE(error.IsOK()) << error.ToString();
-  EXPECT_EQ(delay.Latest().captureStep, 2);
-  EXPECT_FLOAT_EQ(delay.Latest().Floats()[0], 2.0F);
+  EXPECT_EQ(delay.Latest().captureStep, 4);
+  EXPECT_FLOAT_EQ(delay.Latest().Floats()[0], 4.0F);
   Error rejected;
   delay.SetParams({.delayMs = 20.0, .bufferMs = 0.0}, rejected);
   EXPECT_FALSE(rejected.IsOK());

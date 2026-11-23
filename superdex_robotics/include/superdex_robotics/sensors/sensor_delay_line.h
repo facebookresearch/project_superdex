@@ -17,13 +17,15 @@
 #pragma once
 
 #include <superdex_robotics/sensors/sensor_base.h>
+#include <superdex_robotics/sensors/sensor_random_params.h>
 
 #include <cstdint>
 
 namespace superdex::robotics {
 
 struct SensorDelayLineParams {
-  /* Time from input publication to output publication [ms]. */
+  /* Time from input publication to output publication [ms]; delayMs + jitterMs fits in
+   * bufferMs. */
   double delayMs = 0.0;
 
   /* @brief Pending-history duration used to size storage at Init [ms].
@@ -33,14 +35,26 @@ struct SensorDelayLineParams {
   /* @brief Fallback publication rate [Hz] when the input has no positive rate estimate. */
   double bufferAssumedFrequencyHzEstimate = 100.0;
 
+  /* Each sample is due delayMs plus its own draw in [0, jitterMs) after its input publication [ms]
+   * and publishes no earlier than the samples before it: delivery stays in order, so the extra
+   * delay is not uniform when samples arrive faster than the jitter. */
+  double jitterMs = 0.0;
+  /* The jitter's stream, drawn once per sample keyed by its capture step. */
+  SensorRandomParams random;
+
   MOCHI_STRUCT_BEGIN(superdex::robotics::SensorDelayLineParams)
   MOCHI_FIELD(delayMs) MOCHI_ATTRIBUTE(Units("ms"));
   MOCHI_FIELD(bufferMs) MOCHI_ATTRIBUTE(Units("ms"));
   MOCHI_FIELD(bufferAssumedFrequencyHzEstimate) MOCHI_ATTRIBUTE(Units("1/s"));
+  MOCHI_FIELD(jitterMs) MOCHI_ATTRIBUTE(Units("ms"));
+  MOCHI_FIELD(random);
   MOCHI_STRUCT_END()
 };
 
-/* @brief Deterministic time-domain delay over one fixed CPU sensor output. */
+/* @brief Time-domain delay over one fixed CPU sensor output, with optional seeded jitter that
+ * keeps the samples in order. The first input sample after a reset publishes at once and holds
+ * until delayed samples follow. Storage is sized once at Init from bufferMs and kept across
+ * resets. */
 class MOCHI_API SensorDelayLine final : public SensorBase {
  public:
   using Params = SensorDelayLineParams;
@@ -69,6 +83,12 @@ class MOCHI_API SensorDelayLine final : public SensorBase {
   void SetParams(Params const& params, superdex::Error& error);
 
  private:
+  struct QueuedSample {
+    int64_t captureStep = -1;
+    double captureTime = 0.0;
+    double dueTime = 0.0;
+  };
+
   [[nodiscard]] SensorFormat InitSensor(SensorScope const& scope, superdex::Error& error) override;
   void ResetSensor() override;
   void Initialize(Params const& params, superdex::Error& error);
@@ -77,13 +97,11 @@ class MOCHI_API SensorDelayLine final : public SensorBase {
 
   Params _params;
   std::size_t _elementsPerSample = 0;
-  std::size_t _capacity = 0;
+  /* Ring of samples waiting for their due time, sized at Init: _size of them from _head. */
+  DynamicArray<QueuedSample> _ring;
+  DynamicArray<float> _ringValues;
   std::size_t _head = 0;
   std::size_t _size = 0;
-  DynamicArray<float> _floatRing;
-  DynamicArray<int64_t> _captureSteps;
-  DynamicArray<double> _captureTimes;
-  DynamicArray<double> _dueTimes;
   int64_t _lastInputPublishedStep = -1;
 };
 

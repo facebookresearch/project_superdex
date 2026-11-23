@@ -2489,25 +2489,6 @@ class SensorTemporalWindowParams:
         pad_with_first: bool = ...,
     ) -> None: ...
 
-class SensorDelayLineParams:
-    """Deterministic time-domain delay configuration."""
-    delay_ms: float
-    """Time from input publication to output publication [ms]."""
-    buffer_ms: float
-    """Pending-history duration used to size storage at Init [ms]."""
-    buffer_assumed_frequency_hz_estimate: float
-    """Fallback publication-rate estimate [Hz] when the input rate is unknown."""
-    @overload
-    def __init__(self) -> None: ...
-    @overload
-    def __init__(
-        self,
-        *,
-        delay_ms: float = ...,
-        buffer_ms: float = ...,
-        buffer_assumed_frequency_hz_estimate: float = ...,
-    ) -> None: ...
-
 class SensorRandomParams:
     """Episode seed and stable acquisition stream identity."""
     episode_seed: int
@@ -2520,6 +2501,39 @@ class SensorRandomParams:
     def __init__(self) -> None: ...
     @overload
     def __init__(self, *, episode_seed: int = ..., process_key: str = ...) -> None: ...
+
+class SensorDelayLineParams:
+    """Time-domain delay configuration, with optional seeded jitter."""
+    delay_ms: float
+    """Time from input publication to output publication [ms]; delayMs + jitterMs fits
+    in bufferMs.
+    """
+    buffer_ms: float
+    """Pending-history duration used to size storage at Init [ms]."""
+    buffer_assumed_frequency_hz_estimate: float
+    """Fallback publication-rate estimate [Hz] when the input rate is unknown."""
+    jitter_ms: float
+    """Each sample is due delayMs plus its own draw in [0, jitterMs) after its input
+    publication [ms] and publishes no earlier than the samples before it: delivery
+    stays in order, so the extra delay is not uniform when samples arrive faster
+    than the jitter.
+    """
+    random: SensorRandomParams
+    """The jitter's stream, drawn once per sample keyed by its capture step; needed
+    when jitterMs > 0.
+    """
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(
+        self,
+        *,
+        delay_ms: float = ...,
+        buffer_ms: float = ...,
+        buffer_assumed_frequency_hz_estimate: float = ...,
+        jitter_ms: float = ...,
+        random: SensorRandomParams = ...,
+    ) -> None: ...
 
 class SensorGaussianNoiseParams:
     """Additive zero-mean Gaussian noise parameters."""
@@ -3115,7 +3129,11 @@ class SensorTemporalWindow(SensorBase):
     def get_params(self) -> SensorTemporalWindowParams: ...
 
 class SensorDelayLine(SensorBase):
-    """Deterministic time-domain delay over one fixed CPU sensor output."""
+    """Time-domain delay over one fixed CPU sensor output, with optional seeded jitter
+    that keeps the samples in order. The first input sample after a reset publishes
+    at once and holds until delayed samples follow. Storage is sized once at Init
+    from bufferMs.
+    """
     @staticmethod
     def type_name() -> str: ...
     def get_params(self) -> SensorDelayLineParams: ...

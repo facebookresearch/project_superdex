@@ -110,8 +110,8 @@ void mochi::DeclareSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module
   registry.StoreClass(nb::class_<superdex::robotics::SensorSeedV1MLPParams>(m_bots, "SensorSeedV1MLPParams", "SEED tactile sensor parameters."));
   registry.StoreClass(nb::class_<superdex::robotics::SensorSeedV1MLPResult>(m_bots, "SensorSeedV1MLPResult", "SEED tactile sensor result."));
   registry.StoreClass(nb::class_<superdex::robotics::SensorTemporalWindowParams>(m_bots, "SensorTemporalWindowParams", "Fixed oldest-first rolling-window configuration."));
-  registry.StoreClass(nb::class_<superdex::robotics::SensorDelayLineParams>(m_bots, "SensorDelayLineParams", "Deterministic time-domain delay configuration."));
   registry.StoreClass(nb::class_<superdex::robotics::SensorRandomParams>(m_bots, "SensorRandomParams", "Episode seed and stable acquisition stream identity."));
+  registry.StoreClass(nb::class_<superdex::robotics::SensorDelayLineParams>(m_bots, "SensorDelayLineParams", "Time-domain delay configuration, with optional seeded jitter."));
   registry.StoreClass(nb::class_<superdex::robotics::SensorGaussianNoiseParams>(m_bots, "SensorGaussianNoiseParams", "Additive zero-mean Gaussian noise parameters."));
   registry.StoreClass(nb::class_<superdex::robotics::SensorUniformNoiseParams>(m_bots, "SensorUniformNoiseParams", "Additive uniform noise parameters."));
   registry.StoreClass(nb::class_<superdex::robotics::SensorOutlierInjectionParams>(m_bots, "SensorOutlierInjectionParams", "Outlier injection parameters."));
@@ -137,7 +137,7 @@ void mochi::DeclareSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module
   registry.StoreClass(nb::class_<superdex::robotics::SensorSeedRectMap, superdex::robotics::SensorBase>(m_bots, "SensorSeedRectMap", "Image-like force map derived from one vertex-force point-cloud sensor.", nb::never_destruct()));
   registry.StoreClass(nb::class_<superdex::robotics::SensorSeedV1MLP, superdex::robotics::SensorBase>(m_bots, "SensorSeedV1MLP", "SEED tactile sensor using Mochi-native MLP inference.", nb::never_destruct()));
   registry.StoreClass(nb::class_<superdex::robotics::SensorTemporalWindow, superdex::robotics::SensorBase>(m_bots, "SensorTemporalWindow", "Fixed oldest-first rolling window over one native-rate CPU float sensor.", nb::never_destruct()));
-  registry.StoreClass(nb::class_<superdex::robotics::SensorDelayLine, superdex::robotics::SensorBase>(m_bots, "SensorDelayLine", "Deterministic time-domain delay over one fixed CPU sensor output.", nb::never_destruct()));
+  registry.StoreClass(nb::class_<superdex::robotics::SensorDelayLine, superdex::robotics::SensorBase>(m_bots, "SensorDelayLine", "Time-domain delay over one fixed CPU sensor output, with optional seeded jitter\nthat keeps the samples in order. The first input sample after a reset publishes\nat once and holds until delayed samples follow. Storage is sized once at Init\nfrom bufferMs.", nb::never_destruct()));
   registry.StoreClass(nb::class_<superdex::robotics::SensorGaussianNoise, superdex::robotics::SensorBase>(m_bots, "SensorGaussianNoise", "Independent additive noise on new input publications.", nb::never_destruct()));
   registry.StoreClass(nb::class_<superdex::robotics::SensorUniformNoise, superdex::robotics::SensorBase>(m_bots, "SensorUniformNoise", "Independent additive uniform noise on new input publications.", nb::never_destruct()));
   registry.StoreClass(nb::class_<superdex::robotics::SensorOutlierInjection, superdex::robotics::SensorBase>(m_bots, "SensorOutlierInjection", "Replaces whole input samples by outliers with a fixed probability.", nb::never_destruct()));
@@ -1417,27 +1417,6 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_rw("pad_with_first", &superdex::robotics::SensorTemporalWindowParams::padWithFirst, "Rows before the first sample since a reset repeat that sample, its capture and\npublication included, instead of holding zeros.")
   ;
 
-  registry.GetClass<superdex::robotics::SensorDelayLineParams>()
-    .def("__init__", [](superdex::robotics::SensorDelayLineParams* self, nb::object delay_ms, nb::object buffer_ms, nb::object buffer_assumed_frequency_hz_estimate) {
-      superdex::robotics::SensorDelayLineParams result{};
-      result.delayMs = nb::cast<double>(delay_ms);
-      result.bufferMs = nb::cast<double>(buffer_ms);
-      result.bufferAssumedFrequencyHzEstimate = nb::cast<double>(buffer_assumed_frequency_hz_estimate);
-      new (self) superdex::robotics::SensorDelayLineParams(std::move(result));
-    }
-      , nb::kw_only()
-      , nb::arg("delay_ms") = superdex::robotics::SensorDelayLineParams{}.delayMs
-      , nb::arg("buffer_ms") = superdex::robotics::SensorDelayLineParams{}.bufferMs
-      , nb::arg("buffer_assumed_frequency_hz_estimate") = superdex::robotics::SensorDelayLineParams{}.bufferAssumedFrequencyHzEstimate
-    )
-    .def(nb::init<>())
-    .def("__copy__", [](superdex::robotics::SensorDelayLineParams const& self) { return superdex::robotics::SensorDelayLineParams(self); })
-    .def("__deepcopy__", [](superdex::robotics::SensorDelayLineParams const& self, nb::dict) { return superdex::robotics::SensorDelayLineParams(self); })
-    .def_rw("delay_ms", &superdex::robotics::SensorDelayLineParams::delayMs, "Time from input publication to output publication [ms].")
-    .def_rw("buffer_ms", &superdex::robotics::SensorDelayLineParams::bufferMs, "Pending-history duration used to size storage at Init [ms].")
-    .def_rw("buffer_assumed_frequency_hz_estimate", &superdex::robotics::SensorDelayLineParams::bufferAssumedFrequencyHzEstimate, "Fallback publication-rate estimate [Hz] when the input rate is unknown.")
-  ;
-
   registry.GetClass<superdex::robotics::SensorRandomParams>()
     .def("__init__", [](superdex::robotics::SensorRandomParams* self, nb::object episode_seed, nb::object process_key) {
       superdex::robotics::SensorRandomParams result{};
@@ -1454,6 +1433,33 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def("__deepcopy__", [](superdex::robotics::SensorRandomParams const& self, nb::dict) { return superdex::robotics::SensorRandomParams(self); })
     .def_rw("episode_seed", &superdex::robotics::SensorRandomParams::episodeSeed)
     .def_rw("process_key", &superdex::robotics::SensorRandomParams::processKey, "Names the node's streams. Empty keys them by the node's graph name, the name its\nSensorGraph node was added under, so each node declared in an asset draws its\nown.")
+  ;
+
+  registry.GetClass<superdex::robotics::SensorDelayLineParams>()
+    .def("__init__", [](superdex::robotics::SensorDelayLineParams* self, nb::object delay_ms, nb::object buffer_ms, nb::object buffer_assumed_frequency_hz_estimate, nb::object jitter_ms, nb::object random) {
+      superdex::robotics::SensorDelayLineParams result{};
+      result.delayMs = nb::cast<double>(delay_ms);
+      result.bufferMs = nb::cast<double>(buffer_ms);
+      result.bufferAssumedFrequencyHzEstimate = nb::cast<double>(buffer_assumed_frequency_hz_estimate);
+      result.jitterMs = nb::cast<double>(jitter_ms);
+      result.random = nb::cast<superdex::robotics::SensorRandomParams>(random);
+      new (self) superdex::robotics::SensorDelayLineParams(std::move(result));
+    }
+      , nb::kw_only()
+      , nb::arg("delay_ms") = superdex::robotics::SensorDelayLineParams{}.delayMs
+      , nb::arg("buffer_ms") = superdex::robotics::SensorDelayLineParams{}.bufferMs
+      , nb::arg("buffer_assumed_frequency_hz_estimate") = superdex::robotics::SensorDelayLineParams{}.bufferAssumedFrequencyHzEstimate
+      , nb::arg("jitter_ms") = superdex::robotics::SensorDelayLineParams{}.jitterMs
+      , nb::arg("random").sig("...") = superdex::robotics::SensorDelayLineParams{}.random
+    )
+    .def(nb::init<>())
+    .def("__copy__", [](superdex::robotics::SensorDelayLineParams const& self) { return superdex::robotics::SensorDelayLineParams(self); })
+    .def("__deepcopy__", [](superdex::robotics::SensorDelayLineParams const& self, nb::dict) { return superdex::robotics::SensorDelayLineParams(self); })
+    .def_rw("delay_ms", &superdex::robotics::SensorDelayLineParams::delayMs, "Time from input publication to output publication [ms]; delayMs + jitterMs fits\nin bufferMs.")
+    .def_rw("buffer_ms", &superdex::robotics::SensorDelayLineParams::bufferMs, "Pending-history duration used to size storage at Init [ms].")
+    .def_rw("buffer_assumed_frequency_hz_estimate", &superdex::robotics::SensorDelayLineParams::bufferAssumedFrequencyHzEstimate, "Fallback publication-rate estimate [Hz] when the input rate is unknown.")
+    .def_rw("jitter_ms", &superdex::robotics::SensorDelayLineParams::jitterMs, "Each sample is due delayMs plus its own draw in [0, jitterMs) after its input\npublication [ms] and publishes no earlier than the samples before it: delivery\nstays in order, so the extra delay is not uniform when samples arrive faster\nthan the jitter.")
+    .def_rw("random", &superdex::robotics::SensorDelayLineParams::random, "The jitter's stream, drawn once per sample keyed by its capture step; needed\nwhen jitterMs > 0.")
   ;
 
   registry.GetClass<superdex::robotics::SensorGaussianNoiseParams>()

@@ -254,11 +254,11 @@ See [`sensor_graph.h`](./sensor_graph.h) for the complete graph interface.
 
 ### Random streams
 
-Noise and outlier nodes draw from `Derive(episodeSeed, key, step)`, where the key is the node's
-`random.processKey` or, when that is empty, its graph name. A sensor takes its graph name from
-`SensorGraph::Add`, and `SensorGraph::SetEpisodeSeed` seeds every such node of a graph. The graph's
-seed overrides `random.episodeSeed` and survives `SetParams`. Leave `processKey` out of scene and
-bot files: BotScene names nodes `<bot>/<link>/<sensor>`, so two instances of one bot draw
+Noise, outlier and jittered-delay nodes draw from `Derive(episodeSeed, key, step)`, where the key is
+the node's `random.processKey` or, when that is empty, its graph name. A sensor takes its graph name
+from `SensorGraph::Add`, and `SensorGraph::SetEpisodeSeed` seeds every such node of a graph. The
+graph's seed overrides `random.episodeSeed` and survives `SetParams`. Leave `processKey` out of
+scene and bot files: BotScene names nodes `<bot>/<link>/<sensor>`, so two instances of one bot draw
 independently, while a shared explicit key would give them identical noise. Set an explicit key only
 to name a stream across graphs or code changes.
 
