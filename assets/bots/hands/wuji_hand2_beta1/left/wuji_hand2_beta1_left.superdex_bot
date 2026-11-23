@@ -1630,7 +1630,13 @@
   "links": [
     {
       "name": "link_00_mount",
-      "renderModel": "render/mount_render.glb"
+      "renderModel": "render/mount_render.glb",
+      "sensors": [
+        {
+          "name": "joint_encoder",
+          "type": "SENSOR_JOINT_ENCODER"
+        }
+      ]
     },
     {
       "boundaryElementType": "P1Q1",

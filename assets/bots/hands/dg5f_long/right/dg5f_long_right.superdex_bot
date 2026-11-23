@@ -845,6 +845,12 @@
       ],
       "name": "dg5f_link_mount",
       "renderModel": "render/dg5f_link_mount_render.glb",
+      "sensors": [
+        {
+          "name": "joint_encoder",
+          "type": "SENSOR_JOINT_ENCODER"
+        }
+      ],
       "shape": "collision/dg5f_link_mount_collision.mochi.h5"
     },
     {
