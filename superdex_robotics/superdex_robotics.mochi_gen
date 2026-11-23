@@ -1552,6 +1552,27 @@ class bots::SensorAggregateForce(bots::SensorBase) [no_init, no_destruct, no_ref
   fn GetParams() -> bots::SensorAggregateForceParams const& [const];
 }
 
+// @brief Leading-axis description for stacked sensor inputs.
+struct bots::SensorConcatParams [no_reflection] {
+  // @brief Name of the new leading axis.
+  String axisName;
+  // @brief Optional labels, one per input in input order.
+  DynamicArray<String> inputLabels;
+}
+
+// @brief Stack equally formatted inputs, holding each input's latest reading.
+class bots::SensorConcat(bots::SensorBase) [no_init, no_destruct, no_reflection] {
+  // @brief Canonical serialized sensor type identifier.
+  // @return Stable type identifier.
+  fn TypeName() -> StringView [static];
+  // @brief Get stacking parameters.
+  // @return Current parameters.
+  fn GetParams() -> bots::SensorConcatParams const& [const];
+  // @brief Capture steps of the input rows in the latest output.
+  // @return Borrowed capture steps, in input order.
+  fn GetInputCaptureSteps() -> Span<int64 const> [const];
+}
+
 // @brief Base class for robot actuators.
 //
 // Mirrors @ref ControllerBase and @ref SensorBase: derives from ComponentBase for common lifecycle

@@ -133,6 +133,8 @@ void mochi::DeclareSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module
   registry.StoreClass(nb::class_<superdex::robotics::SensorLinkVertexForce, superdex::robotics::SensorBase>(m_bots, "SensorLinkVertexForce", "Vertex-force point cloud derived from one link's ordered contact vertices.", nb::never_destruct()));
   registry.StoreClass(nb::class_<superdex::robotics::SensorAggregateForceParams>(m_bots, "SensorAggregateForceParams", "This sensor has no configurable parameters; this struct shows where developers\ncan add them."));
   registry.StoreClass(nb::class_<superdex::robotics::SensorAggregateForce, superdex::robotics::SensorBase>(m_bots, "SensorAggregateForce", "Sum one per-vertex force input into a three-axis force.", nb::never_destruct()));
+  registry.StoreClass(nb::class_<superdex::robotics::SensorConcatParams>(m_bots, "SensorConcatParams", "Leading-axis description for stacked sensor inputs."));
+  registry.StoreClass(nb::class_<superdex::robotics::SensorConcat, superdex::robotics::SensorBase>(m_bots, "SensorConcat", "Stack equally formatted inputs, holding each input's latest reading.", nb::never_destruct()));
   registry.StoreClass(nb::class_<superdex::robotics::ActuatorBase, superdex::robotics::ComponentBase>(m_bots, "ActuatorBase", "Base class for robot actuators.\n\nMirrors :class:`~superdex.robotics.ControllerBase` and\n:class:`~superdex.robotics.SensorBase`: derives from ComponentBase for common\nlifecycle (validity, actor, destroy). No concrete actuators exist yet; this\nestablishes the contract early so the first actuator follows the same shape as\ncontrollers and sensors.\n\nRegistration contract (a ``RoboticsContext::RegisterActuator<T>`` template lands\nwith the first concrete actuator, mirroring RegisterController/RegisterSensor):\nevery actuator must declare static constexpr std::string_view TypeName() {\nreturn \"...\"; } (used by the registration templates and for the generated Python\ntype_name() binding), implement std::string_view GetTypeName() const override;\n// returns TypeName() and provide a uniform constructor ActuatorX(Actor* actor,\nstd::string_view paramArgs, Error& error); that loads its own params from the\npath or inline JSON. An (Actor*, Params const&, Error&) overload is recommended\nfor programmatic / non-filesystem construction.\n\nTeardown contract (mirrors :class:`~superdex.robotics.ControllerBase` /\n:class:`~superdex.robotics.SensorBase`):\n:meth:`~superdex.robotics.ComponentBase.get_actor` resolves the live actor on\ndemand and yields None once the owning mochi Scene (or the actor) is gone, so an\nactuator that outlives its Scene (Scene destroyed before the RoboticsContext)\nsees :meth:`~superdex.robotics.ComponentBase.get_actor` == None in its\ndestructor. Any concrete actuator whose destructor releases actor-held resources\nmust therefore guard on GetActor() != None (or, for context-owned resources,\nresolve via GetContext()) so teardown never dereferences a dangling Actor*.", nb::never_destruct()));
   registry.StoreClass(nb::class_<superdex::robotics::SensorCamera, superdex::robotics::SensorBase>(m_bots, "SensorCamera", "Camera sensor runtime object. Stores intrinsics/extrinsics for use by renderers\n(UE, etc.). No ComputeSignal — cameras don't produce data in the mochi physics\nloop; renderers query GetParams() to configure their camera actors.", nb::never_destruct()));
   registry.StoreClass(nb::class_<superdex::robotics::SensorSeedRectMap, superdex::robotics::SensorBase>(m_bots, "SensorSeedRectMap", "Image-like force map derived from one vertex-force point-cloud sensor.", nb::never_destruct()));
@@ -1894,6 +1896,37 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def("get_params", &superdex::robotics::SensorAggregateForce::GetParams
       , "Get aggregation parameters.\n\nReturns:\n    Current parameters."
       , nb::rv_policy::reference
+    )
+  ;
+
+  registry.GetClass<superdex::robotics::SensorConcatParams>()
+    .def("__init__", [](superdex::robotics::SensorConcatParams* self, nb::object axis_name, nb::object input_labels) {
+      superdex::robotics::SensorConcatParams result{};
+      result.axisName = nb::cast<mochi::DynamicString>(axis_name);
+      result.inputLabels = nb::cast<mochi::DynamicArray<mochi::DynamicString>>(input_labels);
+      new (self) superdex::robotics::SensorConcatParams(std::move(result));
+    }
+      , nb::kw_only()
+      , nb::arg("axis_name") = superdex::robotics::SensorConcatParams{}.axisName
+      , nb::arg("input_labels").sig("...") = superdex::robotics::SensorConcatParams{}.inputLabels
+    )
+    .def(nb::init<>())
+    .def("__copy__", [](superdex::robotics::SensorConcatParams const& self) { return superdex::robotics::SensorConcatParams(self); })
+    .def("__deepcopy__", [](superdex::robotics::SensorConcatParams const& self, nb::dict) { return superdex::robotics::SensorConcatParams(self); })
+    .def_rw("axis_name", &superdex::robotics::SensorConcatParams::axisName, "Name of the new leading axis.")
+    .def_prop_rw("input_labels", [](superdex::robotics::SensorConcatParams& self) -> mochi::DynamicArray<mochi::DynamicString>& { return self.inputLabels; }, [](superdex::robotics::SensorConcatParams& self, nb::object val) { self.inputLabels = nb::cast<mochi::DynamicArray<mochi::DynamicString>>(val); }, "Optional labels, one per input in input order.")
+  ;
+
+  registry.GetClass<superdex::robotics::SensorConcat, superdex::robotics::SensorBase>()
+    .def_static("type_name", &superdex::robotics::SensorConcat::TypeName
+      , "Canonical serialized sensor type identifier.\n\nReturns:\n    Stable type identifier."
+    )
+    .def("get_params", &superdex::robotics::SensorConcat::GetParams
+      , "Get stacking parameters.\n\nReturns:\n    Current parameters."
+      , nb::rv_policy::reference
+    )
+    .def("get_input_capture_steps", &superdex::robotics::SensorConcat::GetInputCaptureSteps
+      , "Capture steps of the input rows in the latest output.\n\nReturns:\n    Borrowed capture steps, in input order."
     )
   ;
 

@@ -39,6 +39,7 @@
 #include <superdex_robotics/sensors/sensor_articulated_joint_wrench.h>
 #include <superdex_robotics/sensors/sensor_base.h>
 #include <superdex_robotics/sensors/sensor_camera.h>
+#include <superdex_robotics/sensors/sensor_concat.h>
 #include <superdex_robotics/sensors/sensor_delay_line.h>
 #include <superdex_robotics/sensors/sensor_function.h>
 #include <superdex_robotics/sensors/sensor_gaussian_noise.h>

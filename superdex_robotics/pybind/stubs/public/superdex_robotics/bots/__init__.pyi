@@ -3070,6 +3070,47 @@ class SensorAggregateForce(SensorBase):
             Current parameters.
         """
 
+class SensorConcatParams:
+    """Leading-axis description for stacked sensor inputs."""
+    axis_name: str
+    """Name of the new leading axis."""
+    @property
+    def input_labels(self) -> mochi_physics.DynamicArrayString:
+        """Optional labels, one per input in input order."""
+    @input_labels.setter
+    def input_labels(self, value: mochi_physics.ArrayLikeString) -> None: ...
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(
+        self,
+        *,
+        axis_name: str = ...,
+        input_labels: mochi_physics.ArrayLikeString = ...,
+    ) -> None: ...
+
+class SensorConcat(SensorBase):
+    """Stack equally formatted inputs, holding each input's latest reading."""
+    @staticmethod
+    def type_name() -> str:
+        """Canonical serialized sensor type identifier.
+
+        Returns:
+            Stable type identifier.
+        """
+    def get_params(self) -> SensorConcatParams:
+        """Get stacking parameters.
+
+        Returns:
+            Current parameters.
+        """
+    def get_input_capture_steps(self) -> mochi_physics.SpanConstInt64:
+        """Capture steps of the input rows in the latest output.
+
+        Returns:
+            Borrowed capture steps, in input order.
+        """
+
 class ActuatorBase(ComponentBase):
     """Base class for robot actuators.
 

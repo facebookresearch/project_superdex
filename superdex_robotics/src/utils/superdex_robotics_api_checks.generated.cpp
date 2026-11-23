@@ -29,6 +29,7 @@
 #include <superdex_robotics/sensors/sensor_aggregate_force.h>
 #include <superdex_robotics/sensors/sensor_articulated_joint_wrench.h>
 #include <superdex_robotics/sensors/sensor_camera.h>
+#include <superdex_robotics/sensors/sensor_concat.h>
 #include <superdex_robotics/sensors/sensor_delay_line.h>
 #include <superdex_robotics/sensors/sensor_function.h>
 #include <superdex_robotics/sensors/sensor_gaussian_noise.h>
@@ -485,6 +486,15 @@ static_assert(std::is_same_v<decltype(&superdex::robotics::SensorLinkVertexForce
 // class superdex::robotics::SensorAggregateForce
 static_assert(std::is_same_v<decltype(&superdex::robotics::SensorAggregateForce::TypeName), std::string_view (*)()>, "\n  ERROR: Function superdex::robotics::SensorAggregateForce::TypeName is out-of-sync with C++.\n  Please check the function signature, then run mochi_gen_py to regenerate this file.\n");
 static_assert(std::is_same_v<decltype(&superdex::robotics::SensorAggregateForce::GetParams), superdex::robotics::SensorAggregateForceParams const& (superdex::robotics::SensorAggregateForce::*)() const>, "\n  ERROR: Function superdex::robotics::SensorAggregateForce::GetParams is out-of-sync with C++.\n  Please check the function signature, then run mochi_gen_py to regenerate this file.\n");
+
+// struct superdex::robotics::SensorConcatParams
+static_assert(std::is_same_v<decltype(&superdex::robotics::SensorConcatParams::axisName), mochi::DynamicString superdex::robotics::SensorConcatParams::*>, "\n  ERROR: Field superdex::robotics::SensorConcatParams::axisName is out-of-sync with C++ definition.\n  Please check the field type, then run mochi_gen_py to regenerate this file.\n");
+static_assert(std::is_same_v<decltype(&superdex::robotics::SensorConcatParams::inputLabels), mochi::DynamicArray<mochi::DynamicString> superdex::robotics::SensorConcatParams::*>, "\n  ERROR: Field superdex::robotics::SensorConcatParams::inputLabels is out-of-sync with C++ definition.\n  Please check the field type, then run mochi_gen_py to regenerate this file.\n");
+
+// class superdex::robotics::SensorConcat
+static_assert(std::is_same_v<decltype(&superdex::robotics::SensorConcat::TypeName), std::string_view (*)()>, "\n  ERROR: Function superdex::robotics::SensorConcat::TypeName is out-of-sync with C++.\n  Please check the function signature, then run mochi_gen_py to regenerate this file.\n");
+static_assert(std::is_same_v<decltype(&superdex::robotics::SensorConcat::GetParams), superdex::robotics::SensorConcatParams const& (superdex::robotics::SensorConcat::*)() const>, "\n  ERROR: Function superdex::robotics::SensorConcat::GetParams is out-of-sync with C++.\n  Please check the function signature, then run mochi_gen_py to regenerate this file.\n");
+static_assert(std::is_same_v<decltype(&superdex::robotics::SensorConcat::GetInputCaptureSteps), mochi::Span<int64_t const> (superdex::robotics::SensorConcat::*)() const>, "\n  ERROR: Function superdex::robotics::SensorConcat::GetInputCaptureSteps is out-of-sync with C++.\n  Please check the function signature, then run mochi_gen_py to regenerate this file.\n");
 
 // class superdex::robotics::SensorCamera
 static_assert(std::is_same_v<decltype(&superdex::robotics::SensorCamera::TypeName), std::string_view (*)()>, "\n  ERROR: Function superdex::robotics::SensorCamera::TypeName is out-of-sync with C++.\n  Please check the function signature, then run mochi_gen_py to regenerate this file.\n");

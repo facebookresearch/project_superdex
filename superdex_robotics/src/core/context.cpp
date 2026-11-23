@@ -21,6 +21,7 @@
 #include <superdex_robotics/sensors/sensor_aggregate_force.h>
 #include <superdex_robotics/sensors/sensor_articulated_joint_wrench.h>
 #include <superdex_robotics/sensors/sensor_camera.h>
+#include <superdex_robotics/sensors/sensor_concat.h>
 #include <superdex_robotics/sensors/sensor_delay_line.h>
 #include <superdex_robotics/sensors/sensor_gaussian_noise.h>
 #include <superdex_robotics/sensors/sensor_joint_encoder.h>
@@ -694,6 +695,7 @@ void RoboticsContext::RegisterBuiltinTypes() {
   RegisterController<ControllerBasicJscPd>();
   RegisterController<ControllerBasicOscPd>();
   RegisterSensor<SensorAggregateForce>();
+  RegisterSensor<SensorConcat>();
   RegisterSensor<SensorArticulatedJointWrench>();
   RegisterSensor<SensorCamera>();
   RegisterSensor<SensorDelayLine>();

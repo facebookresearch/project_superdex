@@ -101,6 +101,7 @@ namespace mochi {
     DefDynamicArray<mochi::prefab::DeformableNodeToRigidConstraintPrefab>(m_prefab, "DynamicArrayDeformableNodeToRigidConstraintPrefab");
     DefDynamicArray<mochi::experimental::ExperimentalSoftActorParams>(m_experimental, "DynamicArrayExperimentalSoftActorParams");
     DefDynamicArray<int>(m, "DynamicArrayInt");
+    DefDynamicArray<int64_t>(m, "DynamicArrayInt64");
     DefDynamicArray<mochi::prefab::JointRotationRangeConstraintPrefab>(m_prefab, "DynamicArrayJointRotationRangeConstraintPrefab");
     DefDynamicArray<mochi::prefab::JointRotationTrackingConstraintPrefab>(m_prefab, "DynamicArrayJointRotationTrackingConstraintPrefab");
     DefDynamicArray<mochi::prefab::LayerContactEntry>(m_prefab, "DynamicArrayLayerContactEntry");
@@ -141,6 +142,7 @@ namespace mochi {
     DefSpan<mochi::ContactPoint const>(m, "SpanConstContactPoint");
     DefSpan<mochi::experimental::ControlType const>(m_experimental, "SpanConstControlType");
     DefSpan<int const>(m, "SpanConstInt");
+    DefSpan<int64_t const>(m, "SpanConstInt64");
     DefSpan<mochi::NodeContactForce const>(m, "SpanConstNodeContactForce");
     DefSpan<mochi::PoseConstraintInfo const>(m, "SpanConstPoseConstraintInfo");
     DefSpan<mochi::real const>(m, "SpanConstReal");

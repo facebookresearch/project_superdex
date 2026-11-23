@@ -1473,6 +1473,47 @@
 /// @return Current parameters.
 ///
 
+/// @struct superdex::robotics::SensorConcatParams
+///
+/// @brief Leading-axis description for stacked sensor inputs.
+///
+
+/// @var superdex::robotics::SensorConcatParams::axisName
+///
+/// @brief Name of the new leading axis.
+///
+
+/// @var superdex::robotics::SensorConcatParams::inputLabels
+///
+/// @brief Optional labels, one per input in input order.
+///
+
+/// @class superdex::robotics::SensorConcat
+///
+/// @brief Stack equally formatted inputs, holding each input's latest reading.
+///
+
+/// @fn std::string_view superdex::robotics::SensorConcat::TypeName()
+///
+/// @brief Canonical serialized sensor type identifier.
+///
+/// @return Stable type identifier.
+///
+
+/// @fn SensorConcatParams const& superdex::robotics::SensorConcat::GetParams() const
+///
+/// @brief Get stacking parameters.
+///
+/// @return Current parameters.
+///
+
+/// @fn Span<int64_t const> superdex::robotics::SensorConcat::GetInputCaptureSteps() const
+///
+/// @brief Capture steps of the input rows in the latest output.
+///
+/// @return Borrowed capture steps, in input order.
+///
+
 /// @class superdex::robotics::ActuatorBase
 ///
 /// @brief Base class for robot actuators.

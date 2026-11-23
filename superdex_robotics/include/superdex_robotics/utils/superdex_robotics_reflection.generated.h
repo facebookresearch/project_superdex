@@ -26,6 +26,7 @@
 #include <superdex_robotics/controllers/controller_basic_osc_pd.h>
 #include <superdex_robotics/controllers/controller_mochi_articulated_pose.h>
 #include <superdex_robotics/sensors/sensor_camera.h>
+#include <superdex_robotics/sensors/sensor_concat.h>
 #include <superdex_robotics/sensors/sensor_delay_line.h>
 #include <superdex_robotics/sensors/sensor_outlier_injection.h>
 #include <superdex_robotics/sensors/sensor_seed_rect_map.h>
