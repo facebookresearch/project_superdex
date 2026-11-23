@@ -18,7 +18,11 @@
 #include <mochi_core/utils/debug.h>
 #include <mochi_core/utils/defer.h>
 #include <mochi_physics/mochi_physics.h>
+#include <superdex_robotics/sensors/sensor_delay_line.h>
+#include <superdex_robotics/sensors/sensor_gaussian_noise.h>
 #include <superdex_robotics/sensors/sensor_graph.h>
+#include <superdex_robotics/sensors/sensor_outlier_injection.h>
+#include <superdex_robotics/sensors/sensor_uniform_noise.h>
 #include <superdex_robotics/superdex_robotics.h>
 
 #include <gtest/gtest.h>
@@ -26,9 +30,11 @@
 #include <array>
 #include <cstddef>
 #include <cstdio>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 #if MOCHI_ASSERT_ENABLED && MOCHI_PHYSICS_DYNAMICALLY_LINKED
 #if MOCHI_PLATFORM_WINDOWS
@@ -76,6 +82,7 @@ class CountingSource final : public SensorBase {
  public:
   explicit CountingSource(Error& error, int* destructionCount = nullptr)
       : SensorBase(error), _destructionCount(destructionCount) {}
+  using SensorBase::GraphName;
 
   ~CountingSource() override {
     if (_destructionCount != nullptr) {
@@ -117,6 +124,7 @@ class CountingSource final : public SensorBase {
 class DoubleSensor final : public SensorBase {
  public:
   explicit DoubleSensor(Error& error) : SensorBase(error) {}
+  using SensorBase::GraphName;
 
   [[nodiscard]] std::string_view GetTypeName() const override {
     return "TEST_DOUBLE";
@@ -290,6 +298,23 @@ TEST(SensorGraphTest, EnumeratesEnabledNodesSeparatelyFromActiveDependencies) {
   ASSERT_EQ(enabled.size(), 1);
   EXPECT_EQ(enabled[0].sensor, &unused);
   EXPECT_FALSE(enabled[0].handle.IsValid());
+}
+
+TEST(SensorGraphTest, NamesEveryNodeOfTheBuiltGraphInAddedOrder) {
+  CountingSource source(mochi::test::ExpectOK{});
+  CountingSource unused(mochi::test::ExpectOK{});
+  DoubleSensor derived(mochi::test::ExpectOK{});
+  SensorGraph graph;
+  graph.Add("source", &source, mochi::test::ExpectOK{});
+  graph.Add("unused", &unused, mochi::test::ExpectOK{});
+  graph.Add("derived", &derived, Inputs({"source"}), mochi::test::ExpectOK{});
+  graph.SetOutputEnabled("derived", true, mochi::test::ExpectOK{});
+  DynamicArray<std::string_view> const unbuilt = graph.GetNodeNames();
+
+  graph.Build({}, mochi::test::ExpectOK{});
+
+  EXPECT_TRUE(unbuilt.empty());
+  EXPECT_EQ(graph.GetNodeNames(), (DynamicArray<std::string_view>{"source", "unused", "derived"}));
 }
 
 TEST(SensorGraphTest, FindOnlyReturnsNodesFromTheCurrentBuild) {
@@ -534,6 +559,60 @@ TEST(SensorGraphTest, FailedExtensionPreservesTheOriginalGraphAndClock) {
   EXPECT_EQ(existing.stepCalls, 2);
 }
 
+// A sensor keeps its node's name only while the graph holds it: Remove, a failed Extend and Clear
+// take the name back, so a removed keyless random node keeps no stale stream key.
+TEST(SensorGraphTest, GraphNameLastsWhileAGraphHoldsTheSensor) {
+  CountingSource kept(mochi::test::ExpectOK{});
+  CountingSource removed(mochi::test::ExpectOK{});
+  DoubleSensor rejected(mochi::test::ExpectOK{});
+  SensorHandle const removedHandle{1};
+  SensorGraph graph;
+  graph.Add("kept", &kept, mochi::test::ExpectOK{});
+  graph.Add("removed", removedHandle, &removed, {}, mochi::test::ExpectOK{});
+  graph.SetOutputEnabled("kept", true, mochi::test::ExpectOK{});
+  graph.Build({}, mochi::test::ExpectOK{});
+  std::string const named{removed.GraphName()};
+  auto const missing = Inputs({"missing"});
+  std::array<SensorGraphNode, 1> const nodes{
+      SensorGraphNode{.name = "rejected", .sensor = &rejected, .inputs = missing}};
+  std::array<SensorHandle, 1> const removedHandles{removedHandle};
+
+  graph.Remove(removedHandles, mochi::test::ExpectOK{});
+  graph.Extend(nodes, Inputs({"rejected"}), mochi::test::ExpectNotOK{});
+  std::string const keptBeforeClear{kept.GraphName()};
+  graph.Clear();
+
+  EXPECT_EQ(named, "removed");
+  EXPECT_EQ(removed.GraphName(), "");
+  EXPECT_EQ(rejected.GraphName(), "");
+  EXPECT_EQ(keptBeforeClear, "kept");
+  EXPECT_EQ(kept.GraphName(), "");
+}
+
+TEST(SensorGraphTest, ASharedSensorKeepsTheFirstGraphsNameUntilTheLastGraphReleasesIt) {
+  CountingSource shared(mochi::test::ExpectOK{});
+  CountingSource other(mochi::test::ExpectOK{});
+  SensorGraph first;
+  SensorGraph second;
+  first.Add("first", &shared, mochi::test::ExpectOK{});
+  second.Add("other", &other, mochi::test::ExpectOK{});
+  second.Build({}, mochi::test::ExpectOK{});
+  auto const missing = Inputs({"missing"});
+  std::array<SensorGraphNode, 1> const rejected{
+      SensorGraphNode{.name = "rejected", .sensor = &shared, .inputs = missing}};
+
+  second.Extend(rejected, Inputs({"rejected"}), mochi::test::ExpectNotOK{});
+  std::string const afterFailedExtend{shared.GraphName()};
+  second.Add("second", &shared, mochi::test::ExpectOK{});
+  second.Clear();
+  std::string const afterSecond{shared.GraphName()};
+  first.Clear();
+
+  EXPECT_EQ(afterFailedExtend, "first");
+  EXPECT_EQ(afterSecond, "first");
+  EXPECT_EQ(shared.GraphName(), "");
+}
+
 TEST(SensorGraphTest, AddRejectsInvalidNamesWithoutChangingTheBuiltGraph) {
   Error error;
   CountingSource source(error);
@@ -671,6 +750,70 @@ TEST(SensorGraphTest, ResetClearsPublicationBeforeSensorHook) {
   EXPECT_EQ(source.Latest().captureStep, -1);
   EXPECT_FLOAT_EQ(source.Latest().Floats()[0], 0.0F);
   EXPECT_EQ(source.resetCalls, 1);
+}
+
+TEST(SensorGraphTest, LastStepIsTheLastSuccessfulStepUntilReset) {
+  CountingSource source(mochi::test::ExpectOK{});
+  SensorGraph graph;
+  graph.Add("source", &source, mochi::test::ExpectOK{});
+  graph.SetOutputEnabled("source", true, mochi::test::ExpectOK{});
+  graph.Build({}, mochi::test::ExpectOK{});
+  bool const steppedBeforeFirstStep = graph.LastStep().has_value();
+
+  graph.Step({.t = 0.01, .dt = 0.01, .step = 1}, mochi::test::ExpectOK{});
+  graph.Step({.t = 0.0, .dt = 0.01, .step = 0}, mochi::test::ExpectNotOK{});
+  std::optional<StepTime> const last = graph.LastStep();
+  graph.Reset(mochi::test::ExpectOK{});
+
+  EXPECT_FALSE(steppedBeforeFirstStep);
+  ASSERT_TRUE(last.has_value());
+  EXPECT_EQ(last->step, 1);
+  EXPECT_DOUBLE_EQ(last->t, 0.01);
+  EXPECT_DOUBLE_EQ(last->dt, 0.01);
+  EXPECT_FALSE(graph.LastStep().has_value());
+}
+
+// One call seeds every node that draws random streams: a chain of them draws as when each node's
+// params carry the seed.
+TEST(SensorGraphTest, SetEpisodeSeedSeedsEveryRandomNode) {
+  uint64_t constexpr kSeed = 0xfedcba9876543210ULL;
+  // The noisy, jittered chain's output at each of 50 steps of 1 kHz, its nodes' params seeded with
+  // `paramsSeed` and the graph with `graphSeed`, if any.
+  auto const outputs = [](uint64_t paramsSeed, std::optional<uint64_t> graphSeed) {
+    SensorRandomParams const random{.episodeSeed = paramsSeed};
+    CountingSource source(mochi::test::ExpectOK{});
+    SensorUniformNoise uniform(
+        {.low = -1.0, .high = 1.0, .random = random}, mochi::test::ExpectOK{});
+    SensorGaussianNoise gaussian({.std = {0.5}, .random = random}, mochi::test::ExpectOK{});
+    SensorOutlierInjection outliers(
+        {.probability = 0.5, .range = 3.0, .random = random}, mochi::test::ExpectOK{});
+    SensorDelayLine delay(
+        {.delayMs = 1.0, .jitterMs = 8.0, .random = random}, mochi::test::ExpectOK{});
+    SensorGraph graph;
+    graph.Add("source", &source, mochi::test::ExpectOK{});
+    graph.Add("uniform", &uniform, Inputs({"source"}), mochi::test::ExpectOK{});
+    graph.Add("gaussian", &gaussian, Inputs({"uniform"}), mochi::test::ExpectOK{});
+    graph.Add("outliers", &outliers, Inputs({"gaussian"}), mochi::test::ExpectOK{});
+    graph.Add("delay", &delay, Inputs({"outliers"}), mochi::test::ExpectOK{});
+    graph.SetOutputEnabled("delay", true, mochi::test::ExpectOK{});
+    graph.Build({}, mochi::test::ExpectOK{});
+    if (graphSeed) {
+      graph.SetEpisodeSeed(*graphSeed);
+    }
+    graph.Reset(mochi::test::ExpectOK{});
+    std::vector<float> values;
+    for (int64_t step = 1; step <= 50; ++step) {
+      double const t = static_cast<double>(step) / 1000.0;
+      graph.Step({.t = t, .dt = 0.001, .step = step}, mochi::test::ExpectOK{});
+      values.push_back(delay.Latest().Floats()[0]);
+    }
+    return values;
+  };
+
+  std::vector<float> const seeded = outputs(0, kSeed);
+
+  EXPECT_EQ(seeded, outputs(kSeed, std::nullopt));
+  EXPECT_NE(seeded, outputs(0, std::nullopt));
 }
 
 TEST(SensorGraphTest, ResetSupportsExplicitNoOpSensorHook) {

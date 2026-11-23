@@ -96,12 +96,12 @@ TEST(SensorGaussianNoiseTest, ZeroNoisePreservesCaptureAndHeldSamples) {
   StepNoise(graph, 1, error);
   EXPECT_EQ(noise.Latest().captureStep, -1);
   StepNoise(graph, 2, error);
-  EXPECT_FLOAT_EQ(noise.Latest().Floats()[0], 2.0F);
+  EXPECT_EQ(noise.Latest().Floats()[0], 2.0F);
   EXPECT_EQ(noise.Latest().captureStep, source.Latest().captureStep);
   EXPECT_EQ(noise.Latest().captureTime, source.Latest().captureTime);
   StepNoise(graph, 3, error);
   EXPECT_EQ(noise.Latest().publishedStep, 2);
-  EXPECT_FLOAT_EQ(noise.Latest().Floats()[0], 2.0F);
+  EXPECT_EQ(noise.Latest().Floats()[0], 2.0F);
 }
 
 TEST(SensorGaussianNoiseTest, UsesFullWidthSeedAndAcquisitionIndex) {
@@ -116,12 +116,30 @@ TEST(SensorGaussianNoiseTest, UsesFullWidthSeedAndAcquisitionIndex) {
   StepNoise(graph, 2, error);
   uint64_t state = Derive(seed, "index/noise", 2);
   auto const expected = static_cast<float>(2.0 + 0.25 * Normal(state));
-  EXPECT_FLOAT_EQ(noise.Latest().Floats()[0], expected);
+  EXPECT_EQ(noise.Latest().Floats()[0], expected);
   StepNoise(graph, 3, error);
-  EXPECT_FLOAT_EQ(noise.Latest().Floats()[0], expected);
+  EXPECT_EQ(noise.Latest().Floats()[0], expected);
   graph.Reset(error);
   StepNoise(graph, 2, error);
-  EXPECT_FLOAT_EQ(noise.Latest().Floats()[0], expected);
+  EXPECT_EQ(noise.Latest().Floats()[0], expected);
+}
+
+// Pins the stream: these values change only if Derive or Normal does.
+TEST(SensorGaussianNoiseTest, DrawsPinnedValues) {
+  CadencedScalarSource source(2, mochi::test::ExpectOK{});
+  SensorGaussianNoise noise(
+      {.std = {0.25}, .random = {.episodeSeed = 7, .processKey = "golden"}},
+      mochi::test::ExpectOK{});
+  SensorGraph graph;
+  BuildNoiseGraph(graph, source, noise, mochi::test::ExpectOK{});
+
+  StepNoise(graph, 2, mochi::test::ExpectOK{});
+  float const first = noise.Latest().Floats()[0];
+  StepNoise(graph, 4, mochi::test::ExpectOK{});
+  float const second = noise.Latest().Floats()[0];
+
+  EXPECT_EQ(first, 1.92022848F);
+  EXPECT_EQ(second, 4.17378521F);
 }
 
 TEST(SensorGaussianNoiseTest, InvalidTypedParamsDoNotChangeEffectiveConfiguration) {
@@ -142,6 +160,45 @@ TEST(SensorGaussianNoiseTest, InvalidTypedParamsDoNotChangeEffectiveConfiguratio
   noise.SetParams(params, wrongShape);
   EXPECT_FALSE(wrongShape.IsOK());
   EXPECT_EQ(noise.GetParams().std.size(), 1);
+}
+
+// Without a process key, the noise draws from its graph name with the seed its graph sets.
+TEST(SensorGaussianNoiseTest, AnEmptyProcessKeyDrawsFromTheGraphName) {
+  Error error;
+  CadencedScalarSource source(2, error);
+  SensorGaussianNoise noise({.std = {0.25}}, error);
+  SensorGraph graph;
+  BuildNoiseGraph(graph, source, noise, error);
+  graph.SetEpisodeSeed(5);
+  ASSERT_TRUE(error.IsOK()) << error.ToString();
+  StepNoise(graph, 2, error);
+  uint64_t state = Derive(5, "noise", 2);
+  EXPECT_EQ(noise.Latest().Floats()[0], static_cast<float>(2.0 + 0.25 * Normal(state)));
+}
+
+// The graph's seed overrides the params' and survives SetParams: the two calls' order draws the
+// same value, which differs from seed 0's.
+TEST(SensorGaussianNoiseTest, TheGraphsSeedSurvivesSetParams) {
+  SensorGaussianNoise::Params const params{.std = {0.25}};
+  auto const draw = [&params](uint64_t seed, bool seedFirst) {
+    CadencedScalarSource source(2, mochi::test::ExpectOK{});
+    SensorGaussianNoise noise(params, mochi::test::ExpectOK{});
+    SensorGraph graph;
+    BuildNoiseGraph(graph, source, noise, mochi::test::ExpectOK{});
+    if (seedFirst) {
+      graph.SetEpisodeSeed(seed);
+    }
+    noise.SetParams(params, mochi::test::ExpectOK{});
+    if (!seedFirst) {
+      graph.SetEpisodeSeed(seed);
+    }
+    graph.Reset(mochi::test::ExpectOK{});
+    StepNoise(graph, 2, mochi::test::ExpectOK{});
+    return noise.Latest().Floats()[0];
+  };
+
+  EXPECT_EQ(draw(7, true), draw(7, false));
+  EXPECT_NE(draw(7, true), draw(0, true));
 }
 
 class RepublishedCapture final : public SensorBase {
@@ -185,7 +242,7 @@ TEST(SensorGaussianNoiseTest, RepublishedCaptureDrawsAgainPerPublication) {
   uint64_t state = Derive(0, "noise", 2);
   EXPECT_EQ(noise.Latest().captureStep, 1);
   EXPECT_EQ(noise.Latest().publishedStep, 2);
-  EXPECT_FLOAT_EQ(noise.Latest().Floats()[0], static_cast<float>(1.0 + 0.25 * Normal(state)));
+  EXPECT_EQ(noise.Latest().Floats()[0], static_cast<float>(1.0 + 0.25 * Normal(state)));
 }
 
 TEST(SensorGaussianNoiseTest, ReflectedParamsPreserveFullWidthSeedsAndSigma) {
@@ -257,7 +314,7 @@ TEST(SensorGaussianNoiseTest, Native120HzCapturesAreIndependentOfPolicyReads) {
         if (policyPeriod == 12) {
           reference.push_back(noise.Latest().Floats()[0]);
         } else {
-          EXPECT_FLOAT_EQ(noise.Latest().Floats()[0], reference[captures]);
+          EXPECT_EQ(noise.Latest().Floats()[0], reference[captures]);
         }
         ++captures;
       }

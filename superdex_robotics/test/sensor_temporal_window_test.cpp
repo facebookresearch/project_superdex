@@ -153,4 +153,41 @@ TEST(SensorTemporalWindowTest, PartialWindowIsRightAlignedAndResetClearsRows) {
       (DynamicArray<int64_t>{-1, -1, -1}));
 }
 
+// With padWithFirst, rows before the first sample since a reset repeat it, its capture included.
+TEST(SensorTemporalWindowTest, PadWithFirstRepeatsTheFirstSample) {
+  PairSource source(mochi::test::ExpectOK{});
+  SensorTemporalWindow buffer({.historyLength = 3, .padWithFirst = true}, mochi::test::ExpectOK{});
+  SensorGraph graph;
+  graph.Add("source", &source, mochi::test::ExpectOK{});
+  DynamicArray<DynamicString> const input = {"source"};
+  graph.Add("history", &buffer, input, mochi::test::ExpectOK{});
+  graph.SetOutputEnabled("history", true, mochi::test::ExpectOK{});
+  graph.Build({}, mochi::test::ExpectOK{});
+  graph.Reset(mochi::test::ExpectOK{});
+
+  graph.Step({.t = 0.01, .dt = 0.01, .step = 1}, mochi::test::ExpectOK{});
+  DynamicArray<float> const first(buffer.Latest().Floats().begin(), buffer.Latest().Floats().end());
+  graph.Step({.t = 0.02, .dt = 0.01, .step = 2}, mochi::test::ExpectOK{});
+
+  EXPECT_EQ(first, (DynamicArray<float>{1.0F, 1.5F, 1.0F, 1.5F, 1.0F, 1.5F}));
+  EXPECT_EQ(
+      DynamicArray<float>(buffer.Latest().Floats().begin(), buffer.Latest().Floats().end()),
+      (DynamicArray<float>{1.0F, 1.5F, 1.0F, 1.5F, 2.0F, 2.5F}));
+  EXPECT_EQ(
+      DynamicArray<int64_t>(buffer.GetRowCaptureSteps().begin(), buffer.GetRowCaptureSteps().end()),
+      (DynamicArray<int64_t>{1, 1, 2}));
+  EXPECT_EQ(
+      DynamicArray<double>(buffer.GetRowCaptureTimes().begin(), buffer.GetRowCaptureTimes().end()),
+      (DynamicArray<double>{0.01, 0.01, 0.02}));
+  EXPECT_EQ(
+      DynamicArray<int64_t>(
+          buffer.GetRowPublishedSteps().begin(), buffer.GetRowPublishedSteps().end()),
+      (DynamicArray<int64_t>{1, 1, 2}));
+  graph.Reset(mochi::test::ExpectOK{});
+  graph.Step({.t = 0.03, .dt = 0.01, .step = 3}, mochi::test::ExpectOK{});
+  EXPECT_EQ(
+      DynamicArray<float>(buffer.Latest().Floats().begin(), buffer.Latest().Floats().end()),
+      (DynamicArray<float>{3.0F, 3.5F, 3.0F, 3.5F, 3.0F, 3.5F}));
+}
+
 } // namespace

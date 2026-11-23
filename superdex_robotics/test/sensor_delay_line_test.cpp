@@ -15,11 +15,18 @@
  */
 
 #include <mochi_core/test/mochi_test_helpers.h>
+#include <superdex_robotics/core/context.h>
+#include <superdex_robotics/domain_randomization/derive.h>
+#include <superdex_robotics/domain_randomization/random.h>
 #include <superdex_robotics/sensors/sensor_delay_line.h>
 #include <superdex_robotics/sensors/sensor_graph.h>
 #include <superdex_robotics/sensors/sensor_temporal_window.h>
+#include <superdex_robotics/superdex_robotics.h>
 
+#include <algorithm>
 #include <array>
+#include <string>
+#include <vector>
 
 using namespace mochi;
 using namespace superdex::robotics;
@@ -117,13 +124,14 @@ TEST(SensorDelayLineTest, ZeroDelayPreservesValuesAndIdentity) {
   ASSERT_TRUE(error.IsOK()) << error.ToString();
 
   Step(graph, 7, error);
+  SensorSample const input = source.Latest();
   SensorSample const sample = delay.Latest();
   ASSERT_EQ(sample.Floats().size(), 1);
-  EXPECT_FLOAT_EQ(sample.Floats()[0], 7.0F);
+  EXPECT_EQ(sample.Floats()[0], 7.0F);
   EXPECT_EQ(sample.captureStep, 7);
-  EXPECT_DOUBLE_EQ(sample.captureTime, 0.035);
+  EXPECT_EQ(sample.captureTime, input.captureTime);
   EXPECT_EQ(sample.publishedStep, 7);
-  EXPECT_DOUBLE_EQ(sample.publishedTime, 0.035);
+  EXPECT_EQ(sample.publishedTime, input.publishedTime);
 }
 
 // The first sample after a reset publishes at once and holds until the second is due, 10 ms after
@@ -369,6 +377,40 @@ TEST(SensorDelayLineTest, DrainsEveryDueSampleAfterAGraphTimeJump) {
   EXPECT_EQ(delay.Latest().publishedStep, 100);
 }
 
+// A delay of whole steps stays whole all episode on a clock that sums its steps, as BotScene's
+// does, even written in rounded milliseconds.
+TEST(SensorDelayLineTest, WholeStepDelaysStayWholeOnAnAccumulatedClock) {
+  struct Case {
+    double hz = 0.0;
+    double delayMs = 0.0;
+    int64_t steps = 0;
+  };
+  std::array<Case, 3> constexpr kCases = {{
+      {.hz = 200.0, .delayMs = 50.0, .steps = 10},
+      {.hz = 240.0, .delayMs = 16.666667, .steps = 4},
+      {.hz = 500.0, .delayMs = 10.0, .steps = 5},
+  }};
+  for (Case const& c : kCases) {
+    Error error;
+    CadencedScalarSource source(1, error);
+    SensorDelayLine delay({.delayMs = c.delayMs}, error);
+    SensorGraph graph;
+    AddDelayGraph(graph, source, delay);
+    graph.Build({}, error);
+    graph.Reset(error);
+    ASSERT_TRUE(error.IsOK()) << error.ToString();
+
+    double t = 0.0;
+    int64_t late = 0;
+    for (int64_t step = 1; step <= 300; ++step) {
+      t += 1.0 / c.hz;
+      ASSERT_TRUE(graph.Step({.t = t, .dt = 1.0 / c.hz, .step = step}, error)) << error.ToString();
+      late += delay.Latest().captureStep != std::max<int64_t>(step - c.steps, 1) ? 1 : 0;
+    }
+    EXPECT_EQ(late, 0) << c.hz << " Hz";
+  }
+}
+
 TEST(SensorDelayLineTest, TypedParamsRejectInvalidValuesWithoutMutation) {
   Error error;
   SensorDelayLine delay({.delayMs = 8.0}, error);
@@ -379,6 +421,48 @@ TEST(SensorDelayLineTest, TypedParamsRejectInvalidValuesWithoutMutation) {
   delay.SetParams({.delayMs = -1.0}, rejected);
   EXPECT_FALSE(rejected.IsOK());
   EXPECT_DOUBLE_EQ(delay.GetParams().delayMs, 12.0);
+}
+
+// The delay and the jitter must fit in the buffer, at construction and in SetParams.
+TEST(SensorDelayLineTest, DelayAndJitterMustFitInBufferMs) {
+  SensorDelayLine tooLong(
+      {.delayMs = 30.0, .bufferMs = 40.0, .jitterMs = 11.0}, test::ExpectNotOK{});
+  SensorDelayLine delay({.delayMs = 30.0, .bufferMs = 40.0, .jitterMs = 10.0}, test::ExpectOK{});
+
+  delay.SetParams({.delayMs = 35.0, .bufferMs = 40.0, .jitterMs = 6.0}, test::ExpectNotOK{});
+
+  EXPECT_DOUBLE_EQ(delay.GetParams().delayMs, 30.0);
+  EXPECT_DOUBLE_EQ(delay.GetParams().jitterMs, 10.0);
+}
+
+// The ring holds ceil(bufferMs * rate estimate / 1000) + 1 samples, the input's estimate or else
+// the fallback: for 20 ms at 200 Hz, five. The input publishes at 1 kHz, so after the first sample,
+// which publishes at once, five samples fill the ring and a sixth overflows.
+TEST(SensorDelayLineTest, CapacityFollowsBufferMsAndTheRateEstimate) {
+  for (bool const fallback : {false, true}) {
+    Error error;
+    CadencedScalarSource source(1, error, fallback ? 0.0 : 200.0);
+    SensorDelayLine delay(
+        {.delayMs = 20.0,
+         .bufferMs = 20.0,
+         .bufferAssumedFrequencyHzEstimate = fallback ? 200.0 : 1.0},
+        error);
+    SensorGraph graph;
+    AddDelayGraph(graph, source, delay);
+    graph.Build({}, error);
+    graph.Reset(error);
+    ASSERT_TRUE(error.IsOK()) << error.ToString();
+
+    for (int64_t step = 1; step <= 6; ++step) {
+      double const t = static_cast<double>(step) / 1000.0;
+      ASSERT_TRUE(graph.Step({.t = t, .dt = 0.001, .step = step}, error))
+          << error.ToString() << " at step " << step;
+    }
+    Error overflow;
+    EXPECT_FALSE(graph.Step({.t = 0.007, .dt = 0.001, .step = 7}, overflow));
+    EXPECT_NE(overflow.ToString().find("exceeded its configured capacity"), std::string::npos)
+        << overflow.ToString();
+  }
 }
 
 TEST(SensorDelayLineTest, EpisodeParamsTakeEffectAfterExplicitReset) {
@@ -403,6 +487,86 @@ TEST(SensorDelayLineTest, EpisodeParamsTakeEffectAfterExplicitReset) {
   delay.SetParams({.delayMs = 20.0, .bufferMs = 0.0}, rejected);
   EXPECT_FALSE(rejected.IsOK());
   EXPECT_DOUBLE_EQ(delay.GetParams().delayMs, 0.0);
+}
+
+TEST(SensorDelayLineTest, JitterNeedsNoProcessKey) {
+  SensorDelayLine unkeyed({.jitterMs = 1.0}, test::ExpectOK{});
+}
+
+// Each sample waits delayMs plus its own draw from (episode seed, process key, capture step) but
+// never overtakes an earlier sample.
+TEST(SensorDelayLineTest, JitterDelaysEachSampleByItsDrawInOrder) {
+  Error error;
+  CadencedScalarSource source(1, error);
+  SensorDelayLine delay(
+      {.delayMs = 4.0, .jitterMs = 8.0, .random = {.episodeSeed = 3, .processKey = "camera"}},
+      error);
+  SensorGraph graph;
+  AddDelayGraph(graph, source, delay);
+  graph.Build({}, error);
+  graph.Reset(error);
+  ASSERT_TRUE(error.IsOK()) << error.ToString();
+
+  // Sample k is captured and published at step k, t = k / 1024 s. Sample 1 publishes at once; a
+  // later sample publishes once its due time and those of the samples before it have passed.
+  int64_t constexpr kSteps = 200;
+  std::array<double, kSteps + 1> releases{};
+  bool held = false;
+  for (int64_t k = 2; k <= kSteps; ++k) {
+    uint64_t state = Derive(3, "camera", static_cast<uint64_t>(k));
+    double const due = static_cast<double>(k) / 1024.0 + (4.0 + Uniform(state, 0.0, 8.0)) / 1000.0;
+    releases[k] = std::max(due, releases[k - 1]);
+    held = held || due < releases[k - 1];
+  }
+  EXPECT_TRUE(held) << "no sample waited behind an earlier one";
+
+  int64_t expected = 1;
+  for (int64_t step = 1; step <= kSteps; ++step) {
+    double const t = static_cast<double>(step) / 1024.0;
+    ASSERT_TRUE(graph.Step({.t = t, .dt = 1.0 / 1024.0, .step = step}, error)) << error.ToString();
+    while (expected < step && releases[expected + 1] <= t) {
+      ++expected;
+    }
+    EXPECT_EQ(delay.Latest().captureStep, expected) << "step " << step;
+  }
+}
+
+// The graph's seed overrides the params' and survives SetParams: the two calls' order jitters the
+// samples alike, otherwise than seed 0.
+TEST(SensorDelayLineTest, TheGraphsSeedSurvivesSetParams) {
+  SensorDelayLine::Params const params{.delayMs = 4.0, .jitterMs = 8.0};
+  // The capture step published at each of 200 steps of 1024 Hz.
+  auto const published = [&params](uint64_t seed, bool seedFirst) {
+    CadencedScalarSource source(1, test::ExpectOK{});
+    SensorDelayLine delay(params, test::ExpectOK{});
+    SensorGraph graph;
+    AddDelayGraph(graph, source, delay);
+    graph.Build({}, test::ExpectOK{});
+    if (seedFirst) {
+      graph.SetEpisodeSeed(seed);
+    }
+    delay.SetParams(params, test::ExpectOK{});
+    if (!seedFirst) {
+      graph.SetEpisodeSeed(seed);
+    }
+    graph.Reset(test::ExpectOK{});
+    std::vector<int64_t> captures;
+    for (int64_t step = 1; step <= 200; ++step) {
+      double const t = static_cast<double>(step) / 1024.0;
+      graph.Step({.t = t, .dt = 1.0 / 1024.0, .step = step}, test::ExpectOK{});
+      captures.push_back(delay.Latest().captureStep);
+    }
+    return captures;
+  };
+
+  EXPECT_EQ(published(7, true), published(7, false));
+  EXPECT_NE(published(7, true), published(0, true));
+}
+
+TEST(SensorDelayLineTest, SceneAndBotFilesCanDeclareIt) {
+  RoboticsContext* const context = CreateRoboticsContext();
+  EXPECT_TRUE(context->IsSensorTypeRegistered(SensorDelayLine::TypeName()));
+  DestroyRoboticsContext(context);
 }
 
 } // namespace
