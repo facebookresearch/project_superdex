@@ -764,7 +764,12 @@ TEST(IKRecordingClipTest, FileAndLayoutSizeCapsFailBeforeConstructingUnboundedCl
   layout.WriteRaw(State(), metadata);
   layout.Reject("num_dofs");
 }
-TEST(IKRecordingClipTest, LoadsUserSceneRecordingAndReadsBackNativeQAndRootForEachInputBot) {
+// Opt-in check against one local Unreal scene recording, which is not checked in. The expected
+// row count and times below belong to that recording. Run with --gtest_also_run_disabled_tests
+// and set SUPERDEX_TEST_INPUT_RRD and SUPERDEX_TEST_INPUT_BOT.
+TEST(
+    IKRecordingClipTest,
+    DISABLED_LoadsUserSceneRecordingAndReadsBackNativeQAndRootForEachInputBot) {
   auto const* path = std::getenv("SUPERDEX_TEST_INPUT_RRD");
   auto const* inputBotPath = std::getenv("SUPERDEX_TEST_INPUT_BOT");
   if (!path || !inputBotPath) {
