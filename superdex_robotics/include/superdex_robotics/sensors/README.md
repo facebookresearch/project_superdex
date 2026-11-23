@@ -1,10 +1,8 @@
 # Sensor graphs
 
-This README covers **SensorGraph Stack 1 (diffs 1–6)**: synchronous numeric sources, transforms,
-formats, graph execution and recording hooks. **Stack 2 (diffs 1–14)** extends that foundation with
-acquisition and publication timing, noise and delay, concrete recording and replay, additional
-sensor models and domain randomization. **Beyond Stack 2** are asynchronous execution,
-GPU-rendered observations and camera samples. The examples below use Stack 1 sensors.
+SensorGraph provides synchronous numeric CPU observations with separate capture and
+publication timestamps. Each sensor publishes one fixed-shape Float32 tensor.
+Public callers construct and step the graph programmatically.
 
 [`SensorBase`](./sensor_base.h) is the common interface for numeric observation sources and nodes
 that transform other sensor outputs. [`SensorGraph`](./sensor_graph.h) connects them into a directed
@@ -85,8 +83,8 @@ for (int64_t step = 1; step <= 20; ++step) {
 
 The source output is `[N, 3]`, with vertex positions and normals in metadata. The map uses that
 spatial metadata and publishes `[64, 64, 3]`. Only `force_map` is selected as an output;
-`surface_forces` runs as its dependency. Contact-based sources require a supported integration
-method; see the [integration notes](./internal/README.md#botscene-physics-integration).
+`surface_forces` runs as its dependency. Contact-based sources require an integration
+method that supports their queries.
 
 ## Available sensors
 
@@ -104,22 +102,14 @@ Matching shape alone does not establish compatible units, frames or row identiti
 | [`SensorSeedV1MLP`](./sensor_seed_v1_mlp.h) | Contact acquisition and an optional MLP response model | `[3]` |
 | [`SensorAggregateForce`](./sensor_aggregate_force.h) | Sum a borrowed vertex-force input | `[3]` |
 | [`SensorSeedRectMap`](./sensor_seed_rect_map.h) | CPU force map from a vertex-force input and its spatial metadata | `[H, W, 3]` |
+| [`SensorDelayLine`](./sensor_delay_line.h) | Fixed delay measured from upstream publication | Same as input |
+| [`SensorTemporalWindow`](./sensor_temporal_window.h) | Oldest-first history of upstream publications | `[historyLength, ...input shape]` |
 
 Joint wrench rows omit joints whose child link is welded to the world through an entirely static
 ancestry. Check the source headers for these restrictions before choosing an observation layout.
 
 SEED V1 uses raw contact force when the model is bypassed or no weights are loaded. Supply the
 weights to obtain the learned response; an output sample alone does not confirm that inference ran.
-
-### Internal sensors
-
-These implementations are in `internal/` and are not part of the OSS export:
-
-| Sensor | Purpose | Output shape |
-|--------|---------|--------------|
-| [`SensorAggregateForce`](./internal/sensor_aggregate_force.h) | Sum a vertex-force input | `[3]` |
-| [`SensorAggregateWrench`](./internal/sensor_aggregate_wrench.h) | Sum forces and moments using vertex and interaction metadata | `[6]` |
-| [`SensorMitsumiMms101V1`](./internal/sensor_mitsumi_mms101_v1.h) | Mitsumi contact-based wrench observation | `[6]` |
 
 ## Samples, formats and capture identity
 
@@ -154,12 +144,14 @@ Its flat storage does not restrict the tensor rank.
 ### Capture identity
 
 `StepTime` supplies simulation or hardware time: `t` and `dt` in seconds, and an integer `step`.
-The sample fields used by Stack 1 consumers are:
+Capture and publication have separate identities:
 
 ```cpp
 // Excerpt from SensorSample.
 int64_t captureStep;
 double captureTime;
+int64_t publishedStep;
+double publishedTime;
 void const* data;
 int64_t elementCount;
 
@@ -172,8 +164,19 @@ its derived force map retain the same capture timestamp. Reading the map again d
 new data or recompute it.
 
 `captureStep == -1` means no sample has been published. Check it before consuming values;
-allocated output storage alone does not establish a valid observation. Stack 2 adds a separate
-publication identity to describe when a transformed or delayed sample becomes available.
+allocated output storage alone does not establish a valid observation. `publishedStep` and
+`publishedTime` identify when this sensor made that capture available. For example, a capture at
+1.000 s passed through a 50 ms delay retains `captureTime = 1.000` and receives
+`publishedTime = 1.050` on the first graph step at or after its due time.
+
+`SensorDelayLine` measures its configured `delayMs` from the upstream publication, preserving the
+original capture identity. Configure `bufferMs` to cover the delay; storage is sized once from the
+input's publication-frequency estimate, or `bufferAssumedFrequencyHzEstimate` when unavailable.
+An underestimated capacity reports an error rather than discarding a sample silently.
+
+`SensorTemporalWindow` prepends an oldest-first history axis. During startup or after reset, some
+rows are empty; their row capture/publication steps are `-1`. Use the row timestamp getters when
+interpreting a partially filled window or samples with different acquisition times.
 
 An environment can advance physics to settle its initial state during reset. Its policy step
 counter can therefore still be zero when the sensor graph has already published samples. Policy
@@ -270,8 +273,8 @@ and timestamped samples. `ConfigureRecording()` declares sensor metadata and add
 `Record()` writes the latest sample and any sensor-specific sidecars. Storage, encoding and
 persistence belong to the sink. A graph step does not itself invoke these recording hooks.
 
-Stack 1 provides these hooks. The concrete graph recorder, recording/replay integration and
-episode randomization belong to Stack 2.
+These hooks do not supply a concrete recorder or replay backend. Those integrations are separate
+from the R2 sensor additions.
 
 ## Creating sensors
 
@@ -321,23 +324,20 @@ SensorFunction mirror(
 
 ## Bot-relative inputs
 
-A bot file can refer to another sensor on the same link with `./force`, or one on another
-link of the same bot with `../front_pad/force`. `BotScene` resolves these inputs once, using
-the scene's bot instance name, into complete `bot/link/sensor` graph names. The same bot file
-can therefore be instantiated under different scene names without editing its input paths.
+The planned combined scene structure resolves bot-relative inputs such as `./force` and
+`../front_pad/force` into complete `bot/link/sensor` graph names. This declarative integration
+is future work; public callers currently supply graph names programmatically.
 Scene-owned sensors use complete names. Other relative path shapes are rejected; missing
 inputs and cycles fail graph construction. Graph node declarations own their input-name strings.
 
 ## Release scope and integration
 
-Stack 1 supports synchronous numeric CPU observations, including image-like tactile tensors.
-Asynchronous execution, GPU-rendered observations and camera samples are beyond Stack 2.
-[`SensorCamera`](./sensor_camera.h) does not yet produce graph image observations.
+SensorGraph supports synchronous numeric CPU observations, including image-like tactile tensors.
+Camera image samples, asynchronous graph execution and GPU processing are future work.
 
-The initial OSS release supports separate bots and physics scenes. Declarative graph construction
-through the combined scene workflow and its automatic post-physics acquisition callback are
-internal integrations; see the [internal integration notes](./internal/README.md). Public callers
-construct and step the graph programmatically as shown above.
+Public callers advance physics and then step their graph explicitly, as shown above. A combined
+scene structure with declarative sensors and automatic acquisition is future work. All graph
+operations and borrowed sample reads must remain serialized by the caller.
 
 Some sensors retain specialized `ComputeSignal()` methods for compatibility. Deriving from
 `SensorBase` alone does not make an existing implementation usable in a graph; unsupported graph
