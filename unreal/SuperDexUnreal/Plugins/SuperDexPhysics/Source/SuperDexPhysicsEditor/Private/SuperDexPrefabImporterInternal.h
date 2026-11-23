@@ -34,8 +34,8 @@ FString ResolvePrefabPath(
 
 mochi::prefab::ScenePrefab LoadPrefab(const FString& SourcePath, bool& bOutSuccess);
 
-// Where a rigid or soft actor's component sits in the actor's frame: Mochi bakes the actor's scale,
-// then the shape offset, into the shape.
+// Where a rigid, soft or rod actor's component sits in the actor's frame: Mochi bakes the actor's
+// scale, then the shape offset, into the shape.
 template <typename TActorPrefab>
 FTransform GetShapeToActor(const TActorPrefab& Actor, const FMochiToUnrealConverter& M2U) {
   return FTransform(

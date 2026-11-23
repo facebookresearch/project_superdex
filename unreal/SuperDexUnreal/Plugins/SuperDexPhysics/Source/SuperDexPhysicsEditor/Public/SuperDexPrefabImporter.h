@@ -29,16 +29,17 @@ class UMochiArticulation;
 class UMochiContactParams;
 class UMochiMaterialParams;
 class UMochiModel;
+class UMochiRodMaterialParams;
 class USceneComponent;
 class UStaticMesh;
 class UWorld;
 
 // Imports .superdex_prefab, .mochi_prefab and .mochi_scene files authored in SuperDex Studio into
-// USuperDexPrefab assets and the assets generated from them: render meshes, Mochi models, contact
-// and material params, articulations, and either a Blueprint with a component per Mochi actor or a
-// Map with an actor per Mochi actor plus the prefab's scene settings. Nested prefabs are imported
-// recursively as their own USuperDexPrefab Blueprints, each in a subfolder of the folder of the
-// prefab that nests it, and placed as child actor components or actors.
+// USuperDexPrefab assets and the assets generated from them: render meshes, Mochi models, contact,
+// material and rod material params, articulations, and either a Blueprint with a component per
+// Mochi actor or a Map with an actor per Mochi actor plus the prefab's scene settings. Nested
+// prefabs are imported recursively as their own USuperDexPrefab Blueprints, each in a subfolder of
+// the folder of the prefab that nests it, and placed as child actor components or actors.
 class SUPERDEXPHYSICSEDITOR_API FSuperDexPrefabImporter {
  public:
   // Where generated actors are added: a Blueprint's construction script or a map. Everything
@@ -122,6 +123,7 @@ class SUPERDEXPHYSICSEDITOR_API FSuperDexPrefabImporter {
     TArray<FString> GeneratedAssetPaths;
     TArray<UMochiContactParams*> ContactParams;
     TArray<UMochiMaterialParams*> MaterialParams;
+    TArray<UMochiRodMaterialParams*> RodMaterialParams;
     // Generated asset name to what it was generated from, to keep same-named sources from
     // overwriting each other.
     TMap<FString, FString> AssetSources;
@@ -179,6 +181,11 @@ class SUPERDEXPHYSICSEDITOR_API FSuperDexPrefabImporter {
       FPrefabContext& Context,
       FOutput& Output,
       const mochi::prefab::SoftActorPrefab& Actor,
+      const FString& ActorName);
+  void AddRodActor(
+      FPrefabContext& Context,
+      FOutput& Output,
+      const mochi::prefab::RodActorPrefab& Actor,
       const FString& ActorName);
   void AddArticulatedActor(
       FPrefabContext& Context,

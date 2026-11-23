@@ -100,6 +100,12 @@ class FConstraintActorFinder {
         return appendComponent(name);
       }
     }
+    for (const auto& actor : In.actors.rod) {
+      if (bLast && ToFString(actor.name) == name) {
+        OutActor.ShapeToActor = GetShapeToActor(actor, M2U);
+        return appendComponent(name);
+      }
+    }
     for (const auto& actor : In.actors.articulated) {
       if (ToFString(actor.name) != name || Index < Segments.Num() - 2) {
         continue;
@@ -161,6 +167,9 @@ class FConstraintActorFinder {
     for (const auto& actor : In.actors.soft) {
       add(ToFString(actor.name));
     }
+    for (const auto& actor : In.actors.rod) {
+      add(ToFString(actor.name));
+    }
     for (const auto& actor : In.actors.articulated) {
       add(ToFString(actor.name));
     }
@@ -209,7 +218,7 @@ void FSuperDexPrefabImporter::AddConstraints(FPrefabContext& Context, FOutput& O
     return false;
   };
   // A position [m] in a prefab actor's frame, in the frame of the component it was imported as
-  // [cm]. A rigid or soft component sits at the actor's shape frame, scale included; a link frame
+  // [cm]. A rigid, soft or rod component sits at the actor's shape frame, scale included; a link
   // carries the articulation's scale, which Mochi applies to constraint positions too.
   auto localPosition = [&](const FConstraintActor& Actor, const mochi::Real3& Position) {
     const FVector position = M2U.TranslationToUnreal(Position);
