@@ -49,7 +49,7 @@ struct FNominalPhalanx {
   ESuperDexBone_OXR Bone;
   double Length;
 };
-constexpr FNominalPhalanx kNominalPhalanges[] = {
+constexpr FNominalPhalanx NominalPhalanges[] = {
     {ESuperDexBone_OXR::ThumbProximal, 0.0325129},
     {ESuperDexBone_OXR::ThumbDistal, 0.0337931},
     {ESuperDexBone_OXR::ThumbTip, 0.0246213},
@@ -68,7 +68,7 @@ constexpr FNominalPhalanx kNominalPhalanges[] = {
 };
 
 // Bots are shown in Unreal at 1 cm per Unreal unit (kUnrealCentimetersSpace).
-constexpr double kBotUnitsPerMeter = 100.0;
+constexpr double BotUnitsPerMeter = 100.0;
 
 /* C: maps an OpenXR joint frame, as UE's OpenXR plugin reports it, to the imported bone frame. */
 const FQuat& GetJointToBoneRotation() {
@@ -87,14 +87,14 @@ double USuperDexOpenXRPoseSource::EstimateHandScale(TConstArrayView<FVector> Key
   check(KeypointLocations.Num() == EHandKeypointCount);
   double Tracked = 0.0;
   double Nominal = 0.0;
-  for (const FNominalPhalanx& Phalanx : kNominalPhalanges) {
+  for (const FNominalPhalanx& Phalanx : NominalPhalanges) {
     const ESuperDexBone_OXR Parent = kSuperDexBoneParents_OXR[static_cast<int32>(Phalanx.Bone)];
     Tracked += FVector::Dist(
         KeypointLocations[GetXrHandJointOfBone_OXR(Phalanx.Bone)],
         KeypointLocations[GetXrHandJointOfBone_OXR(Parent)]);
     Nominal += Phalanx.Length;
   }
-  const double Scale = Tracked / (Nominal * kBotUnitsPerMeter);
+  const double Scale = Tracked / (Nominal * BotUnitsPerMeter);
   return FMath::IsFinite(Scale) && Scale > UE_KINDA_SMALL_NUMBER ? Scale : 1.0;
 }
 

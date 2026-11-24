@@ -235,7 +235,7 @@ bool FOpenXRPoseSourceHandScaleTest::RunTest(const FString& Parameters) {
   constexpr int32 NumBones = static_cast<int32>(ESuperDexBone_OXR::Count);
   static_assert(UE_ARRAY_COUNT(Offsets) == NumBones);
   // Unreal units per meter: the bots' 100, and a world shown at twice that size.
-  constexpr double kBotUnitsPerMeter = 100.0;
+  constexpr double BotUnitsPerMeter = 100.0;
   constexpr double WorldScales[] = {1.0, 2.0};
   FRandomStream Rng(11);
   for (const double WorldScale : WorldScales) {
@@ -258,7 +258,7 @@ bool FOpenXRPoseSourceHandScaleTest::RunTest(const FString& Parameters) {
           }
           const FVector& X = XrPositions[Bone];
           Locations[GetXrHandJointOfBone_OXR(static_cast<ESuperDexBone_OXR>(Bone))] =
-              FVector(-X.Z, X.X, X.Y) * kBotUnitsPerMeter * WorldScale;
+              FVector(-X.Z, X.X, X.Y) * BotUnitsPerMeter * WorldScale;
         }
         // The bot must match the hand as the world shows it.
         TestNearlyEqual(
