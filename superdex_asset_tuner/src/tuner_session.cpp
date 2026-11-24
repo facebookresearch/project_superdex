@@ -21,6 +21,7 @@
 
 #include <mochi_core/utils/constants.h>
 #include <mochi_core/utils/math_utils.h>
+#include <superdex_robotics/superdex_robotics.h>
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -29,6 +30,9 @@
 namespace superdex::tuner {
 
 namespace {
+
+// A Pose input: x y z, then qx qy qz qw, in the bot's root frame.
+constexpr size_t kPoseInputSize = 7;
 
 using mochi::Actor;
 using mochi::ActorType;
@@ -231,6 +235,22 @@ real DriveChannelValue(LoadSpec const& load, PathDriveMode mode) {
   return 0;
 }
 
+// Fails, naming them, if two enabled Controller Inputs drive one controller.
+bool CheckOneDriverPerController(Span<LoadSpec const> loads, std::string& outError) {
+  for (size_t i = 0; i < loads.size(); ++i) {
+    for (size_t j = 0; j < i; ++j) {
+      bool const both = loads[i].enabled && loads[j].enabled &&
+          loads[i].type == LoadType::ControllerInput &&
+          loads[j].type == LoadType::ControllerInput && loads[i].target == loads[j].target;
+      if (both) {
+        outError = "Loads '" + std::string(loads[j].name) + "' and '" + std::string(loads[i].name) +
+            "' both drive '" + std::string(loads[i].target) + "'.";
+        return false;
+      }
+    }
+  }
+  return true;
+}
 } // namespace
 
 int TunerSession::GetOrAddAccumulator(Actor const& actor) {
@@ -303,9 +323,194 @@ bool TunerSession::ResolveLoad(mochi::Scene& scene, LoadSpec const& load, std::s
     }
     case LoadType::PosePath:
       return ResolvePosePath(scene, load, resolved, outError);
+    case LoadType::ControllerInput:
+      return ResolveControllerInput(load, resolved, outError);
   }
   outError = "Unknown load type.";
   return false;
+}
+
+bool TunerSession::BindControllers(robotics::BotScene& bots, std::string& outError) {
+  for (details::FloatInputController const& found : details::FindFloatInputControllers(bots)) {
+    Actor* const robot = found.controller->GetActor();
+    _controllers.emplace_back();
+    BoundController& bound = _controllers.back();
+    bound.name = found.name;
+    bound.controller = found.controller;
+    bound.accumulator = GetOrAddAccumulator(*robot);
+    bound.input.resize(static_cast<size_t>(found.controller->GetInputSize()));
+    bound.efforts.resize(static_cast<size_t>(robot->GetNumDofs()));
+    bound.scratch.resize(bound.input.size());
+    mochi::Error error;
+    found.controller->GetCurrentInput(mochi::MakeSpan(bound.input), error);
+    if (!error.IsOK()) {
+      outError = "Controller '" + std::string(bound.name) + "': " + error.GetDescription();
+      return false;
+    }
+    bound.start = bound.input;
+  }
+  return true;
+}
+
+bool TunerSession::ResolveControllerInput(
+    LoadSpec const& load,
+    ResolvedLoad& resolved,
+    std::string& outError) {
+  DynamicArray<DynamicString> names;
+  for (BoundController const& bound : _controllers) {
+    names.push_back(bound.name);
+  }
+  resolved.controller = FindName(names, load.target);
+  if (resolved.controller < 0) {
+    outError = "No bot controller with a float input named '" + std::string(load.target) +
+        "'. Available: [" + JoinNames(names) + "]";
+    return false;
+  }
+  BoundController const& bound = _controllers[static_cast<size_t>(resolved.controller)];
+  robotics::ControllerBase const& controller = *bound.controller;
+  // Also called mid-run (UpdateLoads), so everything is rebuilt from the run's starting input.
+  DynamicArray<real> const& start = bound.start;
+  resolved.waypoints.clear();
+  resolved.inputIndices.clear();
+  resolved.inputKeys.clear();
+  if (controller.GetInputKind() == robotics::ControllerInputKind::Pose) {
+    if (load.waypoints.empty() || !load.inputKeys.empty() || !load.joints.empty()) {
+      outError = "'" + std::string(load.target) + "' takes a tool pose: give waypoints only.";
+      return false;
+    }
+    if (start.size() != kPoseInputSize) {
+      outError = "'" + std::string(load.target) + "' reports a pose input of " +
+          std::to_string(start.size()) + " values, not x y z qx qy qz qw.";
+      return false;
+    }
+    // The path starts at the tool's pose, so a first waypoint after t = 0 is approached from it.
+    if (load.waypoints.front().time > 0) {
+      PoseWaypoint first = load.waypoints.front();
+      first.time = 0;
+      first.position = Real3{start[0], start[1], start[2]};
+      first.rotation = mochi::Quaternion(start[3], start[4], start[5], start[6]).ToRotationVector();
+      resolved.waypoints.push_back(first);
+    }
+    resolved.waypoints.append(load.waypoints);
+    return true;
+  }
+  if (load.inputKeys.empty() || !load.waypoints.empty()) {
+    outError = "'" + std::string(load.target) + "' takes input values: give inputKeys only.";
+    return false;
+  }
+  if (load.joints.empty()) {
+    for (int i = 0; i < isize(start); ++i) {
+      resolved.inputIndices.push_back(i);
+    }
+  } else {
+    if (controller.GetInputKind() != robotics::ControllerInputKind::JointPositions) {
+      outError = "Only a joint-position input can name joints.";
+      return false;
+    }
+    mochi::ErrorLog error;
+    mochi::ArticulatedShapeInfo const info = controller.GetActor()->GetArticulatedShapeInfo(error);
+    Span<int const> const dofs = controller.GetControlledDofs();
+    for (DynamicString const& joint : load.joints) {
+      int const j = FindName(info.jointNames, joint);
+      int input = -1;
+      if (j >= 0 && info.dofInfo[static_cast<size_t>(j)].GetSize() == 1) {
+        auto const* const found =
+            std::find(dofs.begin(), dofs.end(), info.dofInfo[static_cast<size_t>(j)].offset);
+        input = found != dofs.end() ? static_cast<int>(found - dofs.begin()) : -1;
+      }
+      if (input < 0) {
+        outError = "'" + std::string(load.target) + "' does not drive a one-DoF joint named '" +
+            std::string(joint) + "'. Joints: [" + JoinNames(info.jointNames) + "]";
+        return false;
+      }
+      if (std::find(resolved.inputIndices.begin(), resolved.inputIndices.end(), input) !=
+          resolved.inputIndices.end()) {
+        outError = "'" + std::string(load.target) + "' lists joint '" + std::string(joint) +
+            "' more than once.";
+        return false;
+      }
+      resolved.inputIndices.push_back(input);
+    }
+  }
+  for (InputKey const& key : load.inputKeys) {
+    if (key.values.size() != resolved.inputIndices.size()) {
+      outError = "Each input key needs " + std::to_string(resolved.inputIndices.size()) +
+          " values (one per joint, or the whole input), not " + std::to_string(key.values.size()) +
+          ".";
+      return false;
+    }
+  }
+  if (load.inputKeys.front().time > 0) {
+    InputKey first = load.inputKeys.front();
+    first.time = 0;
+    for (size_t k = 0; k < resolved.inputIndices.size(); ++k) {
+      first.values[k] = start[static_cast<size_t>(resolved.inputIndices[k])];
+    }
+    resolved.inputKeys.push_back(first);
+  }
+  resolved.inputKeys.append(load.inputKeys);
+  return true;
+}
+
+void TunerSession::DriveControllerInput(
+    ResolvedLoad const& resolved,
+    AppliedLoad& applied,
+    double t) {
+  BoundController& bound = _controllers[static_cast<size_t>(resolved.controller)];
+  if (!resolved.waypoints.empty()) {
+    mochi::TransformRT const pose = EvaluatePosePath(resolved.waypoints, t);
+    Real3 const translation = pose.GetTranslation();
+    for (int i = 0; i < 3; ++i) {
+      bound.input[static_cast<size_t>(i)] = translation[i];
+    }
+    for (int i = 0; i < 4; ++i) {
+      bound.input[static_cast<size_t>(i) + 3] = pose.GetRotation().data[i];
+    }
+    if (Actor const* robot = bound.controller->GetActor()) {
+      applied.targetPose = robot->GetRootTransform() * pose;
+    }
+    return;
+  }
+  Span<real> const values{bound.scratch.data(), resolved.inputIndices.size()};
+  EvaluateInputKeys(resolved.inputKeys, t, values);
+  for (size_t k = 0; k < values.size(); ++k) {
+    bound.input[static_cast<size_t>(resolved.inputIndices[k])] = values[k];
+  }
+}
+
+void TunerSession::SampleControllerInput(
+    LoadSpec const& load,
+    ResolvedLoad const& resolved,
+    AppliedLoad& applied) {
+  BoundController& bound = _controllers[static_cast<size_t>(resolved.controller)];
+  Actor const* robot = bound.controller->GetActor();
+  if (robot == nullptr) {
+    return;
+  }
+  mochi::ErrorLog error;
+  bound.controller->GetCurrentInput(mochi::MakeSpan(bound.scratch), error);
+  applied.input = bound.scratch;
+  if (!load.enabled) {
+    return;
+  }
+  if (!resolved.waypoints.empty()) {
+    mochi::TransformRT const rootFromTool{
+        mochi::Quaternion(bound.scratch[3], bound.scratch[4], bound.scratch[5], bound.scratch[6]),
+        Real3{bound.scratch[0], bound.scratch[1], bound.scratch[2]}};
+    mochi::TransformRT const worldFromTool = robot->GetRootTransform() * rootFromTool;
+    applied.pointWorld = worldFromTool.GetTranslation();
+    applied.trackingError = mochi::Norm(applied.targetPose.GetTranslation() - applied.pointWorld);
+    applied.angleError =
+        mochi::Norm((applied.targetPose.GetRotation() * worldFromTool.GetRotation().GetConjugate())
+                        .ToRotationVector());
+    return;
+  }
+  applied.pointWorld = robot->GetRootTransform().GetTranslation();
+  for (int const index : resolved.inputIndices) {
+    auto const i = static_cast<size_t>(index);
+    applied.trackingError =
+        std::max(applied.trackingError, std::abs(bound.input[i] - bound.scratch[i]));
+  }
 }
 
 bool TunerSession::ResolvePosePath(
@@ -523,6 +728,22 @@ bool TunerSession::ResolveProbe(
       resolved.scratch.resize(static_cast<size_t>(part.articulated->GetNumDofs()), 0);
       return true;
     }
+    case ProbeKind::RelativePose: {
+      Actor* actor = FindBody(scene, target, outError);
+      if (actor == nullptr) {
+        return false;
+      }
+      Actor* frame = FindBody(scene, probe.frame, outError);
+      if (frame == nullptr) {
+        outError = "Frame: " + outError;
+        return false;
+      }
+      resolved.actor = actor->GetHandle();
+      resolved.frame = frame->GetHandle();
+      DynamicString const prefix = DynamicString(target) + ".in." + probe.frame;
+      AddChannels(prefix, {"pos.x", "pos.y", "pos.z", "rotvec.x", "rotvec.y", "rotvec.z"});
+      return true;
+    }
     case ProbeKind::SolverStats:
       AddChannels("solver", {"iters", "residual", "lineSearchIters", "convergence"});
       return true;
@@ -534,13 +755,26 @@ bool TunerSession::ResolveProbe(
   return false;
 }
 
-bool TunerSession::Bind(mochi::Scene& scene, TunerSpec const& spec, std::string& outError) {
+bool TunerSession::Bind(
+    mochi::Scene& scene,
+    TunerSpec const& spec,
+    std::string& outError,
+    robotics::BotScene* bots) {
   Unbind(scene);
+  if (bots != nullptr && !BindControllers(*bots, outError)) {
+    Unbind(scene);
+    return false;
+  }
   _loads = spec.loads;
   for (LoadSpec& load : _loads) {
     SortByTime(load);
   }
-  for (LoadSpec const& load : _loads) {
+  if (!CheckOneDriverPerController(_loads, outError)) {
+    Unbind(scene);
+    return false;
+  }
+  for (size_t i = 0; i < _loads.size(); ++i) {
+    LoadSpec const& load = _loads[i];
     if (!ResolveLoad(scene, load, outError)) {
       if (!load.enabled) {
         // A disabled load may point at something that cannot take loads (e.g. a body made static by
@@ -557,6 +791,8 @@ bool TunerSession::Bind(mochi::Scene& scene, TunerSpec const& spec, std::string&
     AddChannels(prefix, {"mag"});
     if (load.type == LoadType::PosePath) {
       AddChannels(prefix, {"error", "angleError", "drive"});
+    } else if (load.type == LoadType::ControllerInput) {
+      AddChannels(prefix, {"error", "angleError"});
     }
   }
   _appliedLoads.resize(_loads.size());
@@ -718,6 +954,8 @@ void TunerSession::Unbind(mochi::Scene& scene) {
   _probes.clear();
   _stops.clear();
   _channelNames.clear();
+  _controllers.clear();
+  _failure.clear();
   _time = 0.0;
 }
 
@@ -735,10 +973,28 @@ bool TunerSession::UpdateLoads(Span<LoadSpec const> loads, std::string& outError
         "effect on the next run.";
     return false;
   }
-  for (size_t i = 0; i < loads.size(); ++i) {
-    _loads[i] = loads[i];
-    SortByTime(_loads[i]);
+  if (!CheckOneDriverPerController(loads, outError)) {
+    return false;
   }
+  // A controller input drives from its resolved path or keys, so those are rebuilt; all of the
+  // update applies or none of it.
+  DynamicArray<LoadSpec> updated(loads.begin(), loads.end());
+  DynamicArray<ResolvedLoad> resolved = _resolvedLoads;
+  for (size_t i = 0; i < updated.size(); ++i) {
+    SortByTime(updated[i]);
+    if (updated[i].type == LoadType::ControllerInput &&
+        !ResolveControllerInput(updated[i], resolved[i], outError)) {
+      if (updated[i].enabled) {
+        outError = "Load '" + std::string(updated[i].name) + "': " + outError;
+        return false;
+      }
+      // As in Bind, a disabled load that does not resolve is never applied.
+      resolved[i] = {};
+      outError.clear();
+    }
+  }
+  _loads = std::move(updated);
+  _resolvedLoads = std::move(resolved);
   return true;
 }
 
@@ -753,6 +1009,13 @@ void TunerSession::OnPreStep(mochi::StepInfo const& info) {
     ResolvedLoad& resolved = _resolvedLoads[i];
     AppliedLoad& applied = _appliedLoads[i];
     applied = {};
+    if (load.type == LoadType::ControllerInput) {
+      if (load.enabled && resolved.controller >= 0) {
+        // Toward where the input is at the end of this step, as a pose path's drive pulls.
+        DriveControllerInput(resolved, applied, _time + info.timeStepSec);
+      }
+      continue;
+    }
     if (!resolved.body.IsValid()) {
       continue;
     }
@@ -816,7 +1079,42 @@ void TunerSession::OnPreStep(mochi::StepInfo const& info) {
         break;
       }
       case LoadType::PosePath:
-        break; // driven by its constraints above
+      case LoadType::ControllerInput:
+        break; // driven above
+    }
+  }
+
+  for (BoundController& bound : _controllers) {
+    mochi::Error controllerError;
+    bound.controller->ComputeOutputFromInput(
+        mochi::MakeConstSpan(bound.input),
+        static_cast<real>(info.timeStepSec),
+        mochi::MakeSpan(bound.efforts),
+        controllerError);
+    if (!controllerError.IsOK()) {
+      if (_failure.empty()) {
+        _failure =
+            "Controller '" + std::string(bound.name) + "': " + controllerError.GetDescription();
+      }
+      continue;
+    }
+    Span<real> const forces =
+        mochi::MakeSpan(_accumulators[static_cast<size_t>(bound.accumulator)].forces);
+    for (size_t d = 0; d < forces.size(); ++d) {
+      forces[d] += bound.efforts[d];
+    }
+  }
+  for (size_t i = 0; i < _loads.size(); ++i) {
+    ResolvedLoad const& resolved = _resolvedLoads[i];
+    if (_loads[i].type == LoadType::ControllerInput && resolved.controller >= 0) {
+      Span<real const> const efforts =
+          mochi::MakeConstSpan(_controllers[static_cast<size_t>(resolved.controller)].efforts);
+      real sumSq = 0;
+      for (real const effort : efforts) {
+        sumSq += effort * effort;
+      }
+      // A disabled load reads 0, as every other load does.
+      _appliedLoads[i].magnitude = _loads[i].enabled ? std::sqrt(sumSq) : real{0};
     }
   }
 
@@ -847,6 +1145,7 @@ void TunerSession::OnPostStep(mochi::StepInfo const& info, Sample& outSample) {
   mochi::Scene& scene = *info.scene;
   mochi::ErrorLog error;
   outSample.time = _time;
+  outSample.failure = DynamicString(_failure);
   outSample.values.clear();
   outSample.values.reserve(_channelNames.size());
   auto push3 = [&](Real3 const& v) {
@@ -857,14 +1156,21 @@ void TunerSession::OnPostStep(mochi::StepInfo const& info, Sample& outSample) {
   for (size_t i = 0; i < _appliedLoads.size(); ++i) {
     AppliedLoad& applied = _appliedLoads[i];
     bool const isPath = _loads[i].type == LoadType::PosePath;
+    bool const isInput = _loads[i].type == LoadType::ControllerInput;
     if (isPath && _resolvedLoads[i].body.IsValid()) {
       SamplePosePath(scene, _loads[i], _resolvedLoads[i], applied);
+    }
+    if (isInput && _resolvedLoads[i].controller >= 0) {
+      SampleControllerInput(_loads[i], _resolvedLoads[i], applied);
     }
     outSample.values.push_back(applied.magnitude);
     if (isPath) {
       outSample.values.push_back(applied.trackingError);
       outSample.values.push_back(applied.angleError);
       outSample.values.push_back(DriveChannelValue(_loads[i], applied.driveMode));
+    } else if (isInput) {
+      outSample.values.push_back(applied.trackingError);
+      outSample.values.push_back(applied.angleError);
     }
   }
   for (ResolvedProbe& probe : _probes) {
@@ -908,6 +1214,20 @@ void TunerSession::OnPostStep(mochi::StepInfo const& info, Sample& outSample) {
           outSample.values.push_back(probe.dofValues[i]);
           outSample.values.push_back(probe.scratch[static_cast<size_t>(probe.dofIndices[i])]);
         }
+        break;
+      }
+      case ProbeKind::RelativePose: {
+        Actor const* frame = scene.GetActor(probe.frame);
+        if (frame == nullptr) {
+          for (size_t c = 0; c < probe.numChannels; ++c) {
+            outSample.values.push_back(std::numeric_limits<real>::quiet_NaN());
+          }
+          break;
+        }
+        mochi::TransformRT const relative =
+            Invert(frame->GetRootTransform()) * actor->GetRootTransform();
+        push3(relative.GetTranslation());
+        push3(relative.GetRotation().ToRotationVector());
         break;
       }
       case ProbeKind::SolverStats: {

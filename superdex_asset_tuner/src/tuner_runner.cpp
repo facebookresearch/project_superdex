@@ -16,6 +16,7 @@
 
 #include "superdex_asset_tuner/tuner_runner.h"
 
+#include "superdex_asset_tuner/json_path.h"
 #include "superdex_asset_tuner/sim_recording.h"
 
 #include "scene_utils.h"
@@ -23,6 +24,9 @@
 #include <mochi_core/utils/basic_utils.h>
 #include <mochi_core/utils/defer.h>
 #include <mochi_physics/utils/mochi_prefab.h>
+#include <superdex_robotics/core/context.h>
+#include <superdex_robotics/scene/bot_scene.h>
+#include <superdex_robotics/superdex_robotics.h>
 
 #include <algorithm>
 #include <chrono>
@@ -101,6 +105,121 @@ void ApplyRunSpecOverrides(mochi::Scene& scene, RunSpec const& run) {
   }
 }
 
+bool ApplySolverOverrides(
+    mochi::Scene& scene,
+    Span<PrefabOverride const> overrides,
+    std::string& outError) {
+  if (overrides.empty()) {
+    return true;
+  }
+  picojson::value params;
+  if (!ParseJson(SReflect::ToJsonString(scene.GetSolverParams()), params, outError)) {
+    return false;
+  }
+  for (PrefabOverride const& entry : overrides) {
+    if (!SetJsonPathFromText(params, entry.path, entry.value, outError)) {
+      outError = "Solver override: " + outError;
+      return false;
+    }
+  }
+  mochi::SolverParams solver;
+  if (!SReflect::FromJsonString(
+          solver, params.serialize(), SReflect::DeserializeFlags::WarnIfExtraneousFields)) {
+    outError = "solverOverrides do not match SolverParams (unknown field or wrong type; see log).";
+    return false;
+  }
+  mochi::Error error;
+  scene.SetSolverParams(solver, error);
+  if (!error.IsOK()) {
+    outError = std::string("Solver override: ") + error.GetDescription();
+    return false;
+  }
+  return true;
+}
+
+TunerBots::~TunerBots() {
+  // The bots and controllers go first: they belong to the robotics context.
+  Reset();
+  if (_ownedRobotics != nullptr) {
+    robotics::DestroyRoboticsContext(_ownedRobotics);
+  }
+}
+
+void TunerBots::Reset() {
+  _bots.reset();
+}
+
+bool TunerBots::Load(
+    TunerSpec const& spec,
+    std::filesystem::path const& tunerFilePath,
+    mochi::Context* context,
+    mochi::Scene& scene,
+    std::string& outError,
+    robotics::RoboticsContext* robotics) {
+  Reset();
+  std::filesystem::path const path = ResolveScenePath(spec, tunerFilePath);
+  if (path.empty()) {
+    return true;
+  }
+  if (robotics == nullptr) {
+    if (_ownedRobotics == nullptr) {
+      _ownedRobotics = robotics::CreateRoboticsContext();
+    }
+    robotics = _ownedRobotics;
+  }
+  DynamicArray<std::string_view> names;
+  for (DynamicString const& bot : spec.bots) {
+    names.push_back(std::string_view(bot));
+  }
+  mochi::Error error;
+  _bots = std::make_unique<robotics::BotScene>(
+      names.empty()
+          ? robotics::LoadBotScene(&scene, path.string(), context, robotics, error)
+          : robotics::LoadBotScene(
+                &scene, path.string(), mochi::MakeConstSpan(names), context, robotics, error));
+  if (!error.IsOK()) {
+    _bots.reset();
+    outError = "Failed to load bot scene '" + path.string() + "': " + error.GetDescription();
+    return false;
+  }
+  return true;
+}
+
+bool BuildTunerScene(
+    TunerSpec const& spec,
+    std::filesystem::path const& tunerFilePath,
+    mochi::Context* context,
+    mochi::Scene& scene,
+    TunerBots& outBots,
+    std::optional<real>& outGroundHeight,
+    DynamicArray<mochi::Actor*>& outPrefabActors,
+    std::string& outError) {
+  if (!CheckPrefabOrScene(spec, outError)) {
+    return false;
+  }
+  PrepareScene(scene);
+  if (!outBots.Load(spec, tunerFilePath, context, scene, outError)) {
+    return false;
+  }
+  outPrefabActors.clear();
+  if (!spec.prefab.empty()) {
+    mochi::prefab::ScenePrefab prefab;
+    if (!LoadTunerPrefab(spec, tunerFilePath, context, prefab, outError)) {
+      return false;
+    }
+    mochi::Error error;
+    mochi::prefab::AddToSceneResult const added = mochi::prefab::AddToScene(prefab, &scene, error);
+    if (!error.IsOK()) {
+      outError = std::string("Failed to add prefab to scene: ") + error.GetDescription();
+      return false;
+    }
+    outPrefabActors.assign(added.actors.begin(), added.actors.end());
+  }
+  outGroundHeight = AddGroundPlane(scene, spec.run, mochi::MakeConstSpan(outPrefabActors));
+  ApplyRunSpecOverrides(scene, spec.run);
+  return ApplySolverOverrides(scene, mochi::MakeConstSpan(spec.solverOverrides), outError);
+}
+
 bool RunTuner(
     TunerSpec const& spec,
     std::filesystem::path const& tunerFilePath,
@@ -119,31 +238,43 @@ bool RunTuner(
   mochi::Scene* scene = context->CreateScene("superdex_asset_tuner");
   MOCHI_DEFER(context->DestroyScene(scene));
 
-  PrepareScene(*scene);
-  mochi::prefab::ScenePrefab prefab;
-  if (!LoadTunerPrefab(spec, tunerFilePath, context, prefab, outError)) {
-    return false;
-  }
-  mochi::Error error;
-  mochi::prefab::AddToSceneResult const added = mochi::prefab::AddToScene(prefab, scene, error);
-  if (!error.IsOK()) {
-    outError = std::string("Failed to add prefab to scene: ") + error.GetDescription();
+  TunerBots bots;
+  std::optional<real> groundHeight;
+  DynamicArray<mochi::Actor*> prefabActors;
+  if (!BuildTunerScene(
+          spec, tunerFilePath, context, *scene, bots, groundHeight, prefabActors, outError)) {
     return false;
   }
   // The resolved spec records the ground height actually used, so rerunning it reproduces this run
   // even if the automatic height would change (e.g. after the prefab is edited).
   TunerSpec resolved = spec;
-  if (std::optional<real> const groundHeight =
-          AddGroundPlane(*scene, spec.run, mochi::MakeConstSpan(added.actors))) {
+  if (groundHeight) {
     resolved.run.groundHeight = *groundHeight;
   }
-  ApplyRunSpecOverrides(*scene, spec.run);
 
   TunerSession session;
-  if (!session.Bind(*scene, spec, outError)) {
+  if (!session.Bind(*scene, spec, outError, bots.Get())) {
     return false;
   }
   MOCHI_DEFER(session.Unbind(*scene));
+  // The actors whose state shows a divergence: the prefab's, and the bots' links (an articulated
+  // actor's own transform is where it was placed).
+  DynamicArray<mochi::Actor*> watched = prefabActors;
+  if (robotics::BotScene* const botScene = bots.Get()) {
+    mochi::ErrorLog error;
+    for (robotics::BotEntry const& entry : botScene->GetBotScenePrefab().bots) {
+      robotics::Bot const* const bot = botScene->GetBot(entry.name);
+      mochi::Actor const* const robot = bot != nullptr ? bot->GetArticulatedActor() : nullptr;
+      if (robot == nullptr) {
+        continue;
+      }
+      for (mochi::ActorHandle const link : robot->GetNestedLinkActors(error)) {
+        if (mochi::Actor* const linkActor = scene->GetActor(link)) {
+          watched.push_back(linkActor);
+        }
+      }
+    }
+  }
 
   RunWriter writer;
   SimRecording simRecording;
@@ -185,7 +316,7 @@ bool RunTuner(
         if (options.onSample) {
           options.onSample(session.GetChannelNames(), sample);
         }
-        diverged = !AllFinite(sample.values) || !ActorsFinite(added.actors);
+        diverged = !AllFinite(sample.values) || !ActorsFinite(watched);
         if (sample.stopCondition >= 0) {
           stopCondition = sample.stopCondition;
           stopMessage = sample.stopMessage;
@@ -194,7 +325,8 @@ bool RunTuner(
 
   // Round so accumulated float error in duration/dt does not add or drop a step.
   auto const numSteps = static_cast<int>(std::llround(spec.run.duration / spec.run.dt));
-  while (outSummary.steps < numSteps && !diverged && stopCondition < 0) {
+  while (outSummary.steps < numSteps && !diverged && stopCondition < 0 &&
+         session.GetFailure().empty()) {
     scene->Step(spec.run.dt);
     ++outSummary.steps;
   }
@@ -206,6 +338,9 @@ bool RunTuner(
   if (diverged) {
     outSummary.status = "diverged";
     outSummary.message = "Non-finite state at t = " + std::to_string(outSummary.simTime) + " s.";
+  } else if (!session.GetFailure().empty()) {
+    outSummary.status = "error";
+    outSummary.message = DynamicString(session.GetFailure());
   } else if (stopCondition >= 0) {
     outSummary.status = "stopped";
     if (static_cast<size_t>(stopCondition) < spec.stopConditions.size()) {

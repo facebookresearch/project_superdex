@@ -94,6 +94,11 @@ endif ()
 # Always add superdex_physics
 add_subdirectory(superdex_physics)
 
+if (SUPERDEX_BUILD_ASSET_TUNER)
+    # The tuner drives bot controllers.
+    set(SUPERDEX_BUILD_ROBOTICS ON CACHE BOOL "" FORCE)
+endif ()
+
 if (SUPERDEX_BUILD_ROBOTICS)
     add_subdirectory(superdex_robotics)
 endif ()

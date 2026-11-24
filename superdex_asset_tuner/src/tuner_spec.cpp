@@ -152,18 +152,45 @@ std::filesystem::path ResolveAssetsRoot(
   return anchor.parent_path();
 }
 
-std::filesystem::path ResolvePrefabPath(
+namespace {
+
+// A path the tuner file names: "./"-prefixed relative to the tuner file, others to the assets root.
+std::filesystem::path ResolveSpecPath(
     TunerSpec const& spec,
-    std::filesystem::path const& tunerFilePath) {
-  std::string_view const prefab = spec.prefab;
-  if (prefab.starts_with("./")) {
-    return std::filesystem::absolute(tunerFilePath.parent_path() / prefab.substr(2));
+    std::filesystem::path const& tunerFilePath,
+    std::string_view named) {
+  if (named.starts_with("./")) {
+    return std::filesystem::absolute(tunerFilePath.parent_path() / named.substr(2));
   }
-  std::filesystem::path const path(prefab);
+  std::filesystem::path const path(named);
   if (path.is_absolute()) {
     return path;
   }
   return ResolveAssetsRoot(spec, tunerFilePath, tunerFilePath) / path;
+}
+
+} // namespace
+
+bool CheckPrefabOrScene(TunerSpec const& spec, std::string& outError) {
+  if (spec.prefab.empty() == spec.scene.empty()) {
+    outError = "A tuner simulates a prefab or a scene: give exactly one.";
+    return false;
+  }
+  return true;
+}
+
+std::filesystem::path ResolvePrefabPath(
+    TunerSpec const& spec,
+    std::filesystem::path const& tunerFilePath) {
+  return spec.prefab.empty() ? std::filesystem::path{}
+                             : ResolveSpecPath(spec, tunerFilePath, spec.prefab);
+}
+
+std::filesystem::path ResolveScenePath(
+    TunerSpec const& spec,
+    std::filesystem::path const& tunerFilePath) {
+  return spec.scene.empty() ? std::filesystem::path{}
+                            : ResolveSpecPath(spec, tunerFilePath, spec.scene);
 }
 
 namespace {

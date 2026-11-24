@@ -17,11 +17,26 @@
 #pragma once
 
 #include <mochi_core/utils/dynamic_array.h>
+#include <mochi_core/utils/dynamic_string.h>
 #include <mochi_physics/mochi_physics.h>
 
 #include <optional>
 
+namespace superdex::robotics {
+class BotScene;
+class ControllerBase;
+} // namespace superdex::robotics
+
 namespace superdex::tuner::details {
+
+// A built bot's controller that takes a float input, named "bot/controller".
+struct FloatInputController {
+  mochi::DynamicString name;
+  robotics::ControllerBase* controller = nullptr;
+};
+
+[[nodiscard]] mochi::DynamicArray<FloatInputController> FindFloatInputControllers(
+    robotics::BotScene& bots);
 
 // All actors except articulated links (links are reached through their articulated actor).
 [[nodiscard]] mochi::DynamicArray<mochi::Actor*> GetTopLevelActors(mochi::Scene& scene);

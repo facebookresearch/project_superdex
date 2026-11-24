@@ -233,7 +233,7 @@ real AngleZ(mochi::TransformRT const& pose) {
 TEST(LoadMath, PosePathPassesThroughWaypointsAndHoldsOutside) {
   real const quarterTurn = std::numbers::pi_v<real> / 2;
   for (Interpolation const interpolation :
-       {Interpolation::Step, Interpolation::Linear, Interpolation::Smooth}) {
+       {Interpolation::Step, Interpolation::Linear, Interpolation::Smooth, Interpolation::Ease}) {
     std::vector<PoseWaypoint> const path{
         MakeWaypoint(1.0, {0.0f, 0.0f, 0.0f}, 0, interpolation),
         MakeWaypoint(2.0, {1.0f, 0.0f, 0.0f}, quarterTurn, interpolation),
@@ -269,6 +269,41 @@ TEST(LoadMath, PosePathSegmentsFollowTheirInterpolation) {
   mochi::TransformRT const smooth = midpoint(Interpolation::Smooth);
   EXPECT_NEAR(smooth.GetTranslation()[0], 2 * 0.15625, 1e-5);
   EXPECT_NEAR(AngleZ(smooth), 0.15625f * quarterTurn, 1e-5);
+  mochi::TransformRT const ease = midpoint(Interpolation::Ease);
+  EXPECT_NEAR(ease.GetTranslation()[0], 2 * 0.15625, 1e-5);
+  EXPECT_NEAR(AngleZ(ease), 0.15625f * quarterTurn, 1e-5);
+}
+
+TEST(LoadMath, EaseStopsAtEveryWaypointWhileSmoothPassesThrough) {
+  auto const speedAtMiddle = [](Interpolation interpolation) {
+    std::vector<PoseWaypoint> const path{
+        MakeWaypoint(0.0, {0.0f, 0.0f, 0.0f}, 0, interpolation),
+        MakeWaypoint(1.0, {1.0f, 0.0f, 0.0f}, 0, interpolation),
+        MakeWaypoint(2.0, {2.0f, 0.0f, 0.0f}, 0, interpolation),
+    };
+    constexpr double kDt = 1e-3;
+    return (EvaluatePosePath(path, 1.0 + kDt).GetTranslation()[0] -
+            EvaluatePosePath(path, 1.0 - kDt).GetTranslation()[0]) /
+        (2 * kDt);
+  };
+  EXPECT_NEAR(speedAtMiddle(Interpolation::Ease), 0, 1e-2);
+  EXPECT_NEAR(speedAtMiddle(Interpolation::Smooth), 1, 1e-2);
+}
+
+TEST(LoadMath, InputKeysInterpolateEveryValue) {
+  std::vector<InputKey> const keys{
+      {0.0, {0.0f, 10.0f}, Interpolation::Linear},
+      {1.0, {2.0f, 20.0f}, Interpolation::Step},
+      {2.0, {4.0f, 0.0f}, Interpolation::Linear},
+  };
+  std::array<real, 2> values{};
+
+  EvaluateInputKeys(keys, 0.5, values);
+  EXPECT_EQ(values, (std::array<real, 2>{1.0f, 15.0f}));
+  EvaluateInputKeys(keys, 1.5, values);
+  EXPECT_EQ(values, (std::array<real, 2>{2.0f, 20.0f}));
+  EvaluateInputKeys(keys, 3.0, values);
+  EXPECT_EQ(values, (std::array<real, 2>{4.0f, 0.0f}));
 }
 
 TEST(LoadMath, PathDriveHoldsFromEachWaypointUntilTheNext) {

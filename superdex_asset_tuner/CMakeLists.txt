@@ -43,6 +43,8 @@ target_link_libraries(superdex_asset_tuner_static
     PUBLIC
         mochi_core
         mochi_physics
+    PRIVATE
+        superdex_robotics
 )
 if (TARGET superdex_recorder_physics)
     target_link_libraries(superdex_asset_tuner_static
@@ -86,7 +88,8 @@ if (MOCHI_BUILD_TESTS)
     mochi_add_test_executable(superdex_asset_tuner_test "${CMAKE_CURRENT_SOURCE_DIR}/test")
     target_include_directories(superdex_asset_tuner_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/test")
     # The tests have no main.cpp of their own.
-    target_link_libraries(superdex_asset_tuner_test PRIVATE superdex_asset_tuner_static gtest_main)
+    target_link_libraries(
+        superdex_asset_tuner_test PRIVATE superdex_asset_tuner_static superdex_robotics gtest_main)
     if (TARGET superdex_recorder_physics)
         target_link_libraries(
             superdex_asset_tuner_test PRIVATE superdex_recorder_physics superdex_recorder_reader)

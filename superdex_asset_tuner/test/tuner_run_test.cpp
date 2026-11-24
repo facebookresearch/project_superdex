@@ -824,5 +824,49 @@ TEST_F(TunerTest, UnwrappedRotationVectorStaysContinuousThroughFullTurns) {
   EXPECT_GT(run.Final("cube.rotvecUnwrapped.z"), 2 * mochi::kPI);
 }
 
+TEST_F(TunerTest, RelativePoseIsTheTargetInTheFramesFrame) {
+  // `frame` is 1 m along x and turned a quarter about z, so world +x is its -y.
+  TunerSpec spec = MakeSpec(R"({
+    "actors": { "rigid": [
+      { "name": "cube", "shape": "cube/cube_fine_mesh.mochi.h5", "scale": [0.1, 0.1, 0.1],
+        "colliderType": "Box", "density": 1000, "translation": [3, 0, 0] },
+      { "name": "frame", "shape": "cube/cube_fine_mesh.mochi.h5", "scale": [0.1, 0.1, 0.1],
+        "colliderType": "Box", "density": 1000, "translation": [1, 0, 0],
+        "rotation": [0, 0, 0.7071068, 0.7071068], "isStatic": true } ] }
+  })");
+  ProbeSpec probe = MakeProbe(ProbeKind::RelativePose, "cube");
+  probe.frame = "frame";
+  spec.probes.push_back(probe);
+  spec.run.duration = 0.02;
+
+  RunCapture const run = Run(spec);
+
+  EXPECT_NEAR(run.Final("cube.in.frame.pos.x"), 0, 1e-5);
+  EXPECT_NEAR(run.Final("cube.in.frame.pos.y"), -2, 1e-5);
+  EXPECT_NEAR(run.Final("cube.in.frame.rotvec.z"), -std::numbers::pi_v<real> / 2, 1e-5);
+}
+
+TEST_F(TunerTest, SolverOverridesSetTheScenesSolverParams) {
+  TunerSpec spec = MakeSpec(kRigidCubePrefab);
+  spec.loads.push_back(MakeLoad("push", LoadType::Force, "cube", {1.0f, 0.0f, 0.0f}, 100));
+  spec.probes.push_back(MakeProbe(ProbeKind::SolverStats, ""));
+  spec.run.duration = 0.05;
+  spec.solverOverrides.push_back({.path = "nonLinearSolver.maxIter", .value = "1"});
+
+  RunCapture const run = Run(spec);
+  spec.solverOverrides[0].path = "nonLinearSolver.maxIterations";
+  RunSummary summary;
+  std::string error;
+  bool const ranWithUnknownField = RunTuner(spec, TunerPath(), {}, summary, error);
+
+  real maxIters = 0;
+  for (size_t i = 0; i < run.samples.size(); ++i) {
+    maxIters = std::max(maxIters, run.Value("solver.iters", i));
+  }
+  EXPECT_EQ(maxIters, 1);
+  EXPECT_FALSE(ranWithUnknownField);
+  EXPECT_NE(error.find("solverOverrides"), std::string::npos) << error;
+}
+
 } // namespace
 } // namespace superdex::tuner::test

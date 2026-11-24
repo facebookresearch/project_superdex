@@ -49,6 +49,10 @@ namespace superdex::tuner {
 // Waypoints must be sorted by time and non-empty.
 [[nodiscard]] mochi::TransformRT EvaluatePosePath(Span<PoseWaypoint const> waypoints, double t);
 
+// The keys' values at time `t`, one per entry of `out`, interpolated as profile keys are. Keys must
+// be sorted by time, non-empty, and hold at least out.size() values each.
+void EvaluateInputKeys(Span<InputKey const> keys, double t, Span<real> out);
+
 // Drive mode at time `t`: that of the last waypoint at or before `t`, or the first's before it.
 // Waypoints must be sorted by time and non-empty.
 [[nodiscard]] PathDriveMode EvaluatePathDrive(Span<PoseWaypoint const> waypoints, double t);
@@ -101,7 +105,8 @@ struct DrivePullEstimate {
 [[nodiscard]] DrivePullEstimate
 EstimateDrivePull(LoadSpec const& load, DriveScale const& scale, double dt);
 
-// Sorts the load's waypoints and profile keys by time, keeping the order of equal times.
+// Sorts the load's waypoints, profile keys and input keys by time, keeping the order of equal
+// times.
 void SortByTime(LoadSpec& load);
 
 // Rigid actor external-force DoFs (world force, world torque about the center of mass) equivalent

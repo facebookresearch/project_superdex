@@ -62,7 +62,7 @@ struct NamedOption {
   char const* description;
 };
 
-constexpr std::array<NamedOption, 4> kLoadTypes{{
+constexpr std::array<NamedOption, 5> kLoadTypes{{
     {"Force",
      "Force at a point on a rigid body or articulated link. A point off the center of mass also "
      "applies the matching torque. On a link it becomes joint forces through the link Jacobian."},
@@ -75,8 +75,11 @@ constexpr std::array<NamedOption, 4> kLoadTypes{{
     {"Pose Path",
      "Pulls a point on a rigid body or articulated link, and optionally the body's orientation, along timed waypoints with a "
      "spring-damper, similar to in-viewport Physics Drag."},
+    {"Controller Input",
+     "Drives a bot controller's float input (bot/controller): a tool pose along waypoints, or "
+     "joint positions along input keys. Needs a tuner with a scene."},
 }};
-constexpr std::array<NamedOption, 7> kProbeKinds{{
+constexpr std::array<NamedOption, 8> kProbeKinds{{
     {"Body Pose", "Position and rotation vector of the body origin, in world frame."},
     {"Body Velocity", "Linear and angular velocity of the body, in world frame."},
     {"Joint State", "Position and velocity of each of the joint's DoFs."},
@@ -88,6 +91,9 @@ constexpr std::array<NamedOption, 7> kProbeKinds{{
     {"Penetration",
      "Approximate volume (m^3) by which the body overlaps other actors: depth times contact area, "
      "summed over its overlapping contact points."},
+    {"Relative Pose",
+     "Position and rotation vector of the body in the frame of another body or link (Frame), e.g. "
+     "an object in a gripper."},
 }};
 constexpr std::array<NamedOption, 4> kProfileKinds{{
     {"Constant", "Constant magnitude from Start until End."},
@@ -98,10 +104,11 @@ constexpr std::array<NamedOption, 4> kProfileKinds{{
      "Offset + Magnitude * sin(2 * pi * Frequency * (t - Start) + Phase), from Start until End."},
     {"Keyframes", "Curve through timed values, interpolated."},
 }};
-constexpr std::array<NamedOption, 3> kInterpolations{{
+constexpr std::array<NamedOption, 4> kInterpolations{{
     {"Step", "Holds until the next key/waypoint."},
     {"Linear", "Straight line to the next one (constant-speed turn for orientations)."},
     {"Smooth", "Smooth curve through the neighbors with easing."},
+    {"Ease", "Starts from rest and stops at the next key/waypoint."},
 }};
 constexpr std::array<NamedOption, 3> kDriveModes{{
     {"On",
@@ -117,11 +124,12 @@ constexpr std::array<NamedOption, 3> kLoadFrames{{
      "Direction and point are both fixed in the world. "
      "Applies forces even if body is no longer near the point."},
 }};
-constexpr std::array<filament::math::float4, 4> kLoadColors{{
+constexpr std::array<filament::math::float4, 5> kLoadColors{{
     {1.0f, 0.6f, 0.1f, 1.0f}, // Force
     {0.3f, 0.6f, 1.0f, 1.0f}, // Torque
     {0.7f, 0.3f, 1.0f, 1.0f}, // JointEffort
     {0.2f, 0.85f, 0.6f, 1.0f}, // PosePath
+    {0.9f, 0.4f, 0.6f, 1.0f}, // ControllerInput
 }};
 constexpr filament::math::float4 kSelectedLoadColor{1.0f, 1.0f, 0.2f, 1.0f};
 constexpr ImVec4 kWarningColor{1.0f, 0.7f, 0.2f, 1.0f};
@@ -386,6 +394,8 @@ std::string ProbeChannelHint(tuner::ProbeKind kind) {
       return "perf.solveMs";
     case tuner::ProbeKind::Penetration:
       return "penetration.volume";
+    case tuner::ProbeKind::RelativePose:
+      return "in.<frame>.pos.{x,y,z}, in.<frame>.rotvec.{x,y,z}";
   }
   return {};
 }
@@ -791,7 +801,7 @@ void TunerEditor::ShowPhysicsSettingsWindow(bool* open) {
   }
   ImGui::TextWrapped(
       "Time step, Gravity and Ground Plane settings are in the Asset Tuner Run tab.\n"
-      "Solver settings are set from the prefab.");
+      "Solver settings come from the prefab or scene, then the tuner's solverOverrides.");
   if (ImGui::CollapsingHeader("Debug Draw", ImGuiTreeNodeFlags_DefaultOpen)) {
     _mochiScene.ShowDebugDrawSection();
   }
@@ -950,12 +960,12 @@ void TunerEditor::CreatePhysicsActors(mochi::Scene* scene) {
 
 // Sim thread, from CreatePhysicsActors.
 bool TunerEditor::BindPhysicsActors(mochi::Scene* scene) {
+  tuner::TunerSpec const& spec = _tunerAsset->GetSpec();
   MochiPrefabAsset* prefabAsset = _tunerAsset->GetPrefabAsset();
   if (prefabAsset == nullptr) {
     _bindError = "Prefab '" + _tunerAsset->GetPrefabPath().ToString() + "' is not loaded.";
     return false;
   }
-  tuner::TunerSpec const& spec = _tunerAsset->GetSpec();
   mochi::prefab::ScenePrefab overridden;
   mochi::prefab::ScenePrefab* prefab = &prefabAsset->GetPrefab();
   if (!spec.prefabOverrides.empty()) {
@@ -974,6 +984,10 @@ bool TunerEditor::BindPhysicsActors(mochi::Scene* scene) {
     return false;
   }
   tuner::ApplyRunSpecOverrides(*scene, spec.run);
+  if (!tuner::ApplySolverOverrides(
+          *scene, mochi::MakeConstSpan(spec.solverOverrides), _bindError)) {
+    return false;
+  }
   _simSync.Track(mochi::MakeConstSpan(result.actors));
   if (!_session.Bind(*scene, spec, _bindError)) {
     return false;
@@ -1524,6 +1538,15 @@ std::vector<std::string> TunerEditor::GetTargetCandidates(tuner::LoadType type) 
         }
       }
       return joints;
+    }
+    case tuner::LoadType::ControllerInput: {
+      std::vector<std::string> controllers;
+      if (_describedTargets) {
+        for (tuner::ControllerTarget const& controller : _describedTargets->controllers) {
+          controllers.emplace_back(std::string_view(controller.name));
+        }
+      }
+      return controllers;
     }
   }
   return {};
@@ -2514,9 +2537,13 @@ bool TunerEditor::ShowLoadBody(size_t index, bool& structural) {
   structural |= TargetPicker("Target", load.target, GetTargetCandidates(load.type));
   bool const isPath = load.type == tuner::LoadType::PosePath;
   Tooltip(
-      load.type == tuner::LoadType::JointEffort
-          ? "Joint to drive"
-          : "Non-static rigid body, or articulated link. Can be in a nested prefab.");
+      load.type == tuner::LoadType::JointEffort           ? "Joint to drive"
+          : load.type == tuner::LoadType::ControllerInput ? "Bot controller, as bot/controller."
+                                                          : "Non-static rigid body, or articulated "
+                                                            "link. Can be in a nested prefab.");
+  if (load.type == tuner::LoadType::ControllerInput) {
+    return changed || structural;
+  }
 
   if (IsForce(load.type)) {
     tuner::LoadFrame const previousFrame = load.frame;
@@ -3228,7 +3255,8 @@ void TunerEditor::ShowLoadsWindow(bool* open) {
           "##addload",
           ICON_FA_PLUS " Add Load",
           ImGuiComboFlags_NoArrowButton | ImGuiComboFlags_HeightLarge)) {
-    constexpr std::array<char const*, 4> kDefaultNames{"force", "torque", "effort", "path"};
+    constexpr std::array<char const*, 5> kDefaultNames{
+        "force", "torque", "effort", "path", "input"};
     for (size_t t = 0; t < kLoadTypes.size(); ++t) {
       if (ImGui::Selectable(kLoadTypes[t].name)) {
         tuner::LoadSpec load;
@@ -3725,7 +3753,7 @@ void TunerEditor::ShowStopConditionCards(bool& structural) {
   for (tuner::LoadSpec const& load : spec.loads) {
     std::string const prefix = "load." + std::string(std::string_view(load.name));
     addChannel(prefix + ".mag");
-    if (load.type == tuner::LoadType::PosePath) {
+    if (load.type == tuner::LoadType::PosePath || load.type == tuner::LoadType::ControllerInput) {
       addChannel(prefix + ".error");
       addChannel(prefix + ".angleError");
     }
@@ -3768,6 +3796,13 @@ void TunerEditor::ShowStopConditionCards(bool& structural) {
       case tuner::ProbeKind::Penetration:
         add({"penetration.volume"});
         break;
+      case tuner::ProbeKind::RelativePose: {
+        std::string const in = "in." + std::string(std::string_view(probe.frame)) + ".";
+        for (char const* suffix : {"pos.x", "pos.y", "pos.z", "rotvec.x", "rotvec.y", "rotvec.z"}) {
+          addChannel(target + "." + in + suffix);
+        }
+        break;
+      }
       case tuner::ProbeKind::JointState:
         break; // DoF count is only known once bound; the last run's channels cover these
     }
@@ -4129,6 +4164,10 @@ void TunerEditor::ShowProbeCards(bool& structural) {
       if (probe.kind == tuner::ProbeKind::Penetration) {
         structural |= ImGui::Checkbox("Ignore Ground", &probe.ignoreGround);
         Tooltip("Leave out overlap with ground planes (static, unbounded actors).");
+      }
+      if (probe.kind == tuner::ProbeKind::RelativePose) {
+        structural |= TargetPicker("Frame", probe.frame, candidatesFor(probe.kind));
+        Tooltip("Body or link whose frame the target's pose is measured in.");
       }
       ImGui::TextDisabled("Channels: %s", ProbeChannelHint(probe.kind).c_str());
     }

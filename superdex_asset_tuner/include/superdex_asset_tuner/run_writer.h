@@ -41,7 +41,8 @@ struct ChannelSummary {
 };
 
 struct RunSummary {
-  // "ok", "stopped" (a stop condition ended the run early), "diverged" or "error".
+  // "ok", "stopped" (a stop condition ended the run early), "diverged" or "error" (a controller
+  // failed).
   DynamicString status = "ok";
   DynamicString message;
   // Name of the stop condition that ended the run; empty unless status is "stopped".

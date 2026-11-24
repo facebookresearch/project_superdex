@@ -48,6 +48,11 @@ T Hermite(T const& p1, T const& p2, T const& m1, T const& m2, double h, double s
       p2 * weight(3 * s2 - 2 * s3) + m2 * weight((s3 - s2) * h);
 }
 
+// Fraction `s` of a segment eased in and out: zero slope at both ends.
+double Smoothstep(double s) {
+  return s * s * (3 - 2 * s);
+}
+
 // Catmull-Rom tangent at keys[k] from its neighbors, or zero at the first and last key so a smooth
 // curve starts and ends at rest.
 template <typename Key, typename ValueOf>
@@ -84,6 +89,8 @@ auto InterpolateKeys(Span<Key const> keys, double t, ValueOf valueOf) {
       return valueOf(a);
     case Interpolation::Linear:
       return valueOf(a) + (valueOf(b) - valueOf(a)) * static_cast<real>(s);
+    case Interpolation::Ease:
+      return valueOf(a) + (valueOf(b) - valueOf(a)) * static_cast<real>(Smoothstep(s));
     case Interpolation::Smooth:
       break;
   }
@@ -101,7 +108,8 @@ mochi::Quaternion WaypointRotation(PoseWaypoint const& waypoint) {
 }
 
 // Orientation at `t` through `keys` (non-empty, sorted by time), each segment interpolated as its
-// first key says: Linear slerps at constant angular speed, Smooth is Catmull-Rom on the rotation.
+// first key says: Linear slerps at constant angular speed, Ease slerps from rest to rest, Smooth is
+// Catmull-Rom on the rotation.
 template <typename Key, typename RotationOf>
 mochi::Quaternion InterpolateRotation(Span<Key const> keys, double t, RotationOf rotationOf) {
   if (t <= keys.front().time) {
@@ -124,6 +132,8 @@ mochi::Quaternion InterpolateRotation(Span<Key const> keys, double t, RotationOf
       return start;
     case Interpolation::Linear:
       return mochi::Normalize(mochi::Slerp(start, rotationOf(b), static_cast<real>(s)));
+    case Interpolation::Ease:
+      return mochi::Normalize(mochi::Slerp(start, rotationOf(b), static_cast<real>(Smoothstep(s))));
     case Interpolation::Smooth:
       break;
   }
@@ -257,6 +267,13 @@ mochi::TransformRT EvaluatePosePath(Span<PoseWaypoint const> waypoints, double t
   return mochi::TransformRT(InterpolateRotation(waypoints, t, WaypointRotation), position);
 }
 
+void EvaluateInputKeys(Span<InputKey const> keys, double t, Span<real> out) {
+  MOCHI_ASSERT(!keys.empty(), "Input keys must not be empty.");
+  for (size_t j = 0; j < out.size(); ++j) {
+    out[j] = InterpolateKeys(keys, t, [j](InputKey const& key) { return key.values[j]; });
+  }
+}
+
 PathDriveMode EvaluatePathDrive(Span<PoseWaypoint const> waypoints, double t) {
   MOCHI_ASSERT(!waypoints.empty(), "A pose path needs at least one waypoint.");
   auto const after = std::upper_bound(
@@ -315,7 +332,8 @@ DrivePullEstimate EstimateDrivePull(LoadSpec const& load, DriveScale const& scal
       peakAngularVelocity = std::max(peakAngularVelocity, angle * inverse);
     }
   };
-  // Samples per Linear or Smooth segment. Enough to find a Smooth segment's top velocity within 1%.
+  // Samples per Linear, Smooth or Ease segment. Enough to find a Smooth segment's top velocity
+  // within 1%.
   constexpr int kSamplesPerSegment = 32;
   for (size_t i = 0; dt > 0 && i + 1 < waypoints.size(); ++i) {
     PoseWaypoint const& a = waypoints[i];
@@ -370,6 +388,7 @@ void SortByTime(LoadSpec& load) {
   auto const byTime = [](auto const& a, auto const& b) { return a.time < b.time; };
   std::stable_sort(load.waypoints.begin(), load.waypoints.end(), byTime);
   std::stable_sort(load.profile.keys.begin(), load.profile.keys.end(), byTime);
+  std::stable_sort(load.inputKeys.begin(), load.inputKeys.end(), byTime);
 }
 
 std::array<real, 6>

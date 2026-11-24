@@ -21,6 +21,8 @@
 
 #include <mochi_core/geometry/geometry_utils.h>
 #include <mochi_core/utils/defer.h>
+#include <superdex_robotics/scene/bot_scene.h>
+#include <superdex_robotics/superdex_robotics.h>
 
 #include <cmath>
 #include <optional>
@@ -81,6 +83,110 @@ std::optional<mochi::Aabb> details::WorldBounds(mochi::Actor const& actor) {
 
 bool details::IsBounded(mochi::Actor const& actor) {
   return WorldBounds(actor).has_value();
+}
+
+mochi::DynamicArray<details::FloatInputController> details::FindFloatInputControllers(
+    robotics::BotScene& bots) {
+  DynamicArray<FloatInputController> found;
+  robotics::RoboticsContext* const robotics = bots.GetRoboticsContext();
+  if (robotics == nullptr) {
+    return found;
+  }
+  for (robotics::BotEntry const& entry : bots.GetBotScenePrefab().bots) {
+    robotics::Bot* const bot = bots.GetBot(entry.name);
+    if (bot == nullptr) {
+      continue; // declared but not built
+    }
+    for (robotics::ControllerHandle const handle : bot->GetControllerHandles()) {
+      robotics::ControllerBase* const controller = robotics->GetController(handle);
+      // A controller without a float input drives the bot on its own, if at all.
+      if (controller != nullptr && controller->GetActor() != nullptr &&
+          controller->GetInputSize() > 0) {
+        found.push_back(
+            {.name = entry.name + "/" + DynamicString(controller->GetName()),
+             .controller = controller});
+      }
+    }
+  }
+  return found;
+}
+
+namespace {
+
+std::string_view InputKindName(robotics::ControllerInputKind kind) {
+  switch (kind) {
+    case robotics::ControllerInputKind::JointPositions:
+      return "JointPositions";
+    case robotics::ControllerInputKind::Pose:
+      return "Pose";
+    case robotics::ControllerInputKind::Custom:
+      return "Custom";
+    case robotics::ControllerInputKind::None:
+    case robotics::ControllerInputKind::Count:
+      break;
+  }
+  return "None";
+}
+
+// The joint each entry of a joint-position input sets.
+void DescribeInputJoints(robotics::ControllerBase const& controller, ControllerTarget& target) {
+  mochi::Actor const* const actor = controller.GetActor();
+  if (actor == nullptr ||
+      controller.GetInputKind() != robotics::ControllerInputKind::JointPositions) {
+    return;
+  }
+  mochi::ErrorLog error;
+  mochi::ArticulatedShapeInfo const info = actor->GetArticulatedShapeInfo(error);
+  for (int const dof : controller.GetControlledDofs()) {
+    target.inputJoints.emplace_back();
+    InputJoint& joint = target.inputJoints.back();
+    for (size_t j = 0; j < info.jointNames.size(); ++j) {
+      if (info.dofInfo[j].offset != dof || info.dofInfo[j].GetSize() != 1) {
+        continue;
+      }
+      joint.name = info.jointNames[j];
+      joint.type = info.jointTypes[j];
+      // Limits are stored along the joint's axis.
+      Real3 const axis = mochi::Normalize(info.jointAxes[j]);
+      joint.min = mochi::Dot(info.jointMinLimits[j], axis);
+      joint.max = mochi::Dot(info.jointMaxLimits[j], axis);
+      if (!mochi::IsFinite(joint.min) || !mochi::IsFinite(joint.max)) {
+        joint.min = joint.max = 0;
+      }
+      break;
+    }
+  }
+}
+
+} // namespace
+
+bool CollectControllerTargets(
+    robotics::BotScene& bots,
+    DynamicArray<ControllerTarget>& outTargets,
+    std::string& outError) {
+  outTargets.clear();
+  for (details::FloatInputController const& found : details::FindFloatInputControllers(bots)) {
+    outTargets.emplace_back();
+    ControllerTarget& target = outTargets.back();
+    target.name = found.name;
+    target.type = DynamicString(found.controller->GetTypeName());
+    target.inputKind = DynamicString(InputKindName(found.controller->GetInputKind()));
+    target.input.resize(static_cast<size_t>(found.controller->GetInputSize()));
+    mochi::Error error;
+    found.controller->GetCurrentInput(mochi::MakeSpan(target.input), error);
+    if (!error.IsOK()) {
+      outError = "Controller '" + std::string(std::string_view(found.name)) +
+          "': " + error.GetDescription();
+      return false;
+    }
+    DescribeInputJoints(*found.controller, target);
+    if (mochi::Actor const* const actor = found.controller->GetActor()) {
+      mochi::TransformRT const root = actor->GetRootTransform();
+      target.rootPosition = root.GetTranslation();
+      target.rootRotation = root.GetRotation().ToRotationVector();
+    }
+  }
+  return true;
 }
 
 SceneTargets CollectSceneTargets(mochi::Scene& scene) {
@@ -234,22 +340,18 @@ bool DescribeTuner(
   }
   mochi::Scene* scene = context->CreateScene("superdex_asset_tuner_describe");
   MOCHI_DEFER(context->DestroyScene(scene));
-  PrepareScene(*scene);
-  mochi::prefab::ScenePrefab prefab;
-  if (!LoadTunerPrefab(spec, tunerFilePath, context, prefab, outError)) {
+  TunerBots bots;
+  std::optional<real> groundHeight;
+  DynamicArray<mochi::Actor*> prefabActors;
+  if (!BuildTunerScene(
+          spec, tunerFilePath, context, *scene, bots, groundHeight, prefabActors, outError)) {
     return false;
   }
-  mochi::Error error;
-  mochi::prefab::AddToSceneResult const added = mochi::prefab::AddToScene(prefab, scene, error);
-  if (!error.IsOK()) {
-    outError = std::string("Failed to add prefab to scene: ") + error.GetDescription();
-    return false;
-  }
-  std::optional<real> const groundHeight =
-      AddGroundPlane(*scene, spec.run, mochi::MakeConstSpan(added.actors));
   outTargets = CollectSceneTargets(*scene);
   outTargets.groundHeight = groundHeight;
-  return true;
+  robotics::BotScene* const botScene = bots.Get();
+  return botScene == nullptr ||
+      CollectControllerTargets(*botScene, outTargets.controllers, outError);
 }
 
 } // namespace superdex::tuner

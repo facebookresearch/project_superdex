@@ -23,6 +23,11 @@
 #include <array>
 #include <string>
 
+namespace superdex::robotics {
+class BotScene;
+class ControllerBase;
+} // namespace superdex::robotics
+
 namespace superdex::tuner {
 
 // World-space state of one load during the last step, for visualization.
@@ -41,6 +46,9 @@ struct AppliedLoad {
   real angleError = 0;
   // PosePath: the drive mode during the step.
   PathDriveMode driveMode = PathDriveMode::Off;
+  // ControllerInput: the controller's input now, as it reports it (the tool pose x y z, qx qy qz qw
+  // in the bot's root frame, or joint positions).
+  DynamicArray<real> input;
 };
 
 struct Sample {
@@ -54,6 +62,8 @@ struct Sample {
   int stopCondition = -1;
   // Why the run stopped, e.g. "'fell' block.pos.z = -0.101 < -0.1". Empty unless it stopped.
   DynamicString stopMessage;
+  // The run's first controller failure (see TunerSession::GetFailure). Empty unless one failed.
+  DynamicString failure;
 };
 
 // Applies a tuner spec's loads to a live scene and samples its probes. Not thread-safe: all calls
@@ -61,8 +71,14 @@ struct Sample {
 class TunerSession {
  public:
   // Resolves load and probe targets and registers the queries probes need. Call before the first
-  // step. Unresolved targets fail with a message listing the available names.
-  bool Bind(mochi::Scene& scene, TunerSpec const& spec, std::string& outError);
+  // step. Unresolved targets fail with a message listing the available names. With `bots`, every
+  // controller of its built bots that takes a float input is stepped each step, toward its
+  // ControllerInput loads or else the input it starts with; `bots` must outlive the binding.
+  bool Bind(
+      mochi::Scene& scene,
+      TunerSpec const& spec,
+      std::string& outError,
+      robotics::BotScene* bots = nullptr);
 
   // Clears external forces on targeted actors and cancels registered queries.
   void Unbind(mochi::Scene& scene);
@@ -84,6 +100,10 @@ class TunerSession {
   }
   [[nodiscard]] double GetTime() const {
     return _time;
+  }
+  // Why a controller failed to compute its efforts, or empty. The run cannot go on once it is set.
+  [[nodiscard]] std::string const& GetFailure() const {
+    return _failure;
   }
 
  private:
@@ -108,6 +128,25 @@ class TunerSession {
     real driveMass = 0;
     real driveInertia = 0;
     std::array<real, 6> driveGains{};
+    // ControllerInput: the bound controller, the input entries the keys set, and the path or keys
+    // with the controller's input at the start of the run prepended when they start later.
+    int controller = -1;
+    DynamicArray<int> inputIndices;
+    DynamicArray<PoseWaypoint> waypoints;
+    DynamicArray<InputKey> inputKeys;
+  };
+  // A bot controller that takes a float input.
+  struct BoundController {
+    // "bot/controller", as ControllerInput loads name it.
+    DynamicString name;
+    robotics::ControllerBase* controller = nullptr;
+    int accumulator = -1;
+    // Its input at the start of the run, and the input it is driven toward, held where no load
+    // drives it.
+    DynamicArray<real> start;
+    DynamicArray<real> input;
+    DynamicArray<real> efforts;
+    DynamicArray<real> scratch;
   };
   struct ResolvedProbe {
     ProbeKind kind = ProbeKind::BodyPose;
@@ -119,6 +158,8 @@ class TunerSession {
     DynamicArray<real> scratch;
     // BodyPose: last unwrapped rotation vector, the reference for the next step's unwrap.
     Real3 unwrappedRotvec{0.0f, 0.0f, 0.0f};
+    // RelativePose: the body whose frame the pose is measured in.
+    mochi::ActorHandle frame;
     bool ignoreGround = false;
     // Channels the probe adds to each sample.
     size_t numChannels = 0;
@@ -151,6 +192,13 @@ class TunerSession {
       LoadSpec const& load,
       ResolvedLoad const& resolved,
       AppliedLoad& applied) const;
+  bool BindControllers(robotics::BotScene& bots, std::string& outError);
+  bool ResolveControllerInput(LoadSpec const& load, ResolvedLoad& resolved, std::string& outError);
+  // Sets the controller input `load` drives toward its value at time `t`.
+  void DriveControllerInput(ResolvedLoad const& resolved, AppliedLoad& applied, double t);
+  // Fills how far the controller is from its input into `applied`.
+  void
+  SampleControllerInput(LoadSpec const& load, ResolvedLoad const& resolved, AppliedLoad& applied);
   bool ResolveProbe(mochi::Scene& scene, ProbeSpec const& probe, std::string& outError);
   bool ResolveStop(mochi::Scene& scene, StopCondition const& stop, std::string& outError);
   void CheckStopConditions(mochi::Scene& scene, Sample& inOutSample);
@@ -164,6 +212,8 @@ class TunerSession {
   DynamicArray<ResolvedProbe> _probes;
   DynamicArray<ResolvedStop> _stops;
   DynamicArray<DynamicString> _channelNames;
+  DynamicArray<BoundController> _controllers;
+  std::string _failure;
   double _time = 0.0;
 };
 

@@ -22,7 +22,14 @@
 
 #include <filesystem>
 #include <functional>
+#include <memory>
+#include <optional>
 #include <string>
+
+namespace superdex::robotics {
+class BotScene;
+class RoboticsContext;
+} // namespace superdex::robotics
 
 namespace superdex::tuner {
 
@@ -38,7 +45,7 @@ struct RunOptions {
 inline constexpr std::string_view kGroundPlaneName = "TunerGroundPlane";
 
 // Sets default gravity. Call before adding the prefab so prefab scene settings win; then call
-// AddGroundPlane and ApplyRunSpecOverrides.
+// AddGroundPlane, ApplyRunSpecOverrides and ApplySolverOverrides.
 void PrepareScene(mochi::Scene& scene);
 
 // Lowest point (world Z) of `actors`' geometry, including articulated actors' links, ignoring
@@ -53,8 +60,64 @@ AddGroundPlane(mochi::Scene& scene, RunSpec const& run, Span<mochi::Actor* const
 // Applies RunSpec values that override the prefab (currently gravity).
 void ApplyRunSpecOverrides(mochi::Scene& scene, RunSpec const& run);
 
-// Loads the tuner's prefab into a fresh headless scene and steps it for `spec.run.duration`.
-// Returns false only for setup errors; a run that diverges returns true with status "diverged".
+// Applies `overrides` (TunerSpec::solverOverrides) to the scene's solver parameters. False if one
+// does not fit SolverParams.
+bool ApplySolverOverrides(
+    mochi::Scene& scene,
+    Span<PrefabOverride const> overrides,
+    std::string& outError);
+
+// A scene tuner's robots and props: the bot scene's bots and controllers, which last as long as
+// this does.
+class TunerBots {
+ public:
+  TunerBots() = default;
+  ~TunerBots();
+  TunerBots(TunerBots const&) = delete;
+  TunerBots& operator=(TunerBots const&) = delete;
+  TunerBots(TunerBots&&) = delete;
+  TunerBots& operator=(TunerBots&&) = delete;
+
+  // Builds the spec's bot scene into `scene`; nothing without one. The bots belong to `robotics`,
+  // which must outlive them, or to a robotics context of their own without one.
+  bool Load(
+      TunerSpec const& spec,
+      std::filesystem::path const& tunerFilePath,
+      mochi::Context* context,
+      mochi::Scene& scene,
+      std::string& outError,
+      robotics::RoboticsContext* robotics = nullptr);
+
+  // Destroys the bots and their controllers; call while their scene is alive.
+  void Reset();
+
+  // Null without a bot scene.
+  [[nodiscard]] robotics::BotScene* Get() {
+    return _bots.get();
+  }
+
+ private:
+  // The robotics context this owns, if any.
+  robotics::RoboticsContext* _ownedRobotics = nullptr;
+  std::unique_ptr<robotics::BotScene> _bots;
+};
+
+// Sets up `scene` as a tuner run sees it: default gravity, the bot scene or the prefab, the ground
+// plane, then the run and solver overrides. Returns the ground height used, if any, in
+// `outGroundHeight`.
+bool BuildTunerScene(
+    TunerSpec const& spec,
+    std::filesystem::path const& tunerFilePath,
+    mochi::Context* context,
+    mochi::Scene& scene,
+    TunerBots& outBots,
+    std::optional<real>& outGroundHeight,
+    DynamicArray<mochi::Actor*>& outPrefabActors,
+    std::string& outError);
+
+// Loads the tuner's scene into a fresh headless scene and steps it for `spec.run.duration`.
+// Returns false only for setup errors; a run that diverges or loses a controller returns true with
+// that status.
 bool RunTuner(
     TunerSpec const& spec,
     std::filesystem::path const& tunerFilePath,

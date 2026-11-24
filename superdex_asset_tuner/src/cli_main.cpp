@@ -39,11 +39,11 @@ constexpr char kUsage[] =
     "          (default: ./tuner_runs) unless --no-files is given.\n"
     "          --set applies a JSON override to the tuner spec, e.g. --set run.dt=0.005 or\n"
     "          --set loads[name=push].profile.magnitude=3\n"
-    "describe  Prints the rigid actors, articulated links and joints (with DoF ranges) that\n"
-    "          loads and probes can target.\n"
+    "describe  Prints the rigid actors, articulated links and joints (with DoF ranges), and the\n"
+    "          bot controllers (with their inputs), that loads and probes can target.\n"
     "\n"
     "Exit codes: 0 ok (including runs ended by a stop condition; see summary.json status),\n"
-    "1 error, 2 simulation diverged.\n";
+    "1 error (setup, or a bot controller failed), 2 simulation diverged.\n";
 
 constexpr int kExitOk = 0;
 constexpr int kExitError = 1;
@@ -116,7 +116,11 @@ int Run(int argc, char** argv) {
     return Fail(error);
   }
   std::printf("%s\n", SReflect::ToJsonString(summary, true).c_str());
-  return std::string_view(summary.status) == "diverged" ? kExitDiverged : kExitOk;
+  std::string_view const status = summary.status;
+  if (status == "diverged") {
+    return kExitDiverged;
+  }
+  return status == "error" ? kExitError : kExitOk;
 }
 
 } // namespace

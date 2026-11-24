@@ -38,7 +38,9 @@ TunerAsset::Create(std::string const& name, mochi::Path const& path, AssetManage
   asset->_spec = std::move(spec);
   asset->_prefabPath =
       mochi::Path(superdex::tuner::ResolvePrefabPath(asset->_spec, path.AsFilesystemPath()));
-  if (manager->LoadMochiPrefabAsset(asset->_prefabPath) == nullptr) {
+  // A tuner of a bot scene alone has no prefab.
+  if (!asset->_prefabPath.IsEmpty() &&
+      manager->LoadMochiPrefabAsset(asset->_prefabPath) == nullptr) {
     MOCHI_LOG_ERROR(
         "Asset Tuner %s: failed to load prefab %s",
         path.ToString().c_str(),
@@ -89,7 +91,9 @@ std::string const& TunerAsset::GetReferencerName() const {
 
 void TunerAsset::ForEachReferencedPath(
     std::function<void(mochi::Path const&)> const& callback) const {
-  callback(_prefabPath);
+  if (!_prefabPath.IsEmpty()) {
+    callback(_prefabPath);
+  }
 }
 
 bool TunerAsset::RewriteReferencedPath(mochi::Path const& oldPath, mochi::Path const& newPath) {
@@ -114,7 +118,7 @@ bool TunerAsset::RefreshPrefabFromSpec() {
     return false;
   }
   _prefabPath = path;
-  if (_manager->LoadMochiPrefabAsset(_prefabPath) == nullptr) {
+  if (!_prefabPath.IsEmpty() && _manager->LoadMochiPrefabAsset(_prefabPath) == nullptr) {
     MOCHI_LOG_ERROR(
         "Asset Tuner %s: failed to load prefab %s",
         _path.ToString().c_str(),

@@ -90,6 +90,7 @@ All quantities are assumed SI: m, s, kg, N, N m, rad. Fields left out will use d
 | `prefab` | The prefab to simulate. `./`\-prefixed paths are relative to the tuner file, others to the assets root. |
 | `assetsRoot` | Root for asset-relative paths. Empty: the nearest `.superdex_root` marker above the prefab (as in Studio), else `$SUPERDEX_ASSETS_PATH`, else the tuner file's folder. |
 | `prefabOverrides` | `[{ "path", "value" }]`: JSON paths into the prefab, applied in order. |
+| `solverOverrides` | `[{ "path", "value" }]`: JSON paths into the scene's SuperDex Physics `SolverParams` (e.g. `nonLinearSolver.lineSearchType`, `"ResidualNorm"`), applied in order after the prefab's own settings, which they override. An unknown field fails the run. |
 | `loads`, `probes`, `stopConditions` | See below. |
 | `run` | Time step, duration, gravity, ground and recording. |
 | `plots` | Studio's plot layout. Unused in the CLI |
@@ -130,7 +131,7 @@ Loads on the same body are summed internally. A `Force` or `Torque` on a link is
 
 An `end` at or before `start` means the load never turns off. `Envelope` without an `end` holds forever (`fallTime` is ignored). Files that still say `Ramp` / `rampTime` load as `Envelope` / `riseTime`.
 
-`interpolation` (keys and waypoints) is `Step` (hold until the next time), `Linear`, or `Smooth` (a Catmull-Rom curve through the neighbors that starts and ends at rest). Keys and waypoints are sorted by time when the tuner loads.
+`interpolation` (keys and waypoints) is `Step` (hold until the next time), `Linear`, `Smooth` (a Catmull-Rom curve through the neighbors that starts and ends at rest) or `Ease` (from rest to rest: the motion stops at every key). Keys and waypoints are sorted by time when the tuner loads.
 
 With `Keyframes`, the keys can also animate the load's direction and application point:
 
@@ -186,6 +187,7 @@ Its channels are `load.<name>.mag` (the drive's force \[N\]), `load.<name>.error
 | `SolverStats` | (none) | `solver.iters`, `solver.residual`, `solver.lineSearchIters`, `solver.convergence` (0 none, 1 converged, 2 stopped, 3 diverged) |
 | `Performance` | (none) | `perf.solveMs` (wall-clock solve time; varies between runs, so runs are not bit-identical) |
 | `Penetration` | body or `actor/link` | `<target>.penetration.volume` \[m³\]. Set `ignoreGround: true` to leave out ground planes. |
+| `RelativePose` | body or `actor/link`, and a `frame` body or link | `<target>.in.<frame>.pos.{x,y,z}`, `<target>.in.<frame>.rotvec.{x,y,z}`: the target's pose in the frame's frame, e.g. an object in a hand |
 
 Every load adds `load.<name>.mag`. Channels are the `signals.csv` columns and the `summary.json` `channels` entries.
 

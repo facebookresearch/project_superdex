@@ -41,6 +41,9 @@ enum class LoadType {
   // Pulls a point on a rigid body or link (and the body's orientation) along timed waypoints with a
   // spring-damper, like SuperDex Studio's Physics Drag.
   PosePath,
+  // Drives a bot controller's float input ("bot/controller"): a tool pose along `waypoints` for a
+  // Pose input, `inputKeys` otherwise.
+  ControllerInput,
 };
 
 enum class LoadFrame {
@@ -74,6 +77,9 @@ enum class Interpolation {
   // Smooth curve through the neighbors (Catmull-Rom); the path's first and last points are passed
   // at rest.
   Smooth,
+  // Starts from rest and comes to rest at the next keyframe/waypoint (smoothstep), so a scripted
+  // move stops at every waypoint.
+  Ease,
 };
 
 // What a PosePath drive does from a waypoint until the next one.
@@ -96,6 +102,8 @@ enum class ProbeKind {
   Performance,
   // Approximate volume by which the target overlaps other actors.
   Penetration,
+  // The target's pose in the frame of `frame`, a body or link, e.g. an object in a gripper.
+  RelativePose,
 };
 
 enum class StopKind {
@@ -119,6 +127,7 @@ MOCHI_ENUM_ITEM(Force)
 MOCHI_ENUM_ITEM(Torque)
 MOCHI_ENUM_ITEM(JointEffort)
 MOCHI_ENUM_ITEM(PosePath)
+MOCHI_ENUM_ITEM(ControllerInput)
 MOCHI_ENUM_END()
 
 MOCHI_ENUM_BEGIN(superdex::tuner::LoadFrame)
@@ -138,6 +147,7 @@ MOCHI_ENUM_BEGIN(superdex::tuner::Interpolation)
 MOCHI_ENUM_ITEM(Step)
 MOCHI_ENUM_ITEM(Linear)
 MOCHI_ENUM_ITEM(Smooth)
+MOCHI_ENUM_ITEM(Ease)
 MOCHI_ENUM_END()
 
 MOCHI_ENUM_BEGIN(superdex::tuner::PathDriveMode)
@@ -154,6 +164,7 @@ MOCHI_ENUM_ITEM(ContactForce)
 MOCHI_ENUM_ITEM(SolverStats)
 MOCHI_ENUM_ITEM(Performance)
 MOCHI_ENUM_ITEM(Penetration)
+MOCHI_ENUM_ITEM(RelativePose)
 MOCHI_ENUM_END()
 
 MOCHI_ENUM_BEGIN(superdex::tuner::StopKind)
@@ -234,7 +245,7 @@ struct LoadProfile {
 };
 
 // PosePath targets, where the load's point should be, and how the body should be oriented, at
-// `time`.
+// `time`. For ControllerInput, the controller's tool pose in the bot's root frame.
 struct PoseWaypoint {
   double time = 0.0;
   // World position of the load's point.
@@ -279,6 +290,21 @@ struct PathDrive {
   MOCHI_STRUCT_END()
 };
 
+// A ControllerInput key: the values of the load's `joints` (all of the input without them) at
+// `time`.
+struct InputKey {
+  double time = 0.0;
+  DynamicArray<real> values;
+  // Toward the next key.
+  Interpolation interpolation = Interpolation::Linear;
+
+  MOCHI_STRUCT_BEGIN(superdex::tuner::InputKey)
+  MOCHI_FIELD(time) MOCHI_ATTRIBUTE(Units("s"));
+  MOCHI_FIELD(values)
+  MOCHI_FIELD(interpolation)
+  MOCHI_STRUCT_END()
+};
+
 struct LoadSpec {
   DynamicString name;
   bool enabled = true;
@@ -294,9 +320,14 @@ struct LoadSpec {
   Real3 pointWorld{0.0f, 0.0f, 0.0f};
   // Magnitude over time. Not used by PosePath.
   LoadProfile profile;
-  // PosePath only, sorted by time.
+  // PosePath and ControllerInput (Pose inputs), sorted by time.
   DynamicArray<PoseWaypoint> waypoints;
   PathDrive drive;
+  // ControllerInput of joint positions: the joints `inputKeys` set; empty: the whole input. The
+  // rest hold the controller's input at the start of the run.
+  DynamicArray<DynamicString> joints;
+  // ControllerInput of joint positions or a custom input, sorted by time.
+  DynamicArray<InputKey> inputKeys;
 
   MOCHI_STRUCT_BEGIN(superdex::tuner::LoadSpec)
   MOCHI_FIELD(name)
@@ -310,6 +341,8 @@ struct LoadSpec {
   MOCHI_FIELD(profile)
   MOCHI_FIELD(waypoints)
   MOCHI_FIELD(drive)
+  MOCHI_FIELD(joints) MOCHI_ATTRIBUTE(NoSerializeDefaults);
+  MOCHI_FIELD(inputKeys) MOCHI_ATTRIBUTE(NoSerializeDefaults);
   MOCHI_STRUCT_END()
 };
 
@@ -319,11 +352,14 @@ struct ProbeSpec {
   DynamicString target;
   // Penetration: leave out overlap with static unbounded actors (ground planes).
   bool ignoreGround = false;
+  // RelativePose: the body or link whose frame the target's pose is measured in.
+  DynamicString frame;
 
   MOCHI_STRUCT_BEGIN(superdex::tuner::ProbeSpec)
   MOCHI_FIELD(kind)
   MOCHI_FIELD(target)
   MOCHI_FIELD(ignoreGround)
+  MOCHI_FIELD(frame) MOCHI_ATTRIBUTE(NoSerializeDefaults);
   MOCHI_STRUCT_END()
 };
 
@@ -463,13 +499,22 @@ struct RunSpec {
 
 struct TunerSpec {
   std::optional<DynamicString> comment = std::nullopt;
-  // "./"-prefixed paths are relative to the tuner file, others to the assets root.
+  // The prefab to simulate. "./"-prefixed paths are relative to the tuner file, others to the
+  // assets root. A tuner has a prefab or a scene, not both.
   DynamicString prefab;
+  // Instead of a prefab, a bot scene (.superdex_scene) to simulate: its base scene, robots and
+  // their controllers; same path rules.
+  DynamicString scene;
+  // The scene's bots to build; empty: all of them.
+  DynamicArray<DynamicString> bots;
   // Root for asset-relative paths, relative to the tuner file. Empty: the directory of the nearest
   // `.superdex_root` marker (as in SuperDex Studio), else $SUPERDEX_ASSETS_PATH, else the directory
   // of the referencing file.
   DynamicString assetsRoot;
   DynamicArray<PrefabOverride> prefabOverrides;
+  // Like prefabOverrides, JSON paths into the scene's SuperDex Physics SolverParams, applied in
+  // order once the scene is built.
+  DynamicArray<PrefabOverride> solverOverrides;
   DynamicArray<LoadSpec> loads;
   DynamicArray<ProbeSpec> probes;
   RunSpec run;
@@ -480,8 +525,11 @@ struct TunerSpec {
   MOCHI_STRUCT_BEGIN(superdex::tuner::TunerSpec)
   MOCHI_FIELD(comment)
   MOCHI_FIELD(prefab)
+  MOCHI_FIELD(scene) MOCHI_ATTRIBUTE(NoSerializeDefaults);
+  MOCHI_FIELD(bots) MOCHI_ATTRIBUTE(NoSerializeDefaults);
   MOCHI_FIELD(assetsRoot)
   MOCHI_FIELD(prefabOverrides)
+  MOCHI_FIELD(solverOverrides) MOCHI_ATTRIBUTE(NoSerializeDefaults);
   MOCHI_FIELD(loads)
   MOCHI_FIELD(probes)
   MOCHI_FIELD(run)
@@ -524,7 +572,16 @@ bool SaveTunerSpecToFile(
     std::filesystem::path const& tunerFilePath,
     std::filesystem::path const& anchorPath);
 
+// Whether `spec` simulates exactly one of a prefab and a scene; sets `outError` if not.
+[[nodiscard]] bool CheckPrefabOrScene(TunerSpec const& spec, std::string& outError);
+
+// TunerSpec::prefab as a path, or empty without one.
 [[nodiscard]] std::filesystem::path ResolvePrefabPath(
+    TunerSpec const& spec,
+    std::filesystem::path const& tunerFilePath);
+
+// TunerSpec::scene as a path, or empty without one.
+[[nodiscard]] std::filesystem::path ResolveScenePath(
     TunerSpec const& spec,
     std::filesystem::path const& tunerFilePath);
 
