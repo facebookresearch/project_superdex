@@ -1092,7 +1092,6 @@ inline bool ValidCollidingNormals(ContactAssemblyReg const& reg, entt::entity co
       .fadeFriction = experimentalEval.fadeFriction,
       .implicitNormalForceForDissipation = experimentalEval.implicitNormalForceForDissipation,
       .useFittedHessian = useFittedHessian,
-      .frictionModel = experimentalEval.frictionModel,
       .elastoPlasticFriction = AllowsElastoPlasticFriction(params)};
 }
 

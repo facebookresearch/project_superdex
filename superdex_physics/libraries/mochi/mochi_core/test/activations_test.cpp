@@ -134,62 +134,6 @@ static void TestIPCStepC1() {
   }
 }
 
-template <typename T>
-static void TestCinfRegularized() {
-  // Finite-difference parameters following the StribeckActivation pattern.
-  T const kFdEps = MOCHI_USE_DOUBLE_PRECISION ? 1e-6 : 1e-4;
-  T const kFdTol = T(1e3) * kFdEps;
-  T const kTol = 1e-2;
-
-  for (T eps = 1e-2; AllTrue(eps < Scalar(1)); eps += Scalar(1e-1)) {
-    T const delta = kFdEps * eps;
-
-    // Analytical values at x = 0: f = 0 (shifted), df = 0, ddf = 2/eps, df_x = 2/eps
-    {
-      T f{}, df{}, ddf{}, df_x{};
-      CinfRegularized<T>(T(0), eps, f, df, ddf, df_x);
-      EXPECT_NEAR_TOL(T(0), f, kTol * eps);
-      EXPECT_NEAR_TOL(T(0), df, kTol);
-      EXPECT_NEAR_TOL(T(2) / eps, ddf, kTol * (T(1) + T(2) / eps));
-      EXPECT_NEAR_TOL(T(2) / eps, df_x, kTol * (T(1) + T(2) / eps));
-    }
-
-    // Derivative consistency via finite differences in the regularization region.
-    // Beyond ~2*eps, ddf becomes small and the dfP-df subtraction loses float precision.
-    for (T x = eps / Scalar(10); AllTrue(x < Scalar(2) * eps); x += eps / Scalar(10)) {
-      T f{}, df{}, ddf{}, df_x{};
-      CinfRegularized<T>(x, eps, f, df, ddf, df_x);
-
-      T fP{}, dfP{}, ddfP{}, df_xP{};
-      CinfRegularized<T>(x + delta, eps, fP, dfP, ddfP, df_xP);
-
-      EXPECT_NEAR_TOL((fP - f) / delta, df, kFdTol * (T(1) + Abs(df)));
-      EXPECT_NEAR_TOL((dfP - df) / delta, ddf, kFdTol * (T(1) + Abs(ddf)));
-      EXPECT_NEAR_TOL(df / x, df_x, kTol * (T(1) + Abs(df_x)));
-    }
-
-    // Small x: f approaches x^2/eps, to full relative precision
-    {
-      T const x = Scalar(1e-9) * eps;
-      T f{}, df{}, ddf{}, df_x{};
-      CinfRegularized<T>(x, eps, f, df, ddf, df_x);
-      T const fRef = x * x / eps;
-      EXPECT_NEAR_TOL(fRef, f, Scalar(4) * std::numeric_limits<Scalar>::epsilon() * fRef);
-    }
-
-    // Large x: f approaches x - eps/2, df approaches 1, ddf approaches 0, df_x approaches 1/x
-    {
-      T const x = Scalar(100) * eps;
-      T f{}, df{}, ddf{}, df_x{};
-      CinfRegularized<T>(x, eps, f, df, ddf, df_x);
-      EXPECT_NEAR_TOL(x - eps / T(2), f, kTol * x);
-      EXPECT_NEAR_TOL(T(1), df, kTol);
-      EXPECT_NEAR_TOL(T(0), ddf, kTol * (T(1) + Abs(ddf)));
-      EXPECT_NEAR_TOL(T(1) / x, df_x, kTol * (T(1) + T(1) / x));
-    }
-  }
-}
-
 TEST(Activations, SoftPlus) {
   // Derivative consistency via finite differences.
   for (real t = 1e-2_r; t < 1_r; t += 1e-2_r) {
@@ -257,13 +201,6 @@ TEST(Activations, IPCStepC1) {
   TestIPCStepC1<Simd<Scalar>>();
   TestIPCStepC1<Simd<Scalar, 2 * Simd<Scalar>::kSize>>();
   TestIPCStepC1<Simd<Scalar, 4 * Simd<Scalar>::kSize>>();
-}
-
-TEST(Activations, CinfRegularized) {
-  TestCinfRegularized<Scalar>();
-  TestCinfRegularized<Simd<Scalar>>();
-  TestCinfRegularized<Simd<Scalar, 2 * Simd<Scalar>::kSize>>();
-  TestCinfRegularized<Simd<Scalar, 4 * Simd<Scalar>::kSize>>();
 }
 
 // Tests for StribeckActivation

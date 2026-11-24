@@ -645,15 +645,11 @@ struct ContactEvalConfig {
   // convergence.
   bool useFittedHessian = ExperimentalEvalParams{}.fittedSaturationHessian.contactFriction;
 
-  // Selects the smoothing of velocity-regularized Coulomb friction. Elasto-plastic
-  // friction always uses C1Regularized.
-  CoulombFrictionModel frictionModel = ExperimentalEvalParams{}.frictionModel;
-
   // Elasto-plastic Coulomb friction. Coulomb friction acts on the tangential displacement from each
   // contact's anchor, at the anchor offset from the stage-start position, with
-  // ContactParams::preslidingDisplacement as transition width and the C1Regularized ramp, so
-  // contacts hold a load below the Coulomb limit without slip. A new contact has its anchor at the
-  // stage-start position (zero offset). Requires the anchor offsets of every contact.
+  // ContactParams::preslidingDisplacement as transition width, so contacts hold a load below the
+  // Coulomb limit without slip. A new contact has its anchor at the stage-start position (zero
+  // offset). Requires the anchor offsets of every contact.
   bool elastoPlasticFriction = false;
 };
 
@@ -1107,27 +1103,11 @@ MOCHI_FORCE_INLINE void ComputeBatchContactDissipationForceDForce(
         V{config.elastoPlasticFriction ? params.preslidingDisplacement
                                        : params.frictionFalloffVel * dtFactor};
 
-    // Compute friction smoothing function. Elasto-plastic friction always uses C1Regularized, whose
-    // compact support saturates at the presliding displacement, where the anchor update clamps the
-    // displacement; the friction model only selects the smoothing of velocity-regularized friction.
-    // Note: falloffFriction serves as the transition width `t` for IPC (compact support) and as the
-    // regularization parameter `eps` for CinfRegularized (no compact support). Both control the
-    // smoothing scale near the stick-slip transition; the semantics differ but the numerical value
-    // is shared.
+    // Compute friction smoothing function. With elasto-plastic friction, the friction force
+    // reaches its Coulomb limit at the presliding displacement, where the anchor update clamps the
+    // displacement.
     V smoother, dSmoother, ddSmoother, dSmoother_ptNorm;
-    CoulombFrictionModel const frictionModel =
-        config.elastoPlasticFriction ? CoulombFrictionModel::C1Regularized : config.frictionModel;
-    switch (frictionModel) {
-      case CoulombFrictionModel::CinfRegularized:
-        CinfRegularized<V>(
-            slipTNorm, falloffFriction, smoother, dSmoother, ddSmoother, dSmoother_ptNorm);
-        break;
-      case CoulombFrictionModel::C1Regularized:
-        IPCstepC1<V>(slipTNorm, falloffFriction, smoother, dSmoother, ddSmoother, dSmoother_ptNorm);
-        break;
-      default:
-        MOCHI_ASSERT_VERBOSE(false, "Invalid friction model.");
-    }
+    IPCstepC1<V>(slipTNorm, falloffFriction, smoother, dSmoother, ddSmoother, dSmoother_ptNorm);
 
     // Output energy
     if (computeEnergyFactor) {

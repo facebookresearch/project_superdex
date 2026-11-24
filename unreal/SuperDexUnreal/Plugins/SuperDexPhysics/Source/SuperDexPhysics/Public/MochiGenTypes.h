@@ -923,42 +923,6 @@ SUPERDEXPHYSICS_API mochi::IntegrationMethod ToMochi(EMochiIntegrationMethod Val
 /** Returns the Unreal representation of Value. */
 SUPERDEXPHYSICS_API EMochiIntegrationMethod ToUnreal(mochi::IntegrationMethod Value);
 
-/**
- * [Experimental] Smoothing of velocity-regularized Coulomb friction.
- *
- * @note Elasto-plastic friction (see ContactParams::preferElastoPlasticFriction) always uses the
- *   EMochiCoulombFrictionModel::C1Regularized ramp, in displacement.
- *
- * @warning This is an experimental feature. It may be changed or removed in the future. Use at your
- *   own risk.
- */
-UENUM(BlueprintType)
-enum class EMochiCoulombFrictionModel : uint8 {
-  /**
-   * C1-smoothed Coulomb friction with compact support: friction rises smoothly from 0 and reaches
-   *   full strength with zero slope at the end of the ramp. The ramp width is
-   *   ContactParams::frictionFalloffVel of slip speed for velocity-regularized friction, and
-   *   ContactParams::preslidingDisplacement of displacement for elasto-plastic friction.
-   */
-  C1Regularized = 0,
-  /**
-   * C-infinity regularized Coulomb friction with no compact support: friction asymptotically
-   *   approaches full strength. ContactParams::frictionFalloffVel controls the regularization
-   *   scale.
-   */
-  CinfRegularized = 1,
-  /** Number of friction model enum values. */
-  Count = 2 UMETA(Hidden),
-  /** Default Coulomb friction model. */
-  Default = 0,
-};
-
-/** Returns the native Mochi representation of Value. */
-SUPERDEXPHYSICS_API mochi::CoulombFrictionModel ToMochi(EMochiCoulombFrictionModel Value);
-
-/** Returns the Unreal representation of Value. */
-SUPERDEXPHYSICS_API EMochiCoulombFrictionModel ToUnreal(mochi::CoulombFrictionModel Value);
-
 /** Verbosity levels for solvers and optimizers. */
 UENUM(BlueprintType)
 enum class EMochiVerbosityLevel : uint8 {
@@ -2291,19 +2255,6 @@ struct SUPERDEXPHYSICS_API FMochiExperimentalEvalParams {
    */
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   FMochiSaturationHessianParams FittedSaturationHessian{};
-
-  /**
-   * Selects the smoothing of velocity-regularized Coulomb friction.
-   *
-   * C1Regularized (default) preserves existing behavior exactly. CinfRegularized is an additional
-   *   model that can be selected at runtime without affecting C1Regularized users.
-   *
-   * @note Contacts with elasto-plastic friction (see ContactParams::preferElastoPlasticFriction)
-   *   always use the EMochiCoulombFrictionModel::C1Regularized ramp, in displacement over
-   *   ContactParams::preslidingDisplacement, whatever this setting.
-   */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
-  EMochiCoulombFrictionModel FrictionModel{};
 
   /**
    * Validate that the residual is the gradient of the objective by a directional finite-difference

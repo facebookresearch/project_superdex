@@ -280,16 +280,13 @@ struct ContactParams {
   /**
    * @brief [Experimental] Velocity threshold for Coulomb friction smoothing [m/s].
    *
-   * @details For C1Regularized, the Coulomb friction force smoothly transitions from 0 to full
-   * strength as tangential velocity increases from 0 to frictionFalloffVel (compact support). For
-   * CinfRegularized, the force asymptotically approaches full strength with no compact support
-   * boundary; frictionFalloffVel controls the regularization scale.
+   * @details The Coulomb friction force smoothly transitions from 0 to full strength as tangential
+   * velocity increases from 0 to frictionFalloffVel.
    *
    * @warning This is an experimental feature. It may be changed or removed in the future. Use at
    * your own risk.
    *
-   * @note Must be finite and not negative. For CinfRegularized, a value of zero is clamped
-   * internally to avoid numerical issues.
+   * @note Must be finite and not negative. Zero gives unsmoothed Coulomb friction.
    * @note Used only by contacts with velocity-regularized friction (see
    * @ref preferElastoPlasticFriction).
    * @note Smaller velocity thresholds improve physical accuracy but may degrade stability.
@@ -307,9 +304,6 @@ struct ContactParams {
    * contact from its anchor increases from 0 to preslidingDisplacement, and beyond it the anchor
    * follows the contact. A held contact springs back by up to preslidingDisplacement once the load
    * is removed.
-   *
-   * @note The force follows the ramp of @ref CoulombFrictionModel::C1Regularized, whose compact
-   * support ends at preslidingDisplacement, whatever @ref ExperimentalEvalParams::frictionModel.
    *
    * @note Smaller values reduce presliding motion and spring-back, but stiffen the tangential
    * response.
@@ -427,50 +421,6 @@ struct ContactParams {
   MOCHI_STRUCT_END()
   // clang-format on
 };
-
-/**
- * @brief [Experimental] Smoothing of velocity-regularized Coulomb friction.
- *
- * @warning This is an experimental feature. It may be changed or removed in the future. Use at your
- * own risk.
- *
- * @note Elasto-plastic friction (see @ref ContactParams::preferElastoPlasticFriction) always uses
- * the @ref CoulombFrictionModel::C1Regularized ramp, in displacement.
- *
- * @see ContactParams::frictionFalloffVel
- */
-enum class CoulombFrictionModel {
-  /**
-   * @brief C1-smoothed Coulomb friction with compact support: friction rises smoothly from 0 and
-   * reaches full strength with zero slope at the end of the ramp. The ramp width is
-   * @ref ContactParams::frictionFalloffVel of slip speed for velocity-regularized friction, and
-   * @ref ContactParams::preslidingDisplacement of displacement for elasto-plastic friction.
-   */
-  C1Regularized,
-
-  /**
-   * @brief C-infinity regularized Coulomb friction with no compact support: friction asymptotically
-   * approaches full strength. @ref ContactParams::frictionFalloffVel controls the regularization
-   * scale.
-   */
-  CinfRegularized,
-
-  /** @brief Number of friction model enum values. */
-  Count,
-
-  /** @brief Default Coulomb friction model. */
-  Default = C1Regularized
-};
-
-} // namespace mochi
-
-MOCHI_ENUM_BEGIN(mochi::CoulombFrictionModel)
-MOCHI_ENUM_ITEM(C1Regularized)
-MOCHI_ENUM_ITEM(CinfRegularized)
-MOCHI_ENUM_COUNT(Count)
-MOCHI_ENUM_END()
-
-namespace mochi {
 
 /**
  * @brief Collision detection geometry for an @ref Actor.

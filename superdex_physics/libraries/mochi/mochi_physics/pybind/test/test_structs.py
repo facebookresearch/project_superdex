@@ -450,7 +450,6 @@ class TestStructs(MochiTestBase):
                 joint_friction=True,
                 constraint_saturation=False,
             ),
-            friction_model=mochi.CoulombFrictionModel.CINF_REGULARIZED,
             fade_friction=False,
             consistency_res_norm=True,
             implicit_normal_force_for_dissipation=True,
@@ -462,9 +461,6 @@ class TestStructs(MochiTestBase):
         self.assertFalse(params_kw_all.fitted_saturation_hessian.contact_friction)
         self.assertTrue(params_kw_all.fitted_saturation_hessian.joint_friction)
         self.assertFalse(params_kw_all.fitted_saturation_hessian.constraint_saturation)
-        self.assertEqual(
-            mochi.CoulombFrictionModel.CINF_REGULARIZED, params_kw_all.friction_model
-        )
         self.assertTrue(params_kw_all.consistency_res_norm)
         self.assertAlmostEqual(2e-3, params_kw_all.consistency_res_norm_step)
 
@@ -494,7 +490,6 @@ class TestStructs(MochiTestBase):
         params.fitted_saturation_hessian = mochi.SaturationHessianParams(
             contact_friction=False, joint_friction=True, constraint_saturation=False
         )
-        params.friction_model = mochi.CoulombFrictionModel.CINF_REGULARIZED
         params.consistency_res_norm = True
         params.consistency_res_norm_step = 2e-3
 

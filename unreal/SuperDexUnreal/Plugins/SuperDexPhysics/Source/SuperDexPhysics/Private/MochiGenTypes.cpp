@@ -253,19 +253,6 @@ EMochiIntegrationMethod ToUnreal(mochi::IntegrationMethod Value) {
   return static_cast<EMochiIntegrationMethod>(Value);
 }
 
-static_assert(static_cast<int>(EMochiCoulombFrictionModel::C1Regularized) == static_cast<int>(mochi::CoulombFrictionModel::C1Regularized));
-static_assert(static_cast<int>(EMochiCoulombFrictionModel::CinfRegularized) == static_cast<int>(mochi::CoulombFrictionModel::CinfRegularized));
-static_assert(static_cast<int>(EMochiCoulombFrictionModel::Count) == static_cast<int>(mochi::CoulombFrictionModel::Count));
-static_assert(static_cast<int>(EMochiCoulombFrictionModel::Default) == static_cast<int>(mochi::CoulombFrictionModel::Default));
-
-mochi::CoulombFrictionModel ToMochi(EMochiCoulombFrictionModel Value) {
-  return static_cast<mochi::CoulombFrictionModel>(Value);
-}
-
-EMochiCoulombFrictionModel ToUnreal(mochi::CoulombFrictionModel Value) {
-  return static_cast<EMochiCoulombFrictionModel>(Value);
-}
-
 static_assert(static_cast<int>(EMochiVerbosityLevel::Silent) == static_cast<int>(mochi::VerbosityLevel::Silent));
 static_assert(static_cast<int>(EMochiVerbosityLevel::Error) == static_cast<int>(mochi::VerbosityLevel::Error));
 static_assert(static_cast<int>(EMochiVerbosityLevel::Warning) == static_cast<int>(mochi::VerbosityLevel::Warning));
@@ -529,7 +516,6 @@ void AssignFromMochi(FMochiExperimentalEvalParams& Out, mochi::ExperimentalEvalP
   Out.bFadeFriction = static_cast<bool>(Src.fadeFriction);
   Out.bImplicitNormalForceForDissipation = static_cast<bool>(Src.implicitNormalForceForDissipation);
   Out.FittedSaturationHessian = ToUnreal(Src.fittedSaturationHessian);
-  Out.FrictionModel = ToUnreal(Src.frictionModel);
   Out.bConsistencyResNorm = static_cast<bool>(Src.consistencyResNorm);
   Out.ConsistencyResNormStep = static_cast<float>(Src.consistencyResNormStep);
 }
@@ -884,7 +870,6 @@ mochi::ExperimentalEvalParams ToMochi(FMochiExperimentalEvalParams const& Src) {
   Out.fadeFriction = static_cast<bool>(Src.bFadeFriction);
   Out.implicitNormalForceForDissipation = static_cast<bool>(Src.bImplicitNormalForceForDissipation);
   Out.fittedSaturationHessian = ToMochi(Src.FittedSaturationHessian);
-  Out.frictionModel = ToMochi(Src.FrictionModel);
   Out.consistencyResNorm = static_cast<bool>(Src.bConsistencyResNorm);
   Out.consistencyResNormStep = static_cast<mochi::real>(Src.ConsistencyResNormStep);
   return Out;

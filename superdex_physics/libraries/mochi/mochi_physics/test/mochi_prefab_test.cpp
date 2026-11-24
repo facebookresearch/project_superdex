@@ -2900,7 +2900,6 @@ TEST(Prefab, Serialization_SceneParams) {
             "jointFriction": true,
             "constraintSaturation": false
           },
-          "frictionModel": "CinfRegularized",
           "consistencyResNorm": true,
           "consistencyResNormStep": 4.44e-05
         }
@@ -2960,7 +2959,6 @@ TEST(Prefab, Serialization_SceneParams) {
     EXPECT_EQ(true, solver.experimentalEval.implicitNormalForceForDissipation);
     EXPECT_EQ(false, solver.experimentalEval.fadeFriction);
     EXPECT_EQ(true, solver.experimentalEval.explicitNormals);
-    EXPECT_EQ(CoulombFrictionModel::CinfRegularized, solver.experimentalEval.frictionModel);
     EXPECT_EQ(true, solver.experimentalEval.consistencyResNorm);
     EXPECT_NEAR_EQ(4.44e-5_r, solver.experimentalEval.consistencyResNormStep);
     EXPECT_EQ(IntegrationMethod::BDF2, solver.integrationMethod);

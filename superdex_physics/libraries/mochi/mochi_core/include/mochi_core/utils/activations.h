@@ -170,48 +170,6 @@ MOCHI_FORCE_INLINE void IPCstepC1(T const& x, T const& t, T& f, T& df, T& ddf, T
   df = Select(mask, one, x * df_x);
 }
 
-/**************************************************************************************************
- C-infinity regularized friction activation function. Given some input x >= 0 and
- regularization parameter eps >= 0, this function computes:
-
- f(x)    = sqrt(x^2 + eps^2/4) - eps/2            // energy smoother, shifted so f(0) = 0
- df(x)   = x / sqrt(x^2 + eps^2/4)                // first derivative
- ddf(x)  = (eps^2/4) / (x^2 + eps^2/4)^{3/2}      // second derivative
- df_x(x) = 1 / sqrt(x^2 + eps^2/4)                // df/x (robust, no division by x)
-
- This is a C-infinity smooth approximation to f(x) = |x|, which converges as eps -> 0.
- Unlike IPCstepC1, the regularization has no compact support: the function smoothly
- transitions everywhere, with the steepest transition near x = 0.
-
- The eps parameter is clamped internally to a small positive value to avoid division by zero
- when eps = 0. The value of f is shifted by -eps/2 so that f(0) = 0, matching the
- convention in other similar activation functions.
-*/
-template <class T>
-MOCHI_FORCE_INLINE void CinfRegularized(T const& x, T const& eps, T& f, T& df, T& ddf, T& df_x) {
-  static_assert(std::is_floating_point_v<T> || IsSimd<T>, "Unsupported type for CinfRegularized");
-  if constexpr (IsSimd<T>) {
-    static_assert(
-        std::is_floating_point_v<typename T::Scalar>, "Unsupported type for CinfRegularized");
-  }
-  MOCHI_ASSERT_VERBOSE(
-      AllTrue(x >= T(0)), "CinfRegularized only supported for non-negative values.");
-  // Clamp eps to avoid division by zero when the caller passes eps = 0.
-  T const epsClamped = Max(eps, T{std::numeric_limits<real>::epsilon()});
-  // The factor of 1/4 (i.e., dividing eps by 2) ensures that ddf(0) = 2/eps, matching the
-  // second derivative of IPCstepC1 at x = 0 (with t = eps) for consistent regularization.
-  T const eps2 = epsClamped * epsClamped / 4_r;
-  T const x2 = x * x;
-  T const s2 = x2 + eps2;
-  T const s = Sqrt(s2);
-  T const invS = T{1} / s;
-
-  f = x2 / (s + epsClamped / 2_r); // energy smoother s - eps/2, without cancellation
-  df = x * invS; // first derivative
-  ddf = eps2 * (invS * invS * invS); // eps^2 / s^3
-  df_x = invS; // 1/s (robust, no division by x)
-}
-
 // Interpreting the argument x as a velocity, df is a Gaussian Stribeck friction model, but
 // normalized for a peak static friction of 1 and shifted to the right by a regularization threshold
 // t, to make room for smoothly ramping up from zero. For dfInfty = 1, this is equivalent to the IPC

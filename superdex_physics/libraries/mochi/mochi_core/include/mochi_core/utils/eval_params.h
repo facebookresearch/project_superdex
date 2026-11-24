@@ -17,7 +17,6 @@
 #pragma once
 
 // PLEASE DO NOT ADD OTHER INCLUDES HERE. This header is included in the mochi_physics public API.
-#include <mochi_core/contact/contact_params.h>
 #include <mochi_core/mochi_platform.h>
 #include <mochi_core/utils/reflection.h>
 
@@ -135,19 +134,6 @@ struct ExperimentalEvalParams {
   SaturationHessianParams fittedSaturationHessian;
 
   /**
-   * @brief Selects the smoothing of velocity-regularized Coulomb friction.
-   *
-   * @details C1Regularized (default) preserves existing behavior exactly. CinfRegularized is an
-   * additional model that can be selected at runtime without affecting C1Regularized users.
-   *
-   * @note Contacts with elasto-plastic friction (see
-   * @ref ContactParams::preferElastoPlasticFriction) always use the
-   * @ref CoulombFrictionModel::C1Regularized ramp, in displacement over
-   * @ref ContactParams::preslidingDisplacement, whatever this setting.
-   */
-  CoulombFrictionModel frictionModel = CoulombFrictionModel::Default;
-
-  /**
    * @brief Validate that the residual is the gradient of the objective by a directional
    * finite-difference consistency check.
    *
@@ -169,7 +155,6 @@ struct ExperimentalEvalParams {
   MOCHI_FIELD(fadeFriction)
   MOCHI_FIELD(implicitNormalForceForDissipation)
   MOCHI_FIELD(fittedSaturationHessian)
-  MOCHI_FIELD(frictionModel)
   MOCHI_FIELD(consistencyResNorm)
   MOCHI_FIELD(consistencyResNormStep)
   MOCHI_STRUCT_END()

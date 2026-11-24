@@ -785,28 +785,17 @@ TEST_F(FrictionAnchors, PlacingOtherActorKeepsAnchors) {
 // Integrators whose step does not end at their last stage do not allow elasto-plastic friction.
 // They are accepted, and all contacts then use velocity-regularized friction: the contacts of a
 // held cube drop their anchors at the next step and keep none. Allowing it again starts the
-// contacts without preload. CinfRegularized friction, which only applies to velocity-regularized
-// friction, keeps elasto-plastic friction.
+// contacts without preload.
 TEST_F(
     FrictionAnchors,
     IntegratorsThatDisallowElastoPlasticFrictionSelectVelocityRegularizedFriction) {
   Actor* cube = CreateCubeUnderTangentialLoad(0.5_r);
   SolverParams const allowed = _scene->GetSolverParams();
   ASSERT_TRUE(AllowsElastoPlasticFriction(allowed));
-  DynamicArray<SolverParams> cases;
-  SolverParams cinf = allowed;
-  cinf.experimentalEval.frictionModel = CoulombFrictionModel::CinfRegularized;
-  cases.push_back(cinf);
+
   for (int i = 0; i < static_cast<int>(IntegrationMethod::Count); ++i) {
     SolverParams params = allowed;
     params.integrationMethod = static_cast<IntegrationMethod>(i);
-    cases.push_back(params);
-  }
-
-  for (SolverParams const& params : cases) {
-    SCOPED_TRACE(
-        std::string(SReflect::EnumToString(params.integrationMethod)) + ", " +
-        SReflect::EnumToString(params.experimentalEval.frictionModel));
     _scene->SetSolverParams(allowed, test::ExpectOK{});
     Step(5);
     ASSERT_FALSE(GetPendingAnchors(cube).empty());
@@ -826,7 +815,7 @@ TEST_F(
       EXPECT_TRUE(requests.empty());
       _scene->SetSolverParams(allowed, test::ExpectOK{});
       Step(1);
-      EXPECT_TRUE(GetAnchors(cube).empty()) << "The step after allowing it starts without preload.";
+      EXPECT_TRUE(GetAnchors(cube).empty());
       EXPECT_FALSE(GetPendingAnchors(cube).empty());
       EXPECT_FALSE(AreEqualAnchors(held, GetPendingAnchors(cube)));
     }

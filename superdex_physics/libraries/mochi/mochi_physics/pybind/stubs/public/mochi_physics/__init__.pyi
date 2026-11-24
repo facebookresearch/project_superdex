@@ -1247,45 +1247,6 @@ class LogChannel:
     def __int__(self) -> int: ...
     def __index__(self) -> int: ...
 
-class CoulombFrictionModel:
-    """[Experimental] Smoothing of velocity-regularized Coulomb friction.
-
-    Note:
-        Elasto-plastic friction (see
-        :attr:`~superdex.physics.ContactParams.prefer_elasto_plastic_friction`)
-        always uses the :class:`C1_REGULARIZED
-        <superdex.physics.CoulombFrictionModel>` ramp, in displacement.
-
-    Warning:
-        This is an experimental feature. It may be changed or removed in the future.
-        Use at your own risk.
-    """
-    C1_REGULARIZED: CoulombFrictionModel
-    """C1-smoothed Coulomb friction with compact support: friction rises smoothly from
-    0 and reaches full strength with zero slope at the end of the ramp. The ramp
-    width is :attr:`~superdex.physics.ContactParams.friction_falloff_vel` of slip
-    speed for velocity-regularized friction, and
-    :attr:`~superdex.physics.ContactParams.presliding_displacement` of displacement
-    for elasto-plastic friction.
-    """
-    CINF_REGULARIZED: CoulombFrictionModel
-    """C-infinity regularized Coulomb friction with no compact support: friction
-    asymptotically approaches full strength.
-    :attr:`~superdex.physics.ContactParams.friction_falloff_vel` controls the
-    regularization scale.
-    """
-    COUNT: CoulombFrictionModel
-    """Number of friction model enum values."""
-    DEFAULT: CoulombFrictionModel
-    """Default Coulomb friction model."""
-    def __init__(self, value: int) -> None: ...
-    @property
-    def name(self) -> str: ...
-    @property
-    def value(self) -> int: ...
-    def __int__(self) -> int: ...
-    def __index__(self) -> int: ...
-
 class NonLinearSolverType:
     """Non-linear solver algorithm."""
     NEWTON: NonLinearSolverType
@@ -3741,15 +3702,11 @@ class ContactParams:
     friction_falloff_vel: float
     """[Experimental] Velocity threshold for Coulomb friction smoothing [m/s].
 
-    For C1Regularized, the Coulomb friction force smoothly transitions from 0 to
-    full strength as tangential velocity increases from 0 to frictionFalloffVel
-    (compact support). For CinfRegularized, the force asymptotically approaches full
-    strength with no compact support boundary; frictionFalloffVel controls the
-    regularization scale.
+    The Coulomb friction force smoothly transitions from 0 to full strength as
+    tangential velocity increases from 0 to frictionFalloffVel.
 
     Note:
-        Must be finite and not negative. For CinfRegularized, a value of zero is
-        clamped internally to avoid numerical issues.
+        Must be finite and not negative. Zero gives unsmoothed Coulomb friction.
 
     Note:
         Used only by contacts with velocity-regularized friction (see
@@ -3778,12 +3735,6 @@ class ContactParams:
     tangential displacement of a contact from its anchor increases from 0 to
     preslidingDisplacement, and beyond it the anchor follows the contact. A held
     contact springs back by up to preslidingDisplacement once the load is removed.
-
-    Note:
-        The force follows the ramp of :class:`C1_REGULARIZED
-        <superdex.physics.CoulombFrictionModel>`, whose compact support ends at
-        preslidingDisplacement, whatever
-        :attr:`~superdex.physics.ExperimentalEvalParams.friction_model`.
 
     Note:
         Smaller values reduce presliding motion and spring-back, but stiffen the
@@ -4248,21 +4199,6 @@ class ExperimentalEvalParams:
         See :class:`~superdex.physics.SaturationHessianParams` for when it switches
         to fitted Hessians.
     """
-    friction_model: CoulombFrictionModel
-    """Selects the smoothing of velocity-regularized Coulomb friction.
-
-    C1Regularized (default) preserves existing behavior exactly. CinfRegularized is
-    an additional model that can be selected at runtime without affecting
-    C1Regularized users.
-
-    Note:
-        Contacts with elasto-plastic friction (see
-        :attr:`~superdex.physics.ContactParams.prefer_elasto_plastic_friction`)
-        always use the :class:`C1_REGULARIZED
-        <superdex.physics.CoulombFrictionModel>` ramp, in displacement over
-        :attr:`~superdex.physics.ContactParams.presliding_displacement`, whatever
-        this setting.
-    """
     consistency_res_norm: bool
     """Validate that the residual is the gradient of the objective by a directional
     finite-difference consistency check.
@@ -4282,7 +4218,6 @@ class ExperimentalEvalParams:
         fade_friction: bool = ...,
         implicit_normal_force_for_dissipation: bool = ...,
         fitted_saturation_hessian: SaturationHessianParams = ...,
-        friction_model: CoulombFrictionModel | int = ...,
         consistency_res_norm: bool = ...,
         consistency_res_norm_step: float = ...,
     ) -> None: ...
