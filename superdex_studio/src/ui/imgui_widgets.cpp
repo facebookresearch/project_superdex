@@ -2649,17 +2649,21 @@ static char const* GetDisplayLabel(SReflect::FieldTypeInfo const& field, char* b
   return CamelCaseToDisplayName(field._name, buf, bufSize);
 }
 
+// A nested struct's fields revert to @p defaultPtr's, such as the member's initializer in the
+// enclosing struct; null uses the struct type's defaults.
 static bool SimpleReflectionField(
     char const* label,
     SReflect::TypeInfo const& typeInfo,
     void* fieldPtr,
-    SReflect::FieldTypeInfo const* fieldInfo);
+    SReflect::FieldTypeInfo const* fieldInfo,
+    void const* defaultPtr = nullptr);
 
 static bool SimpleReflectionStruct_Internal(
     SReflect::StructTypeInfo const& structInfo,
     void* structPtr,
     SimpleReflectionWidgetOverride overrideFn,
-    SimpleReflectionReadOnlyPredicate readOnlyFn = nullptr);
+    SimpleReflectionReadOnlyPredicate readOnlyFn = nullptr,
+    void const* defaultStructPtr = nullptr);
 
 // Default-constructed instance of `typeInfo`, cached once per type for the process. Used both to
 // render the widget an unset optional would get, and to source the default values that drive the
@@ -2708,7 +2712,8 @@ void ImGui::PopReflectionArrayLabels() {
 }
 
 // A tree node with one row per element plus add / remove-last buttons, so the array can grow from
-// empty. Scalar elements take @p fieldInfo's units and range.
+// empty. Struct and variant elements are entries in their own right, so each also gets a remove
+// button. Scalar elements take @p fieldInfo's units and range.
 static bool ResizableArrayField(
     char const* label,
     SReflect::ArrayTypeInfo const& arrInfo,
@@ -2732,11 +2737,20 @@ static bool ResizableArrayField(
   using CT = SReflect::CoreType;
   bool const isScalar = elemInfo._coreType == CT::CT_int32 || elemInfo._coreType == CT::CT_float ||
       elemInfo._coreType == CT::CT_double;
+  bool const isEntry = elemInfo._coreType == CT::CT_struct || elemInfo._coreType == CT::CT_variant;
   bool changed = false;
+  size_t toRemove = count;
   for (size_t i = 0; i < count; ++i) {
     std::string const elemLabel =
         i < elemLabels.size() ? elemLabels[i] : "[" + std::to_string(i) + "]";
     PushID(static_cast<int>(i));
+    if (isEntry) {
+      if (Button(ICON_FA_TRASH)) {
+        toRemove = i;
+      }
+      ItemTooltipWrapped("Remove this element");
+      SameLine();
+    }
     changed |= SimpleReflectionField(
         elemLabel.c_str(), elemInfo, arrInfo.GetElement(arrPtr, i), isScalar ? fieldInfo : nullptr);
     PopID();
@@ -2758,6 +2772,13 @@ static bool ResizableArrayField(
   }
   ItemTooltipWrapped("Remove the last element");
   EndDisabled();
+  if (toRemove < count) {
+    for (size_t i = toRemove; i + 1 < count; ++i) {
+      elemInfo.Set(arrInfo.GetElement(arrPtr, i + 1), arrInfo.GetElement(arrPtr, i));
+    }
+    arrInfo.SetNumElements(arrPtr, count - 1);
+    changed = true;
+  }
   TreePop();
   return changed;
 }
@@ -2766,7 +2787,8 @@ static bool SimpleReflectionField(
     char const* label,
     SReflect::TypeInfo const& typeInfo,
     void* fieldPtr,
-    SReflect::FieldTypeInfo const* fieldInfo) {
+    SReflect::FieldTypeInfo const* fieldInfo,
+    void const* defaultPtr) {
   bool changed = false;
 
   char const* units = nullptr;
@@ -2905,13 +2927,50 @@ static bool SimpleReflectionField(
         PopID();
         break;
       }
+      case SReflect::CoreType::CT_variant: {
+        auto const& varInfo = static_cast<SReflect::VariantTypeInfo const&>(typeInfo);
+        auto const& types = varInfo._innerTypes;
+        size_t const current = varInfo.GetInnerTypeIndex(fieldPtr);
+        if (current >= types.size()) {
+          TextDisabled("%s (no value)", label);
+          break;
+        }
+        size_t shown = current;
+        PushID(label);
+        if (BeginCombo(label, types[current]->_name)) {
+          for (size_t i = 0; i < types.size(); ++i) {
+            bool const selected = i == current;
+            if (Selectable(types[i]->_name, selected) && !selected &&
+                varInfo.TrySetInnerTypeIndex(fieldPtr, i)) {
+              shown = i;
+              changed = true;
+            }
+            if (selected) {
+              SetItemDefaultFocus();
+            }
+          }
+          EndCombo();
+        }
+        SReflect::TypeInfo const& innerInfo = *types[shown];
+        void* const innerPtr = varInfo.GetInnerObject(fieldPtr);
+        Indent();
+        if (innerInfo._coreType == SReflect::CoreType::CT_struct) {
+          changed |= SimpleReflectionStruct_Internal(
+              static_cast<SReflect::StructTypeInfo const&>(innerInfo), innerPtr, nullptr, nullptr);
+        } else {
+          changed |= SimpleReflectionField("Value", innerInfo, innerPtr, nullptr);
+        }
+        Unindent();
+        PopID();
+        break;
+      }
       case SReflect::CoreType::CT_struct: {
         auto const& inner = static_cast<SReflect::StructTypeInfo const&>(typeInfo);
         // Framed header rather than a plain tree node so nested structs read as sections.
         // CollapsingHeader implies NoTreePushOnOpen, so indent the body explicitly.
         if (CollapsingHeader(label)) {
           Indent();
-          changed = SimpleReflectionStruct_Internal(inner, fieldPtr, nullptr);
+          changed = SimpleReflectionStruct_Internal(inner, fieldPtr, nullptr, nullptr, defaultPtr);
           Unindent();
         }
         break;
@@ -3046,12 +3105,15 @@ static bool SimpleReflectionStruct_Internal(
     SReflect::StructTypeInfo const& structInfo,
     void* structPtr,
     SimpleReflectionWidgetOverride overrideFn,
-    SimpleReflectionReadOnlyPredicate readOnlyFn) {
+    SimpleReflectionReadOnlyPredicate readOnlyFn,
+    void const* defaultStructPtr) {
   bool changed = false;
-  // Default-constructed instance of this struct, the source of per-field default values for the
-  // revert buttons. Null if the struct is not default-constructible, in which case revert is
+  // The source of per-field default values for the revert buttons: the default given, else a
+  // default-constructed instance of this struct. Null if neither exists, in which case revert is
   // simply not offered.
-  void* const defaultStructPtr = GetDefaultInstance(structInfo);
+  if (defaultStructPtr == nullptr) {
+    defaultStructPtr = GetDefaultInstance(structInfo);
+  }
   for (SReflect::FieldTypeInfo const* field : structInfo._fields) {
     if (field->HasAttribute<SReflect::Attribute_HideFromEditor>()) {
       continue;
@@ -3088,7 +3150,7 @@ static bool SimpleReflectionStruct_Internal(
       if (canRevert) {
         changed |= SimpleReflectionFieldWithRevert(label, *field, fieldPtr, defaultFieldPtr);
       } else {
-        changed |= SimpleReflectionField(label, innerType, fieldPtr, field);
+        changed |= SimpleReflectionField(label, innerType, fieldPtr, field, defaultFieldPtr);
       }
     }
 

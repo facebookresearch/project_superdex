@@ -18,6 +18,7 @@
 #include "app/app.h"
 #include "assets/asset_manager.h"
 #include "assets/bot_asset.h"
+#include "assets/bot_task_utils.h"
 #include "assets/controller_params.h"
 #include "assets/mochi_prefab_asset.h"
 #include "assets/scene_asset.h"
@@ -1210,6 +1211,7 @@ bool SceneEditor::LoadTask(mochi::Path const& path) {
   _taskPath = path;
   _taskPrefab.emplace();
   SReflect::FromJsonString(*_taskPrefab, entry->json);
+  _taskValidationPending = true;
   _showCurrentTaskTransforms = false;
   // A task that does not bind to this scene still loads, so it can be edited until it does.
   RestageScene();
@@ -1221,6 +1223,8 @@ void SceneEditor::ClearTask() {
   _taskPath = {};
   _taskPrefab.reset();
   _taskSpawns.clear();
+  _taskValidationError.clear();
+  _taskValidationPending = false;
   _taskBindError.clear();
   _taskLoadError.clear();
   _taskSaveError.clear();
@@ -1235,6 +1239,7 @@ void SceneEditor::SyncTaskFromCache() {
   if (auto const* entry = _sceneAsset->GetTaskCache().Find(_taskPath.ToString())) {
     _taskPrefab.emplace();
     SReflect::FromJsonString(*_taskPrefab, entry->json);
+    _taskValidationPending = true;
   }
 }
 
@@ -1274,6 +1279,7 @@ void SceneEditor::OnTaskEdited(bool structural) {
   if (auto* entry = _sceneAsset->GetTaskCache().Find(_taskPath.ToString())) {
     entry->json = SReflect::ToJsonString(*_taskPrefab, true);
   }
+  _taskValidationPending = true;
   RestageScene();
   _sceneAsset->SetDirty(true);
   if (structural) {
@@ -1762,10 +1768,16 @@ void SceneEditor::ShowTaskEditor() {
     changed |= ImGui::SimpleReflectionStruct(task.metadata);
   }
 
-  mochi::Error validation;
-  superdex::robotics::ValidateBotTaskPrefab(task, validation);
-  if (!validation.IsOK()) {
-    ShowWarning(validation.GetDescription());
+  // ValidateBotTaskPrefab logs each failure, so validate once an edit is committed (Enter, a click
+  // elsewhere, a released drag) rather than on every keystroke or drag frame.
+  if (_taskValidationPending && !ImGui::IsAnyItemActive()) {
+    mochi::Error validation;
+    superdex::robotics::ValidateBotTaskPrefab(task, validation);
+    _taskValidationError = validation.IsOK() ? std::string() : validation.GetDescription();
+    _taskValidationPending = false;
+  }
+  if (!_taskValidationError.empty()) {
+    ShowWarning(_taskValidationError);
   } else if (!_taskBindError.empty()) {
     ShowWarning("Task objects are hidden: " + _taskBindError);
   }
@@ -1811,16 +1823,18 @@ void SceneEditor::ShowTaskEditor() {
       // typing neither drops nor adopts any. An empty parent means task_root, so a spawn that had
       // no name had no children.
       if (ImGui::IsItemActivated()) {
-        _spawnRename = {.name = oldName, .children = {}};
+        _spawnRename = {.name = oldName, .children = {}, .criteria = task.terminationCriteria};
         for (int j = 0; j < mochi::isize(spawns); ++j) {
           if (!oldName.empty() && std::string_view(spawns[j].parent) == oldName) {
             _spawnRename.children.push_back(j);
           }
         }
       }
-      // A name left empty or taken reverts, since spawns are parented by name.
+      // A name left empty or taken reverts, since spawns are parented by name. So does one with a
+      // '.', which criteria would read as "<spawn>.<sub>".
       if (ImGui::IsItemDeactivatedAfterEdit() &&
-          (spawn.name.empty() || std::ranges::any_of(spawns, [&](auto const& other) {
+          (spawn.name.empty() || std::string_view(spawn.name).find('.') != std::string_view::npos ||
+           std::ranges::any_of(spawns, [&](auto const& other) {
              return &other != &spawn &&
                  std::string_view(other.name) == std::string_view(spawn.name);
            }))) {
@@ -1833,6 +1847,8 @@ void SceneEditor::ShowTaskEditor() {
             spawns[child].parent = spawn.name;
           }
         }
+        task.terminationCriteria = _spawnRename.criteria;
+        RenameTaskObjectReferences(task.terminationCriteria, _spawnRename.name, spawn.name);
         changed = true;
       }
       changed |= NameCombo("Prefab", prefabNames, spawn.prefabName, spawn.prefabName);
@@ -1897,6 +1913,9 @@ void SceneEditor::ShowTaskEditor() {
   if (prefabNames.empty()) {
     ImGui::TextDisabled("Add spawnable prefabs to the scene to place them in tasks.");
   }
+
+  ImGui::HoverableSeparatorText("Termination Criteria");
+  changed |= ImGui::SimpleReflectionStruct(task.terminationCriteria);
 
   ImGui::EndDisabled();
   if (changed || structural) {

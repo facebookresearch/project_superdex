@@ -19,6 +19,10 @@
 #include <string>
 #include <string_view>
 
+namespace superdex::robotics {
+struct TerminationCriteria;
+} // namespace superdex::robotics
+
 namespace superdex::studio {
 
 // Writes a new .superdex_task at @p path with no spawns and its metadata name set to @p name.
@@ -26,5 +30,12 @@ bool CreateBotTaskFile(std::string const& path, std::string_view name, std::stri
 
 // Sets the metadata name of the .superdex_task at @p path, keeping the rest of the task.
 bool SetBotTaskName(std::string const& path, std::string_view name, std::string& error);
+
+// Points references to task object @p from, including sub-actor addresses "<from>.<sub>", at @p to.
+// An empty @p from, or one containing '.', matches no reference.
+void RenameTaskObjectReferences(
+    superdex::robotics::TerminationCriteria& criteria,
+    std::string_view from,
+    std::string_view to);
 
 } // namespace superdex::studio

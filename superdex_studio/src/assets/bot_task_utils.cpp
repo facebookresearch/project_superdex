@@ -19,6 +19,9 @@
 #include <superdex_robotics/scene/bot_task.h>
 #include <superdex_robotics/utils/file_utils.h>
 
+#include <type_traits>
+#include <variant>
+
 namespace superdex::studio {
 
 namespace {
@@ -53,6 +56,42 @@ bool SetBotTaskName(std::string const& path, std::string_view name, std::string&
   }
   task.metadata.name = mochi::DynamicString{std::string(name)};
   return SaveTask(task, path, error);
+}
+
+void RenameTaskObjectReferences(
+    superdex::robotics::TerminationCriteria& criteria,
+    std::string_view from,
+    std::string_view to) {
+  if (from.empty()) {
+    return;
+  }
+  // A reference names a spawn, or a sub-actor of one as "<spawn>.<sub>".
+  auto const rename = [&](mochi::DynamicString& ref) {
+    std::string_view const value{ref};
+    if (value.substr(0, value.find('.')) == from) {
+      ref.replace(0, from.size(), to);
+    }
+  };
+  auto const renameReferences = [&](auto& c) {
+    using Criterion = std::decay_t<decltype(c)>;
+    if constexpr (std::is_same_v<Criterion, superdex::robotics::RelativeBounds>) {
+      rename(c.targetTaskObject);
+      rename(c.taskObject);
+    } else {
+      // A new criterion type must rename its own references here.
+      static_assert(
+          std::is_same_v<Criterion, superdex::robotics::SphericalProximity> ||
+          std::is_same_v<Criterion, superdex::robotics::AxisAlignment>);
+      rename(c.taskObjectA);
+      rename(c.taskObjectB);
+    }
+  };
+  for (auto& criterion : criteria.success.criteria) {
+    std::visit(renameReferences, criterion);
+  }
+  for (auto& criterion : criteria.failure.criteria) {
+    std::visit(renameReferences, criterion);
+  }
 }
 
 } // namespace superdex::studio

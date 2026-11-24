@@ -30,7 +30,11 @@
 
 using namespace superdex::studio;
 using namespace mochi::test;
+using superdex::robotics::AxisAlignment;
 using superdex::robotics::BotTaskPrefab;
+using superdex::robotics::RelativeBounds;
+using superdex::robotics::SphericalProximity;
+using superdex::robotics::TerminationCriteria;
 
 namespace {
 
@@ -75,6 +79,39 @@ TEST_F(BotTaskUtilsTest, SetNameOnMissingFileFailsWithoutCreatingIt) {
   EXPECT_FALSE(SetBotTaskName(_path, "New", error));
   EXPECT_FALSE(error.empty());
   EXPECT_FALSE(std::filesystem::exists(_path));
+}
+
+TEST(RenameTaskObjectReferencesTest, RenamesTheObjectAndItsSubActorsInBothOutcomes) {
+  TerminationCriteria criteria;
+  criteria.success.criteria.emplace_back(
+      RelativeBounds{.targetTaskObject = "knob", .taskObject = "knob.screw"});
+  criteria.failure.criteria.emplace_back(
+      SphericalProximity{.taskObjectA = "knobs", .taskObjectB = "knob"});
+  criteria.failure.criteria.emplace_back(
+      AxisAlignment{.taskObjectA = "knob.cap", .taskObjectB = "board"});
+
+  RenameTaskObjectReferences(criteria, "knob", "m8_knob");
+
+  TerminationCriteria expected;
+  expected.success.criteria.emplace_back(
+      RelativeBounds{.targetTaskObject = "m8_knob", .taskObject = "m8_knob.screw"});
+  expected.failure.criteria.emplace_back(
+      SphericalProximity{.taskObjectA = "knobs", .taskObjectB = "m8_knob"});
+  expected.failure.criteria.emplace_back(
+      AxisAlignment{.taskObjectA = "m8_knob.cap", .taskObjectB = "board"});
+  EXPECT_EQ(SReflect::ToJsonString(criteria, true), SReflect::ToJsonString(expected, true));
+}
+
+TEST(RenameTaskObjectReferencesTest, RenamesNothingForANameNoReferenceCanAddress) {
+  TerminationCriteria criteria;
+  criteria.success.criteria.emplace_back(
+      SphericalProximity{.taskObjectA = "knob.cap", .taskObjectB = ""});
+  std::string const before = SReflect::ToJsonString(criteria, true);
+
+  RenameTaskObjectReferences(criteria, "", "m8_knob");
+  RenameTaskObjectReferences(criteria, "knob.cap", "m8_knob");
+
+  EXPECT_EQ(SReflect::ToJsonString(criteria, true), before);
 }
 
 } // namespace

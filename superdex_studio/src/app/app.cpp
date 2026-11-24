@@ -654,8 +654,8 @@ void SuperDexStudio::OnUpdate() {
   // Handle editor specific inputs.
   if (auto* editor = GetActiveAssetEditor()) {
     auto& undoStack = editor->GetUndoStack();
-    // Undo/Redo
-    if (editor->CanUndoRedo() && undoStack.IsInitialized()) {
+    // Undo/Redo. A text field being edited takes Ctrl+Z itself.
+    if (editor->CanUndoRedo() && undoStack.IsInitialized() && !ImGui::GetIO().WantTextInput) {
       bool const redo = ImGui::IsKeyChordPressed(ImGuiKey_Z | ImGuiMod_Ctrl | ImGuiMod_Shift);
       bool const undo = ImGui::IsKeyChordPressed(ImGuiKey_Z | ImGuiMod_Ctrl);
       bool const redoY = ImGui::IsKeyChordPressed(ImGuiKey_Y | ImGuiMod_Ctrl);

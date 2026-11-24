@@ -173,6 +173,10 @@ class SceneEditor : public AssetEditor {
   mochi::Path _taskPath;
   std::optional<superdex::robotics::BotTaskPrefab> _taskPrefab;
   std::vector<ResolvedTaskSpawn> _taskSpawns;
+  // Why _taskPrefab fails ValidateBotTaskPrefab; empty when it passes.
+  std::string _taskValidationError;
+  // _taskPrefab changed and has not been validated since.
+  bool _taskValidationPending = false;
   // Why _taskPrefab no longer binds to the edited scene; its spawns are not staged meanwhile.
   std::string _taskBindError;
   // Why the most recent Load/Replace Task attempt failed; the previous task, if any, stays loaded.
@@ -180,11 +184,12 @@ class SceneEditor : public AssetEditor {
   // Why the most recent Save Task failed.
   std::string _taskSaveError;
   bool _showCurrentTaskTransforms = false;
-  // The spawn whose Name field is being edited: its name and the indices of its children when
-  // editing started.
+  // The spawn whose Name field is being edited: its name, the indices of its children and the
+  // task's termination criteria when editing started.
   struct SpawnRename {
     std::string name;
     std::vector<int> children;
+    superdex::robotics::TerminationCriteria criteria;
   };
   SpawnRename _spawnRename;
   // The bot whose Name field is being edited: its name and the (slot, entry) indices that named it
