@@ -3384,6 +3384,10 @@ class BotEntry:
         """Initial joint angles (length = total DOFs of the bot)."""
     @initial_pose.setter
     def initial_pose(self, value: mochi_physics.ArrayLikeReal) -> None: ...
+    has_gravity: bool
+    """False builds every link of the bot without gravity, as for a robot whose own
+    controller compensates gravity; the scene's other actors keep theirs.
+    """
     @property
     def controllers(self) -> DynamicArrayControllerEntry:
         """Controllers to create and attach to this bot."""
@@ -3404,6 +3408,7 @@ class BotEntry:
         path: str = ...,
         parent_from_bot: mochi_physics.TransformRT = ...,
         initial_pose: mochi_physics.ArrayLikeReal = ...,
+        has_gravity: bool = ...,
         controllers: ArrayLikeControllerEntry = ...,
         roboperator_class: str = ...,
     ) -> None: ...

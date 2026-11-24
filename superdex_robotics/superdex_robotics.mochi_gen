@@ -1796,6 +1796,9 @@ struct bots::BotEntry [no_reflection] {
   TransformRT parentFromBot [no_serialize_defaults];
   // @brief Initial joint angles (length = total DOFs of the bot).
   DynamicArray<real> initialPose [no_serialize_defaults];
+  // @brief False builds every link of the bot without gravity, as for a robot whose own controller
+  // compensates gravity; the scene's other actors keep theirs.
+  bool hasGravity [no_serialize_defaults] = true;
   // @brief Controllers to create and attach to this bot.
   DynamicArray<bots::ControllerEntry> controllers [no_serialize_defaults];
   // @brief Key naming the teleoperator rig that drives this bot; the consumer maps it to a

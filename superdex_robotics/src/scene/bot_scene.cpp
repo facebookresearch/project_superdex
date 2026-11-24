@@ -1722,6 +1722,11 @@ static Bot* InstantiateBot(
   if (!botEntry.initialPose.empty()) {
     botPrefab.defaultPose = botEntry.initialPose;
   }
+  if (!botEntry.hasGravity) {
+    for (BotLinkPrefab& link : botPrefab.links) {
+      link.hasGravity = false;
+    }
+  }
   if (impl.editBot) {
     impl.editBot(botEntry, botPrefab, error);
     MOCHI_ERROR_RETURN(error, nullptr);

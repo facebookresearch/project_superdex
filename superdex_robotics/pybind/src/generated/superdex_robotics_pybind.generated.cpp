@@ -2181,12 +2181,13 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
   ;
 
   registry.GetClass<superdex::robotics::BotEntry>()
-    .def("__init__", [](superdex::robotics::BotEntry* self, nb::object name, nb::object path, nb::object parent_from_bot, nb::object initial_pose, nb::object controllers, nb::object roboperator_class) {
+    .def("__init__", [](superdex::robotics::BotEntry* self, nb::object name, nb::object path, nb::object parent_from_bot, nb::object initial_pose, nb::object has_gravity, nb::object controllers, nb::object roboperator_class) {
       superdex::robotics::BotEntry result{};
       result.name = nb::cast<mochi::DynamicString>(name);
       result.path = nb::cast<mochi::DynamicString>(path);
       result.parentFromBot = nb::cast<mochi::TransformRT>(parent_from_bot);
       result.initialPose = nb::cast<mochi::DynamicArray<mochi::real>>(initial_pose);
+      result.hasGravity = nb::cast<bool>(has_gravity);
       result.controllers = nb::cast<mochi::DynamicArray<superdex::robotics::ControllerEntry>>(controllers);
       result.roboperatorClass = nb::cast<mochi::DynamicString>(roboperator_class);
       new (self) superdex::robotics::BotEntry(std::move(result));
@@ -2196,6 +2197,7 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
       , nb::arg("path") = superdex::robotics::BotEntry{}.path
       , nb::arg("parent_from_bot").sig("...") = superdex::robotics::BotEntry{}.parentFromBot
       , nb::arg("initial_pose").sig("...") = superdex::robotics::BotEntry{}.initialPose
+      , nb::arg("has_gravity") = superdex::robotics::BotEntry{}.hasGravity
       , nb::arg("controllers").sig("...") = superdex::robotics::BotEntry{}.controllers
       , nb::arg("roboperator_class") = superdex::robotics::BotEntry{}.roboperatorClass
     )
@@ -2206,6 +2208,7 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_rw("path", &superdex::robotics::BotEntry::path, "Path to a .superdex_bot or .superdex_bot_archive file (self-contained or mod\nbot).")
     .def_rw("parent_from_bot", &superdex::robotics::BotEntry::parentFromBot, "Bot placement relative to the scene root (aFromB convention: maps bot-frame\ncoordinates into the scene frame). Default: identity.")
     .def_prop_rw("initial_pose", [](superdex::robotics::BotEntry& self) -> mochi::DynamicArray<mochi::real>& { return self.initialPose; }, [](superdex::robotics::BotEntry& self, nb::object val) { self.initialPose = nb::cast<mochi::DynamicArray<mochi::real>>(val); }, "Initial joint angles (length = total DOFs of the bot).")
+    .def_rw("has_gravity", &superdex::robotics::BotEntry::hasGravity, "False builds every link of the bot without gravity, as for a robot whose own\ncontroller compensates gravity; the scene's other actors keep theirs.")
     .def_prop_rw("controllers", [](superdex::robotics::BotEntry& self) -> mochi::DynamicArray<superdex::robotics::ControllerEntry>& { return self.controllers; }, [](superdex::robotics::BotEntry& self, nb::object val) { self.controllers = nb::cast<mochi::DynamicArray<superdex::robotics::ControllerEntry>>(val); }, "Controllers to create and attach to this bot.")
     .def_rw("roboperator_class", &superdex::robotics::BotEntry::roboperatorClass, "Key naming the teleoperator rig that drives this bot; the consumer maps it to a\nconcrete class. Empty means use the consumer's default for the slot this bot\nfills.")
   ;

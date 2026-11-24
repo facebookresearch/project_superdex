@@ -159,6 +159,10 @@ struct BotEntry {
   /// Initial joint angles (length = total DOFs of the bot).
   DynamicArray<real> initialPose;
 
+  /// False builds every link of the bot without gravity, as for a robot whose own controller
+  /// compensates gravity; the scene's other actors keep theirs.
+  bool hasGravity = true;
+
   /// Controllers to create and attach to this bot.
   DynamicArray<ControllerEntry> controllers;
 
@@ -179,6 +183,7 @@ struct BotEntry {
   MOCHI_FIELD(path)
   MOCHI_FIELD(parentFromBot) MOCHI_ATTRIBUTE(NoSerializeDefaults);
   MOCHI_FIELD(initialPose) MOCHI_ATTRIBUTE(NoSerializeDefaults);
+  MOCHI_FIELD(hasGravity) MOCHI_ATTRIBUTE(NoSerializeDefaults);
   MOCHI_FIELD(controllers) MOCHI_ATTRIBUTE(NoSerializeDefaults);
   MOCHI_FIELD(roboperatorClass) MOCHI_ATTRIBUTE(NoSerializeDefaults);
   MOCHI_FIELD_NAME(_legacyTranslation, "translation") MOCHI_ATTRIBUTE(NoSerializeDefaults);

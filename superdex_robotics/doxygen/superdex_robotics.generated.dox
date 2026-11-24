@@ -1728,6 +1728,11 @@
 /// @brief Initial joint angles (length = total DOFs of the bot).
 ///
 
+/// @var superdex::robotics::BotEntry::hasGravity
+///
+/// @brief False builds every link of the bot without gravity, as for a robot whose own controller compensates gravity; the scene's other actors keep theirs.
+///
+
 /// @var superdex::robotics::BotEntry::controllers
 ///
 /// @brief Controllers to create and attach to this bot.
