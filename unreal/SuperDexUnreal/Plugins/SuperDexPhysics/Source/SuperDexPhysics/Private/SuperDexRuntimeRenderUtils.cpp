@@ -126,7 +126,7 @@ void BuildMipChain(UTexture2D& Texture) {
         ERawImageFormat::BGRA8,
         Gamma);
     FImageCore::ResizeImage(Previous, Next, kFilter);
-    auto* Mip = new FTexture2DMipMap(Next.SizeX, Next.SizeY);
+    FTexture2DMipMap* Mip = new FTexture2DMipMap(Next.SizeX, Next.SizeY);
     Mip->BulkData.Lock(LOCK_READ_WRITE);
     FMemory::Memcpy(
         Mip->BulkData.Realloc(Next.RawData.Num()), Next.RawData.GetData(), Next.RawData.Num());
@@ -435,7 +435,7 @@ USkeletalMesh* CreateTransientSkeletalMesh(
           Weight.InfluenceWeights[0] = MAX_uint16;
         } else {
           float Total = 0.f;
-          for (const auto& Influence : Influences) {
+          for (const UE::AnimationCore::FBoneWeight& Influence : Influences) {
             Total += Influence.GetWeight();
           }
           int32 Remaining = MAX_uint16;

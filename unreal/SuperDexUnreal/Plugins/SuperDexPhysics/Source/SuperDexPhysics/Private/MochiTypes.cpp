@@ -110,7 +110,7 @@ inline void ContactEventHandlerBehavior(
   // collect contacts and contacting components
   OutContactPoints.SetNum(0);
   OuContactingComponents.Reset();
-  for (auto& contact : NewContactPoints) {
+  for (const FMochiContactPoint& contact : NewContactPoints) {
     // We can sometimes get null component pointers for some reason so we will remove them as they
     // make no sense and are untraceable
     if (contact.OtherMochiComponent &&
@@ -120,12 +120,12 @@ inline void ContactEventHandlerBehavior(
     }
   }
   // begin contact events
-  for (const auto otherComp : OuContactingComponents) {
+  for (USceneComponent* const otherComp : OuContactingComponents) {
     if (!OutPreviousContactingComponents.Contains(otherComp)) {
       // create temp array of contacts for only this component
       thread_local TArray<FMochiContactPoint> beginContacts;
       beginContacts.Reset();
-      for (auto& contact : OutContactPoints) {
+      for (FMochiContactPoint& contact : OutContactPoints) {
         if (contact.OtherMochiComponent == otherComp) {
           beginContacts.Add(contact);
         }
@@ -134,7 +134,7 @@ inline void ContactEventHandlerBehavior(
     }
   }
   // end contact events
-  for (const auto otherComp : OutPreviousContactingComponents) {
+  for (USceneComponent* const otherComp : OutPreviousContactingComponents) {
     if (!OuContactingComponents.Contains(otherComp)) {
       OnEndContact(otherComp);
     }
@@ -189,13 +189,13 @@ void FMochiNestedContactEventHandler::Update(
   // sort and copy new points by nested name
   SortedContactPoints.Reset();
   // first we need to add previously observed nested names otherwise we'll never call EndContact
-  for (auto& pair : PreviousContactingComponents) {
+  for (TPair<FName, TSet<USceneComponent*>>& pair : PreviousContactingComponents) {
     SortedContactPoints.Add(pair.Key, {});
   }
-  for (auto& contact : NewContactPoints) {
+  for (const FMochiContactPoint& contact : NewContactPoints) {
     SortedContactPoints.FindOrAdd(contact.NestedName).Add(contact);
   }
-  for (auto& pair : SortedContactPoints) {
+  for (TPair<FName, TArray<FMochiContactPoint>>& pair : SortedContactPoints) {
     FName name = pair.Key;
     TArray<FMochiContactPoint>& newContactPoints = pair.Value;
     ContactEventHandlerBehavior(

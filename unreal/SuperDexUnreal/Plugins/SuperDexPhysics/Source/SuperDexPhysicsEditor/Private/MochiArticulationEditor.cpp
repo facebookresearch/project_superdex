@@ -125,7 +125,8 @@ void FMochiArticulationEditorToolkit::NotifyPostChange(
   // Called by the details view, whose NotifyHook is this toolkit, after a property changes.
   const FName PropName = PropertyChangedEvent.GetPropertyName();
   if (Articulation && EditorViewport) {
-    auto PreviewMeshComponent = EditorViewport->GetPreviewMeshComponent();
+    UMochiArticulationPreviewComponent* PreviewMeshComponent =
+        EditorViewport->GetPreviewMeshComponent();
     if (PreviewMeshComponent) {
       PreviewMeshComponent->SetArticulation(Articulation);
     }
@@ -154,8 +155,8 @@ TSharedRef<SDockTab> FMochiArticulationEditorToolkit::SpawnTab_Viewport(const FS
     numJoints = Articulation->GetJointNames().Num();
     numDofs = Articulation->GetNumDofs();
     int numSurfaceFaces = 0;
-    if (auto asArticulation = Cast<UMochiArticulation>(Articulation)) {
-      for (auto& l : asArticulation->GetLinks()) {
+    if (UMochiArticulation* asArticulation = Cast<UMochiArticulation>(Articulation)) {
+      for (const FMochiArticulatedLink& l : asArticulation->GetLinks()) {
         mass += l.bOverrideMass ? l.Mass : 0;
         numSurfaceFaces += l.Shape ? l.Shape->NumSurfaceFaces : 0;
       }
@@ -175,7 +176,7 @@ TSharedRef<SDockTab> FMochiArticulationEditorToolkit::SpawnTab_Viewport(const FS
     UMochiArticulationPreviewComponent* PreviewMeshComponent =
         EditorViewport->GetPreviewMeshComponent();
     if (PreviewMeshComponent) {
-      auto skm = PreviewMeshComponent->GetSkinnedAsset();
+      USkinnedAsset* skm = PreviewMeshComponent->GetSkinnedAsset();
       if (skm) {
         const FSkeletalMeshRenderData* renderData = skm->GetResourceForRendering();
         const FSkeletalMeshLODRenderData& lod0 = renderData->LODRenderData[0];
@@ -378,7 +379,7 @@ void FMochiArticulationEditorToolkit::Export() const {
 }
 
 void FMochiArticulationEditorToolkit::GenerateSkeletalMesh() const {
-  if (auto asArticulation = Cast<UMochiArticulation>(Articulation)) {
+  if (UMochiArticulation* asArticulation = Cast<UMochiArticulation>(Articulation)) {
     FMochiArticulationAssetUtils::GenerateSkeletalMesh(asArticulation);
   }
 }
@@ -420,7 +421,8 @@ void FMochiArticulationEditorToolkit::InitEditor(
   Articulation = Cast<UMochiArticulationBase>(ObjectToEdit);
   Articulation->OnSkeletalMeshRegenerated = [this](USkeletalMesh*) {
     if (Articulation && EditorViewport) {
-      auto PreviewMeshComponent = EditorViewport->GetPreviewMeshComponent();
+      UMochiArticulationPreviewComponent* PreviewMeshComponent =
+          EditorViewport->GetPreviewMeshComponent();
       if (PreviewMeshComponent) {
         // We need to call this with null so that the next call to it in SetArticulation
         // won't early out because the SKM is the same pointer address. When that
@@ -609,7 +611,7 @@ void FMochiArticulationEditorViewportClient::Draw(
   if (!PreviewArticulation || !PreviewMeshComponent) {
     return;
   }
-  if (auto asArticulation = Cast<UMochiArticulation>(PreviewArticulation)) {
+  if (UMochiArticulation* asArticulation = Cast<UMochiArticulation>(PreviewArticulation)) {
     DrawArticulation(asArticulation, View, PDI);
   } else {
     PreviewArticulation->DrawCustom(
@@ -626,17 +628,17 @@ void FMochiArticulationEditorViewportClient::DrawArticulation(
     UMochiArticulation* Articulation,
     const FSceneView* View,
     FPrimitiveDrawInterface* PDI) {
-  const auto& links = Articulation->GetLinks();
-  const auto& jointPos = Articulation->GetDefaultJointPositions();
+  const TArray<FMochiArticulatedLink>& links = Articulation->GetLinks();
+  const TArray<double>& jointPos = Articulation->GetDefaultJointPositions();
   TArray<FTransform> linkTransforms;
   if (!Articulation->ComputeLinkToArticulationRootTransforms(jointPos, linkTransforms)) {
     return;
   }
-  auto rootToWorld = PreviewMeshComponent->GetComponentTransform();
+  FTransform rootToWorld = PreviewMeshComponent->GetComponentTransform();
   for (int iLink = 0; iLink < links.Num(); ++iLink) {
-    auto& link = links[iLink];
-    auto& linkToRoot = linkTransforms[iLink];
-    auto linkLoc = linkToRoot.GetLocation();
+    const FMochiArticulatedLink& link = links[iLink];
+    FTransform& linkToRoot = linkTransforms[iLink];
+    FVector linkLoc = linkToRoot.GetLocation();
     if (bShowLinkTransforms) {
       FRotationMatrix R(linkToRoot.GetRotation().Rotator());
       FVector const X = R.GetScaledAxis(EAxis::X);
@@ -655,8 +657,8 @@ void FMochiArticulationEditorViewportClient::DrawArticulation(
         if (joint.Type == EMochiArticulatedJointType::Revolute ||
             joint.Type == EMochiArticulatedJointType::Prismatic) {
           const int sides = joint.Type == EMochiArticulatedJointType::Prismatic ? 3 : 16;
-          auto axis = jointToRoot.TransformVector(joint.Axis).GetSafeNormal();
-          auto transform = jointToRoot;
+          FVector axis = jointToRoot.TransformVector(joint.Axis).GetSafeNormal();
+          FTransform transform = jointToRoot;
           transform.SetRotation(FQuat::FindBetweenNormals(FVector(0, 0, 1), axis));
           FVector X = transform.TransformVector({1.0, 0.0, 0.0});
           FVector Y = transform.TransformVector({0.0, 1.0, 0.0});
@@ -736,7 +738,9 @@ struct StackedLabelDrawer {
     }
   }
   void Draw() {
-    for (auto& [loc, labels] : Labels) {
+    for (TPair<TPair<int, int>, TArray<FString>>& LabelPair : Labels) {
+      TPair<int, int>& loc = LabelPair.Key;
+      TArray<FString>& labels = LabelPair.Value;
       FString string;
       for (int i = 0; i < labels.Num(); ++i) {
         FString eol = i == labels.Num() - 1 ? TEXT("") : TEXT("\n");
@@ -767,7 +771,7 @@ void FMochiArticulationEditorViewportClient::DrawCanvas(
   if (!PreviewArticulation || !PreviewMeshComponent) {
     return;
   }
-  if (auto asArticulation = Cast<UMochiArticulation>(PreviewArticulation)) {
+  if (UMochiArticulation* asArticulation = Cast<UMochiArticulation>(PreviewArticulation)) {
     DrawCanvasArticulation(asArticulation, InViewport, View, Canvas);
   } else {
     PreviewArticulation->DrawCanvasCustom(
@@ -781,18 +785,18 @@ void FMochiArticulationEditorViewportClient::DrawCanvasArticulation(
     FSceneView& View,
     FCanvas& Canvas) {
   StackedLabelDrawer drawer(View, Canvas, GetDPIScale());
-  const auto& links = Articulation->GetLinks();
-  const auto& joints = Articulation->GetJoints();
-  const auto& jointPos = Articulation->GetDefaultJointPositions();
+  const TArray<FMochiArticulatedLink>& links = Articulation->GetLinks();
+  const TArray<FMochiArticulatedJoint>& joints = Articulation->GetJoints();
+  const TArray<double>& jointPos = Articulation->GetDefaultJointPositions();
   TArray<FTransform> transforms;
   if (!Articulation->ComputeLinkToArticulationRootTransforms(jointPos, transforms)) {
     return;
   }
-  auto rootToWorld = PreviewMeshComponent->GetComponentTransform();
+  FTransform rootToWorld = PreviewMeshComponent->GetComponentTransform();
   for (int iLink = 0; iLink < links.Num(); ++iLink) {
-    auto& link = links[iLink];
-    auto& linkToRoot = transforms[iLink];
-    auto linkLoc = linkToRoot.GetLocation();
+    const FMochiArticulatedLink& link = links[iLink];
+    FTransform& linkToRoot = transforms[iLink];
+    FVector linkLoc = linkToRoot.GetLocation();
     if (bShowLinkTransforms) {
       bool bDummy = link.RenderModel == nullptr || link.Shape == nullptr;
       FString txt = bDummy ? link.Name.ToString() + TEXT("*") : link.Name.ToString();
@@ -924,7 +928,7 @@ void SMochiArticulationEditorViewport::Construct(
   const TObjectPtr<UMochiArticulationBase> articulation = EditorToolkit->GetArticulation();
   PreviewScene->AddComponent(PreviewMeshComponent, FTransform::Identity);
   PreviewMeshComponent->SetArticulation(articulation);
-  const auto skelMesh = PreviewMeshComponent->GetSkinnedAsset();
+  USkinnedAsset* const skelMesh = PreviewMeshComponent->GetSkinnedAsset();
   if (skelMesh) {
     PreviewScene->SetFloorOffset(
         static_cast<float>(-skelMesh->GetBounds().Origin.Z + skelMesh->GetBounds().BoxExtent.Z));
@@ -984,7 +988,7 @@ void SMochiArticulationEditorViewport::OnFloatingButtonClicked() {}
 void SMochiArticulationEditorViewport::OnFocusViewportToSelection() {
   SAssetEditorViewport::OnFocusViewportToSelection();
   if (PreviewScene.IsValid() && EditorToolkit->GetArticulation()) {
-    const auto& jointPos = EditorToolkit->GetArticulation()->GetDefaultJointPositions();
+    const TArray<double>& jointPos = EditorToolkit->GetArticulation()->GetDefaultJointPositions();
     FBoxSphereBounds bounds;
     if (EditorToolkit->GetArticulation()->ComputeVisualBoundsFromJointPositions(jointPos, bounds)) {
       MochiViewportFraming::FocusOnBounds(*ViewportClient, bounds, false);

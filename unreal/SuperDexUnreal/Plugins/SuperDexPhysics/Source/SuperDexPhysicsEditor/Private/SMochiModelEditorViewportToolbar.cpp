@@ -42,7 +42,7 @@ TSharedRef<SWidget> SMochiModelEditorViewportToolbar::GenerateShowMenu() const {
   const bool bShouldCloseAfterSelection = false;
   FMenuBuilder ShowMenuBuilder(bShouldCloseAfterSelection, ViewportRef->GetCommandList());
   {
-    auto Commands = FMochiModelEditorCommands::Get();
+    FMochiModelEditorCommands Commands = FMochiModelEditorCommands::Get();
 
     ShowMenuBuilder.BeginSection("MochiModel", LOCTEXT("MochiModel", "Mochi Model"));
     ShowMenuBuilder.AddMenuEntry(Commands.SetShowVolumeVertices);

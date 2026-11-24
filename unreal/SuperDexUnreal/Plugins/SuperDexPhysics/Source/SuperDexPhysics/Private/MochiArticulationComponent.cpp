@@ -205,7 +205,7 @@ void UMochiArticulationComponent::EndPlay(const EEndPlayReason::Type EndPlayReas
   MOCHI_PROFILE_SCOPE();
   SetArticulationController(nullptr);
   Super::EndPlay(EndPlayReason);
-  for (const auto& dynMesh : SoftLinkDynamicMeshComponents) {
+  for (UMochiSoftMeshComponent* const& dynMesh : SoftLinkDynamicMeshComponents) {
     dynMesh->GetMochiActor()->DestroyMochiResources();
   }
   DestroyArticulatedActor();
@@ -290,7 +290,7 @@ void UMochiArticulationComponent::CreateArticulatedActor() {
           FMochiArticulatedActorPoseVariant& WorldFromLinks,
           mochi::Actor* ArticulatedActor,
           mochi::Scene* Scene,
-          double /*TimeStepSec*/) {
+          double /*TimeStepSec*/) -> bool {
         return OnArticulatedActorControl(WorldFromLinks, ArticulatedActor, Scene);
       },
       bEnableContacts ? ContactGeneratingLinks : TArray<FName>{},
@@ -353,7 +353,7 @@ bool UMochiArticulationComponent::OnArticulatedActorControl(
   }
   FScopeLock lock(&ArticulationControllerMutex);
   mochi::ErrorLog e{};
-  auto state = ExtractArticulatedActorState(ArticulatedActor);
+  FMochiArticulationState state = ExtractArticulatedActorState(ArticulatedActor);
   ConvertArticulatedActorDofsToUnreal(ArticulatedActor, state.JointPositions);
   ConvertArticulatedActorDofsToUnreal(ArticulatedActor, state.JointVelocities);
   thread_local FMochiArticulationControllerCommands commands;
@@ -366,7 +366,7 @@ bool UMochiArticulationComponent::OnArticulatedActorControl(
     ensure(commands.JointEfforts.Num() == NumMochiJointDofs);
     ConvertArticulatedActorDofsToMochi(ArticulatedActor, commands.JointPositionTargets);
     ConvertArticulatedActorDofsToMochi(ArticulatedActor, commands.JointEfforts);
-    auto poseTarget = BuildPoseControllerTargets(
+    TArray<mochi::real> poseTarget = BuildPoseControllerTargets(
         ArticulatedActor, commands.BaseTransformTarget, commands.JointPositionTargets);
     OutPoseTarget.Set<TArray<mochi::real>>(poseTarget);
     SetArticulatedActorJointEfforts(ArticulatedActor, commands.JointEfforts);
@@ -437,7 +437,7 @@ bool UMochiArticulationComponent::EnsureArrayProperties() {
     }
     if (ContactGeneratingLinks.Num() == 0) {
       ContactGeneratingLinks = Articulation->GetLinkNames();
-      for (auto& softLink : Articulation->GetSoftLinks()) {
+      for (const FMochiArticulationSoftLink& softLink : Articulation->GetSoftLinks()) {
         ContactGeneratingLinks.Add(softLink.Name);
       }
       ret = true;
@@ -472,7 +472,7 @@ void UMochiArticulationComponent::PoseMeshFromJointPositions(
 
 void UMochiArticulationComponent::PoseMeshFromLinkWorldTransforms(
     const TArray<FTransform>& InLinkWorldTransforms) {
-  auto& links = Articulation->GetLinks();
+  const TArray<FMochiArticulatedLink>& links = Articulation->GetLinks();
   check(links.Num() == InLinkWorldTransforms.Num());
   for (int iLink = 0; iLink < InLinkWorldTransforms.Num(); iLink++) {
     SetBoneTransformByName(
@@ -483,7 +483,7 @@ void UMochiArticulationComponent::PoseMeshFromLinkWorldTransforms(
 
 void UMochiArticulationComponent::CreateSoftLinksDynamicMeshComponents(
     const TArray<mochi::ActorHandle>& SoftActors) {
-  const auto& softLinks = Articulation->GetSoftLinks();
+  const TArray<FMochiArticulationSoftLink>& softLinks = Articulation->GetSoftLinks();
   const int numSoftLinks = softLinks.Num();
   if (numSoftLinks == 0) {
     return;
@@ -492,7 +492,7 @@ void UMochiArticulationComponent::CreateSoftLinksDynamicMeshComponents(
   AActor* owner = GetOwner();
   SoftLinkDynamicMeshComponents.Reset();
   for (int iLink = 0; iLink < numSoftLinks; ++iLink) {
-    auto dynMesh = Cast<UMochiSoftMeshComponent>(owner->AddComponentByClass(
+    UMochiSoftMeshComponent* dynMesh = Cast<UMochiSoftMeshComponent>(owner->AddComponentByClass(
         UMochiSoftMeshComponent::StaticClass(), true, FTransform::Identity, true));
     dynMesh->SetupAttachment(this);
     FString name = FString::Printf(

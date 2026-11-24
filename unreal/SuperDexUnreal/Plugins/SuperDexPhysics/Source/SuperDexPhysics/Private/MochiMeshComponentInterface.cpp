@@ -19,7 +19,7 @@
 #include "MochiConversions.h"
 
 void IMochiMeshComponentInterface::SetWorldTransformMochi(const FTransform& NewTransform) {
-  if (const auto mochiActorObj = GetMochiActor()) {
+  if (UMochiActorObject* const mochiActorObj = GetMochiActor()) {
     mochiActorObj->SetRootTransform(NewTransform);
   }
 }
@@ -35,27 +35,27 @@ void IMochiMeshComponentInterface::SetWorldLocationAndRotationMochi(
 }
 
 void IMochiMeshComponentInterface::SetContactParams(const UMochiContactParams* ContactParams) {
-  if (const auto mochiActorObj = GetMochiActor()) {
+  if (UMochiActorObject* const mochiActorObj = GetMochiActor()) {
     mochiActorObj->SetContactParams(ContactParams);
   }
 }
 
 void IMochiMeshComponentInterface::SetMaterialParams(const UMochiMaterialParams* MaterialParams) {
-  if (const auto mochiActorObj = GetMochiActor()) {
+  if (UMochiActorObject* const mochiActorObj = GetMochiActor()) {
     mochiActorObj->SetMaterialParams(MaterialParams);
   }
 }
 
 void IMochiMeshComponentInterface::ClearBoundaryConditions() {
-  if (const auto mochiActorObj = GetMochiActor()) {
-    auto handle = mochiActorObj->GetMochiActorHandle();
+  if (UMochiActorObject* const mochiActorObj = GetMochiActor()) {
+    mochi::ActorHandle handle = mochiActorObj->GetMochiActorHandle();
     GetMochiActor()->GetMochiScene()->QueueOrExecuteActorCommand(
         handle, [](mochi::Actor* Actor) { Actor->ClearBoundaryConditions(); });
   }
 }
 
 void IMochiMeshComponentInterface::SetZeroDeformation() const {
-  auto handle = GetMochiActor()->GetMochiActorHandle();
+  mochi::ActorHandle handle = GetMochiActor()->GetMochiActorHandle();
   GetMochiActor()->GetMochiScene()->QueueOrExecuteActorCommand(handle, [](mochi::Actor* Actor) {
     mochi::ErrorLog e{};
     Actor->ClearBoundaryConditions();
@@ -65,13 +65,13 @@ void IMochiMeshComponentInterface::SetZeroDeformation() const {
 
 void IMochiMeshComponentInterface::SetVelocities(FVector LinearVelocity, FVector AngularVelocity)
     const {
-  if (const auto mochiActorObj = GetMochiActor()) {
+  if (UMochiActorObject* const mochiActorObj = GetMochiActor()) {
     mochiActorObj->SetVelocity(LinearVelocity, AngularVelocity);
   }
 }
 
 void IMochiMeshComponentInterface::SetZeroVelocities() {
-  if (const auto mochiActorObj = GetMochiActor()) {
+  if (UMochiActorObject* const mochiActorObj = GetMochiActor()) {
     mochiActorObj->SetVelocity(FVector::ZeroVector, FVector::ZeroVector);
   }
 }
@@ -80,7 +80,7 @@ void IMochiMeshComponentInterface::GetInertialParams(
     double& Mass,
     FVector& CenterOfMass,
     FMochiMomentOfInertia& MomentOfInertia) {
-  if (const auto mochiActorObj = GetMochiActor()) {
+  if (UMochiActorObject* const mochiActorObj = GetMochiActor()) {
     mochiActorObj->GetInertialParams(Mass, CenterOfMass, MomentOfInertia);
   }
 }

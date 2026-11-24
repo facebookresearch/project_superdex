@@ -249,7 +249,7 @@ void UMochiSceneObject::ConfigureSettings(const FMochiSceneSettings& InSettings)
 
 void UMochiSceneObject::ConfigureSceneContentSettings(const FMochiSceneSettings& InSettings) {
   // get solver params
-  auto solverParams = InSettings.GetSolverParams();
+  UMochiSolverParams* solverParams = InSettings.GetSolverParams();
   if (solverParams == nullptr) {
     UE_LOG(
         LogMochiPhysics,
@@ -265,7 +265,7 @@ void UMochiSceneObject::ConfigureSceneContentSettings(const FMochiSceneSettings&
   }
 
   // get contact matrix
-  const auto contactMatrix = InSettings.GetContactMatrix();
+  UMochiContactMatrix* const contactMatrix = InSettings.GetContactMatrix();
   if (contactMatrix == nullptr) {
     UE_LOG(
         LogMochiPhysics,
@@ -285,7 +285,7 @@ void UMochiSceneObject::ConfigureSceneContentSettings(const FMochiSceneSettings&
     // Add user Contact Matrix entries
     // TODO: remove user defined contact matrix entries that were in prior settings?
     if (contactMatrix) {
-      for (auto& entry : contactMatrix->Matrix) {
+      for (FMochiContactMatrixEntry& entry : contactMatrix->Matrix) {
         if (entry.LayerA.IsNone() || entry.LayerB.IsNone()) {
           UE_LOG(
               LogMochiPhysics,
@@ -330,13 +330,13 @@ void UMochiSceneObject::DebugDrawScene(UWorld* World) {
     }
   }
 
-  const auto depth = Settings.DebugDrawFlags.bDebugDrawForeground ? SDPG_Foreground : 0;
+  const int depth = Settings.DebugDrawFlags.bDebugDrawForeground ? SDPG_Foreground : 0;
   const FMochiToUnrealConverter m2u;
 
-  auto* UnrealWorld = World ? World : GetWorld();
+  UWorld* UnrealWorld = World ? World : GetWorld();
   if (UnrealWorld) {
     // Draw all lines
-    auto const& lineVerts = debugDrawDataRender.lineVerts;
+    const DebugDrawLineVerticesBuffer& lineVerts = debugDrawDataRender.lineVerts;
     for (size_t StartIdx = 0; StartIdx < lineVerts.positions.size(); StartIdx += 2) {
       size_t EndIdx = StartIdx + 1;
       FVector StartPos = m2u.TranslationToUnreal(lineVerts.positions[StartIdx]);
@@ -350,7 +350,7 @@ void UMochiSceneObject::DebugDrawScene(UWorld* World) {
     }
 
     // Draw all spheres
-    auto const& spheres = debugDrawDataRender.spheres;
+    const DebugDrawSpheresBuffer& spheres = debugDrawDataRender.spheres;
     for (size_t Idx = 0; Idx < spheres.positions.size(); ++Idx) {
       FVector Pos = m2u.TranslationToUnreal(spheres.positions[Idx]);
       float Radius = static_cast<float>(spheres.radii[Idx]);
@@ -472,7 +472,7 @@ void UMochiSceneObject::InitDefaultContactLayers() {
 
     // Optionally force all actors to simulate in a single island. This may be useful for debugging,
     // but it will significantly reduce CPU performance.
-    const auto projSettings = GetDefault<UMochiPhysicsSettings>();
+    const UMochiPhysicsSettings* const projSettings = GetDefault<UMochiPhysicsSettings>();
     if (projSettings && projSettings->bForceSingleIsland) {
       scene->SetForceSingleIsland(true);
       UE_LOG(
@@ -486,9 +486,9 @@ void UMochiSceneObject::InitDefaultContactLayers() {
 
 void UMochiSceneObject::RegisterDebugDrawAndStatsCallbacks() {
   // Register callback to render debug draw elements to Unreal
-  [[maybe_unused]] const auto debugDrawHandle = RegisterPostStepCallback(
+  [[maybe_unused]] const mochi::CallbackHandle debugDrawHandle = RegisterPostStepCallback(
       "DebugDraw", [this](mochi::StepInfo const& info) { // Update debug draw data
-        auto const& drawData = info.scene->GetDebugDraw().GatherData();
+        const mochi::DebugDrawData& drawData = info.scene->GetDebugDraw().GatherData();
 
         // Make a copy
         debugDrawDataMochi.lineVerts.positions.assign(
@@ -509,7 +509,7 @@ void UMochiSceneObject::RegisterDebugDrawAndStatsCallbacks() {
       });
 
   // Register callback to get stats
-  [[maybe_unused]] const auto statHandle =
+  [[maybe_unused]] const mochi::CallbackHandle statHandle =
       RegisterPostStepCallback("Stats", [this](mochi::StepInfo const& info) {
         FWriteScopeLock lock(StatsLock);
         Stats.Performance = info.scene->GetPerformanceStats();
@@ -565,7 +565,7 @@ void UMochiSceneObject::StartRecording(const FString& filePath) const {
         now->tm_sec);
 
     // Put it all together
-    auto fullFileName = mochi::Format(
+    std::string fullFileName = mochi::Format(
         "%s/%s_%s.recording.h5", recordingPath.c_str(), timeStamp.c_str(), kRecordingName);
     QueueOrExecuteCommand([fullFileName](mochi::Scene* scene) {
       // Use default options + enable contact point recording

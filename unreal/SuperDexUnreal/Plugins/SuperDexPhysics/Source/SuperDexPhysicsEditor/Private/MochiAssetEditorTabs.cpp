@@ -27,7 +27,7 @@ namespace MochiAssetEditorTabs {
 
 TSharedRef<FTabManager::FLayout>
 MakeDefaultLayout(FName LayoutName, FName ViewportTab, FName DetailsTab) {
-  auto MakeSingleTabStack = [](FName Tab, float WidthFraction) {
+  auto MakeSingleTabStack = [](FName Tab, float WidthFraction) -> TSharedRef<FTabManager::FStack> {
     return FTabManager::NewStack()
         ->AddTab(Tab, ETabState::OpenedTab)
         ->SetHideTabWell(true)

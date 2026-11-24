@@ -172,7 +172,7 @@ void FMochiModelEditorDragTool::UpdateSelectedElementIndices(
 
   // A linear scan over all elements is fast enough for an editor tool.
   for (int32 iElement = 0; iElement < Positions.Num(); ++iElement) {
-    const bool bInside = Algo::AnyOf(Volumes, [&](const FConvexVolume& Volume) {
+    const bool bInside = Algo::AnyOf(Volumes, [&](const FConvexVolume& Volume) -> bool {
       return Volume.IntersectPoint(Positions[iElement]);
     });
     if (!bInside) {

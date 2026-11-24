@@ -62,7 +62,7 @@ inline mochi::Quaternion ToMochiQuaternion(FQuat4f const& Value) {
 }
 
 inline FQuat4f ToUnrealQuaternion(mochi::Quaternion const& Value) {
-  auto const Components = Value.ToReal4();
+  const mochi::Real4 Components = Value.ToReal4();
   return FQuat4f(Components[0], Components[1], Components[2], Components[3]);
 }
 
@@ -84,7 +84,7 @@ template <typename TNative, typename TUnreal, typename TConvert>
 mochi::DynamicArray<TNative> ToMochiArray(TArray<TUnreal> const& Source, TConvert Convert) {
   mochi::DynamicArray<TNative> Result;
   Result.reserve(static_cast<size_t>(Source.Num()));
-  for (auto const& Value : Source) {
+  for (const TUnreal& Value : Source) {
     Result.push_back(Convert(Value));
   }
   return Result;

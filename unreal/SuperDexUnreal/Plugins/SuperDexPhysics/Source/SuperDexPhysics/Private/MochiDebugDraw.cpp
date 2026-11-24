@@ -83,7 +83,7 @@ void FMochiDebugDrawFlags::SetMochiDebugDrawFlags(
     mochi::DebugDraw& DebugDraw,
     const FMochiDebugDrawFlags& Flags) {
   auto EnableFeature = [&](char const* name, bool enable) {
-    auto index = DebugDraw.FindFeature(name);
+    int index = DebugDraw.FindFeature(name);
     if (index >= 0) {
       DebugDraw.EnableFeature(index, enable);
     } else {
@@ -154,10 +154,10 @@ void FMochiDebugDrawFlags::SetMochiDebugDrawFlags(
 //------------------------------------------------------------------------------
 
 static FMochiDebugDrawFlags GetCurrentDebugDrawFlags(const UWorld* World) {
-  const auto game = World->GetGameInstance();
-  const auto subsys = game->GetSubsystem<UMochiGameInstanceSubsystem>();
+  UGameInstance* const game = World->GetGameInstance();
+  UMochiGameInstanceSubsystem* const subsys = game->GetSubsystem<UMochiGameInstanceSubsystem>();
   if (subsys) {
-    if (const auto scene = subsys->GetScene()) {
+    if (UMochiSceneObject* const scene = subsys->GetScene()) {
       return scene->GetDebugDrawFlags();
     }
   }
@@ -169,10 +169,10 @@ static FMochiDebugDrawFlags GetCurrentDebugDrawFlags(const UWorld* World) {
 }
 
 static void UpdateDebugDrawFlags(const UWorld* World, const FMochiDebugDrawFlags& Flags) {
-  const auto game = World->GetGameInstance();
-  const auto subsys = game->GetSubsystem<UMochiGameInstanceSubsystem>();
+  UGameInstance* const game = World->GetGameInstance();
+  UMochiGameInstanceSubsystem* const subsys = game->GetSubsystem<UMochiGameInstanceSubsystem>();
   if (subsys) {
-    if (const auto scene = subsys->GetScene()) {
+    if (UMochiSceneObject* const scene = subsys->GetScene()) {
       scene->ConfigureDebugDraw(true, Flags);
     }
   }
@@ -182,8 +182,8 @@ static FAutoConsoleCommandWithWorld GMochiEnableDebugDraw(
     TEXT("Mochi.EnableDebugDraw"),
     TEXT("Enable Mochi debug drawing."),
     FConsoleCommandWithWorldDelegate::CreateLambda([](const UWorld* World) {
-      const auto game = World->GetGameInstance();
-      const auto subsys = game->GetSubsystem<UMochiGameInstanceSubsystem>();
+      UGameInstance* const game = World->GetGameInstance();
+      UMochiGameInstanceSubsystem* const subsys = game->GetSubsystem<UMochiGameInstanceSubsystem>();
       if (subsys) {
         subsys->EnableDebugDraw();
       }
@@ -193,8 +193,8 @@ static FAutoConsoleCommandWithWorld GMochiDisableDebugDraw(
     TEXT("Mochi.DisableDebugDraw"),
     TEXT("Disable Mochi debug drawing."),
     FConsoleCommandWithWorldDelegate::CreateLambda([](const UWorld* World) {
-      const auto game = World->GetGameInstance();
-      const auto subsys = game->GetSubsystem<UMochiGameInstanceSubsystem>();
+      UGameInstance* const game = World->GetGameInstance();
+      UMochiGameInstanceSubsystem* const subsys = game->GetSubsystem<UMochiGameInstanceSubsystem>();
       if (subsys) {
         subsys->DisableDebugDraw();
       }

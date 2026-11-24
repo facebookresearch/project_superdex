@@ -160,7 +160,7 @@ const FMochiArticulatedJoint* UMochiArticulation::FindJoint(FName JointName) con
 
 bool UMochiArticulation::ValidateLinkNames() const {
   TSet<FName> names;
-  for (const auto& link : Links) {
+  for (const FMochiArticulatedLink& link : Links) {
     if (names.Contains(link.Name)) {
       UE_LOG(
           LogMochiPhysics,
@@ -316,7 +316,7 @@ int UMochiArticulation::GetLinkIndex(FName LinkName) const {
 }
 
 bool UMochiArticulation::GetLink(FName LinkName, FMochiArticulatedLink& OutLink) const {
-  if (const auto link = FindLink(LinkName)) {
+  if (const FMochiArticulatedLink* const link = FindLink(LinkName)) {
     OutLink = *link;
     return true;
   }
@@ -329,7 +329,7 @@ int UMochiArticulation::GetJointIndex(FName JointName) const {
 }
 
 bool UMochiArticulation::GetJoint(FName JointName, FMochiArticulatedJoint& OutJoint) const {
-  if (const auto joint = FindJoint(JointName)) {
+  if (const FMochiArticulatedJoint* const joint = FindJoint(JointName)) {
     OutJoint = *joint;
     return true;
   }
@@ -413,7 +413,7 @@ FTransform UMochiArticulation::GetRestLinkToRoot(int LinkIndex) const {
 
 TArray<FName> UMochiArticulation::GetLinkNames() const {
   TArray<FName> names;
-  for (auto& link : Links) {
+  for (const FMochiArticulatedLink& link : Links) {
     names.AddUnique(link.Name);
   }
   return names;
@@ -421,7 +421,7 @@ TArray<FName> UMochiArticulation::GetLinkNames() const {
 
 TArray<FName> UMochiArticulation::GetJointNames() const {
   TArray<FName> names;
-  for (auto& joint : Joints) {
+  for (const FMochiArticulatedJoint& joint : Joints) {
     names.AddUnique(joint.Name);
   }
   return names;
@@ -454,8 +454,8 @@ bool UMochiArticulation::ComputeLinkTransformsInternal(
   OutLinkTransforms.SetNum(iFinal);
   int iDof = 0;
   for (int iLink = 0; iLink < iFinal; ++iLink) {
-    const auto& link = Links[iLink];
-    const auto& joint = Joints[iLink];
+    const FMochiArticulatedLink& link = Links[iLink];
+    const FMochiArticulatedJoint& joint = Joints[iLink];
     const FTransform motion = GetJointMotion(joint, JointPositions, iDof, AngleScale, LengthScale);
     OutLinkTransforms[iLink] = link.ParentJointFromLink * motion * joint.ParentLinkFromJoint;
     if (bToArticulationRoot && link.ParentLink != INDEX_NONE) {
@@ -485,7 +485,7 @@ bool UMochiArticulation::ComputeJointPositionsInternal(
   }
   // The motion DOFs must fit the joint position layout.
   int numMotionDofs = 0;
-  for (const auto& joint : Joints) {
+  for (const FMochiArticulatedJoint& joint : Joints) {
     numMotionDofs += GetNumMotionDofs(joint);
   }
   if (numMotionDofs > GetNumDofs()) {
@@ -495,7 +495,7 @@ bool UMochiArticulation::ComputeJointPositionsInternal(
   OutJointPositions.Init(0.0, GetNumDofs());
   int iDof = 0;
   for (int iLink = 0; iLink < Links.Num(); ++iLink) {
-    const auto& link = Links[iLink];
+    const FMochiArticulatedLink& link = Links[iLink];
     FTransform linkToParent = LinkTransforms[iLink];
     if (bFromArticulationRoot && link.ParentLink != INDEX_NONE) {
       linkToParent = LinkTransforms[iLink] * LinkTransforms[link.ParentLink].Inverse();
@@ -612,7 +612,7 @@ TArray<mochi::ShapeHandle> UMochiArticulation::GetLinkShapes() const {
         *GetName());
   }
   TArray<mochi::ShapeHandle> shapes;
-  for (auto& link : Links) {
+  for (const FMochiArticulatedLink& link : Links) {
     shapes.Add(
         link.Shape ? link.Shape->GetMochiShape(link.ShapeScale, link.GetShapeTransform())
                    : mochi::ShapeHandle{});
@@ -628,7 +628,7 @@ TArray<mochi::ShapeHandle> UMochiArticulation::GetSoftShapes() const {
   TArray<mochi::ShapeHandle> result;
   result.SetNum(numSoftLinks);
   for (int i = 0; i < numSoftLinks; ++i) {
-    auto& softLink = SoftLinks[i];
+    const FMochiArticulationSoftLink& softLink = SoftLinks[i];
     const int parentLinkIndex = GetLinkIndex(softLink.ParentName);
     if (softLink.Model == nullptr) {
       UE_LOG(

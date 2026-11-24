@@ -273,7 +273,8 @@ const TSharedRef<FTabManager::FLayout> FMochiModelEditorToolkit::GetDefaultLayou
 
 void FMochiModelEditorToolkit::AddMaterialModifiers() {
   if (ModelEditorViewport) {
-    auto ViewportClient = ModelEditorViewport->GetViewportClient();
+    TSharedPtr<FMochiModelEditorViewportClient> ViewportClient =
+        ModelEditorViewport->GetViewportClient();
     if (ViewportClient) {
       ViewportClient.Get()->AddSelectionToMaterialModifiers();
     }
@@ -282,7 +283,8 @@ void FMochiModelEditorToolkit::AddMaterialModifiers() {
 
 void FMochiModelEditorToolkit::RemoveMaterialModifiers() {
   if (ModelEditorViewport) {
-    auto ViewportClient = ModelEditorViewport->GetViewportClient();
+    TSharedPtr<FMochiModelEditorViewportClient> ViewportClient =
+        ModelEditorViewport->GetViewportClient();
     if (ViewportClient) {
       ViewportClient.Get()->RemoveSelectionFromMaterialModifiers();
     }
@@ -352,7 +354,7 @@ void FMochiModelEditorToolkit::OnObjectModified(UObject* InObject) {
   // TODO: handle more objects!
 
   if (MochiModel == InObject && ModelEditorViewport) {
-    auto PreviewMeshComponent = ModelEditorViewport->GetPreviewMeshComponent();
+    UMochiSoftMeshComponent* PreviewMeshComponent = ModelEditorViewport->GetPreviewMeshComponent();
     UE_LOG(
         LogMochiPhysicsEditor,
         Display,
@@ -369,7 +371,7 @@ void FMochiModelEditorToolkit::NotifyPostChange(
   const FName PropName = PropertyChangedEvent.GetPropertyName();
 
   if (MochiModel && ModelEditorViewport) {
-    auto PreviewMeshComponent = ModelEditorViewport->GetPreviewMeshComponent();
+    UMochiSoftMeshComponent* PreviewMeshComponent = ModelEditorViewport->GetPreviewMeshComponent();
     if (PreviewMeshComponent) {
       PreviewMeshComponent->SetMaterial(0, MochiModel->PreviewRenderMaterial);
     }

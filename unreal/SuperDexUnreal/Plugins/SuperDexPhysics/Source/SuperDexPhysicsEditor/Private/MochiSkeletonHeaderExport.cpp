@@ -260,7 +260,7 @@ void AddDetailsRow(
     IDetailLayoutBuilder& DetailLayout,
     IDetailCategoryBuilder& Category,
     const UMochiArticulationBase* Articulation) {
-  auto& header = Category.AddCustomRow(FText::FromString("Header"));
+  FDetailWidgetRow& header = Category.AddCustomRow(FText::FromString("Header"));
   header
       .NameContent()
           [SNew(STextBlock).Font(DetailLayout.GetDetailFont()).Text(FText::FromString("Header"))]
@@ -272,7 +272,7 @@ void AddDetailsRow(
                                    .ButtonStyle(FAppStyle::Get(), "Button")
                                    .TextStyle(FAppStyle::Get(), "SmallText")
                                    .Text(FText::FromString("Generate SuperDexSkeleton Header"))
-                                   .OnClicked(FOnClicked::CreateLambda([Articulation] {
+                                   .OnClicked(FOnClicked::CreateLambda([Articulation]() -> FReply {
                                      Generate(Articulation);
                                      return FReply::Handled();
                                    }))]];

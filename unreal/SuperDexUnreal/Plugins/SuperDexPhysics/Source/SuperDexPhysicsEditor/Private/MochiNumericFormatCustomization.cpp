@@ -65,8 +65,10 @@ void FMochiScientificNotationCustomization::CustomizeDetails(IDetailLayoutBuilde
 
   UClass* Class = Objects[0]->GetClass();
 
-  auto FloatInterface = MakeShared<TMochiScientificTypeInterface<float>>();
-  auto DoubleInterface = MakeShared<TMochiScientificTypeInterface<double>>();
+  TSharedRef<TMochiScientificTypeInterface<float>> FloatInterface =
+      MakeShared<TMochiScientificTypeInterface<float>>();
+  TSharedRef<TMochiScientificTypeInterface<double>> DoubleInterface =
+      MakeShared<TMochiScientificTypeInterface<double>>();
 
   // clang-format off
   for (TFieldIterator<FProperty> It(Class); It; ++It) {
@@ -108,7 +110,7 @@ void FMochiScientificNotationCustomization::CustomizeDetails(IDetailLayoutBuilde
             .Text(FText::FromString(Units))
           ]
         ];
-    } else if (auto* StructProp = CastField<FStructProperty>(Prop);
+    } else if (FStructProperty* StructProp = CastField<FStructProperty>(Prop);
                StructProp && StructProp->Struct == TBaseStructure<FVector2D>::Get()) {
       TSharedPtr<IPropertyHandle> XHandle = Handle->GetChildHandle(0);
       TSharedPtr<IPropertyHandle> YHandle = Handle->GetChildHandle(1);

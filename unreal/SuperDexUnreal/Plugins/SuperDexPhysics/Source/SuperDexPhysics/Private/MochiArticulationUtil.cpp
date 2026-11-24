@@ -35,7 +35,7 @@ void ConvertArticulatedActorDofs(
     TArray<mochi::real>& JointDofs,
     bool bToUnreal) {
   mochi::ErrorLog e{};
-  const auto shapeInfo = ArticulatedActor->GetArticulatedShapeInfo(e);
+  const mochi::ArticulatedShapeInfo shapeInfo = ArticulatedActor->GetArticulatedShapeInfo(e);
   TArray<EMochiArticulatedJointType, TInlineAllocator<64>> types;
   bool bNeedsConversion = false;
   for (const mochi::ArticulatedJointType type : shapeInfo.jointTypes) {
@@ -71,12 +71,12 @@ FMochiArticulationState ExtractArticulatedActorState(const mochi::Actor* Articul
   thread_local std::vector<mochi::real> jointPositions;
   thread_local std::vector<mochi::real> jointVelocities;
   // count DOFs
-  const auto shapeInfo = ArticulatedActor->GetArticulatedShapeInfo(e);
+  const mochi::ArticulatedShapeInfo shapeInfo = ArticulatedActor->GetArticulatedShapeInfo(e);
   const int numMochiDofs = ArticulatedActor->GetNumDofs();
   const int numMochiBaseDofs = GetNumBaseDofs(shapeInfo);
   const int numMochiJointDofs = numMochiDofs - numMochiBaseDofs;
   // get base transform
-  const auto linkActors = ArticulatedActor->GetNestedLinkActors(e);
+  const mochi::Span<mochi::ActorHandle const> linkActors = ArticulatedActor->GetNestedLinkActors(e);
   const int numLinks = linkActors.size();
   worldFromLinks.resize(numLinks);
   ArticulatedActor->GetArticulatedLinkTransforms(worldFromLinks, e);
@@ -106,7 +106,7 @@ void SetArticulatedActorJointEfforts(
   thread_local std::vector<int> jointDofIndices;
   thread_local std::vector<mochi::real> jointEfforts;
   // count DOFs
-  const auto shapeInfo = ArticulatedActor->GetArticulatedShapeInfo(e);
+  const mochi::ArticulatedShapeInfo shapeInfo = ArticulatedActor->GetArticulatedShapeInfo(e);
   const int numMochiDofs = ArticulatedActor->GetNumDofs();
   const int numMochiBaseDofs = GetNumBaseDofs(shapeInfo);
   const int numMochiJointDofs = numMochiDofs - numMochiBaseDofs;
@@ -141,7 +141,7 @@ TArray<mochi::real> BuildPoseControllerTargets(
   // static storage
   thread_local TArray<mochi::real> targets;
   // count DOFs
-  const auto shapeInfo = ArticulatedActor->GetArticulatedShapeInfo(e);
+  const mochi::ArticulatedShapeInfo shapeInfo = ArticulatedActor->GetArticulatedShapeInfo(e);
   const int numMochiDofs = ArticulatedActor->GetNumDofs();
   const int numMochiBaseDofs = GetNumBaseDofs(shapeInfo);
   const int numMochiJointDofs = numMochiDofs - numMochiBaseDofs;

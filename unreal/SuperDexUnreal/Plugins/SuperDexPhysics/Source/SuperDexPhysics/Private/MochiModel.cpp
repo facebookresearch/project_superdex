@@ -450,12 +450,12 @@ mochi::ShapeHandle UMochiModel::GetMochiShape(
     const FVector& BakeScale,
     const FTransform& BakeTransformRT) const {
   FUnrealToMochiConverter u2m;
-  auto importMatrix = UnrealToMatrix(ImportTransform.GetScale3D(), ImportTransform);
-  auto bakeMatrix = UnrealToMatrix(BakeScale, BakeTransformRT);
-  auto spaceMatrix = Dot4x4(
+  mochi::VMatrix4x4r importMatrix = UnrealToMatrix(ImportTransform.GetScale3D(), ImportTransform);
+  mochi::VMatrix4x4r bakeMatrix = UnrealToMatrix(BakeScale, BakeTransformRT);
+  mochi::VMatrix4x4r spaceMatrix = Dot4x4(
       u2m.GetBasisChangeMatrix(),
       mochi::VDiagonalMatrix<4>(static_cast<mochi::real>(u2m.OutputSpace.UnitsPerMeter)));
-  auto finalMatrix = Dot4x4(spaceMatrix, Dot4x4(bakeMatrix, importMatrix));
+  mochi::VMatrix4x4r finalMatrix = Dot4x4(spaceMatrix, Dot4x4(bakeMatrix, importMatrix));
   return GetMochiShape_Raw(finalMatrix);
 }
 
@@ -464,13 +464,13 @@ mochi::ShapeHandle UMochiModel::GetMochiShape(
     const mochi::VMatrix4x4r& BakeTransformRT) const {
   MOCHI_PROFILE_SCOPE();
   FUnrealToMochiConverter u2m;
-  auto importMatrix = UnrealToMatrix(ImportTransform.GetScale3D(), ImportTransform);
-  auto bakeMatrix =
+  mochi::VMatrix4x4r importMatrix = UnrealToMatrix(ImportTransform.GetScale3D(), ImportTransform);
+  mochi::VMatrix4x4r bakeMatrix =
       Dot4x4(BakeTransformRT, mochi::VDiagonalMatrix<4>(ToSimd(ToMochiType(BakeScale), 1_r)));
-  auto spaceMatrix = Dot4x4(
+  mochi::VMatrix4x4r spaceMatrix = Dot4x4(
       u2m.GetBasisChangeMatrix(),
       mochi::VDiagonalMatrix<4>(static_cast<mochi::real>(u2m.OutputSpace.UnitsPerMeter)));
-  auto finalMatrix = Dot4x4(spaceMatrix, Dot4x4(bakeMatrix, importMatrix));
+  mochi::VMatrix4x4r finalMatrix = Dot4x4(spaceMatrix, Dot4x4(bakeMatrix, importMatrix));
   return GetMochiShape_Raw(finalMatrix);
 }
 
@@ -486,8 +486,11 @@ mochi::ShapeHandle UMochiModel::GetMochiShape_Raw(const mochi::VMatrix4x4r& Bake
         *GetName());
   }
   mochi::ErrorLog e{};
-  const auto mochiWorld = IMochiPhysicsModule::Get()->GetMochiContext();
-  auto [bakeScale, bakeTransformRT] = mochi::DecomposeMatrixTransform(BakeMatrix);
+  mochi::Context* const mochiWorld = IMochiPhysicsModule::Get()->GetMochiContext();
+  std::pair<mochi::Real3, mochi::TransformRT> bakeTransform =
+      mochi::DecomposeMatrixTransform(BakeMatrix);
+  mochi::Real3& bakeScale = bakeTransform.first;
+  mochi::TransformRT& bakeTransformRT = bakeTransform.second;
 
   if (!HasModelGeometry(ModelData)) {
     UE_LOG(
@@ -506,7 +509,7 @@ mochi::ShapeHandle UMochiModel::GetMochiShape_Raw(const mochi::VMatrix4x4r& Bake
   mochi::ModelData baked = ::ToMochi(ModelData);
   mochi::model_utils::BakeTransform(baked, bakeScale, bakeTransformRT, e);
   MOCHI_ERROR_RETURN(e, {});
-  const auto shape = mochiWorld->CreateModelShape(baked, e);
+  const mochi::ShapeHandle shape = mochiWorld->CreateModelShape(baked, e);
   MOCHI_ERROR_RETURN(e, {});
   return shape;
 }
@@ -531,12 +534,15 @@ mochi::ModelData UMochiModel::GetMochiModelData(mochi::Error& error) const {
   // two loaders consistent for any ImportTransform / simulation space. For the SuperDex bots
   // configuration the net transform is identity, so this is a no-op there.
   FUnrealToMochiConverter u2m;
-  auto importMatrix = UnrealToMatrix(ImportTransform.GetScale3D(), ImportTransform);
-  auto spaceMatrix = Dot4x4(
+  mochi::VMatrix4x4r importMatrix = UnrealToMatrix(ImportTransform.GetScale3D(), ImportTransform);
+  mochi::VMatrix4x4r spaceMatrix = Dot4x4(
       u2m.GetBasisChangeMatrix(),
       mochi::VDiagonalMatrix<4>(static_cast<mochi::real>(u2m.OutputSpace.UnitsPerMeter)));
-  auto finalMatrix = Dot4x4(spaceMatrix, importMatrix);
-  auto [bakeScale, bakeTransformRT] = mochi::DecomposeMatrixTransform(finalMatrix);
+  mochi::VMatrix4x4r finalMatrix = Dot4x4(spaceMatrix, importMatrix);
+  std::pair<mochi::Real3, mochi::TransformRT> bakeTransform =
+      mochi::DecomposeMatrixTransform(finalMatrix);
+  mochi::Real3& bakeScale = bakeTransform.first;
+  mochi::TransformRT& bakeTransformRT = bakeTransform.second;
   mochi::model_utils::BakeTransform(modelData, bakeScale, bakeTransformRT, error);
   MOCHI_ERROR_RETURN(error, {});
 
@@ -547,7 +553,7 @@ mochi::ShapeHandle UMochiModel::GetTriangularMochiShapeFromStaticMesh(
     const UStaticMesh* mesh,
     const ETriangularMeshCollisionSource collisionSource,
     FVector scale3D) {
-  const auto mochiWorld = IMochiPhysicsModule::Get()->GetMochiContext();
+  mochi::Context* const mochiWorld = IMochiPhysicsModule::Get()->GetMochiContext();
 
   if (!mesh) {
     UE_LOG(
@@ -588,9 +594,9 @@ mochi::ShapeHandle UMochiModel::GetTriangularMochiShapeFromStaticMesh(
         return mochi::ShapeHandle();
       }
 
-      for (const auto& convexElem : bodySetup->AggGeom.ConvexElems) {
+      for (const FKConvexElem& convexElem : bodySetup->AggGeom.ConvexElems) {
         const TArray<FVector>& ElemVertices = convexElem.VertexData;
-        const auto ElemIndices = convexElem.IndexData;
+        const TArray<int32> ElemIndices = convexElem.IndexData;
 
         if (ElemIndices.Num() % 3 != 0) {
           UE_LOG(
@@ -604,7 +610,7 @@ mochi::ShapeHandle UMochiModel::GetTriangularMochiShapeFromStaticMesh(
 
         const int32 vertexOffset = Coordinates.Num() / 3;
         for (const FVector& Vertex : convexElem.VertexData) {
-          auto v = u2m.TranslationToMochi(Vertex);
+          mochi::Real3 v = u2m.TranslationToMochi(Vertex);
           Coordinates.Add(scale3D.X * v[0]);
           Coordinates.Add(scale3D.Y * v[1]);
           Coordinates.Add(scale3D.Z * v[2]);
@@ -685,7 +691,7 @@ mochi::ShapeHandle UMochiModel::GetTriangularMochiShapeFromStaticMesh(
 
       for (uint32 i = 0; i < vertexCount; i++) {
         FVector3f position = LOD->VertexBuffers.PositionVertexBuffer.VertexPosition(i);
-        auto p = u2m.TranslationToMochi(static_cast<FVector>(position));
+        mochi::Real3 p = u2m.TranslationToMochi(static_cast<FVector>(position));
         int idx = i * 3;
         Coordinates[idx] = scale3D.X * p[0];
         Coordinates[idx + 1] = scale3D.Y * p[1];
@@ -899,14 +905,14 @@ bool UMochiModel::ApplyModelData(const mochi::ModelData& Data) {
 
 bool UMochiModel::RefreshMeshCounts() {
   MOCHI_PROFILE_SCOPE();
-  const auto mochiWorld = IMochiPhysicsModule::Get()->GetMochiContext();
-  const auto shape = GetMochiShape(FVector::OneVector, FTransform::Identity);
+  mochi::Context* const mochiWorld = IMochiPhysicsModule::Get()->GetMochiContext();
+  const mochi::ShapeHandle shape = GetMochiShape(FVector::OneVector, FTransform::Identity);
   if (!shape.IsValid()) {
     UE_LOG(LogMochiPhysics, Error, TEXT("[UMochiModel] Shape is invalid"));
     return false;
   }
   mochi::Error e{};
-  auto const shapeMesh = mochiWorld->GetShapeMesh(shape, e);
+  const mochi::MeshDataView shapeMesh = mochiWorld->GetShapeMesh(shape, e);
   MOCHI_ERROR_RETURN(e, false);
   if (shapeMesh.IsEmpty()) {
     UE_LOG(LogMochiPhysics, Error, TEXT("[UMochiModel] Shape does not have mesh data"));
@@ -924,7 +930,7 @@ bool UMochiModel::RefreshMeshCounts() {
     return true;
   }
 
-  auto const surfaceMesh = mochiWorld->GetShapeSurfaceMesh(shape, e);
+  const mochi::MeshDataView surfaceMesh = mochiWorld->GetShapeSurfaceMesh(shape, e);
   MOCHI_ERROR_RETURN(e, false);
   if (surfaceMesh.IsEmpty()) {
     UE_LOG(LogMochiPhysics, Error, TEXT("[UMochiModel] Shape does not have surface mesh data"));
@@ -954,9 +960,9 @@ bool UMochiModel::ConvertTetMeshToSurfaceMesh() {
   }
 
   mochi::Error error;
-  auto const mochiContext = IMochiPhysicsModule::Get()->GetMochiContext();
+  mochi::Context* const mochiContext = IMochiPhysicsModule::Get()->GetMochiContext();
 
-  auto model = ::ToMochi(ModelData);
+  mochi::ModelData model = ::ToMochi(ModelData);
 
   // early-out if no mesh or not a tetrahedral mesh
   if (!model.mesh.has_value() || model.mesh->nodesPerElement != 4) {
@@ -969,7 +975,7 @@ bool UMochiModel::ConvertTetMeshToSurfaceMesh() {
   }
 
   // The surface of a tet mesh is derived by Mochi, so go through a shape to read it back.
-  auto const shape = mochiContext->CreateModelShape(model, error);
+  const mochi::ShapeHandle shape = mochiContext->CreateModelShape(model, error);
   if (!error.IsOK() || !shape.IsValid()) {
     UE_LOG(
         LogMochiPhysics,
@@ -979,7 +985,7 @@ bool UMochiModel::ConvertTetMeshToSurfaceMesh() {
     return false;
   }
 
-  auto const surfaceMeshView = mochiContext->GetShapeSurfaceMesh(shape, error);
+  const mochi::MeshDataView surfaceMeshView = mochiContext->GetShapeSurfaceMesh(shape, error);
   if (!error.IsOK()) {
     UE_LOG(
         LogMochiPhysics,

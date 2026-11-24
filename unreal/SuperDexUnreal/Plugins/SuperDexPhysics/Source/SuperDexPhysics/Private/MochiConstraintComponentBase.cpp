@@ -156,13 +156,17 @@ void UMochiConstraintComponentBase::TryCreateConstraints() {
         std::vector<mochi::ConstraintHandle>& constraints = mochiState->Constraints;
         constraints = request.Create(Scene);
         const bool bAllCreated = !constraints.empty() &&
-            std::all_of(constraints.begin(), constraints.end(), [](mochi::ConstraintHandle Handle) {
-              return Handle.IsValid();
-            });
+            std::all_of(
+                constraints.begin(), constraints.end(), [](mochi::ConstraintHandle Handle) -> bool {
+                  return Handle.IsValid();
+                });
         if (!bAllCreated) {
           return;
         }
-        for (const auto& [a, b] : request.NoContactPairs) {
+        for (const std::pair<mochi::ActorHandle, mochi::ActorHandle>& NoContactPair :
+             request.NoContactPairs) {
+          const mochi::ActorHandle& a = NoContactPair.first;
+          const mochi::ActorHandle& b = NoContactPair.second;
           Scene->EnableActorContactSymmetric(
               a, b, /*enable*/ false, mochi::IncludeNestedActors::No, mochi::ErrorLog{});
         }

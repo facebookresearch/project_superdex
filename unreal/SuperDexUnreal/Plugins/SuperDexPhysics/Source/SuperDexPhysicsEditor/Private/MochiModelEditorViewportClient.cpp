@@ -90,7 +90,7 @@ void FMochiModelEditorViewportClient::Draw(const FSceneView* View, FPrimitiveDra
     FMatrix LocalToWorldInverseTransform =
         PreviewMeshComponent->GetComponentTransform().ToMatrixWithScale().InverseFast();
 
-    for (auto i = 0; i < Vertices.Num(); i++) {
+    for (int i = 0; i < Vertices.Num(); i++) {
       const FVector VertexPos = Vertices[i];
       const FVector WorldPos =
           PreviewMeshComponent->GetComponentTransform().TransformPosition(VertexPos);
@@ -103,7 +103,7 @@ void FMochiModelEditorViewportClient::Draw(const FSceneView* View, FPrimitiveDra
   if (bDrawElementBarycenters || bDrawSelectedElementBarycenters) {
     const TArray<FVector>& Centers = MochiViewportPtr.Pin()->ElementBarycenterPositions;
 
-    for (auto i = 0; i < Centers.Num(); i++) {
+    for (int i = 0; i < Centers.Num(); i++) {
       const FVector CenterPos = Centers[i];
       const FVector WorldPos =
           PreviewMeshComponent->GetComponentTransform().TransformPosition(CenterPos);
@@ -182,7 +182,8 @@ TSharedPtr<FDragTool> FMochiModelEditorViewportClient::MakeDragTool(EDragTool::T
       // currently follows the engine's drag tool pattern.
       DragTool = MakeShareable(new FMochiModelEditorDragTool(this, MochiViewportPtr.Pin().Get()));
 
-      auto MochiDragTool = StaticCastSharedPtr<FMochiModelEditorDragTool>(DragTool);
+      TSharedPtr<FMochiModelEditorDragTool> MochiDragTool =
+          StaticCastSharedPtr<FMochiModelEditorDragTool>(DragTool);
       if (MochiDragTool.IsValid()) {
         MochiDragTool.Get()->SetSelectLasso(bUseLassoSelection);
       }
@@ -286,7 +287,7 @@ void FMochiModelEditorViewportClient::AddSelectionToMaterialModifiers() {
   TMap<int, FMochiMaterialModifier>& Modifiers = ModifierAsset->MaterialModifiers;
   FMochiMaterialModifier Template = PreviewModel->MaterialModifierTemplate;
 
-  for (auto Element : SelectedElementsContainer->SelectedElements) {
+  for (int Element : SelectedElementsContainer->SelectedElements) {
     Modifiers.Emplace(Element, Template);
   }
 }
@@ -309,7 +310,7 @@ void FMochiModelEditorViewportClient::RemoveSelectionFromMaterialModifiers() {
 
   TMap<int, FMochiMaterialModifier>& Modifiers = ModifierAsset->MaterialModifiers;
 
-  for (auto Element : SelectedElementsContainer->SelectedElements) {
+  for (int Element : SelectedElementsContainer->SelectedElements) {
     Modifiers.Remove(Element);
   }
 }

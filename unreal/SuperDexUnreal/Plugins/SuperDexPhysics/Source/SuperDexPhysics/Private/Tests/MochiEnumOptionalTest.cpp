@@ -31,11 +31,11 @@ void CheckOptionalRoundTrip(
     FAutomationTestBase& Test,
     TOptional<Element> Component::* Field,
     Element Value) {
-  auto* Source = NewObject<Component>();
+  Component* Source = NewObject<Component>();
   Test.TestFalse(TEXT("New collider selection is unset"), (Source->*Field).IsSet());
   for (bool bSet : {true, false}) {
     Source->*Field = bSet ? TOptional<Element>(Value) : TOptional<Element>();
-    auto* Duplicate = DuplicateObject<Component>(Source, GetTransientPackage());
+    Component* Duplicate = DuplicateObject<Component>(Source, GetTransientPackage());
     Test.TestTrue(
         TEXT("Duplication preserves optional selection"), Duplicate->*Field == Source->*Field);
 
@@ -45,7 +45,7 @@ void CheckOptionalRoundTrip(
     static_cast<UObject*>(Source)->Serialize(Writer);
     Test.TestFalse(TEXT("Optional save succeeds"), Writer.IsError());
 
-    auto* Loaded = NewObject<Component>();
+    Component* Loaded = NewObject<Component>();
     FMemoryReader MemoryReader(Bytes);
     FObjectAndNameAsStringProxyArchive Reader(MemoryReader, false);
     static_cast<UObject*>(Loaded)->Serialize(Reader);

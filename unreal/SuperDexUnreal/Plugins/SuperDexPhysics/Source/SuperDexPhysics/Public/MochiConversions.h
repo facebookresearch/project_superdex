@@ -55,9 +55,9 @@ template <typename T>
 TArray<T> FromMochiSpan(mochi::Span<T const> Span) {
   TArray<T> array;
   array.SetNum(Span.size());
-  auto srcBegin = Span.data();
-  auto srcEnd = srcBegin + Span.size();
-  auto dstBegin = array.GetData();
+  const T* srcBegin = Span.data();
+  const T* srcEnd = srcBegin + Span.size();
+  T* dstBegin = array.GetData();
   std::copy(srcBegin, srcEnd, dstBegin);
   return array;
 }
@@ -115,7 +115,7 @@ struct TMochiToUnrealConverter : protected TMochiSpaceConverter<T> {
   FORCEINLINE TTransform TransformToUnreal(const mochi::TransformSRT& Tt) const {
     const TQuat r = RotationToUnreal(Tt.GetRotation());
     const TVector p = TranslationToUnreal(Tt.GetTranslation());
-    const auto s = Tt.GetScale();
+    const mochi::real s = Tt.GetScale();
     return TTransform(r, p, TVector(s));
   }
 
@@ -203,7 +203,7 @@ struct TUnrealToMochiConverter : protected TMochiSpaceConverter<T> {
   }
 
   FORCEINLINE mochi::VMatrix4x4r GetBasisChangeMatrix() const {
-    const auto& M = TMochiSpaceConverter<T>::InputToOutputMatrix;
+    const TMatrix3& M = TMochiSpaceConverter<T>::InputToOutputMatrix;
     return mochi::VMatrix4x4r{
         mochi::Vec4r{
             static_cast<mr>(M(0, 0)), static_cast<mr>(M(0, 1)), static_cast<mr>(M(0, 2)), 0},
@@ -234,8 +234,8 @@ FORCEINLINE void ContactPointToUnreal(
     FName NestedName,
     const FMochiToUnrealConverter& M2U,
     FMochiContactPoint& OutUnrealContact) {
-  const auto* mochiActorA = Scene->GetActor(MochiContact.actorA);
-  const auto* mochiActorB = Scene->GetActor(MochiContact.actorB);
+  const mochi::Actor* mochiActorA = Scene->GetActor(MochiContact.actorA);
+  const mochi::Actor* mochiActorB = Scene->GetActor(MochiContact.actorB);
   USceneComponent* mochiCompA = reinterpret_cast<USceneComponent*>(mochiActorA->GetUserData());
   USceneComponent* mochiCompB = reinterpret_cast<USceneComponent*>(mochiActorB->GetUserData());
   OutUnrealContact.InternalMochiActor = FName(mochiActorA->GetName());
@@ -254,7 +254,7 @@ FORCEINLINE void ContactPointToUnreal(
   // TODO: When Mochi mirrors a mesh collider (negative scale on an odd number of axes), it
   // reverses the triangle winding order. Reverse the parametric coordinates here too, so they
   // match the triangle as the UE mesh defines it.
-  const auto& pc = MochiContact.parametricCoords;
+  const mochi::Real3& pc = MochiContact.parametricCoords;
   OutUnrealContact.ParametricCoords = FVector{pc[0], pc[1], pc[2]};
   OutUnrealContact.Area = M2U.MeasureToUnreal(MochiContact.intWeight, 2);
 }

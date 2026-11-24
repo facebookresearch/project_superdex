@@ -242,7 +242,7 @@ bool FindLinkPair(
       return false;
     }
     const std::string_view linkName = name.substr(actorName.size() + 1);
-    for (const auto& link : Actor.links) {
+    for (const mochi::prefab::ArticulatedLinkPrefab& link : Actor.links) {
       if (std::string_view(link.name) == linkName) {
         OutLink = FName(ToFString(link.name));
         return true;
@@ -257,7 +257,7 @@ bool FindLinkPair(
 TArray<mochi::DynamicString> GetReferencedFiles(const mochi::prefab::ScenePrefab& Prefab) {
   TArray<mochi::DynamicString> files;
   auto addArticulated = [&](const mochi::prefab::ArticulatedActorPrefab& actor) {
-    for (const auto& link : actor.links) {
+    for (const mochi::prefab::ArticulatedLinkPrefab& link : actor.links) {
       files.Add(link.shapeFile);
       files.Add(link.renderModelFile);
     }
@@ -271,27 +271,27 @@ TArray<mochi::DynamicString> GetReferencedFiles(const mochi::prefab::ScenePrefab
     files.Add(actor.renderModelFile);
     files.Add(actor.flowFile);
   };
-  for (const auto& actor : Prefab.actors.rigid) {
+  for (const mochi::prefab::RigidActorPrefab& actor : Prefab.actors.rigid) {
     files.Add(actor.shapeFile);
     files.Add(actor.renderModelFile);
   }
-  for (const auto& actor : Prefab.actors.soft) {
+  for (const mochi::prefab::SoftActorPrefab& actor : Prefab.actors.soft) {
     addSoft(actor);
   }
-  for (const auto& actor : Prefab.actors.articulated) {
+  for (const mochi::prefab::ArticulatedActorPrefab& actor : Prefab.actors.articulated) {
     addArticulated(actor);
   }
-  for (const auto& actor : Prefab.actors.softSkinned) {
+  for (const mochi::prefab::SoftSkinnedActorPrefab& actor : Prefab.actors.softSkinned) {
     addArticulated(actor.skeletonParams);
-    for (const auto& soft : actor.softParams) {
+    for (const mochi::prefab::SoftActorPrefab& soft : actor.softParams) {
       addSoft(soft);
     }
   }
-  for (const auto& actor : Prefab.actors.rod) {
+  for (const mochi::prefab::RodActorPrefab& actor : Prefab.actors.rod) {
     files.Add(actor.shapeFile);
     files.Add(actor.renderModelFile);
   }
-  files.RemoveAll([](const mochi::DynamicString& File) { return File.empty(); });
+  files.RemoveAll([](const mochi::DynamicString& File) -> bool { return File.empty(); });
   return files;
 }
 
@@ -323,7 +323,7 @@ void HashPrefabFiles(const FString& SourcePath, FSHA1& Sha, TSet<FString>& Visit
   for (const mochi::DynamicString& file : GetReferencedFiles(prefab)) {
     hashFile(ResolvePrefabPath(rootDir, SourcePath, file));
   }
-  for (const auto& nested : prefab.prefabs) {
+  for (const mochi::prefab::PrefabReference& nested : prefab.prefabs) {
     HashPrefabFiles(ResolvePrefabPath(rootDir, SourcePath, nested.path), Sha, Visited);
   }
 }
@@ -667,7 +667,7 @@ bool FSuperDexPrefabImporter::Import(
 
   TArray<USuperDexPrefab*> nestedPrefabs;
   Prefab->NestedPrefabs.Reset();
-  for (const auto& nested : context.Data.prefabs) {
+  for (const mochi::prefab::PrefabReference& nested : context.Data.prefabs) {
     const FString nestedPath = ResolvePath(context, nested.path);
     USuperDexPrefab* nestedPrefab = ImportPrefab(
         nestedPath, SuperDexImportUtils::GetNestedImportFolder(context.DestFolder, nestedPath));
@@ -798,7 +798,7 @@ TParams* FSuperDexPrefabImporter::FindOrCreateParams(
     return nullptr;
   }
   if (TParams* const* found = Existing.FindByPredicate(
-          [&](const TParams* Params) { return HaveSameProperties(Candidate, Params); })) {
+          [&](const TParams* Params) -> bool { return HaveSameProperties(Candidate, Params); })) {
     return *found;
   }
   TParams* asset = FindOrCreateAsset<TParams>(FPaths::Combine(
@@ -921,7 +921,8 @@ UMochiArticulation* FSuperDexPrefabImporter::ImportArticulation(
   // overrides, which the runtime applies after the links are created, as Mochi applies the filter.
   TArray<FMochiArticulationContactOverride> contactOverrides;
   if (Context.Data.contactFilter && Context.Data.contactFilter->actorContactSymmetric) {
-    for (const auto& entry : *Context.Data.contactFilter->actorContactSymmetric) {
+    for (const mochi::prefab::ActorContactEntry& entry :
+         *Context.Data.contactFilter->actorContactSymmetric) {
       FMochiArticulationContactOverride contact;
       if (FindLinkPair(Actor, entry, contact.LinkAName, contact.LinkBName)) {
         contact.bEnable = entry.enable;
@@ -1220,9 +1221,9 @@ void FSuperDexPrefabImporter::AddSceneSettings(FPrefabContext& Context, FOutput&
     int numIgnored =
         filter.actorContactAsymmetric ? static_cast<int>(filter.actorContactAsymmetric->size()) : 0;
     if (filter.actorContactSymmetric) {
-      for (const auto& entry : *filter.actorContactSymmetric) {
+      for (const mochi::prefab::ActorContactEntry& entry : *filter.actorContactSymmetric) {
         bool bImported = false;
-        for (const auto& actor : Context.Data.actors.articulated) {
+        for (const mochi::prefab::ArticulatedActorPrefab& actor : Context.Data.actors.articulated) {
           FName linkA;
           FName linkB;
           bImported = bImported || FindLinkPair(actor, entry, linkA, linkB);
@@ -1251,7 +1252,7 @@ void FSuperDexPrefabImporter::AddActors(
     FOutput& Output,
     const TArray<USuperDexPrefab*>& NestedPrefabs) {
   const FString& prefabName = Context.PrefabName;
-  const auto& actors = Context.Data.actors;
+  const mochi::prefab::ActorLists& actors = Context.Data.actors;
   for (int i = 0; i < static_cast<int>(actors.rigid.size()); ++i) {
     AddRigidActor(
         Context, Output, actors.rigid[i], GetActorName(actors.rigid[i].name, TEXT("Rigid"), i));
@@ -1271,7 +1272,7 @@ void FSuperDexPrefabImporter::AddActors(
     AddRodActor(Context, Output, actors.rod[i], GetActorName(actors.rod[i].name, TEXT("Rod"), i));
   }
   for (int i = 0; i < static_cast<int>(Context.Data.prefabs.size()); ++i) {
-    const auto& reference = Context.Data.prefabs[i];
+    const mochi::prefab::PrefabReference& reference = Context.Data.prefabs[i];
     USuperDexPrefab* nested = NestedPrefabs[i];
     UBlueprint* nestedBlueprint = nested ? nested->GeneratedBlueprint.LoadSynchronous() : nullptr;
     if (!nestedBlueprint || !nestedBlueprint->GeneratedClass) {
@@ -1316,7 +1317,7 @@ void FSuperDexPrefabImporter::AddActors(
   if (!actors.softSkinned.empty()) {
     WarnUnsupported(prefabName, TEXT("Soft skinned actors"));
   }
-  const auto& constraints = Context.Data.constraints;
+  const mochi::prefab::ConstraintLists& constraints = Context.Data.constraints;
   if (!constraints.rodElementRotation.empty() || !constraints.rodElementRotationToRigid.empty()) {
     WarnUnsupported(prefabName, TEXT("Rod constraints"));
   }

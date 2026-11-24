@@ -154,8 +154,8 @@ static bool PopulateFromMochiMesh_SoftInternal(
         true /* use contact skin if present */);
   } else if (MochiExistingActor.IsValid()) {
     // If this dynamic mesh was created at run time with existing actor, get the mesh from there.
-    const auto game = World->GetGameInstance();
-    const auto subsys = game->GetSubsystem<UMochiGameInstanceSubsystem>();
+    UGameInstance* const game = World->GetGameInstance();
+    UMochiGameInstanceSubsystem* const subsys = game->GetSubsystem<UMochiGameInstanceSubsystem>();
     if (subsys) {
       PopulateMeshFromMochiActor(
           &Mesh,

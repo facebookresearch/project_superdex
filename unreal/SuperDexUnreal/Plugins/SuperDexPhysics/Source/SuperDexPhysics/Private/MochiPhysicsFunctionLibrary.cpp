@@ -32,8 +32,8 @@ static FAutoConsoleCommandWithWorld GMochiPause(
     TEXT("Mochi.Pause"),
     TEXT("Pause Mochi simulation."),
     FConsoleCommandWithWorldDelegate::CreateLambda([](UWorld* World) {
-      const auto game = World->GetGameInstance();
-      const auto subsys = game->GetSubsystem<UMochiGameInstanceSubsystem>();
+      UGameInstance* const game = World->GetGameInstance();
+      UMochiGameInstanceSubsystem* const subsys = game->GetSubsystem<UMochiGameInstanceSubsystem>();
       if (subsys && subsys->GetScene()) {
         subsys->GetScene()->SetPaused(true);
       }
@@ -43,8 +43,8 @@ static FAutoConsoleCommandWithWorld GMochiUnpause(
     TEXT("Mochi.Unpause"),
     TEXT("Unpause Mochi simulation."),
     FConsoleCommandWithWorldDelegate::CreateLambda([](UWorld* World) {
-      const auto game = World->GetGameInstance();
-      const auto subsys = game->GetSubsystem<UMochiGameInstanceSubsystem>();
+      UGameInstance* const game = World->GetGameInstance();
+      UMochiGameInstanceSubsystem* const subsys = game->GetSubsystem<UMochiGameInstanceSubsystem>();
       if (subsys && subsys->GetScene()) {
         subsys->GetScene()->SetPaused(false);
       }
@@ -54,8 +54,8 @@ static FAutoConsoleCommandWithWorld GMochiStepPause(
     TEXT("Mochi.StepPause"),
     TEXT("Step the Mochi simulation by exactly one step then pause (or re-pause)."),
     FConsoleCommandWithWorldDelegate::CreateLambda([](UWorld* World) {
-      const auto game = World->GetGameInstance();
-      const auto subsys = game->GetSubsystem<UMochiGameInstanceSubsystem>();
+      UGameInstance* const game = World->GetGameInstance();
+      UMochiGameInstanceSubsystem* const subsys = game->GetSubsystem<UMochiGameInstanceSubsystem>();
       if (subsys && subsys->GetScene()) {
         subsys->GetScene()->StepPause();
       }
@@ -66,9 +66,9 @@ static FAutoConsoleCommandWithWorld GMochiStepPause(
 //------------------------------------------------------------------------------
 
 void UMochiPhysicsFunctionLibrary::SetMochiGravity(UObject* WorldContext, FVector GravityVector) {
-  const auto subsys = GetMochiGameInstanceSubsystem(WorldContext);
+  UMochiGameInstanceSubsystem* const subsys = GetMochiGameInstanceSubsystem(WorldContext);
   if (subsys) {
-    if (const auto scene = subsys->GetScene()) {
+    if (UMochiSceneObject* const scene = subsys->GetScene()) {
       scene->SetGravity(GravityVector);
     }
   }
@@ -77,9 +77,9 @@ void UMochiPhysicsFunctionLibrary::SetMochiGravity(UObject* WorldContext, FVecto
 void UMochiPhysicsFunctionLibrary::SetMochiContactMatrixEntry(
     UObject* WorldContext,
     const FMochiContactMatrixEntry& Entry) {
-  const auto subsys = GetMochiGameInstanceSubsystem(WorldContext);
+  UMochiGameInstanceSubsystem* const subsys = GetMochiGameInstanceSubsystem(WorldContext);
   if (subsys) {
-    if (const auto scene = subsys->GetScene()) {
+    if (UMochiSceneObject* const scene = subsys->GetScene()) {
       scene->SetContactMatrixEntry(Entry);
     }
   }
@@ -89,12 +89,12 @@ void UMochiPhysicsFunctionLibrary::DisableContact(
     UObject* WorldContext,
     const UMochiActorObject* ActorA,
     const UMochiActorObject* ActorB) {
-  const auto subsys = GetMochiGameInstanceSubsystem(WorldContext);
+  UMochiGameInstanceSubsystem* const subsys = GetMochiGameInstanceSubsystem(WorldContext);
   if (subsys) {
-    const auto scene = subsys->GetScene();
+    UMochiSceneObject* const scene = subsys->GetScene();
     if (scene && ActorA && ActorB && ActorA->IsValid() && ActorB->IsValid()) {
-      auto handleA = ActorA->GetMochiActorHandle();
-      auto handleB = ActorB->GetMochiActorHandle();
+      mochi::ActorHandle handleA = ActorA->GetMochiActorHandle();
+      mochi::ActorHandle handleB = ActorB->GetMochiActorHandle();
       scene->QueueOrExecuteCommand([handleA, handleB](mochi::Scene* Scene) {
         mochi::ErrorLog e;
         Scene->EnableActorContactSymmetric(
@@ -115,17 +115,17 @@ void UMochiPhysicsFunctionLibrary::DisableContact_Articulated(
     const UMochiActorObject* ActorA,
     const UMochiArticulatedActorObject* ActorB,
     int Link) {
-  const auto subsys = GetMochiGameInstanceSubsystem(WorldContext);
+  UMochiGameInstanceSubsystem* const subsys = GetMochiGameInstanceSubsystem(WorldContext);
   if (subsys) {
-    const auto scene = subsys->GetScene();
-    auto handlesB = ActorB->GetNestedLinkActorHandles();
+    UMochiSceneObject* const scene = subsys->GetScene();
+    TArray<mochi::ActorHandle> handlesB = ActorB->GetNestedLinkActorHandles();
     if (Link >= 0) {
       handlesB = {handlesB[Link]};
     }
     if (scene && ActorA && ActorB && ActorA->IsValid() && ActorB->IsValid()) {
-      auto handleA = ActorA->GetMochiActorHandle();
+      mochi::ActorHandle handleA = ActorA->GetMochiActorHandle();
       scene->QueueOrExecuteCommand([handleA, handlesB](mochi::Scene* Scene) {
-        for (auto& handleB : handlesB) {
+        for (const mochi::ActorHandle& handleB : handlesB) {
           mochi::ErrorLog e;
           Scene->EnableActorContactSymmetric(
               handleA, handleB, /*enable*/ false, mochi::IncludeNestedActors::No, e);
@@ -142,21 +142,21 @@ void UMochiPhysicsFunctionLibrary::DisableContact_Articulated(
 }
 
 void UMochiPhysicsFunctionLibrary::EnableMochiDebugDraw(UObject* WorldContext) {
-  const auto subsys = GetMochiGameInstanceSubsystem(WorldContext);
+  UMochiGameInstanceSubsystem* const subsys = GetMochiGameInstanceSubsystem(WorldContext);
   if (subsys) {
     subsys->EnableDebugDraw();
   }
 }
 
 void UMochiPhysicsFunctionLibrary::DisableMochiDebugDraw(UObject* WorldContext) {
-  const auto subsys = GetMochiGameInstanceSubsystem(WorldContext);
+  UMochiGameInstanceSubsystem* const subsys = GetMochiGameInstanceSubsystem(WorldContext);
   if (subsys) {
     subsys->DisableDebugDraw();
   }
 }
 
 void UMochiPhysicsFunctionLibrary::ToggleMochiDebugDraw(UObject* WorldContext) {
-  const auto subsys = GetMochiGameInstanceSubsystem(WorldContext);
+  UMochiGameInstanceSubsystem* const subsys = GetMochiGameInstanceSubsystem(WorldContext);
   if (subsys) {
     if (subsys->IsDebugDrawEnabled()) {
       subsys->DisableDebugDraw();
@@ -167,7 +167,7 @@ void UMochiPhysicsFunctionLibrary::ToggleMochiDebugDraw(UObject* WorldContext) {
 }
 
 bool UMochiPhysicsFunctionLibrary::IsMochiDebugDrawEnabled(UObject* WorldContext) {
-  const auto subsys = GetMochiGameInstanceSubsystem(WorldContext);
+  UMochiGameInstanceSubsystem* const subsys = GetMochiGameInstanceSubsystem(WorldContext);
   if (subsys) {
     return subsys->IsDebugDrawEnabled();
   }
@@ -175,14 +175,14 @@ bool UMochiPhysicsFunctionLibrary::IsMochiDebugDrawEnabled(UObject* WorldContext
 }
 
 void UMochiPhysicsFunctionLibrary::SetPaused(UObject* WorldContext, bool bPaused) {
-  const auto subsys = GetMochiGameInstanceSubsystem(WorldContext);
+  UMochiGameInstanceSubsystem* const subsys = GetMochiGameInstanceSubsystem(WorldContext);
   if (subsys && subsys->GetScene()) {
     subsys->GetScene()->SetPaused(bPaused);
   }
 }
 
 bool UMochiPhysicsFunctionLibrary::IsPaused(UObject* WorldContext) {
-  const auto subsys = GetMochiGameInstanceSubsystem(WorldContext);
+  UMochiGameInstanceSubsystem* const subsys = GetMochiGameInstanceSubsystem(WorldContext);
   if (subsys && subsys->GetScene()) {
     return subsys->GetScene()->IsPaused();
   }
@@ -190,7 +190,7 @@ bool UMochiPhysicsFunctionLibrary::IsPaused(UObject* WorldContext) {
 }
 
 int UMochiPhysicsFunctionLibrary::GetNumMochiStepsSinceStart(UObject* WorldContext) {
-  const auto subsys = GetMochiGameInstanceSubsystem(WorldContext);
+  UMochiGameInstanceSubsystem* const subsys = GetMochiGameInstanceSubsystem(WorldContext);
   if (subsys && subsys->GetScene()) {
     return subsys->GetScene()->GetNumMochiStepsSinceStart();
   }
@@ -198,7 +198,7 @@ int UMochiPhysicsFunctionLibrary::GetNumMochiStepsSinceStart(UObject* WorldConte
 }
 
 double UMochiPhysicsFunctionLibrary::GetTotalSimulatedTimeSinceStartSec(UObject* WorldContext) {
-  const auto subsys = GetMochiGameInstanceSubsystem(WorldContext);
+  UMochiGameInstanceSubsystem* const subsys = GetMochiGameInstanceSubsystem(WorldContext);
   if (subsys && subsys->GetScene()) {
     return subsys->GetScene()->GetTotalSimulatedTimeSinceStartSec();
   }
@@ -206,14 +206,14 @@ double UMochiPhysicsFunctionLibrary::GetTotalSimulatedTimeSinceStartSec(UObject*
 }
 
 void UMochiPhysicsFunctionLibrary::StartRecording(UObject* WorldContext, const FString& filePath) {
-  const auto subsys = GetMochiGameInstanceSubsystem(WorldContext);
+  UMochiGameInstanceSubsystem* const subsys = GetMochiGameInstanceSubsystem(WorldContext);
   if (subsys && subsys->GetScene()) {
     subsys->GetScene()->StartRecording(filePath);
   }
 }
 
 void UMochiPhysicsFunctionLibrary::StopRecording(UObject* WorldContext) {
-  const auto subsys = GetMochiGameInstanceSubsystem(WorldContext);
+  UMochiGameInstanceSubsystem* const subsys = GetMochiGameInstanceSubsystem(WorldContext);
   if (subsys && subsys->GetScene()) {
     subsys->GetScene()->StopRecording();
   }
@@ -223,7 +223,7 @@ void UMochiPhysicsFunctionLibrary::ExportMochiScene(
     UObject* WorldContext,
     const FString& exportName,
     const FString& filePath) {
-  const auto subsys = GetMochiGameInstanceSubsystem(WorldContext);
+  UMochiGameInstanceSubsystem* const subsys = GetMochiGameInstanceSubsystem(WorldContext);
   if (subsys && subsys->GetScene()) {
     subsys->GetScene()->QueueOrExecuteCommand([exportName, filePath](mochi::Scene* Scene) {
       mochi::Error e;
@@ -234,6 +234,6 @@ void UMochiPhysicsFunctionLibrary::ExportMochiScene(
 
 UMochiGameInstanceSubsystem* UMochiPhysicsFunctionLibrary::GetMochiGameInstanceSubsystem(
     UObject* WorldContext) {
-  const auto game = WorldContext->GetWorld()->GetGameInstance();
+  UGameInstance* const game = WorldContext->GetWorld()->GetGameInstance();
   return game->GetSubsystem<UMochiGameInstanceSubsystem>();
 }

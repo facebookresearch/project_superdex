@@ -56,7 +56,7 @@ TSharedRef<SWidget> MakeIconButton(
         .ButtonStyle(FAppStyle::Get(), "SimpleButton")
         .ContentPadding(0.0f)
         .IsFocusable(bIsFocusable)
-        .OnClicked_Lambda([OnClicked]() {
+        .OnClicked_Lambda([OnClicked]() -> FReply {
           OnClicked.ExecuteIfBound();
           return FReply::Handled();
         })
@@ -76,7 +76,7 @@ void AddFancyAsset(
   // check mark once it is current.
   TSharedRef<SWidget> buttons = MakeIconButton(
       LOCTEXT("GenerateButtonToolTipText", "Generate Asset"),
-      TAttribute<const FSlateBrush*>::CreateLambda([GetWarn]() {
+      TAttribute<const FSlateBrush*>::CreateLambda([GetWarn]() -> const FSlateBrush* {
         return FAppStyle::GetBrush(GetWarn() ? "Icons.Warning" : "Icons.Check");
       }),
       TAttribute<FSlateColor>::CreateLambda([GetWarn]() {
@@ -85,8 +85,8 @@ void AddFancyAsset(
       OnGenerate,
       /*bIsFocusable=*/false);
 
-  auto assProp = DetailLayout.GetProperty(PropertyName);
-  auto& row = AssCat.AddProperty(assProp);
+  TSharedRef<IPropertyHandle> assProp = DetailLayout.GetProperty(PropertyName);
+  IDetailPropertyRow& row = AssCat.AddProperty(assProp);
   row.ShowPropertyButtons(false);
   row.CustomWidget(false)
       .NameContent()
@@ -156,7 +156,7 @@ TSharedRef<SWidget> CreateDefaultJointPositionsSliderWidget(
   const bool bRadial = Type != EMochiArticulatedJointType::Prismatic;
   const FString unitStr = bRadial ? TEXT("radians") : TEXT("meters");
   const EUnit unit = bRadial ? EUnit::Radians : EUnit::Meters;
-  const auto unitTypeInterface = MakeShared<TNumericUnitTypeInterface<double>>(unit);
+  const TSharedRef<TNumericUnitTypeInterface<double>> unitTypeInterface = MakeShared<TNumericUnitTypeInterface<double>>(unit);
   // Calling SetupFixedDisplay will make UE use localized units according to project settings.
   // This means radians will probably be displayed as degrees, and meters as centimeters.
   // If we want to use meters for prismatic joints, we can condition this function call.
@@ -266,8 +266,8 @@ void FMochiArticulationDetailsCustomization::CustomizeDetails(IDetailLayoutBuild
       // Warnings category
       TArray<FString> warnings;
       if (!Articulation->IsReady(true, &warnings)) {
-        auto& warnCat = DetailLayout.EditCategory("Warnings");
-        for (const auto& msg : warnings) {
+        IDetailCategoryBuilder& warnCat = DetailLayout.EditCategory("Warnings");
+        for (const FString& msg : warnings) {
           warnCat.AddCustomRow(FText::FromString(msg))
               .WholeRowContent()[SNew(SWarningOrErrorBox)
                                      .MessageStyle(EMessageStyle::Warning)
@@ -284,7 +284,7 @@ void FMochiArticulationDetailsCustomization::CustomizeDetails(IDetailLayoutBuild
         }
       }
       // Robot category
-      auto& artCat = DetailLayout.EditCategory("Articulation");
+      IDetailCategoryBuilder& artCat = DetailLayout.EditCategory("Articulation");
       artCat.AddProperty(
           DetailLayout.GetProperty(GET_MEMBER_NAME_CHECKED(UMochiArticulation, ArticulationName)));
       const TSharedPtr<IPropertyHandle> posProp = DetailLayout.GetProperty(
@@ -310,7 +310,7 @@ void FMochiArticulationDetailsCustomization::CustomizeDetails(IDetailLayoutBuild
       artCat.AddProperty(
           DetailLayout.GetProperty(GET_MEMBER_NAME_CHECKED(UMochiArticulation, SoftLinks)));
       // Assets category
-      auto& assCat = DetailLayout.EditCategory("Assets");
+      IDetailCategoryBuilder& assCat = DetailLayout.EditCategory("Assets");
       AddFancyAsset(
           DetailLayout,
           assCat,
@@ -318,12 +318,11 @@ void FMochiArticulationDetailsCustomization::CustomizeDetails(IDetailLayoutBuild
           [this] {
             return Articulation->bNeedGenerateSkeletalMesh || Articulation->SkeletalMesh == nullptr;
           },
-          FSimpleDelegate::CreateLambda([this, &DetailLayout] {
-            FMochiArticulationAssetUtils::GenerateSkeletalMesh(Articulation);
-          }));
+          FSimpleDelegate::CreateLambda(
+              [this] { FMochiArticulationAssetUtils::GenerateSkeletalMesh(Articulation); }));
       MochiSkeletonHeaderExport::AddDetailsRow(DetailLayout, assCat, Articulation);
       // Internal category
-      auto& intCat = DetailLayout.EditCategory("Internal");
+      IDetailCategoryBuilder& intCat = DetailLayout.EditCategory("Internal");
       intCat.SetDisplayName(FText::FromString(TEXT("Internal (Advanced Use Only)")));
       intCat.InitiallyCollapsed(true);
     }
@@ -351,10 +350,10 @@ void FMochiArticulationComponentDetailsCustomization::CustomizeDetails(
   TArray<TWeakObjectPtr<UObject>> objects;
   DetailLayout.GetObjectsBeingCustomized(objects);
   for (int iObj = 0; iObj < objects.Num(); ++iObj) {
-    const auto component = Cast<UMochiArticulationComponent>(objects[iObj]);
+    UMochiArticulationComponent* const component = Cast<UMochiArticulationComponent>(objects[iObj]);
     Articulation = component->GetArticulationAsset();
     if (Articulation) {
-      auto& articulationCat = DetailLayout.EditCategory(
+      IDetailCategoryBuilder& articulationCat = DetailLayout.EditCategory(
           "Mochi Articulation", FText::GetEmpty(), ECategoryPriority::Important);
       articulationCat.AddProperty(DetailLayout.GetProperty(
           GET_MEMBER_NAME_CHECKED(UMochiArticulationComponent, Articulation)));

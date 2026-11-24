@@ -41,9 +41,9 @@ void UMochiForceVisualizerComponent::BeginPlay() {
   MOCHI_PROFILE_SCOPE();
   Super::BeginPlay();
   // TODO: generalize using IMochiMeshComponentInterface if possible
-  const auto parent = GetAttachParent();
+  USceneComponent* const parent = GetAttachParent();
   // UMochiSoftMeshComponent parent
-  if (const auto dynMeshComp = Cast<UMochiSoftMeshComponent>(parent)) {
+  if (UMochiSoftMeshComponent* const dynMeshComp = Cast<UMochiSoftMeshComponent>(parent)) {
     if (!dynMeshComp->GetContactsEnabled()) {
       UE_LOG(
           LogMochiPhysics,
@@ -62,7 +62,7 @@ void UMochiForceVisualizerComponent::BeginPlay() {
         this, &UMochiForceVisualizerComponent::OnMochiComponentContact);
   }
   // UMochiRigidMeshComponent parent
-  else if (const auto statMeshComp = Cast<UMochiRigidMeshComponent>(parent)) {
+  else if (UMochiRigidMeshComponent* const statMeshComp = Cast<UMochiRigidMeshComponent>(parent)) {
     if (!statMeshComp->GetContactsEnabled()) {
       UE_LOG(
           LogMochiPhysics,
@@ -153,19 +153,19 @@ void UMochiForceVisualizerComponent::TickComponent(
   Clear();
   if (bEnabled) {
     // iterate map of mochi components
-    for (auto& pair : ContactsMap) {
-      auto& contacts = pair.Value;
+    for (TPair<USceneComponent*, TArray<FMochiContactPoint>>& pair : ContactsMap) {
+      TArray<FMochiContactPoint>& contacts = pair.Value;
       // add a line for each contact force
       for (int iLine = 0; iLine < contacts.Num(); ++iLine) {
-        const auto force = contacts[iLine].Force.Size();
-        const auto forceNormal = contacts[iLine].Force.GetSafeNormal();
-        const auto forceLength =
+        const double force = contacts[iLine].Force.Size();
+        const FVector forceNormal = contacts[iLine].Force.GetSafeNormal();
+        const double forceLength =
             FMath::GetMappedRangeValueUnclamped(ForceMinMax, LineLengthMinMax, force);
-        const auto worldStart = contacts[iLine].Location;
-        const auto worldEnd = worldStart + forceNormal * forceLength;
-        const auto localStart = GetComponentTransform().InverseTransformPosition(worldStart);
-        const auto localEnd = GetComponentTransform().InverseTransformPosition(worldEnd);
-        const auto color = GetColorFromForce(force);
+        const FVector worldStart = contacts[iLine].Location;
+        const FVector worldEnd = worldStart + forceNormal * forceLength;
+        const FVector localStart = GetComponentTransform().InverseTransformPosition(worldStart);
+        const FVector localEnd = GetComponentTransform().InverseTransformPosition(worldEnd);
+        const FColor color = GetColorFromForce(force);
         AddLine(localStart, localEnd, color, 0);
       }
     }

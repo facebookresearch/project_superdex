@@ -104,7 +104,7 @@ void FMochiPhysicsModule::Initialize() {
   // The superdex_robotics library is loaded by the SuperDexRobotics plugin's own module.
 
   // Create MochiContext
-  const auto settings = GetDefault<UMochiPhysicsSettings>();
+  const UMochiPhysicsSettings* const settings = GetDefault<UMochiPhysicsSettings>();
   if (settings && (settings->NumWorkerThreads > 0)) {
     MochiContext = mochi::CreateContext(settings->NumWorkerThreads);
   } else {
@@ -120,7 +120,7 @@ void FMochiPhysicsModule::Initialize() {
 
 #if !UE_BUILD_SHIPPING
   if (settings && settings->bEnablePhysicsDebuggerConnection) {
-    auto& DebugServer = MochiContext->GetDebugServer();
+    mochi::DebugServer& DebugServer = MochiContext->GetDebugServer();
     DebugServer.SetCoordinateSpace(
         ToMochiCoordinateSpace(UMochiPhysicsSettings::GetActiveSimulationSpace()));
     DebugServer.Start();

@@ -103,9 +103,10 @@ void UMochiNodeBoundaryConditionComponent::CreateBoundaryConditions() {
       return;
     }
     MochiThreadState->DeformableActorHandle = actorHandle;
-    const auto softWorldFromLocal = softActor->GetRootTransform();
-    const auto softLocalFromWorld = Invert(softWorldFromLocal);
-    const auto query = softActor->RegisterQueryAndCompute(mochi::QueryType::NodePositions, e);
+    const mochi::TransformRT softWorldFromLocal = softActor->GetRootTransform();
+    const mochi::TransformRT softLocalFromWorld = Invert(softWorldFromLocal);
+    const mochi::QueryHandle query =
+        softActor->RegisterQueryAndCompute(mochi::QueryType::NodePositions, e);
     // pin each node at its current world position
     auto onEach = [&](int iNode, mochi::Real3 pos) {
       std::array<int, 1> node = {iNode};
@@ -114,13 +115,13 @@ void UMochiNodeBoundaryConditionComponent::CreateBoundaryConditions() {
       MochiThreadState->PinnedNodeIndices.Add(iNode);
     };
     if (bVolUseBox) {
-      auto volLocalFromSoft = softLocalFromWorld * volWorldFromLocal;
+      mochi::TransformRT volLocalFromSoft = softLocalFromWorld * volWorldFromLocal;
       mochi::Obb obb(volLocalFromSoft, volBoxExtents);
       softActor->QueryNodesInVolumeLocal(obb, false, onEach, e);
     } else {
-      auto sphereWorld = TransformShape(
+      mochi::Sphere sphereWorld = TransformShape(
           volWorldFromLocal, mochi::Sphere(mochi::Real3{0_r, 0_r, 0_r}, volSphereRadius));
-      auto sphereLocal = TransformShape(softLocalFromWorld, sphereWorld);
+      mochi::Sphere sphereLocal = TransformShape(softLocalFromWorld, sphereWorld);
       softActor->QueryNodesInVolumeLocal(sphereLocal, false, onEach, e);
     }
     softActor->CancelQuery(query);

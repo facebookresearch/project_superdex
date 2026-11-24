@@ -382,7 +382,7 @@ void FMochiArticulatedSkin::FromMochi(const mochi::prefab::ArticulatedSkinPrefab
   bOverrideNonCollidingLinks = Mochi.nonCollidingLinks.has_value();
   NonCollidingLinks.Reset();
   if (bOverrideNonCollidingLinks) {
-    for (const auto& link : *Mochi.nonCollidingLinks) {
+    for (const mochi::DynamicString& link : *Mochi.nonCollidingLinks) {
       NonCollidingLinks.Add(FName(UTF8_TO_TCHAR(link.c_str())));
     }
   }
@@ -447,7 +447,7 @@ void ConvertArticulatedDofsToMochi(
     const FUnrealToMochiConverter& U2M) {
   const double sign = U2M.FlipsHandedness() ? -1.0 : 1.0;
   ConvertArticulatedDofs(
-      Types, bIncludesRootFreeDofs, Dofs, [&](const FVector& V, bool bRotational) {
+      Types, bIncludesRootFreeDofs, Dofs, [&](const FVector& V, bool bRotational) -> FVector {
         return ToFVector(U2M.DirectionToMochi(bRotational ? sign * V : V));
       });
 }

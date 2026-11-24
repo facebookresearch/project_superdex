@@ -31,7 +31,7 @@ FindComponentRecursive(UActorComponent* Caller, FName ComponentName, const AActo
     return nullptr;
   }
   // first search this component's owning actor
-  const auto actor = Actor ? Actor : Caller->GetOwner();
+  const AActor* const actor = Actor ? Actor : Caller->GetOwner();
   TArray<USceneComponent*> comps;
   actor->GetComponents(comps);
   for (USceneComponent* comp : comps) {
@@ -43,16 +43,16 @@ FindComponentRecursive(UActorComponent* Caller, FName ComponentName, const AActo
   // next search any child actor components
   TArray<AActor*> childActors;
   actor->GetAllChildActors(childActors, false);
-  for (const auto childActor : childActors) {
-    if (const auto result = FindComponentRecursive(Caller, ComponentName, childActor)) {
+  for (AActor* const childActor : childActors) {
+    if (USceneComponent* const result = FindComponentRecursive(Caller, ComponentName, childActor)) {
       return result;
     }
   }
   // next search actor's parent *IF* it is a ChildActor
   // note: this will cause a redundant search, but will not loop indefinitely
   if (actor->IsChildActor() && Actor == nullptr) {
-    if (const auto parent = actor->GetAttachParentActor()) {
-      if (const auto result = FindComponentRecursive(Caller, ComponentName, parent)) {
+    if (AActor* const parent = actor->GetAttachParentActor()) {
+      if (USceneComponent* const result = FindComponentRecursive(Caller, ComponentName, parent)) {
         return result;
       }
     }
@@ -65,7 +65,8 @@ bool EnsureMochiActor(UActorComponent* Caller, USceneComponent* MochiComponent) 
   if (MochiComponent && MochiComponentTags::AreComponentsDisabled(MochiComponent->GetOwner())) {
     return false;
   }
-  if (const auto mochiMeshComp = Cast<IMochiMeshComponentInterface>(MochiComponent)) {
+  if (IMochiMeshComponentInterface* const mochiMeshComp =
+          Cast<IMochiMeshComponentInterface>(MochiComponent)) {
     if (mochiMeshComp->GetMochiActor() == nullptr) {
       mochiMeshComp->CreateMochiActor();
       const bool success = mochiMeshComp->GetMochiActor() != nullptr;

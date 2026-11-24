@@ -26,6 +26,7 @@
 
 #include <mochi_core/utils/defer.h>
 #include <mochi_core/utils/profile.h>
+#include <cstddef>
 
 namespace MochiArticulatedActorObjectInternal {
 
@@ -62,7 +63,8 @@ inline void CreateAdditionalConstraints(
     mochi::ErrorLog& e) {
   MOCHI_ERROR_RETURN(e);
   FUnrealToMochiConverter u2m;
-  auto& additionalConstraints = Articulation->GetAdditionalConstraints();
+  const TArray<FMochiArticulationConstraint>& additionalConstraints =
+      Articulation->GetAdditionalConstraints();
   for (const FMochiArticulationConstraint& constraint : additionalConstraints) {
     const int iA = Articulation->GetLinkIndex(constraint.LinkAName);
     const int iB = Articulation->GetLinkIndex(constraint.LinkBName);
@@ -127,7 +129,7 @@ static bool SetupController(
     mochi::ErrorLog& e) {
   MOCHI_ERROR_RETURN(e, false);
   if (bAddPoseController) {
-    const auto numLinks = ArticulatedActor->GetNestedLinkActors(e).size();
+    const size_t numLinks = ArticulatedActor->GetNestedLinkActors(e).size();
     const int numPosGains = PoseControllerGains.PositionTrackingGains.Num();
     const int numRotGains = PoseControllerGains.RotationTrackingGains.Num();
     const int numJointGains = PoseControllerGains.JointTrackingGains.Num();
@@ -164,7 +166,7 @@ static bool SetupController(
           FMochiArticulatedActorPoseVariant pose;
           if (SetPoseTarget(pose, ArticulatedActor, Scene, info.timeStepSec)) {
             if (pose.IsType<TArray<mochi::TransformRT>>() && bAddPoseController) {
-              auto& linkTransforms = pose.Get<TArray<mochi::TransformRT>>();
+              TArray<mochi::TransformRT>& linkTransforms = pose.Get<TArray<mochi::TransformRT>>();
               const int numLinks = ArticulatedActor->GetNestedLinkActors(e).size();
               if (linkTransforms.Num() == numLinks) {
                 ArticulatedActor->SetArticulatedTargetLinkTransforms(
@@ -179,7 +181,7 @@ static bool SetupController(
                     linkTransforms.Num())
               }
             } else if (pose.IsType<TArray<mochi::real>>() && bAddPoseController) {
-              auto& jointPositions = pose.Get<TArray<mochi::real>>();
+              TArray<mochi::real>& jointPositions = pose.Get<TArray<mochi::real>>();
               const int numDofs = ArticulatedActor->GetNumDofs();
               if (jointPositions.Num() == numDofs) {
                 ArticulatedActor->SetArticulatedTargetPose(ToMochiSpan(jointPositions), e);
@@ -494,8 +496,8 @@ void UMochiArticulatedActorObject::SetupActorHandlesAndCallbacks(
         [&LinksThatQueryContactPoints, &SyncScene, &OutData, &GetNestedName, &e](
             const TArray<mochi::ActorHandle>& ActorHandles) {
           for (int iHandle = 0; iHandle < ActorHandles.Num(); ++iHandle) {
-            const auto handle = ActorHandles[iHandle];
-            const auto name = GetNestedName(handle);
+            const mochi::ActorHandle handle = ActorHandles[iHandle];
+            const FName name = GetNestedName(handle);
             if (LinksThatQueryContactPoints.Contains(name)) {
               mochi::Actor* actor = SyncScene->GetActor(handle);
               // A link the skin covers is not a colliding actor and carries no contact samples, so
@@ -603,7 +605,7 @@ void UMochiArticulatedActorObject::AddPoseController(
         TEXT("[UMochiArticulatedActorObject] UMochiArticulatedActorObject is invalid!"))
     return;
   }
-  const auto numLinks = LinkActorHandles.Num();
+  const int numLinks = LinkActorHandles.Num();
   const int numPosGains = PoseControllerGains.PositionTrackingGains.Num();
   const int numRotGains = PoseControllerGains.RotationTrackingGains.Num();
   const int numJointGains = PoseControllerGains.JointTrackingGains.Num();
@@ -767,8 +769,8 @@ void UMochiArticulatedActorObject::TryGetQueryData(
       // Fix up data here on the Unreal (render) thread. We don't do this part on the Mochi
       // simulation thread because it requires access to the Unreal components and actors.
       if (UnrealThreadQueryData->ContactPoints.Num() > 0) {
-        const auto outer = GetOuter();
-        for (auto& contact : UnrealThreadQueryData->ContactPoints) {
+        UObject* const outer = GetOuter();
+        for (FMochiContactPoint& contact : UnrealThreadQueryData->ContactPoints) {
           contact.MochiActor =
               contact.MochiComponent ? contact.MochiComponent->GetOwner() : nullptr;
           contact.OtherMochiActor =
@@ -851,7 +853,7 @@ void UMochiArticulatedActorObject::SetRootTransform(
   }
   MochiSceneObject->QueueOrExecuteCommand([WorldFromLocal, this](mochi::Scene* scene) {
     FUnrealToMochiConverter u2m;
-    auto articulatedActor = scene->GetActor(MochiActorHandle);
+    mochi::Actor* articulatedActor = scene->GetActor(MochiActorHandle);
     if (articulatedActor == nullptr) {
       return; // actor no longer exists; UE component must be shutting down
     }
@@ -892,7 +894,7 @@ void UMochiArticulatedActorObject::SetArticulatedPoseFromJoints(
     return;
   }
   MochiSceneObject->QueueOrExecuteCommand([JointPositions, this](mochi::Scene* scene) {
-    auto articulatedActor = scene->GetActor(MochiActorHandle);
+    mochi::Actor* articulatedActor = scene->GetActor(MochiActorHandle);
     if (articulatedActor == nullptr) {
       return; // actor no longer exists; UE component must be shutting down
     }
@@ -929,10 +931,11 @@ TArray<UMochiContactParams*> UMochiArticulatedActorObject::GetLinkContactParams(
     MochiSceneObject->QueueOrExecuteActorCommand(
         LinkActorHandles[i], [&contactParams, i](mochi::Actor* actor) {
           mochi::ErrorLog e{};
-          const auto mochiContactParams = actor->GetContactParams(e);
+          const mochi::ContactParams mochiContactParams = actor->GetContactParams(e);
           if (e.IsOK()) {
             // Convert mochi params to UE params
-            auto ueContactParams = NewObject<UMochiContactParams>(GetTransientPackage());
+            UMochiContactParams* ueContactParams =
+                NewObject<UMochiContactParams>(GetTransientPackage());
             ueContactParams->FromMochi(mochiContactParams);
             contactParams[i] = ueContactParams;
           } else {
@@ -969,7 +972,7 @@ void UMochiArticulatedActorObject::SetLinkContactParams(
   if (!ContactParams) {
     return;
   }
-  const auto mochiContactParams = ContactParams->ToMochi();
+  const mochi::ContactParams mochiContactParams = ContactParams->ToMochi();
   MochiSceneObject->QueueOrExecuteActorCommand(
       LinkActorHandles[LinkIndex], [mochiContactParams](mochi::Actor* actor) {
         mochi::ErrorLog e{};
@@ -1021,7 +1024,7 @@ void UMochiArticulatedActorObject::SetLinkDensity(int LinkIndex, float Density, 
         LinkActorHandles.Num())
     return;
   }
-  const auto mochiDensity = static_cast<mochi::real>(Density);
+  const mochi::real mochiDensity = static_cast<mochi::real>(Density);
   MochiSceneObject->QueueOrExecuteActorCommand(
       LinkActorHandles[LinkIndex], [mochiDensity](mochi::Actor* actor) {
         mochi::ErrorLog e{};
@@ -1101,12 +1104,12 @@ void UMochiArticulatedActorObject::ExtractQueryData_Internal(
   MochiThreadQueryData->JointVelocities.Append(state.JointVelocities);
   // extract contact points
   if (bQueryContactPoints) {
-    auto& contacts = MochiThreadQueryData->ContactPoints;
+    TArray<FMochiContactPoint>& contacts = MochiThreadQueryData->ContactPoints;
     contacts.Reset();
-    for (const auto& pair : ContactableActorHandles) {
-      const auto name = pair.Get<0>();
-      const auto handle = pair.Get<1>();
-      const auto actor = SyncScene->GetActor(handle);
+    for (const TPair<FName, mochi::ActorHandle>& pair : ContactableActorHandles) {
+      const FName name = pair.Get<0>();
+      const mochi::ActorHandle handle = pair.Get<1>();
+      mochi::Actor* const actor = SyncScene->GetActor(handle);
       const mochi::Span<const mochi::ContactPoint> mochiContactPoints =
           actor->GetContactPointsWorld(e);
       if (e.IsOK()) {
@@ -1114,7 +1117,7 @@ void UMochiArticulatedActorObject::ExtractQueryData_Internal(
         // TODO: Convert on the game thread instead; see
         // UMochiActorObject::ExtractQueryData_Internal.
         for (int iMochiContact = 0; iMochiContact < mochiContactPoints.size(); ++iMochiContact) {
-          const auto& mochiContact = mochiContactPoints[iMochiContact];
+          const mochi::ContactPoint& mochiContact = mochiContactPoints[iMochiContact];
           FMochiContactPoint unrealContact = {};
           ContactPointToUnreal(mochiContact, SyncScene, name, m2u, unrealContact);
           contacts.Add(unrealContact);

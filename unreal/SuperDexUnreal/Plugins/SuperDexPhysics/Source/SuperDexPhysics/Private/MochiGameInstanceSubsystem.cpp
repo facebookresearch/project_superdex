@@ -40,7 +40,7 @@
 namespace {
 template <typename T>
 T* FindAsset(const TCHAR* AssetToFind) {
-  auto result = ConstructorHelpers::FObjectFinder<T>(AssetToFind);
+  ConstructorHelpers::FObjectFinder<T> result = ConstructorHelpers::FObjectFinder<T>(AssetToFind);
   if (result.Succeeded()) {
     UE_LOG(
         LogMochiPhysics,
@@ -65,18 +65,18 @@ UMochiGameInstanceSubsystem::UMochiGameInstanceSubsystem() {
   // be called from a UObject constructor. Eventually, I imagine we'll have a
   // more sophisticated database mapping static meshes to mochi meshes.
   // find default UE mesh references
-  const auto defaultUnrealMesh_Plane =
+  UStaticMesh* const defaultUnrealMesh_Plane =
       FindAsset<UStaticMesh>(TEXT("StaticMesh'/Engine/BasicShapes/Plane.Plane'"));
-  const auto defaultUnrealMesh_Cube =
+  UStaticMesh* const defaultUnrealMesh_Cube =
       FindAsset<UStaticMesh>(TEXT("StaticMesh'/Engine/BasicShapes/Cube.Cube'"));
-  const auto defaultUnrealMesh_Sphere =
+  UStaticMesh* const defaultUnrealMesh_Sphere =
       FindAsset<UStaticMesh>(TEXT("StaticMesh'/Engine/BasicShapes/Sphere.Sphere'"));
   // find default Mochi mesh references
-  const auto defaultMochiMesh_Plane =
+  UMochiModel* const defaultMochiMesh_Plane =
       FindAsset<UMochiModel>(TEXT("MochiModel'/SuperDexPhysics/Models/MM_Plane.MM_Plane'"));
-  const auto defaultMochiMesh_Cube =
+  UMochiModel* const defaultMochiMesh_Cube =
       FindAsset<UMochiModel>(TEXT("MochiModel'/SuperDexPhysics/Models/MM_Cube.MM_Cube'"));
-  const auto defaultMochiMesh_Sphere =
+  UMochiModel* const defaultMochiMesh_Sphere =
       FindAsset<UMochiModel>(TEXT("MochiModel'/SuperDexPhysics/Models/MM_Sphere.MM_Sphere'"));
 #endif
 }
@@ -96,7 +96,7 @@ UMochiSceneObject* UMochiGameInstanceSubsystem::GetScene() const {
 }
 
 void UMochiGameInstanceSubsystem::EnableDebugDraw() const {
-  if (const auto scene = GetScene()) {
+  if (UMochiSceneObject* const scene = GetScene()) {
     scene->ConfigureDebugDraw(true);
   } else {
     UE_LOG(
@@ -107,7 +107,7 @@ void UMochiGameInstanceSubsystem::EnableDebugDraw() const {
 }
 
 void UMochiGameInstanceSubsystem::DisableDebugDraw() const {
-  if (const auto scene = GetScene()) {
+  if (UMochiSceneObject* const scene = GetScene()) {
     scene->ConfigureDebugDraw(false);
   } else {
     UE_LOG(
@@ -118,7 +118,7 @@ void UMochiGameInstanceSubsystem::DisableDebugDraw() const {
 }
 
 bool UMochiGameInstanceSubsystem::IsDebugDrawEnabled() const {
-  const auto scene = GetScene();
+  UMochiSceneObject* const scene = GetScene();
   if (scene) {
     return scene->IsDebugDrawEnabled();
   }
@@ -197,7 +197,7 @@ void UMochiGameInstanceSubsystem::CreateScene() {
   if (UWorld* World = GetWorld()) {
     if (ULevel* Level = World->PersistentLevel) {
       for (AActor* Actor : Level->Actors) {
-        auto* Settings = Cast<AMochiSceneSettingsActor>(Actor);
+        AMochiSceneSettingsActor* Settings = Cast<AMochiSceneSettingsActor>(Actor);
         if (Settings && Settings->SceneSettings.bOverrideSimulationSpace) {
           OverrideSettings = Settings;
           break;
@@ -222,7 +222,7 @@ void UMochiGameInstanceSubsystem::CreateScene() {
   // have been initialized yet (UE is inconsistent in this regard). However, this
   // does not mean that settings applied through AMochiSceneSettingsActor won't be
   // used since that actor configures the scene settings in its BeginPlay function.
-  auto settings = RetrieveMochiSceneSettings();
+  FMochiSceneSettings settings = RetrieveMochiSceneSettings();
 
   // Create game instance scene. Create the scene paused so that all UE actors/components can issue
   // commands in BeginPlay before simulation begins. The scene will be unpaused on the next call to
@@ -318,13 +318,13 @@ FMochiSceneSettings UMochiGameInstanceSubsystem::RetrieveMochiSceneSettings() co
         Display,
         TEXT("UMochiGameInstanceSubsystem: Obtained scene settings from AMochiSceneSettingsActor."))
     // mark all instances as applied
-    for (const auto settingsActor : settingsActors) {
+    for (AActor* const settingsActor : settingsActors) {
       Cast<AMochiSceneSettingsActor>(settingsActor)->bApplied = true;
     }
   }
   // otherwise fallback to project settings
   else {
-    const auto projectSettings = GetDefault<UMochiPhysicsSettings>();
+    const UMochiPhysicsSettings* const projectSettings = GetDefault<UMochiPhysicsSettings>();
     if (projectSettings == nullptr) {
       UE_LOG(
           LogMochiPhysics,

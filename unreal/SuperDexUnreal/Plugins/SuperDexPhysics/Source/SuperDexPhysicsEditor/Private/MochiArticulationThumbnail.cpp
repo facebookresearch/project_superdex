@@ -35,7 +35,7 @@ FBoxSphereBounds FMochiArticulationThumbnailScene::GetShownBounds() const {
 void FMochiArticulationThumbnailScene::SetArticulation(UMochiArticulationBase* Articulation) const {
   PreviewActor->SetArticulation(Articulation);
   if (Articulation && Articulation->GetSkeletalMesh()) {
-    SetOnFloor(*PreviewActor, [this]() { return GetShownBounds(); });
+    SetOnFloor(*PreviewActor, [this]() -> FBoxSphereBounds { return GetShownBounds(); });
   }
   PreviewActor->GetPoseableMeshComponent()->RecreateRenderState_Concurrent();
 }

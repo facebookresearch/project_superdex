@@ -124,7 +124,7 @@ bool MakeRigidLinkMesh(
           UE::Geometry::FStaticMeshLODResourcesToDynamicMesh::ConversionOptions(),
           DynamicMesh,
           Colors.GetNumVertices() > 0,
-          [&Colors](int32 VertexIndex) { return Colors.VertexColor(VertexIndex); })) {
+          [&Colors](int32 VertexIndex) -> FColor { return Colors.VertexColor(VertexIndex); })) {
     return false;
   }
   FSkeletalMeshAttributes Attributes(OutMesh);
@@ -507,7 +507,7 @@ bool FMochiArticulationAssetUtils::GenerateSkeletalMesh(
           FindObject<USkeletalMesh>(
               nullptr, *(FPaths::Combine(PackagePath, skelMeshName) + TEXT(".") + skelMeshName))};
       const FScopedUnregisterMeshComponents unregisterComponents(replacedMeshes);
-      const auto skeleton = GenerateSkeleton(links, PackagePath, skelName, kFlags);
+      USkeleton* const skeleton = GenerateSkeleton(links, PackagePath, skelName, kFlags);
       Articulation->SkeletalMesh =
           GenerateSkeletalMesh(links, skeleton, PackagePath, skelMeshName, kFlags);
       FProperty* prop = FindFieldChecked<FProperty>(

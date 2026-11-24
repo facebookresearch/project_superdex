@@ -42,7 +42,7 @@ static void PopulateMeshFromMochiMeshData(
   }
 
   // Initialize faces
-  auto const& TriIndices = meshData.connectivity;
+  const mochi::Span<int const>& TriIndices = meshData.connectivity;
   if (m2u.FlipsHandedness()) {
     for (int i = 0; i < TriIndices.size(); i += 3) {
       UE::Geometry::FIndex3i Tri{
@@ -207,8 +207,8 @@ void ConvertVolumeNodeReferencePositions(
     TArray<FVector>& OutReferencePositionsUnreal) {
   mochi::ErrorLog e{};
   mochi::Context* mochiContext = IMochiPhysicsModule::Get()->GetMochiContext();
-  const auto shape = MochiModel->GetMochiShape(Scale3D, FTransform::Identity);
-  auto const& mesh = mochiContext->GetShapeMesh(shape, e);
+  const mochi::ShapeHandle shape = MochiModel->GetMochiShape(Scale3D, FTransform::Identity);
+  const mochi::MeshDataView& mesh = mochiContext->GetShapeMesh(shape, e);
   ConvertNodePositionsToUnreal(mesh.coordinates, OutReferencePositionsUnreal, Scale3D);
 }
 
@@ -219,9 +219,9 @@ void ConvertElementBarycenterReferencePositions(
   if (MochiModel) {
     mochi::ErrorLog e{};
     mochi::Context* mochiContext = IMochiPhysicsModule::Get()->GetMochiContext();
-    const auto shape = MochiModel->GetMochiShape(Scale3D, FTransform::Identity);
-    auto const mesh = mochiContext->GetShapeMesh(shape, e);
-    auto barycenters = mochi::ComputeElementBarycenters(mesh);
+    const mochi::ShapeHandle shape = MochiModel->GetMochiShape(Scale3D, FTransform::Identity);
+    const mochi::MeshDataView mesh = mochiContext->GetShapeMesh(shape, e);
+    mochi::DynamicArray<mochi::real> barycenters = mochi::ComputeElementBarycenters(mesh);
     ConvertNodePositionsToUnreal(
         mochi::MakeConstSpan(barycenters), OutReferencePositionsUnreal, Scale3D);
   }

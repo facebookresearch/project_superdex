@@ -21,6 +21,7 @@
 #include "Misc/AutomationTest.h"
 #include "UObject/UnrealType.h"
 
+#include <optional>
 #include <type_traits>
 
 static_assert(EMochiActorSegmentElementType::Default == EMochiActorSegmentElementType::P1Q3);
@@ -127,7 +128,8 @@ bool FMochiGenTypesEnumsTest::RunTest(const FString& Parameters) {
   if (!LinearSolverEnum) {
     return false;
   }
-  for (const auto& Entry : TArray<TPair<FString, mochi::LinearSolverType>>{
+  for (const TPair<FString, mochi::LinearSolverType>& Entry :
+       TArray<TPair<FString, mochi::LinearSolverType>>{
            {TEXT("GMRES"), mochi::LinearSolverType::GMRES},
            {TEXT("CudaGMRES"), mochi::LinearSolverType::CudaGMRES},
            {TEXT("AugmentedCG"), mochi::LinearSolverType::AugmentedCG},
@@ -460,7 +462,7 @@ bool FMochiGenTypesStructsTest::RunTest(const FString& Parameters) {
       TEXT("Per-element PSD strategy round trips"),
       RoundTrippedMaterial.psdStrategy,
       NativeMaterial.psdStrategy);
-  for (auto Field :
+  for (mochi::DynamicArray<mochi::real> mochi::PerElementSoftMaterialData::* Field :
        {&mochi::PerElementSoftMaterialData::youngsModulus,
         &mochi::PerElementSoftMaterialData::poissonRatio,
         &mochi::PerElementSoftMaterialData::anisoAlpha,
@@ -521,7 +523,7 @@ bool FMochiGenTypesSupportTest::RunTest(const FString& Parameters) {
   TestFalse(
       TEXT("Unset optional stays unset"),
       MochiGenSupport::ToMochiOptional<mochi::DynamicArray<int>>(Unset, Convert).has_value());
-  const auto NativeEmpty =
+  const std::optional<mochi::DynamicArray<int>> NativeEmpty =
       MochiGenSupport::ToMochiOptional<mochi::DynamicArray<int>>(PresentEmpty, Convert);
   TestTrue(TEXT("Present-empty optional stays set"), NativeEmpty.has_value());
   TestTrue(

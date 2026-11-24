@@ -64,8 +64,9 @@ void FMochiPhysicsEditorModule::StartupModule() {
   RegisterAssetContextMenu();
   // register actor factories
   if (GEditor) {
-    auto SoftMeshActorFactory = NewObject<UMochiSoftMeshActorFactory>();
-    auto ArticulationPreviewActorFactory = NewObject<UMochiArticulationActorFactory>();
+    UMochiSoftMeshActorFactory* SoftMeshActorFactory = NewObject<UMochiSoftMeshActorFactory>();
+    UMochiArticulationActorFactory* ArticulationPreviewActorFactory =
+        NewObject<UMochiArticulationActorFactory>();
 
     GEditor->ActorFactories.Add(SoftMeshActorFactory);
     GEditor->ActorFactories.Add(ArticulationPreviewActorFactory);
@@ -124,7 +125,7 @@ void FMochiPhysicsEditorModule::ShutdownModule() {
       FModuleManager::GetModulePtr<FAssetToolsModule>("AssetTools");
   if (AssetToolsModule != nullptr) {
     IAssetTools& AssetTools = AssetToolsModule->Get();
-    for (auto Action : RegisteredAssetTypeActions) {
+    for (TSharedRef<IAssetTypeActions> Action : RegisteredAssetTypeActions) {
       AssetTools.UnregisterAssetTypeActions(Action);
     }
   }

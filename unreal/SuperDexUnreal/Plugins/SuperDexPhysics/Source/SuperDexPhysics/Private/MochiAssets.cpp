@@ -27,7 +27,7 @@
 
 template <typename T, size_t N>
 int IndexOf(const T (&array)[N], const T& value) {
-  auto it = std::find(std::begin(array), std::end(array), value);
+  const T* it = std::find(std::begin(array), std::end(array), value);
   if (it != std::end(array)) {
     return std::distance(std::begin(array), it);
   }
@@ -51,10 +51,10 @@ mochi::SoftMaterialParams UMochiMaterialParams::ToMochi() const {
   result.massDampingCoefficient = mochi::real(MassDampingCoefficient);
   result.stiffnessDampingCoefficient = mochi::real(StiffnessDampingCoefficient);
 
-  auto const ym = mochi::real(YoungsModulus * k_MPaToPa);
-  auto const pr = mochi::real(PoissonRatio);
-  auto const psd = ::ToMochi(PsdStrategy);
-  auto const arapStiffness = mochi::real(ArapStiffness);
+  const mochi::real ym = mochi::real(YoungsModulus * k_MPaToPa);
+  const mochi::real pr = mochi::real(PoissonRatio);
+  const mochi::MaterialPsdStrategy psd = ::ToMochi(PsdStrategy);
+  const mochi::real arapStiffness = mochi::real(ArapStiffness);
   switch (result.type) {
     case mochi::SoftMaterialType::NeoHookean:
       result.neoHookean.youngsModulus = ym;
@@ -320,7 +320,7 @@ void UMochiContactParams::FromMochi(const mochi::ContactParams& Mochi) {
 //------------------------------------------------------------------------------
 
 UMochiSolverParams::UMochiSolverParams() {
-  auto mochi = mochi::SolverParams{};
+  mochi::SolverParams mochi = mochi::SolverParams{};
   IntegrationMethod = ::ToUnreal(mochi.integrationMethod);
 }
 

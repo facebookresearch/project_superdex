@@ -30,7 +30,8 @@ bool IsSceneExternallyOwned(const UWorld* World) {
     return false;
   }
   if (const UGameInstance* GI = World->GetGameInstance()) {
-    if (const auto* Subsys = GI->GetSubsystem<UMochiGameInstanceSubsystem>()) {
+    if (const UMochiGameInstanceSubsystem* Subsys =
+            GI->GetSubsystem<UMochiGameInstanceSubsystem>()) {
       return Subsys->IsSceneExternallyOwned();
     }
   }
@@ -200,7 +201,7 @@ void UMochiRigidMeshComponent::BeginPlay() {
 
   // freeze degrees of freedom
   if (MochiActorObject && (FreezeConstraints != (uint8)EMochiFreezeConstraint::None)) {
-    auto handle = MochiActorObject->GetMochiActorHandle();
+    mochi::ActorHandle handle = MochiActorObject->GetMochiActorHandle();
     MochiActorObject->GetMochiScene()->QueueOrExecuteActorCommand(
         handle, [this](mochi::Actor* Actor) {
           mochi::ErrorLog e{};
@@ -232,7 +233,7 @@ void UMochiRigidMeshComponent::SetWorldLocationAndRotationMochiWithDynamics(
     const FVector& NewLocation,
     const FRotator& NewRotation) {
   FTransform NewTransform(NewRotation, NewLocation);
-  auto handle = GetMochiActor()->GetMochiActorHandle();
+  mochi::ActorHandle handle = GetMochiActor()->GetMochiActorHandle();
   FUnrealToMochiConverter u2m;
   GetMochiActor()->GetMochiScene()->QueueOrExecuteActorCommand(
       handle, [NewTransform, u2m](mochi::Actor* Actor) {
@@ -245,21 +246,24 @@ void UMochiRigidMeshComponent::SetWorldLocationAndRotationMochiWithDynamics(
         mochi::Real3 dofWorldPosition{dofValues[0], dofValues[1], dofValues[2]};
 
         // Get Root Transform Information
-        auto root = Actor->GetRootTransform();
-        auto rootWorldPosition = root.GetTranslation();
+        mochi::TransformRT root = Actor->GetRootTransform();
+        mochi::Real3 rootWorldPosition = root.GetTranslation();
 
         // The dof transform is about the center of mass.
         // The root transform is about the origin of the local space.
         // So the position of the center of mass in world space is merely
         // the dof translation or the root translation + the local com coordinates rotated to world
         // space.
-        auto comLocalPos = root.TransformDirectionInverse(dofWorldPosition - rootWorldPosition);
+        mochi::Real3 comLocalPos =
+            root.TransformDirectionInverse(dofWorldPosition - rootWorldPosition);
 
         // Get the new transform
-        auto NewTransform_Mochi = u2m.TransformToMochi_RT(NewTransform); // world from local of grip
-        auto NewTransformInverse_Mochi = mochi::Invert(u2m.TransformToMochi_RT(NewTransform));
-        auto translation = NewTransform_Mochi.GetTranslation();
-        auto rotationVec = NewTransform_Mochi.GetRotation().ToRotationVector();
+        mochi::TransformRT NewTransform_Mochi =
+            u2m.TransformToMochi_RT(NewTransform); // world from local of grip
+        mochi::TransformRT NewTransformInverse_Mochi =
+            mochi::Invert(u2m.TransformToMochi_RT(NewTransform));
+        mochi::Real3 translation = NewTransform_Mochi.GetTranslation();
+        mochi::Real3 rotationVec = NewTransform_Mochi.GetRotation().ToRotationVector();
 
         // Get new dof
         mochi::Real3 translationDof =
@@ -343,7 +347,7 @@ void UMochiRigidMeshComponent::PostEditChangeProperty(FPropertyChangedEvent& Pro
   }
   // check static mesh CPU access
   if (bUseStaticMeshAsMochiModel) {
-    if (auto mesh = GetStaticMesh()) {
+    if (TObjectPtr<UStaticMesh> mesh = GetStaticMesh()) {
       if (!mesh->bAllowCPUAccess) {
         UE_LOG(
             LogMochiPhysics,

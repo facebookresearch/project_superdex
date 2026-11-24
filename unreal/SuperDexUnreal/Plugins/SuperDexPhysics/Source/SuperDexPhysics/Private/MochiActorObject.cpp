@@ -213,7 +213,8 @@ UMochiActorObject* UMochiActorObject::CreateRigid(
     bool bQueryContactPoints,
     UMochiSceneObject* Scene) {
   MOCHI_PROFILE_SCOPE();
-  const auto shape = Model->GetMochiShape(WorldFromLocal.GetScale3D(), FTransform::Identity);
+  const mochi::ShapeHandle shape =
+      Model->GetMochiShape(WorldFromLocal.GetScale3D(), FTransform::Identity);
 
   return CreateRigidFromMochiShape(
       Outer,
@@ -261,7 +262,7 @@ UMochiActorObject* UMochiActorObject::CreateRigidFromSurfaceMesh(
     bool bQueryContactPoints,
     UMochiSceneObject* Scene) {
   MOCHI_PROFILE_SCOPE();
-  const auto shape = UMochiModel::GetTriangularMochiShapeFromStaticMesh(
+  const mochi::ShapeHandle shape = UMochiModel::GetTriangularMochiShapeFromStaticMesh(
       SurfaceMesh, CollisionSource, WorldFromLocal.GetScale3D());
   if (shape.IsValid()) {
     return CreateRigidFromMochiShape(
@@ -322,14 +323,14 @@ UMochiActorObject* UMochiActorObject::CreateRigidFromMochiShape(
   if (!VerifySceneAcceptsNewActors(Scene, TEXT("UMochiActorObject"), ActorName)) {
     return nullptr;
   }
-  const auto mochiWorld = IMochiPhysicsModule::Get()->GetMochiContext();
+  mochi::Context* const mochiWorld = IMochiPhysicsModule::Get()->GetMochiContext();
   mochi::ActorHandle mochiActorHandle;
   Scene->QueueOrExecuteCommand([&](mochi::Scene* scene) {
     mochi::ErrorLog e{};
     MOCHI_ERROR_RETURN(e);
-    const auto nameStr = ActorName + "___Actor";
-    const auto layerStr = Layer.ToString();
-    const auto actorParams = CreateRigidActorParams(
+    const FString nameStr = ActorName + "___Actor";
+    const FString layerStr = Layer.ToString();
+    const mochi::RigidActorParams actorParams = CreateRigidActorParams(
         TCHAR_TO_ANSI(*nameStr),
         WorldFromLocal,
         TCHAR_TO_ANSI(*layerStr),
@@ -345,7 +346,7 @@ UMochiActorObject* UMochiActorObject::CreateRigidFromMochiShape(
         MassOverride,
         CenterOfMassOverride,
         MomentOfInertiaOverride);
-    auto* actor = scene->CreateRigidActor(actorParams, e);
+    mochi::Actor* actor = scene->CreateRigidActor(actorParams, e);
     MOCHI_ERROR_RETURN(e);
     mochiActorHandle = actor->GetHandle();
   });
@@ -389,15 +390,16 @@ UMochiActorObject* UMochiActorObject::CreateSoft(
   if (!VerifySceneAcceptsNewActors(Scene, TEXT("UMochiActorObject"), ActorName)) {
     return nullptr;
   }
-  const auto mochiWorld = IMochiPhysicsModule::Get()->GetMochiContext();
+  mochi::Context* const mochiWorld = IMochiPhysicsModule::Get()->GetMochiContext();
   mochi::ActorHandle mochiActorHandle;
-  const auto shape = Model->GetMochiShape(WorldFromLocal.GetScale3D(), FTransform::Identity);
+  const mochi::ShapeHandle shape =
+      Model->GetMochiShape(WorldFromLocal.GetScale3D(), FTransform::Identity);
   Scene->QueueOrExecuteCommand([&](mochi::Scene* scene) {
     mochi::ErrorLog e{};
     MOCHI_ERROR_RETURN(e);
-    const auto nameStr = ActorName + "___SoftActor";
-    const auto layerStr = Layer.ToString();
-    const auto actorParams = CreateSoftActorParams(
+    const FString nameStr = ActorName + "___SoftActor";
+    const FString layerStr = Layer.ToString();
+    const mochi::SoftActorParams actorParams = CreateSoftActorParams(
         TCHAR_TO_ANSI(*nameStr),
         WorldFromLocal,
         TCHAR_TO_ANSI(*layerStr),
@@ -416,7 +418,8 @@ UMochiActorObject* UMochiActorObject::CreateSoft(
       experimentalParams.rom = RomParams->ToMochi();
     }
 
-    auto* actor = mochi::experimental::CreateSoftActor(scene, actorParams, experimentalParams, e);
+    mochi::Actor* actor =
+        mochi::experimental::CreateSoftActor(scene, actorParams, experimentalParams, e);
     MOCHI_ERROR_RETURN(e);
     mochiActorHandle = actor->GetHandle();
   });
@@ -463,9 +466,9 @@ UMochiActorObject* UMochiActorObject::CreateShell(
   Scene->QueueOrExecuteCommand([&](mochi::Scene* scene) {
     mochi::ErrorLog e{};
     MOCHI_ERROR_RETURN(e);
-    const auto nameStr = ActorName + "___ShellActor";
-    const auto layerStr = Layer.ToString();
-    const auto shellParams = CreateShellActorParams(
+    const FString nameStr = ActorName + "___ShellActor";
+    const FString layerStr = Layer.ToString();
+    const mochi::experimental::ShellActorParams shellParams = CreateShellActorParams(
         TCHAR_TO_ANSI(*nameStr),
         WorldFromLocal,
         TCHAR_TO_ANSI(*layerStr),
@@ -478,7 +481,7 @@ UMochiActorObject* UMochiActorObject::CreateShell(
         bUseContactSkin,
         ContactElementType);
 
-    auto* actor = mochi::experimental::CreateShellActor(scene, shellParams, e);
+    mochi::Actor* actor = mochi::experimental::CreateShellActor(scene, shellParams, e);
     MOCHI_ERROR_RETURN(e);
     mochiActorHandle = actor->GetHandle();
   });
@@ -526,9 +529,9 @@ UMochiActorObject* UMochiActorObject::CreateRod(
   Scene->QueueOrExecuteCommand([&](mochi::Scene* scene) {
     mochi::ErrorLog e{};
     MOCHI_ERROR_RETURN(e);
-    const auto nameStr = ActorName + "___RodActor";
-    const auto layerStr = Layer.ToString();
-    const auto rodParams = CreateRodActorParams(
+    const FString nameStr = ActorName + "___RodActor";
+    const FString layerStr = Layer.ToString();
+    const mochi::RodActorParams rodParams = CreateRodActorParams(
         TCHAR_TO_ANSI(*nameStr),
         WorldFromLocal,
         TCHAR_TO_ANSI(*layerStr),
@@ -542,7 +545,7 @@ UMochiActorObject* UMochiActorObject::CreateRod(
         ContactElementType,
         ContactSkinElementType);
 
-    auto* actor = scene->CreateRodActor(rodParams, e);
+    mochi::Actor* actor = scene->CreateRodActor(rodParams, e);
     MOCHI_ERROR_RETURN(e);
     mochiActorHandle = actor->GetHandle();
   });
@@ -605,17 +608,17 @@ UMochiActorObject* UMochiActorObject::CreateImplicitPlane(
   if (!VerifySceneAcceptsNewActors(Scene, TEXT("UMochiActorObject"), ActorName)) {
     return nullptr;
   }
-  const auto mochiWorld = IMochiPhysicsModule::Get()->GetMochiContext();
+  mochi::Context* const mochiWorld = IMochiPhysicsModule::Get()->GetMochiContext();
   mochi::ActorHandle mochiActorHandle;
   Scene->QueueOrExecuteCommand([&](mochi::Scene* scene) {
     mochi::ErrorLog e{};
     FUnrealToMochiConverter u2m;
-    const auto shape =
+    const mochi::ShapeHandle shape =
         mochiWorld->CreatePlaneShape(u2m.DirectionToMochi(Normal), u2m.MeasureToMochi(Distance), e);
     MOCHI_ERROR_RETURN(e);
-    const auto nameStr = ActorName + "___Plane";
-    const auto layerStr = Layer.ToString();
-    const auto actorParams = CreateRigidActorParams(
+    const FString nameStr = ActorName + "___Plane";
+    const FString layerStr = Layer.ToString();
+    const mochi::RigidActorParams actorParams = CreateRigidActorParams(
         TCHAR_TO_ANSI(*nameStr),
         WorldFromLocal,
         TCHAR_TO_ANSI(*layerStr),
@@ -632,7 +635,7 @@ UMochiActorObject* UMochiActorObject::CreateImplicitPlane(
         nullptr, // CenterOfMassOverride
         nullptr // MomentOfInertiaOverride
     );
-    auto* actor = scene->CreateRigidActor(actorParams, e);
+    mochi::Actor* actor = scene->CreateRigidActor(actorParams, e);
     MOCHI_ERROR_RETURN(e);
     mochiActorHandle = actor->GetHandle();
   });
@@ -666,17 +669,17 @@ UMochiActorObject* UMochiActorObject::CreateImplicitSphere(
   if (!VerifySceneAcceptsNewActors(Scene, TEXT("UMochiActorObject"), ActorName)) {
     return nullptr;
   }
-  const auto mochiWorld = IMochiPhysicsModule::Get()->GetMochiContext();
+  mochi::Context* const mochiWorld = IMochiPhysicsModule::Get()->GetMochiContext();
   mochi::ActorHandle mochiActorHandle;
   Scene->QueueOrExecuteCommand([&](mochi::Scene* scene) {
     mochi::ErrorLog e{};
     FUnrealToMochiConverter u2m;
-    const auto shape = mochiWorld->CreateSphereShape(
+    const mochi::ShapeHandle shape = mochiWorld->CreateSphereShape(
         u2m.TranslationToMochi(Center), u2m.MeasureToMochi(Radius), e);
     MOCHI_ERROR_RETURN(e);
-    const auto nameStr = ActorName + "___Sphere";
-    const auto layerStr = Layer.ToString();
-    const auto actorParams = CreateRigidActorParams(
+    const FString nameStr = ActorName + "___Sphere";
+    const FString layerStr = Layer.ToString();
+    const mochi::RigidActorParams actorParams = CreateRigidActorParams(
         TCHAR_TO_ANSI(*nameStr),
         WorldFromLocal,
         TCHAR_TO_ANSI(*layerStr),
@@ -693,7 +696,7 @@ UMochiActorObject* UMochiActorObject::CreateImplicitSphere(
         nullptr, // CenterOfMassOverride
         nullptr // MomentOfInertiaOverride
     );
-    auto* actor = scene->CreateRigidActor(actorParams, e);
+    mochi::Actor* actor = scene->CreateRigidActor(actorParams, e);
     MOCHI_ERROR_RETURN(e);
     mochiActorHandle = actor->GetHandle();
   });
@@ -734,7 +737,7 @@ UMochiActorObject* UMochiActorObject::Create_Internal(
   FString actorName;
   Scene->QueueOrExecuteCommand([&](mochi::Scene* scene) {
     mochi::ErrorLog e{};
-    if (const auto actor = scene->GetActor(ActorHandle)) {
+    if (mochi::Actor* const actor = scene->GetActor(ActorHandle)) {
       if ((bQuerySurfaceNodePositions || bQueryNodeNormals) &&
           actor->GetType() == mochi::ActorType::Rod &&
           !(bUseVisualMeshIfPresent &&
@@ -809,7 +812,7 @@ UMochiActorObject* UMochiActorObject::Create_Internal(
     }
   });
   Scene->WaitForQueuedCommands();
-  auto mochiActorObj = NewObject<UMochiActorObject>(Outer, FName(*actorName));
+  UMochiActorObject* mochiActorObj = NewObject<UMochiActorObject>(Outer, FName(*actorName));
   mochiActorObj->MochiSceneObject = Scene;
   mochiActorObj->MochiMaterialParams = MaterialParams;
   mochiActorObj->MochiActorHandle = ActorHandle;
@@ -871,8 +874,8 @@ void UMochiActorObject::TryGetQueryData(TFunctionRef<void(const FMochiActorQuery
       // Fix up data here on the Unreal (render) thread. We don't do this part on the Mochi
       // simulation thread because it requires access to the Unreal components and actors.
       if (UnrealThreadQueryData->ContactPoints.Num() > 0) {
-        const auto outer = GetOuter();
-        for (auto& contact : UnrealThreadQueryData->ContactPoints) {
+        UObject* const outer = GetOuter();
+        for (FMochiContactPoint& contact : UnrealThreadQueryData->ContactPoints) {
           contact.MochiActor =
               contact.MochiComponent ? contact.MochiComponent->GetOwner() : nullptr;
           contact.OtherMochiActor =
@@ -1009,7 +1012,7 @@ void UMochiActorObject::ApplyMaterialModifiers(
   if (Modifiers.Num() > 0 || bResetExisting) {
     // create a "template" of material params, because if the type doesn't match
     // the original material SetSoftMaterialParamsField will fail
-    auto ModelMaterialParams = GetMaterialParams();
+    const UMochiMaterialParams* ModelMaterialParams = GetMaterialParams();
     MochiSceneObject->QueueOrExecuteActorCommand(
         MochiActorHandle, [ModelMaterialParams, Modifiers, bResetExisting](mochi::Actor* actor) {
           mochi::SoftMaterialParams params = ModelMaterialParams->ToMochi();
@@ -1023,14 +1026,14 @@ void UMochiActorObject::ApplyMaterialModifiers(
           }
           if (actor->GetType() == mochi::ActorType::Soft) {
             // Modifiers only supported for soft actors.
-            for (const auto Modifier : Modifiers) {
+            for (const TPair<int, FMochiMaterialModifier> Modifier : Modifiers) {
               // TODO: should we check for zeros/negative?
               // indices are already checked in mochi
               constexpr mochi::real k_MPaToPa = 1e6_r;
               int idx = Modifier.Key;
-              auto values = Modifier.Value;
-              auto const ym = values.YoungsModulus * k_MPaToPa;
-              auto const pr = values.PoissonRatio;
+              FMochiMaterialModifier values = Modifier.Value;
+              const mochi::real ym = values.YoungsModulus * k_MPaToPa;
+              const float pr = values.PoissonRatio;
               static_assert(
                   static_cast<int>(mochi::SoftMaterialType::Count) == 6,
                   "Please update the switch statement below if SoftMaterialType enum changes");
@@ -1101,7 +1104,7 @@ void UMochiActorObject::GetInertialParams(
         Mass = actor->GetMass(e);
         FMochiToUnrealConverter m2u;
         CenterOfMass = m2u.TranslationToUnreal(actor->GetRigidCenterOfMassLocal(e));
-        auto moi = actor->GetRigidMomentOfInertiaLocal(e);
+        mochi::Real6 moi = actor->GetRigidMomentOfInertiaLocal(e);
         MomentOfInertia = m2u.InertiaToUnreal(moi);
         MomentOfInertia.Ixy = m2u.MeasureToUnreal(moi[1], 2);
         MomentOfInertia.Ixz = m2u.MeasureToUnreal(moi[2], 2);
@@ -1212,8 +1215,8 @@ void UMochiActorObject::ExtractQueryData_Internal(const mochi::Actor* Actor, moc
       // from them here first.
       MochiThreadQueryData->ContactPoints.SetNum(contactPoints.size());
       for (int iContact = 0; iContact < contactPoints.size(); ++iContact) {
-        const auto& mochiContact = contactPoints[iContact];
-        auto& unrealContact = MochiThreadQueryData->ContactPoints[iContact];
+        const mochi::ContactPoint& mochiContact = contactPoints[iContact];
+        FMochiContactPoint& unrealContact = MochiThreadQueryData->ContactPoints[iContact];
         ContactPointToUnreal(mochiContact, Scene, NAME_None, m2u, unrealContact);
       }
     }

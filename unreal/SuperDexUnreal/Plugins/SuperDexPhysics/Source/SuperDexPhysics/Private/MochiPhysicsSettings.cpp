@@ -34,7 +34,7 @@ void RestartDebuggerIfActiveSpaceChanged(const FMochiSpaceDefinition& PreviousAc
     return;
   }
 
-  auto& DebugServer = Context->GetDebugServer();
+  mochi::DebugServer& DebugServer = Context->GetDebugServer();
   const uint16 PreviousPort = DebugServer.GetPort();
   if (PreviousPort == 0) {
     return;
@@ -124,7 +124,7 @@ FName UMochiPhysicsSettings::GetCategoryName() const {
 
 AMochiSceneSettingsActor::AMochiSceneSettingsActor() {
   // try to get settings from project settings
-  const auto projectSettings = GetDefault<UMochiPhysicsSettings>();
+  const UMochiPhysicsSettings* const projectSettings = GetDefault<UMochiPhysicsSettings>();
   if (projectSettings) {
     SceneSettings = projectSettings->DefaultSceneSettings;
     // initialize SimulationSpace from project-level setting so the default value in the details
@@ -171,11 +171,11 @@ void AMochiSceneSettingsActor::BeginPlay() {
         TEXT("AMochiSceneSettingsActor: Overriding SimulationSpace from level settings"));
   }
   // else get the subsystem scene and reconfigure settings
-  const auto game = GetWorld()->GetGameInstance();
-  const auto subsys = game->GetSubsystem<UMochiGameInstanceSubsystem>();
+  UGameInstance* const game = GetWorld()->GetGameInstance();
+  UMochiGameInstanceSubsystem* const subsys = game->GetSubsystem<UMochiGameInstanceSubsystem>();
   if (subsys) {
     subsys->bStartPaused = SceneSettings.bStartPaused;
-    if (const auto scene = subsys->GetScene()) {
+    if (UMochiSceneObject* const scene = subsys->GetScene()) {
       scene->ConfigureSettings(SceneSettings);
       bApplied = true;
       UE_LOG(

@@ -133,7 +133,8 @@ bool FMochiCoordinateSpaceExhaustiveMappingTest::RunTest(const FString& Paramete
       continue;
     }
     ++NumCombinations;
-    const auto PluginAxes = static_cast<EMochiSpaceAxes>(AxesEnum->GetValueByIndex(Index));
+    const EMochiSpaceAxes PluginAxes =
+        static_cast<EMochiSpaceAxes>(AxesEnum->GetValueByIndex(Index));
     const mochi::CoordinateSpace NativeSpace = ToMochiCoordinateSpace({PluginAxes, 1.0});
 
     TestEqual(
