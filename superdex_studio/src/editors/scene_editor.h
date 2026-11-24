@@ -37,6 +37,15 @@ namespace superdex::studio {
 
 class SceneAsset;
 
+// Resolves @p task's spawns on @p scene, where a run places them, and loads their prefabs so
+// SceneStage can stage them. On failure, @p spawns is empty and @p error says why.
+bool BindTaskSpawns(
+    superdex::robotics::BotTaskPrefab const& task,
+    superdex::robotics::BotScenePrefab const& scene,
+    AssetManager& assetManager,
+    std::vector<ResolvedTaskSpawn>& spawns,
+    std::string& error);
+
 // Editor for .superdex_scene and .superdex_scene_archive files.
 // Visualizes and edits the base scene, spawnable prefabs, and placed bots, and can simulate them
 // (play/step/stop). Edits are undoable and restage the viewport live.
@@ -88,12 +97,6 @@ class SceneEditor : public AssetEditor {
   void RestageScene();
   // The viewport Stats overlay rows for what RestageScene stages.
   StatsText BuildStats() const;
-  // Resolves @p task against the current scene and loads its prefabs. On failure, @p spawns is
-  // empty and @p error says why.
-  bool BindTaskSpawns(
-      superdex::robotics::BotTaskPrefab const& task,
-      std::vector<ResolvedTaskSpawn>& spawns,
-      std::string& error);
   bool LoadTask(mochi::Path const& path);
   void ClearTask();
   // Re-reads the loaded task from the scene's task cache, whose values undo restores.

@@ -1779,6 +1779,7 @@ bool ImGui::AssetSlot(
       studio->GetAssetBrowser().SelectAsset(asset);
     }
   }
+  ImGui::SetItemTooltip("Show in the Asset Browser.");
   if (showClearButton) {
     ImGui::SameLine();
     if (ImGui::Button(ICON_FA_TRASH)) {

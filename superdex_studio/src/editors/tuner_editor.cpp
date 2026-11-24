@@ -17,12 +17,17 @@
 #include "editors/tuner_editor.h"
 
 #include "app/app.h"
+#include "assets/bot_asset.h"
 #include "assets/mochi_prefab_asset.h"
+#include "assets/scene_asset.h"
 #include "assets/tuner_asset.h"
+#include "editors/scene_editor.h"
 #include "rendering/arrow_glyph.h"
 #include "rendering/debug_text.h"
 #include "rendering/measure_tool.h"
 #include "rendering/stats.h"
+#include "simulation/skin_sim_sync.h"
+#include "ui/asset_browser.h"
 #include "ui/imgui_widgets.h"
 
 #include <superdex_asset_tuner/json_path.h>
@@ -33,6 +38,8 @@
 #include <mochi_core/utils/math_utils.h>
 #include <mochi_renderer/debug.h>
 #include <mochi_renderer/type_conversions.h>
+#include <superdex_robotics/scene/bot_scene.h>
+#include <superdex_robotics/superdex_robotics.h>
 
 #include <imguios/fonts/icons_font_awesome5.h>
 #include <implot.h>
@@ -231,6 +238,11 @@ PreviewLoad(tuner::LoadSpec const& load, int key, mochi::TransformRT const& worl
 mochi::TransformRT WaypointPose(tuner::PoseWaypoint const& waypoint) {
   return mochi::TransformRT(
       mochi::Quaternion::FromRotationVector(waypoint.rotation), waypoint.position);
+}
+
+// Whether a run builds `bot` (TunerSpec::bots; empty: every bot).
+bool BuildsBot(tuner::TunerSpec const& spec, DynamicString const& bot) {
+  return spec.bots.empty() || std::find(spec.bots.begin(), spec.bots.end(), bot) != spec.bots.end();
 }
 
 // `items` sorted by time, for previews of keys or waypoints mid-edit (the spec is sorted once an
@@ -540,10 +552,38 @@ void TunerEditor::Initialize() {
   };
   _viewport->SetStatsProvider([this] {
     StatsText text;
-    if (MochiPrefabAsset const* prefabAsset = _tunerAsset->GetPrefabAsset()) {
-      text.AddPrefab(prefabAsset->GetPrefab());
-    }
     auto const& spec = _tunerAsset->GetSpec();
+    std::vector<mochi::prefab::ScenePrefab const*> prefabs;
+    if (SceneAsset const* scene = _tunerAsset->GetSceneAsset()) {
+      // As the Bot Scene Editor counts them: the built bots, then the base scene with the prefab.
+      auto const& assets = _studio->GetAssetManager();
+      int64_t bots = 0;
+      int64_t botDofs = 0;
+      for (superdex::robotics::BotEntry const& bot : scene->GetPrefab().bots) {
+        bool const built = BuildsBot(spec, bot.name);
+        if (auto const* asset =
+                assets.FindAssetByPath<BotAsset>(mochi::Path{std::string(bot.path)});
+            built && asset != nullptr) {
+          ++bots;
+          botDofs += asset->GetBotPrefab()._numDofs;
+        }
+      }
+      text.Add("Bots", FormatBreakdown(bots, {{botDofs, "DOFs"}}));
+      if (auto const* base = assets.FindAssetByPath<MochiPrefabAsset>(
+              mochi::Path{std::string(scene->GetPrefab().scene.baseScene)})) {
+        prefabs.push_back(&base->GetPrefab());
+      }
+    }
+    if (MochiPrefabAsset const* prefabAsset = _tunerAsset->GetPrefabAsset()) {
+      prefabs.push_back(&prefabAsset->GetPrefab());
+    }
+    for (ResolvedTaskSpawn const& spawn : _taskSpawns) {
+      if (auto const* const prefab =
+              _studio->GetAssetManager().FindAssetByPath<MochiPrefabAsset>(spawn.prefabPath)) {
+        prefabs.push_back(&prefab->GetPrefab());
+      }
+    }
+    text.AddPrefabs(prefabs);
     return text.Add("Loads", mochi::isize(spec.loads))
         .Add("Probes", mochi::isize(spec.probes))
         .AddRender(_stageStats.render)
@@ -592,6 +632,7 @@ void TunerEditor::Initialize() {
     }
     _hasSample = false;
     _stopEvent.reset();
+    _taskResult.reset();
     return mochi::CallbackHandle{};
   };
   _mochiScene.registerPostStepCallback = [this](mochi::AsyncScene* scene) {
@@ -613,7 +654,7 @@ void TunerEditor::Initialize() {
 }
 
 void TunerEditor::OnHandleInputs() {
-  if (_tunerAsset->GetPrefabAsset() != nullptr) {
+  if (IsSceneLoaded()) {
     _mochiScene.HandleHotkeys();
   }
   if (_placingLoad >= 0 && ImGui::IsKeyPressed(ImGuiKey_Escape)) {
@@ -677,10 +718,11 @@ void TunerEditor::ShowTabContents() {
   _viewport->ShowStatsOverlay(
       _mochiScene.GetStepsPerSecond(),
       _hasSample ? std::optional<float>(static_cast<float>(_lastSample.time)) : std::nullopt);
-  ImGui::BeginDisabled(_tunerAsset->GetPrefabAsset() == nullptr);
+  ImGui::BeginDisabled(!IsSceneLoaded());
   _mochiScene.ShowPlayToolbarOverViewport();
   ImGui::EndDisabled();
   ShowStopBanner();
+  ShowTaskBanner();
   if (_placingLoad >= 0 || IsRecording()) {
     // Bottom-right, clear of the stats overlay in the bottom-left corner and above the viewport's
     // hidden-actors button.
@@ -828,35 +870,82 @@ void TunerEditor::ForEachReferencedPath(
     std::function<void(mochi::Path const&)> const& callback) const {
   AssetEditor::ForEachReferencedPath(callback);
   callback(_tunerAsset->GetPrefabPath());
+  callback(_tunerAsset->GetScenePath());
+  callback(_tunerAsset->GetTaskPath());
 }
 
 //--------------------------------------------------------------------------------------------------
 // Staging and simulation
 //--------------------------------------------------------------------------------------------------
 
+bool TunerEditor::IsSceneLoaded() const {
+  return _tunerAsset->GetPrefabAsset() != nullptr || _tunerAsset->GetSceneAsset() != nullptr;
+}
+
 void TunerEditor::Restage() {
   _describedTargetsStale = true;
   MochiPrefabAsset* prefabAsset = _tunerAsset->GetPrefabAsset();
-  if (prefabAsset == nullptr) {
+  SceneAsset const* sceneAsset = _tunerAsset->GetSceneAsset();
+  _taskSpawns.clear();
+  if (!IsSceneLoaded()) {
     _stage.Clear();
     _stageStats = {};
+    ValidateOverrides();
     return;
   }
-  // Nested prefabs edited in their own editors since the prefab was loaded (saved or not).
-  ResolveNestedPrefabsFromMemory(
-      prefabAsset->GetPrefab(), _studio->GetAssetManager(), prefabAsset->GetAssetsRoot());
+  if (prefabAsset != nullptr) {
+    // Nested prefabs edited in their own editors since the prefab was loaded (saved or not).
+    ResolveNestedPrefabsFromMemory(
+        prefabAsset->GetPrefab(), _studio->GetAssetManager(), prefabAsset->GetAssetsRoot());
+  }
+  if (sceneAsset != nullptr) {
+    // Staged as a run builds the scene: the base scene, the task's objects and the bots the tuner
+    // builds.
+    superdex::robotics::BotScenePrefab scene = sceneAsset->GetPrefab();
+    scene.bots.clear();
+    for (superdex::robotics::BotEntry const& bot : sceneAsset->GetPrefab().bots) {
+      if (BuildsBot(_tunerAsset->GetSpec(), bot.name)) {
+        scene.bots.push_back(bot);
+      }
+    }
+    _taskSpawns = LoadTaskSpawns(*sceneAsset);
+    _stage.StageBotTask(scene, mochi::MakeConstSpan(_taskSpawns), _stageType);
+  } else {
+    _stage.StagePrefab(prefabAsset->GetPrefab(), prefabAsset->GetAssetsRoot(), _stageType);
+  }
   ValidateOverrides();
-  _stage.StagePrefab(prefabAsset->GetPrefab(), prefabAsset->GetAssetsRoot(), _stageType);
   // Staging places every actor at its rest pose, also mid-run (simulation moves them again after).
   _stageStats = ComputeStageStats(
       _stage, _studio->GetAssetManager(), _studio->GetRendererToEditorSpaceConverter());
-  // The ground stays put mid-run (it only changes the view there).
+  // The ground stays put mid-run (it only changes the view there), and the run's last state goes
+  // back on, so a paused run does not show the rest pose.
   if (_mochiScene.IsSimulating()) {
+    _simSync.ApplyLatest(_stage, _studio->GetEditorToRendererSpaceConverter());
     return;
   }
   // As in the prefab editor: the automatic ground sits at the lowest point of what is shown.
   _autoGroundHeight = _viewport->UpdateGroundPlane();
   ApplyRunSettings();
+}
+
+std::vector<ResolvedTaskSpawn> TunerEditor::LoadTaskSpawns(SceneAsset const& scene) {
+  std::vector<ResolvedTaskSpawn> spawns;
+  _taskStageError.clear();
+  mochi::Path const& path = _tunerAsset->GetTaskPath();
+  if (path.IsEmpty()) {
+    return spawns;
+  }
+  superdex::Error error;
+  superdex::robotics::BotTaskPrefab const task =
+      superdex::robotics::LoadBotTaskPrefabFromFile(path.ToString(), error);
+  std::string message = error.IsOK() ? "" : error.GetDescription();
+  if (!error.IsOK() ||
+      !BindTaskSpawns(task, scene.GetPrefab(), _studio->GetAssetManager(), spawns, message)) {
+    _taskStageError = message;
+    MOCHI_LOG_ERROR(
+        "Asset Tuner: task '%s' cannot be staged: %s", path.ToString().c_str(), message.c_str());
+  }
+  return spawns;
 }
 
 void TunerEditor::RefreshTargets() {
@@ -868,7 +957,7 @@ void TunerEditor::RefreshTargets() {
   _describedTargetsStale = false;
   _describedTargets.reset();
   _targets = {};
-  if (_tunerAsset->GetPrefabAsset() == nullptr) {
+  if (!IsSceneLoaded()) {
     return;
   }
   // In a temporary scene of the studio's context (never a second context; see DescribeTuner).
@@ -961,52 +1050,116 @@ void TunerEditor::CreatePhysicsActors(mochi::Scene* scene) {
 // Sim thread, from CreatePhysicsActors.
 bool TunerEditor::BindPhysicsActors(mochi::Scene* scene) {
   tuner::TunerSpec const& spec = _tunerAsset->GetSpec();
+  if (!tuner::CheckPrefabOrScene(spec, _bindError)) {
+    return false;
+  }
   MochiPrefabAsset* prefabAsset = _tunerAsset->GetPrefabAsset();
-  if (prefabAsset == nullptr) {
+  if (!spec.prefab.empty() && prefabAsset == nullptr) {
     _bindError = "Prefab '" + _tunerAsset->GetPrefabPath().ToString() + "' is not loaded.";
     return false;
   }
-  mochi::prefab::ScenePrefab overridden;
-  mochi::prefab::ScenePrefab* prefab = &prefabAsset->GetPrefab();
-  if (!spec.prefabOverrides.empty()) {
-    overridden = *prefab;
-    if (!tuner::ApplyPrefabOverrides(overridden, spec.prefabOverrides, _bindError)) {
-      return false;
-    }
-    prefab = &overridden;
-  }
-  mochi::ErrorLog error;
-  mochi::prefab::EnsureFullyLoaded(
-      *prefab, prefabAsset->GetAssetsRoot(), _studio->GetMochiContext(), error);
-  auto const result = mochi::prefab::AddToScene(*prefab, scene, {}, error);
-  if (!error.IsOK()) {
-    _bindError = "Failed to add the prefab to the scene (see log).";
+  if (!spec.scene.empty() && _tunerAsset->GetSceneAsset() == nullptr) {
+    _bindError = "Scene '" + _tunerAsset->GetScenePath().ToString() + "' is not loaded.";
     return false;
   }
+  if (!_bots.Load(
+          spec,
+          _tunerAsset->GetPath().AsFilesystemPath(),
+          _studio->GetMochiContext(),
+          *scene,
+          _bindError,
+          _studio->GetRoboticsContext())) {
+    return false;
+  }
+  // Kept past the run: its last samples are drained after the bots are gone.
+  _taskTimeLimit = _bots.GetTaskTimeLimit();
+  // The simulated actors, matched to the staged ones by name.
+  std::vector<mochi::Actor*> tracked;
+  superdex::robotics::BotScene* const bots = _bots.Get();
+  if (bots != nullptr) {
+    for (mochi::ActorHandle const handle : bots->GetBaseSceneActorHandles()) {
+      tracked.push_back(scene->GetActor(handle));
+    }
+  }
+  if (prefabAsset != nullptr) {
+    mochi::prefab::ScenePrefab overridden;
+    mochi::prefab::ScenePrefab* prefab = &prefabAsset->GetPrefab();
+    if (!spec.prefabOverrides.empty()) {
+      overridden = *prefab;
+      if (!tuner::ApplyPrefabOverrides(overridden, spec.prefabOverrides, _bindError)) {
+        return false;
+      }
+      prefab = &overridden;
+    }
+    mochi::ErrorLog error;
+    mochi::prefab::EnsureFullyLoaded(
+        *prefab, prefabAsset->GetAssetsRoot(), _studio->GetMochiContext(), error);
+    auto const result = mochi::prefab::AddToScene(*prefab, scene, {}, error);
+    if (!error.IsOK()) {
+      _bindError = "Failed to add the prefab to the scene (see log).";
+      return false;
+    }
+    tracked.insert(tracked.end(), result.actors.begin(), result.actors.end());
+  }
+  if (bots != nullptr) {
+    for (DynamicString const& instance : bots->GetPrefabInstanceNames()) {
+      for (mochi::ActorHandle const handle : bots->GetPrefabInstanceActors(instance)) {
+        tracked.push_back(scene->GetActor(handle));
+      }
+    }
+    for (superdex::robotics::BotEntry const& entry : bots->GetBotScenePrefab().bots) {
+      superdex::robotics::Bot const* const bot = bots->GetBot(entry.name);
+      if (bot != nullptr && bot->GetArticulatedActor() != nullptr) {
+        tracked.push_back(bot->GetArticulatedActor());
+      }
+    }
+  }
+  std::erase(tracked, nullptr);
   tuner::ApplyRunSpecOverrides(*scene, spec.run);
   if (!tuner::ApplySolverOverrides(
           *scene, mochi::MakeConstSpan(spec.solverOverrides), _bindError)) {
     return false;
   }
-  _simSync.Track(mochi::MakeConstSpan(result.actors));
-  if (!_session.Bind(*scene, spec, _bindError)) {
+  _simSync.Track(mochi::MakeConstSpan(tracked));
+  if (SceneAsset const* const sceneAsset = _tunerAsset->GetSceneAsset();
+      bots != nullptr && sceneAsset != nullptr) {
+    // The UI thread is blocked while the actors are created, so the bot assets can be read.
+    for (superdex::robotics::BotEntry const& entry : sceneAsset->GetPrefab().bots) {
+      superdex::robotics::Bot const* const bot = bots->GetBot(entry.name);
+      auto const* const asset = _studio->GetAssetManager().FindAssetByPath<BotAsset>(
+          mochi::Path{std::string(entry.path)});
+      if (bot != nullptr && bot->GetArticulatedActor() != nullptr && asset != nullptr) {
+        _simSync.SetSkinBoneLinkRemap(
+            bot->GetArticulatedActor()->GetHandle(),
+            ComputeSkinBoneLinkRemap(asset->GetBotPrefab()));
+      }
+    }
+  }
+  if (!_session.Bind(*scene, spec, _bindError, bots)) {
     return false;
   }
   _loadsCallback = scene->RegisterPreStepCallback(
       "TunerEditor::Loads", [this](mochi::StepInfo const& info) { _session.OnPreStep(info); });
   _probesCallback = scene->RegisterPostStepCallback(
-      "TunerEditor::Probes", [this, sample = tuner::Sample{}](mochi::StepInfo const& info) mutable {
+      "TunerEditor::Probes",
+      [this, sample = tuner::Sample{}](mochi::StepInfo const& info) mutable {
         _session.OnPostStep(info, sample);
         // Pause on this step, like the CLI stops on it, so the scene the viewport shows is the one
-        // that triggered. Only the first trigger pauses; resuming runs on without stop checks.
-        bool const firstStop = sample.stopCondition >= 0 && !_stopPausedOnSim.exchange(true);
-        if (firstStop) {
+        // that triggered. Only the first trigger pauses; resuming runs on without stop checks,
+        // except that a failed controller pauses every step.
+        bool const failed = !sample.failure.empty();
+        bool const ends = sample.stopCondition >= 0 || failed ||
+            sample.task == tuner::TaskOutcome::Success ||
+            sample.task == tuner::TaskOutcome::Failure;
+        bool const firstStop = ends && !_stopPausedOnSim.exchange(true);
+        if (firstStop || failed) {
           _mochiScene.GetAsyncScene()->Pause(true);
         }
         RecordSimSample(sample, firstStop);
         std::lock_guard const lock(_samplesMutex);
         _pendingSamples.push_back(sample);
-      });
+      },
+      tuner::kProbesCallbackPriority);
   if (_recordNextRun && OpenRunWriter()) {
     StartSimRecording(*scene);
   }
@@ -1024,6 +1177,7 @@ void TunerEditor::DestroyPhysicsActors(mochi::Scene* scene) {
   }
   _session.Unbind(*scene);
   _simSync.Untrack(scene);
+  _bots.Reset();
   RestoreThreadingMode();
 }
 
@@ -1042,6 +1196,7 @@ void TunerEditor::OnStopPhysics() {
   _stage.ResetWorldTransforms(_studio->GetEditorToRendererSpaceConverter());
   _hasSample = false;
   _stopEvent.reset();
+  _taskResult.reset();
   _bindError.clear();
 }
 
@@ -1051,13 +1206,18 @@ void TunerEditor::DrainSamples() {
     std::lock_guard const lock(_samplesMutex);
     samples.swap(_pendingSamples);
   }
-  double const duration = _tunerAsset->GetSpec().run.duration;
+  tuner::TunerSpec const& spec = _tunerAsset->GetSpec();
+  double const duration = tuner::GetRunDuration(spec, _taskTimeLimit);
+  // The run ends on the step nearest its length, as the CLI rounds its step count.
+  double const halfStep = 0.5 * spec.run.dt;
   bool stopNow = false;
   for (tuner::Sample& sample : samples) {
-    bool const inRun = !_stopAtDuration || sample.time <= duration + kTimeEpsilon;
+    bool const inRun = !_stopAtDuration || sample.time <= duration + halfStep;
     // The first triggered stop condition ends the run like on the CLI: the sim thread paused on
-    // this step, and the recording ends with this sample.
-    bool const stopsHere = sample.stopCondition >= 0 && !_stopEvent;
+    // this step, and the recording ends with this sample. A run resumed after the task's verdict
+    // has no stop conditions, as the sim thread no longer pauses on them.
+    bool const failed = !sample.failure.empty();
+    bool const stopsHere = (failed || (sample.stopCondition >= 0 && !_taskResult)) && !_stopEvent;
     if (IsRecording() && inRun) {
       _writer.WriteSample(sample);
       tuner::UpdateChannelSummaries(
@@ -1066,21 +1226,50 @@ void TunerEditor::DrainSamples() {
       _runSummary.simTime = sample.time;
     }
     if (stopsHere) {
+      DynamicString const& message = failed ? sample.failure : sample.stopMessage;
       _stopEvent = StopEvent{
-          .condition = sample.stopCondition,
-          .message = std::string(std::string_view(sample.stopMessage)),
+          .condition = failed ? -1 : sample.stopCondition,
+          .message = std::string(std::string_view(message)),
           .time = sample.time};
       auto const& stops = _tunerAsset->GetSpec().stopConditions;
       if (IsRecording()) {
-        _runSummary.status = "stopped";
-        _runSummary.message = sample.stopMessage;
-        if (sample.stopCondition < static_cast<int>(stops.size())) {
+        _runSummary.status = failed ? "error" : "stopped";
+        _runSummary.message = message;
+        if (!failed && sample.stopCondition >= 0 &&
+            sample.stopCondition < static_cast<int>(stops.size())) {
           _runSummary.stopCondition = stops[static_cast<size_t>(sample.stopCondition)].name;
         }
       }
       _runStatus = "Stopped: " + _stopEvent->message;
-      MOCHI_LOG("Asset Tuner stopped at t = %.3f s: %s", sample.time, sample.stopMessage.c_str());
+      MOCHI_LOG("Asset Tuner stopped at t = %.3f s: %s", sample.time, message.c_str());
       stopNow = true;
+    }
+    // The task's outcome ends the run like on the CLI, which judges it the same way: when it is
+    // reached, or when a stop condition or the run's end comes first. Without Stop at Duration the
+    // run has no end to judge it at.
+    bool const decided =
+        sample.task == tuner::TaskOutcome::Success || sample.task == tuner::TaskOutcome::Failure;
+    bool const ended = stopsHere || (_stopAtDuration && sample.time >= duration - halfStep);
+    if (sample.task != tuner::TaskOutcome::None && !failed && (decided || ended) && inRun &&
+        !_taskResult) {
+      tuner::RunSummary verdict;
+      tuner::JudgeTask(
+          sample.task,
+          sample.time,
+          stopsHere ? std::string_view(sample.stopMessage) : std::string_view(),
+          verdict);
+      _taskResult = TaskResult{
+          .succeeded = verdict.status == "succeeded",
+          .time = sample.time,
+          .message = std::string(std::string_view(verdict.message))};
+      // Resuming runs on without stop checks, as after the sim thread's first trigger.
+      _stopPausedOnSim = true;
+      if (IsRecording()) {
+        _runSummary.status = verdict.status;
+        _runSummary.message = verdict.message;
+      }
+      _runStatus = _taskResult->message;
+      stopNow = stopNow || decided;
     }
     if (_sampleTimes.size() < kMaxPlotSamples && sample.values.size() == _channels.size()) {
       _sampleTimes.push_back(static_cast<float>(sample.time));
@@ -1097,7 +1286,7 @@ void TunerEditor::DrainSamples() {
   if (stopNow) {
     StopRecording();
   }
-  if (_stopAtDuration && _hasSample && _lastSample.time >= duration - kTimeEpsilon &&
+  if (_stopAtDuration && _hasSample && _lastSample.time >= duration - halfStep &&
       _mochiScene.IsSimulating() && !_mochiScene.IsPaused()) {
     _mochiScene.Pause(true);
     StopRecording();
@@ -1131,7 +1320,9 @@ void TunerEditor::OnSpecEdited(bool structural) {
     _mochiScene.GetAsyncScene()->QueueCommand(
         [this, loads = _tunerAsset->GetSpec().loads](mochi::Scene*) {
           std::string error;
-          _session.UpdateLoads(loads, error);
+          if (!_session.UpdateLoads(loads, error)) {
+            MOCHI_LOG_ERROR("Asset Tuner: a live edit was not applied: %s", error.c_str());
+          }
         });
   }
 }
@@ -1167,7 +1358,7 @@ void TunerEditor::RestoreUndoSnapshot(std::string const& json) {
   _tunerAsset->GetSpec() = std::move(spec);
   _placingLoad = -1;
   _tunerAsset->SetDirty(!GetUndoStack().IsAtSavedState());
-  if (_tunerAsset->RefreshPrefabFromSpec()) {
+  if (_tunerAsset->RefreshReferencesFromSpec()) {
     Restage();
   }
   ValidateOverrides();
@@ -1179,19 +1370,33 @@ void TunerEditor::ValidateOverrides() {
   _describedTargetsStale = true;
   auto const& overrides = _tunerAsset->GetSpec().prefabOverrides;
   _overrideErrors.assign(overrides.size(), {});
-  MochiPrefabAsset const* prefabAsset = _tunerAsset->GetPrefabAsset();
-  if (prefabAsset == nullptr) {
-    return;
+  // What a run applies them to: the prefab, else each of the task's objects.
+  std::vector<mochi::prefab::ScenePrefab const*> prefabs;
+  if (!_tunerAsset->GetSpec().prefab.empty()) {
+    if (MochiPrefabAsset const* prefabAsset = _tunerAsset->GetPrefabAsset()) {
+      prefabs.push_back(&prefabAsset->GetPrefab());
+    }
+  } else {
+    for (ResolvedTaskSpawn const& spawn : _taskSpawns) {
+      if (auto const* const prefab =
+              _studio->GetAssetManager().FindAssetByPath<MochiPrefabAsset>(spawn.prefabPath)) {
+        prefabs.push_back(&prefab->GetPrefab());
+      }
+    }
   }
   // Each override is checked alone so every broken one gets its own message.
-  for (size_t i = 0; i < overrides.size(); ++i) {
+  for (size_t i = 0; i < overrides.size() && !prefabs.empty(); ++i) {
     if (overrides[i].path.empty()) {
       _overrideErrors[i] = "Empty path.";
       continue;
     }
-    mochi::prefab::ScenePrefab copy = prefabAsset->GetPrefab();
-    tuner::ApplyPrefabOverrides(
-        copy, Span<tuner::PrefabOverride const>(&overrides[i], 1), _overrideErrors[i]);
+    for (mochi::prefab::ScenePrefab const* prefab : prefabs) {
+      mochi::prefab::ScenePrefab copy = *prefab;
+      if (!tuner::ApplyPrefabOverrides(
+              copy, Span<tuner::PrefabOverride const>(&overrides[i], 1), _overrideErrors[i])) {
+        break;
+      }
+    }
   }
 }
 
@@ -1298,8 +1503,8 @@ void TunerEditor::StartSimRecording(mochi::Scene& scene) {
     return;
   }
   // Mirrors which samples DrainSamples writes to signals.csv.
-  _simRecordEnd =
-      _stopAtDuration ? _recordedSpec.run.duration : std::numeric_limits<double>::infinity();
+  _simRecordEnd = _stopAtDuration ? tuner::GetRunDuration(_recordedSpec, _taskTimeLimit)
+                                  : std::numeric_limits<double>::infinity();
   std::string error;
   _runSummary.simRecording =
       _simRecording.Start(_writer.GetSimRecordingPath(), scene, _session, _recordedSpec, error);
@@ -1313,14 +1518,15 @@ void TunerEditor::RecordSimSample(tuner::Sample const& sample, bool firstStop) {
   if (!_simRecordingOnSim) {
     return;
   }
-  if (sample.time > _simRecordEnd + kTimeEpsilon) {
+  double const halfStep = 0.5 * _recordedSpec.run.dt;
+  if (sample.time > _simRecordEnd + halfStep) {
     StopSimSampling();
     return;
   }
   _simRecording.Record(sample);
   // Like signals.csv, the recording ends with the sample that stopped the run or reached its
   // duration.
-  if (firstStop || sample.time >= _simRecordEnd - kTimeEpsilon) {
+  if (firstStop || sample.time >= _simRecordEnd - halfStep) {
     StopSimSampling();
   }
 }
@@ -1771,31 +1977,73 @@ void TunerEditor::DrawStopBoxes() {
   }
 }
 
-void TunerEditor::ShowStopBanner() {
-  if (!_stopEvent || !_mochiScene.IsSimulating()) {
-    return;
-  }
-  // Top-center, below the play toolbar.
-  std::string const text = std::string(ICON_FA_HAND_PAPER " Stopped at t = ") +
-      std::to_string(_stopEvent->time).substr(0, 5) + " s: " + _stopEvent->message;
-  char const* const hint = "Play resumes (stop conditions stay off for this run); Stop resets.";
+namespace {
+
+// A banner at the top center of the viewport, `top` pixels below its top: red, or green when
+// `good`.
+void DrawBanner(std::string const& text, char const* hint, bool good, float top) {
   ImVec2 const textSize = ImGui::CalcTextSize(text.c_str());
   ImVec2 const hintSize = ImGui::CalcTextSize(hint);
   float const width = std::max(textSize.x, hintSize.x);
   ImVec2 const pad{12.0f, 8.0f};
   ImVec2 const windowPos = ImGui::GetWindowPos();
   float const x = windowPos.x + 0.5f * (ImGui::GetWindowWidth() - width);
-  float const y = windowPos.y + 64.0f;
+  float const y = windowPos.y + top;
   ImDrawList* drawList = ImGui::GetWindowDrawList();
   drawList->AddRectFilled(
       ImVec2(x - pad.x, y - pad.y),
       ImVec2(x + width + pad.x, y + textSize.y + hintSize.y + 4.0f + pad.y),
-      ImGui::GetColorU32(ImVec4(0.45f, 0.08f, 0.06f, 0.92f)),
+      ImGui::GetColorU32(
+          good ? ImVec4(0.08f, 0.32f, 0.16f, 0.92f) : ImVec4(0.45f, 0.08f, 0.06f, 0.92f)),
       8.0f);
   drawList->AddText(
-      ImVec2(x, y), ImGui::GetColorU32(ImVec4(1.0f, 0.9f, 0.85f, 1.0f)), text.c_str());
+      ImVec2(x, y),
+      ImGui::GetColorU32(good ? ImVec4(0.9f, 1.0f, 0.92f, 1.0f) : ImVec4(1.0f, 0.9f, 0.85f, 1.0f)),
+      text.c_str());
   drawList->AddText(
-      ImVec2(x, y + textSize.y + 4.0f), ImGui::GetColorU32(ImVec4(1.0f, 0.75f, 0.7f, 0.85f)), hint);
+      ImVec2(x, y + textSize.y + 4.0f),
+      ImGui::GetColorU32(
+          good ? ImVec4(0.75f, 1.0f, 0.8f, 0.85f) : ImVec4(1.0f, 0.75f, 0.7f, 0.85f)),
+      hint);
+}
+
+} // namespace
+
+void TunerEditor::ShowStopBanner() {
+  if (!_stopEvent || !_mochiScene.IsSimulating()) {
+    return;
+  }
+  // Top-center, below the play toolbar.
+  DrawBanner(
+      std::string(ICON_FA_HAND_PAPER " Stopped at t = ") +
+          std::to_string(_stopEvent->time).substr(0, 5) + " s: " + _stopEvent->message,
+      // A controller failure is no stop condition: playing on goes no further.
+      _stopEvent->condition >= 0
+          ? "Play resumes (stop conditions stay off for this run); Stop resets."
+          : "Stop resets.",
+      false,
+      64.0f);
+}
+
+void TunerEditor::ShowTaskBanner() {
+  if (!_taskResult || !_mochiScene.IsSimulating()) {
+    return;
+  }
+  DrawBanner(
+      std::string(_taskResult->succeeded ? ICON_FA_CHECK_CIRCLE " " : ICON_FA_TIMES_CIRCLE " ") +
+          _taskResult->message,
+      "Play resumes; Stop resets.",
+      _taskResult->succeeded,
+      _stopEvent ? 128.0f : 64.0f);
+}
+
+void TunerEditor::OpenTaskInSceneEditor() {
+  if (!_studio->OpenPath(_tunerAsset->GetScenePath())) {
+    return;
+  }
+  if (auto* const editor = dynamic_cast<SceneEditor*>(_studio->GetActiveAssetEditor())) {
+    editor->OpenTask(_tunerAsset->GetTaskPath());
+  }
 }
 
 std::optional<mochi::TransformRT> TunerEditor::SelectedLoadGizmoFrame() const {
@@ -4207,6 +4455,201 @@ void TunerEditor::ShowProbeCards(bool& structural) {
   }
 }
 
+void TunerEditor::ShowTaskRow(bool& structural) {
+  bool const editable = !_mochiScene.IsSimulating() && !_tunerAsset->IsReadOnly();
+  mochi::Path const& taskPath = _tunerAsset->GetTaskPath();
+  auto const setTask = [&](mochi::Path const& path) {
+    _tunerAsset->SetTaskPath(path);
+    Restage();
+    structural = true;
+  };
+  ImGui::BeginDisabled(!editable);
+  std::string const label = std::string(ICON_FA_CHECK_SQUARE " ") +
+      (taskPath.IsEmpty() ? std::string("(None)") : taskPath.GetFilename()) + "###task";
+  if (ImGui::Button(label.c_str())) {
+    std::array<char const*, 1> const filters{{"*.superdex_task"}};
+    int const numFilters = MOCHI_PLATFORM_MACOS ? 0 : static_cast<int>(filters.size());
+    mochi::Path const selected = SuperDexStudio::GetFileDialogPath(
+        "Select Task",
+        filters.data(),
+        numFilters,
+        "SuperDex Task (*.superdex_task)",
+        false,
+        taskPath.IsEmpty() ? _tunerAsset->GetScenePath().GetParentPath() : taskPath);
+    if (!selected.IsEmpty()) {
+      setTask(selected);
+    }
+  }
+  // A disabled button still takes drops, so only an editable row offers one.
+  if (editable && ImGui::BeginDragDropTarget()) {
+    if (auto const* peek = ImGui::AcceptDragDropPayload(
+            kAssetBrowserDragDropType, ImGuiDragDropFlags_AcceptPeekOnly)) {
+      auto const* payload = *static_cast<AssetBrowserDragDropPayload* const*>(peek->Data);
+      bool const valid = payload != nullptr && payload->items.size() == 1 &&
+          payload->items[0].type == AssetType::BotTask;
+      if (!valid) {
+        ImGui::SetMouseCursor(ImGuiMouseCursor_NotAllowed);
+      } else if (ImGui::AcceptDragDropPayload(kAssetBrowserDragDropType)) {
+        setTask(payload->items[0].fullPath);
+      }
+    }
+    ImGui::EndDragDropTarget();
+  }
+  Tooltip(
+      _mochiScene.IsSimulating()
+          ? "Stop the simulation to change the task."
+          : "The task this tuner solves on its scene: its objects and the criteria that decide the "
+            "run. Pick a task, or drop one from the Asset Browser.");
+  ImGui::EndDisabled();
+  ImGui::SameLine();
+  ImGui::BeginDisabled(taskPath.IsEmpty());
+  if (ImGui::Button(ICON_FA_SEARCH "##task")) {
+    _studio->GetAssetBrowser().SelectPath(taskPath);
+  }
+  ImGui::EndDisabled();
+  Tooltip("Show in the Asset Browser.");
+  ImGui::SameLine();
+  ImGui::BeginDisabled(!editable || taskPath.IsEmpty());
+  if (ImGui::Button(ICON_FA_TRASH "##task")) {
+    setTask({});
+  }
+  ImGui::EndDisabled();
+  Tooltip("Clear the task.");
+  if (taskPath.IsEmpty()) {
+    return;
+  }
+  ImGui::SameLine();
+  if (ImGui::Button(ICON_FA_FOLDER_OPEN " Open##task")) {
+    OpenTaskInSceneEditor();
+  }
+  Tooltip(
+      "Open the task in the scene editor, whose Task Preview edits its criteria. Play uses the "
+      "saved task.");
+  char const* const verdictTip =
+      "The task's criteria decide the run, as on the CLI: it ends at the first success or "
+      "failure, and fails if it has not succeeded by the run's end.";
+  if (_taskResult) {
+    ImGui::TextColored(
+        _taskResult->succeeded ? ImVec4(0.30f, 0.80f, 0.45f, 1.0f) : kErrorTextColor,
+        "%s",
+        _taskResult->message.c_str());
+    Tooltip(verdictTip);
+  } else if (
+      _mochiScene.IsSimulating() && _hasSample && _lastSample.task == tuner::TaskOutcome::Pending) {
+    ImGui::TextDisabled(ICON_FA_HOURGLASS_HALF " not succeeded yet");
+    Tooltip(verdictTip);
+  }
+  if (!_taskStageError.empty()) {
+    ImGui::PushStyleColor(ImGuiCol_Text, kErrorTextColor);
+    ImGui::TextWrapped(
+        ICON_FA_EXCLAMATION_TRIANGLE " Its objects are not shown: %s", _taskStageError.c_str());
+    ImGui::PopStyleColor();
+  }
+}
+
+void TunerEditor::ShowSourceSection(bool& structural) {
+  ImGui::SeparatorText("Prefab or Scene");
+  bool const isScene = !_tunerAsset->GetSpec().scene.empty();
+  mochi::Path const path = isScene ? _tunerAsset->GetScenePath() : _tunerAsset->GetPrefabPath();
+  bool const editable = !_mochiScene.IsSimulating() && !_tunerAsset->IsReadOnly();
+  mochi::DynamicString slotPath(path.ToString());
+  constexpr std::array<AssetType, 2> kSourceTypes{{AssetType::MochiPrefab, AssetType::Scene}};
+  // A tuner always simulates something, so the slot has no clear button.
+  ImGui::BeginDisabled(!editable);
+  if (ImGui::AssetSlot(
+          "##source",
+          slotPath,
+          _studio->GetAssetManager(),
+          _studio,
+          kSourceTypes,
+          /*acceptDragDropPayload=*/editable,
+          /*showClearButton=*/false)) {
+    _tunerAsset->SetPrefabOrScene(mochi::Path(std::string(std::string_view(slotPath))));
+    Restage();
+    _viewport->FocusCameraOnScene();
+    structural = true;
+  }
+  ImGui::EndDisabled();
+  bool const loaded =
+      isScene ? _tunerAsset->GetSceneAsset() != nullptr : _tunerAsset->GetPrefabAsset() != nullptr;
+  // On the slot's button row, after its Asset Browser button.
+  ImGui::SameLine();
+  ImGui::BeginDisabled(!loaded);
+  if (ImGui::Button(ICON_FA_FOLDER_OPEN " Open")) {
+    _studio->OpenPath(path);
+  }
+  ImGui::EndDisabled();
+  Tooltip(
+      isScene ? "Open the scene in its own editor tab." : "Open the prefab in its own editor tab.");
+  ImGui::SameLine();
+  ImGui::TextDisabled("(?)");
+  Tooltip(
+      "The prefab or the scene this asset tuner simulates, with its solver settings. Pick or drop "
+      "another prefab or scene to tune it instead. Loads, probes and overrides keep their targets; "
+      "the ones it does not have show as not found.");
+  if (!loaded && !path.IsEmpty()) {
+    ImGui::SameLine();
+    ImGui::TextColored(kErrorTextColor, ICON_FA_EXCLAMATION_TRIANGLE " Failed to load (see log).");
+  }
+  if (std::string error; !tuner::CheckPrefabOrScene(_tunerAsset->GetSpec(), error)) {
+    ImGui::TextColored(kErrorTextColor, ICON_FA_EXCLAMATION_TRIANGLE " %s", error.c_str());
+  }
+  SceneAsset const* const scene = _tunerAsset->GetSceneAsset();
+  if (!isScene || scene == nullptr) {
+    return;
+  }
+  if (scene->IsDirty()) {
+    ImGui::TextColored(
+        kWarningColor, ICON_FA_EXCLAMATION_TRIANGLE " Unsaved edits: Play runs the saved scene.");
+  }
+  ShowTaskRow(structural);
+  if (!_describedTargets) {
+    return;
+  }
+  // Each controller that takes a float input, and the load that drives it.
+  auto const& loads = _tunerAsset->GetSpec().loads;
+  _loadCards.Resize(loads.size());
+  for (tuner::ControllerTarget const& controller : _describedTargets->controllers) {
+    ImGui::PushID(controller.name.c_str());
+    ImGui::AlignTextToFramePadding();
+    ImGui::TextDisabled("%s  %s", controller.name.c_str(), controller.type.c_str());
+    ImGui::SameLine();
+    // The enabled load that drives it, else a disabled one, which leaves it holding.
+    auto const drives = [&](tuner::LoadSpec const& load, bool enabled) {
+      return load.type == tuner::LoadType::ControllerInput && load.target == controller.name &&
+          load.enabled == enabled;
+    };
+    auto driver = std::find_if(loads.begin(), loads.end(), [&](tuner::LoadSpec const& load) {
+      return drives(load, true);
+    });
+    if (driver == loads.end()) {
+      driver = std::find_if(loads.begin(), loads.end(), [&](tuner::LoadSpec const& load) {
+        return drives(load, false);
+      });
+    }
+    if (driver == loads.end()) {
+      ImGui::TextDisabled("holds where it starts");
+    } else {
+      size_t const i = static_cast<size_t>(driver - loads.begin());
+      ImVec4 color = LoadAccent(tuner::LoadType::ControllerInput);
+      color.w = driver->enabled ? color.w : 0.45f;
+      ImGui::PushStyleColor(ImGuiCol_Text, color);
+      if (ImGui::Button((std::string(ICON_FA_ARROW_LEFT " ") + driver->name.c_str() +
+                         (driver->enabled ? "" : " (off): holds where it starts"))
+                            .c_str())) {
+        SelectLoad(static_cast<int>(i));
+        _loadCards.cards[i].collapsed = false;
+      }
+      ImGui::PopStyleColor();
+      Tooltip(
+          driver->enabled ? "Driven by this load. Click to select its card in Asset Tuner Loads."
+                          : "Its load is off, so it holds where it starts. Click to select the "
+                            "load's card in Asset Tuner Loads.");
+    }
+    ImGui::PopID();
+  }
+}
+
 void TunerEditor::ShowRunWindow(bool* open) {
   if (!ImGui::Begin("Asset Tuner Run", open)) {
     ImGui::End();
@@ -4216,44 +4659,7 @@ void TunerEditor::ShowRunWindow(bool* open) {
   bool changed = false;
   bool structural = false;
 
-  ImGui::SeparatorText("Prefab");
-  {
-    mochi::DynamicString prefabPath(_tunerAsset->GetPrefabPath().ToString());
-    // A tuner always simulates a prefab, so the slot has no clear button.
-    ImGui::BeginDisabled(_mochiScene.IsSimulating() || _tunerAsset->IsReadOnly());
-    if (ImGui::AssetSlot(
-            "Prefab",
-            prefabPath,
-            _studio->GetAssetManager(),
-            _studio,
-            AssetType::MochiPrefab,
-            /*acceptDragDropPayload=*/true,
-            /*showClearButton=*/false)) {
-      _tunerAsset->SetPrefabPath(mochi::Path(std::string(std::string_view(prefabPath))));
-      Restage();
-      _viewport->FocusCameraOnScene();
-      structural = true;
-    }
-    ImGui::EndDisabled();
-    Tooltip(
-        _mochiScene.IsSimulating()
-            ? "Stop the simulation to change the prefab."
-            : "The prefab this asset tuner simulates; solver settings are from the prefab. Pick or "
-              "drop another prefab to tune it instead. Loads, probes and overrides keep their "
-              "current targets, which could be mismatched with the replacement.");
-    bool const prefabLoaded = _tunerAsset->GetPrefabAsset() != nullptr;
-    ImGui::BeginDisabled(!prefabLoaded);
-    if (ImGui::Button(ICON_FA_FOLDER_OPEN " Open Prefab")) {
-      _studio->OpenPath(_tunerAsset->GetPrefabPath());
-    }
-    ImGui::EndDisabled();
-    Tooltip("Open the prefab in its own editor tab.");
-    if (!prefabLoaded) {
-      ImGui::SameLine();
-      ImGui::TextColored(
-          kErrorTextColor, ICON_FA_EXCLAMATION_TRIANGLE " Failed to load (see log).");
-    }
-  }
+  ShowSourceSection(structural);
 
   ImGui::SeparatorText("Recording");
   bool const recording = IsRecording();
@@ -4356,8 +4762,8 @@ void TunerEditor::ShowOverridesWindow(bool* open) {
     ValidateOverrides();
   }
   ImGui::TextWrapped(
-      "Values set on the prefab before each Play, without changing the prefab file. The viewport "
-      "shows the unmodified prefab.");
+      "Values set on the prefab (without one, on the task's objects) before each Play, without "
+      "changing their files. The viewport shows them unmodified.");
   ImGui::Separator();
   bool changed = false;
   bool structural = false;

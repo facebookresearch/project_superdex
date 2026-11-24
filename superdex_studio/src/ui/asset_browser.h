@@ -92,6 +92,8 @@ class AssetBrowser {
 
   void ShowWindow(bool* open);
   void SelectAsset(Asset* asset);
+  // Selects the file at @p path, an asset or not (e.g. a task), and shows its folder.
+  void SelectPath(mochi::Path const& path);
   // Adds @p root as an additional workspace root, keeping the roots already open. Returns whether
   // @p root is in the workspace afterwards: false only when it is refused for exceeding the
   // file/folder limit (which leaves the existing roots unchanged); a @p root already covered by an
@@ -124,8 +126,9 @@ class AssetBrowser {
   void DuplicateItem(TileItem const& item);
   void CreateModBotAsset(mochi::Path const& dir, std::string const& base = {});
   void CreateIKConfigAsset(mochi::Path const& botPath);
-  // Creates a .superdex_tuner next to `prefabPath` that references it, then renames and opens it.
-  void CreateTunerAsset(mochi::Path const& prefabPath);
+  // Creates a .superdex_tuner next to `assetPath`, a prefab or a scene, that references it, then
+  // renames and opens it.
+  void CreateTunerAsset(mochi::Path const& assetPath);
 
   DirectoryNode const* FindNode(mochi::Path const& path) const;
   mochi::Path const* FindOwningRoot(mochi::Path const& path) const;

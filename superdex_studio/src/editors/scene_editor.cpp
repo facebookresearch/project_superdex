@@ -1114,7 +1114,12 @@ void SceneEditor::RestageScene() {
   // thread reads _taskSpawns, so bindings stay fixed for the duration of a simulation.
   if (_taskPrefab.has_value() && !_mochiScene.IsSimulating()) {
     _taskBindError.clear();
-    BindTaskSpawns(*_taskPrefab, _taskSpawns, _taskBindError);
+    BindTaskSpawns(
+        *_taskPrefab,
+        _sceneAsset->GetPrefab(),
+        _studio->GetAssetManager(),
+        _taskSpawns,
+        _taskBindError);
   }
   auto const stagedPrefab = WithActiveSlotBots(_sceneAsset->GetPrefab(), _activeSlotBots);
   if (_taskPrefab.has_value()) {
@@ -1160,16 +1165,17 @@ StatsText SceneEditor::BuildStats() const {
   return text.AddPrefabs(prefabs).AddRender(_stageStats.render).AddCollision(_stageStats.collision);
 }
 
-bool SceneEditor::BindTaskSpawns(
+bool BindTaskSpawns(
     superdex::robotics::BotTaskPrefab const& task,
+    superdex::robotics::BotScenePrefab const& scene,
+    AssetManager& assetManager,
     std::vector<ResolvedTaskSpawn>& spawns,
     std::string& error) {
-  if (!ResolveTaskSpawns(task, _sceneAsset->GetPrefab(), spawns, error)) {
+  if (!ResolveTaskSpawns(task, scene, spawns, error)) {
     spawns.clear();
     return false;
   }
   // SceneStage only finds already-loaded assets.
-  auto& assetManager = _studio->GetAssetManager();
   for (auto const& spawn : spawns) {
     bool loaded = false;
     if (superdex::robotics::IsBotArchivePath(spawn.prefabPath.ToString()) ||

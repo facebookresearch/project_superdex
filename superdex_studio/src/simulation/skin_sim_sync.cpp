@@ -49,6 +49,23 @@ mochi::DynamicArray<int> ComputeSkinBoneLinkRemap(superdex::robotics::BotPrefab 
   return boneLinks;
 }
 
+void ComputeSkinBoneTransforms(
+    mochi::Span<mochi::TransformRT const> linkTransforms,
+    mochi::Span<int const> boneLinkRemap,
+    std::vector<mochi::TransformRT>& outBoneTransforms) {
+  if (boneLinkRemap.empty()) {
+    outBoneTransforms.assign(linkTransforms.begin(), linkTransforms.end());
+    return;
+  }
+  outBoneTransforms.clear();
+  outBoneTransforms.reserve(boneLinkRemap.size());
+  for (int const linkIndex : boneLinkRemap) {
+    outBoneTransforms.push_back(
+        linkIndex >= 0 && linkIndex < mochi::isize(linkTransforms) ? linkTransforms[linkIndex]
+                                                                   : mochi::TransformRT{});
+  }
+}
+
 void SkinSimSync::Track(
     mochi::Actor& actor,
     mochi::DynamicArray<int> boneLinkRemap,
@@ -99,17 +116,8 @@ void SkinSimSync::Produce(
   // reordered into skin-bone (GLB joint) order so the skin's bone indices address the right links.
   pose.name = _name;
   pose.stagedIndex = _stagedIndex;
-  if (_boneLinkRemap.empty()) {
-    pose.linkWorldTransforms.assign(linkTransforms.begin(), linkTransforms.end());
-  } else {
-    pose.linkWorldTransforms.clear();
-    pose.linkWorldTransforms.reserve(_boneLinkRemap.size());
-    for (int const linkIndex : _boneLinkRemap) {
-      pose.linkWorldTransforms.push_back(
-          linkIndex >= 0 && linkIndex < mochi::isize(linkTransforms) ? linkTransforms[linkIndex]
-                                                                     : mochi::TransformRT{});
-    }
-  }
+  ComputeSkinBoneTransforms(
+      linkTransforms, mochi::MakeConstSpan(_boneLinkRemap), pose.linkWorldTransforms);
   if (surface != nullptr) {
     MOCHI_ASSERT_VERBOSE(_queriesRegistered);
     surface->name = _name;

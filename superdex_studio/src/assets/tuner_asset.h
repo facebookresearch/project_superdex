@@ -26,9 +26,10 @@
 namespace superdex::studio {
 
 class AssetManager;
+class SceneAsset;
 class MochiPrefabAsset;
 
-// A .superdex_tuner file: a prefab reference plus loads, probes and run settings.
+// A .superdex_tuner file: a prefab or scene reference plus loads, probes and run settings.
 class TunerAsset : public Asset, public IAssetReferencer {
  public:
   ~TunerAsset() override = default;
@@ -60,24 +61,40 @@ class TunerAsset : public Asset, public IAssetReferencer {
   mochi::Path const& GetPrefabPath() const {
     return _prefabPath;
   }
-  // Points the tuner at another prefab and loads it. The spec stores the path relative to the tuner
-  // ("./...") when the prefab is in or below the tuner's folder, else relative to the assets root
-  // when it is under it, else absolute.
-  void SetPrefabPath(mochi::Path const& path);
-  // Follows the spec's prefab path after it changed in place (an undo), loading that prefab.
-  // Returns true if the prefab changed.
-  bool RefreshPrefabFromSpec();
+  // The referenced scene, looked up by path on every call. Null without one, or if it failed to
+  // load.
+  SceneAsset* GetSceneAsset() const;
+  // Empty without a scene.
+  mochi::Path const& GetScenePath() const {
+    return _scenePath;
+  }
+  // Empty without a task.
+  mochi::Path const& GetTaskPath() const {
+    return _taskPath;
+  }
+  // Points the tuner at a prefab or a scene, replacing the one it has, and loads it. Replacing a
+  // scene clears its task and the bots to build. The spec stores the path relative to the tuner
+  // ("./...") when it is in or below the tuner's folder, else relative to the assets root when it
+  // is under it, else absolute.
+  void SetPrefabOrScene(mochi::Path const& path);
+  // Sets the scene's task, stored like SetPrefabOrScene's path; an empty path clears it.
+  void SetTaskPath(mochi::Path const& path);
+  // Follows the spec's prefab, scene and task paths after they changed in place (an undo), loading
+  // what they reference. Returns true if any changed.
+  bool RefreshReferencesFromSpec();
 
  private:
   friend class AssetManager;
   using Asset::Asset;
   static std::unique_ptr<TunerAsset>
   Create(std::string const& name, mochi::Path const& path, AssetManager* manager);
-  // How the spec stores `path`; see SetPrefabPath.
-  [[nodiscard]] std::string ToSpecPrefabPath(mochi::Path const& path) const;
+  // How the spec stores `path`; see SetPrefabOrScene.
+  [[nodiscard]] std::string ToSpecPath(mochi::Path const& path) const;
 
   superdex::tuner::TunerSpec _spec;
   mochi::Path _prefabPath;
+  mochi::Path _scenePath;
+  mochi::Path _taskPath;
 };
 
 } // namespace superdex::studio

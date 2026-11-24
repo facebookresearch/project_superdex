@@ -888,8 +888,9 @@ void AssetBrowser::ShowItemContextMenuContents(TileItem const& item, Asset const
     }
     showedAssetActions = true;
   }
-  if (selectedCount == 1 && !item.isFolder &&
-      ClassifyAssetTypeByFilename(item.fullPath.GetFilename()) == AssetType::MochiPrefab) {
+  if (AssetType const type = ClassifyAssetTypeByFilename(item.fullPath.GetFilename());
+      selectedCount == 1 && !item.isFolder &&
+      (type == AssetType::MochiPrefab || type == AssetType::Scene)) {
     if (ImGui::IconSelectable("Create Asset Tuner...", ICON_FA_PLUS)) {
       CreateTunerAsset(item.fullPath);
     }
@@ -1528,15 +1529,20 @@ void AssetBrowser::CreateIKConfigAsset(mochi::Path const& outputBotPath) {
   });
 }
 
-void AssetBrowser::CreateTunerAsset(mochi::Path const& prefabPath) {
+void AssetBrowser::CreateTunerAsset(mochi::Path const& assetPath) {
   std::string const extension{superdex::tuner::kTunerFileExtension};
-  mochi::Path const dir = prefabPath.GetParentPath();
+  mochi::Path const dir = assetPath.GetParentPath();
   std::string const tunerName =
-      MakeUniqueFileName(GetAssetNameFromPath(prefabPath) + "_tuner", dir, extension);
+      MakeUniqueFileName(GetAssetNameFromPath(assetPath) + "_tuner", dir, extension);
   auto const newPath = dir / (tunerName + extension);
 
   superdex::tuner::TunerSpec spec;
-  spec.prefab = "./" + prefabPath.GetFilename();
+  std::string const reference = "./" + assetPath.GetFilename();
+  if (ClassifyAssetTypeByFilename(assetPath.GetFilename()) == AssetType::Scene) {
+    spec.scene = reference;
+  } else {
+    spec.prefab = reference;
+  }
   superdex::tuner::ProbeSpec solverStats;
   solverStats.kind = superdex::tuner::ProbeKind::SolverStats;
   spec.probes.push_back(std::move(solverStats));
@@ -2186,6 +2192,10 @@ void AssetBrowser::ShowContents() {
     if (isCut) {
       ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.5f);
     }
+    if (_forceAssetFocus && selected) {
+      ImGui::SetScrollHereY(0.5f);
+      _forceAssetFocus = false;
+    }
     // Render Tile
     if (item.isFolder) {
       ImGui::FolderTile(
@@ -2198,10 +2208,6 @@ void AssetBrowser::ShowContents() {
           selected,
           isRenaming ? &_tileRename : nullptr);
     } else if (asset) {
-      if (_forceAssetFocus && selected) {
-        ImGui::SetScrollHereY(0.5f);
-        _forceAssetFocus = false;
-      }
       bool const isBotInvalid =
           asset->GetType() == AssetType::Bot && !static_cast<BotAsset*>(asset)->IsValidateOk();
       ImGui::AssetTile(
@@ -2613,18 +2619,20 @@ void AssetBrowser::ShowContents() {
 }
 
 void AssetBrowser::SelectAsset(Asset* asset) {
-  ClearSelection();
   if (asset == nullptr) {
+    ClearSelection();
     return;
   }
+  SelectPath(asset->GetPath());
+}
+
+void AssetBrowser::SelectPath(mochi::Path const& path) {
+  ClearSelection();
   _forceAssetFocus = true;
-  auto const assetPath = asset->GetPath();
-  if (_assetManager->FindAssetByPath(assetPath)) {
-    _selectedPaths.insert(assetPath);
-    auto parentDir = assetPath.GetParentPath();
-    if (!parentDir.IsEmpty() && std::filesystem::is_directory(parentDir.AsFilesystemPath())) {
-      SetCurrentPath(parentDir);
-    }
+  _selectedPaths.insert(path);
+  mochi::Path const parentDir = path.GetParentPath();
+  if (!parentDir.IsEmpty() && std::filesystem::is_directory(parentDir.AsFilesystemPath())) {
+    SetCurrentPath(parentDir);
   }
 }
 

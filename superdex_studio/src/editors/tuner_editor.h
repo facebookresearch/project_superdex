@@ -28,6 +28,7 @@
 #include <superdex_asset_tuner/run_writer.h>
 #include <superdex_asset_tuner/scene_targets.h>
 #include <superdex_asset_tuner/sim_recording.h>
+#include <superdex_asset_tuner/tuner_runner.h>
 #include <superdex_asset_tuner/tuner_session.h>
 
 #include <atomic>
@@ -126,6 +127,11 @@ class TunerEditor : public AssetEditor {
 
   // Staging and simulation
   void Restage();
+  // The task's objects on `scene`, where a run spawns them, their prefabs loaded; none without a
+  // task, or when it cannot be staged (_taskStageError says why).
+  std::vector<ResolvedTaskSpawn> LoadTaskSpawns(SceneAsset const& scene);
+  // Whether the tuner's scene is loaded: its prefab or its bot scene.
+  [[nodiscard]] bool IsSceneLoaded() const;
   void ApplyRunSettings();
   // The run's ground height: its override, else the automatic (lowest point of the prefab) one.
   [[nodiscard]] float EffectiveGroundHeight() const;
@@ -177,6 +183,10 @@ class TunerEditor : public AssetEditor {
   void DrawStopBoxes();
   // Banner shown after a stop condition paused the run.
   void ShowStopBanner();
+  // The task's outcome, once the run reached it or its time limit.
+  void ShowTaskBanner();
+  // Opens the bot scene in its editor with the tuner's task loaded, where its criteria are edited.
+  void OpenTaskInSceneEditor();
   void OnScenePressed(mochi_renderer::SceneObject* object, filament::math::float3 worldHit);
   // Index of the load whose card is selected (the transform gizmo edits it), or -1.
   [[nodiscard]] int SelectedLoadIndex() const;
@@ -211,6 +221,11 @@ class TunerEditor : public AssetEditor {
   // Strip of the path's waypoints over run time, with each span's drive mode shaded. Markers select
   // a waypoint on click and retime it on drag. `compact` draws a short read-only strip instead.
   void ShowWaypointTimeline(size_t index, bool compact, bool& changed);
+  // The prefab or scene the tuner simulates; for a scene, its task, its bots and the load that
+  // drives each of their controllers. Sets `structural` when it changes what the tuner references.
+  void ShowSourceSection(bool& structural);
+  // The scene's task: pick, drop, clear or open it, and its outcome.
+  void ShowTaskRow(bool& structural);
   // Profile settings of a load card. Keyframes get a key table and draggable markers on the
   // preview.
   void ShowProfileEditor(size_t index, bool& changed);
@@ -249,6 +264,12 @@ class TunerEditor : public AssetEditor {
   // Sim-thread state. Touched from the UI thread only while the sim thread is blocked (scene
   // creation/destruction) or through AsyncScene::QueueCommand.
   superdex::tuner::TunerSession _session;
+  // The bot scene's bots and controllers, while a run of a bot-scene tuner exists.
+  superdex::tuner::TunerBots _bots;
+  // The task's objects as Restage staged them, in order.
+  std::vector<ResolvedTaskSpawn> _taskSpawns;
+  // Why Restage could not stage the task's objects; empty when it could.
+  std::string _taskStageError;
   mochi::CallbackHandle _loadsCallback;
   mochi::CallbackHandle _probesCallback;
   std::string _bindError;
@@ -335,11 +356,21 @@ class TunerEditor : public AssetEditor {
   // The stop condition that paused this run: spec index, message and sim time. Further triggers in
   // the same run are ignored so it can be resumed.
   struct StopEvent {
+    // -1 for a controller failure, which ends the run as on the CLI.
     int condition = -1;
     std::string message;
     double time = 0.0;
   };
   std::optional<StopEvent> _stopEvent;
+  // The run's task outcome: reached, or failed by not succeeding in time (TunerSpec::task).
+  struct TaskResult {
+    bool succeeded = false;
+    double time = 0.0;
+    std::string message;
+  };
+  std::optional<TaskResult> _taskResult;
+  // The time limit of the task of the run being simulated [s]; 0: none.
+  double _taskTimeLimit = 0.0;
   int _placingLoad = -1;
   bool _autoFitPlots = true;
 };

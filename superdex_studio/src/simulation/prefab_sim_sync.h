@@ -20,11 +20,13 @@
 #include "rendering/scene_stage.h"
 
 #include <mochi_core/utils/coordinate_space_converter.h>
+#include <mochi_core/utils/dynamic_array.h>
 #include <mochi_physics/mochi_physics.h>
 #include <mochi_renderer/buffer.h>
 
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace superdex::studio {
@@ -45,12 +47,17 @@ class PrefabSimSync {
   // if a query cannot be registered; the queries of actors set up before the failure stay
   // registered until Untrack, so call Untrack even after a failed Track.
   bool Track(mochi::Span<mochi::Actor* const> actors);
+  // Poses `actor`'s skin bone i from its nested link `boneLinkRemap[i]` rather than link i, for a
+  // composed bot (see ComputeSkinBoneLinkRemap). Call after Track.
+  void SetSkinBoneLinkRemap(mochi::ActorHandle actor, mochi::DynamicArray<int> boneLinkRemap);
   // Cancels the surface queries. Call while the actors are still alive.
   void Untrack(mochi::Scene* scene);
   // Post-step: captures the tracked actors' state for the UI thread.
   void Produce(mochi::Scene* scene);
   // Applies the latest captured state to `stage`. Returns false if nothing new was produced.
   bool Apply(SceneStage& stage, mochi::CoordinateSpaceConverter const& editorToRenderer);
+  // Applies the last state Apply took again, e.g. to a stage restaged at its rest pose mid-run.
+  void ApplyLatest(SceneStage& stage, mochi::CoordinateSpaceConverter const& editorToRenderer);
   // Drops tracked actors and any pending state (after the scene is destroyed).
   void Reset();
 
@@ -91,6 +98,7 @@ class PrefabSimSync {
   // The meshes each staged actor was built from, by staged name (see CaptureStagedSurfaces).
   std::unordered_map<std::string, DeformableSurfaces> _stagedSurfaces;
   std::vector<mochi::ActorHandle> _actors;
+  std::vector<std::pair<mochi::ActorHandle, mochi::DynamicArray<int>>> _skinBoneLinkRemaps;
   std::vector<DeformableQueryState> _deformableQueryState;
   mochi_renderer::ProducerConsumerBuffer<SimData> _simData;
 };

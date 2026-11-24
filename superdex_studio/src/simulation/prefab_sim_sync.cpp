@@ -17,9 +17,11 @@
 #include "simulation/prefab_sim_sync.h"
 
 #include "simulation/deformable_surface_queries.h"
+#include "simulation/skin_sim_sync.h"
 
 #include <mochi_core/utils/basic_utils.h>
 
+#include <algorithm>
 #include <tuple>
 #include <utility>
 
@@ -34,6 +36,7 @@ void PrefabSimSync::CaptureStagedSurfaces(SceneStage const& stage) {
 
 bool PrefabSimSync::Track(mochi::Span<mochi::Actor* const> actors) {
   _actors.clear();
+  _skinBoneLinkRemaps.clear();
   _deformableQueryState.clear();
   mochi::ErrorLog e;
   for (auto* actor : actors) {
@@ -89,6 +92,12 @@ bool PrefabSimSync::Track(mochi::Span<mochi::Actor* const> actors) {
   return true;
 }
 
+void PrefabSimSync::SetSkinBoneLinkRemap(
+    mochi::ActorHandle actor,
+    mochi::DynamicArray<int> boneLinkRemap) {
+  _skinBoneLinkRemaps.emplace_back(actor, std::move(boneLinkRemap));
+}
+
 void PrefabSimSync::DeformableQueryState::CancelQueries(mochi::Actor& owner) const {
   owner.CancelQuery(positions);
   owner.CancelQuery(normals);
@@ -137,10 +146,19 @@ void PrefabSimSync::Produce(mochi::Scene* scene) {
         data.actorTransforms.push_back(actor->GetRootTransform());
         data.actorNames.push_back(SkinStagedName(actorName ? actorName : ""));
         // Pose the skin's render model from this actor's link world transforms (nested-link
-        // order == GLB joint order). ApplySkinnedPose no-ops if the skin has no render model.
+        // order == GLB joint order, unless a bot remaps them). ApplySkinnedPose no-ops if the skin
+        // has no render model.
         SkinnedPoseUpdate poseUpdate;
         poseUpdate.name = SkinStagedName(actorName ? actorName : "");
-        poseUpdate.linkWorldTransforms.assign(linkTransforms.begin(), linkTransforms.end());
+        auto const remap = std::find_if(
+            _skinBoneLinkRemaps.begin(), _skinBoneLinkRemaps.end(), [&](auto const& entry) {
+              return entry.first == handle;
+            });
+        ComputeSkinBoneTransforms(
+            mochi::MakeConstSpan(linkTransforms),
+            remap == _skinBoneLinkRemaps.end() ? mochi::Span<int const>()
+                                               : mochi::MakeConstSpan(remap->second),
+            poseUpdate.linkWorldTransforms);
         data.skinnedPoseUpdates.push_back(std::move(poseUpdate));
       }
     } else if (
@@ -209,6 +227,13 @@ bool PrefabSimSync::Apply(
   if (!_simData.Consume()) {
     return false;
   }
+  ApplyLatest(stage, editorToRenderer);
+  return true;
+}
+
+void PrefabSimSync::ApplyLatest(
+    SceneStage& stage,
+    mochi::CoordinateSpaceConverter const& editorToRenderer) {
   auto const& data = _simData.GetConsumerData();
   // Rigid, soft, and articulated actors are matched by name here. Soft actors additionally have
   // their deformed surface mesh applied by ApplyDeformableMeshUpdates below.
@@ -219,10 +244,10 @@ bool PrefabSimSync::Apply(
   stage.ApplyDeformableMeshUpdates(
       mochi::MakeConstSpan(data.deformableMeshUpdates), editorToRenderer);
   stage.ApplySkinnedPose(mochi::MakeConstSpan(data.skinnedPoseUpdates), editorToRenderer);
-  return true;
 }
 
 void PrefabSimSync::Reset() {
+  _skinBoneLinkRemaps.clear();
   _deformableQueryState.clear();
   _simData.Consume();
   _actors.clear();

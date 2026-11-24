@@ -25,6 +25,7 @@
 #include <mochi_physics/mochi_physics.h>
 
 #include <string>
+#include <vector>
 
 namespace superdex::studio {
 
@@ -32,6 +33,14 @@ namespace superdex::studio {
 // i (a natively skinned bot); a composed bot that adopted a sub-bot's skin gets the remap.
 [[nodiscard]] mochi::DynamicArray<int> ComputeSkinBoneLinkRemap(
     superdex::robotics::BotPrefab const& prefab);
+
+// The skin's bone transforms from its actor's nested link transforms: bone i follows link
+// `boneLinkRemap[i]` (ComputeSkinBoneLinkRemap's result), or link i when the remap is empty. A bone
+// whose link is missing gets the identity.
+void ComputeSkinBoneTransforms(
+    mochi::Span<mochi::TransformRT const> linkTransforms,
+    mochi::Span<int const> boneLinkRemap,
+    std::vector<mochi::TransformRT>& outBoneTransforms);
 
 // Mirrors the skin of one simulated articulated actor into the skin SceneStage staged for it: poses
 // it from the link transforms each step and, when the actor carries the skin's collision surface,

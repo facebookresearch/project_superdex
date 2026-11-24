@@ -17,11 +17,14 @@
 #include "assets/tuner_asset.h"
 
 #include "assets/asset_manager.h"
+#include "assets/asset_types.h"
 #include "assets/mochi_prefab_asset.h"
+#include "assets/scene_asset.h"
 #include "editors/tuner_editor.h"
 
 #include <mochi_core/utils/path.h>
 
+#include <filesystem>
 #include <optional>
 
 namespace superdex::studio {
@@ -36,17 +39,8 @@ TunerAsset::Create(std::string const& name, mochi::Path const& path, AssetManage
   }
   auto asset = std::unique_ptr<TunerAsset>(new TunerAsset(name, path, AssetType::Tuner, manager));
   asset->_spec = std::move(spec);
-  asset->_prefabPath =
-      mochi::Path(superdex::tuner::ResolvePrefabPath(asset->_spec, path.AsFilesystemPath()));
-  // A tuner of a bot scene alone has no prefab.
-  if (!asset->_prefabPath.IsEmpty() &&
-      manager->LoadMochiPrefabAsset(asset->_prefabPath) == nullptr) {
-    MOCHI_LOG_ERROR(
-        "Asset Tuner %s: failed to load prefab %s",
-        path.ToString().c_str(),
-        asset->_prefabPath.ToString().c_str());
-  }
   manager->RegisterReferencer(asset.get());
+  asset->RefreshReferencesFromSpec();
   return asset;
 }
 
@@ -85,6 +79,10 @@ MochiPrefabAsset* TunerAsset::GetPrefabAsset() const {
   return _manager->FindAssetByPath<MochiPrefabAsset>(_prefabPath);
 }
 
+SceneAsset* TunerAsset::GetSceneAsset() const {
+  return _scenePath.IsEmpty() ? nullptr : _manager->FindAssetByPath<SceneAsset>(_scenePath);
+}
+
 std::string const& TunerAsset::GetReferencerName() const {
   return GetName();
 }
@@ -94,42 +92,80 @@ void TunerAsset::ForEachReferencedPath(
   if (!_prefabPath.IsEmpty()) {
     callback(_prefabPath);
   }
+  if (!_scenePath.IsEmpty()) {
+    callback(_scenePath);
+  }
+  if (!_taskPath.IsEmpty()) {
+    callback(_taskPath);
+  }
 }
 
 bool TunerAsset::RewriteReferencedPath(mochi::Path const& oldPath, mochi::Path const& newPath) {
-  if (!(_prefabPath == oldPath)) {
+  if (_prefabPath == oldPath) {
+    _prefabPath = newPath;
+    _spec.prefab = ToSpecPath(newPath);
+  } else if (_scenePath == oldPath) {
+    _scenePath = newPath;
+    _spec.scene = ToSpecPath(newPath);
+  } else if (_taskPath == oldPath) {
+    _taskPath = newPath;
+    _spec.task = ToSpecPath(newPath);
+  } else {
     return false;
   }
-  _prefabPath = newPath;
-  _spec.prefab = ToSpecPrefabPath(newPath);
   SetDirty(true);
   return true;
 }
 
-void TunerAsset::SetPrefabPath(mochi::Path const& path) {
-  _spec.prefab = ToSpecPrefabPath(path);
+void TunerAsset::SetPrefabOrScene(mochi::Path const& path) {
+  bool const isScene = ClassifyAssetTypeByFilename(path.GetFilename()) == AssetType::Scene;
+  mochi::DynamicString const specPath(ToSpecPath(path));
+  if (path != _scenePath) {
+    // Both belong to the scene being replaced.
+    _spec.task = mochi::DynamicString();
+    _spec.bots = {};
+  }
+  _spec.prefab = isScene ? mochi::DynamicString() : specPath;
+  _spec.scene = isScene ? specPath : mochi::DynamicString();
   SetDirty(true);
-  RefreshPrefabFromSpec();
+  RefreshReferencesFromSpec();
 }
 
-bool TunerAsset::RefreshPrefabFromSpec() {
-  mochi::Path const path(superdex::tuner::ResolvePrefabPath(_spec, _path.AsFilesystemPath()));
-  if (path == _prefabPath) {
+void TunerAsset::SetTaskPath(mochi::Path const& path) {
+  _spec.task = path.IsEmpty() ? mochi::DynamicString() : mochi::DynamicString(ToSpecPath(path));
+  SetDirty(true);
+  RefreshReferencesFromSpec();
+}
+
+bool TunerAsset::RefreshReferencesFromSpec() {
+  std::filesystem::path const file = _path.AsFilesystemPath();
+  mochi::Path const prefab(superdex::tuner::ResolvePrefabPath(_spec, file));
+  mochi::Path const scene(superdex::tuner::ResolveScenePath(_spec, file));
+  mochi::Path const task(superdex::tuner::ResolveTaskPath(_spec, file));
+  if (prefab == _prefabPath && scene == _scenePath && task == _taskPath) {
     return false;
   }
-  _prefabPath = path;
+  _prefabPath = prefab;
+  _scenePath = scene;
+  _taskPath = task;
   if (!_prefabPath.IsEmpty() && _manager->LoadMochiPrefabAsset(_prefabPath) == nullptr) {
     MOCHI_LOG_ERROR(
         "Asset Tuner %s: failed to load prefab %s",
         _path.ToString().c_str(),
         _prefabPath.ToString().c_str());
   }
-  // Keeps the new prefab loaded and lets the old one unload.
+  if (!_scenePath.IsEmpty() && _manager->LoadSceneAsset(_scenePath) == nullptr) {
+    MOCHI_LOG_ERROR(
+        "Asset Tuner %s: failed to load scene %s",
+        _path.ToString().c_str(),
+        _scenePath.ToString().c_str());
+  }
+  // Keeps the new assets loaded and lets the old ones unload.
   _manager->ResyncReferencer(this);
   return true;
 }
 
-std::string TunerAsset::ToSpecPrefabPath(mochi::Path const& path) const {
+std::string TunerAsset::ToSpecPath(mochi::Path const& path) const {
   auto const relativeIfBelow = [&](std::filesystem::path const& dir) -> std::optional<std::string> {
     std::filesystem::path const relative = path.AsFilesystemPath().lexically_relative(dir);
     if (relative.empty() || *relative.begin() == "..") {
