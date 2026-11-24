@@ -20,7 +20,7 @@
  * Background: Warm off-white
  */
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { ArrowRight, ChevronDown } from "lucide-react";
+import { ArrowDown, ArrowRight, ChevronDown } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 
@@ -102,7 +102,7 @@ export default function HeroSection() {
             className="flex flex-wrap gap-3"
           >
             <button
-              onClick={handleGetStarted}
+              onClick={handleScrollDown}
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded text-sm font-medium transition-all duration-200"
               style={{
                 background: "oklch(0.15 0 0)",
@@ -116,28 +116,16 @@ export default function HeroSection() {
                 (e.currentTarget.style.background = "oklch(0.15 0 0)")
               }
             >
-              Get Started
-              <ArrowRight size={14} />
+              Learn More
+              <ArrowDown aria-hidden="true" size={14} />
             </button>
             <button
-              onClick={handleScrollDown}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded text-sm font-medium border transition-all duration-200"
-              style={{
-                borderColor: "oklch(0.82 0 0)",
-                color: "oklch(0.35 0 0)",
-                fontFamily: "'DM Sans', sans-serif",
-                background: "transparent",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = "oklch(0.55 0 0)";
-                e.currentTarget.style.color = "oklch(0.15 0 0)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = "oklch(0.82 0 0)";
-                e.currentTarget.style.color = "oklch(0.35 0 0)";
-              }}
+              onClick={handleGetStarted}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded text-sm font-medium border border-border bg-background text-foreground hover:border-muted-foreground transition-all duration-200"
+              style={{ fontFamily: "'DM Sans', sans-serif" }}
             >
-              Learn More
+              Get Started
+              <ArrowRight aria-hidden="true" size={14} />
             </button>
           </motion.div>
         </div>
