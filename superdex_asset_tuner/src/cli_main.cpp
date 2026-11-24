@@ -43,11 +43,12 @@ constexpr char kUsage[] =
     "          bot controllers (with their inputs), that loads and probes can target.\n"
     "\n"
     "Exit codes: 0 ok (including runs ended by a stop condition; see summary.json status),\n"
-    "1 error (setup, or a bot controller failed), 2 simulation diverged.\n";
+    "1 error (setup, or a bot controller failed), 2 simulation diverged, 3 the task failed.\n";
 
 constexpr int kExitOk = 0;
 constexpr int kExitError = 1;
 constexpr int kExitDiverged = 2;
+constexpr int kExitFailed = 3;
 
 int Fail(std::string const& message) {
   std::fprintf(stderr, "superdex_asset_tuner: %s\n", message.c_str());
@@ -119,6 +120,9 @@ int Run(int argc, char** argv) {
   std::string_view const status = summary.status;
   if (status == "diverged") {
     return kExitDiverged;
+  }
+  if (status == "failed") {
+    return kExitFailed;
   }
   return status == "error" ? kExitError : kExitOk;
 }

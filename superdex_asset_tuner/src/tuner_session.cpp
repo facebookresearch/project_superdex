@@ -21,6 +21,7 @@
 
 #include <mochi_core/utils/constants.h>
 #include <mochi_core/utils/math_utils.h>
+#include <superdex_robotics/scene/bot_task.h>
 #include <superdex_robotics/superdex_robotics.h>
 #include <algorithm>
 #include <cmath>
@@ -765,6 +766,7 @@ bool TunerSession::Bind(
     Unbind(scene);
     return false;
   }
+  _bots = bots;
   _loads = spec.loads;
   for (LoadSpec& load : _loads) {
     SortByTime(load);
@@ -955,6 +957,7 @@ void TunerSession::Unbind(mochi::Scene& scene) {
   _stops.clear();
   _channelNames.clear();
   _controllers.clear();
+  _bots = nullptr;
   _failure.clear();
   _time = 0.0;
 }
@@ -1146,6 +1149,13 @@ void TunerSession::OnPostStep(mochi::StepInfo const& info, Sample& outSample) {
   mochi::ErrorLog error;
   outSample.time = _time;
   outSample.failure = DynamicString(_failure);
+  // The bot scene decided its task in a post-step callback that ran before this one.
+  robotics::TerminationOutcome const task =
+      _bots != nullptr ? _bots->GetTerminationOutcome() : robotics::TerminationOutcome{};
+  outSample.task = task.failureAuthored && task.failure ? TaskOutcome::Failure
+      : task.successAuthored && task.success            ? TaskOutcome::Success
+      : task.successAuthored                            ? TaskOutcome::Pending
+                                                        : TaskOutcome::None;
   outSample.values.clear();
   outSample.values.reserve(_channelNames.size());
   auto push3 = [&](Real3 const& v) {

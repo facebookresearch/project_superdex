@@ -22,6 +22,7 @@
 #include <mochi_core/utils/quaternion.h>
 #include <picojson/picojson.h>
 #include <superdex_robotics/scene/bot_scene.h>
+#include <superdex_robotics/scene/bot_task.h>
 
 #include <fstream>
 #include <string>
@@ -59,7 +60,37 @@ class TunerBotTest : public TunerTest {
     spec.run.duration = 2.0;
     return spec;
   }
+
+  // The FR3 scene with a task that spawns two cubes 0.3 m apart, and the task's other `fields`
+  // (its criteria over the cubes). Gravity is off, so the cubes stay where they spawn.
+  [[nodiscard]] TunerSpec MakeTaskSpec(std::string const& fields) const {
+    TunerSpec spec = MakeBotSpec(kJsc);
+    std::filesystem::path const mesh =
+        std::filesystem::path(std::string(spec.assetsRoot)) / "cube/cube_fine_mesh.mochi.h5";
+    std::ofstream(Dir() / "cube.mochi_scene")
+        << R"({"actors": {"rigid": [{"name": "cube", "shape": )"
+        << picojson::value(mesh.string()).serialize()
+        << R"(, "scale": [0.1, 0.1, 0.1], "colliderType": "Box", "density": 1000}]}})";
+    std::ofstream(Dir() / "arm.superdex_scene")
+        << R"({"scene": {"spawnablePrefabs": [{"name": "cube", "path": "./cube.mochi_scene"}]},
+              "bots": [{"name": "arm", "path": "@bots/arms/fr3/fr3.superdex_bot",
+                        "controllers": )"
+        << kJsc << "}]}";
+    std::ofstream(Dir() / "cubes.superdex_task")
+        << R"({"resetState": [{"name": "a", "prefabName": "cube"},
+              {"name": "b", "prefabName": "cube",
+               "parentFromSpawn": {"rotation": [0, 0, 0, 1], "translation": [0.3, 0, 0]}}], )"
+        << fields << "}";
+    spec.task = "./cubes.superdex_task";
+    spec.run.duration = 1.0;
+    return spec;
+  }
 };
+
+constexpr char kCubesNear[] = R"({"criteria": [{"SphericalProximity": {"taskObjectA": "a",
+    "taskObjectB": "b", "comparator": "LessThan", "thresholdM": 0.5}}], "validationTimeS": 0.2})";
+constexpr char kCubesTouch[] = R"({"criteria": [{"SphericalProximity": {"taskObjectA": "a",
+    "taskObjectB": "b", "comparator": "LessThan", "thresholdM": 0.1}}]})";
 
 LoadSpec MakeInput(std::string_view target) {
   LoadSpec load;
@@ -156,7 +187,9 @@ TEST_F(TunerBotTest, AControllerInputEditedMidRunMovesItsJoint) {
       "edit::Loads", [&](mochi::StepInfo const& info) { session.OnPreStep(info); });
   MOCHI_DEFER(scene->CancelCallback(loads));
   mochi::CallbackHandle const probes = scene->RegisterPostStepCallback(
-      "edit::Probes", [&](mochi::StepInfo const& info) { session.OnPostStep(info, sample); });
+      "edit::Probes",
+      [&](mochi::StepInfo const& info) { session.OnPostStep(info, sample); },
+      kProbesCallbackPriority);
   MOCHI_DEFER(scene->CancelCallback(probes));
   auto const runFor = [&](double seconds) {
     for (int i = 0; i < static_cast<int>(std::llround(seconds / spec.run.dt)); ++i) {
@@ -259,6 +292,115 @@ TEST_F(TunerBotTest, APrefabAndASceneTogetherAreRefused) {
   EXPECT_FALSE(RunTuner(spec, TunerPath(), {}, summary, error));
 
   EXPECT_NE(error.find("a prefab or a scene"), std::string::npos) << error;
+}
+
+TEST_F(TunerBotTest, ATasksSuccessEndsTheRunOnceItHoldsForItsValidationTime) {
+  TunerSpec spec =
+      MakeTaskSpec(std::string(R"("terminationCriteria": {"success": )") + kCubesNear + "}");
+  // A task's objects are spawned as named instances, which probes can target.
+  spec.probes.push_back(MakeProbe(ProbeKind::BodyPose, "b/cube"));
+
+  RunCapture const run = Run(spec);
+
+  // Held from the first step (0.01 s), the success is reported on the step that has held it for
+  // 0.2 s (0.21 s, or 0.22 s as the summed time steps round), and the run ends on that step.
+  EXPECT_EQ(run.summary.status, "succeeded") << run.summary.message;
+  EXPECT_GE(run.summary.simTime, 0.21 - 1e-6);
+  EXPECT_LE(run.summary.simTime, 0.22 + 1e-6);
+  EXPECT_NEAR(run.Final("b/cube.pos.x"), 0.3f, 1e-4f);
+}
+
+TEST_F(TunerBotTest, EachSampleCarriesTheTaskOutcomeOfItsOwnStep) {
+  TunerSpec const spec =
+      MakeTaskSpec(std::string(R"("terminationCriteria": {"success": )") + kCubesNear + "}");
+  mochi::Context* context = mochi::CreateContext(0);
+  MOCHI_DEFER(mochi::DestroyContext(context));
+  mochi::Scene* scene = context->CreateScene("task");
+  MOCHI_DEFER(context->DestroyScene(scene));
+  TunerBots bots;
+  std::optional<real> groundHeight;
+  DynamicArray<mochi::Actor*> prefabActors;
+  std::string error;
+  ASSERT_TRUE(
+      BuildTunerScene(spec, TunerPath(), context, *scene, bots, groundHeight, prefabActors, error))
+      << error;
+  TunerSession session;
+  ASSERT_TRUE(session.Bind(*scene, spec, error, bots.Get())) << error;
+  MOCHI_DEFER(session.Unbind(*scene));
+  Sample sample;
+  // Registered as a run registers it, before the bot scene's own termination callback.
+  mochi::CallbackHandle const probes = scene->RegisterPostStepCallback(
+      "task::Probes",
+      [&](mochi::StepInfo const& info) { session.OnPostStep(info, sample); },
+      kProbesCallbackPriority);
+  MOCHI_DEFER(scene->CancelCallback(probes));
+
+  bool succeeded = false;
+  for (int step = 0; step < 40; ++step) {
+    scene->Step(spec.run.dt);
+    succeeded = bots.Get()->GetTerminationOutcome().success;
+    EXPECT_EQ(sample.task == TaskOutcome::Success, succeeded) << "step " << step;
+  }
+  EXPECT_TRUE(succeeded);
+}
+
+TEST_F(TunerBotTest, PrefabOverridesChangeTheTasksObjects) {
+  TunerSpec spec = MakeTaskSpec(R"("terminationCriteria": {})");
+  PrefabOverride density;
+  density.path = "actors.rigid[name=cube].density";
+  density.value = "500";
+  spec.prefabOverrides.push_back(density);
+
+  SceneTargets const targets = Describe(spec);
+
+  auto const cube = std::find_if(targets.rigid.begin(), targets.rigid.end(), [](auto const& body) {
+    return body.name == "a/cube";
+  });
+  ASSERT_NE(cube, targets.rigid.end());
+  EXPECT_NEAR(cube->mass, 0.5f, 1e-4f); // a 0.1 m cube at 500 kg/m^3
+}
+
+TEST_F(TunerBotTest, ATasksFailureFailsTheRun) {
+  TunerSpec const spec =
+      MakeTaskSpec(std::string(R"("terminationCriteria": {"failure": )") + kCubesNear + "}");
+
+  RunCapture const run = Run(spec);
+
+  EXPECT_EQ(run.summary.status, "failed") << run.summary.message;
+  EXPECT_GE(run.summary.simTime, 0.21 - 1e-6);
+  EXPECT_LE(run.summary.simTime, 0.22 + 1e-6);
+}
+
+TEST_F(TunerBotTest, AStopConditionThatEndsTheRunBeforeTheTaskSucceedsFailsIt) {
+  TunerSpec spec =
+      MakeTaskSpec(std::string(R"("terminationCriteria": {"success": )") + kCubesTouch + "}");
+  spec.probes.push_back(MakeProbe(ProbeKind::BodyPose, "b/cube"));
+  StopCondition stop;
+  stop.name = "early";
+  stop.kind = StopKind::ChannelThreshold;
+  stop.channel = "b/cube.pos.x";
+  stop.comparison = StopComparison::Above;
+  stop.threshold = 0.2f; // true from the first step
+  spec.stopConditions.push_back(stop);
+
+  RunCapture const run = Run(spec);
+
+  EXPECT_EQ(run.summary.status, "failed");
+  EXPECT_NE(std::string_view(run.summary.message).find("'early'"), std::string_view::npos)
+      << run.summary.message;
+}
+
+TEST_F(TunerBotTest, ATaskThatDoesNotSucceedByItsTimeLimitFailsTheRun) {
+  TunerSpec const spec = MakeTaskSpec(
+      std::string(R"("terminationCriteria": {"success": )") + kCubesTouch +
+      R"(}, "timeLimitS": 0.5)");
+
+  RunCapture const run = Run(spec);
+
+  EXPECT_EQ(run.summary.status, "failed");
+  EXPECT_NEAR(run.summary.simTime, 0.5, 1e-6);
+  EXPECT_NE(std::string_view(run.summary.message).find("did not succeed"), std::string_view::npos)
+      << run.summary.message;
 }
 
 TEST_F(TunerBotTest, AnUnknownControllerListsTheBotsControllers) {

@@ -193,6 +193,13 @@ std::filesystem::path ResolveScenePath(
                             : ResolveSpecPath(spec, tunerFilePath, spec.scene);
 }
 
+std::filesystem::path ResolveTaskPath(
+    TunerSpec const& spec,
+    std::filesystem::path const& tunerFilePath) {
+  return spec.task.empty() ? std::filesystem::path{}
+                           : ResolveSpecPath(spec, tunerFilePath, spec.task);
+}
+
 namespace {
 
 // PrefabReference fields: an override of these edits the reference itself, not the nested prefab.

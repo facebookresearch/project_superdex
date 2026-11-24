@@ -51,6 +51,20 @@ struct AppliedLoad {
   DynamicArray<real> input;
 };
 
+// The priority OnPostStep's callback runs at: after the bot scene decides its task in a post-step
+// callback of its own (at the default priority), so each sample carries the step's outcome.
+inline constexpr int kProbesCallbackPriority = mochi::Scene::kDefaultCallbackPriority + 1;
+
+// Where a run's task stands (TunerSpec::task).
+enum class TaskOutcome {
+  // No task, or one without success criteria that has not failed.
+  None,
+  // Its success criteria are yet to be met.
+  Pending,
+  Success,
+  Failure,
+};
+
 struct Sample {
   // Simulation time at the end of the step [s].
   double time = 0.0;
@@ -64,6 +78,8 @@ struct Sample {
   DynamicString stopMessage;
   // The run's first controller failure (see TunerSession::GetFailure). Empty unless one failed.
   DynamicString failure;
+  // The task's outcome, the first reached kept.
+  TaskOutcome task = TaskOutcome::None;
 };
 
 // Applies a tuner spec's loads to a live scene and samples its probes. Not thread-safe: all calls
@@ -213,6 +229,8 @@ class TunerSession {
   DynamicArray<ResolvedStop> _stops;
   DynamicArray<DynamicString> _channelNames;
   DynamicArray<BoundController> _controllers;
+  // Decides the task, if the bots run one.
+  robotics::BotScene const* _bots = nullptr;
   std::string _failure;
   double _time = 0.0;
 };

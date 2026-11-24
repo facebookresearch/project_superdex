@@ -26,6 +26,7 @@
 #include <mochi_physics/utils/mochi_prefab.h>
 #include <superdex_robotics/core/context.h>
 #include <superdex_robotics/scene/bot_scene.h>
+#include <superdex_robotics/scene/bot_task.h>
 #include <superdex_robotics/superdex_robotics.h>
 
 #include <algorithm>
@@ -146,6 +147,7 @@ TunerBots::~TunerBots() {
 }
 
 void TunerBots::Reset() {
+  _taskTimeLimit = 0.0;
   _bots.reset();
 }
 
@@ -157,6 +159,10 @@ bool TunerBots::Load(
     std::string& outError,
     robotics::RoboticsContext* robotics) {
   Reset();
+  if (!spec.task.empty() && spec.scene.empty()) {
+    outError = "A task runs on a bot scene: set `scene`.";
+    return false;
+  }
   std::filesystem::path const path = ResolveScenePath(spec, tunerFilePath);
   if (path.empty()) {
     return true;
@@ -182,6 +188,41 @@ bool TunerBots::Load(
     outError = "Failed to load bot scene '" + path.string() + "': " + error.GetDescription();
     return false;
   }
+  std::filesystem::path const taskPath = ResolveTaskPath(spec, tunerFilePath);
+  if (taskPath.empty()) {
+    return true;
+  }
+  robotics::BotTaskPrefab const task =
+      robotics::LoadBotTaskPrefabFromFile(taskPath.string(), error);
+  if (!error.IsOK()) {
+    Reset();
+    outError = "Task '" + taskPath.string() + "': " + error.GetDescription();
+    return false;
+  }
+  DynamicArray<robotics::ResolvedSpawn> const spawns = robotics::ResolveResetState(
+      task, {}, robotics::ComputeWorldFromTask(_bots->GetBotScenePrefab().scene, task), error);
+  // A scene tuner's prefab overrides change the task's objects.
+  std::string overrideError;
+  robotics::SpawnPrefabEdit edit;
+  if (!spec.prefabOverrides.empty()) {
+    edit = [&](mochi::prefab::ScenePrefab& prefab, superdex::Error& editError) {
+      if (!ApplyPrefabOverrides(prefab, spec.prefabOverrides, overrideError)) {
+        MOCHI_ERROR_SET(editError, "A prefab override does not fit the task's object.");
+      }
+    };
+  }
+  for (size_t i = 0; i < spawns.size() && error.IsOK(); ++i) {
+    _bots->SpawnEditedPrefabInstance(
+        spawns[i].name, spawns[i].prefabName, spawns[i].worldFromSpawn, edit, error);
+  }
+  if (!error.IsOK()) {
+    Reset();
+    outError = "Task '" + taskPath.string() +
+        "': " + (overrideError.empty() ? std::string(error.GetDescription()) : overrideError);
+    return false;
+  }
+  _bots->StartTermination(task);
+  _taskTimeLimit = task.timeLimitS;
   return true;
 }
 
@@ -215,9 +256,45 @@ bool BuildTunerScene(
     }
     outPrefabActors.assign(added.actors.begin(), added.actors.end());
   }
+  if (robotics::BotScene const* const bots = outBots.Get()) {
+    for (DynamicString const& instance : bots->GetPrefabInstanceNames()) {
+      for (mochi::ActorHandle const handle : bots->GetPrefabInstanceActors(instance)) {
+        if (mochi::Actor* const actor = scene.GetActor(handle)) {
+          outPrefabActors.push_back(actor);
+        }
+      }
+    }
+  }
   outGroundHeight = AddGroundPlane(scene, spec.run, mochi::MakeConstSpan(outPrefabActors));
   ApplyRunSpecOverrides(scene, spec.run);
   return ApplySolverOverrides(scene, mochi::MakeConstSpan(spec.solverOverrides), outError);
+}
+
+double GetRunDuration(TunerSpec const& spec, double taskTimeLimit) {
+  return taskTimeLimit > 0 ? std::min(spec.run.duration, taskTimeLimit) : spec.run.duration;
+}
+
+void JudgeTask(
+    TaskOutcome outcome,
+    double time,
+    std::string_view stopMessage,
+    RunSummary& summary) {
+  if (outcome == TaskOutcome::None) {
+    return;
+  }
+  char message[64];
+  std::snprintf(
+      message,
+      sizeof(message),
+      outcome == TaskOutcome::Success       ? "The task succeeded at t = %.3f s."
+          : outcome == TaskOutcome::Failure ? "The task failed at t = %.3f s."
+                                            : "The task did not succeed by t = %.3f s.",
+      time);
+  summary.status = outcome == TaskOutcome::Success ? "succeeded" : "failed";
+  summary.message = DynamicString(
+      outcome == TaskOutcome::Success || stopMessage.empty()
+          ? std::string(message)
+          : std::string(message) + " " + std::string(stopMessage));
 }
 
 bool RunTuner(
@@ -295,6 +372,9 @@ bool RunTuner(
 
   Sample sample;
   bool diverged = false;
+  auto const decided = [&] {
+    return sample.task == TaskOutcome::Success || sample.task == TaskOutcome::Failure;
+  };
   int stopCondition = -1;
   DynamicString stopMessage;
   for (auto const& name : session.GetChannelNames()) {
@@ -305,7 +385,8 @@ bool RunTuner(
   mochi::CallbackHandle const preStep = scene->RegisterPreStepCallback(
       "superdex_asset_tuner::Loads", [&](mochi::StepInfo const& info) { session.OnPreStep(info); });
   mochi::CallbackHandle const postStep = scene->RegisterPostStepCallback(
-      "superdex_asset_tuner::Probes", [&](mochi::StepInfo const& info) {
+      "superdex_asset_tuner::Probes",
+      [&](mochi::StepInfo const& info) {
         session.OnPostStep(info, sample);
         UpdateChannelSummaries(
             sample.values, outSummary.steps == 0, mochi::MakeSpan(outSummary.channels));
@@ -321,12 +402,14 @@ bool RunTuner(
           stopCondition = sample.stopCondition;
           stopMessage = sample.stopMessage;
         }
-      });
+      },
+      kProbesCallbackPriority);
 
   // Round so accumulated float error in duration/dt does not add or drop a step.
-  auto const numSteps = static_cast<int>(std::llround(spec.run.duration / spec.run.dt));
+  auto const numSteps =
+      static_cast<int>(std::llround(GetRunDuration(spec, bots.GetTaskTimeLimit()) / spec.run.dt));
   while (outSummary.steps < numSteps && !diverged && stopCondition < 0 &&
-         session.GetFailure().empty()) {
+         session.GetFailure().empty() && !decided()) {
     scene->Step(spec.run.dt);
     ++outSummary.steps;
   }
@@ -341,12 +424,19 @@ bool RunTuner(
   } else if (!session.GetFailure().empty()) {
     outSummary.status = "error";
     outSummary.message = DynamicString(session.GetFailure());
-  } else if (stopCondition >= 0) {
-    outSummary.status = "stopped";
-    if (static_cast<size_t>(stopCondition) < spec.stopConditions.size()) {
-      outSummary.stopCondition = spec.stopConditions[static_cast<size_t>(stopCondition)].name;
+  } else {
+    if (stopCondition >= 0) {
+      outSummary.status = "stopped";
+      if (static_cast<size_t>(stopCondition) < spec.stopConditions.size()) {
+        outSummary.stopCondition = spec.stopConditions[static_cast<size_t>(stopCondition)].name;
+      }
+      outSummary.message = stopMessage;
     }
-    outSummary.message = stopMessage;
+    JudgeTask(
+        sample.task,
+        outSummary.simTime,
+        stopCondition >= 0 ? std::string_view(stopMessage) : std::string_view(),
+        outSummary);
   }
   outSummary.wallTimeSec =
       std::chrono::duration<double>(std::chrono::steady_clock::now() - wallStart).count();

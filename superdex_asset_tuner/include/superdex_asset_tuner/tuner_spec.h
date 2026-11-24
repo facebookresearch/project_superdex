@@ -507,6 +507,10 @@ struct TunerSpec {
   DynamicString scene;
   // The scene's bots to build; empty: all of them.
   DynamicArray<DynamicString> bots;
+  // A task (.superdex_task) on the bot scene, the tuner's loads trying to solve it: its reset
+  // state spawns the task's objects, and its termination criteria decide the run (see
+  // RunSummary::status). Same path rules. Empty: none.
+  DynamicString task;
   // Root for asset-relative paths, relative to the tuner file. Empty: the directory of the nearest
   // `.superdex_root` marker (as in SuperDex Studio), else $SUPERDEX_ASSETS_PATH, else the directory
   // of the referencing file.
@@ -527,6 +531,7 @@ struct TunerSpec {
   MOCHI_FIELD(prefab)
   MOCHI_FIELD(scene) MOCHI_ATTRIBUTE(NoSerializeDefaults);
   MOCHI_FIELD(bots) MOCHI_ATTRIBUTE(NoSerializeDefaults);
+  MOCHI_FIELD(task) MOCHI_ATTRIBUTE(NoSerializeDefaults);
   MOCHI_FIELD(assetsRoot)
   MOCHI_FIELD(prefabOverrides)
   MOCHI_FIELD(solverOverrides) MOCHI_ATTRIBUTE(NoSerializeDefaults);
@@ -582,6 +587,11 @@ bool SaveTunerSpecToFile(
 
 // TunerSpec::scene as a path, or empty without one.
 [[nodiscard]] std::filesystem::path ResolveScenePath(
+    TunerSpec const& spec,
+    std::filesystem::path const& tunerFilePath);
+
+// TunerSpec::task as a path, or empty without one.
+[[nodiscard]] std::filesystem::path ResolveTaskPath(
     TunerSpec const& spec,
     std::filesystem::path const& tunerFilePath);
 
