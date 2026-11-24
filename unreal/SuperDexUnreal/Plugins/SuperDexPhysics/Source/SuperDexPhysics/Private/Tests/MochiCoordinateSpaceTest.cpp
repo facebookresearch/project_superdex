@@ -106,8 +106,8 @@ bool FMochiCoordinateSpaceNamedMappingsTest::RunTest(const FString& Parameters) 
   const FMochiSceneSettings SceneSettings;
   TestTrue(
       TEXT("Scene override defaults to SuperDex space"),
-      SceneSettings.SimulationSpace == kSuperDexSpace);
-  const mochi::CoordinateSpace DefaultSpace = ToMochiCoordinateSpace(kSuperDexSpace);
+      SceneSettings.SimulationSpace == SuperDexSpace);
+  const mochi::CoordinateSpace DefaultSpace = ToMochiCoordinateSpace(SuperDexSpace);
   TestEqual(TEXT("Default axes"), DefaultSpace.axes, mochi::CoordinateSpaceAxes::FLU);
   TestEqual(TEXT("Default uses meters"), DefaultSpace.unitsPerMeter, 1.0);
   return true;

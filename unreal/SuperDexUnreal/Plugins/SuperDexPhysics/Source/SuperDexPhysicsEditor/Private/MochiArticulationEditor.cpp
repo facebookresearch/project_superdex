@@ -341,9 +341,9 @@ void FMochiArticulationEditorToolkit::ToggleScreenPercentage() const {
   }
 
   ViewportClient->SetPreviewScreenPercentage(
-      ViewportClient->GetPreviewScreenPercentage() != kHighPreviewScreenPercentage
-          ? kHighPreviewScreenPercentage
-          : kNominalPreviewScreenPercentage);
+      ViewportClient->GetPreviewScreenPercentage() != HighPreviewScreenPercentage
+          ? HighPreviewScreenPercentage
+          : NominalPreviewScreenPercentage);
 }
 
 void FMochiArticulationEditorToolkit::Export() const {
@@ -1004,7 +1004,7 @@ TSharedRef<FEditorViewportClient> SMochiArticulationEditorViewport::MakeEditorVi
       SharedThis(this), PreviewScene.ToSharedRef(), Articulation, PreviewMeshComponent));
   ViewportClient->SetPreviewingScreenPercentage(!ViewportClient->IsPreviewingScreenPercentage());
   ViewportClient->SetPreviewScreenPercentage(
-      FMochiArticulationEditorToolkit::kNominalPreviewScreenPercentage);
+      FMochiArticulationEditorToolkit::NominalPreviewScreenPercentage);
   ViewportClient->Invalidate();
   return ViewportClient.ToSharedRef();
 }

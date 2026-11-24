@@ -164,10 +164,10 @@ constexpr bool operator!=(const FMochiSpaceDefinition& Lhs, const FMochiSpaceDef
   return !(Lhs == Rhs);
 }
 
-static constexpr FMochiSpaceDefinition kMochiSpace(EMochiSpaceAxes::Mochi, 1.0);
-static constexpr FMochiSpaceDefinition kSuperDexSpace(EMochiSpaceAxes::SuperDex, 1.0);
-static constexpr FMochiSpaceDefinition kUnrealCentimetersSpace(EMochiSpaceAxes::Unreal, 100.0);
-static constexpr FMochiSpaceDefinition kUnrealMetersSpace(EMochiSpaceAxes::Unreal, 1.0);
+static constexpr FMochiSpaceDefinition MochiSpace(EMochiSpaceAxes::Mochi, 1.0);
+static constexpr FMochiSpaceDefinition SuperDexSpace(EMochiSpaceAxes::SuperDex, 1.0);
+static constexpr FMochiSpaceDefinition UnrealCentimetersSpace(EMochiSpaceAxes::Unreal, 100.0);
+static constexpr FMochiSpaceDefinition UnrealMetersSpace(EMochiSpaceAxes::Unreal, 1.0);
 
 FORCEINLINE constexpr mochi::CoordinateSpace ToMochiCoordinateSpace(
     const FMochiSpaceDefinition& SpaceDef) {

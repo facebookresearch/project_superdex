@@ -48,7 +48,7 @@ DEFINE_LOG_CATEGORY_STATIC(LogSuperDexBotFactory, Log, All);
 static constexpr bool kCleanupStaticMeshes = false;
 
 static TMochiToUnrealConverter<double> GetRosToUnrealConverter() {
-  return TMochiToUnrealConverter<double>(kSuperDexSpace, kUnrealCentimetersSpace);
+  return TMochiToUnrealConverter<double>(SuperDexSpace, UnrealCentimetersSpace);
 }
 
 // Transform of a render model (or skin render model) relative to the frame it is attached to.

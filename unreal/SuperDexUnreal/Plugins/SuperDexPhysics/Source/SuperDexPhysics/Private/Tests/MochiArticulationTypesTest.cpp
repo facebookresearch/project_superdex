@@ -42,8 +42,8 @@ constexpr double ArticulationTestTolerance = 1e-5;
 
 // SuperDex Studio space (right-handed, X forward, Y left, Z up, meters) to Unreal and back. The
 // handedness flip is what makes rotational joint quantities interesting.
-const FMochiToUnrealConverter StudioToUnreal(kSuperDexSpace);
-const FUnrealToMochiConverter UnrealToStudio(kSuperDexSpace);
+const FMochiToUnrealConverter StudioToUnreal(SuperDexSpace);
+const FUnrealToMochiConverter UnrealToStudio(SuperDexSpace);
 
 bool NearlyEqual(const mochi::Real3& A, const mochi::Real3& B) {
   for (int i = 0; i < 3; ++i) {

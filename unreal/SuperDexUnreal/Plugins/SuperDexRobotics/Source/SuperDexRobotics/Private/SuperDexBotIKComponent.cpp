@@ -146,7 +146,7 @@ bool USuperDexBotIKComponent::SetGoalTransform(
       (Space != ESuperDexBotIKGoalSpace::Component && Space != ESuperDexBotIKGoalSpace::World)) {
     return false;
   }
-  FUnrealToMochiConverter Converter(kSuperDexSpace);
+  FUnrealToMochiConverter Converter(SuperDexSpace);
   if (!mochi::IsFinite(Converter.TransformToMochi_RT(Transform))) {
     return false;
   }
@@ -184,7 +184,7 @@ bool USuperDexBotIKComponent::SolveIK(bool& OutGoalsReached) {
   }
   bool bActive = false;
   const FTransform WorldFromComponent = RigidTransform(GetComponentTransform());
-  FUnrealToMochiConverter Converter(kSuperDexSpace);
+  FUnrealToMochiConverter Converter(SuperDexSpace);
   for (int32 Index = 0; Index < RuntimeGoals.Num(); ++Index) {
     const auto& Goal = RuntimeGoals[Index];
     FTransform LocalGoal = RigidTransform(Goal.BaseOrInputLinkFrameFromConstraintFrame);

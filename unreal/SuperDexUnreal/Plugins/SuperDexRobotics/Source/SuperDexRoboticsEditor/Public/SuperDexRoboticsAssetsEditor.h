@@ -46,7 +46,7 @@ class FSuperDexBotAssetActions : public FAssetTypeActions_Base {
     return USuperDexBot::StaticClass();
   }
   virtual FColor GetTypeColor() const override {
-    return kSuperdexAssetColor;
+    return SuperdexAssetColor;
   }
   virtual bool IsImportedAsset() const override {
     return true;

@@ -571,7 +571,7 @@ bool USuperDexBot::ComputeLinkTransformsInternal(
     return false;
   }
   const TArray<bool> PrismaticDofs = GetPrismaticDofs(CachedBotPrefab);
-  TMochiToUnrealConverter<double> Converter(kSuperDexSpace, kUnrealCentimetersSpace);
+  TMochiToUnrealConverter<double> Converter(SuperDexSpace, UnrealCentimetersSpace);
   // JointPositions times LengthScale are physical lengths in Unreal centimeters (a prismatic joint
   // moves the bot built at its scale, as its native commands do), but the native positions are
   // lengths in the bot's nominal space, like its link offsets.
@@ -634,7 +634,7 @@ bool USuperDexBot::ComputeJointPositionsInternal(
     return false;
   }
   // (output space, input space)
-  TUnrealToMochiConverter<double> Converter(kSuperDexSpace, kUnrealCentimetersSpace);
+  TUnrealToMochiConverter<double> Converter(SuperDexSpace, UnrealCentimetersSpace);
   mochi::DynamicArray<mochi::TransformRT> MochiTransforms;
   MochiTransforms.resize(NumLinks);
   for (int32 i = 0; i < NumLinks; ++i) {
@@ -657,7 +657,7 @@ bool USuperDexBot::ComputeJointPositionsInternal(
   const TArray<bool> PrismaticDofs = GetPrismaticDofs(CachedBotPrefab);
   // The inverse of the conversion in ComputeLinkTransformsInternal.
   const double LengthToNative = LengthScale /
-      (TMochiToUnrealConverter<double>(kSuperDexSpace, kUnrealCentimetersSpace).MeasureToUnreal(1) *
+      (TMochiToUnrealConverter<double>(SuperDexSpace, UnrealCentimetersSpace).MeasureToUnreal(1) *
        static_cast<double>(CachedBotPrefab.scale));
   const int32 NumDofs = static_cast<int32>(Pose.size());
   OutJointPositions.SetNum(NumDofs);
@@ -696,7 +696,7 @@ bool USuperDexBot::ComputeVisualBoundsInternal(
   }
   const TArray<FTransform>& LinkToRootTransforms =
       bToArticulationRoot ? LinksToTransformSpace : LinksToRoot;
-  TMochiToUnrealConverter<double> Converter(kSuperDexSpace, kUnrealCentimetersSpace);
+  TMochiToUnrealConverter<double> Converter(SuperDexSpace, UnrealCentimetersSpace);
   FBox CompositeBox(ForceInit);
   for (int32 i = 0; i < NumLinks; ++i) {
     if (LinkBounds[i].SphereRadius <= 0) {
@@ -746,7 +746,7 @@ void USuperDexBot::DrawCustom(
     bool bShowBounds,
     FMaterialRenderProxy* JointMaterialRenderProxy) const {
   static constexpr FColor kPurpleColor = FColor(138, 43, 226, 255);
-  TMochiToUnrealConverter<double> Conv(kSuperDexSpace, kUnrealCentimetersSpace);
+  TMochiToUnrealConverter<double> Conv(SuperDexSpace, UnrealCentimetersSpace);
   auto const& P = GetBotPrefab();
   mochi::DynamicArray<mochi::real> Pose(P.defaultPose.begin(), P.defaultPose.end());
   mochi::DynamicArray<mochi::TransformRT> RT;
@@ -813,7 +813,7 @@ void USuperDexBot::DrawCanvasCustom(
     float DPIScale,
     bool bShowLinkTransforms,
     bool bShowJoints) const {
-  TMochiToUnrealConverter<double> Conv(kSuperDexSpace, kUnrealCentimetersSpace);
+  TMochiToUnrealConverter<double> Conv(SuperDexSpace, UnrealCentimetersSpace);
   auto const& P = GetBotPrefab();
   mochi::DynamicArray<mochi::real> Pose(P.defaultPose.begin(), P.defaultPose.end());
   mochi::DynamicArray<mochi::TransformRT> RT;

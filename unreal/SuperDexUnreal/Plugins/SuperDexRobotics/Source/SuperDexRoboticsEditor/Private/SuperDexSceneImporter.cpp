@@ -123,9 +123,7 @@ void AddBot(
 } // namespace
 
 FSuperDexSceneImporter::FSuperDexSceneImporter(FSuperDexImportSession& InSession)
-    : PrefabImporter(InSession),
-      BotFactory(NewObject<USuperDexBotFactory>()),
-      M2U(kSuperDexSpace) {}
+    : PrefabImporter(InSession), BotFactory(NewObject<USuperDexBotFactory>()), M2U(SuperDexSpace) {}
 
 FString FSuperDexSceneImporter::GetSceneName(const FString& SourcePath) {
   return FSuperDexPrefabImporter::GetPrefabName(SourcePath);

@@ -80,14 +80,14 @@ class SUPERDEXPHYSICS_API UMochiPhysicsFunctionLibrary : public UBlueprintFuncti
   static double GetTotalSimulatedTimeSinceStartSec(UObject* WorldContext);
 
   UFUNCTION(BlueprintCallable, Category = "Mochi", meta = (WorldContext = "WorldContext"))
-  static void StartRecording(UObject* WorldContext, const FString& filePath);
+  static void StartRecording(UObject* WorldContext, const FString& FilePath);
 
   UFUNCTION(BlueprintCallable, Category = "Mochi", meta = (WorldContext = "WorldContext"))
   static void StopRecording(UObject* WorldContext);
 
   UFUNCTION(BlueprintCallable, Category = "Mochi", meta = (WorldContext = "WorldContext"))
   static void
-  ExportMochiScene(UObject* WorldContext, const FString& exportName, const FString& filePath);
+  ExportMochiScene(UObject* WorldContext, const FString& ExportName, const FString& FilePath);
 
   UFUNCTION(BlueprintCallable, Category = "Mochi", meta = (WorldContext = "WorldContext"))
   static UMochiGameInstanceSubsystem* GetMochiGameInstanceSubsystem(UObject* WorldContext);

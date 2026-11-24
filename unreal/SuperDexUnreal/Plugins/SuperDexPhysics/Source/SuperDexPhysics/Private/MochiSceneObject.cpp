@@ -438,12 +438,12 @@ void UMochiSceneObject::UpdateStatsGroups() {
 
 int UMochiSceneObject::GetNumMochiStepsSinceStart() const {
   FReadScopeLock Lock(StatsLock);
-  return Stats.numMochiStepsSinceStart;
+  return Stats.NumMochiStepsSinceStart;
 }
 
 double UMochiSceneObject::GetTotalSimulatedTimeSinceStartSec() const {
   FReadScopeLock Lock(StatsLock);
-  return Stats.totalSimulatedTimeSinceStartSec;
+  return Stats.TotalSimulatedTimeSinceStartSec;
 }
 
 double UMochiSceneObject::GetTotalStepDuration() const {
@@ -516,9 +516,9 @@ void UMochiSceneObject::RegisterDebugDrawAndStatsCallbacks() {
         Stats.NumActors = Info.scene->GetNumActors();
         Stats.NumLayers = Info.scene->GetNumContactLayers();
         Stats.NumConstraints = Info.scene->GetNumConstraints();
-        Stats.numMochiStepsSinceStart++;
+        Stats.NumMochiStepsSinceStart++;
         Stats.LastTimeStepSec = Info.scene->GetLastTimeStep();
-        Stats.totalSimulatedTimeSinceStartSec += Stats.LastTimeStepSec;
+        Stats.TotalSimulatedTimeSinceStartSec += Stats.LastTimeStepSec;
       });
 }
 

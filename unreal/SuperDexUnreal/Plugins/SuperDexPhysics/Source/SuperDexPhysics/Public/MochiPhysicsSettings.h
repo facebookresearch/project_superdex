@@ -41,11 +41,11 @@ struct FMochiSceneSettings {
       EditAnywhere,
       Category = "Scene",
       meta = (EditCondition = "bOverrideSimulationSpace"))
-  FMochiSpaceDefinition SimulationSpace = kSuperDexSpace;
+  FMochiSpaceDefinition SimulationSpace = SuperDexSpace;
 
   // Gravity vector in m/s^2.
   UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Scene")
-  FVector GravityVector = TMochiSpaceConverter<double>(kMochiSpace, kUnrealMetersSpace)
+  FVector GravityVector = TMochiSpaceConverter<double>(MochiSpace, UnrealMetersSpace)
                               .DirectionToOutput(FVector(
                                   mochi::kDefaultGravity[0],
                                   mochi::kDefaultGravity[1],
@@ -103,7 +103,7 @@ class SUPERDEXPHYSICS_API UMochiPhysicsSettings : public UDeveloperSettings {
   // space (+X forward, +Y left, +Z up) with meter scaling, the convention of SuperDex bot and
   // scene files.
   UPROPERTY(Config, BlueprintReadOnly, EditAnywhere, Category = "Simulation")
-  FMochiSpaceDefinition SimulationSpace = kSuperDexSpace;
+  FMochiSpaceDefinition SimulationSpace = SuperDexSpace;
 
   // Start the Mochi physics debugger server when the plugin initializes. This setting is ignored
   // in Shipping builds. The server advertises the effective simulation space. A scene override

@@ -382,7 +382,7 @@ bool USuperDexBotIKRetargeter::GetTransformedPose_Implementation(
     return false;
   }
   // Parent-from-link transforms in nominal InputBot space; only prismatic joints read translations.
-  FUnrealToMochiConverter ToNative(kSuperDexSpace);
+  FUnrealToMochiConverter ToNative(SuperDexSpace);
   mochi::DynamicArray<mochi::TransformRT> ParentFromLinks(InputLinks);
   for (int32 I = 0; I < InputLinks; ++I) {
     ParentFromLinks[I] = ToNative.TransformToMochi_RT(SourceLinkToParent[I]);
@@ -718,7 +718,7 @@ void USuperDexBotIKRetargeter::CaptureDebugGoalFrames(
   // Express everything relative to the output base (its root link), which is where this
   // component's root bone is drawn.
   const mochi::TransformRT OutputBaseFromWorld = mochi::Invert(WorldFromOutputLinks[0]);
-  FMochiToUnrealConverter ToUnreal(kSuperDexSpace);
+  FMochiToUnrealConverter ToUnreal(SuperDexSpace);
   const auto InOutputBase = [&](const mochi::TransformRT& WorldFromFrame) {
     return ToUnreal.TransformToUnreal(OutputBaseFromWorld * WorldFromFrame);
   };
@@ -781,7 +781,7 @@ void USuperDexBotIKRetargeter::CaptureDebugInputPose(
   if (!Error.IsOK()) {
     return;
   }
-  FMochiToUnrealConverter ToUnreal(kSuperDexSpace);
+  FMochiToUnrealConverter ToUnreal(SuperDexSpace);
   DebugInputBaseInOutputBase = ToUnreal.TransformToUnreal(
       mochi::Invert(WorldFromOutputLinks[0]) * WorldFrameFromInputBaseFrame);
   DebugInputBaseInOutputBase.SetScale3D(FVector(InputModel.scale * NativeConfig.inputBotScale));

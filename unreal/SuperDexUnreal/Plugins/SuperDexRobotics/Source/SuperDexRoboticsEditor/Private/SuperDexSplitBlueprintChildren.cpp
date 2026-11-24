@@ -325,7 +325,7 @@ void WalkAndSplit(
 // "parent" field is omitted when empty (superdex_task treats absent parent
 // as "task_root").
 FString BuildTaskJson(FString const& MetadataName, TArray<FSpawnRecord> const& Spawns) {
-  FMochiSpaceConverter const Converter(kUnrealCentimetersSpace, kSuperDexSpace);
+  FMochiSpaceConverter const Converter(UnrealCentimetersSpace, SuperDexSpace);
 
   FString Out;
   TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&Out);

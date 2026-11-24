@@ -92,13 +92,13 @@ class FMochiModelEditorViewportClient : public FEditorViewportClient {
 
   UE::Widget::EWidgetMode WidgetMode;
 
-  const float kMaxYoungsModulusDisplay = 2000.0f;
-  const float kMaxPoissonRatioDisplay = 0.5f;
-  const FLinearColor kMaxElementColor = FLinearColor(0.0, 1.0f, 0.0f);
-  const FLinearColor kMinElementColor = FLinearColor(1.0, 0.0f, 0.0f);
-  const float kDefaultFOV = 90.0f;
-  const float kElementPointSize = 5.0f;
-  const float kSelectedElementPointSize = 10.0f;
+  const float MaxYoungsModulusDisplay = 2000.0f;
+  const float MaxPoissonRatioDisplay = 0.5f;
+  const FLinearColor MaxElementColor = FLinearColor(0.0, 1.0f, 0.0f);
+  const FLinearColor MinElementColor = FLinearColor(1.0, 0.0f, 0.0f);
+  const float DefaultFOV = 90.0f;
+  const float ElementPointSize = 5.0f;
+  const float SelectedElementPointSize = 10.0f;
 
  private:
   FAdvancedPreviewScene* AdvancedPreviewScene;

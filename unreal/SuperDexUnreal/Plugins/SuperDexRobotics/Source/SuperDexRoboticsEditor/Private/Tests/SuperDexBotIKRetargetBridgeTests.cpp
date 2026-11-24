@@ -147,7 +147,7 @@ bool CompareBridge(
         TEXT("Bridge matches direct native joint positions"),
         FMath::IsNearlyEqual(Dofs[Index], static_cast<double>(NativeDofs[Index]), 1e-5));
   }
-  FMochiToUnrealConverter Converter(kSuperDexSpace);
+  FMochiToUnrealConverter Converter(SuperDexSpace);
   auto const Links = Direct.GetWorldFromLinks();
   auto const RawLinks = Solver->GetOutputBotWorldFromLinks();
   if (!Test.TestEqual(

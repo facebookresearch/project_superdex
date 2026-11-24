@@ -236,7 +236,7 @@ class SUPERDEXPHYSICS_API UMochiArticulation : public UMochiArticulationBase {
   void ClampJointPositions(TArray<double>& JointPositions) const;
   // Generate an array of random joints positions within the joint limits.
   UFUNCTION(BlueprintCallable, Category = "Mochi|Articulation")
-  void RandomJointPositions(TArray<double>& JointPositions, bool NormalDistribution = false) const;
+  void RandomJointPositions(TArray<double>& JointPositions, bool bNormalDistribution = false) const;
 
  public:
   // Load the Mochi link shapes. This MUST be called on the UE game thread.

@@ -132,7 +132,7 @@ mochi::ShapeHandle FSuperDexBotLoader::LoadShape(
   //
   // bakeScale: Scale magnitudes are axis-agnostic, so they pass through unchanged.
   // bakeTransform: Rotation and translation need ROS→UE conversion (Y-negate + m→cm).
-  TMochiToUnrealConverter<double> Converter(kSuperDexSpace, kUnrealCentimetersSpace);
+  TMochiToUnrealConverter<double> Converter(SuperDexSpace, UnrealCentimetersSpace);
   FVector UEBakeScale(bakeScale[0], bakeScale[1], bakeScale[2]);
   FTransform UEBakeTransform = Converter.TransformToUnreal(bakeTransform);
 

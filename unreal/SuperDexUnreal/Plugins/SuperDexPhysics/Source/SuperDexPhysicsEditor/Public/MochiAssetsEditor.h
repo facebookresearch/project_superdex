@@ -38,7 +38,7 @@
 
 // Content Browser type color of every SuperDex asset type: Meta blue (#0064E0). The asset icons in
 // each plugin's Resources/ use the same blue as their accent.
-static constexpr FColor kSuperdexAssetColor = FColor(0, 100, 224, 255);
+static constexpr FColor SuperdexAssetColor = FColor(0, 100, 224, 255);
 
 template <typename TMochiAsset>
 class FMochiAssetActions : public FAssetTypeActions_Base {
@@ -54,7 +54,7 @@ class FMochiAssetActions : public FAssetTypeActions_Base {
     return TMochiAsset::StaticClass();
   }
   virtual FColor GetTypeColor() const override {
-    return kSuperdexAssetColor;
+    return SuperdexAssetColor;
   }
 
  private:
@@ -256,7 +256,7 @@ class FMochiArticulationAssetActions : public FAssetTypeActions_Base {
     return UMochiArticulation::StaticClass();
   }
   virtual FColor GetTypeColor() const override {
-    return kSuperdexAssetColor;
+    return SuperdexAssetColor;
   }
 
   virtual void OpenAssetEditor(

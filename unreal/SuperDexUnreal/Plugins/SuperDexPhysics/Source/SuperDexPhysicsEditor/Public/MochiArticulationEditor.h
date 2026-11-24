@@ -105,8 +105,8 @@ class SUPERDEXPHYSICSEDITOR_API FMochiArticulationEditorToolkit : public FAssetE
  public:
   static const FName ViewportTabID;
   static const FName DetailsTabID;
-  static constexpr int kHighPreviewScreenPercentage = 200;
-  static constexpr int kNominalPreviewScreenPercentage = 100;
+  static constexpr int HighPreviewScreenPercentage = 200;
+  static constexpr int NominalPreviewScreenPercentage = 100;
 
  private:
   TObjectPtr<UMochiArticulationBase> Articulation;

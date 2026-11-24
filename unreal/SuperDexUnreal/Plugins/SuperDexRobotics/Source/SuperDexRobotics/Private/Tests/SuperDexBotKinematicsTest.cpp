@@ -128,7 +128,7 @@ USuperDexBot* MakeBot(const superdex::robotics::BotPrefab& Prefab) {
 
 // The chain as an articulation, built without superdex_robotics.
 UMochiArticulation* MakeArticulation() {
-  const FMochiToUnrealConverter m2u(kSuperDexSpace);
+  const FMochiToUnrealConverter m2u(SuperDexSpace);
   TArray<FMochiArticulatedJoint> joints;
   TArray<FMochiArticulatedLink> links;
   joints.AddDefaulted(kNumLinks);
@@ -241,7 +241,7 @@ struct FKinematicsChecker {
       return RotationDistance(link.GetRotation(), Target.GetRotation());
     }
     const FTransform jointFromLink =
-        FMochiToUnrealConverter(kSuperDexSpace).TransformToUnreal(ChainParentJointFromLink(I));
+        FMochiToUnrealConverter(SuperDexSpace).TransformToUnreal(ChainParentJointFromLink(I));
     return FVector::Dist(
         (jointFromLink.Inverse() * link).GetTranslation(),
         (jointFromLink.Inverse() * Target).GetTranslation());
@@ -348,7 +348,7 @@ struct FKinematicsChecker {
     // another, so the angle is 0.
     {
       // LinkToParent = ParentJointFromLink * Motion * ParentLinkFromJoint, with the turn as Motion.
-      const FMochiToUnrealConverter m2u(kSuperDexSpace);
+      const FMochiToUnrealConverter m2u(SuperDexSpace);
       const FVector axis = m2u.DirectionToUnreal(kChain[revolute].Axis).GetSafeNormal();
       const FVector perpendicular =
           FVector::CrossProduct(axis, FVector::ForwardVector).GetSafeNormal();

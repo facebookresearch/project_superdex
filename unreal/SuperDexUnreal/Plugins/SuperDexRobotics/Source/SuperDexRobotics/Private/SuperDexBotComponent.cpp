@@ -226,7 +226,7 @@ void USuperDexBotComponent::BeginPlay() {
   // TODO: superdex_robotics does not yet support loading a bot into coordinate spaces
   // other than RH, Z up. Until it does, throw an error and ensure.
   const auto& activeSpace = UMochiPhysicsSettings::GetActiveSimulationSpace();
-  if (activeSpace != kSuperDexSpace) {
+  if (activeSpace != SuperDexSpace) {
     UE_LOG(
         LogMochiPhysics,
         Error,

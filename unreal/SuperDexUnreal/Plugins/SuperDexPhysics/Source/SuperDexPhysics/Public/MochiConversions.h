@@ -80,11 +80,11 @@ struct TMochiToUnrealConverter : protected TMochiSpaceConverter<T> {
   FORCEINLINE TMochiToUnrealConverter()
       : TMochiSpaceConverter<T>(
             UMochiPhysicsSettings::GetActiveSimulationSpace(),
-            kUnrealCentimetersSpace) {}
+            UnrealCentimetersSpace) {}
 
   FORCEINLINE explicit TMochiToUnrealConverter(
       const FMochiSpaceDefinition& InInputSpace,
-      const FMochiSpaceDefinition& InOutputSpace = kUnrealCentimetersSpace)
+      const FMochiSpaceDefinition& InOutputSpace = UnrealCentimetersSpace)
       : TMochiSpaceConverter<T>(InInputSpace, InOutputSpace) {}
 
   FORCEINLINE T MeasureToUnreal(mochi::real S, int N = 1) const {
@@ -146,12 +146,12 @@ struct TUnrealToMochiConverter : protected TMochiSpaceConverter<T> {
 
   FORCEINLINE TUnrealToMochiConverter()
       : TMochiSpaceConverter<T>(
-            kUnrealCentimetersSpace,
+            UnrealCentimetersSpace,
             UMochiPhysicsSettings::GetActiveSimulationSpace()) {}
 
   FORCEINLINE explicit TUnrealToMochiConverter(
       const FMochiSpaceDefinition& InOutputSpace,
-      const FMochiSpaceDefinition& InInputSpace = kUnrealCentimetersSpace)
+      const FMochiSpaceDefinition& InInputSpace = UnrealCentimetersSpace)
       : TMochiSpaceConverter<T>(InInputSpace, InOutputSpace) {}
 
   FORCEINLINE mochi::real MeasureToMochi(T S, int N = 1) const {

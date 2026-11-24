@@ -56,12 +56,12 @@ mochi::TransformRT ToNativeRigidFrame(const FTransform& Frame) {
   if (!Rotation.ContainsNaN() && Rotation.IsNormalized()) {
     Rotation.Normalize();
   }
-  return FUnrealToMochiConverter(kSuperDexSpace)
+  return FUnrealToMochiConverter(SuperDexSpace)
       .TransformToMochi_RT(FTransform(Rotation, Frame.GetTranslation()));
 }
 
 FTransform FromNativeRigidFrame(const mochi::TransformRT& Frame) {
-  auto Result = FMochiToUnrealConverter(kSuperDexSpace).TransformToUnreal(Frame);
+  auto Result = FMochiToUnrealConverter(SuperDexSpace).TransformToUnreal(Frame);
   // Native validation allows 1e-4 norm roundoff; use unit UE quaternions at the API boundary.
   if (!Result.GetRotation().ContainsNaN() &&
       FMath::IsNearlyEqual(Result.GetRotation().SizeSquared(), 1.0, 2.1e-4)) {

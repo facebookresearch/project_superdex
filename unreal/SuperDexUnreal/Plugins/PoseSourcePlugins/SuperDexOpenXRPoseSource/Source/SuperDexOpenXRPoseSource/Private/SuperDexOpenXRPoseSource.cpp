@@ -67,7 +67,7 @@ constexpr FNominalPhalanx NominalPhalanges[] = {
     {ESuperDexBone_OXR::LittleTip, 0.0219575},
 };
 
-// Bots are shown in Unreal at 1 cm per Unreal unit (kUnrealCentimetersSpace).
+// Bots are shown in Unreal at 1 cm per Unreal unit (UnrealCentimetersSpace).
 constexpr double BotUnitsPerMeter = 100.0;
 
 /* C: maps an OpenXR joint frame, as UE's OpenXR plugin reports it, to the imported bone frame. */

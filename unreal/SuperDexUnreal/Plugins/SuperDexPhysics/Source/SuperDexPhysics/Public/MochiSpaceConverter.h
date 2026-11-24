@@ -38,7 +38,7 @@ struct TMochiSpaceConverter {
   typedef UE::Math::TTransform<T> TTransform;
 
  public:
-  FORCEINLINE TMochiSpaceConverter() : TMochiSpaceConverter(kUnrealCentimetersSpace, kMochiSpace) {}
+  FORCEINLINE TMochiSpaceConverter() : TMochiSpaceConverter(UnrealCentimetersSpace, MochiSpace) {}
 
   TMochiSpaceConverter(
       const FMochiSpaceDefinition& InInputSpace,

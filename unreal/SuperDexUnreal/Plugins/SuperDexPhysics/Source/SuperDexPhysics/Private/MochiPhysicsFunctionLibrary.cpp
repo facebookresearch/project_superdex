@@ -205,10 +205,10 @@ double UMochiPhysicsFunctionLibrary::GetTotalSimulatedTimeSinceStartSec(UObject*
   return 0;
 }
 
-void UMochiPhysicsFunctionLibrary::StartRecording(UObject* WorldContext, const FString& filePath) {
+void UMochiPhysicsFunctionLibrary::StartRecording(UObject* WorldContext, const FString& FilePath) {
   UMochiGameInstanceSubsystem* const Subsys = GetMochiGameInstanceSubsystem(WorldContext);
   if (Subsys && Subsys->GetScene()) {
-    Subsys->GetScene()->StartRecording(filePath);
+    Subsys->GetScene()->StartRecording(FilePath);
   }
 }
 
@@ -221,13 +221,13 @@ void UMochiPhysicsFunctionLibrary::StopRecording(UObject* WorldContext) {
 
 void UMochiPhysicsFunctionLibrary::ExportMochiScene(
     UObject* WorldContext,
-    const FString& exportName,
-    const FString& filePath) {
+    const FString& ExportName,
+    const FString& FilePath) {
   UMochiGameInstanceSubsystem* const Subsys = GetMochiGameInstanceSubsystem(WorldContext);
   if (Subsys && Subsys->GetScene()) {
-    Subsys->GetScene()->QueueOrExecuteCommand([exportName, filePath](mochi::Scene* Scene) {
+    Subsys->GetScene()->QueueOrExecuteCommand([ExportName, FilePath](mochi::Scene* Scene) {
       mochi::Error E;
-      mochi::prefab::ExportScene(Scene, TCHAR_TO_UTF8(*exportName), TCHAR_TO_UTF8(*filePath), E);
+      mochi::prefab::ExportScene(Scene, TCHAR_TO_UTF8(*ExportName), TCHAR_TO_UTF8(*FilePath), E);
     });
   }
 }

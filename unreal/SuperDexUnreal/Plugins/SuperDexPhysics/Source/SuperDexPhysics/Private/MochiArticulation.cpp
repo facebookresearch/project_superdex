@@ -576,7 +576,7 @@ void UMochiArticulation::ClampJointPositions(TArray<double>& JointPositions) con
 
 void UMochiArticulation::RandomJointPositions(
     TArray<double>& JointPositions,
-    bool NormalDistribution) const {
+    bool bNormalDistribution) const {
   // for generating normally distributed random numbers
   std::random_device Rd{};
   std::mt19937 Gen{Rd()};
@@ -593,7 +593,7 @@ void UMochiArticulation::RandomJointPositions(
     const double Fallback = bTranslation ? 1.0 : UE_DOUBLE_PI;
     Lower = FMath::IsFinite(Lower) ? Lower : -Fallback;
     Upper = FMath::IsFinite(Upper) ? Upper : +Fallback;
-    if (NormalDistribution) {
+    if (bNormalDistribution) {
       JointPositions[DofIndex] = FMath::GetMappedRangeValueClamped(
           TRange<double>{-2.5, 2.5}, TRange<double>{Lower, Upper}, D(Gen));
     } else {

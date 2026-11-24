@@ -61,7 +61,7 @@ inline mochi::Real3 ToMochiType(FVector T) {
 inline mochi::VMatrix4x4r UnrealToMatrix(const FVector& S, const FTransform& RT) {
   mochi::VMatrix4x4r ScaleMatrix = mochi::VDiagonalMatrix<4>(ToSimd(ToMochiType(S), 1_r));
   mochi::Quaternion R = ToMochiType(RT.GetRotation());
-  mochi::Real3 T = ToMochiType(RT.GetTranslation() / kUnrealCentimetersSpace.UnitsPerMeter);
+  mochi::Real3 T = ToMochiType(RT.GetTranslation() / UnrealCentimetersSpace.UnitsPerMeter);
   mochi::VMatrix4x4r Rt = ToVMatrix4x4(mochi::TransformRT(R, T));
   mochi::VMatrix4x4r Srt = Dot4x4(Rt, ScaleMatrix);
   return Srt;

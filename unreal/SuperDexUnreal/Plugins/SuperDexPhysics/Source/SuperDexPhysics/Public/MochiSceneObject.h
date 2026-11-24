@@ -30,8 +30,8 @@ struct FMochiSceneStats {
   int NumActors;
   int NumLayers;
   int NumConstraints;
-  int numMochiStepsSinceStart = 0;
-  double totalSimulatedTimeSinceStartSec = 0;
+  int NumMochiStepsSinceStart = 0;
+  double TotalSimulatedTimeSinceStartSec = 0;
 };
 
 UENUM(BlueprintType)

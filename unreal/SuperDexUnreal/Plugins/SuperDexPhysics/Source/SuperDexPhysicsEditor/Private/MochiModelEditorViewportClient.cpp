@@ -113,7 +113,7 @@ void FMochiModelEditorViewportClient::Draw(const FSceneView* View, FPrimitiveDra
         PDI->DrawPoint(
             WorldPos,
             FLinearColor(61.0f / 255.0f, 200.0f / 255.0f, 1.0f),
-            kSelectedElementPointSize * (ViewFOV / kDefaultFOV),
+            SelectedElementPointSize * (ViewFOV / DefaultFOV),
             SDPG_Foreground);
         // scaling point size by FOV helps with orthographic view where a 5.0f point
         // is extremely large, whereas it looks reasonable in perspective view
@@ -128,9 +128,9 @@ void FMochiModelEditorViewportClient::Draw(const FSceneView* View, FPrimitiveDra
             if (ModifierAsset) {
               if (FMochiMaterialModifier* Modifier = ModifierAsset->MaterialModifiers.Find(i)) {
                 ElementColor = FMath::Lerp(
-                    kMinElementColor,
-                    kMaxElementColor,
-                    Modifier->YoungsModulus / kMaxYoungsModulusDisplay);
+                    MinElementColor,
+                    MaxElementColor,
+                    Modifier->YoungsModulus / MaxYoungsModulusDisplay);
                 bShouldDrawElement = true;
               }
             }
@@ -139,9 +139,9 @@ void FMochiModelEditorViewportClient::Draw(const FSceneView* View, FPrimitiveDra
             if (ModifierAsset) {
               if (FMochiMaterialModifier* Modifier = ModifierAsset->MaterialModifiers.Find(i)) {
                 ElementColor = FMath::Lerp(
-                    kMinElementColor,
-                    kMaxElementColor,
-                    Modifier->PoissonRatio / kMaxPoissonRatioDisplay);
+                    MinElementColor,
+                    MaxElementColor,
+                    Modifier->PoissonRatio / MaxPoissonRatioDisplay);
                 bShouldDrawElement = true;
               }
             }
@@ -157,7 +157,7 @@ void FMochiModelEditorViewportClient::Draw(const FSceneView* View, FPrimitiveDra
 
         if (bShouldDrawElement) {
           PDI->DrawPoint(
-              WorldPos, ElementColor, kElementPointSize * (ViewFOV / kDefaultFOV), SDPG_Foreground);
+              WorldPos, ElementColor, ElementPointSize * (ViewFOV / DefaultFOV), SDPG_Foreground);
           // scaling point size by FOV helps with orthographic view where a 5.0f point
           // is extremely large, whereas it looks reasonable in perspective view
         }

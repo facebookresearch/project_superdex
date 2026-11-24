@@ -95,7 +95,7 @@ USuperDexBot* GenericAsset(const superdex::robotics::BotPrefab& Model, const TCH
   auto* Mesh = NewObject<USkeletalMesh>(Asset);
   {
     FReferenceSkeletonModifier Modify(Mesh->GetRefSkeleton(), nullptr);
-    FMochiToUnrealConverter Converter(kSuperDexSpace);
+    FMochiToUnrealConverter Converter(SuperDexSpace);
     for (int I = 0; I < static_cast<int>(Model.links.size()); ++I) {
       auto A = Model.joints[I].parentLinkFromJoint;
       auto B = Model.links[I].parentJointFromLink;
@@ -343,7 +343,7 @@ bool FGenericBotIKGoalsAndMetadataTest::RunTest(const FString&) {
   TStrongObjectPtr<USuperDexBot> Input(GenericAsset(Model, TEXT("ScaleInput")));
   TStrongObjectPtr<USuperDexBot> Output(GenericAsset(Model, TEXT("ScaleOutput")));
   TStrongObjectPtr<USuperDexBotIKConfig> Config(GenericConfig(Input.Get(), Output.Get()));
-  FMochiToUnrealConverter ToUE(kSuperDexSpace);
+  FMochiToUnrealConverter ToUE(SuperDexSpace);
   Config->OutputBaseFrameFromInputBaseFrame = ToUE.TransformToUnreal(
       mochi::TransformRT{
           mochi::Quaternion::RotationZ(0.2_r), mochi::Real3{0.01_r, 0.02_r, -0.03_r}});

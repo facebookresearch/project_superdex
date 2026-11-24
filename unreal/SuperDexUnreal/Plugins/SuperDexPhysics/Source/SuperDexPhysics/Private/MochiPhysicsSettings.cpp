@@ -79,7 +79,7 @@ UMochiPhysicsSettings::UMochiPhysicsSettings() {
           .Object;
 }
 
-FMochiSpaceDefinition UMochiPhysicsSettings::ActiveSimulationSpace = kSuperDexSpace;
+FMochiSpaceDefinition UMochiPhysicsSettings::ActiveSimulationSpace = SuperDexSpace;
 bool UMochiPhysicsSettings::bHasActiveOverride = false;
 
 const FMochiSpaceDefinition& UMochiPhysicsSettings::GetActiveSimulationSpace() {

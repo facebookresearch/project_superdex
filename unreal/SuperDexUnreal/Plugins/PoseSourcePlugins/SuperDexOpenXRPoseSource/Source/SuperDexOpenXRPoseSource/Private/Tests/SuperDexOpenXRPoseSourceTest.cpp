@@ -44,7 +44,7 @@ FQuat XrToUnreal(const FQuat& Xr) {
 
 // What the superdex importer makes of a right-handed bot rotation.
 FQuat BotToUnreal(const FQuat& Bot) {
-  const TMochiToUnrealConverter<double> M2U(kSuperDexSpace);
+  const TMochiToUnrealConverter<double> M2U(SuperDexSpace);
   return M2U.RotationToUnreal(
       mochi::Quaternion(
           static_cast<mochi::real>(Bot.X),
@@ -55,7 +55,7 @@ FQuat BotToUnreal(const FQuat& Bot) {
 
 // What the superdex importer made a right-handed bot rotation into, back in the bot's space.
 FQuat UnrealToBot(const FQuat& Unreal) {
-  const TUnrealToMochiConverter<double> U2M(kSuperDexSpace);
+  const TUnrealToMochiConverter<double> U2M(SuperDexSpace);
   const mochi::Real4 V = U2M.RotationToMochi(Unreal).ToReal4();
   return FQuat(V[0], V[1], V[2], V[3]);
 }

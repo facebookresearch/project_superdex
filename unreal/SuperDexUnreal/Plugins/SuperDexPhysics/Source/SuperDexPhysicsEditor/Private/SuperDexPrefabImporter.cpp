@@ -428,7 +428,7 @@ class FMapOutput : public FSuperDexPrefabImporter::FOutput {
 } // namespace
 
 FSuperDexPrefabImporter::FSuperDexPrefabImporter(FSuperDexImportSession& InSession)
-    : Session(InSession), M2U(kSuperDexSpace) {}
+    : Session(InSession), M2U(SuperDexSpace) {}
 
 //------------------------------------------------------------------------------
 // Asset locations and tracking

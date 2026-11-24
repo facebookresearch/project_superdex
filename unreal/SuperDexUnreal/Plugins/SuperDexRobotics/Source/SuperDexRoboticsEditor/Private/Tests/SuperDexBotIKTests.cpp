@@ -1461,7 +1461,7 @@ bool FSuperDexBotIKAttachmentTest::RunTest(const FString&) {
   if (!TestTrue(TEXT("Prepare expected attachment FK"), Error.IsOK())) {
     return false;
   }
-  FMochiToUnrealConverter Converter(kSuperDexSpace);
+  FMochiToUnrealConverter Converter(SuperDexSpace);
   FSuperDexBotIKGoalConfig Goal;
   Goal.Name = TEXT("AttachmentGoal");
   Goal.OutputBotLink = TEXT("tip");
@@ -1555,7 +1555,7 @@ bool FSuperDexBotIKJointCouplingTest::RunTest(const FString&) {
   Goal.OutputBotLink = TEXT("tip");
   Goal.PositionStiffness = 0;
   Goal.RotationStiffness = 100;
-  FMochiToUnrealConverter Converter(kSuperDexSpace);
+  FMochiToUnrealConverter Converter(SuperDexSpace);
   Goal.BaseOrInputLinkFrameFromConstraintFrame =
       Converter.TransformToUnreal(mochi::TransformRT{mochi::Quaternion::RotationZ(0.7_r)});
   Config->Goals.Add(Goal);

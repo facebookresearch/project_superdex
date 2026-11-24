@@ -866,7 +866,7 @@ bool USuperDexIKSolverObject::SolveIK() {
 
 void USuperDexIKSolverObject::UpdateBotResults() {
   FMochiToUnrealConverter m2u(
-      bNativeJointLayout ? kSuperDexSpace : UMochiPhysicsSettings::GetActiveSimulationSpace());
+      bNativeJointLayout ? SuperDexSpace : UMochiPhysicsSettings::GetActiveSimulationSpace());
   const auto WorldFromLinks = NativeIK->GetWorldFromLinks();
   SolvedLinkToWorld.SetNum(static_cast<int>(WorldFromLinks.size()));
   for (int iLink = 0; iLink < SolvedLinkToWorld.Num(); ++iLink) {
