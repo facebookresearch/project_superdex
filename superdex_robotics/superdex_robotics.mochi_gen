@@ -22,19 +22,19 @@ fn bots::Derive(uint64 seed, StringView key, Optional<uint64> index = {}) -> uin
 struct bots::RoboticsHandle [equality, sortable, hashable] {
   uint64 value;
   fn IsValid() -> bool [const];
-}
+};
 
 // @brief Distinct handle identifying a bot in its owning @ref RoboticsContext.
-struct bots::BotHandle(bots::RoboticsHandle) {}
+struct bots::BotHandle(bots::RoboticsHandle) {};
 
 // @brief Distinct handle identifying a controller in its owning @ref RoboticsContext.
-struct bots::ControllerHandle(bots::RoboticsHandle) {}
+struct bots::ControllerHandle(bots::RoboticsHandle) {};
 
 // @brief Distinct handle identifying a sensor in its owning @ref RoboticsContext.
-struct bots::SensorHandle(bots::RoboticsHandle) {}
+struct bots::SensorHandle(bots::RoboticsHandle) {};
 
 // @brief Distinct handle identifying an actuator in its owning @ref RoboticsContext.
-struct bots::ActuatorHandle(bots::RoboticsHandle) {}
+struct bots::ActuatorHandle(bots::RoboticsHandle) {};
 
 // @brief Type of content stored in a .superdex_bot file.
 enum bots::BotFileType {
@@ -44,7 +44,7 @@ enum bots::BotFileType {
   ModBotPrefab,
   // @brief Number of enum values.
   Count,
-}
+};
 
 // @brief Reference space for computed link transforms.
 enum bots::LinkTransformSpace {
@@ -54,7 +54,7 @@ enum bots::LinkTransformSpace {
   RootFromParent,
   // @brief Number of enum values.
   Count,
-}
+};
 
 // @brief Sentinel @ref BotJointPrefab::effortLimit value: the joint's actuation effort is
 // unbounded.
@@ -69,7 +69,7 @@ struct bots::BotJointPrefab(prefab::ArticulatedJointPrefab) [equality(default), 
   // limit. This is advisory metadata — it is not copied into the physics articulation, so the sim
   // enforces nothing on its own; controllers may read it (e.g. to clamp their output).
   real effortLimit [no_serialize_defaults] = bots::kEffortUnbounded;
-}
+};
 
 // @brief Parameters describing a single sensor in a bot.
 struct bots::BotSensorPrefab [equality(default), no_reflection] {
@@ -93,7 +93,7 @@ struct bots::BotSensorPrefab [equality(default), no_reflection] {
   // @brief Legacy key captured on load: older assets named this field `paramsFile`. Folded into
   // `params` by ApplyLegacyBotSensorFields and cleared (so re-saves omit it).
   String _legacyParamsFile [no_python, no_serialize_defaults, reflection_name("paramsFile")];
-}
+};
 
 // @brief Parameters describing a single actuator in a bot.
 struct bots::BotActuatorPrefab [equality(default), no_reflection] {
@@ -103,7 +103,7 @@ struct bots::BotActuatorPrefab [equality(default), no_reflection] {
   String name;
   // @brief Actuator parameters: a path to a params JSON file or inline JSON. Empty uses defaults.
   String params [json_string, no_serialize_defaults];
-}
+};
 
 // @brief Parameters describing a single link (body) in a bot.
 struct bots::BotLinkPrefab(prefab::ArticulatedLinkPrefab) [equality(default), no_reflection] {
@@ -123,7 +123,7 @@ struct bots::BotLinkPrefab(prefab::ArticulatedLinkPrefab) [equality(default), no
   // @brief [Internal] Transform to bot root; computed at runtime by RebuildBotData; DO NOT
   // TOUCH!
   TransformRT _rootFromLink [no_python, no_reflection];
-}
+};
 
 // @brief Used to explicitly enable or disable contact between links in a bot. By default, all bots
 // will spawn with contact disabled between links and their first ancestor with a physics body not
@@ -139,7 +139,7 @@ struct bots::BotContactOverride [no_reflection] {
   String linkB;
   // @brief Should contact between the pair be enabled?
   bool enable = false;
-}
+};
 
 // @brief Common parameters for bot transmissions (linear transmissions and spatial tendons).
 //
@@ -149,7 +149,7 @@ struct bots::BotContactOverride [no_reflection] {
 struct bots::BotTransmissionPrefab(experimental::DisplacementControlActuatorParams) [equality(default), no_reflection] {
   // @brief Human-readable label (used by the editor UI; not consumed by the runtime API).
   String name;
-}
+};
 
 // @brief Parameters describing a single linear transmission attached to a bot.
 //
@@ -175,7 +175,7 @@ struct bots::BotLinearTransmissionPrefab(bots::BotTransmissionPrefab) [equality(
   // point at each joint. This allows the transmission to be offset from the joint
   // origin along the axis.
   DynamicArray<real> jointAxisDisps;
-}
+};
 
 // @brief Parameters describing a single spatial tendon attached to a bot.
 //
@@ -190,7 +190,7 @@ struct bots::BotSpatialTendonPrefab(bots::BotTransmissionPrefab) [equality(defau
   // @brief Ordered routing elements defining the tendon path. Must contain at least
   // one element, and every waypoint must be adjacent to another waypoint.
   DynamicArray<RoutingElement> routingElements;
-}
+};
 
 // @brief Complete parameter set for a bot.
 struct bots::BotPrefab [no_reflection] {
@@ -244,13 +244,13 @@ struct bots::BotPrefab [no_reflection] {
   // history that cannot be reconstructed from a flattened bot, so it is serialized. Populated by
   // ApplyMod only; DO NOT set by hand.
   DynamicArray<String> _skinBoneLinks [no_python, no_serialize_defaults, reflection_name("skinBoneLinks")];
-}
+};
 
 // @brief Base fields shared by bot modification actions.
 struct bots::BotModBase [no_python, no_reflection] {
   String name;
   bool enabled = true;
-}
+};
 
 // @brief Attach an external bot file to a parent link.
 struct bots::AttachBot(bots::BotModBase) [no_python, no_reflection] {
@@ -259,32 +259,32 @@ struct bots::AttachBot(bots::BotModBase) [no_python, no_reflection] {
   String prefix [no_serialize_defaults];
   String path;
   bool attachLinearTransmissions [no_serialize_defaults] = false;
-}
+};
 
 // @brief Attach a single link to a parent link.
 struct bots::AttachLink(bots::BotModBase) [no_python, no_reflection] {
   String parentLinkName;
   bots::BotJointPrefab joint [no_serialize_defaults];
   bots::BotLinkPrefab link [no_serialize_defaults];
-}
+};
 
 // @brief Replace a link and its descendants with a new link, preserving the joint.
 struct bots::ReplaceLink(bots::BotModBase) [no_python, no_reflection] {
   String linkToReplace;
   bots::BotLinkPrefab link [no_serialize_defaults];
-}
+};
 
 // @brief Replace a link and its descendants with an external bot, preserving the joint.
 struct bots::ReplaceLinkWithBot(bots::BotModBase) [no_python, no_reflection] {
   String linkToReplace;
   String prefix [no_serialize_defaults];
   String path;
-}
+};
 
 // @brief Attach a deformable skin to a bot.
 struct bots::AttachSkin(bots::BotModBase) [no_python, no_reflection] {
   prefab::ArticulatedSkinPrefab skin;
-}
+};
 
 // @brief Metadata stored at the root of a bot archive.
 struct bots::BotArchiveMetadata [no_python, no_reflection] {
@@ -294,7 +294,7 @@ struct bots::BotArchiveMetadata [no_python, no_reflection] {
   String target;
   Optional<String> comment;
   DynamicArray<String> warnings;
-}
+};
 
 // @brief Load bot parameters from a .superdex_bot file using the default file-based loader.
 // Automatically resolves ModBotPrefab files by building the final @ref BotPrefab.
@@ -541,7 +541,7 @@ class bots::RoboticsContext [no_init, no_destruct] {
   // @param[in] name Exact bot name to match.
   // @return Handles of every matching live bot; empty if none.
   fn FindBotsByName(StringView name) -> DynamicArray<bots::BotHandle> [const];
-}
+};
 
 // @brief Create a new @ref RoboticsContext.
 //
@@ -612,7 +612,7 @@ class bots::ComponentBase [no_init, no_destruct] {
   // Parameters are preserved. Use between episodes to clear stale state
   // (e.g., derivative tracking, timing diagnostics).
   fn Reset() -> void [pure, virtual];
-}
+};
 
 // @brief What a controller's float input holds (see @ref ControllerBase::GetInputKind).
 enum bots::ControllerInputKind {
@@ -626,7 +626,7 @@ enum bots::ControllerInputKind {
   Custom,
   // @brief Number of enum values.
   Count,
-}
+};
 
 // @brief Base class for all controllers.
 // Inherits common lifecycle from ComponentBase. Controllers are identified
@@ -668,7 +668,7 @@ class bots::ControllerBase(bots::ComponentBase) [no_init, no_destruct] {
   // @param[in] paramArgs Params file path or inline JSON; empty uses defaults.
   // @param[in] initArgs Controller-specific init-argument file path or inline JSON.
   fn ConfigureFromSceneEntry(StringView paramArgs, StringView initArgs) -> void [pure, virtual, mochi_error];
-}
+};
 
 // @brief Basic operational-space PD controller parameters.
 //
@@ -710,7 +710,7 @@ struct bots::ControllerBasicOscPdParams [no_reflection] {
   // @brief Save controller parameters to a JSON file.
   // @param[in] path Destination file path.
   fn SaveToFile(StringView path) -> void [mochi_error, const];
-}
+};
 
 // @brief Scene-entry initialization arguments for @ref ControllerBasicOscPd. Unrecognized keys
 // are ignored on load.
@@ -719,7 +719,7 @@ struct bots::ControllerBasicOscPdInitArgs [no_python, no_reflection] {
   String baseLinkName;
   // @brief End-effector link name.
   String eeLinkName;
-}
+};
 
 // @brief Observation state — robot state variables read each control step.
 // Fill it with GetCurrentObservationsFromMochi to read the live simulation, or populate it
@@ -735,13 +735,13 @@ struct bots::ControllerBasicOscPdObsv {
   TransformRT worldFromEELink;
   // @brief 6×numDofs EE Jacobian in world frame (row-major)
   DynamicArray<real> eeJacobian;
-}
+};
 
 // @brief Target setpoint for the controller.
 struct bots::ControllerBasicOscPdTarget {
   // @brief Target EE pose in root frame
   TransformRT rootFromTargetEE;
-}
+};
 
 // @brief Basic operational-space PD (impedance) controller for robotic arms.
 //
@@ -800,7 +800,7 @@ class bots::ControllerBasicOscPd(bots::ControllerBase) [no_init, no_destruct] {
   // @return Efforts for all DOFs [Nm]. Uncontrolled DOFs are set to 0. Empty span on error.
   fn ComputeOutput(bots::ControllerBasicOscPdObsv const& obsv, bots::ControllerBasicOscPdTarget const& target) -> Span<real const> [mochi_error, overloaded];
 
-}
+};
 
 // @brief ControllerMochiArticulatedPose parameters.
 struct bots::ControllerMochiArticulatedPoseParams [no_reflection] {
@@ -814,10 +814,10 @@ struct bots::ControllerMochiArticulatedPoseParams [no_reflection] {
   // @brief Save controller parameters to a JSON file.
   // @param[in] path Destination file path.
   fn SaveToFile(StringView path) -> void [mochi_error, const];
-}
+};
 
 // @brief Observation state (empty — this controller is target-driven).
-struct bots::ControllerMochiArticulatedPoseObsv {}
+struct bots::ControllerMochiArticulatedPoseObsv {};
 
 // @brief Target to drive the ArticulatedPoseController toward.
 // Provide exactly one of @ref bots::ControllerMochiArticulatedPoseTarget::localToParentTransforms or
@@ -829,7 +829,7 @@ struct bots::ControllerMochiArticulatedPoseTarget {
   DynamicArray<TransformRT> localToParentTransforms;
   // @brief Non-root joint DOFs; root DOFs are derived from worldFromRoot
   DynamicArray<real> poseDofs;
-}
+};
 
 // @brief ControllerMochiArticulatedPose -- drives a mochi ArticulatedPoseController
 // via either per-link LocalToParent transforms (converted to world-space targets)
@@ -864,7 +864,7 @@ class bots::ControllerMochiArticulatedPose(bots::ControllerBase) [no_init, no_de
   // Exactly one must be provided.
   // @return Empty span — control is applied internally via the pose controller.
   fn ComputeOutput(bots::ControllerMochiArticulatedPoseObsv const& obsv, bots::ControllerMochiArticulatedPoseTarget const& target) -> Span<real const> [mochi_error];
-}
+};
 
 // @brief Runtime interface to a bot instance in a @ref Scene.
 //
@@ -1052,7 +1052,7 @@ class bots::Bot [no_init, no_destruct] {
   // @param[in] typeName Exact registered type name to match.
   // @return Handles of every match in creation order; empty if none.
   fn FindActuatorsByType(StringView typeName) -> DynamicArray<bots::ActuatorHandle> [pure, virtual, const];
-}
+};
 
 // @brief Convert a bot-space pose to an articulated-actor pose.
 //
@@ -1091,7 +1091,7 @@ struct bots::ControllerBasicJscPdParams [no_reflection] {
   // @brief Save controller parameters to a JSON file.
   // @param[in] path Destination file path.
   fn SaveToFile(StringView path) -> void [mochi_error, const];
-}
+};
 
 // @brief Observation state — robot state variables read each control step.
 // Fill it with GetCurrentObservationsFromMochi to read the live simulation, or populate it
@@ -1103,13 +1103,13 @@ struct bots::ControllerBasicJscPdObsv {
   DynamicArray<real> dofVelocities;
   // @brief Time since the last ComputeOutput call [s]
   real dt;
-}
+};
 
 // @brief Target setpoint for the controller.
 struct bots::ControllerBasicJscPdTarget {
   // @brief Target joint positions [m or rad]
   DynamicArray<real> targetPose;
-}
+};
 
 // @brief Parameters for a camera sensor (fixed or wrist-mounted).
 // Loaded from a .superdex_sensor JSON file via SReflect.
@@ -1137,7 +1137,7 @@ struct bots::SensorCameraParams [no_reflection] {
   Real3 upAxisLocal;
   // @brief Distance ahead of offset point to place look-at target (wrist cameras only).
   real lookDistance [units("m")];
-}
+};
 
 // @brief Geometry used to flatten a tactile spherical cap into a rectangle.
 enum bots::TactileRectProjectionType [no_reflection] {
@@ -1147,7 +1147,7 @@ enum bots::TactileRectProjectionType [no_reflection] {
   AzimuthalEquidistant = 2,
   // @brief Standard octahedral direction encoding.
   Octahedral = 3,
-}
+};
 
 // @brief Resampling from projected taxels into the output grid.
 enum bots::TactileRectRasterizationType [no_reflection] {
@@ -1155,7 +1155,7 @@ enum bots::TactileRectRasterizationType [no_reflection] {
   ConservativeVoronoi = 1,
   // @brief Accumulate every taxel's complete force into its nearest output cell.
   NearestCell = 2,
-}
+};
 
 // @brief Handling for source taxels outside a configured tactile spherical cap.
 enum bots::TactileRectOutsidePolicy [no_reflection] {
@@ -1163,7 +1163,7 @@ enum bots::TactileRectOutsidePolicy [no_reflection] {
   Reject = 1,
   // @brief Explicitly exclude taxels outside the configured cap.
   Exclude = 2,
-}
+};
 
 // @brief Fixed geometry for a SEED force RectMap sensor.
 struct bots::SensorSeedRectMapParams [no_reflection] {
@@ -1177,7 +1177,7 @@ struct bots::SensorSeedRectMapParams [no_reflection] {
   bots::TactileRectRasterizationType rasterization = bots::TactileRectRasterizationType::ConservativeVoronoi;
   int voronoiOversampling = 4;
   bots::TactileRectOutsidePolicy outsidePolicy = bots::TactileRectOutsidePolicy::Reject;
-}
+};
 
 // @brief SEED tactile sensor parameters.
 struct bots::SensorSeedV1MLPParams {
@@ -1187,7 +1187,7 @@ struct bots::SensorSeedV1MLPParams {
   Real3 hemisphereCenterOffset [units("m")];
   // @brief When true, output = raw contact force (skip MLP inference).
   bool bypassModel;
-}
+};
 
 // @brief SEED tactile sensor result.
 struct bots::SensorSeedV1MLPResult {
@@ -1197,7 +1197,7 @@ struct bots::SensorSeedV1MLPResult {
   Real3 contactCentroid;
   Real3 contactNormal;
   int numContacts;
-}
+};
 
 // @brief Fixed oldest-first rolling-window configuration.
 struct bots::SensorTemporalWindowParams [no_reflection] {
@@ -1206,7 +1206,7 @@ struct bots::SensorTemporalWindowParams [no_reflection] {
   // @brief Rows before the first sample since a reset repeat that sample, its capture and
   // publication included, instead of holding zeros.
   bool padWithFirst = false;
-}
+};
 
 // @brief Episode seed and stable acquisition stream identity.
 struct bots::SensorRandomParams [no_reflection] {
@@ -1214,7 +1214,7 @@ struct bots::SensorRandomParams [no_reflection] {
   // @brief Names the node's streams. Empty keys them by the node's graph name, the name its
   // SensorGraph node was added under, so each node declared in an asset draws its own.
   String processKey;
-}
+};
 
 // @brief Time-domain delay configuration, with optional seeded jitter.
 struct bots::SensorDelayLineParams [no_reflection] {
@@ -1232,13 +1232,13 @@ struct bots::SensorDelayLineParams [no_reflection] {
   // @brief The jitter's stream, drawn once per sample keyed by its capture step; needed when
   // jitterMs > 0.
   bots::SensorRandomParams random;
-}
+};
 
 // @brief Additive zero-mean Gaussian noise parameters.
 struct bots::SensorGaussianNoiseParams [no_reflection] {
   DynamicArray<real> std = {0.0};
   bots::SensorRandomParams random;
-}
+};
 
 // @brief Joint-encoder configuration.
 struct bots::SensorJointEncoderParams [no_reflection] {
@@ -1248,7 +1248,7 @@ struct bots::SensorJointEncoderParams [no_reflection] {
   // @brief Calibration offset added to each joint's position [rad or m], in output order; empty is
   // zeros.
   DynamicArray<real> offset [no_serialize_defaults];
-}
+};
 
 // @brief Additive uniform noise parameters.
 struct bots::SensorUniformNoiseParams [no_reflection] {
@@ -1257,7 +1257,7 @@ struct bots::SensorUniformNoiseParams [no_reflection] {
   // @brief Upper bound of each value's draw (exclusive), in input element units.
   double high = 0.0;
   bots::SensorRandomParams random;
-}
+};
 
 // @brief Outlier injection parameters.
 struct bots::SensorOutlierInjectionParams [no_reflection] {
@@ -1269,25 +1269,25 @@ struct bots::SensorOutlierInjectionParams [no_reflection] {
   // two rows of a uniformly random rotation instead.
   bool rotation = false;
   bots::SensorRandomParams random;
-}
+};
 
 // @brief Ordered, sensor-link-frame positions for a tactile taxel layout.
 struct bots::TactileTaxelLayout [no_reflection] {
   // @brief Taxel positions [m] in the sensor link frame. Their order is the taxel identity.
   DynamicArray<Real3> positions [units("m")];
-}
+};
 
 // @brief Dense per-taxel force observation for one tactile site.
 struct bots::TactileTaxelForces [no_reflection] {
   // @brief One force [N] per layout taxel, in the sensor link frame.
   DynamicArray<Real3> forces [units("N")];
-}
+};
 
 // @brief Aggregate force observation for one tactile site.
 struct bots::TactileAggregateForce [no_reflection] {
   // @brief Sum of the taxel forces [N], in the sensor link frame.
   Real3 force [units("N")];
-}
+};
 
 // @brief Aggregate wrench observation for one tactile site.
 struct bots::TactileAggregateWrench [no_reflection] {
@@ -1297,7 +1297,7 @@ struct bots::TactileAggregateWrench [no_reflection] {
   Real3 torque [units("Nm")];
   // @brief Point about which torque is resolved [m], in the sensor link frame.
   Real3 referencePoint [units("m")];
-}
+};
 
 // @brief Configuration for mapping a tactile spherical cap to a rectangle.
 struct bots::TactileHemisphereRectParams [no_reflection] {
@@ -1321,7 +1321,7 @@ struct bots::TactileHemisphereRectParams [no_reflection] {
   int voronoiOversampling = 4;
   // @brief Handling for source taxels beyond maxPolarLatitude.
   bots::TactileRectOutsidePolicy outsidePolicy = bots::TactileRectOutsidePolicy::Reject;
-}
+};
 
 // @brief Resolved, immutable mapping from an ordered taxel layout to a rectangular grid.
 struct bots::TactileRectProjectionMap [no_reflection] {
@@ -1345,7 +1345,7 @@ struct bots::TactileRectProjectionMap [no_reflection] {
   bots::TactileRectRasterizationType rasterization;
   // @brief Fine-grid scale used for Voronoi resampling, or one for nearest-cell mode.
   int voronoiOversampling;
-}
+};
 
 // @brief Rectangular tactile force grid for one site.
 struct bots::TactileForceGrid [no_reflection] {
@@ -1357,7 +1357,7 @@ struct bots::TactileForceGrid [no_reflection] {
   int width;
   // @brief Number of grid rows.
   int height;
-}
+};
 
 // @brief Build an ordered tactile taxel layout.
 //
@@ -1438,12 +1438,12 @@ class bots::ControllerBasicJscPd(bots::ControllerBase) [no_init, no_destruct] {
   // @return Efforts for all DOFs [N or Nm]. Returns empty span on error.
   fn ComputeOutput(bots::ControllerBasicJscPdObsv const& obsv, bots::ControllerBasicJscPdTarget const& target) -> Span<real const> [mochi_error, overloaded];
 
-}
+};
 
 // @brief Scalar representation of one sensor tensor element.
 enum bots::SensorDType {
   Float32,
-}
+};
 
 // @brief Meaning of one tensor dimension.
 // Labels are empty or contain one entry per element. Units are empty, contain one broadcast unit,
@@ -1452,7 +1452,7 @@ struct bots::SensorAxis [no_reflection] {
   String name;
   DynamicArray<String> labels;
   DynamicArray<String> units;
-}
+};
 
 // @brief Immutable shape and meaning of one sensor's numeric output.
 struct bots::SensorFormat [no_reflection] {
@@ -1460,7 +1460,7 @@ struct bots::SensorFormat [no_reflection] {
   DynamicArray<int> shape;
   bots::SensorDType dtype = Float32;
   DynamicArray<bots::SensorAxis> axes;
-}
+};
 
 // @brief Borrowed view of one completed sensor publication.
 // The payload remains producer-owned and is valid only until that sensor publishes, resets,
@@ -1470,7 +1470,7 @@ struct bots::SensorSample [no_reflection] {
   int64 captureStep;
   // @brief Source capture time in seconds.
   double captureTime;
-}
+};
 
 // @brief Base class for graph-native robot sensors.
 // Derives from ComponentBase for common identity and ownership. SensorGraph drives the uniform
@@ -1509,7 +1509,7 @@ class bots::SensorBase(bots::ComponentBase) [no_init, no_destruct] {
   //
   // @return Sensor pose in world space.
   fn GetWorldTransform() -> TransformRT [const];
-}
+};
 
 // @brief Actor-wide source of every measurable articulated-joint wrench.
 //
@@ -1519,13 +1519,13 @@ class bots::SensorArticulatedJointWrench(bots::SensorBase) [no_init, no_destruct
   // @brief Registration type name for this sensor (pass to RoboticsContext.create_sensor).
   // @return This sensor's canonical registration type name.
   fn TypeName() -> StringView [static];
-}
+};
 
 // @brief Acquisition cadence for a link vertex-force source.
 struct bots::SensorLinkVertexForceParams [no_reflection] {
   // @brief Samples per second, or zero to capture every graph step.
   real sampleRateHz [units("1/s")];
-}
+};
 
 // @brief Vertex-force point cloud derived from one link's ordered contact vertices.
 class bots::SensorLinkVertexForce(bots::SensorBase) [no_init, no_destruct, no_reflection] {
@@ -1535,11 +1535,11 @@ class bots::SensorLinkVertexForce(bots::SensorBase) [no_init, no_destruct, no_re
   // @brief Get acquisition parameters.
   // @return Current acquisition parameters.
   fn GetParams() -> bots::SensorLinkVertexForceParams const& [const];
-}
+};
 // @brief This sensor has no configurable parameters; this struct shows where developers can add
 // them.
 struct bots::SensorAggregateForceParams [no_reflection] {
-}
+};
 
 // @brief Sum one per-vertex force input into a three-axis force.
 class bots::SensorAggregateForce(bots::SensorBase) [no_init, no_destruct, no_reflection] {
@@ -1550,7 +1550,7 @@ class bots::SensorAggregateForce(bots::SensorBase) [no_init, no_destruct, no_ref
   // @brief Get aggregation parameters.
   // @return Current parameters.
   fn GetParams() -> bots::SensorAggregateForceParams const& [const];
-}
+};
 
 // @brief Leading-axis description for stacked sensor inputs.
 struct bots::SensorConcatParams [no_reflection] {
@@ -1558,7 +1558,7 @@ struct bots::SensorConcatParams [no_reflection] {
   String axisName;
   // @brief Optional labels, one per input in input order.
   DynamicArray<String> inputLabels;
-}
+};
 
 // @brief Stack equally formatted inputs, holding each input's latest reading.
 class bots::SensorConcat(bots::SensorBase) [no_init, no_destruct, no_reflection] {
@@ -1571,7 +1571,7 @@ class bots::SensorConcat(bots::SensorBase) [no_init, no_destruct, no_reflection]
   // @brief Capture steps of the input rows in the latest output.
   // @return Borrowed capture steps, in input order.
   fn GetInputCaptureSteps() -> Span<int64 const> [const];
-}
+};
 
 // @brief Base class for robot actuators.
 //
@@ -1596,7 +1596,7 @@ class bots::SensorConcat(bots::SensorBase) [no_init, no_destruct, no_reflection]
 // @ref GetActor == None in its destructor. Any concrete actuator whose destructor releases
 // actor-held resources must therefore guard on GetActor() != None (or, for context-owned
 // resources, resolve via GetContext()) so teardown never dereferences a dangling Actor*.
-class bots::ActuatorBase(bots::ComponentBase) [no_init, no_destruct] {}
+class bots::ActuatorBase(bots::ComponentBase) [no_init, no_destruct] {};
 
 // @brief Camera sensor runtime object.
 // Stores intrinsics/extrinsics for use by renderers (UE, etc.).
@@ -1615,13 +1615,13 @@ class bots::SensorCamera(bots::SensorBase) [no_init, no_destruct] {
   // @brief Set sensor parameters.
   // @param[in] params Params.
   fn SetParams(bots::SensorCameraParams const& params) -> void [mochi_error];
-}
+};
 
 // @brief Image-like force map derived from one vertex-force point-cloud sensor.
 class bots::SensorSeedRectMap(bots::SensorBase) [no_init, no_destruct, no_reflection] {
   fn TypeName() -> StringView [static];
   fn GetParams() -> bots::SensorSeedRectMapParams const& [const];
-}
+};
 
 // @brief SEED tactile sensor using Mochi-native MLP inference.
 class bots::SensorSeedV1MLP(bots::SensorBase) [no_init, no_destruct, no_reflection] {
@@ -1630,13 +1630,13 @@ class bots::SensorSeedV1MLP(bots::SensorBase) [no_init, no_destruct, no_reflecti
   fn ComputeSignal(Span<ContactPoint const> contacts) -> bots::SensorSeedV1MLPResult [mochi_error, overloaded];
   fn GetParams() -> bots::SensorSeedV1MLPParams const& [const];
   fn SetParams(bots::SensorSeedV1MLPParams const& params) -> void [mochi_error];
-}
+};
 
 // @brief Fixed oldest-first rolling window over one native-rate CPU float sensor.
 class bots::SensorTemporalWindow(bots::SensorBase) [no_init, no_destruct] {
   fn TypeName() -> StringView [static];
   fn GetParams() -> bots::SensorTemporalWindowParams const& [const];
-}
+};
 
 // @brief Time-domain delay over one fixed CPU sensor output, with optional seeded jitter that keeps
 // the samples in order. The first input sample after a reset publishes at once and holds until
@@ -1646,28 +1646,28 @@ class bots::SensorDelayLine(bots::SensorBase) [no_init, no_destruct] {
   fn GetParams() -> bots::SensorDelayLineParams [const];
   // @brief Install typed episode parameters before resetting the graph.
   fn SetParams(bots::SensorDelayLineParams const& params) -> void [mochi_error];
-}
+};
 
 // @brief Independent additive noise on new input publications.
 class bots::SensorGaussianNoise(bots::SensorBase) [no_init, no_destruct, no_reflection] {
   fn TypeName() -> StringView [static];
   fn GetParams() -> bots::SensorGaussianNoiseParams [const];
   fn SetParams(bots::SensorGaussianNoiseParams const& params) -> void [mochi_error];
-}
+};
 
 // @brief Independent additive uniform noise on new input publications.
 class bots::SensorUniformNoise(bots::SensorBase) [no_init, no_destruct, no_reflection] {
   fn TypeName() -> StringView [static];
   fn GetParams() -> bots::SensorUniformNoiseParams [const];
   fn SetParams(bots::SensorUniformNoiseParams const& params) -> void [mochi_error];
-}
+};
 
 // @brief Replaces whole input samples by outliers with a fixed probability.
 class bots::SensorOutlierInjection(bots::SensorBase) [no_init, no_destruct, no_reflection] {
   fn TypeName() -> StringView [static];
   fn GetParams() -> bots::SensorOutlierInjectionParams [const];
   fn SetParams(bots::SensorOutlierInjectionParams const& params) -> void [mochi_error];
-}
+};
 
 // @brief The owning bot's one-DOF joint states, published at every graph step, the reset step
 // included, as a [2, N] tensor: row 0 the positions plus per-joint calibration offsets, row 1 the
@@ -1678,13 +1678,13 @@ class bots::SensorJointEncoder(bots::SensorBase) [no_init, no_destruct, no_refle
   // @brief Install new offsets, for example randomized ones. The joints cannot change once the
   // graph has initialized the sensor.
   fn SetParams(bots::SensorJointEncoderParams const& params) -> void [mochi_error];
-}
+};
 
 // @brief Source that publishes the values a C++ function writes at every step of its graph, the
 // reset step included. Scene and bot files cannot declare it.
 class bots::SensorFunction(bots::SensorBase) [no_init, no_destruct, no_reflection] {
   fn TypeName() -> StringView [static];
-}
+};
 
 // @brief Create a @ref Bot runtime object from a @ref BotPrefab. Builds the underlying
 // articulated actor in scene and seeds its default pose. The returned @ref Bot owns no
@@ -1722,7 +1722,7 @@ struct bots::BotSceneArchiveMetadata [no_python, no_reflection] {
   String commitHash;
   String target;
   Optional<String> comment;
-}
+};
 
 // @brief Human-readable metadata for a .superdex_scene file. Not consumed by the runtime.
 struct bots::BotSceneMetadata [no_reflection] {
@@ -1734,7 +1734,7 @@ struct bots::BotSceneMetadata [no_reflection] {
   String version;
   // @brief Author name or unixname.
   String author;
-}
+};
 
 // @brief A named reference to a spawnable scene, prefab, bot, or bot archive.
 struct bots::PrefabEntry [no_reflection] {
@@ -1743,7 +1743,7 @@ struct bots::PrefabEntry [no_reflection] {
   // @brief Relative path to a .mochi_scene, .mochi_prefab, .superdex_bot, or
   // .superdex_bot_archive file.
   String path;
-}
+};
 
 // @brief Scene definition within a .superdex_scene.
 //
@@ -1760,7 +1760,7 @@ struct bots::BaseSceneParams [no_reflection] {
   // root-level spawns are placed onto it, through the task's taskRootOffset when it declares one.
   // Unset leaves every task where its own coordinates put it.
   Optional<TransformRT> taskRoot [no_serialize_defaults];
-}
+};
 
 // @brief A controller instance to create and attach to a bot.
 struct bots::ControllerEntry [no_reflection, ignore_extraneous_fields] {
@@ -1783,7 +1783,7 @@ struct bots::ControllerEntry [no_reflection, ignore_extraneous_fields] {
   // this string at load time -- see LoadBotScenePrefabFromFile; new scenes and all saves use the
   // nested form.)
   String initArgs [json_string, no_serialize_defaults] = "{}";
-}
+};
 
 // @brief A bot (robot) to instantiate in the scene.
 struct bots::BotEntry [no_reflection] {
@@ -1810,7 +1810,7 @@ struct bots::BotEntry [no_reflection] {
   // @brief Legacy key captured on load: older assets stored a flat `rotation`. Folded into
   // @ref parentFromBot by ApplyLegacyBotEntryTransforms and cleared (so re-saves omit it).
   Quaternion _legacyRotation [no_python, no_serialize_defaults, reflection_name("rotation")];
-}
+};
 
 // @brief Borrowed identity of a selected sensor graph output.
 // Valid only until graph mutation or destruction.
@@ -1819,7 +1819,7 @@ struct bots::SensorGraphNodeView [no_reflection] {
   StringView name;
   // @brief Sensor handle in the owning robotics context.
   bots::SensorHandle handle;
-}
+};
 
 // @brief One slot a scene offers, and the bots eligible to fill it.
 struct bots::SlotEntry [no_reflection] {
@@ -1829,7 +1829,7 @@ struct bots::SlotEntry [no_reflection] {
   // superdex validates that each named bot exists and is listed once, and nothing else. Which
   // slots a scene has, and what they mean, is the scene's business, not superdex's.
   DynamicArray<String> controlledBots;
-}
+};
 
 // @brief A scene-level sensor (not attached to any bot).
 //
@@ -1856,7 +1856,7 @@ struct bots::SceneSensorEntry [no_reflection, ignore_extraneous_fields] {
   // @brief Legacy key captured on load: older assets stored a flat `rotation`. Folded into
   // @ref parentFromSensor by ApplyLegacySensorTransforms and cleared (so re-saves omit it).
   Quaternion _legacyRotation [no_python, no_serialize_defaults, reflection_name("rotation")];
-}
+};
 
 // @brief Complete parameter set for a .superdex_scene file.
 //
@@ -1875,7 +1875,7 @@ struct bots::BotScenePrefab [no_reflection] {
   // named entries in the file, as every other named collection in this schema is. Empty means the
   // scene declares no slots and offers no choice.
   DynamicArray<bots::SlotEntry> slots [no_serialize_defaults];
-}
+};
 
 // @brief Load bot scene parameters from a .superdex_scene JSON file.
 //
@@ -1895,7 +1895,7 @@ struct bots::SceneUrdfJointVelocityLimit [no_reflection] {
   String joint;
   // @brief Velocity limit [rad/s or m/s].
   real velocity;
-}
+};
 
 // @brief An extra URDF frame rigidly attached to every exported link named @ref link.
 struct bots::SceneUrdfLinkAlias [no_reflection] {
@@ -1903,7 +1903,7 @@ struct bots::SceneUrdfLinkAlias [no_reflection] {
   String link;
   // @brief Alias name, prefixed like the link it is attached to.
   String alias;
-}
+};
 
 // @brief Options for @ref SaveBotSceneToUrdfString.
 struct bots::SceneUrdfOptions [no_reflection] {
@@ -1922,7 +1922,7 @@ struct bots::SceneUrdfOptions [no_reflection] {
   bool requireVelocityLimits = true;
   // @brief Extra frames to add, e.g. ROS names for a bot's base and tool links.
   DynamicArray<bots::SceneUrdfLinkAlias> linkAliases;
-}
+};
 
 // @brief Export a bot scene to a URDF XML string, without meshes.
 //
@@ -2154,7 +2154,7 @@ class bots::BotScene [no_init, no_reflection] {
   //
   // @return Both outcomes.
   fn GetTerminationOutcome() -> bots::TerminationOutcome [const];
-}
+};
 
 // @brief Load a .superdex_scene file and instantiate all scene objects.
 //
@@ -2252,7 +2252,7 @@ struct bots::SpawnEntry [no_reflection] {
   // @brief Legacy key captured on load: older assets stored a flat `rotation`. Folded into
   // @ref parentFromSpawn by ApplyLegacySpawnTransforms and cleared (so re-saves omit it).
   Quaternion _legacyRotation [no_python, no_serialize_defaults, reflection_name("rotation")];
-}
+};
 
 // @brief Complete parameter set for a .superdex_task file.
 //
@@ -2275,7 +2275,7 @@ struct bots::BotTaskPrefab [no_reflection] {
   // @brief How long an episode may run before it ends with neither outcome, in seconds of sim
   // time. 0 means the task sets no limit.
   real timeLimitS [no_serialize_defaults, units("s")];
-}
+};
 
 // @brief Load task parameters from a .superdex_task JSON file.
 //
@@ -2303,7 +2303,7 @@ struct bots::TerminationOutcome [no_reflection] {
   bool failureAuthored = false;
   // @brief Whether the failure criteria have held for their validation time.
   bool failure = false;
-}
+};
 
 # ---------------------------------------------------------------------------
 # DR episode list types (dr_manifest.json — the pre-randomized DR interchange)
@@ -2318,7 +2318,7 @@ struct bots::DREpisodeEntry [no_reflection] {
   String key;
   bool scalar;
   DynamicArray<real> value;
-}
+};
 
 // @brief One episode's sampled DR: seed and the flat keyed values.
 //
@@ -2335,7 +2335,7 @@ struct bots::DREpisode [no_reflection] {
   // @brief Observed application keys. Absent means unknown; an empty list means
   // coverage was recorded but no quantities were applied. Keys must occur in values.
   Optional<DynamicArray<String>> appliedKeys [reflection_name("applied_keys"), no_serialize_defaults];
-}
+};
 
 // @brief Resolved schema-2 episodes with opaque producer metadata.
 //
@@ -2352,7 +2352,7 @@ struct bots::DREpisodeList [no_reflection] {
   // Empty means no extra fields.
   // Numeric metadata uses signed-int64 or binary64; encode full uint64 IDs as strings.
   String metadata [json_string, no_serialize_defaults];
-}
+};
 
 // @brief Load and validate schema-2 resolved episodes using standard reflection.
 //
@@ -2427,7 +2427,7 @@ struct bots::ResolvedSpawn [no_reflection] {
   // @brief The entry's pose composed through its parent chain, with the task root at the
   // worldFromTask passed to ResolveResetState.
   TransformRT worldFromSpawn;
-}
+};
 
 // @brief Where a task's root-level spawns go on a scene: scene.taskRoot * task.taskRootOffset,
 // with an absent offset taken as identity; identity when the scene declares no task root.
@@ -2460,7 +2460,7 @@ fn bots::ResolveResetState(bots::BotTaskPrefab const& task, DynamicArray<bots::D
 struct bots::AssetSnapshotEntry [no_reflection] {
   String file;
   String version;
-}
+};
 
 // @brief The contents of a .superdex_scene_snapshot file: every file a scene uses, each mapped to
 // a pinned version. Where the versions come from is up to whoever writes the snapshot.
@@ -2472,7 +2472,7 @@ struct bots::AssetSnapshot [no_reflection] {
   // @brief The source revision the versions were read at.
   String sourceRevision;
   DynamicArray<bots::AssetSnapshotEntry> files;
-}
+};
 
 // @brief Read a .superdex_scene_snapshot file. Fails unless its formatVersion is the one this
 // reader supports.
@@ -2515,7 +2515,7 @@ fn bots::ClearAssetSnapshot() -> void [export];
 struct bots::SensorLinkContactForceParams [no_reflection] {
   // @brief Samples per second, or zero to capture every graph step.
   real sampleRateHz [units("1/s")] = 0.0;
-}
+};
 
 // @brief Total contact force on a link, in the sensor frame, including contacts sampled on the other
 // body.
@@ -2527,4 +2527,4 @@ class bots::SensorLinkContactForce(bots::SensorBase) [no_init, no_destruct, no_r
   // @brief Get sensor parameters.
   // @return Current parameters.
   fn GetParams() -> bots::SensorLinkContactForceParams const& [const];
-}
+};

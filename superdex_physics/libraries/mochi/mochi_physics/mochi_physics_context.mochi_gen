@@ -1016,7 +1016,7 @@ class Context [no_init, no_destruct, singleton] {
   //
   // @see DebugServer
   fn GetDebugServer() -> DebugServer const& [pure, virtual, const, overloaded, no_python];
-}
+};
 
 // @brief Initialize SuperDex Physics by creating a @ref Context object.
 //

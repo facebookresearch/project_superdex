@@ -949,4 +949,4 @@ class Scene [no_init, no_destruct] {
   //
   // @see RegisterPreStepCallback, RegisterPostStepCallback
   fn CancelCallback(CallbackHandle handle) -> void [pure, virtual];
-}
+};

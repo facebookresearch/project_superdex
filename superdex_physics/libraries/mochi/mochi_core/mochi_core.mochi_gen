@@ -70,7 +70,7 @@ enum ArticulatedJointType [from_mochi_core] {
   Cycle,
   Count,
   Invalid = Count,
-}
+};
 
 // @brief Defines a cycle-closing joint in an articulated body.
 //
@@ -81,7 +81,7 @@ struct ArticulatedCycleJoint [from_mochi_core, equality(default)] {
   int child = 0;
   // @brief Parent link index.
   int parent = 0;
-}
+};
 
 // @brief Selects how a @ref RoutingElement is interpreted by a spatial tendon.
 enum RoutingElementType [from_mochi_core] {
@@ -91,7 +91,7 @@ enum RoutingElementType [from_mochi_core] {
   // @brief A constant moment arm contributing `coefficient * jointCoordinate`. Carries no geometry
   // and breaks the polyline between waypoints.
   LinearJoint,
-}
+};
 
 // @brief One ordered element in a spatial tendon's heterogeneous routing list.
 //
@@ -112,7 +112,7 @@ struct RoutingElement [from_mochi_core, equality(default)] {
   // linear-joint elements. Its sign sets whether the tendon lengthens or shortens with the joint
   // DoF.
   real coefficient = 0;
-}
+};
 
 // @brief Blending data for one source shape within a soft skinned mesh.
 //
@@ -134,7 +134,7 @@ struct BlendingData [from_mochi_core, no_capi, equality(default)] {
   // @details Entry `i` is in `[0, 1]`, where zero is purely articulated and one is fully
   // nested-soft. The size equals the number of target vertices.
   DynamicArray<real> weights;
-}
+};
 
 // @brief Non-owning view of blending data for one source shape within a soft skinned mesh.
 //
@@ -150,7 +150,7 @@ struct BlendingDataView [from_mochi_core, no_capi, equality(default)] {
   Span<int const> indices;
   // @brief See @ref BlendingData::weights.
   Span<real const> weights;
-}
+};
 
 // @brief Skinning data for a SuperDex mesh.
 //
@@ -166,7 +166,7 @@ struct SkinningData [from_mochi_core, no_capi, equality(default)] {
   DynamicArray<int> indices;
   // @brief Weights for each node. Size is numNodes * weightsPerNode.
   DynamicArray<real> weights;
-}
+};
 
 // @brief Non-owning view of skinning data for a SuperDex mesh.
 //
@@ -182,7 +182,7 @@ struct SkinningDataView [from_mochi_core, no_capi, equality(default)] {
   Span<int const> indices;
   // @brief Weights for each node. Size is numNodes * weightsPerNode.
   Span<real const> weights;
-}
+};
 
 // @brief Mesh data for a SuperDex actor or model file.
 //
@@ -215,7 +215,7 @@ struct MeshData [from_mochi_core, no_capi, equality(default)] {
   // @brief Return true if the mesh is empty.
   // @return True if the mesh is empty.
   fn IsEmpty() -> bool [const];
-}
+};
 
 // @brief Non-owning view of mesh data for a SuperDex actor or model file.
 //
@@ -249,7 +249,7 @@ struct MeshDataView [from_mochi_core, no_capi, equality(default)] {
   // @brief Return true if the mesh is empty.
   // @return True if the mesh is empty.
   fn IsEmpty() -> bool [const];
-}
+};
 
 // @brief Data for a precomputed signed-distance-field grid.
 //
@@ -285,7 +285,7 @@ struct GridSdfData [from_mochi_core, no_capi, equality(default)] {
   // @note Applied order is scale, then rotation, then translation.
   // @note Typically set when a transform is baked into the containing model.
   Optional<Real3> translation;
-}
+};
 
 // @brief Non-owning view of data for a precomputed signed-distance-field grid.
 //
@@ -321,7 +321,7 @@ struct GridSdfDataView [from_mochi_core, no_capi, equality(default)] {
   // @note Applied order is scale, then rotation, then translation.
   // @note Typically set when a transform is baked into the containing model.
   Optional<Real3> translation;
-}
+};
 
 // @brief Oriented box represented by center, half extents, and rotation.
 struct Box [from_mochi_core, equality(default)] {
@@ -331,7 +331,7 @@ struct Box [from_mochi_core, equality(default)] {
   Real3 halfExtents [units("m")] = kReal3Ones;
   // @brief Orientation of the box local frame.
   Quaternion rotation;
-}
+};
 
 // @brief Plane represented by a unit normal and signed distance from the origin.
 struct Plane [from_mochi_core, equality(default)] {
@@ -339,7 +339,7 @@ struct Plane [from_mochi_core, equality(default)] {
   Real3 normal = kReal3YAxis;
   // @brief Signed distance from the origin [m].
   real distance [units("m")];
-}
+};
 
 // @brief Sphere represented by center and radius.
 struct Sphere [from_mochi_core, equality(default)] {
@@ -347,7 +347,7 @@ struct Sphere [from_mochi_core, equality(default)] {
   Real3 center [units("m")];
   // @brief Radius [m].
   real radius [units("m")];
-}
+};
 
 // @brief Contents of a SuperDex model file.
 //
@@ -391,7 +391,7 @@ struct ModelData [from_mochi_core, no_capi, equality(default)] {
 
   // @brief True if a loaded model contained unsupported experimental data.
   bool experimentalDataDetected [no_capi, no_python, no_serialize] = false;
-}
+};
 
 // @brief Non-owning view of the contents of a SuperDex model file.
 //
@@ -435,7 +435,7 @@ struct ModelDataView [from_mochi_core, no_capi, equality(default)] {
 
   // @brief True if a loaded model contained unsupported experimental data.
   bool experimentalDataDetected [no_capi, no_python] = false;
-}
+};
 
 // @brief Verbosity levels for solvers and optimizers.
 enum VerbosityLevel [from_mochi_core] {
@@ -449,7 +449,7 @@ enum VerbosityLevel [from_mochi_core] {
   Verbose,
   // @brief Number of verbosity level enum values.
   Count,
-}
+};
 
 // @brief Convergence status of the non-linear solver.
 //
@@ -470,7 +470,7 @@ enum ConvergenceStatus [from_mochi_core] {
   Diverged,
   // @brief Number of convergence status enum values.
   Count
-}
+};
 
 // @brief Material constitutive models for soft bodies.
 //
@@ -553,7 +553,7 @@ enum SoftMaterialType [from_mochi_core] {
   Arap,
   // @brief Number of unique material type enum values.
   Count,
-}
+};
 
 // @brief Strategy for ensuring positive semi-definite (PSD) Hessian matrices in material models.
 //
@@ -616,7 +616,7 @@ enum MaterialPsdStrategy [from_mochi_core] {
   PerTermProjection,
   // @brief Number of unique enum values.
   Count,
-}
+};
 
 // @brief The maximum voxel size for an SDF will be determined by one of these measurements scaled
 // by @ref GridSdfParams::resolutionDelta.
@@ -638,7 +638,7 @@ enum GridSdfResolutionMode [from_mochi_core] {
   Explicit,
   // @brief Total number of resolution modes.
   Count,
-}
+};
 
 // @brief File format options used when saving model data.
 enum FileFormat [from_mochi_core, no_capi] {
@@ -647,7 +647,7 @@ enum FileFormat [from_mochi_core, no_capi] {
   // @brief HDF5 format (binary). Requires MOCHI_USE_HDF5.
   H5,
   Count,
-}
+};
 
 // @brief Mesh file format hint for shape and model loading.
 enum MeshFileType [from_mochi_core] {
@@ -662,7 +662,7 @@ enum MeshFileType [from_mochi_core] {
   // @brief OBJ format (Wavefront).
   OBJ,
   Count,
-}
+};
 
 // @brief Parameters controlling the resolution of grid-based Signed Distance Fields (SDF).
 //
@@ -708,7 +708,7 @@ struct GridSdfParams [equality(default), from_mochi_core] {
   // @note This may override the voxel count (and voxel size) computed using @ref resolutionMode and
   // @ref resolutionDelta.
   Int3 minGridResolution = {6, 6, 6};
-}
+};
 
 // @brief Parameters for a linear elastic material model.
 struct LinearElasticMaterialParams [equality(default), from_mochi_core] {
@@ -719,7 +719,7 @@ struct LinearElasticMaterialParams [equality(default), from_mochi_core] {
   //
   // @note Must be in (-1, 0.5). Near 0.5 = nearly incompressible.
   real poissonRatio = 0.45;
-}
+};
 
 // @brief Parameters for the St. Venant-Kirchhoff material model.
 struct StVenantKirchhoffMaterialParams [equality(default), from_mochi_core] {
@@ -735,7 +735,7 @@ struct StVenantKirchhoffMaterialParams [equality(default), from_mochi_core] {
   //
   // @see MaterialPsdStrategy
   MaterialPsdStrategy psdStrategy = MaterialPsdStrategy::Projection;
-}
+};
 
 // @brief Parameters for the Smith stable Neo-Hookean material model.
 struct NeoHookeanMaterialParams [from_mochi_core] {
@@ -751,7 +751,7 @@ struct NeoHookeanMaterialParams [from_mochi_core] {
   //
   // @see MaterialPsdStrategy
   MaterialPsdStrategy psdStrategy = MaterialPsdStrategy::Projection;
-}
+};
 
 // @brief Parameters for the active anisotropic ARAP material component.
 struct ActiveAnisoArapMaterialParams [equality(default), from_mochi_core] {
@@ -796,7 +796,7 @@ struct ActiveAnisoArapMaterialParams [equality(default), from_mochi_core] {
   //
   // @return Unit vector: (cos(φ)cos(θ), sin(φ), cos(φ)sin(θ)).
   fn ComputeFiberDirection(real theta, real phi) -> Real3 [static];
-}
+};
 
 // @brief Parameters for a material combining passive Neo-Hookean and active anisotropic terms.
 struct ActiveNeoHookeanMaterialParams [equality(default), from_mochi_core] {
@@ -809,7 +809,7 @@ struct ActiveNeoHookeanMaterialParams [equality(default), from_mochi_core] {
   //
   // @see ActiveAnisoArapMaterialParams
   ActiveAnisoArapMaterialParams activeAnisotropic;
-}
+};
 
 // @brief Parameters for an as-rigid-as-possible material model.
 struct ArapMaterialParams [equality(default), from_mochi_core] {
@@ -822,7 +822,7 @@ struct ArapMaterialParams [equality(default), from_mochi_core] {
   //
   // @see MaterialPsdStrategy
   MaterialPsdStrategy psdStrategy = MaterialPsdStrategy::Projection;
-}
+};
 
 // @brief Parameters for an active ARAP material targeting a preferred shape tensor.
 struct ActiveShapeTargetingArapMaterialParams [equality(default), from_mochi_core] {
@@ -843,7 +843,7 @@ struct ActiveShapeTargetingArapMaterialParams [equality(default), from_mochi_cor
   //
   // @see MaterialPsdStrategy
   MaterialPsdStrategy psdStrategy = MaterialPsdStrategy::Projection;
-}
+};
 
 // @brief Parameters for a homogeneous soft material.
 struct SoftMaterialParams [equality(default), from_mochi_core] {
@@ -907,7 +907,7 @@ struct SoftMaterialParams [equality(default), from_mochi_core] {
   // @warning This is an experimental feature. It may be changed or removed in the future. Use at
   // your own risk.
   bool stiffnessDampingIncludeGeometricTerm = false;
-}
+};
 
 // @brief Per-element soft material data for heterogeneous materials.
 //
@@ -962,7 +962,7 @@ struct PerElementSoftMaterialData [from_mochi_core, equality(default), no_capi] 
   //
   // @return Number of elements.
   fn GetNumElements() -> int [const];
-}
+};
 
 // @brief Non-owning view of per-element soft material data.
 //
@@ -1007,7 +1007,7 @@ struct PerElementSoftMaterialDataView [from_mochi_core, equality(default), no_ca
   // @details Six values per element. Defines S_t = I + [[s0, s1, s2], [s1, s3, s4], [s2, s4,
   // s5]].
   Span<real const> shapeTargetTensor;
-}
+};
 
 // @brief Collision detection geometry for an @ref Actor.
 //
@@ -1078,7 +1078,7 @@ enum ColliderType [from_mochi_core] {
   PointCloud,
   // @brief Number of collider type enum values.
   Count,
-}
+};
 
 // @brief Parameters for contact mechanics simulation.
 //
@@ -1369,7 +1369,7 @@ struct ContactParams [equality(default), from_mochi_core] {
   //
   // @return Total contact detection threshold [m].
   fn GetPenaltyThresholdDist(bool addPadding) -> real [const];
-}
+};
 
 // @brief Per-joint friction parameters for articulated bodies.
 //
@@ -1442,7 +1442,7 @@ struct ArticulatedJointFrictionParams [from_mochi_core, equality(default)] {
   // @note The sliding velocity is the slip since the start of the step divided by the time since
   // then, so higher-order integrators may be only first-order accurate while the joint slides.
   real stribeckVel = 0.0;
-}
+};
 
 // @brief Degree-of-freedom layout information for one articulated joint.
 struct ArticulatedDofInfo [equality(default), from_mochi_core] {
@@ -1467,7 +1467,7 @@ struct ArticulatedDofInfo [equality(default), from_mochi_core] {
   //
   // @return The total DoF count (@ref transSize + @ref rotSize).
   fn GetSize() -> int [const];
-}
+};
 
 // @brief Log message channel.
 enum LogChannel [from_mochi_core] {
@@ -1476,7 +1476,7 @@ enum LogChannel [from_mochi_core] {
   Warning,
   Error,
   Count
-}
+};
 
 // @brief [Experimental] Controls whether force-saturation terms use a fitted quadratic Hessian
 // independently for each saturation pathway.
@@ -1512,7 +1512,7 @@ struct SaturationHessianParams [equality(default), from_mochi_core] {
   //
   // @return True iff all three flags are true.
   fn AllTrue() -> bool [const];
-}
+};
 
 // @brief [Experimental] Evaluation settings common to the full scene.
 //
@@ -1576,7 +1576,7 @@ struct ExperimentalEvalParams [equality(default), from_mochi_core] {
   bool consistencyResNorm = false;
   // @brief Step size for finite-difference consistency check.
   real consistencyResNormStep = 1e-4;
-}
+};
 
 // @brief Non-linear solver algorithm.
 enum NonLinearSolverType [from_mochi_core] {
@@ -1606,7 +1606,7 @@ enum NonLinearSolverType [from_mochi_core] {
   Count,
   // @brief Default non-linear solver type.
   Default = Newton,
-}
+};
 
 // @brief Convergence monitoring mode for the non-linear solver residual.
 //
@@ -1643,7 +1643,7 @@ enum NonLinearSolverConvergenceMode [from_mochi_core] {
   Count,
   // @brief Default convergence monitoring mode.
   Default = PerActorWeighted,
-}
+};
 
 // @brief Positive Semi-Definite (PSD) projection modes for the dresidual matrix.
 enum PsdProjectionMode [from_mochi_core] {
@@ -1660,7 +1660,7 @@ enum PsdProjectionMode [from_mochi_core] {
   Count,
   // @brief Default PSD projection mode.
   Default = Always,
-}
+};
 
 // @brief Line-search strategy used by the non-linear solver.
 //
@@ -1710,7 +1710,7 @@ enum LineSearchType [from_mochi_core] {
   Count,
   // @brief Default line search type.
   Default = WolfeStrong,
-}
+};
 
 // @brief Strategy for adapting linear solver tolerance inside non-linear iterations.
 enum LinearToleranceStrategy [from_mochi_core] {
@@ -1739,7 +1739,7 @@ enum LinearToleranceStrategy [from_mochi_core] {
   Count,
   // @brief Default linear tolerance strategy.
   Default = EisenstatWalker2,
-}
+};
 
 // @brief Parameters for non-linear implicit solves.
 struct NonLinearSolverParams [equality(default), from_mochi_core] {
@@ -1845,7 +1845,7 @@ struct NonLinearSolverParams [equality(default), from_mochi_core] {
   # Other
   // @brief Verbosity level for logging output.
   VerbosityLevel verbosity = VerbosityLevel::Warning;
-}
+};
 
 // @brief Linear solver algorithm.
 enum LinearSolverType [from_mochi_core] {
@@ -1946,7 +1946,7 @@ enum LinearSolverType [from_mochi_core] {
   Count,
   // @brief Default solver type.
   Default = Auto,
-}
+};
 
 // @brief Preconditioner types for the linear solver.
 //
@@ -2025,7 +2025,7 @@ enum PreconditionerType [from_mochi_core] {
   Count,
   // @brief Default preconditioner type.
   Default = PerActor,
-}
+};
 
 // @brief Norm types for the stopping criteria of the linear solver.
 //
@@ -2061,7 +2061,7 @@ enum LinearSolverConvergenceNorm [from_mochi_core] {
   Count,
   // @brief Default linear solver convergence norm.
   Default = PreconditionedResidualL2,
-}
+};
 
 // @brief Parameters for linear solves.
 struct LinearSolverParams [equality(default), from_mochi_core] {
@@ -2123,7 +2123,7 @@ struct LinearSolverParams [equality(default), from_mochi_core] {
   bool abortIfNotSpd = false;
   // @brief Verbosity level for logging output.
   VerbosityLevel verbosity = VerbosityLevel::Warning;
-}
+};
 
 // @brief Time-integration method.
 enum IntegrationMethod [from_mochi_core] {
@@ -2172,7 +2172,7 @@ enum IntegrationMethod [from_mochi_core] {
   Count,
   // @brief Default time integration method.
   Default = BackwardEuler,
-}
+};
 
 // @brief Combination of axis directions for a coordinate space convention.
 //
@@ -2278,7 +2278,7 @@ enum CoordinateSpaceAxes [from_mochi_core] {
   BDL [display_name("X-backward, Y-down, Z-left")] = 93,
   // @brief Default convention for SuperDex Physics.
   Default = FLU,
-}
+};
 
 // @brief Coordinate-axis convention and linear unit scale.
 struct CoordinateSpace [from_mochi_core, equality(default)] {
@@ -2334,4 +2334,4 @@ struct CoordinateSpace [from_mochi_core, equality(default)] {
   // @return The unit vector pointing forward, in this space's own coordinates.
   fn GetForward() -> Real3 [const];
 
-}
+};

@@ -41,7 +41,7 @@ enum ActorType {
 
   // @brief Number of actor type enum values.
   Count,
-}
+};
 
 // @brief Strategy for selecting the active boundary faces when subsampling boundary integrals.
 enum BoundarySubsamplingStrategy {
@@ -62,7 +62,7 @@ enum BoundarySubsamplingStrategy {
 
   // @brief Number of boundary subsampling strategy enum values.
   Count,
-}
+};
 
 // @brief Two-dimensional discretization element types for actor boundary integrals.
 //
@@ -101,7 +101,7 @@ enum ActorBoundaryElementType {
 
   // @brief Default actor boundary element type.
   Default = P1Q3,
-}
+};
 
 // @brief One-dimensional discretization element types for actor segment integrals.
 //
@@ -122,7 +122,7 @@ enum ActorSegmentElementType {
 
   // @brief Default actor segment element type.
   Default = P1Q3,
-}
+};
 
 // @brief Type of constraint acting on actors' degrees of freedom.
 //
@@ -233,7 +233,7 @@ enum ConstraintType {
 
   // @brief Number of constraint type enum values.
   Count,
-}
+};
 
 // @brief Type of constraint in an articulated pose controller.
 //
@@ -257,7 +257,7 @@ enum PoseConstraintType {
 
   // @brief Invalid constraint type.
   Invalid = 255,
-}
+};
 
 // @brief Type of query data to compute for an actor or constraint.
 //
@@ -398,7 +398,7 @@ enum QueryType {
 
   // @brief Number of query type enum values.
   Count,
-}
+};
 
 // @brief Specifies whether actor-contact filtering also applies to nested actors.
 //
@@ -415,4 +415,4 @@ enum IncludeNestedActors {
 
   // @brief Number of @ref IncludeNestedActors values.
   Count,
-}
+};

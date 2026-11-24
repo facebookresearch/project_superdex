@@ -176,4 +176,4 @@ class AsyncScene [no_init, no_destruct, no_python, no_capi] {
   //
   // @see Pause, AsyncStepParams::fixedTimeStepSeconds, AsyncStepParams::timeStepCallback
   fn RequestStepThenPause() -> void [pure, virtual];
-}
+};

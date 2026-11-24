@@ -43,7 +43,7 @@ struct prefab::SceneParams [equality(default)] {
   // fields omitted from the solver object use their default values, e.g. `"solver": {}` resets all
   // solver parameters to their defaults.
   Optional<SolverParams> solver;
-}
+};
 
 // @brief Prefab parameters for a rigid actor.
 //
@@ -113,7 +113,7 @@ struct prefab::RigidActorPrefab(RigidActorParams) [equality(default), remove_ref
   //
   // @note Ignored if @ref renderModelFile is empty.
   Real3 renderModelTranslation [units("m")];
-}
+};
 
 // @brief Prefab parameters for a soft actor.
 //
@@ -244,7 +244,7 @@ struct prefab::SoftActorPrefab(SoftActorParams) [equality(default), remove_refle
   // @note For nested soft actors in @ref SoftSkinnedActorPrefab::softParams, values are the soft
   // displacements in the unposed (bind-pose) frame, before skinning is applied.
   Optional<DynamicArray<real>> nodeDisplacements [units("m")];
-}
+};
 
 // @brief A rod pose: node displacements and element frame axes.
 //
@@ -267,7 +267,7 @@ struct prefab::RodPose [equality(default)] {
   // vector orthogonal to its deformed element, within a tolerance of 1e-3. Geometry violations
   // emit warnings; the supplied pose is still applied.
   DynamicArray<real> elementFrameAxes;
-}
+};
 
 // @brief Prefab parameters for a rod actor.
 //
@@ -349,10 +349,10 @@ struct prefab::RodActorPrefab(RodActorParams) [equality(default), remove_reflect
   // @brief Optional initial pose. Applied right after the actor is created, see
   // @ref Actor::SetRodPose.
   Optional<prefab::RodPose> pose;
-}
+};
 
 // @brief Joint parameters for an articulated actor prefab.
-struct prefab::ArticulatedJointPrefab(ArticulatedJointParams) [equality(default)] {}
+struct prefab::ArticulatedJointPrefab(ArticulatedJointParams) [equality(default)] {};
 
 // @brief Link parameters for an articulated actor prefab.
 //
@@ -409,7 +409,7 @@ struct prefab::ArticulatedLinkPrefab(ArticulatedLinkParams) [equality(default)] 
   //
   // @note Ignored if @ref renderModelFile is empty.
   Real3 renderModelTranslation [units("m")];
-}
+};
 
 // @brief Skin parameters for an articulated actor prefab.
 //
@@ -450,7 +450,7 @@ struct prefab::ArticulatedSkinPrefab(ArticulatedSkinParams) [equality(default)] 
   // @note Independent of @ref ArticulatedSkinParams::nonCollidingLinks.
   // @note Ignored if @ref renderModelFile is empty.
   Optional<DynamicArray<String>> hiddenLinks;
-}
+};
 
 // @brief Prefab parameters for an articulated actor.
 struct prefab::ArticulatedActorPrefab [equality(default)] {
@@ -521,7 +521,7 @@ struct prefab::ArticulatedActorPrefab [equality(default)] {
   //
   // @note Ignored if unset or empty. Otherwise, must contain @ref Actor::GetNumDofs finite values.
   Optional<DynamicArray<real>> jointPose;
-}
+};
 
 // @brief Prefab parameters for a soft-skinned actor.
 //
@@ -570,7 +570,7 @@ struct prefab::SoftSkinnedActorPrefab [equality(default)] {
 
   // @brief Whether soft material stress is applied.
   bool hasStress = false;
-}
+};
 
 // @brief Lists of actors grouped by type.
 struct prefab::ActorLists [equality(default)] {
@@ -591,7 +591,7 @@ struct prefab::ActorLists [equality(default)] {
 
   // @brief Rod actors.
   DynamicArray<prefab::RodActorPrefab> rod;
-}
+};
 
 // @brief Prefab parameters for a @ref RigidSphericalJointConstraintParams.
 //
@@ -607,7 +607,7 @@ struct prefab::RigidSphericalJointConstraintPrefab(RigidSphericalJointConstraint
 
   // @brief Name or hierarchy path identifying rigid actor B.
   String actorNameB [reflection_name("actorB")];
-}
+};
 
 // @brief Prefab parameters for a @ref RigidPrismaticJointConstraintParams.
 //
@@ -623,7 +623,7 @@ struct prefab::RigidPrismaticJointConstraintPrefab(RigidPrismaticJointConstraint
 
   // @brief Name or hierarchy path identifying rigid actor B.
   String actorNameB [reflection_name("actorB")];
-}
+};
 
 // @brief Prefab parameters for a @ref DeformableNodeToDeformableNodeConstraintParams.
 //
@@ -639,7 +639,7 @@ struct prefab::DeformableNodeToDeformableNodeConstraintPrefab(DeformableNodeToDe
 
   // @brief Name or hierarchy path identifying deformable actor B.
   String actorNameB [reflection_name("actorB")];
-}
+};
 
 // @brief Prefab parameters for a @ref RodElementRotationConstraintParams.
 //
@@ -654,7 +654,7 @@ struct prefab::DeformableNodeToDeformableNodeConstraintPrefab(DeformableNodeToDe
 struct prefab::RodElementRotationConstraintPrefab(RodElementRotationConstraintParams) [equality(default)] {
   // @brief Name or hierarchy path identifying the rod actor.
   String actorName [reflection_name("actor")];
-}
+};
 
 // @brief Prefab parameters for a @ref RodElementRotationToRigidConstraintParams.
 //
@@ -672,7 +672,7 @@ struct prefab::RodElementRotationToRigidConstraintPrefab(RodElementRotationToRig
 
   // @brief Name or hierarchy path identifying the rod actor.
   String rodActorName [reflection_name("rodActor")];
-}
+};
 
 // @brief Prefab parameters for a @ref DeformableNodeToRigidConstraintParams.
 //
@@ -688,7 +688,7 @@ struct prefab::DeformableNodeToRigidConstraintPrefab(DeformableNodeToRigidConstr
 
   // @brief Name or hierarchy path identifying the deformable actor.
   String deformableActorName [reflection_name("deformableActor")];
-}
+};
 
 // @brief Prefab parameters for a @ref JointRotationRangeConstraintParams.
 //
@@ -704,7 +704,7 @@ struct prefab::JointRotationRangeConstraintPrefab(JointRotationRangeConstraintPa
 
   // @brief Name or hierarchy path identifying rigid actor B.
   String actorNameB [reflection_name("actorB")];
-}
+};
 
 // @brief Prefab parameters for a @ref RigidPivotPositionConstraintParams.
 //
@@ -717,7 +717,7 @@ struct prefab::JointRotationRangeConstraintPrefab(JointRotationRangeConstraintPa
 struct prefab::RigidPivotPositionConstraintPrefab(RigidPivotPositionConstraintParams) [equality(default)] {
   // @brief Name or hierarchy path identifying the rigid actor.
   String actorName [reflection_name("actor")];
-}
+};
 
 // @brief Prefab parameters for a @ref RigidPivotToRigidTargetConstraintParams.
 //
@@ -730,7 +730,7 @@ struct prefab::RigidPivotPositionConstraintPrefab(RigidPivotPositionConstraintPa
 struct prefab::RigidPivotToRigidTargetConstraintPrefab(RigidPivotToRigidTargetConstraintParams) [equality(default)] {
   // @brief Name or hierarchy path identifying the rigid actor.
   String actorName [reflection_name("actor")];
-}
+};
 
 // @brief Prefab parameters for a @ref RigidPivotRotationConstraintParams.
 //
@@ -743,7 +743,7 @@ struct prefab::RigidPivotToRigidTargetConstraintPrefab(RigidPivotToRigidTargetCo
 struct prefab::RigidPivotRotationConstraintPrefab(RigidPivotRotationConstraintParams) [equality(default)] {
   // @brief Name or hierarchy path identifying the rigid actor.
   String actorName [reflection_name("actor")];
-}
+};
 
 // @brief Prefab parameters for a @ref DeformableNodePositionConstraintParams.
 //
@@ -756,7 +756,7 @@ struct prefab::RigidPivotRotationConstraintPrefab(RigidPivotRotationConstraintPa
 struct prefab::DeformableNodePositionConstraintPrefab(DeformableNodePositionConstraintParams) [equality(default)] {
   // @brief Name or hierarchy path identifying the deformable actor.
   String actorName [reflection_name("actor")];
-}
+};
 
 // @brief Prefab parameters for a @ref JointRotationTrackingConstraintParams.
 //
@@ -772,7 +772,7 @@ struct prefab::JointRotationTrackingConstraintPrefab(JointRotationTrackingConstr
 
   // @brief Name or hierarchy path identifying rigid actor B.
   String actorNameB [reflection_name("actorB")];
-}
+};
 
 // @brief Prefab parameters for a @ref ArticulatedSingleDofTargetConstraintParams.
 //
@@ -785,7 +785,7 @@ struct prefab::JointRotationTrackingConstraintPrefab(JointRotationTrackingConstr
 struct prefab::ArticulatedSingleDofTargetConstraintPrefab(ArticulatedSingleDofTargetConstraintParams) [equality(default)] {
   // @brief Name or hierarchy path identifying the articulated actor.
   String actorName [reflection_name("actor")];
-}
+};
 
 // @brief Prefab parameters for a @ref Articulated3dRotationTargetConstraintParams.
 //
@@ -798,7 +798,7 @@ struct prefab::ArticulatedSingleDofTargetConstraintPrefab(ArticulatedSingleDofTa
 struct prefab::Articulated3dRotationTargetConstraintPrefab(Articulated3dRotationTargetConstraintParams) [equality(default)] {
   // @brief Name or hierarchy path identifying the articulated actor.
   String actorName [reflection_name("actor")];
-}
+};
 
 // @brief Prefab parameters for a @ref ArticulatedSingleDofRangeConstraintParams.
 //
@@ -811,7 +811,7 @@ struct prefab::Articulated3dRotationTargetConstraintPrefab(Articulated3dRotation
 struct prefab::ArticulatedSingleDofRangeConstraintPrefab(ArticulatedSingleDofRangeConstraintParams) [equality(default)] {
   // @brief Name or hierarchy path identifying the articulated actor.
   String actorName [reflection_name("actor")];
-}
+};
 
 // @brief Prefab parameters for a @ref Articulated3dRotationRangeConstraintParams.
 //
@@ -824,7 +824,7 @@ struct prefab::ArticulatedSingleDofRangeConstraintPrefab(ArticulatedSingleDofRan
 struct prefab::Articulated3dRotationRangeConstraintPrefab(Articulated3dRotationRangeConstraintParams) [equality(default)] {
   // @brief Name or hierarchy path identifying the articulated actor.
   String actorName [reflection_name("actor")];
-}
+};
 
 // @brief Lists of constraints grouped by type.
 struct prefab::ConstraintLists [equality(default)] {
@@ -878,7 +878,7 @@ struct prefab::ConstraintLists [equality(default)] {
 
   // @brief Relative-rotation tracking constraints between rod elements and rigid actors.
   DynamicArray<prefab::RodElementRotationToRigidConstraintPrefab> rodElementRotationToRigid;
-}
+};
 
 // @brief Prefab parameters for an articulated pose controller.
 struct prefab::PoseControllerPrefab [equality(default)] {
@@ -902,7 +902,7 @@ struct prefab::PoseControllerPrefab [equality(default)] {
 
   // @brief Per-joint pose tracking parameters.
   DynamicArray<PoseTrackingParams> jointTracking;
-}
+};
 
 // @brief Reference to another prefab (scene or actor) for prefab nesting.
 struct prefab::PrefabReference [equality(default)] {
@@ -965,7 +965,7 @@ struct prefab::PrefabReference [equality(default)] {
   // LoadNestedPrefabs and @ref EnsureFullyLoaded then keep this prefab and load all prefabs nested
   // within it instead of loading this reference from a file.
   PrefabHandle prefab [no_python, no_reflection];
-}
+};
 
 // @brief Used by @ref ContactFilter to enable or disable contact for a pair of actors.
 //
@@ -1015,7 +1015,7 @@ struct prefab::ActorContactEntry [equality(default)] {
   // same parent actor, the entry also covers pairs between that parent's nested actors, including
   // adjacent links.
   bool includeNestedActors [no_serialize_defaults] = true;
-}
+};
 
 // @brief Overrides selected contact parameters for an unordered actor pair.
 //
@@ -1041,7 +1041,7 @@ struct prefab::ContactPairParamsOverrideEntry [equality(default)] {
   //
   // @note At least one field must be present.
   ContactPairParamsOverride paramsOverride;
-}
+};
 
 // @brief Used by @ref ContactFilter to enable or disable contact for a pair of layers.
 //
@@ -1066,7 +1066,7 @@ struct prefab::LayerContactEntry [equality(default)] {
   // @note Both layer names can be the same. In that case, the setting applies between actors within
   // the same layer.
   DynamicArray<String> layers;
-}
+};
 
 // @brief Contact filtering parameters for a prefab.
 //
@@ -1126,7 +1126,7 @@ struct prefab::ContactFilter [equality(default)] {
   //
   // @see ContactFilter, LayerContactEntry, Scene::EnableLayerContactSymmetric
   Optional<DynamicArray<prefab::LayerContactEntry>> layerContactSymmetric;
-}
+};
 
 // @brief Top-level prefab describing a complete or partial physics scene (possibly just one actor).
 struct prefab::ScenePrefab [equality(default)] {
@@ -1169,7 +1169,7 @@ struct prefab::ScenePrefab [equality(default)] {
   // A later entry for the same unordered actor pair replaces the earlier override rather than
   // merging with it. Nested child prefab entries are applied before parent entries.
   Optional<DynamicArray<prefab::ContactPairParamsOverrideEntry>> contactPairParamsOverrides [no_serialize_defaults];
-}
+};
 
 ## Prefab Serialization
 
@@ -1341,7 +1341,7 @@ struct prefab::PrefabParams [no_reflection] {
   // When false, neither override is applied. Scene settings from nested prefabs are always
   // ignored.
   bool applySceneSettings = true;
-}
+};
 
 // @brief Struct used to return all created actors and constraints from @ref AddToScene.
 //
@@ -1391,7 +1391,7 @@ struct prefab::AddToSceneResult [no_reflection] {
   // @note For a single prefab (no nested prefabs), the result will be 1-to-1 with the constraint list
   // in the prefab (same size, same order).
   fn Filter(ConstraintType type) -> DynamicArray<Constraint*> [const, overloaded, export];
-}
+};
 
 // @brief Instantiate a @ref ScenePrefab and add it to a @ref Scene.
 //
@@ -1645,7 +1645,7 @@ struct prefab::ExportParams [no_reflection] {
   // @note A prefab with exported soft displacements cannot be added to a scene with @ref
   // experimental::RomParams. Set this to false to export a prefab for that use.
   bool exportCurrentPose = false;
-}
+};
 
 // @brief Export a @ref Scene to a folder containing a prefab file and all
 // generated mesh files.

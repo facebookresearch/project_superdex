@@ -70,4 +70,4 @@ class DebugServer [no_init, no_destruct] {
   //
   // @see Start
   fn SetCoordinateSpace(CoordinateSpace const& space) -> void [pure, virtual];
-}
+};

@@ -48,7 +48,7 @@ struct diffsim::BackPropagationSolverParams [no_reflection] {
   // @brief Validate analytic Hessian-vector products against finite differences (diagnostic;
   // slower).
   bool validateFiniteDiff = false;
-}
+};
 
 // @brief Performance metrics for the last back-propagation step.
 struct diffsim::BackPropagationSceneStats [no_reflection] {
@@ -72,7 +72,7 @@ struct diffsim::BackPropagationSceneStats [no_reflection] {
   // @note Only meaningful when @ref BackPropagationSolverParams::validateFiniteDiff is set;
   // otherwise stays at its default of true.
   bool finiteDiffValid = true;
-}
+};
 
 // @brief Make a scene differentiable.
 //

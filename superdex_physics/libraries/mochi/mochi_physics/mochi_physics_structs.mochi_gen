@@ -29,7 +29,7 @@ struct SolverParams [equality(default)] {
   // @warning This is an experimental feature. It may be changed or removed in the future. Use at
   // your own risk.
   ExperimentalEvalParams experimentalEval = {};
-}
+};
 
 // @brief Parameters controlling recentering behavior for standalone soft, shell, and rod actors.
 //
@@ -73,7 +73,7 @@ struct RecenteringParams [equality(default)] {
   // @note Recentering is applied if either rotation or translation change more than their respective
   // thresholds.
   real translationEpsilon [units("m")] = 0;
-}
+};
 
 // @brief Parameters for subsampling boundary integrals such as contact.
 //
@@ -88,7 +88,7 @@ struct BoundarySubsamplingParams [equality(default)] {
 
   // @brief Strategy for determining which sample points to use.
   BoundarySubsamplingStrategy strategy = BoundarySubsamplingStrategy::UniformProbability;
-}
+};
 
 // @brief Optional contact-response parameter replacements for an unordered actor pair.
 //
@@ -136,7 +136,7 @@ struct ContactPairParamsOverride [equality(default)] {
   //
   // @see ContactParams::normalViscousDampingCoefficient
   Optional<real> normalViscousDampingCoefficient [units("s/m")];
-}
+};
 
 // @brief Information describing an articulated shape's kinematic structure.
 //
@@ -229,7 +229,7 @@ struct ArticulatedShapeInfo [no_capi] {
 
   // @brief Name of each joint. Size must be numLinks + numCycles.
   Span<String const> jointNames;
-}
+};
 
 // @brief Information passed to per-step callbacks.
 //
@@ -240,7 +240,7 @@ struct StepInfo {
 
   // @brief Time step size [s] for this simulation step.
   double timeStepSec [units("s")] = 0;
-}
+};
 
 // @brief Parameters to create a rigid body actor.
 //
@@ -388,7 +388,7 @@ struct RigidActorParams [equality(default)] {
   //
   // @see Actor::GetAngularVelocity, Actor::SetVelocity
   Optional<Real3> angularVelocity [units("rad/s")];
-}
+};
 
 // @brief Parameters to create a soft deformable actor.
 //
@@ -501,7 +501,7 @@ struct SoftActorParams [equality(default)] {
   //
   // @see ActorBoundaryElementType
   ActorBoundaryElementType boundaryElementType = ActorBoundaryElementType::Default;
-}
+};
 
 // @brief Material properties of a rod actor.
 //
@@ -557,7 +557,7 @@ struct RodMaterialParams [equality(default)] {
   // compression, adds no stiffness at rest, and diverges as the rod collapses. Zero disables it,
   // leaving the plain St. Venant-Kirchhoff axial response.
   real axialCollapseBarrierScale = 1e-3;
-}
+};
 
 // @brief Geometric and logical properties of a point-cloud collider.
 //
@@ -615,7 +615,7 @@ struct PointCloudColliderParams [equality(default)] {
   // placement with the specified segment element type. Only used for curve collider geometries
   // (e.g., rods).
   Optional<ActorSegmentElementType> colliderSegmentElementType;
-}
+};
 
 // @brief Parameters to create a rod actor.
 //
@@ -682,7 +682,7 @@ struct RodActorParams [equality(default)] {
   //
   // @note @ref RodActorParams::contactElementType controls centerline sampling instead.
   ActorBoundaryElementType contactSkinElementType = ActorBoundaryElementType::Default;
-}
+};
 
 // @brief Parameters describing a single joint within an articulated actor.
 //
@@ -764,7 +764,7 @@ struct ArticulatedJointParams [equality(default)] {
   // @note Must be non-negative and finite.
   // @note Ignored for joints without limits.
   real limitDamping = 0;
-}
+};
 
 // @brief Parameters describing a single rigid link within an articulated actor.
 //
@@ -894,7 +894,7 @@ struct ArticulatedLinkParams [equality(default)] {
   // @note For best performance, combine subsampling with @ref boundaryElementType = @ref
   // ActorBoundaryElementType::P1Q1.
   Optional<BoundarySubsamplingParams> boundarySubsampling;
-}
+};
 
 // @brief Optional skinned mesh attached to an articulated actor for collision and rendering.
 //
@@ -954,7 +954,7 @@ struct ArticulatedSkinParams [equality(default)] {
   // @note This setting does not affect whether the links act as colliders; see
   // @ref ArticulatedLinkParams::colliderType.
   Optional<DynamicArray<String>> nonCollidingLinks;
-}
+};
 
 // @brief Parameters for a cycle-closing joint within an articulated actor.
 //
@@ -979,7 +979,7 @@ struct ArticulatedCycleJointParams [equality(default)] {
 
   // @brief Stiffness [N/m] for the cycle joint constraint.
   real stiffness = 50000;
-}
+};
 
 // @brief Parameters to create an articulated actor.
 //
@@ -1027,7 +1027,7 @@ struct ArticulatedActorParams [equality(default)] {
   //
   // @see Actor::GetArticulatedJointVelocities, Actor::SetArticulatedJointVelocities
   Optional<DynamicArray<real>> jointVelocities;
-}
+};
 
 // @brief Parameters to create soft-skinned actors with a shared articulated skeleton.
 //
@@ -1126,7 +1126,7 @@ struct SoftSkinnedActorParams {
   // SoftActorParams entry that has its hasStress set to true. This is an approximation but may
   // improve performance.
   bool hasStress = false;
-}
+};
 
 // @brief Base constraint parameters.
 //
@@ -1159,7 +1159,7 @@ struct ConstraintParams [equality(default)] {
   // contribution to @ref stiffness * @ref saturation. The damping contribution is separate and is
   // not limited by saturation.
   real saturation = -1;
-}
+};
 
 // @brief Parameters for creating a spherical joint between two rigid actors.
 //
@@ -1177,7 +1177,7 @@ struct RigidSphericalJointConstraintParams(ConstraintParams) [equality(default)]
 
   // @brief Actor handle identifying rigid actor B.
   ActorHandle actorB = {};
-}
+};
 
 // @brief Parameters for creating a prismatic joint between two rigid actors.
 //
@@ -1209,7 +1209,7 @@ struct RigidPrismaticJointConstraintParams(ConstraintParams) [equality(default)]
 
   // @brief Minimum translation [m] relative to rest position. Empty means unbounded.
   Optional<real> min [units("m")] = {};
-}
+};
 
 // @brief Parameters for creating a constraint coupling a node in a deformable actor to a node in
 // another deformable actor.
@@ -1241,7 +1241,7 @@ struct DeformableNodeToDeformableNodeConstraintParams(ConstraintParams) [equalit
   // simulation meshes. @ref nodeIndexA and @ref nodeIndexB are ignored.
   // @note When true, both actors must be soft actors (shell and rod actors are not supported).
   bool findClosest = false;
-}
+};
 
 // @brief Parameters for creating a tracking constraint on the relative rotation between a rigid
 // actor and a rod element.
@@ -1268,7 +1268,7 @@ struct RodElementRotationToRigidConstraintParams(ConstraintParams) [equality(def
 
   // @brief Index of the element in the rod actor.
   int elementIndex = 0;
-}
+};
 
 // @brief Parameters for creating a tracking constraint on the world rotation of a rod element.
 //
@@ -1289,7 +1289,7 @@ struct RodElementRotationConstraintParams(ConstraintParams) [equality(default)] 
 
   // @brief Index of the element in the rod actor.
   int elementIndex = 0;
-}
+};
 
 // @brief Parameters for creating a constraint coupling a deformable node to a rigid actor.
 //
@@ -1331,7 +1331,7 @@ struct DeformableNodeToRigidConstraintParams(ConstraintParams) [equality(default
   // @note When @ref findClosest is also true, @ref rigidLocalPos is still used as the search point
   // that selects which deformable node is picked.
   bool fixToDeformablePos = true;
-}
+};
 
 // @brief Parameters for creating a joint rotation range constraint between two rigid actors.
 //
@@ -1368,7 +1368,7 @@ struct JointRotationRangeConstraintParams(ConstraintParams) [equality(default)] 
   // @brief When true, angle limits are relative to the actors' relative rotation at constraint
   // creation time. When false, limits are absolute in the joint reference frame.
   bool rangeAroundRest = true;
-}
+};
 
 // @brief Parameters for creating a position constraint on a rigid actor's pivot point.
 //
@@ -1386,7 +1386,7 @@ struct RigidPivotPositionConstraintParams(ConstraintParams) [equality(default)] 
 
   // @brief Actor handle identifying the rigid actor.
   ActorHandle actor = {};
-}
+};
 
 // @brief Parameters for creating a constraint on a rigid actor's pivot point. The target is
 // expressed as the center-of-mass transform of the actor.
@@ -1406,7 +1406,7 @@ struct RigidPivotToRigidTargetConstraintParams(ConstraintParams) [equality(defau
 
   // @brief Actor handle identifying the rigid actor.
   ActorHandle actor = {};
-}
+};
 
 // @brief Parameters for creating a rotation constraint on a rigid actor's pivot frame.
 //
@@ -1424,7 +1424,7 @@ struct RigidPivotRotationConstraintParams(ConstraintParams) [equality(default)] 
 
   // @brief Actor handle identifying the rigid actor.
   ActorHandle actor = {};
-}
+};
 
 // @brief Parameters for creating a position constraint on a deformable actor node.
 //
@@ -1440,7 +1440,7 @@ struct DeformableNodePositionConstraintParams(ConstraintParams) [equality(defaul
 
   // @brief Actor handle identifying the deformable actor.
   ActorHandle actor = {};
-}
+};
 
 // @brief Parameters for creating a joint rotation tracking constraint between two rigid actors.
 //
@@ -1467,7 +1467,7 @@ struct JointRotationTrackingConstraintParams(ConstraintParams) [equality(default
 
   // @brief Actor handle identifying rigid actor B.
   ActorHandle actorB = {};
-}
+};
 
 // @brief Parameters for creating a target constraint on a single articulated DoF.
 //
@@ -1496,7 +1496,7 @@ struct ArticulatedSingleDofTargetConstraintParams(ConstraintParams) [equality(de
   // @brief Target value for the joint DoF. Units are [m] for translation DoFs, [rad] for
   // rotation DoFs.
   real targetValue = 0;
-}
+};
 
 // @brief Parameters for creating a target constraint on 3D rotation DoFs of an articulated actor.
 //
@@ -1522,7 +1522,7 @@ struct Articulated3dRotationTargetConstraintParams(ConstraintParams) [equality(d
   //
   // @note Must be finite and non-zero. Normalized before use.
   Quaternion target = {};
-}
+};
 
 // @brief Parameters for creating a range constraint on a single articulated DoF.
 //
@@ -1552,7 +1552,7 @@ struct ArticulatedSingleDofRangeConstraintParams(ConstraintParams) [equality(def
 
   // @brief Maximum value for the DoF. [m] for translation DoFs, [rad] for rotation DoFs.
   real maxValue = 0;
-}
+};
 
 // @brief Parameters for creating a range constraint on a 3D-rotation articulated joint.
 //
@@ -1575,7 +1575,7 @@ struct Articulated3dRotationRangeConstraintParams(ConstraintParams) [equality(de
 
   // @brief Maximum allowed value [rad] for each component of the joint-local rotation vector.
   Real3 maxValues [units("rad")] = {};
-}
+};
 
 // @brief Information about a contact point between two actors.
 //
@@ -1661,7 +1661,7 @@ struct ContactPoint {
   // @note For rod actors, this field is not populated and is reported as {0, 0, 0}. Use @ref
   // sampleIndex to identify the contact location.
   Real3 parametricCoords = {};
-}
+};
 
 // @brief Contact force applied to a specific node.
 //
@@ -1677,7 +1677,7 @@ struct NodeContactForce {
 
   // @brief Contact force [N] applied to the node.
   Real3 force [units("N")] = {};
-}
+};
 
 // @brief SDF distance information for active contact sample points.
 //
@@ -1707,7 +1707,7 @@ struct SdfDistances {
   //
   // @note Non-zero only if the actor has far SDF evaluation enabled.
   real maxSdfFarDistanceEvaluation [units("m")] = 0;
-}
+};
 
 // @brief Parameters controlling the stepping behavior of an @ref AsyncScene.
 //
@@ -1765,7 +1765,7 @@ struct AsyncStepParams [no_capi, no_python] {
   //
   // @see AsyncStepParams::fixedTimeStepSeconds, AsyncStepParams::useFixedTimeStep
   Function<double> timeStepCallback [no_reflection];
-}
+};
 
 // @brief Timing and profiling metrics from the last simulation step.
 //
@@ -1796,7 +1796,7 @@ struct PerformanceStats [equality(default)] {
   // @warning Recording is an experimental feature. It may be changed or removed without notice.
   // @see experimental::StartRecording, experimental::RecordingParams
   double recordingStepDurationSec [units("s")] = 0;
-}
+};
 
 // @brief Solver convergence metrics from the last simulation step.
 //
@@ -1833,7 +1833,7 @@ struct SolverStats [equality(default)] {
   //
   // @see ConvergenceStatus, Actor::GetConvergenceStatus
   ConvergenceStatus convergenceStatus = ConvergenceStatus::None;
-}
+};
 
 // @brief Parameters for pose controller tracking constraints.
 //
@@ -1866,7 +1866,7 @@ struct PoseTrackingParams [equality(default)] {
   // not limited by saturation.
   // @note Must be finite and non-zero.
   real saturation = -1;
-}
+};
 
 // @brief Parameters to create a pose controller for an articulated actor.
 //
@@ -1895,7 +1895,7 @@ struct PoseControllerParams {
 
   // @brief Tracking parameters for joint constraints.
   DynamicArray<PoseTrackingParams> jointTracking;
-}
+};
 
 // @brief Information about a single pose constraint in a pose controller.
 //
@@ -1913,7 +1913,7 @@ struct PoseConstraintInfo {
 
   // @brief Index of the parent link, or -1 if none.
   int parent = -1;
-}
+};
 
 // @brief Sphere primitives for debug visualization.
 struct DebugDrawSpheres [equality(default)] {
@@ -1926,7 +1926,7 @@ struct DebugDrawSpheres [equality(default)] {
 
   // @brief Sphere colors.
   Span<Color const> colors;
-}
+};
 
 // @brief Line primitives for debug visualization.
 //
@@ -1941,7 +1941,7 @@ struct DebugDrawLineVertices [equality(default)] {
 
   // @brief Line vertex colors.
   Span<Color const> colors;
-}
+};
 
 // @brief Collection of debug draw primitives.
 //
@@ -1954,4 +1954,4 @@ struct DebugDrawData [equality(default)] {
 
   // @brief Sphere primitives.
   DebugDrawSpheres spheres;
-}
+};

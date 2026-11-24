@@ -34,17 +34,17 @@ struct Handle [equality, sortable, hashable] {
   // @brief Compute a hash of the handle for use in unordered containers.
   // @return The hash of the handle's raw identifier.
   fn GetHash() -> uint64 [const];
-}
+};
 
 // @brief Unique identifier for a @ref Scene within a @ref Context.
-struct SceneHandle(Handle) [hashable] {}
+struct SceneHandle(Handle) [hashable] {};
 
 // @brief Unique identifier for an @ref Actor within a @ref Scene.
 //
 // @note An @ref ActorHandle can only be used with the @ref Scene that created it.
 // @note Creating and destroying many actors in the same scene may eventually cause an
 // @ref ActorHandle value from a previously destroyed actor to be re-used.
-struct ActorHandle(Handle) [hashable] {}
+struct ActorHandle(Handle) [hashable] {};
 
 // @brief Handle to a shape (mesh, sphere, plane, etc.) within a @ref Context.
 //
@@ -53,33 +53,33 @@ struct ActorHandle(Handle) [hashable] {}
 // when destroyed. In the C API, you must call @ref Context::ReleaseShape when done with the handle.
 //
 // @see Context::ReleaseShape
-struct ShapeHandle(Handle) [hashable, no_cpp_definition] {}
+struct ShapeHandle(Handle) [hashable, no_cpp_definition] {};
 
 // @brief Unique identifier for a callback registration within a @ref Scene.
 //
 // @note A @ref CallbackHandle can only be used with the @ref Scene that created it.
-struct CallbackHandle(Handle) [hashable] {}
+struct CallbackHandle(Handle) [hashable] {};
 
 // @brief Unique identifier for a @ref Constraint within a @ref Scene.
 //
 // @note A @ref ConstraintHandle can only be used with the @ref Scene that created it.
 // @note Creating and destroying many constraints in the same scene may eventually cause a
 // @ref ConstraintHandle value from a previously destroyed constraint to be re-used.
-struct ConstraintHandle(Handle) [hashable] {}
+struct ConstraintHandle(Handle) [hashable] {};
 
 // @brief Unique identifier for a captured simulation state within a @ref Scene.
 //
 // @note A @ref StateHandle can only be used with the @ref Scene that created it.
 //
 // @see Scene::CaptureState, Scene::RestoreState, Scene::ReleaseState
-struct StateHandle(Handle) [hashable] {}
+struct StateHandle(Handle) [hashable] {};
 
 // @brief Unique identifier for a query within a @ref Scene.
 //
 // @note A @ref QueryHandle can only be used with the @ref Scene that created it.
 //
 // @see Actor::RegisterQuery, Actor::CancelQuery, Constraint::RegisterQuery, Constraint::CancelQuery
-struct QueryHandle(Handle) [hashable] {}
+struct QueryHandle(Handle) [hashable] {};
 
 // @brief Runtime handle to a loaded nested prefab (the resolved target of a
 // @ref prefab::PrefabReference).
@@ -88,4 +88,4 @@ struct QueryHandle(Handle) [hashable] {}
 //
 // @see prefab::PrefabReference, prefab::LoadNestedPrefabs, prefab::EnsureFullyLoaded,
 // prefab::ScenePrefab
-struct PrefabHandle [no_cpp_definition, no_reflection, no_python] {}
+struct PrefabHandle [no_cpp_definition, no_reflection, no_python] {};

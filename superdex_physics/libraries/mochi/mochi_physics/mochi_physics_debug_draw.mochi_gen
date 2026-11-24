@@ -126,4 +126,4 @@ class DebugDraw [no_init, no_destruct] {
   // @note Debug draw data won't be generated for any actor if the master switch, i.e. @ref
   // IsEnabled, is false.
   fn EnableActor(ActorHandle actor, bool enable) -> void [pure, virtual, mochi_error];
-}
+};

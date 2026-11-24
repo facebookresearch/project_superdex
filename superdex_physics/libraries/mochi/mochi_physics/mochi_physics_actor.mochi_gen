@@ -1744,4 +1744,4 @@ class Actor [no_init, no_destruct, use_scene] {
   //
   // @see IsNestedLinkActor
   fn GetArticulatedJacobian() -> Span<real const> [pure, virtual, const, mochi_error, batchable, nodiscard];
-}
+};

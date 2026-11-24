@@ -17,7 +17,7 @@ namespace experimental;
 // @brief [Experimental] Parameters defining a Reduced-Order Model (ROM) actor.
 //
 // @warning ROMs are experimental and may change or be removed without warning.
-struct experimental::RomParams [equality(default), no_cpp_definition, no_reflection, no_capi, no_python] {}
+struct experimental::RomParams [equality(default), no_cpp_definition, no_reflection, no_capi, no_python] {};
 
 // @brief Load and instantiate a scene prefab with a uniform ROM override.
 //
@@ -109,7 +109,7 @@ enum experimental::ControlType [no_reflection] {
   Force,
   // @brief Number of control type enum values.
   Count,
-}
+};
 
 // @brief Set force, target pose, or other control modes for an articulated actor.
 //
@@ -145,23 +145,23 @@ fn experimental::SetArticulatedForceAndTargetPose(Actor* actor, Span<real const>
 struct experimental::LinearTransmissionParams [no_reflection] {
   DynamicArray<int> jointIndices;
   DynamicArray<real> jointCoefficients;
-}
+};
 
 struct experimental::SpatialTendonParams [no_reflection] {
   DynamicArray<RoutingElement> routingElements;
-}
+};
 
 struct experimental::DisplacementControlActuatorParams [equality(default)] {
   real targetDisplacement [no_serialize_defaults] = 0;
   real stiffness [no_serialize_defaults] = 1e9;
   real damping [no_serialize_defaults] = 0;
   bool allowCompressiveForce [no_serialize_defaults] = false;
-}
+};
 
 struct experimental::ForceControlActuatorParams [no_reflection] {
   real force = 0;
   bool allowCompressiveForce = false;
-}
+};
 
 struct experimental::McKibbenActuatorParams [no_reflection] {
   real pressure;
@@ -170,7 +170,7 @@ struct experimental::McKibbenActuatorParams [no_reflection] {
   real numberOfWraps;
   real deflatedStiffness;
   real deflatedEquilibriumLength;
-}
+};
 
 fn experimental::AddLinearTransmission(Actor* actor, experimental::LinearTransmissionParams const& params) -> int [mochi_error];
 fn experimental::AddSpatialTendon(Actor* actor, experimental::SpatialTendonParams const& params) -> int [mochi_error];
@@ -250,7 +250,7 @@ struct experimental::IKSolverParams [no_reflection] {
   //
   // @see NonLinearSolverParams::maxElapsedTimeSeconds
   double maxElapsedTimeSeconds = 0;
-}
+};
 
 // @brief Inverse kinematics solver for articulated bodies.
 //
@@ -348,7 +348,7 @@ class experimental::IKSolver [no_init, no_destruct, no_reflection] {
   // @see IKSolverParams::positionErrorThres, IKSolverParams::rotationErrorThres,
   // IKSolver::CreatePositionTarget, IKSolver::CreateRotationTarget
   fn SolveIK() -> bool [pure, virtual, mochi_error];
-}
+};
 
 // @brief Create a new inverse kinematics (IK) solver.
 //
@@ -407,7 +407,7 @@ fn experimental::IsValidIKSolver(experimental::IKSolver const* solver [nullable]
 
 class experimental::NewtonEulerTerms [no_init, no_destruct, no_reflection] {
   fn Compute(real dt, Span<real const> q, Span<real const> dq, Span<real> outM, Span<real> outC, Span<real> outJ, Span<real> outJtF) -> void [pure, virtual, mochi_error];
-}
+};
 
 fn experimental::CreateNewtonEulerTerms(Actor* robot, Context* context) -> experimental::NewtonEulerTerms* [mochi_error, nullable];
 fn experimental::DestroyNewtonEulerTerms(experimental::NewtonEulerTerms* newtonEulerTerms [nullable], Context* context) -> void [mochi_error];
@@ -421,13 +421,13 @@ struct experimental::ExperimentalSoftActorParams [equality(default), no_reflecti
   ShapeHandle flow;
 
   bool useRecentering = true;
-}
+};
 
 fn experimental::CreateSoftActor(Scene* scene, SoftActorParams const& params, experimental::ExperimentalSoftActorParams const& experimentalParams) -> Actor* [export, mochi_error, nullable];
 
 struct experimental::ExperimentalSoftSkinnedActorParams [equality(default), no_reflection] {
   DynamicArray<experimental::ExperimentalSoftActorParams> softParams;
-}
+};
 
 fn experimental::GenerateTubularRodModelData(Span<Real3 const> nodes [units("m")], Span<Real3 const> elementFrameAxes, real radius [units("m")], int numCrossSectionSegments, bool isClosedLoop) -> ModelData [mochi_error, no_capi];
 
@@ -441,7 +441,7 @@ struct experimental::ShellMaterialParams {
   real stiffnessDampingCoefficient [units("s")] = 0;
   real membraneCollapseBarrierScale = 1e-3;
   real membraneStrainStiffeningScale = 0;
-}
+};
 
 // @brief Parameters for creating an experimental shell actor.
 struct experimental::ShellActorParams {
@@ -493,7 +493,7 @@ struct experimental::ShellActorParams {
   // QueryType::ContactSkinNodePositions / @ref QueryType::ContactSkinNodeNormals independently of
   // this flag.
   bool useContactSkin = false;
-}
+};
 
 fn experimental::CreateShellActor(Scene* scene, experimental::ShellActorParams const& params) -> Actor* [mochi_error, nullable];
 fn experimental::ShellMaterialParamsFrom3dIsotropic(real youngsModulus3d, real poissonsRatio3d, real density3d, real thickness) -> experimental::ShellMaterialParams [mochi_error];
@@ -581,7 +581,7 @@ struct experimental::SleepParams [equality(default), no_reflection] {
   //
   // @note Must be at least 2.
   int minStepsBeforeSleep = 20;
-}
+};
 
 // @brief [Experimental] Get the island sleeping parameters of a scene.
 //
@@ -608,7 +608,7 @@ struct experimental::DebugStats [no_reflection] {
   // finite-difference consistency check. It is disabled by default due to its computational cost,
   // but it can be activated with @ref ExperimentalEvalParams::consistencyResNorm.
   real maxResidualNormRelativeError;
-}
+};
 
 fn experimental::GetDebugStats(Scene const* scene) -> experimental::DebugStats [mochi_error];
 
@@ -660,7 +660,7 @@ struct experimental::RecordingParams {
   //
   // @return The initialized @ref experimental::RecordingParams.
   fn All(bool enabled = true) -> experimental::RecordingParams [static];
-}
+};
 
 // @brief [Experimental] Check if the scene is currently recording.
 //
