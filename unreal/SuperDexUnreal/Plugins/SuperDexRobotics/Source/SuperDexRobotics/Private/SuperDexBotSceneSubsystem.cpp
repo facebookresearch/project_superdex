@@ -173,6 +173,12 @@ bool USuperDexBotSceneSubsystem::EnsureLoaded(
 }
 
 void USuperDexBotSceneSubsystem::SetFailed(const FString& InError) {
+  // A failed runtime request must still suppress level-authored actors and settings.
+  if (auto* MochiSubsystem = GetGameInstance()
+          ? GetGameInstance()->GetSubsystem<UMochiGameInstanceSubsystem>()
+          : nullptr) {
+    MochiSubsystem->SetSceneExternallyOwned(true);
+  }
   State = ESuperDexBotSceneState::Failed;
   ErrorMessage = InError;
   if (Pimpl) {
