@@ -3571,7 +3571,7 @@ class SceneUrdfOptions:
     Defaults to "real".
     """
     strip_index_prefixes: bool
-    """Strip a leading "link_NN_" or "joint_NN_" index from SuperDex names."""
+    """Strip a leading `link_NN_` or `joint_NN_` index from SuperDex names."""
     @property
     def joint_velocity_limits(self) -> DynamicArraySceneUrdfJointVelocityLimit:
         """Velocity limits by joint name. :class:`~superdex.robotics.BotJointPrefab` has

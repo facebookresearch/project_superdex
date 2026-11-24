@@ -1913,7 +1913,7 @@ struct bots::SceneUrdfOptions [no_reflection] {
   // and other bots' "{entry}_{name}". Base-scene actors keep their names, prefixed with
   // "{prefab}_" for each nested prefab. Defaults to "real".
   String instanceName;
-  // @brief Strip a leading "link_NN_" or "joint_NN_" index from SuperDex names.
+  // @brief Strip a leading `link_NN_` or `joint_NN_` index from SuperDex names.
   bool stripIndexPrefixes = false;
   // @brief Velocity limits by joint name. @ref BotJointPrefab has none of its own.
   DynamicArray<bots::SceneUrdfJointVelocityLimit> jointVelocityLimits;

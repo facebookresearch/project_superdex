@@ -1904,7 +1904,7 @@
 
 /// @var superdex::robotics::SceneUrdfOptions::stripIndexPrefixes
 ///
-/// @brief Strip a leading "link_NN_" or "joint_NN_" index from SuperDex names.
+/// @brief Strip a leading `link_NN_` or `joint_NN_` index from SuperDex names.
 ///
 
 /// @var superdex::robotics::SceneUrdfOptions::jointVelocityLimits
