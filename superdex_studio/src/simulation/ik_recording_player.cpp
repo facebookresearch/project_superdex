@@ -25,6 +25,7 @@
 #include <cmath>
 #include <limits>
 #include <map>
+#include <memory>
 #include <set>
 
 namespace superdex::studio {
@@ -508,7 +509,7 @@ std::shared_ptr<IKRecordingClip const> IKRecordingClip::Load(
         "Native joint_positions/root translation/quaternion snapshot frame and sim_time alignment mismatch";
     return {};
   }
-  auto clip = std::shared_ptr<IKRecordingClip>(new IKRecordingClip);
+  auto clip = std::make_shared<IKRecordingClip>();
   clip->_compatibility = "Physics-scene articulation poses: " + actor.path + " (" + actor.identity +
       "); named joint types/DOF spans validated. Input asset supplies axes/rest frames; geometry/native scale not compared; no raw tracking confidence.";
   clip->_samples.reserve(count);
