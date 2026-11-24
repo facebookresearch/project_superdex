@@ -24,11 +24,13 @@
 class USuperDexBot;
 class USuperDexBotIKConfig;
 
+/** Imports .superdex_ik files as USuperDexBotIKConfig assets. */
 UCLASS()
 class SUPERDEXROBOTICSEDITOR_API USuperDexBotIKConfigFactory : public UFactory {
   GENERATED_BODY()
 
  public:
+  /** Imports .superdex_ik files. */
   USuperDexBotIKConfigFactory();
   virtual UObject* FactoryCreateFile(
       UClass* InClass,
@@ -41,21 +43,25 @@ class SUPERDEXROBOTICSEDITOR_API USuperDexBotIKConfigFactory : public UFactory {
       bool& bOutOperationCanceled) override;
   virtual bool FactoryCanImport(const FString& Filename) override;
 
-  /** Import is transactional: malformed documents leave settings, assignments and provenance
+  /**
+   * Import is transactional: malformed documents leave settings, assignments and provenance
    * intact. Missing/ambiguous bot references are retained for manual repair, with no automatic
    * selection.
    */
   bool ImportConfig(USuperDexBotIKConfig* Asset, const FString& Filename, bool bReimport);
   /** Resolve either bot by its imported source-file tag, not by basename or package proximity. */
   static USuperDexBot* ResolveBotAsset(const FString& SourcePath);
+  /** Returns Path as a normalized absolute path, or empty if Path is empty. */
   static FString NormalizeSourcePath(const FString& Path);
 };
 
+/** Creates new, empty USuperDexBotIKConfig assets. */
 UCLASS()
 class USuperDexBotIKConfigFactoryNew : public UFactory {
   GENERATED_BODY()
 
  public:
+  /** Configures the factory to create empty configs and edit them after creation. */
   USuperDexBotIKConfigFactoryNew();
   virtual UObject* FactoryCreateNew(
       UClass* InClass,
@@ -66,6 +72,7 @@ class USuperDexBotIKConfigFactoryNew : public UFactory {
       FFeedbackContext* Warn) override;
 };
 
+/** Reimports USuperDexBotIKConfig assets from their source files. */
 UCLASS()
 class SUPERDEXROBOTICSEDITOR_API UReimportSuperDexBotIKConfigFactory
     : public USuperDexBotIKConfigFactory,
@@ -73,6 +80,7 @@ class SUPERDEXROBOTICSEDITOR_API UReimportSuperDexBotIKConfigFactory
   GENERATED_BODY()
 
  public:
+  /** Used only for reimport, not for new imports. */
   UReimportSuperDexBotIKConfigFactory();
   virtual bool CanReimport(UObject* Obj, TArray<FString>& OutFilenames) override;
   virtual void SetReimportPaths(UObject* Obj, const TArray<FString>& NewReimportPaths) override;

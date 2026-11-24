@@ -33,6 +33,7 @@
  */
 static const FName SkeletonName_OpenXR = "OpenXR";
 
+/** Bones of the OpenXR hand skeleton (SkeletonName_OpenXR), in the hand bots' link order. */
 UENUM(BlueprintType)
 enum class ESuperDexBone_OXR : uint8 {
   Wrist = 0,

@@ -23,8 +23,10 @@
 
 #include "SuperDexPlayerPawnPoseSource.generated.h"
 
-// Redirects any GetPose calls to the player pawn. If this component is attached to the player pawn,
-// then it will always return false.
+/**
+ * Redirects any GetPose calls to the player pawn. If this component is attached to the player pawn,
+ * then it will always return false.
+ */
 UCLASS()
 class SUPERDEXPOSE_API USuperDexPlayerPawnPoseSource : public USuperDexPoseSource {
   GENERATED_BODY()

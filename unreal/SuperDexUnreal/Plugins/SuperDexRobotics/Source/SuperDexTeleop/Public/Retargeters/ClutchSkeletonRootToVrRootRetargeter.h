@@ -20,31 +20,47 @@
 
 #include "ClutchSkeletonRootToVrRootRetargeter.generated.h"
 
+/** How a clutch maps the source skeleton root onto the clutched one while engaged. */
 UENUM(BlueprintType)
 enum class ESuperDexClutchType : uint8 {
-  // The relative translation of the input to output SkeletonRoot persists while clutched. The
-  // rotation of the output skeletonRoot equals the input rotation while clutched.
+  /**
+   * The relative translation of the input to output SkeletonRoot persists while clutched. The
+   * rotation of the output skeletonRoot equals the input rotation while clutched.
+   */
   RelativeTranslationAbsoluteRotation,
-  // The relative translation and relative rotation are both applied when clutched. The rotation
-  // will be applied after the translation so that rotating the input SkeletonRoot does not
-  // translate the output SkeletonRoot.
+  /**
+   * The relative translation and relative rotation are both applied when clutched. The rotation
+   * will be applied after the translation so that rotating the input SkeletonRoot does not
+   * translate the output SkeletonRoot.
+   */
   RelativeTranslationRelativeRotation,
-  // The translation of the output skeletonRoot equals the input translation while clutched. The
-  // relative rotation of the input to output SkeletonRoot persists while clutched.
+  /**
+   * The translation of the output skeletonRoot equals the input translation while clutched. The
+   * relative rotation of the input to output SkeletonRoot persists while clutched.
+   */
   AbsoluteTranslationRelativeRotation,
-  // The translation and rotation of the output skeletonRoot equals the input translation and
-  // rotation while clutched
+  /**
+   * The translation and rotation of the output skeletonRoot equals the input translation and
+   * rotation while clutched
+   */
   AbsoluteTranslationAbsoluteRotation,
 
   Count UMETA(Hidden),
 };
 
+/**
+ * Retargeter that clutches the source pose's SkeletonRootToVrRoot: while the clutch is engaged the
+ * source motion moves the clutched transform (see ClutchType), and while disengaged the transformed
+ * pose keeps the last clutched transform.
+ */
 UCLASS(Blueprintable, meta = (BlueprintSpawnableComponent))
 class SUPERDEXTELEOP_API UClutchSkeletonRootToVrRootRetargeter : public USuperDexRetargeter {
   GENERATED_BODY()
  public:
-  // Determines what mechanics that clutch uses. This should not be changed while running as the
-  // system is not currently written to support that without additional initialization.
+  /**
+   * Determines what mechanics that clutch uses. This should not be changed while running as the
+   * system is not currently written to support that without additional initialization.
+   */
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SuperDex")
   ESuperDexClutchType ClutchType = ESuperDexClutchType::RelativeTranslationAbsoluteRotation;
 
@@ -110,26 +126,41 @@ class SUPERDEXTELEOP_API UClutchSkeletonRootToVrRootRetargeter : public USuperDe
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex")
   bool bDisengageClutchIfSourceIsNotConfident = true;
 
+  /**
+   * If true, on BeginPlay the clutch tries once per tick to initialize from the leaf bone of
+   * InitializeClutchFromPosableWithName while it is not initialized. Configuration errors (an empty
+   * name, a missing component or mesh, no bones, or no single leaf bone when no explicit bone
+   * index is selected) clear this flag and stop the retries.
+   */
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SuperDex")
   bool bInitializeClutchFromEndEffectorOfPoseable = false;
 
+  /** Name of the SuperDexPoseableComponent the clutch is initialized from. */
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SuperDex")
   FString InitializeClutchFromPosableWithName = "";
 
+  /**
+   * Bone of the poseable to initialize from instead of its single leaf bone, or -1 for the leaf
+   * bone.
+   */
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SuperDex")
   int InitializeClutchRelativeToBoneIndex = -1;
 
-  // If true, InitializeClutchSkeletonRootToPoseableEndEffector will be set to its value. If false,
-  // it will be derived from the relative position from the clutch component to the leaf bone of the
-  // SuperDexPoseableComponent found using InitializeClutchFromPosableWithName on BeginPlay. If
-  // false and no valid component is present, it will be identity.
+  /**
+   * If true, InitializeClutchSkeletonRootToPoseableEndEffector will be set to its value. If false,
+   * it will be derived from the relative position from the clutch component to the leaf bone of the
+   * SuperDexPoseableComponent found using InitializeClutchFromPosableWithName on BeginPlay. If
+   * false and no valid component is present, it will be identity.
+   */
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex")
   bool bOverrideInitializeClutchSkeletonRootToPoseableEndEffector = false;
 
-  // This should be the same transform used by an arm to transform pose. Its inverse will be applied
-  // to the end effector transform of the posable to compute the initial clutch
-  // SkeletonRootToVrRoot. This value is used internally to pose the clutch with respect to the end
-  // effector.
+  /**
+   * This should be the same transform used by an arm to transform pose. Its inverse will be applied
+   * to the end effector transform of the posable to compute the initial clutch
+   * SkeletonRootToVrRoot. This value is used internally to pose the clutch with respect to the end
+   * effector.
+   */
   UPROPERTY(
       EditAnywhere,
       BlueprintReadWrite,
@@ -148,12 +179,21 @@ class SUPERDEXTELEOP_API UClutchSkeletonRootToVrRootRetargeter : public USuperDe
    * initializing the clutch from the spawn pose. If false, it will use the existing relative pose,
    * usually assigned when it was first initialized. If any stage has issues the function will abort
    * and return false.
+   *
+   * @param PosableWithName Name of the SuperDexPoseableComponent on the owning actor.
+   * @param bUpdateClutchToLeafBoneTransform Whether to update
+   *   InitializeClutchSkeletonRootToPoseableEndEffector from the leaf bone.
+   * @return True if the clutch was initialized.
    */
   UFUNCTION(BlueprintCallable, meta = (ReturnDisplayName = "Success"), Category = "SuperDex")
   bool InitializeClutchBasedOnLeafBone(
       FString const& PosableWithName,
       bool bUpdateClutchToLeafBoneTransform = false);
 
+  /**
+   * Like InitializeClutchBasedOnLeafBone, but uses the poseable's current bone transforms without
+   * requiring it to report a cached pose.
+   */
   bool InitializeClutchFromCurrentPoseableLeafBone(
       FString const& PosableWithName,
       bool bUpdateClutchToLeafBoneTransform = false);
@@ -163,16 +203,29 @@ class SUPERDEXTELEOP_API UClutchSkeletonRootToVrRootRetargeter : public USuperDe
    * Returns the new state of the clutch (which may not be equal to the command and false if not
    * initialized). When the clutch is enabled from a disabled state the relative transform between
    * the clutch transform and SourcePose transform is recorded to compute the new TransformedPose.
+   *
+   * @param bNewClutchEnabled The requested clutch state.
+   * @return The clutch state after the call.
    */
   UFUNCTION(BlueprintCallable, Category = "SuperDex")
   bool SetClutchEnabled(bool bNewClutchEnabled);
 
+  /**
+   * Whether the clutch is engaged.
+   *
+   * @return True while the clutch is engaged.
+   */
   UFUNCTION(BlueprintPure, Category = "SuperDex")
   bool GetClutchEnabled() const {
     FReadScopeLock Lock(ClutchLock);
     return bClutchEnabled;
   }
 
+  /**
+   * Whether the clutched transform has been initialized.
+   *
+   * @return True once the clutch is initialized.
+   */
   UFUNCTION(BlueprintPure, Category = "SuperDex")
   bool IsClutchInitialized() const {
     FReadScopeLock Lock(ClutchLock);
@@ -193,19 +246,25 @@ class SUPERDEXTELEOP_API UClutchSkeletonRootToVrRootRetargeter : public USuperDe
       bool,
       IsNowPaused);
 
-  // Emitted when the clutch enable state changes. Useful for knowing when the clutch has disengaged
-  // itself via the safety checks and informing the user.
+  /**
+   * Emitted when the clutch enable state changes. Useful for knowing when the clutch has disengaged
+   * itself via the safety checks and informing the user.
+   */
   UPROPERTY(BlueprintAssignable, Category = "SuperDex")
   FOnClutchChanged OnClutchStateChanged;
 
-  // Emitted when the clutch pauses or unpauses. Useful for knowing when the clutch has disengaged
-  // itself via the safety checks and informing the user.
+  /**
+   * Emitted when the clutch pauses or unpauses. Useful for knowing when the clutch has disengaged
+   * itself via the safety checks and informing the user.
+   */
   UPROPERTY(BlueprintAssignable, Category = "SuperDex")
   FOnClutchPaused OnClutchPauseUpause;
 
   /**
    * Get the currently stored and applied SkeletonRootToVrRoot. This value will be updated
    * continuously while the clutch is enabled.
+   *
+   * @return The clutched SkeletonRootToVrRoot.
    */
   UFUNCTION(BlueprintPure, Category = "SuperDex")
   FTransform GetClutchedSkeletonRootToVrRoot() const {
@@ -219,6 +278,9 @@ class SUPERDEXTELEOP_API UClutchSkeletonRootToVrRootRetargeter : public USuperDe
    * effector position of some other component such as a robot arm. When the clutch is disengaged
    * the TransformedPose will return the SourcePose with the SkeletonRootToVrRoot replaced by the
    * clutched version.
+   *
+   * @param NewSkeletonRootToVrRoot The new clutched transform. Setting it marks the clutch
+   *   initialized.
    */
   UFUNCTION(BlueprintCallable, Category = "SuperDex")
   void SetClutchedSkeletonRootToVrRoot(FTransform const& NewSkeletonRootToVrRoot) {
@@ -235,49 +297,68 @@ class SUPERDEXTELEOP_API UClutchSkeletonRootToVrRootRetargeter : public USuperDe
  protected:
   virtual void BeginPlay() override;
 
+  /**
+   * Tries to initialize the clutch from InitializeClutchFromPosableWithName and, while it is not
+   * initialized and bInitializeClutchFromEndEffectorOfPoseable is set, retries on the next tick.
+   */
   void AttemptToInitialize_RecursiveOnTick();
 
+  /**
+   * Shared body of the leaf-bone initializers. Disengages and uninitializes the clutch first;
+   * bRequireCachedPose requires the poseable to report a cached pose.
+   */
   bool InitializeClutchBasedOnLeafBoneInternal(
       FString const& PosableWithName,
       bool bUpdateClutchToLeafBoneTransform,
       bool bRequireCachedPose);
 
-  // Guards access to the our clutch in case it is being evaluated on the mochi thread.
-  // Explicity should guard
+  /**
+   * Guards access to the our clutch in case it is being evaluated on the mochi thread.
+   * Explicity should guard
+   */
   mutable FRWLock ClutchLock;
 
-  // Do not allow the user to clutch the robot until an initial value has been set.
+  /** Do not allow the user to clutch the robot until an initial value has been set. */
   bool bClutchInitialized = false;
   bool bClutchEnabled = false;
   bool bClutchWasPaused = false;
 
-  // The relative transforms are collected in GetTransformedPose() so that it is accurate to the
-  // first call after the clutch was enabled. Resulting in zero unintended movement. The relative
-  // transform is applied to the SourcePose differently depending on the settings of the clutch
-  // action.
+  /**
+   * The relative transforms are collected in GetTransformedPose() so that it is accurate to the
+   * first call after the clutch was enabled. Resulting in zero unintended movement. The relative
+   * transform is applied to the SourcePose differently depending on the settings of the clutch
+   * action.
+   */
   bool bUpdateClutchRelativeTransform = false;
   FTransform InitialClutchRootToSkeletonRoot_location = FTransform::Identity;
   FTransform InitialClutchVrRootToVrRoot_rotation = FTransform::Identity;
   double LastClutchEnableTime = -1;
   double LastClutchUnpauseTime = -1;
 
-  // The actual computed transform being applied to the SourcePose to get the TransformedPose
+  /** The actual computed transform being applied to the SourcePose to get the TransformedPose */
   FTransform ClutchedSkeletonRootToVrRoot = FTransform::Identity;
   FTransform UnpausedClutchedSkeletonRootToClutchRoot = FTransform::Identity;
 
-  // Source pose used for clutching so that bones stay stationary when clutch is disabled: the last
-  // pose output while engaged, with its joint positions as output (blended, see below).
+  /**
+   * Source pose used for clutching so that bones stay stationary when clutch is disabled: the last
+   * pose output while engaged, with its joint positions as output (blended, see below).
+   */
   FSuperDexPose LastEnabledSourcePose;
   bool bLastEnabledSourcePoseInitialized = false;
 
-  // Starts lerping the output joint positions from the held ones (LastEnabledSourcePose's) to the
-  // source's over Duration seconds from Now.
+  /**
+   * Starts lerping the output joint positions from the held ones (LastEnabledSourcePose's) to the
+   * source's over Duration seconds from Now.
+   */
   void StartJointBlend(double Now, double Duration);
-  // Lerps Pose's joint positions from the held ones while a blend runs.
+
+  /** Lerps Pose's joint positions from the held ones while a blend runs. */
   void BlendJointPositions(double Now, FSuperDexPose& Pose) const;
 
-  // The joint positions held when the clutch last engaged or unpaused, and their bot (identity
-  // only).
+  /**
+   * The joint positions held when the clutch last engaged or unpaused, and their bot (identity
+   * only).
+   */
   TArray<double> JointBlendFromDofPositions;
   const UMochiArticulationBase* JointBlendFromBot = nullptr;
   double JointBlendStartTime = 0;

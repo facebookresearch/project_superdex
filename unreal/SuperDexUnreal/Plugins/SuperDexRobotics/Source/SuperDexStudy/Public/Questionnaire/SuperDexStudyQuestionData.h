@@ -21,6 +21,10 @@
 
 #include "SuperDexStudyQuestionData.generated.h"
 
+/**
+ * How a questionnaire question is answered: a binary response, a point on a discrete scale
+ * (NumPoints points) or a value on a continuous scale.
+ */
 UENUM(BlueprintType)
 enum class ESuperDexStudyQuestionResponseType : uint8 {
   BinaryResponse,
@@ -28,18 +32,21 @@ enum class ESuperDexStudyQuestionResponseType : uint8 {
   ContinuousScale
 };
 
-/* A questionnaire question: its prompt, how it's answered, and its scale's end descriptors. */
+/** A questionnaire question: its prompt, how it's answered, and its scale's end descriptors. */
 UCLASS()
 class SUPERDEXSTUDY_API USuperDexStudyQuestionData : public UPrimaryDataAsset {
   GENERATED_BODY()
 
  public:
+  /** The question's prompt text. */
   UPROPERTY(EditAnywhere, BlueprintReadWrite)
   FString Prompt;
 
+  /** How the question is answered. */
   UPROPERTY(EditAnywhere, BlueprintReadWrite)
   ESuperDexStudyQuestionResponseType ResponseType;
 
+  /** Number of points on the discrete scale. */
   UPROPERTY(
       EditAnywhere,
       BlueprintReadWrite,
@@ -48,9 +55,11 @@ class SUPERDEXSTUDY_API USuperDexStudyQuestionData : public UPrimaryDataAsset {
            EditConditionHides))
   int32 NumPoints = 7;
 
+  /** Descriptor for the scale's left end. */
   UPROPERTY(EditAnywhere, BlueprintReadWrite)
   FString LeftDescriptor;
 
+  /** Descriptor for the scale's right end. */
   UPROPERTY(EditAnywhere, BlueprintReadWrite)
   FString RightDescriptor;
 };

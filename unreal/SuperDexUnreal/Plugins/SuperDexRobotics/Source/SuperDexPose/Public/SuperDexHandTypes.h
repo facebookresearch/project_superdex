@@ -23,15 +23,19 @@
 // Hand types shared by every skeleton. Skeleton-specific bones, joints and tables live in the
 // Skeletons/SuperDexSkeleton_*.h headers.
 
+/** Which hand a pose, skeleton or component belongs to. */
 UENUM(BlueprintType)
 enum class ESuperDexHandedness : uint8 {
-  Left = 0, // Left Hand
-  Right = 1, // Right Hand
+  /** Left Hand */
+  Left = 0,
+  /** Right Hand */
+  Right = 1,
   Count = 2 UMETA(Hidden),
   None = 255 UMETA(Hidden) // No Hand
 };
 ENUM_RANGE_BY_COUNT(ESuperDexHandedness, ESuperDexHandedness::Count);
 
+/** Finger of a hand. */
 UENUM(BlueprintType)
 enum class ESuperDexFinger : uint8 {
   Thumb = 0,
@@ -44,6 +48,7 @@ enum class ESuperDexFinger : uint8 {
 };
 ENUM_RANGE_BY_COUNT(ESuperDexFinger, ESuperDexFinger::Count);
 
+/** Bone segment of a finger, in order from the palm outward. */
 UENUM(BlueprintType)
 enum class ESuperDexFingerSegment : uint8 {
   Metacarpal = 0,

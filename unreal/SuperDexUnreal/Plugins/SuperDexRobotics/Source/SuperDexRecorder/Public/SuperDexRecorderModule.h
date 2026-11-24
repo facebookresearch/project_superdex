@@ -21,6 +21,7 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogSuperDexRecorder, Log, All);
 
+/** The SuperDexRecorder module; loads the native recorder library. */
 class FSuperDexRecorderModule final : public IModuleInterface {
  public:
   void StartupModule() override;

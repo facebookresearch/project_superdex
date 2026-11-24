@@ -25,26 +25,43 @@
 
 #include "SuperDexLatentActions.generated.h"
 
+/**
+ * Output execution pin of the fire-and-forget latent actions: Update on each update and Finished
+ * once at the end.
+ */
 UENUM(BlueprintType)
 enum class ESuperDexFireAndForgetExec : uint8 { Update, Finished };
 
+/**
+ * Output execution pin of the iteration latent action: Update on each update, IterationFinished at
+ * the end of each iteration and Finished once all iterations are done.
+ */
 UENUM(BlueprintType)
 enum class ESuperDexFireAndForgetIterationExec : uint8 { Update, IterationFinished, Finished };
 
+/** Latent action of USuperDexPoseFunctionLibrary::FireAndForgetSeconds. */
 class FSuperDexFireAndForgetSecondsAction : public FPendingLatentAction {
  public:
+  /** Run time [s]. */
   float Duration;
 
+  /** The Blueprint outputs, written on each update. */
   float& Time;
   float& PercentComplete;
   ESuperDexFireAndForgetExec& Exec;
 
+  /** The Blueprint callback, from the call's FLatentActionInfo. */
   FName ExecutionFunction;
   int32 OutputLink;
   FWeakObjectPtr CallbackTarget;
 
+  /** Whether the final Update has fired; Finished fires on the next update. */
   bool bLastUpdatedTriggered = false;
 
+  /**
+   * Keeps references to the Blueprint outputs, which must outlive the action, and resets Time and
+   * PercentComplete to 0.
+   */
   FSuperDexFireAndForgetSecondsAction(
       const float InDuration,
       float& InTime,
@@ -87,12 +104,13 @@ class FSuperDexFireAndForgetSecondsAction : public FPendingLatentAction {
     }
   }
 
+  /** Hooks for subclasses, called before an Update, the final Update and Finished fire. */
   virtual void OnUpdate() {}
   virtual void OnFinalUpdate() {}
   virtual void OnFinished() {}
 
 #if WITH_EDITOR
-  // Returns a human readable description of the latent operation's current state
+  /** Returns a human readable description of the latent operation's current state */
   virtual FString GetDescription() const override {
     static const FNumberFormattingOptions TimeFormatOptions =
         FNumberFormattingOptions().SetMinimumFractionalDigits(3).SetMaximumFractionalDigits(3);
@@ -107,17 +125,25 @@ class FSuperDexFireAndForgetSecondsAction : public FPendingLatentAction {
 #endif
 };
 
+/** Latent action of USuperDexPoseFunctionLibrary::FireAndForgetFrames. */
 class FSuperDexFireAndForgetFramesAction : public FPendingLatentAction {
  public:
+  /** Number of frames to run. */
   const int Frames;
 
+  /** The Blueprint outputs, written on each update. */
   int& Frame;
   ESuperDexFireAndForgetExec& Exec;
 
+  /** The Blueprint callback, from the call's FLatentActionInfo. */
   FName ExecutionFunction;
   int32 OutputLink;
   FWeakObjectPtr CallbackTarget;
 
+  /**
+   * Keeps references to the Blueprint outputs, which must outlive the action, and sets Frame to -1
+   * until the first update.
+   */
   FSuperDexFireAndForgetFramesAction(
       int InFrames,
       int& InFrame,
@@ -146,7 +172,7 @@ class FSuperDexFireAndForgetFramesAction : public FPendingLatentAction {
   }
 
 #if WITH_EDITOR
-  // Returns a human readable description of the latent operation's current state
+  /** Returns a human readable description of the latent operation's current state */
   virtual FString GetDescription() const override {
     return FText::Format(
                NSLOCTEXT(
@@ -160,11 +186,14 @@ class FSuperDexFireAndForgetFramesAction : public FPendingLatentAction {
 #endif
 };
 
+/** Latent action of USuperDexPoseFunctionLibrary::FireAndForgetIterations. */
 class FSuperDexFireAndForgetIterationsAction : public FPendingLatentAction {
  public:
+  /** Number of iterations and the length of each [s]. */
   const int Iterations;
   const float IterationDuration;
 
+  /** The Blueprint outputs, written on each update. */
   int& Iteration;
   float& IterationTime;
   float& IterationPercentComplete;
@@ -172,16 +201,23 @@ class FSuperDexFireAndForgetIterationsAction : public FPendingLatentAction {
   float& PercentComplete;
   ESuperDexFireAndForgetIterationExec& Exec;
 
+  /** The Blueprint callback, from the call's FLatentActionInfo. */
   FName ExecutionFunction;
   int32 OutputLink;
   FWeakObjectPtr CallbackTarget;
 
+  /** Iteration and finish bookkeeping between updates. */
   float NextIterationTime;
   bool bLastIterationUpdateTriggered = false;
   bool bTriggerFinish = false;
   bool bNextIteration = false;
   float Duration;
 
+  /**
+   * Keeps references to the Blueprint outputs, which must outlive the action, and resets the
+   * numeric progress outputs (iteration, times and fractions) to 0; Exec is not assigned until the
+   * first update.
+   */
   FSuperDexFireAndForgetIterationsAction(
       int InIterations,
       float InIterationDuration,
@@ -258,7 +294,7 @@ class FSuperDexFireAndForgetIterationsAction : public FPendingLatentAction {
   }
 
 #if WITH_EDITOR
-  // Returns a human readable description of the latent operation's current state
+  /** Returns a human readable description of the latent operation's current state */
   virtual FString GetDescription() const override {
     static const FNumberFormattingOptions TimeFormatOptions =
         FNumberFormattingOptions().SetMinimumFractionalDigits(3).SetMaximumFractionalDigits(3);
@@ -273,13 +309,21 @@ class FSuperDexFireAndForgetIterationsAction : public FPendingLatentAction {
 #endif
 };
 
+/** Latent action of USuperDexPoseFunctionLibrary::FireAndForgetCurve. */
 class FSuperDexFireAndForgetCurveAction : public FSuperDexFireAndForgetSecondsAction {
  public:
+  /** The sampled curve. */
   UCurveFloat* Curve;
+  /** The Blueprint output, set to the curve value on each update. */
   float& Value;
+  /** The curve's time range. */
   float MinTime;
   float MaxTime;
 
+  /**
+   * Keeps references to the Blueprint outputs, which must outlive the action, and runs for the
+   * curve's time range divided by InSpeed. InCurve must not be null.
+   */
   FSuperDexFireAndForgetCurveAction(
       UCurveFloat* InCurve,
       float InSpeed,

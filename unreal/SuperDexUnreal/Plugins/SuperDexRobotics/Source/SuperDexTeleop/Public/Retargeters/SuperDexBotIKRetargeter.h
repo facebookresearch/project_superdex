@@ -25,7 +25,8 @@
 class USuperDexIKSolverObject;
 class UMaterialInterface;
 
-/** Input-bot pose -> fixed-output-base document-authored Bot IK, for any input bot with a Free/Hard
+/**
+ * Input-bot pose -> fixed-output-base document-authored Bot IK, for any input bot with a Free/Hard
  * root and Hard/Revolute/Prismatic/Spherical joints. Input poses hold joint positions of the input
  * bot, or of another bot of its skeleton: their parent-relative link transforms, in the input bot's
  * link order (only their count is checked), pose the input bot. Each joint keeps what it can do of
@@ -43,10 +44,14 @@ class SUPERDEXTELEOP_API USuperDexBotIKRetargeter : public USuperDexRetargeter {
   GENERATED_BODY()
 
  public:
+  /**
+   * The bot IK config solved from the input bot pose. Edits take effect after InitializeRetargeter.
+   */
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bot IK")
   TObjectPtr<USuperDexBotIKConfig> Config;
 
-  /** Publish each fresh solve's joint positions as hand joint targets on the owner's TeleopNode
+  /**
+   * Publish each fresh solve's joint positions as hand joint targets on the owner's TeleopNode
    * operator component, whose own settings govern communication. Targets are invalidated when no
    * fresh solve is available.
    */
@@ -60,7 +65,8 @@ class SUPERDEXTELEOP_API USuperDexBotIKRetargeter : public USuperDexRetargeter {
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bot IK|Teleop")
   bool bSubscribeToTeleopHandJointPositions = false;
 
-  /** Scales the solved joint positions, except those in JointAngleMultiplierExcludeIndex, then
+  /**
+   * Scales the solved joint positions, except those in JointAngleMultiplierExcludeIndex, then
    * clamps every joint to the output bot's authored limits. 1.0 leaves the solve as is (no
    * clamping). Applies to the published command and its display, not to the solver or feedback.
    */
@@ -71,7 +77,8 @@ class SUPERDEXTELEOP_API USuperDexBotIKRetargeter : public USuperDexRetargeter {
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bot IK|Teleop")
   TArray<int32> JointAngleMultiplierExcludeIndex;
 
-  /** Draw each active IK goal every frame with a fresh solve: the goal frame resolved from the
+  /**
+   * Draw each active IK goal every frame with a fresh solve: the goal frame resolved from the
    * input pose and the constraint frame on the solved output link (both as small coordinate
    * frames), a black line between them (the remaining error), and lines from each frame to its
    * link (white: output link, yellow: input link, for goals bound to one).
@@ -102,20 +109,37 @@ class SUPERDEXTELEOP_API USuperDexBotIKRetargeter : public USuperDexRetargeter {
    * component's root bone). Captured only while bDebugDrawIKCoordinateFrames is set.
    */
   struct FDebugGoalFrames {
-    FTransform GoalInOutputBase; // Where the input pose wants the constraint frame.
-    FTransform ConstraintInOutputBase; // The constraint frame on the solved output link.
+    /** Where the input pose wants the constraint frame. */
+    FTransform GoalInOutputBase;
+    /** The constraint frame on the solved output link. */
+    FTransform ConstraintInOutputBase;
     FTransform OutputLinkInOutputBase;
-    FTransform InputLinkInOutputBase; // Valid only if bHasInputLink.
-    FName InputLinkName; // Valid only if bHasInputLink.
+
+    /** Valid only if bHasInputLink. */
+    FTransform InputLinkInOutputBase;
+    /** Valid only if bHasInputLink. */
+    FName InputLinkName;
     bool bHasInputLink = false;
   };
   const TArray<FDebugGoalFrames>& GetDebugGoalFrames() const {
     return DebugGoalFrames;
   }
 
+  /**
+   * Validates the configuration and creates the IK solver, replacing any previous one.
+   *
+   * @return False off the game thread, if the configuration is invalid or if the solver cannot be
+   *   created; otherwise true.
+   */
   UFUNCTION(BlueprintCallable, Category = "Bot IK")
   bool InitializeRetargeter();
 
+  /**
+   * Checks that Config is complete and valid for this retargeter without creating a solver.
+   *
+   * @param Diagnostic Set to why the configuration is invalid, or cleared.
+   * @return True if the configuration is valid.
+   */
   UFUNCTION(BlueprintCallable, CallInEditor, Category = "Bot IK")
   bool ValidateConfiguration(FString& Diagnostic) const;
 
@@ -134,11 +158,13 @@ class SUPERDEXTELEOP_API USuperDexBotIKRetargeter : public USuperDexRetargeter {
   virtual bool GetCachedPose(FSuperDexPose& OutPose) const override;
 
  protected:
+  /** Runs without a valid source pose and hides the editor viewport pose. */
   USuperDexBotIKRetargeter();
   virtual void OnRegister() override;
   virtual void OnChildAttached(USceneComponent* ChildComponent) override;
   virtual void BeginPlay() override;
-  // Without a fresh solve this tick, poses the mesh from hand feedback (display only).
+
+  /** Without a fresh solve this tick, poses the mesh from hand feedback (display only). */
   virtual void OnTickManageCache(FSuperDexPose& Pose, bool bIsValid) override;
   virtual void TickComponent(
       float DeltaTime,
@@ -160,34 +186,50 @@ class SUPERDEXTELEOP_API USuperDexBotIKRetargeter : public USuperDexRetargeter {
     bool bHasMinimum = false;
     bool bHasMaximum = false;
   };
-  // Prepared once in instantiated command units; no random-pose fallback bounds.
+
+  /** Prepared once in instantiated command units; no random-pose fallback bounds. */
   TArray<FBiasedCommandLimit> BiasedCommandLimits;
   void PrepareBiasedCommandLimits();
   bool ApplyJointBiasAndLimits(TArray<double>& Positions) const;
-  // The component pose source, or null for subsystem/actor sources.
+
+  /** The component pose source, or null for subsystem/actor sources. */
   USuperDexPoseableComponent* GetComponentPoseSource() const;
-  // The source's relative transform that puts the input bot's base at
-  // Config->OutputBaseFrameFromInputBaseFrame. False if the source is not attached to this
-  // component, whose placement is then left to its owner.
+
+  /**
+   * The source's relative transform that puts the input bot's base at
+   * Config->OutputBaseFrameFromInputBaseFrame. False if the source is not attached to this
+   * component, whose placement is then left to its owner.
+   */
   bool ComputeSourcePlacement(
       const USuperDexPoseableComponent& Source,
       FTransform& OutSourceRelative) const;
-  // The output root in the source root's frame implied by
-  // Config->OutputBaseFrameFromInputBaseFrame.
+
+  /**
+   * The output root in the source root's frame implied by
+   * Config->OutputBaseFrameFromInputBaseFrame.
+   */
   FTransform ComputeInputRootFrameFromOutputRootFrame() const;
-  // Place an attached component source per ComputeSourcePlacement.
+
+  /** Place an attached component source per ComputeSourcePlacement. */
   void PlaceSourceAtConfigInputBaseFrame();
-  // Resolve the active goals' frames exactly as the native solver does, after a solve.
+
+  /** Resolve the active goals' frames exactly as the native solver does, after a solve. */
   void CaptureDebugGoalFrames(const mochi::TransformRT& WorldFrameFromInputBaseFrame);
   void DrawDebugGoalFrames() const;
   TArray<FDebugGoalFrames> DebugGoalFrames;
-  // The input bot as the latest solve saw it, captured while bDebugDrawInputPoseSkeleton is set.
+
+  /**
+   * The input bot as the latest solve saw it, captured while bDebugDrawInputPoseSkeleton is set.
+   */
   void CaptureDebugInputPose(const mochi::TransformRT& WorldFrameFromInputBaseFrame);
   void UpdateDebugInputPoseMesh(bool bFreshSolve);
   UPROPERTY(Transient)
   TObjectPtr<UPoseableMeshComponent> DebugInputPoseMesh;
-  FTransform DebugInputBaseInOutputBase = FTransform::Identity; // Includes the display scale.
-  TArray<FTransform> DebugInputLinksInParent; // Nominal (unscaled), input bot link order.
+
+  /** Includes the display scale. */
+  FTransform DebugInputBaseInOutputBase = FTransform::Identity;
+  /** Nominal (unscaled), input bot link order. */
+  TArray<FTransform> DebugInputLinksInParent;
   bool bDebugInputPoseMeshMatchesBot = false;
   bool bHasDebugInputPose = false;
   void ReleaseSolver();
@@ -205,23 +247,32 @@ class SUPERDEXTELEOP_API USuperDexBotIKRetargeter : public USuperDexRetargeter {
   superdex::robotics::BotIKConfig NativeConfig;
   superdex::robotics::BotPrefab OutputModel;
   superdex::robotics::BotPrefab InputModel;
-  // Root-driven pose contract: the output root in the source root's frame, so the output root is
-  // this applied to the source pose's SkeletonRootToVrRoot. Derived from
-  // Config->OutputBaseFrameFromInputBaseFrame on InitializeRetargeter; solves, clutch toggles,
-  // FK and component movement never change it.
+
+  /**
+   * Root-driven pose contract: the output root in the source root's frame, so the output root is
+   * this applied to the source pose's SkeletonRootToVrRoot. Derived from
+   * Config->OutputBaseFrameFromInputBaseFrame on InitializeRetargeter; solves, clutch toggles,
+   * FK and component movement never change it.
+   */
   FTransform InputRootFrameFromOutputRootFrame = FTransform::Identity;
-  // Input joint positions of the last applied pose: the reference for the next one's revolute
-  // turns.
+
+  /**
+   * Input joint positions of the last applied pose: the reference for the next one's revolute
+   * turns.
+   */
   mochi::DynamicArray<mochi::real> PreviousInputPositions;
-  // Frames whose input pose didn't fit the InputBot's joints; throttles their warning.
+
+  /** Frames whose input pose didn't fit the InputBot's joints; throttles their warning. */
   int32 LargeInputResidualFrames = 0;
   bool bInputBotHasPrismatic = false;
-  // Guarded by ResultMutex: read from other threads through the cached getters.
+
+  /** Guarded by ResultMutex: read from other threads through the cached getters. */
   TArray<double> JointCache;
   mutable FCriticalSection ResultMutex;
   bool bHasSolution = false;
   bool bCurrentValid = false;
-  // The last status, only to log and show each change once.
+
+  /** The last status, only to log and show each change once. */
   FString LastDiagnostic;
   uint64 ErrorMessageKey = 0;
 };

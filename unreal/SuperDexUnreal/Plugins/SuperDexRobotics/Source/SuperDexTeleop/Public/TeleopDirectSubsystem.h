@@ -29,10 +29,10 @@ using FTeleopTransformArrayCallback = std::function<void(const TArray<FTransform
 using FTeleopStringCallback = std::function<void(const FString&)>;
 using FTeleopByteArrayCallback = std::function<void(const TArray<uint8>&)>;
 
-// Message type enumeration for type safety
+/** Message type enumeration for type safety */
 enum class ETeleopMessageType : uint8 { DoubleArray, TransformArray, String, ByteArray };
 
-// Typed subscriber storage
+/** Typed subscriber storage */
 struct FTeleopSubscriberEntry {
   ETeleopMessageType Type;
   FTeleopDoubleArrayCallback DoubleArrayCallback;
@@ -41,19 +41,19 @@ struct FTeleopSubscriberEntry {
   FTeleopByteArrayCallback ByteArrayCallback;
 };
 
-// Base structure for topic data storage
+/** Base structure for topic data storage */
 struct FTeleopTopicData {
   ETeleopMessageType Type;
   FDateTime LastUpdated;
   TArray<FTeleopSubscriberEntry> Subscribers;
 
-  // Typed data storage (only one will be used based on Type)
+  /** Typed data storage (only one will be used based on Type) */
   TArray<double> DoubleArrayData;
   TArray<FTransform> TransformArrayData;
   FString StringData;
   TArray<uint8> ByteArrayData;
 
-  // Dirty flag: true if new data has been published since last pump
+  /** Dirty flag: true if new data has been published since last pump */
   bool bDirty = false;
 };
 
@@ -85,8 +85,10 @@ class SUPERDEXTELEOP_API UTeleopDirectSubsystem : public UGameInstanceSubsystem 
   // Configuration
   //----------------------------------------------------------------------------
 
-  // When true, Publish_* calls invoke subscriber callbacks immediately.
-  // When false (default), messages are queued and delivered via PumpSubscribers().
+  /**
+   * When true, Publish_* calls invoke subscriber callbacks immediately.
+   * When false (default), messages are queued and delivered via PumpSubscribers().
+   */
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TeleopDirect")
   bool bInstantDelivery = false;
 
@@ -94,46 +96,67 @@ class SUPERDEXTELEOP_API UTeleopDirectSubsystem : public UGameInstanceSubsystem 
   // Publisher Registration
   //----------------------------------------------------------------------------
 
+  /** Registers a publisher on TopicName, creating the topic if needed, and returns its ID. */
   int32 RegisterPublisher(const FString& TopicName, ETeleopMessageType Type);
+  /** Unregisters a publisher; its topic is kept. */
   void UnregisterPublisher(int32 PublisherId, const FString& TopicName);
 
   //----------------------------------------------------------------------------
   // Subscriber Registration (typed)
   //----------------------------------------------------------------------------
 
+  /**
+   * Registers a double-array callback on TopicName, creating the topic if needed, and returns its
+   * ID.
+   */
   int32 RegisterSubscriber_DoubleArray(
       const FString& TopicName,
       FTeleopDoubleArrayCallback Callback);
 
+  /** Like RegisterSubscriber_DoubleArray, for transform-array messages. */
   int32 RegisterSubscriber_TransformArray(
       const FString& TopicName,
       FTeleopTransformArrayCallback Callback);
 
+  /** Like RegisterSubscriber_DoubleArray, for string messages. */
   int32 RegisterSubscriber_String(const FString& TopicName, FTeleopStringCallback Callback);
 
+  /** Like RegisterSubscriber_DoubleArray, for byte-array messages. */
   int32 RegisterSubscriber_ByteArray(const FString& TopicName, FTeleopByteArrayCallback Callback);
 
+  /**
+   * Unregisters a subscriber by clearing its callback in the topic registry. A delivery that has
+   * already copied the subscriber list may still call it.
+   */
   void UnregisterSubscriber(int32 SubscriberId, const FString& TopicName);
 
   //----------------------------------------------------------------------------
   // Publishing (typed)
   //----------------------------------------------------------------------------
 
+  /**
+   * Publishes Data on TopicName from a registered publisher, delivering it now with
+   * bInstantDelivery or on the next PumpSubscribers otherwise.
+   */
   void Publish_DoubleArray(int32 PublisherId, const FString& TopicName, const TArray<double>& Data);
 
+  /** Like Publish_DoubleArray, for transform-array messages. */
   void Publish_TransformArray(
       int32 PublisherId,
       const FString& TopicName,
       const TArray<FTransform>& Data);
 
+  /** Like Publish_DoubleArray, for string messages. */
   void Publish_String(int32 PublisherId, const FString& TopicName, const FString& Data);
 
+  /** Like Publish_DoubleArray, for byte-array messages. */
   void Publish_ByteArray(int32 PublisherId, const FString& TopicName, const TArray<uint8>& Data);
 
   //----------------------------------------------------------------------------
   // Message Delivery
   //----------------------------------------------------------------------------
 
+  /** Delivers each topic's latest queued message to its subscribers. */
   void PumpSubscribers();
 
  private:
@@ -144,7 +167,7 @@ class SUPERDEXTELEOP_API UTeleopDirectSubsystem : public UGameInstanceSubsystem 
   // Handle tracking
   int32 NextHandleId = 0;
 
-  // Track which handles are registered to which topics (for validation)
+  /** Track which handles are registered to which topics (for validation) */
   TMap<int32, FString> PublisherHandleToTopic;
   TMap<int32, FString> SubscriberHandleToTopic;
   TMap<int32, int32> SubscriberHandleToIndex;

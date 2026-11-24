@@ -68,7 +68,7 @@ struct TSuperDexOneEuroFilter {
     return SmoothedValue;
   }
 
-  // ~ Static filter parameters; see constructor for description ~
+  /** ~ Static filter parameters; see constructor for description ~ */
   double MinCutoff;
   double Beta;
   double Dcutoff;

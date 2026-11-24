@@ -35,26 +35,38 @@ using FByteArrayCallback = TFunction<void(const TArray<uint8>&)>;
 // BASE IMPLEMENTATION CLASS
 //------------------------------------------------------------------------------
 
+/**
+ * Base class of the communication backends a teleop node publishes and subscribes through.
+ * Subclasses implement every method except SetName.
+ */
 UCLASS(Abstract)
 class SUPERDEXTELEOP_API UTeleopNodeImplBase : public UObject {
   GENERATED_BODY()
 
  public:
   // Lifecycle
+  /** Sets the node name used in log messages. */
   virtual void SetName(const FString& Name);
+  /** Starts the backend; returns false if it cannot start. */
   virtual bool Initialize();
+  /** Stops the backend. */
   virtual void Deinitialize();
 
-  // Called each tick to process incoming messages
+  /** Called each tick to process incoming messages */
   virtual void Pump();
 
   // Publisher creation
+  /** Create a publisher of each message type on TopicName. */
   virtual FTeleopPublisherHandle CreatePublisher_DoubleArray(const FString& TopicName);
   virtual FTeleopPublisherHandle CreatePublisher_TransformArray(const FString& TopicName);
   virtual FTeleopPublisherHandle CreatePublisher_String(const FString& TopicName);
   virtual FTeleopPublisherHandle CreatePublisher_ByteArray(const FString& TopicName);
 
   // Subscriber creation
+  /**
+   * Create a subscriber of each message type on TopicName; Callback receives the data the backend
+   * delivers, which may coalesce messages (see the backend).
+   */
   virtual FTeleopSubscriberHandle CreateSubscriber_DoubleArray(
       const FString& TopicName,
       FDoubleArrayCallback Callback);
@@ -69,6 +81,7 @@ class SUPERDEXTELEOP_API UTeleopNodeImplBase : public UObject {
       FByteArrayCallback Callback);
 
   // Publishing
+  /** Publish Data through a publisher of the matching type. */
   virtual void Publish_DoubleArray(FTeleopPublisherHandle Handle, const TArray<double>& Data);
   virtual void Publish_TransformArray(
       FTeleopPublisherHandle Handle,

@@ -21,14 +21,16 @@
 
 #include "TeleopNodeSettings.generated.h"
 
-// Project-level teleop node settings, shown under Project Settings > Plugins > SuperDex Teleop.
+/** Project-level teleop node settings, shown under Project Settings > Plugins > SuperDex Teleop. */
 UCLASS(Config = Game, defaultconfig, DisplayName = "SuperDex Teleop")
 class SUPERDEXTELEOP_API UTeleopNodeSettings : public UDeveloperSettings {
   GENERATED_BODY()
 
  public:
-  // The UTeleopNodeImplBase class that teleop nodes with an empty CommunicationClassName use.
-  // When empty, they use UTeleopNodeImplDirect.
+  /**
+   * The UTeleopNodeImplBase class that teleop nodes with an empty CommunicationClassName use.
+   * When empty, they use UTeleopNodeImplDirect.
+   */
   UPROPERTY(
       Config,
       EditAnywhere,
@@ -39,6 +41,10 @@ class SUPERDEXTELEOP_API UTeleopNodeSettings : public UDeveloperSettings {
   virtual FName GetCategoryName() const override;
 
 #if WITH_EDITOR
+  /**
+   * Lists the available communication classes, like
+   * UTeleopNodeBaseComponent::GetCommunicationClassOptions_EditorOnly.
+   */
   UFUNCTION(Category = "Teleop Node")
   TArray<FString> GetCommunicationClassOptions() const;
 #endif

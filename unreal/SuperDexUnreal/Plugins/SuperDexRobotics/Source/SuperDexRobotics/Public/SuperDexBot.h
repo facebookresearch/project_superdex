@@ -34,13 +34,19 @@ class FCanvas;
 class FPrimitiveDrawInterface;
 class FMaterialRenderProxy;
 
-/// Marker written over a sensor's `params` at import once the params file it named has been
-/// captured into USuperDexBot::SensorParamFiles. The remainder of the string is the key into
-/// that map. Chosen so superdex_robotics still classifies the value as a path rather than
-/// inline JSON (@ref superdex::robotics::IsInlineJson), and so it collides with neither of
-/// that library's own path forms (`//` root-relative and `@tag/`).
+/**
+ * Marker written over a sensor's `params` at import once the params file it named has been
+ * captured into USuperDexBot::SensorParamFiles. The remainder of the string is the key into
+ * that map. Chosen so superdex_robotics still classifies the value as a path rather than
+ * inline JSON (@ref superdex::robotics::IsInlineJson), and so it collides with neither of
+ * that library's own path forms (`//` root-relative and `@tag/`).
+ */
 inline constexpr std::string_view SuperDexBotDataPrefix = "botdata:";
 
+/**
+ * How a bot component's params value is given: empty, inline JSON, a file captured into the asset
+ * (SuperDexBotDataPrefix), a loader path (`//` or `@`), or a plain file path.
+ */
 enum class ESuperDexBotComponentParamsKind : uint8 {
   Empty,
   InlineJson,
@@ -49,10 +55,12 @@ enum class ESuperDexBotComponentParamsKind : uint8 {
   FilePath,
 };
 
-/// Mirrors superdex::robotics::IsInlineJson: a params value is inline JSON when its first
-/// non-whitespace character is '{' or '[', and any other non-empty value is a file path.
-/// Reimplemented rather than called because the declaration in the vendored file_utils.h sits
-/// behind MOCHI_USE_REFLECTION, which none of the Unreal plugin modules define.
+/**
+ * Mirrors superdex::robotics::IsInlineJson: a params value is inline JSON when its first
+ * non-whitespace character is '{' or '[', and any other non-empty value is a file path.
+ * Reimplemented rather than called because the declaration in the vendored file_utils.h sits
+ * behind MOCHI_USE_REFLECTION, which none of the Unreal plugin modules define.
+ */
 inline bool IsInlineJsonParams(std::string_view Value) {
   for (const char C : Value) {
     if (C == ' ' || C == '\t' || C == '\n' || C == '\r') {
@@ -63,6 +71,7 @@ inline bool IsInlineJsonParams(std::string_view Value) {
   return false; // empty or all-whitespace -> treat as (empty) path, not inline JSON
 }
 
+/** Classifies a bot component params value. */
 inline ESuperDexBotComponentParamsKind ClassifyBotComponentParams(std::string_view Value) {
   if (Value.empty()) {
     return ESuperDexBotComponentParamsKind::Empty;
@@ -79,7 +88,7 @@ inline ESuperDexBotComponentParamsKind ClassifyBotComponentParams(std::string_vi
   return ESuperDexBotComponentParamsKind::FilePath;
 }
 
-/// One file captured out of a bot's sensor params at import time.
+/** One file captured out of a bot's sensor params at import time. */
 USTRUCT()
 struct FSuperDexBotDataFile {
   GENERATED_BODY()
@@ -88,85 +97,128 @@ struct FSuperDexBotDataFile {
   TArray<uint8> Contents;
 };
 
+/**
+ * Import data of a USuperDexBot: source tracking plus the content hashes used to skip reimporting
+ * unchanged models.
+ */
 UCLASS()
 class SUPERDEXROBOTICS_API USuperDexBotImportData : public UAssetImportData {
   GENERATED_BODY()
  public:
+  /**
+   * Hash of the source .superdex_bot and its referenced files at the last import (see
+   * USuperDexBot::ComputeSourceHash).
+   */
   UPROPERTY(VisibleAnywhere)
   FString SourceFileHash;
+  /**
+   * Per-link content hash of the render model (.glb), used to skip reimporting an unchanged render
+   * mesh.
+   */
   UPROPERTY(VisibleAnywhere)
   TArray<FString> RenderModelHashes;
+  /**
+   * Per-link content hash of the collision model (.mochi.h5), used to skip reimporting an unchanged
+   * MochiModel.
+   */
   UPROPERTY(VisibleAnywhere)
   TArray<FString> MochiModelHashes;
-  /// Content hash of the skin collision model (skin.shape .mochi.h5), used to skip
-  /// reimporting an unchanged skin collision mesh. Empty if the bot has no skin.
+  /**
+   * Content hash of the skin collision model (skin.shape .mochi.h5), used to skip
+   * reimporting an unchanged skin collision mesh. Empty if the bot has no skin.
+   */
   UPROPERTY(VisibleAnywhere)
   FString SkinMochiModelHash;
-  /// Content hash of the skin render model (skin.renderModel .glb), used to skip reimporting an
-  /// unchanged skin render mesh. Empty if the bot's skin has no render model.
+  /**
+   * Content hash of the skin render model (skin.renderModel .glb), used to skip reimporting an
+   * unchanged skin render mesh. Empty if the bot's skin has no render model.
+   */
   UPROPERTY(VisibleAnywhere)
   FString SkinRenderModelHash;
-  /// Object paths (relative to this bot's package folder) of every asset generated
-  /// by the last import -- render/collision meshes, the skeleton and skeletal mesh,
-  /// and the materials they reference. Reimport checks these still exist to detect
-  /// deleted outputs even when the source .superdex_bot is unchanged. Stored relative
-  /// so the bot's folder can be moved and still reimport correctly.
+  /**
+   * Object paths (relative to this bot's package folder) of every asset generated
+   * by the last import -- render/collision meshes, the skeleton and skeletal mesh,
+   * and the materials they reference. Reimport checks these still exist to detect
+   * deleted outputs even when the source .superdex_bot is unchanged. Stored relative
+   * so the bot's folder can be moved and still reimport correctly.
+   */
   UPROPERTY(VisibleAnywhere)
   TArray<FString> GeneratedAssetPaths;
 };
 
+/**
+ * Imported Unreal asset representing a SuperDex bot.
+ *
+ * Created by USuperDexBotFactory when a .superdex_bot file is dragged into the Content
+ * Browser. Stores the source JSON, a generated skeletal mesh, and any associated
+ * MochiModels. Supports reimport via FReimportManager (right-click "Reimport" in
+ * the Content Browser, or the Reimport button in the Details panel).
+ */
 UCLASS(
     BlueprintType,
     HideCategories = Object,
     DisplayName = "SuperDex Bot",
     PrioritizeCategories = ("SuperDex Bot", "Assets", "Internal"),
     AutoCollapseCategories = ("Internal"))
-/// Imported Unreal asset representing a SuperDex bot.
-///
-/// Created by USuperDexBotFactory when a .superdex_bot file is dragged into the Content
-/// Browser. Stores the source JSON, a generated skeletal mesh, and any associated
-/// MochiModels. Supports reimport via FReimportManager (right-click "Reimport" in
-/// the Content Browser, or the Reimport button in the Details panel).
 class SUPERDEXROBOTICS_API USuperDexBot : public UMochiArticulationBase {
   GENERATED_BODY()
  public:
 #if WITH_EDITOR
-  /// Creates the UAssetImportData subobject for source file tracking.
+  /** Creates the UAssetImportData subobject for source file tracking. */
   virtual void PostInitProperties() override;
-  // Upgrades AssetImportData to USuperDexBotImportData if necessary.
+  /** Upgrades AssetImportData to USuperDexBotImportData if necessary. */
   virtual void PostLoad() override;
-  /// Exposes the source file path to the Asset Registry for reimport discovery.
+  /** Exposes the source file path to the Asset Registry for reimport discovery. */
   virtual void GetAssetRegistryTags(FAssetRegistryTagsContext Context) const override;
-  /// Triggers reimport of this asset from its source .superdex_bot file via FReimportManager.
+  /** Triggers reimport of this asset from its source .superdex_bot file via FReimportManager. */
   void Reimport();
-  /// Returns the absolute path to the source .superdex_bot file on disk.
+  /** Returns the absolute path to the source .superdex_bot file on disk. */
   FString GetSourceFilePath() const;
-  /// Computes a SHA1 hash of the source .superdex_bot file and all referenced asset
-  /// files (.glb, .mochi.h5). If the bot was a ModBotPrefab, the hash is
-  /// computed on the resolved (built)
+  /**
+   * Computes a SHA1 hash of the source .superdex_bot file and all referenced asset
+   * files (.glb, .mochi.h5). If the bot was a ModBotPrefab, the hash is
+   * computed on the resolved (built)
+   */
   FString ComputeSourceHash() const;
-  /// Returns true if the source .superdex_bot on disk has changed since the last import
-  /// (i.e. ComputeSourceHash() differs from the stored hash).
+  /**
+   * Returns true if the source .superdex_bot on disk has changed since the last import
+   * (i.e. ComputeSourceHash() differs from the stored hash).
+   */
   bool IsOutOfSync() const;
 #endif
-  /// Creates a transient bot, not backed by an imported asset, from resolved BotPrefab JSON. Its
-  /// kinematics, the only part that does not need imported content, are exactly those of an
-  /// imported bot with the same links and joints, so the JSON can be a copy of an imported bot
-  /// pruned to them (no geometry, contact or mass). The BotPrefab is loaded here, so later
-  /// queries only read it. Returns nullptr if the JSON does not load.
+  /**
+   * Creates a transient bot, not backed by an imported asset, from resolved BotPrefab JSON. Its
+   * kinematics, the only part that does not need imported content, are exactly those of an
+   * imported bot with the same links and joints, so the JSON can be a copy of an imported bot
+   * pruned to them (no geometry, contact or mass). The BotPrefab is loaded here, so later
+   * queries only read it. Returns nullptr if the JSON does not load.
+   */
   static USuperDexBot* CreateTransient(UObject* Outer, const FString& InBotPrefabJson);
-  /// Returns the bot name extracted from the BotPrefab JSON (e.g. "left_hand").
+
+  /**
+   * Returns the bot name extracted from the BotPrefab JSON (e.g. "left_hand").
+   *
+   * @return The bot name.
+   */
   UFUNCTION(BlueprintPure, Category = "SuperDex Bot")
   const FString& GetBotName() const;
-  /// Returns the generated skeletal mesh, or nullptr if generation failed.
+  /** Returns the generated skeletal mesh, or nullptr if generation failed. */
   virtual USkeletalMesh* GetSkeletalMesh() const override;
-  /// Returns the imported MochiModel assets (one per link that has a mochiModel entry).
+  /**
+   * Returns the imported MochiModel assets (one per link that has a mochiModel entry).
+   *
+   * @return The imported MochiModel assets.
+   */
   UFUNCTION(BlueprintPure, Category = "SuperDex Bot")
   const TArray<UMochiModel*>& GetMochiModels() const;
-  /// Returns the fully-resolved BotPrefab JSON.
+  /**
+   * Returns the fully-resolved BotPrefab JSON.
+   *
+   * @return The resolved BotPrefab JSON.
+   */
   UFUNCTION(BlueprintPure, Category = "SuperDex Bot")
   const FString& GetBotPrefabJson() const;
-  /// Returns the BotPrefab
+  /** Returns the BotPrefab */
   const superdex::robotics::BotPrefab& GetBotPrefab() const;
 
   virtual const FString& GetArticulationName() const override;
@@ -174,12 +226,22 @@ class SUPERDEXROBOTICS_API USuperDexBot : public UMochiArticulationBase {
   virtual const TArray<double>& GetDefaultJointPositions() const override;
   virtual TArray<FName> GetLinkNames() const override;
   virtual TArray<FName> GetJointNames() const override;
-  /// Returns the index of a joint's first DOF among the bot's DOFs (the order of joint positions,
-  /// e.g. USuperDexBotComponent::GetCurrentJointPositions), or INDEX_NONE if the joint doesn't
-  /// exist or has no DOFs.
+  /**
+   * Returns the index of a joint's first DOF among the bot's DOFs (the order of joint positions,
+   * e.g. USuperDexBotComponent::GetCurrentJointPositions), or INDEX_NONE if the joint doesn't
+   * exist or has no DOFs.
+   *
+   * @param JointName Name of the joint.
+   * @return Index of the joint's first DOF, or INDEX_NONE.
+   */
   UFUNCTION(BlueprintPure, Category = "SuperDex Bot")
   int32 GetDofIndex(FName JointName) const;
-  /// Returns the name of the link a DOF moves, or NAME_None for an invalid DOF index.
+  /**
+   * Returns the name of the link a DOF moves, or NAME_None for an invalid DOF index.
+   *
+   * @param DofIndex Index among the bot's DOFs.
+   * @return Name of the link the DOF moves, or NAME_None.
+   */
   UFUNCTION(BlueprintPure, Category = "SuperDex Bot")
   FName GetDofLinkName(int32 DofIndex) const;
   virtual bool SupportsUrdfExport() const override {
@@ -232,63 +294,74 @@ class SUPERDEXROBOTICS_API USuperDexBot : public UMochiArticulationBase {
   friend class USuperDexBotFactory;
   friend class UReimportSuperDexBotFactory;
   friend class FSuperDexBotEditorToolkit;
-  // Calls MaterializeSensorParamFiles: the loader is the single point every BotPrefab this
-  // asset produces passes through, including one resolved by UE path for a nested bot.
+
+  /**
+   * Calls MaterializeSensorParamFiles: the loader is the single point every BotPrefab this
+   * asset produces passes through, including one resolved by UE path for a nested bot.
+   */
   friend class FSuperDexBotLoader;
 
-  /// Bot name extracted from the BotPrefab JSON (sanitized for use as a package path).
+  /** Bot name extracted from the BotPrefab JSON (sanitized for use as a package path). */
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, AssetRegistrySearchable, Category = "SuperDex Bot")
   FString BotName;
 #if WITH_EDITORONLY_DATA
-  /// UE import data subobject storing the source file path for reimport support.
+  /** UE import data subobject storing the source file path for reimport support. */
   UPROPERTY(VisibleAnywhere, Category = "Internal")
   TObjectPtr<USuperDexBotImportData> AssetImportData;
 #endif
 
-  /// Fully-resolved BotPrefab JSON.
+  /** Fully-resolved BotPrefab JSON. */
   UPROPERTY()
   FString BotPrefabJson;
-  /// Generated skeletal mesh with per-link bones and render geometry baked in.
+  /** Generated skeletal mesh with per-link bones and render geometry baked in. */
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, AssetRegistrySearchable, Category = "Assets")
   TObjectPtr<USkeletalMesh> SkeletalMesh;
-  /// Imported MochiModel (.mochi.h5) assets: one per link that defines a mochiModel entry,
-  /// plus the optional skin collision model (skin.shape) when the bot has a skin. Held here
-  /// to keep them GC-alive and saved with the bot; not indexed by link at runtime.
+  /**
+   * Imported MochiModel (.mochi.h5) assets: one per link that defines a mochiModel entry,
+   * plus the optional skin collision model (skin.shape) when the bot has a skin. Held here
+   * to keep them GC-alive and saved with the bot; not indexed by link at runtime.
+   */
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Assets")
   TArray<TObjectPtr<UMochiModel>> MochiModels;
-  /// Per-link local bounding boxes for visual bounds computation.
+  /** Per-link local bounding boxes for visual bounds computation. */
   UPROPERTY()
   TArray<FBoxSphereBounds> LinkBounds;
 
-  /// Every sensor params file this bot's links name, plus the companion files those params
-  /// reference (a learned sensor's model weights, say), captured at import and keyed by a
-  /// bot-relative path.
-  ///
-  /// superdex_robotics opens a sensor's params through the filesystem, and the path the
-  /// importer hands it is absolute and rooted in the *importing* machine's archive-extraction
-  /// temp dir (see ExtractBotArchiveToCache). Baking that path into the asset makes the bot
-  /// loadable only where that temp dir happens to survive, so the bytes travel inside the
-  /// asset instead and are written back out by MaterializeSensorParamFiles before the bot is
-  /// built. Empty for bots whose sensors all use inline JSON params, and for bots imported
-  /// before this capture existed.
+  /**
+   * Every sensor params file this bot's links name, plus the companion files those params
+   * reference (a learned sensor's model weights, say), captured at import and keyed by a
+   * bot-relative path.
+   *
+   * superdex_robotics opens a sensor's params through the filesystem, and the path the
+   * importer hands it is absolute and rooted in the *importing* machine's archive-extraction
+   * temp dir (see ExtractBotArchiveToCache). Baking that path into the asset makes the bot
+   * loadable only where that temp dir happens to survive, so the bytes travel inside the
+   * asset instead and are written back out by MaterializeSensorParamFiles before the bot is
+   * built. Empty for bots whose sensors all use inline JSON params, and for bots imported
+   * before this capture existed.
+   */
   UPROPERTY()
   TMap<FString, FSuperDexBotDataFile> SensorParamFiles;
 
  private:
-  /// Lazily loads and caches BotPrefab from the stored JSON.
+  /** Lazily loads and caches BotPrefab from the stored JSON. */
   bool EnsureBotPrefabCached(bool bForceReload = false) const;
-  /// Writes SensorParamFiles to a scratch directory and repoints every `botdata:`-marked
-  /// sensor params in @p Prefab at the file written for it. Returns false if any captured
-  /// file could not be written or any marker had no matching entry; the bot is not loadable
-  /// in that case, so the caller should treat it as a load failure rather than build a bot
-  /// whose sensors would fail one by one.
+  /**
+   * Writes SensorParamFiles to a scratch directory and repoints every `botdata:`-marked
+   * sensor params in @p Prefab at the file written for it. Returns false if any captured
+   * file could not be written or any marker had no matching entry; the bot is not loadable
+   * in that case, so the caller should treat it as a load failure rather than build a bot
+   * whose sensors would fail one by one.
+   */
   bool MaterializeSensorParamFiles(superdex::robotics::BotPrefab& Prefab) const;
-  /// Returns the per-link bounding boxes.
+  /** Returns the per-link bounding boxes. */
   const TArray<FBoxSphereBounds>& GetLinkBounds() const;
 
  private:
-  /// Guards loading CachedBotPrefab and everything filled with it. Once bHasCachedBotPrefab is set,
-  /// readers on any thread only read them.
+  /**
+   * Guards loading CachedBotPrefab and everything filled with it. Once bHasCachedBotPrefab is set,
+   * readers on any thread only read them.
+   */
   mutable FCriticalSection BotPrefabLoadMutex;
   mutable superdex::robotics::BotPrefab CachedBotPrefab;
   mutable std::atomic<bool> bHasCachedBotPrefab{false};

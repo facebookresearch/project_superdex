@@ -36,21 +36,29 @@ class FSuperDexPoseModule : public IModuleInterface {
     return FModuleManager::LoadModulePtr<FSuperDexPoseModule>("SuperDexPose");
   }
 
-  // Transform that takes a hand root/wrist pose from the source tracking space (e.g. mocap), to
-  // the space of the parent of the hand meshes (likely either the player pawn root, or a sub-node
-  // of the player pawn, such as 'VROrigin', at the player's feet). This transform is applied to
-  // hand root/wrist poses to get them into a convenient space for consumption by callers.
+  /**
+   * Transform that takes a hand root/wrist pose from the source tracking space (e.g. mocap), to
+   * the space of the parent of the hand meshes (likely either the player pawn root, or a sub-node
+   * of the player pawn, such as 'VROrigin', at the player's feet). This transform is applied to
+   * hand root/wrist poses to get them into a convenient space for consumption by callers.
+   */
   virtual void SetTrackingSpaceToHandParentSpaceTransform(const FTransform& Transform);
 
+  /** Returns the transform set by SetTrackingSpaceToHandParentSpaceTransform. */
   virtual FTransform GetTrackingSpaceToHandParentSpaceTransform() const;
 
-  // Common utility functions that require .cpp implementation
-  // This isn't a great place to put these, but, no other home for them right now
-  // Modules are not statically-linked together, so must go through some virtual interface to be
-  // accessible to other modules
+  /**
+   * Loads StructData, of type StructDefinition, from the JSON file at FilePath.
+   *
+   * Common utility functions that require .cpp implementation
+   * This isn't a great place to put these, but, no other home for them right now
+   * Modules are not statically-linked together, so must go through some virtual interface to be
+   * accessible to other modules
+   */
   virtual bool
   LoadFromJsonFile(const UStruct* StructDefinition, void* StructData, TCHAR const* FilePath);
 
+  /** Saves StructData, of type StructDefinition, to the JSON file at FilePath. */
   virtual bool
   SaveToJsonFile(const UStruct* StructDefinition, const void* StructData, TCHAR const* FilePath);
 

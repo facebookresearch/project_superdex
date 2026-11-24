@@ -23,7 +23,7 @@
 
 class ASuperDexRecorder;
 
-/*
+/**
  * The SuperDex Recorders of a game world. The first to register is the active one; recorders that
  * register while another is registered never record.
  */
@@ -32,10 +32,17 @@ class USuperDexRecorderWorldSubsystem : public UWorldSubsystem {
   GENERATED_BODY()
 
  public:
-  /* Returns whether Recorder is the active recorder. Logs an error naming every recorder if it
-   * isn't. */
+  /**
+   * Returns whether Recorder is the active recorder. Logs an error naming every recorder if it
+   * isn't.
+   */
   bool Register(ASuperDexRecorder* Recorder);
+  /**
+   * Removes Recorder, and any destroyed recorders, from the world's recorders; clears the active
+   * recorder if it was Recorder.
+   */
   void Unregister(const ASuperDexRecorder* Recorder);
+  /** Returns the world's recording SuperDex Recorder, or null. */
   ASuperDexRecorder* GetActiveRecorder() const;
 
  protected:

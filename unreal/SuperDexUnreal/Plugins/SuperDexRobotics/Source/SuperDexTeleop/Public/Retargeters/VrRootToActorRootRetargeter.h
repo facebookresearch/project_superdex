@@ -20,9 +20,11 @@
 
 #include "VrRootToActorRootRetargeter.generated.h"
 
-// Modifies the SkeletonRootToVrRoot transform to be SkeletonRootToActorRoot. Effectively changing
-// the pose so that it is relative to the parent actor of this component rather than the pawn's
-// VrRoot leaving the SkeletonRoot stationary in UEWorldSpace.
+/**
+ * Modifies the SkeletonRootToVrRoot transform to be SkeletonRootToActorRoot. Effectively changing
+ * the pose so that it is relative to the parent actor of this component rather than the pawn's
+ * VrRoot leaving the SkeletonRoot stationary in UEWorldSpace.
+ */
 UCLASS(Blueprintable, meta = (BlueprintSpawnableComponent))
 class SUPERDEXTELEOP_API UVrRootToActorRootRetargeter : public USuperDexRetargeter {
   GENERATED_BODY()

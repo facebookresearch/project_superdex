@@ -20,6 +20,7 @@
 
 #include "SuperDexClutchableInterface.generated.h"
 
+/** Interface for objects whose teleop clutch can be engaged and disengaged. */
 UINTERFACE(BlueprintType)
 class SUPERDEXTELEOP_API USuperDexClutchableInterface : public UInterface {
   GENERATED_BODY()
@@ -29,6 +30,11 @@ class SUPERDEXTELEOP_API ISuperDexClutchableInterface {
   GENERATED_BODY()
 
  public:
+  /**
+   * Engages or disengages the clutch.
+   *
+   * @param bClutchEnabled Whether the clutch should be engaged.
+   */
   UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "SuperDex")
   void SetClutchEnabled(bool bClutchEnabled);
 };

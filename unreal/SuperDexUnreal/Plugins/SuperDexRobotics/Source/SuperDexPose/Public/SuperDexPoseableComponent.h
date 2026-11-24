@@ -41,9 +41,11 @@ class SUPERDEXPOSE_API USuperDexPoseableComponent : public UPoseableMeshComponen
   GENERATED_BODY()
 
  public:
-  /** Overrides the PoseSource for this component. If set, the USuperDexPoseSubsystem will be asked
+  /**
+   * Overrides the PoseSource for this component. If set, the USuperDexPoseSubsystem will be asked
    * directly for a pose from this source. If the source is not valid, it will provide invalid
-   * poses. */
+   * poses.
+   */
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDexPoseableComponent")
   TSubclassOf<USuperDexPoseSource> PoseSourceOverride = nullptr;
 
@@ -62,18 +64,22 @@ class SUPERDEXPOSE_API USuperDexPoseableComponent : public UPoseableMeshComponen
   UPROPERTY(BlueprintReadWrite, Category = "SuperDexPoseableComponent")
   USuperDexPoseableComponent* SourcePoseableOverride = nullptr;
 
-  /** A substring used for disambiguation when multiple children sources are present. Can safely be
+  /**
+   * A substring used for disambiguation when multiple children sources are present. Can safely be
    * left blank if there is 0-1 children. Otherwise, when this component needs to GetPose from its
-   * children it will do so using the first child matching the substring. */
+   * children it will do so using the first child matching the substring.
+   */
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDexPoseableComponent")
   FString ChildSourceNameContainsSubstring = "";
 
-  /** If true, the component will be moved each tick such that its componentToRoot transform is
+  /**
+   * If true, the component will be moved each tick such that its componentToRoot transform is
    * equal to the SkeletonRootToVrRoot of its output pose. This functionally ignores the parent
    * relative attachments of the component. If false, no updates to the component scene transform
    * will be made. The internal CachedVrRootToWorld will be updated with the correct current pose
    * and OutputPoseScaleOverride will be respected. Note that CachedOutputPose.SkeletonRootToVrRoot
-   * may no longer be equal to this component's componentToRoot transform. */
+   * may no longer be equal to this component's componentToRoot transform.
+   */
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDexPoseableComponent")
   bool bUpdateComponentToRootTransformOnTick = true;
 
@@ -81,7 +87,8 @@ class SUPERDEXPOSE_API USuperDexPoseableComponent : public UPoseableMeshComponen
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SuperDexPoseableComponent")
   ESuperDexHandedness HandednessOverride = ESuperDexHandedness::None;
 
-  /** If true, override the scale of the input SuperDexPose on recipt before doing anything with it.
+  /**
+   * If true, override the scale of the input SuperDexPose on recipt before doing anything with it.
    */
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDexPoseableComponent")
   bool bOverrideInputPoseScale = false;
@@ -153,8 +160,10 @@ class SUPERDEXPOSE_API USuperDexPoseableComponent : public UPoseableMeshComponen
   UPROPERTY(Replicated)
   FSuperDexPose CachedOutputPose;
 
-  /** A copy of the owning actor's localToWorld transform. This is done so that we have a thread
-   * safe way to get the transform from a mochi thread.  */
+  /**
+   * A copy of the owning actor's localToWorld transform. This is done so that we have a thread
+   * safe way to get the transform from a mochi thread.
+   */
   FTransform CachedVrRootToWorld = FTransform::Identity;
 
  private:
@@ -169,6 +178,7 @@ class SUPERDEXPOSE_API USuperDexPoseableComponent : public UPoseableMeshComponen
   TArray<int32> MeshBonesOfLinks;
 
  public:
+  /** Ticks in the editor and in TG_StartPhysics, and disables gravity. */
   USuperDexPoseableComponent();
   ~USuperDexPoseableComponent() override;
 
@@ -290,6 +300,10 @@ class SUPERDEXPOSE_API USuperDexPoseableComponent : public UPoseableMeshComponen
 #if WITH_EDITOR
   virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
+  /**
+   * Outside a game world, caches EditorViewportPose as the output pose for the editor preview when
+   * its bone count matches the mesh.
+   */
   void WhenNotPlayingInitPoseCache();
 
   /**

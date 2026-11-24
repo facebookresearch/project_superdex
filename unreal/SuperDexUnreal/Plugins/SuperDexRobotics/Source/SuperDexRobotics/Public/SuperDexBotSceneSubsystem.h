@@ -28,6 +28,7 @@ class BotScene;
 struct BotTaskPrefab;
 } // namespace superdex::robotics
 
+/** Load state of the bot scene subsystem: no scene loaded, a scene loaded, or a failed load. */
 UENUM(BlueprintType)
 enum class ESuperDexBotSceneState : uint8 {
   Disabled UMETA(DisplayName = "Disabled"),
@@ -74,6 +75,7 @@ class SUPERDEXROBOTICS_API USuperDexBotSceneSubsystem : public UGameInstanceSubs
   virtual void Initialize(FSubsystemCollectionBase& Collection) override;
   virtual void Deinitialize() override;
 
+  /** The load state, the requested scene and task paths, and the error of a failed load. */
   ESuperDexBotSceneState GetState() const;
   FString GetScenePath() const;
   FString GetTaskPath() const;
@@ -95,10 +97,12 @@ class SUPERDEXROBOTICS_API USuperDexBotSceneSubsystem : public UGameInstanceSubs
    */
   bool EnsureLoaded(const FString& FallbackScenePath, const FString& FallbackTaskPath);
 
+  /** Broadcast when the scene transitions from Disabled to Loaded. */
   FOnBotSceneLoaded& OnSceneLoaded() {
     return SceneLoadedDelegate;
   }
 
+  /** Broadcast after task instances or bots are added or removed. */
   FOnBotSceneContentsChanged& OnSceneContentsChanged() {
     return SceneContentsChangedDelegate;
   }

@@ -21,22 +21,32 @@
 
 #include "ZeroOrderHoldRetargeter.generated.h"
 
+/** Retargeter that outputs a held joint configuration of Articulation, ignoring the source pose. */
 UCLASS(Blueprintable, meta = (BlueprintSpawnableComponent))
 class SUPERDEXTELEOP_API UZeroOrderHoldRetargeter : public USuperDexRetargeter {
   GENERATED_BODY()
 
  public:
+  /** The articulation whose held joint configuration is output. */
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Teleop")
   TObjectPtr<UMochiArticulation> Articulation;
 
-  // Set the output pose of the zero order hold filter
+  /**
+   * Set the output pose of the zero order hold filter
+   *
+   * @param ConfigurationVector Joint positions [rad or m]; ignored unless it has one value per held
+   *   DOF.
+   */
   UFUNCTION(BlueprintCallable, Category = "Teleop")
   void SetPose(const TArray<double>& ConfigurationVector);
 
+  /** Runs without a valid source pose. */
   UZeroOrderHoldRetargeter();
 
-  // Lets the retargeter run without a valid source pose, and takes Articulation from the owner's
-  // UMochiArticulationComponent when it is not set.
+  /**
+   * Lets the retargeter run without a valid source pose, and takes Articulation from the owner's
+   * UMochiArticulationComponent when it is not set.
+   */
   virtual void BeginPlay() override;
   virtual bool GetTransformedPose_Implementation(
       FSuperDexPose const& SourcePose,
@@ -46,6 +56,9 @@ class SUPERDEXTELEOP_API UZeroOrderHoldRetargeter : public USuperDexRetargeter {
  protected:
   FRWLock HeldPoseMutex;
 
+  /**
+   * The held joint positions [rad or m]; initialized to Articulation's default pose on BeginPlay.
+   */
   UPROPERTY(EditAnywhere, BlueprintSetter = SetPose, Category = "Teleop")
   TArray<double> HeldPose;
 };

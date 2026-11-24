@@ -57,7 +57,8 @@ class USuperDexPoseSourceAndCache : public UObject {
   GENERATED_BODY()
 
  public:
-  /** Flag indicating whether the cache has ever been assigned a valid pose.
+  /**
+   * Flag indicating whether the cache has ever been assigned a valid pose.
    * One for each handedness.
    */
   TStaticArray<bool, static_cast<uint8>(ESuperDexHandedness::Count)> bIsInitialized = false;
@@ -68,8 +69,10 @@ class USuperDexPoseSourceAndCache : public UObject {
   /** Array of poses, one for each handedness. */
   TStaticArray<FSuperDexPose, static_cast<uint8>(ESuperDexHandedness::Count)> CachedPose;
 
-  /** Key as of the last cache update. If a new key does not match it means the cache is invalid.
-   * Each update refreshes each handedness so that the cached poses stay in sync. */
+  /**
+   * Key as of the last cache update. If a new key does not match it means the cache is invalid.
+   * Each update refreshes each handedness so that the cached poses stay in sync.
+   */
   double CacheKey = -1;
 
   /**

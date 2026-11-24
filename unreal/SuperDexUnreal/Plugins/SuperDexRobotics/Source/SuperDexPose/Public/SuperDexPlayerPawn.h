@@ -105,6 +105,10 @@ class SUPERDEXPOSE_API ASuperDexPlayerPawn : public APawn {
   int RightPoseableActorIndex = 0;
 
  public:
+  /**
+   * Creates the collision capsule root, the VR root at the bottom of the capsule and the camera
+   * above it.
+   */
   ASuperDexPlayerPawn();
 
   /**
@@ -149,6 +153,13 @@ class SUPERDEXPOSE_API ASuperDexPlayerPawn : public APawn {
       TSubclassOf<ASuperDexPoseableActor> PoseableActorClass,
       ESuperDexHandedness Handedness);
 
+  /**
+   * Destroys the poseable actor of a hand, resets its poseable index and broadcasts
+   * OnPoseableActorDestroyed.
+   *
+   * @param Handedness Hand whose poseable actor to destroy.
+   * @return True if the hand had a valid poseable actor to destroy.
+   */
   UFUNCTION(
       BlueprintCallable,
       Category = "SuperDexPlayerPawn",

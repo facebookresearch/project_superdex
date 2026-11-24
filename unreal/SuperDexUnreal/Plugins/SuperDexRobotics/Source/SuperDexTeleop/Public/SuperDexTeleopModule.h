@@ -20,6 +20,7 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogSuperDexTeleop, Log, All);
 
+/** The SuperDexTeleop module. */
 class FSuperDexTeleopModule : public IModuleInterface {
  public:
   /** IModuleInterface implementation */

@@ -32,8 +32,10 @@
 // SUPERDEX BOT
 //------------------------------------------------------------------------------
 
+/** Content Browser actions for USuperDexBot assets; they open in the Mochi articulation editor. */
 class FSuperDexBotAssetActions : public FAssetTypeActions_Base {
  public:
+  /** Lists the assets under InAssetCategory. */
   FSuperDexBotAssetActions(EAssetTypeCategories::Type InAssetCategory)
       : AssetCategory(InAssetCategory) {}
   virtual uint32 GetCategories() override {
@@ -70,6 +72,7 @@ class FSuperDexBotAssetActions : public FAssetTypeActions_Base {
 // SUPERDEX SCENE
 //------------------------------------------------------------------------------
 
+/** Content Browser actions for imported USuperDexScene assets. */
 class FSuperDexSceneAssetActions : public FMochiAssetActions<USuperDexScene> {
  public:
   using FMochiAssetActions::FMochiAssetActions;
@@ -79,6 +82,10 @@ class FSuperDexSceneAssetActions : public FMochiAssetActions<USuperDexScene> {
   }
 };
 
+/**
+ * Content Browser actions for imported USuperDexBotIKConfig assets; they open in the generic asset
+ * editor.
+ */
 class FSuperDexBotIKConfigAssetActions : public FMochiAssetActions<USuperDexBotIKConfig> {
  public:
   using FMochiAssetActions::FMochiAssetActions;
@@ -98,7 +105,9 @@ class FSuperDexBotIKConfigAssetActions : public FMochiAssetActions<USuperDexBotI
 // DATA ASSETS
 //------------------------------------------------------------------------------
 
-// Data assets are created through the generic Data Asset factory; these actions only give them the
-// SuperDex type color and category.
+/**
+ * Data assets are created through the generic Data Asset factory; these actions only give them the
+ * SuperDex type color and category.
+ */
 using FSuperDexPoseAssetActions = FMochiAssetActions<USuperDexPoseAsset>;
 using FSuperDexStudyQuestionDataAssetActions = FMochiAssetActions<USuperDexStudyQuestionData>;

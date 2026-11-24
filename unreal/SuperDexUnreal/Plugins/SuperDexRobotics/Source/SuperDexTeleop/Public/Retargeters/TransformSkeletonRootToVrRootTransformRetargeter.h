@@ -20,22 +20,28 @@
 
 #include "TransformSkeletonRootToVrRootTransformRetargeter.generated.h"
 
-// This class is used to add transforms and offsets to tracking poses to provide a different
-// SkeletonRootToVrRoot to components further down the chain. It is otherwise identical to a normal
-// USuperDexPoseableComponent. Note that the FTransforms are not protected and thus may result in
-// tearing when changed across threads.
+/**
+ * This class is used to add transforms and offsets to tracking poses to provide a different
+ * SkeletonRootToVrRoot to components further down the chain. It is otherwise identical to a normal
+ * USuperDexPoseableComponent. Note that the FTransforms are not protected and thus may result in
+ * tearing when changed across threads.
+ */
 UCLASS(Blueprintable, meta = (BlueprintSpawnableComponent))
 class SUPERDEXTELEOP_API UTransformSkeletonRootToVrRootTransformRetargeter
     : public USuperDexRetargeter {
   GENERATED_BODY()
  public:
-  // The TransformedPose_SkeletonRootToVrRoot = SkeletonOutRootToSkeletonInRoot *
-  // InputSource_SkeletonRootToVrRoot * VrInRootToVrOutRoot
+  /**
+   * The TransformedPose_SkeletonRootToVrRoot = SkeletonOutRootToSkeletonInRoot *
+   * InputSource_SkeletonRootToVrRoot * VrInRootToVrOutRoot
+   */
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex")
   FTransform SkeletonOutRootToSkeletonInRoot;
 
-  // The TransformedPose_SkeletonRootToVrRoot = SkeletonOutRootToSkeletonInRoot *
-  // InputSource_SkeletonRootToVrRoot * VrInRootToVrOutRoot
+  /**
+   * The TransformedPose_SkeletonRootToVrRoot = SkeletonOutRootToSkeletonInRoot *
+   * InputSource_SkeletonRootToVrRoot * VrInRootToVrOutRoot
+   */
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex")
   FTransform VrInRootToVrOutRoot;
 

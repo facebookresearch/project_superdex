@@ -22,46 +22,61 @@
 
 class FSuperDexClassIconStyle;
 
-/// SuperDexRobotics editor module. Owns everything bot-specific: bot asset actions/factories/
-/// thumbnails, and the "Export SuperDex Bot Scene..."/"Reimport Bots" Mochi-menu entries.
+/**
+ * SuperDexRobotics editor module. Owns everything bot-specific: bot asset actions/factories/
+ * thumbnails, and the "Export SuperDex Bot Scene..."/"Reimport Bots" Mochi-menu entries.
+ */
 class FSuperDexRoboticsEditorModule : public IModuleInterface {
  public:
+  /**
+   * Loads the SuperDexRoboticsEditor module if needed and returns it; asserts if it cannot be
+   * loaded.
+   */
   static inline FSuperDexRoboticsEditorModule& Get() {
     return FModuleManager::LoadModuleChecked<FSuperDexRoboticsEditorModule>(
         "SuperDexRoboticsEditor");
   }
+  /** Whether the SuperDexRoboticsEditor module is loaded. */
   static inline bool IsLoaded() {
     return FModuleManager::Get().IsModuleLoaded("SuperDexRoboticsEditor");
   }
   virtual void StartupModule() override;
   virtual void ShutdownModule() override;
 
-  // Registers the "Split Mochi Children..." Content Browser context-menu entry for
-  // Blueprints.
+  /**
+   * Registers the "Split Mochi Children..." Content Browser context-menu entry for
+   * Blueprints.
+   */
   void RegisterAssetContextMenu();
 
-  // Extends the "Mochi" submenu (registered by FMochiPhysicsEditorModule) with the
-  // bot-specific menu entries. Registered as its own UToolMenus startup callback, so it
-  // does not require FMochiPhysicsEditorModule to know about SuperDexRobotics at all.
+  /**
+   * Extends the "Mochi" submenu (registered by FMochiPhysicsEditorModule) with the
+   * bot-specific menu entries. Registered as its own UToolMenus startup callback, so it
+   * does not require FMochiPhysicsEditorModule to know about SuperDexRobotics at all.
+   */
   void RegisterSuperDexRoboticsMenu();
 
-  // Absent from an externally built plugin: bot-scene authoring is stripped from the export.
-  // Exports a .superdex_scene_archive from the current level (requires PIE)
+  /**
+   * Absent from an externally built plugin: bot-scene authoring is stripped from the export.
+   * Exports a .superdex_scene_archive from the current level (requires PIE)
+   */
   static void ExecuteExportSuperDexBotScene();
 
-  // Exports a .superdex_scene_archive of the live scene: captures the current scene
-  // (task + spawnables) into the base scene instead of the two-phase split.
+  /**
+   * Exports a .superdex_scene_archive of the live scene: captures the current scene
+   * (task + spawnables) into the base scene instead of the two-phase split.
+   */
   static void ExecuteExportLiveSuperDexBotScene();
 
-  // Shared implementation for the bot-scene export menu entries.
+  /** Shared implementation for the bot-scene export menu entries. */
   static void ExecuteExportSuperDexBotSceneInternal(bool bCaptureLiveScene);
 
-  // Scans all SuperDexBot assets and reimports those whose source files have changed
+  /** Scans all SuperDexBot assets and reimports those whose source files have changed */
   static void ExecuteReimportOutOfSyncBots();
 
  private:
   TArray<TSharedRef<IAssetTypeActions>> RegisteredAssetTypeActions;
 
-  // Class icons and thumbnails of the SuperDexRobotics asset types.
+  /** Class icons and thumbnails of the SuperDexRobotics asset types. */
   TSharedPtr<FSuperDexClassIconStyle> ClassIconStyle;
 };

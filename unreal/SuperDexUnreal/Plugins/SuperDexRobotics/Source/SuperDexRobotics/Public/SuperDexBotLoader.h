@@ -22,20 +22,24 @@
 
 class USuperDexBot;
 
-/// Custom IBotLoader that loads BotPrefab from USuperDexBot assets in the UE Content Browser.
-///
-/// Instead of reading from disk, this loader resolves a UE asset path to a USuperDexBot,
-/// then deserializes the stored JSON. This allows the superdex_robotics API
-/// (e.g., ComputeLinkTransformsFromPose) to operate on imported bot data.
-///
-/// The path argument to LoadBotPrefab/LoadModBotPrefab/GetBotFileType should be
-/// the UE package path of the USuperDexBot asset (e.g., "/Game/Bots/my_bot/my_bot").
-/// For convenience, an empty path can be provided if the loader is constructed with
-/// a default USuperDexBot, which will be used as a fallback.
+/**
+ * Custom IBotLoader that loads BotPrefab from USuperDexBot assets in the UE Content Browser.
+ *
+ * Instead of reading from disk, this loader resolves a UE asset path to a USuperDexBot,
+ * then deserializes the stored JSON. This allows the superdex_robotics API
+ * (e.g., ComputeLinkTransformsFromPose) to operate on imported bot data.
+ *
+ * The path argument to LoadBotPrefab/LoadModBotPrefab/GetBotFileType should be
+ * the UE package path of the USuperDexBot asset (e.g., "/Game/Bots/my_bot/my_bot").
+ * For convenience, an empty path can be provided if the loader is constructed with
+ * a default USuperDexBot, which will be used as a fallback.
+ */
 class SUPERDEXROBOTICS_API FSuperDexBotLoader : public superdex::robotics::IBotLoader {
  public:
-  /// Construct with a default bot. If a path is provided to the loader methods and
-  /// resolves to a USuperDexBot, that bot is used. Otherwise, falls back to DefaultBot.
+  /**
+   * Construct with a default bot. If a path is provided to the loader methods and
+   * resolves to a USuperDexBot, that bot is used. Otherwise, falls back to DefaultBot.
+   */
   explicit FSuperDexBotLoader();
   ~FSuperDexBotLoader() override = default;
 
@@ -45,7 +49,7 @@ class SUPERDEXROBOTICS_API FSuperDexBotLoader : public superdex::robotics::IBotL
   superdex::robotics::BotPrefab LoadBotPrefab(std::string_view Path, mochi::Error& Error)
       const override;
 
-  /// Convenience overload: loads BotPrefab directly from a USuperDexBot pointer.
+  /** Convenience overload: loads BotPrefab directly from a USuperDexBot pointer. */
   superdex::robotics::BotPrefab LoadBotPrefab(const USuperDexBot* Bot, mochi::Error& Error) const;
 
   superdex::robotics::ModBotPrefab LoadModBotPrefab(std::string_view Path, mochi::Error& Error)
@@ -58,13 +62,17 @@ class SUPERDEXROBOTICS_API FSuperDexBotLoader : public superdex::robotics::IBotL
       mochi::Context* Context,
       mochi::Error& Error) const override;
 
-  /// Load raw model data (mesh + skinning) for a skin whose baked bone indices must be remapped
-  /// onto a composed skeleton (the non-identity skin path in BuildArticulatedActorParams). Resolves
-  /// the UE asset path stored in BotPrefab to a UMochiModel, same as LoadShape.
+  /**
+   * Load raw model data (mesh + skinning) for a skin whose baked bone indices must be remapped
+   * onto a composed skeleton (the non-identity skin path in BuildArticulatedActorParams). Resolves
+   * the UE asset path stored in BotPrefab to a UMochiModel, same as LoadShape.
+   */
   mochi::ModelData LoadModelData(std::string_view Path, mochi::Error& Error) const override;
 
  private:
-  /// Resolve a path to a USuperDexBot. Tries to load as a UE asset path first,
-  /// falls back to DefaultBot if the path is empty or resolution fails.
+  /**
+   * Resolve a path to a USuperDexBot. Tries to load as a UE asset path first,
+   * falls back to DefaultBot if the path is empty or resolution fails.
+   */
   const USuperDexBot* ResolveBot(std::string_view Path, mochi::Error& Error) const;
 };

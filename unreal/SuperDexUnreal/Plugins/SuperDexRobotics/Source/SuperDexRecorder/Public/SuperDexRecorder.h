@@ -34,7 +34,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
     OutputPath);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FSuperDexRecordingAborted, const FString&, Reason);
 
-/*
+/**
  * Records SuperDex episodes from Blueprint: the Mochi scene and its robots, plus the streams of
  * USuperDexRecordingSourceComponents on this actor and on SourceActors, plus the events and scalars
  * raised through RecordEvent, RecordScalar and RecordScalars. Each episode is one RRD file; record
@@ -53,18 +53,21 @@ class SUPERDEXRECORDER_API ASuperDexRecorder : public AActor {
   GENERATED_BODY()
 
  public:
+  /** Creates a scene root component. */
   ASuperDexRecorder();
 
-  /* Where episodes are written. Empty uses <Project>/Saved/SuperDexRecorder. */
+  /** Where episodes are written. Empty uses <Project>/Saved/SuperDexRecorder. */
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex|Recording")
   FDirectoryPath OutputDirectory;
 
-  /* The scene archive the episode references, so the scene can be rebuilt offline. Ignored with
-   * bExportLiveScene. */
+  /**
+   * The scene archive the episode references, so the scene can be rebuilt offline. Ignored with
+   * bExportLiveScene.
+   */
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex|Recording")
   FFilePath SceneArchive;
 
-  /*
+  /**
    * Export the live Mochi scene, as it is when the first episode starts, to an archive in
    * OutputDirectory's "scenes" folder, and reference it instead of SceneArchive. Later episodes
    * reuse it; call ExportLiveSceneAtNextEpisode after adding or removing physics actors or bots.
@@ -74,94 +77,149 @@ class SUPERDEXRECORDER_API ASuperDexRecorder : public AActor {
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex|Recording")
   bool bExportLiveScene = false;
 
-  /* Refuse to record without a scene archive (SceneArchive, or the live scene's). */
+  /** Refuse to record without a scene archive (SceneArchive, or the live scene's). */
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex|Recording")
   bool bRequireSceneArchive = false;
 
-  /* Stored with each episode, e.g. the participant, condition or task. Set them before each
-   * StartRecording. */
+  /**
+   * Stored with each episode, e.g. the participant, condition or task. Set them before each
+   * StartRecording.
+   */
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex|Recording")
   TMap<FString, FString> Properties;
 
-  /* Records Mochi's contact forces, at a cost per contact point in every step. */
+  /** Records Mochi's contact forces, at a cost per contact point in every step. */
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex|Recording")
   bool bRecordContactForces = superdex::recorder::PhysicsRecorderConfig{}.recordContactForces;
 
-  /* Other actors whose USuperDexRecordingSourceComponents this recorder uses. */
+  /** Other actors whose USuperDexRecordingSourceComponents this recorder uses. */
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex|Recording")
   TArray<TObjectPtr<AActor>> SourceActors;
 
-  /* Start the first episode on its own once the scene and WaitForActorsBeforeStart are ready. */
+  /** Start the first episode on its own once the scene and WaitForActorsBeforeStart are ready. */
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex|Recording")
   bool bStartAutomatically = true;
 
-  /* While true, holds back the automatic start, e.g. until the application is ready. */
+  /** While true, holds back the automatic start, e.g. until the application is ready. */
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex|Recording")
   bool bPreventAutomaticStart = false;
 
+  /** Actors that must have begun play before the automatic start. */
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex|Recording")
   TArray<TObjectPtr<AActor>> WaitForActorsBeforeStart;
 
-  /* Commit the episode in progress when play ends; otherwise it's discarded. */
+  /** Commit the episode in progress when play ends; otherwise it's discarded. */
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex|Recording")
   bool bCommitOnEndPlay = true;
 
+  /** Broadcast with the episode ID when an episode starts. */
   UPROPERTY(BlueprintAssignable, Category = "SuperDex|Recording")
   FSuperDexRecordingStarted OnRecordingStarted;
 
+  /** Broadcast with the episode's output path once it is written. */
   UPROPERTY(BlueprintAssignable, Category = "SuperDex|Recording")
   FSuperDexRecordingCommitted OnRecordingCommitted;
 
+  /** Broadcast with the reason when an episode is aborted or its commit fails. */
   UPROPERTY(BlueprintAssignable, Category = "SuperDex|Recording")
   FSuperDexRecordingAborted OnRecordingAborted;
 
-  /* The world's recording SuperDex Recorder, or none if it has none (or it hasn't initialized
-   * yet). */
+  /**
+   * The world's recording SuperDex Recorder, or none if it has none (or it hasn't initialized
+   * yet).
+   *
+   * @param WorldContextObject Object whose world to search.
+   * @return The recording SuperDex Recorder, or null.
+   */
   UFUNCTION(
       BlueprintPure,
       Category = "SuperDex|Recording",
       meta = (WorldContext = "WorldContextObject"))
   static ASuperDexRecorder* GetActiveRecorder(const UObject* WorldContextObject);
 
-  /* Begins an episode. Returns false if one is already recording or it can't start. */
+  /**
+   * Begins an episode. Returns false if one is already recording or it can't start.
+   *
+   * @return True if an episode started.
+   */
   UFUNCTION(BlueprintCallable, Category = "SuperDex|Recording")
   bool StartRecording();
 
-  /* Ends the episode and writes its file, blocking until it's written. */
+  /**
+   * Ends the episode and writes its file, blocking until it's written.
+   *
+   * @return False if no episode was recording or its commit failed, otherwise true.
+   */
   UFUNCTION(BlueprintCallable, Category = "SuperDex|Recording")
   bool CommitRecording();
 
-  /* Ends the episode and discards it. */
+  /**
+   * Ends the episode and discards it.
+   *
+   * @param Reason Why the episode is discarded, broadcast through OnRecordingAborted.
+   */
   UFUNCTION(BlueprintCallable, Category = "SuperDex|Recording")
   void AbortRecording(const FString& Reason);
 
-  /* With bExportLiveScene, export the live scene again when the next episode starts, e.g. after
-   * physics actors or bots were added or removed. Recorded episodes keep their archive. */
+  /**
+   * With bExportLiveScene, export the live scene again when the next episode starts, e.g. after
+   * physics actors or bots were added or removed. Recorded episodes keep their archive.
+   */
   UFUNCTION(BlueprintCallable, Category = "SuperDex|Recording")
   void ExportLiveSceneAtNextEpisode();
 
+  /**
+   * Whether an episode is in progress.
+   *
+   * @return True while an episode is recording.
+   */
   UFUNCTION(BlueprintPure, Category = "SuperDex|Recording")
   bool IsRecording() const;
 
+  /**
+   * The ID of the episode in progress.
+   *
+   * @return The episode ID, or empty while not recording.
+   */
   UFUNCTION(BlueprintPure, Category = "SuperDex|Recording")
   FString GetEpisodeId() const;
 
+  /**
+   * The file the episode in progress will be written to.
+   *
+   * @return The output path, or empty while not recording.
+   */
   UFUNCTION(BlueprintPure, Category = "SuperDex|Recording")
   FString GetOutputPath() const;
 
-  /* Records Text on Stream at the next Mochi step, under "data/events/<Stream>". Ignored while not
-   * recording. */
+  /**
+   * Records Text on Stream at the next Mochi step, under "data/events/<Stream>". Ignored while not
+   * recording.
+   *
+   * @param Stream Event stream name.
+   * @param Text Event text.
+   */
   UFUNCTION(BlueprintCallable, Category = "SuperDex|Recording")
   void RecordEvent(const FString& Stream, const FString& Text);
 
-  /* Records Value at the next Mochi step, under "data/scalars/<Name>". Ignored while not
-   * recording. */
+  /**
+   * Records Value at the next Mochi step, under "data/scalars/<Name>". Ignored while not
+   * recording.
+   *
+   * @param Name Scalar stream name.
+   * @param Value Sample value.
+   */
   UFUNCTION(BlueprintCallable, Category = "SuperDex|Recording")
   void RecordScalar(const FString& Name, double Value);
 
-  /* Records Values as one sample at the next Mochi step, under "data/scalars/<Name>". The
+  /**
+   * Records Values as one sample at the next Mochi step, under "data/scalars/<Name>". The
    * recording doesn't fix the number of values: keep it consistent per name, and interpret the
-   * values when reading. Ignored while not recording. */
+   * values when reading. Ignored while not recording.
+   *
+   * @param Name Scalar stream name.
+   * @param Values Sample values.
+   */
   UFUNCTION(BlueprintCallable, Category = "SuperDex|Recording")
   void RecordScalars(const FString& Name, const TArray<double>& Values);
 
@@ -171,16 +229,18 @@ class SUPERDEXRECORDER_API ASuperDexRecorder : public AActor {
 
  private:
   bool IsReadyToStartAutomatically();
-  /* The live scene's archive, exported now unless an earlier episode's can be reused, or empty if
-   * the export failed. */
+  /**
+   * The live scene's archive, exported now unless an earlier episode's can be reused, or empty if
+   * the export failed.
+   */
   FString GetOrExportLiveSceneArchive();
-  /* Tells the sources of the episode that ended, if they haven't been told yet. */
+  /** Tells the sources of the episode that ended, if they haven't been told yet. */
   void EndSources();
 
   TUniquePtr<FSuperDexSceneRecorder> Recorder;
-  /* The sources configured for the current (or just ended) episode. */
+  /** The sources configured for the current (or just ended) episode. */
   TArray<TWeakObjectPtr<USuperDexRecordingSourceComponent>> RecordingSources;
-  /* The archive the live scene was last exported to, or empty to export at the next episode. */
+  /** The archive the live scene was last exported to, or empty to export at the next episode. */
   FString LiveSceneArchivePath;
   bool bIsActiveRecorder = false;
   bool bAutomaticStartDone = false;

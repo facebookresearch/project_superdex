@@ -24,29 +24,42 @@
 
 #include "SuperDexStudyQuestionPrompt.generated.h"
 
-// Broadcast with the participant's response to the question.
+/** Broadcast with the participant's response to the question. */
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
     FSuperDexStudyQuestionResponseDelegate,
     float,
     Response);
 
+/**
+ * Actor that presents a questionnaire question and broadcasts the participant's response.
+ * Blueprints implement UpdateInterface to show QuestionData.
+ */
 UCLASS(Blueprintable)
 class SUPERDEXSTUDY_API ASuperDexStudyQuestionPrompt : public AActor {
   GENERATED_BODY()
 
  public:
+  /** The question to present. Setting it through SetQuestionData also calls UpdateInterface. */
   UPROPERTY(EditAnywhere, BlueprintSetter = SetQuestionData)
   USuperDexStudyQuestionData* QuestionData = nullptr;
 
+  /** Broadcast with the participant's response. */
   UPROPERTY(BlueprintAssignable, BlueprintCallable, Category = "Events")
   FSuperDexStudyQuestionResponseDelegate OnResponse;
 
+  /**
+   * Sets QuestionData and calls UpdateInterface.
+   *
+   * @param Data The question to present.
+   */
   UFUNCTION(BlueprintSetter)
   void SetQuestionData(USuperDexStudyQuestionData* Data);
 
+  /** Enables ticking, which prompt Blueprints use for Event Tick. */
   ASuperDexStudyQuestionPrompt();
 
  protected:
+  /** Refreshes the prompt for QuestionData. The native implementation does nothing. */
   UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
   void UpdateInterface();
 };

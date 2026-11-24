@@ -48,6 +48,7 @@ class SUPERDEXTELEOP_API USuperDexRetargeter : public USuperDexPoseableComponent
    * @param SourcePose The incoming pose to be transformed.
    * @param TransformedPose The output pose, i.e. SourcePose after transformation.
    * @return true if successful, false otherwise
+   * @param bSourceIsValid Whether the source pose's GetPose() succeeded.
    */
   UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "SuperDexPoseableComponent")
   bool GetTransformedPose(
@@ -74,8 +75,8 @@ class SUPERDEXTELEOP_API USuperDexRetargeter : public USuperDexPoseableComponent
    * Get the highest priority last called within a certain time frame.
    * Duplicate function to the one found in the USuperDexPoseSubsystem.
    *
-   * @param currentTime The current time.
-   * @param withinDeltaSecondsAgo The time frame to check within.
+   * @param CurrentTime The current time.
+   * @param WithinDeltaSecondsAgo The time frame to check within.
    * @return The highest priority last called within the specified time frame.
    */
   uint32 GetHighestPriorityLastCalledWithin(double CurrentTime, double WithinDeltaSecondsAgo);

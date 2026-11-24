@@ -23,67 +23,89 @@
 
 #include "OpenXR2RobotiqRetargeter.generated.h"
 
+/**
+ * Retargeter that drives a Robotiq 2F-85 gripper from an OpenXR hand: the thumb-to-index tip
+ * distance sets the gripper opening, and the hand root places the gripper root.
+ */
 UCLASS(Blueprintable, meta = (BlueprintSpawnableComponent))
 class SUPERDEXTELEOP_API UOpenXR2RobotiqRetargeter : public USuperDexRetargeter {
   GENERATED_BODY()
  public:
-  // The gripper's articulation. Its joint configuration poses this component's mesh.
+  /** The gripper's articulation. Its joint configuration poses this component's mesh. */
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mesh")
   TObjectPtr<UMochiArticulationBase> Articulation;
 
-  // If true, RobotiqRootToSourceSkeletonRoot will be set to its value. If false, it will be
-  // derived from the ChildSource of this SuperDexPoseableComponent on BeginPlay. If false and no
-  // valid child component is present, it will be identity.
+  /**
+   * If true, RobotiqRootToSourceSkeletonRoot will be set to its value. If false, it will be
+   * derived from the ChildSource of this SuperDexPoseableComponent on BeginPlay. If false and no
+   * valid child component is present, it will be identity.
+   */
   UPROPERTY(EditAnywhere, BlueprintREADONLY, Category = "Teleop")
   bool bOverrideRobotiqRootToSourceSkeletonRoot = false;
-  // Transform between the Robotiq root and your source hand root.
-  // TransformedPose.SkeletonRootToVrRoot = RobotiqRootToSourceSkeletonRoot *
-  // SourcePose.SkeletonRootToVrRoot. This multiplication ignores scale to preserve the actual
-  // relative position and then sets scale to the combination of the two.
+  /**
+   * Transform between the Robotiq root and your source hand root.
+   * TransformedPose.SkeletonRootToVrRoot = RobotiqRootToSourceSkeletonRoot *
+   * SourcePose.SkeletonRootToVrRoot. This multiplication ignores scale to preserve the actual
+   * relative position and then sets scale to the combination of the two.
+   */
   UPROPERTY(
       EditAnywhere,
       BlueprintReadWrite,
       meta = (EditCondition = "bOverrideRobotiqRootToSourceSkeletonRoot"),
       Category = "Teleop")
   FTransform RobotiqRootToSourceSkeletonRoot = FTransform::Identity;
-  // The thumb tip link of the source pose's bot; its distance to the index tip at the source pose's
-  // joint positions drives the gripper. The default is the OpenXR hand's (xr_05_thumb_tip).
+  /**
+   * The thumb tip link of the source pose's bot; its distance to the index tip at the source pose's
+   * joint positions drives the gripper. The default is the OpenXR hand's (xr_05_thumb_tip).
+   */
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Teleop")
   FName ThumbTipName = SuperDexBoneNames_OXR[static_cast<int32>(ESuperDexBone_OXR::ThumbTip)];
-  // The index finger tip link of the source pose's bot. The default is the OpenXR hand's
-  // (xr_10_index_tip).
+  /**
+   * The index finger tip link of the source pose's bot. The default is the OpenXR hand's
+   * (xr_10_index_tip).
+   */
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Teleop")
   FName IndexTipName = SuperDexBoneNames_OXR[static_cast<int32>(ESuperDexBone_OXR::IndexTip)];
-  // Default behavior is to directly map
-  // finger distance to pincher distance; setting
-  // this to true allows you to define custom pinch mappings below.
+  /**
+   * Default behavior is to directly map
+   * finger distance to pincher distance; setting
+   * this to true allows you to define custom pinch mappings below.
+   */
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleop")
   bool bUseCustomPinchRange = false;
-  // Pinch is "1.0" at or below this index-to-thumb-tip distance.
+  /** Pinch is "1.0" at or below this index-to-thumb-tip distance. */
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
       meta = (EditCondition = "bUseCustomPinchRange"),
       Category = "Teleop")
   double MinPinchDistance = 1.0;
-  // Pinch is "0.0" at or above this index-to-thumb-tip distance.
+  /** Pinch is "0.0" at or above this index-to-thumb-tip distance. */
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
       meta = (EditCondition = "bUseCustomPinchRange"),
       Category = "Teleop")
   double MaxPinchDistance = 10.0;
-  // If true, the TransformedPose will be based on received ros poses. If false, the TransformedPose
-  // will be based on the solved IK poses.
+  /**
+   * If true, the TransformedPose will be based on received ros poses. If false, the TransformedPose
+   * will be based on the solved IK poses.
+   */
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Teleop")
   bool bReceiveRosPoses = false;
-  // If true, will send the IK computed pose to the Ros interface. If false and bReceiveRosPoses is
-  // true, the system will not compute or need any of the IK solvers.
+  /**
+   * If true, will send the IK computed pose to the Ros interface. If false and bReceiveRosPoses is
+   * true, the system will not compute or need any of the IK solvers.
+   */
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Teleop")
   bool bIssueRosCommands = false;
 
-  // Returns the current cached joint positionsof the robot as an array of joint positions [rad or
-  // m]. These are updated when GetTransformedPose is called and returns a valid pose.
+  /**
+   * Returns the current cached joint positionsof the robot as an array of joint positions [rad or
+   * m]. These are updated when GetTransformedPose is called and returns a valid pose.
+   *
+   * @return The cached joint positions [rad or m].
+   */
   UFUNCTION(BlueprintPure, Category = "Teleop")
   const TArray<double>& GetCachedJointPositions() const {
     return JointPositionsCache;

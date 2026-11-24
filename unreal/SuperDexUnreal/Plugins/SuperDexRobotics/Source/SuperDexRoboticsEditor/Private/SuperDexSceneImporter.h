@@ -27,38 +27,47 @@ class FSuperDexImportSession;
 class USuperDexBot;
 class USuperDexScene;
 
-// Imports .superdex_scene and .superdex_scene_archive files authored in SuperDex Studio into
-// USuperDexScene assets and a Blueprint or Map that places the base scene and bots. The base scene
-// and spawnable prefabs are imported as USuperDexPrefab Blueprints, and bots as USuperDexBot
-// assets, each in a subfolder of the scene's folder.
+/**
+ * Imports .superdex_scene and .superdex_scene_archive files authored in SuperDex Studio into
+ * USuperDexScene assets and a Blueprint or Map that places the base scene and bots. The base scene
+ * and spawnable prefabs are imported as USuperDexPrefab Blueprints, and bots as USuperDexBot
+ * assets, each in a subfolder of the scene's folder.
+ */
 class FSuperDexSceneImporter {
  public:
+  /** Borrows InSession for prefab imports; the session must outlive this importer. */
   explicit FSuperDexSceneImporter(FSuperDexImportSession& InSession);
 
-  // Import the scene at SourcePath into Scene, generating assets next to it. Returns false if
-  // the scene could not be imported.
+  /**
+   * Import the scene at SourcePath into Scene, generating assets next to it. Returns false if
+   * the scene could not be imported.
+   */
   bool Import(USuperDexScene* Scene, const FString& SourcePath, ESuperDexPrefabImportMode Mode);
 
-  // Name of the scene at SourcePath, derived from its file name.
+  /** Name of the scene at SourcePath, derived from its file name. */
   static FString GetSceneName(const FString& SourcePath);
-  // Find the USuperDexScene asset of a scene in its destination folder, or nullptr.
+  /** Find the USuperDexScene asset of a scene in its destination folder, or nullptr. */
   static USuperDexScene* FindSceneAsset(const FString& DestFolder, const FString& SceneName);
-  // Create the USuperDexScene asset of a scene in its destination folder.
+  /** Create the USuperDexScene asset of a scene in its destination folder. */
   static USuperDexScene* CreateSceneAsset(const FString& DestFolder, const FString& SceneName);
-  // Hash of the scene file at SourcePath. The prefabs and bots it references are checked by
-  // their own assets.
+  /**
+   * Hash of the scene file at SourcePath. The prefabs and bots it references are checked by
+   * their own assets.
+   */
   static FString ComputeSourceHash(const FString& SourcePath);
-  // Whether the scene, its prefabs and bots are up to date and its generated assets exist.
+  /** Whether the scene, its prefabs and bots are up to date and its generated assets exist. */
   static bool IsUpToDate(const USuperDexScene* Scene);
 
  private:
-  // Import the bot at SourcePath into a subfolder of ParentFolder.
+  /** Import the bot at SourcePath into a subfolder of ParentFolder. */
   USuperDexBot* ImportBot(const FString& SourcePath, const FString& ParentFolder);
 
   FSuperDexPrefabImporter PrefabImporter;
   TStrongObjectPtr<USuperDexBotFactory> BotFactory;
-  // SuperDex Studio space (right-handed, X forward, Y left, Z up, meters) to Unreal.
+
+  /** SuperDex Studio space (right-handed, X forward, Y left, Z up, meters) to Unreal. */
   FMochiToUnrealConverter M2U;
-  // Bots imported by this importer, by source path.
+
+  /** Bots imported by this importer, by source path. */
   TMap<FString, USuperDexBot*> ImportedBots;
 };

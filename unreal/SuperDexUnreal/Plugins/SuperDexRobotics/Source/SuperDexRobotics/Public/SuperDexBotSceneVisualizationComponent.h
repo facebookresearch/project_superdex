@@ -76,6 +76,7 @@ class SUPERDEXROBOTICS_API USuperDexBotSceneVisualizationComponent : public USce
   GENERATED_BODY()
 
  public:
+  /** Starts with ticking disabled and does not tick in the editor. */
   USuperDexBotSceneVisualizationComponent();
 
  protected:
@@ -101,15 +102,18 @@ class SUPERDEXROBOTICS_API USuperDexBotSceneVisualizationComponent : public USce
       UMochiSceneObject* SceneObject);
   void EnsureSkinsForSnapshot(const TArray<FBotSceneVizSkinSnapshot>& Snapshot);
   void OnSkinnedMeshLoaded(uint64 ActorKey, uint32 RequestId, USkeletalMesh* Mesh);
-  // Hides the visuals of links a drawn skin covers, and shows every other link visual.
+
+  /** Hides the visuals of links a drawn skin covers, and shows every other link visual. */
   void UpdateCoveredLinkVisibility();
-  // Poses each drawn skin from LinkToWorldByHandle.
+
+  /** Poses each drawn skin from LinkToWorldByHandle. */
   void PoseSkins();
   UMeshComponent* CreateShapeMeshComponent(
       mochi::ShapeHandle RefShape,
       uint64 HandleKey,
       UMochiSceneObject* SceneObject);
-  // A rod's contact skin, deformed every tick by UpdateDeformableMeshes.
+
+  /** A rod's contact skin, deformed every tick by UpdateDeformableMeshes. */
   UMeshComponent* CreateRodMeshComponent(
       const TArray<mochi::real>& SkinCoords,
       const TArray<int32>& SkinTriangles,
@@ -121,74 +125,97 @@ class SUPERDEXROBOTICS_API USuperDexBotSceneVisualizationComponent : public USce
       const FString& File,
       UStaticMesh* Mesh,
       UMochiSceneObject* SceneObject);
-  // Re-registers the contact-skin-position query of every deformable visual's actor, cancelling
-  // the previous registrations.
+
+  /**
+   * Re-registers the contact-skin-position query of every deformable visual's actor, cancelling
+   * the previous registrations.
+   */
   void RefreshDeformableQueries(UMochiSceneObject* SceneObject);
-  // Writes the latest deformed contact-skin nodes into each deformable visual's mesh.
+
+  /** Writes the latest deformed contact-skin nodes into each deformable visual's mesh. */
   void UpdateDeformableMeshes(const TMap<uint64, TArray<mochi::real>>& Nodes);
 
-  // Per-ShapeHandle cache: geometry built once via MochiDynamicMeshUtil,
-  // winding + meters->cm baked, normals computed, inverse-scale baked.
-  // Key is ShapeHandle.value (handle hash); value is a shared FDynamicMesh3.
+  /**
+   * Per-ShapeHandle cache: geometry built once via MochiDynamicMeshUtil,
+   * winding + meters->cm baked, normals computed, inverse-scale baked.
+   * Key is ShapeHandle.value (handle hash); value is a shared FDynamicMesh3.
+   */
   TMap<uint64, TSharedPtr<UE::Geometry::FDynamicMesh3>> GeometryCache;
 
-  // The component scale baked into everything currently in GeometryCache. The cache key does
-  // not carry it, so the cache is dropped when this stops matching the live scale.
+  /**
+   * The component scale baked into everything currently in GeometryCache. The cache key does
+   * not carry it, so the cache is dropped when this stops matching the live scale.
+   */
   FVector BakedGeometryScale = FVector::OneVector;
 
   struct FVisualEntry {
     uint64 HandleValue = 0;
     uint64 ShapeKey = 0;
     mochi::ShapeHandle RefShape;
-    // Absolute .glb path, or empty to draw the Mochi shape.
+
+    /** Absolute .glb path, or empty to draw the Mochi shape. */
     FString RenderModelFile;
-    // Null while the render model is importing.
+
+    /** Null while the render model is importing. */
     TObjectPtr<UMeshComponent> MeshComp = nullptr;
     FTransform ComponentToLink = FTransform::Identity;
     FTransform LinkToWorld = FTransform::Identity;
-    // A rod: its contact-skin mesh follows the actor's deformed contact skin every step.
+
+    /** A rod: its contact-skin mesh follows the actor's deformed contact skin every step. */
     bool bDeformable = false;
   };
   TArray<FVisualEntry> Visuals;
 
-  // The contact-skin-position queries registered for deformable visuals, by actor handle.
+  /** The contact-skin-position queries registered for deformable visuals, by actor handle. */
   TArray<TPair<uint64, mochi::QueryHandle>> DeformableQueries;
 
   struct FSkinVisual {
-    // The bot's articulated actor handle.
+    /** The bot's articulated actor handle. */
     uint64 ActorKey = 0;
     FString File;
-    // Per skin bone: the link it follows (NoLink for none). Skeleton bone i + 1 is skin bone i.
+
+    /**
+     * Per skin bone: the link it follows (NoLink for none). Skeleton bone i + 1 is skin bone i.
+     */
     TArray<uint64> BoneLinks;
-    // The skin bone whose link the component follows; bones are posed relative to it.
+
+    /** The skin bone whose link the component follows; bones are posed relative to it. */
     int32 AnchorBone = 0;
     TArray<uint64> CoveredLinks;
-    // What the mesh is built from, besides File and BoneLinks (see FSuperDexSkinnedMeshRequest).
+
+    /**
+     * What the mesh is built from, besides File and BoneLinks (see FSuperDexSkinnedMeshRequest).
+     */
     FTransform MeshToComponent;
     TArray<FTransform> RestBoneToComponent;
-    // Identifies the mesh request, so a superseded request's mesh is dropped.
+
+    /** Identifies the mesh request, so a superseded request's mesh is dropped. */
     uint32 RequestId = 0;
-    // Null while the mesh is being built, or if it could not be.
+
+    /** Null while the mesh is being built, or if it could not be. */
     TObjectPtr<UPoseableMeshComponent> MeshComp = nullptr;
   };
   TArray<FSkinVisual> Skins;
   uint32 LastSkinRequestId = 0;
 
-  // Latest world transform of every link a visual or skin follows.
+  /** Latest world transform of every link a visual or skin follows. */
   TMap<uint64, FTransform> LinkToWorldByHandle;
 
-  // Tick runs only when visuals exist.
+  /** Tick runs only when visuals exist. */
   bool bHasSceneSnapshot = false;
 
-  // False under -NoRenderModels.
+  /** False under -NoRenderModels. */
   bool bUseRenderModels = true;
 
-  // Viz publisher: Mochi PostStep writes LatestTransforms, Game tick reads it.
-  // Matches legacy UMochiArticulatedActorObject triple-buffer polling - no
-  // Game→Mochi QueueOrExecuteCommand+WaitForQueuedCommands on the tick path.
+  /**
+   * Viz publisher: Mochi PostStep writes LatestTransforms, Game tick reads it.
+   * Matches legacy UMochiArticulatedActorObject triple-buffer polling - no
+   * Game→Mochi QueueOrExecuteCommand+WaitForQueuedCommands on the tick path.
+   */
   mutable FCriticalSection LatestTransformsLock;
   TMap<uint64, mochi::TransformRT> LatestTransforms;
-  // Deformed contact-skin node positions (actor frame, Mochi units) of each deformable visual.
+
+  /** Deformed contact-skin node positions (actor frame, Mochi units) of each deformable visual. */
   TMap<uint64, TArray<mochi::real>> LatestDeformedNodes;
   mochi::CallbackHandle VizPostStepHandle;
   TWeakObjectPtr<UMochiSceneObject> VizSceneObject;

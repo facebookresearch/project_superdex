@@ -99,6 +99,7 @@ class SUPERDEXPOSE_API ASuperDexPlayerController : public APlayerController {
       meta = (ReturnDisplayName = "Success"))
   bool NextPoseSource(const ESuperDexHandedness Handedness, bool bPrevious = false);
 
+  /** Broadcasts OnDoAlginmentKeypress. */
   UFUNCTION(BlueprintCallable, Category = "ASuperDexPlayerController")
   void TriggerAlignment();
 

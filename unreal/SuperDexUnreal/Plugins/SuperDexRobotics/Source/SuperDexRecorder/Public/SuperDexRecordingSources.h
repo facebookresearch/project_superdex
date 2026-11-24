@@ -22,7 +22,7 @@
 
 #include "SuperDexRecordingSources.generated.h"
 
-/*
+/**
  * Records the first local player's camera, which follows the headset in VR, under
  * "world/sources/<SourceId>" (default "head").
  */
@@ -32,6 +32,10 @@ class SUPERDEXRECORDER_API USuperDexRecordingPlayerCameraSourceComponent
   GENERATED_BODY()
 
  public:
+  /**
+   * Defaults SourceId to "head" and ticks after the camera has followed the headset
+   * (TG_PostUpdateWork).
+   */
   USuperDexRecordingPlayerCameraSourceComponent();
 
   void ConfigureRecording(FSuperDexSceneRecorderConfig& Config) override;
@@ -47,15 +51,19 @@ class SUPERDEXRECORDER_API USuperDexRecordingPlayerCameraSourceComponent
       MakeShared<FSuperDexRecordingCachedTransform, ESPMode::ThreadSafe>();
 };
 
+/** One scene component recorded by USuperDexRecordingTransformSourceComponent. */
 USTRUCT(BlueprintType)
 struct SUPERDEXRECORDER_API FSuperDexRecordingTransformSourceEntry {
   GENERATED_BODY()
 
-  /* Names this component's stream "world/sources/<SourceId>.<Id>". Empty uses
-   * "<actor>.<component>". */
+  /**
+   * Names this component's stream "world/sources/<SourceId>.<Id>". Empty uses
+   * "<actor>.<component>".
+   */
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex|Recording")
   FString Id;
 
+  /** The scene component whose world transform is recorded, resolved on the owning actor. */
   UPROPERTY(
       EditAnywhere,
       BlueprintReadWrite,
@@ -64,7 +72,7 @@ struct SUPERDEXRECORDER_API FSuperDexRecordingTransformSourceEntry {
   FComponentReference Component;
 };
 
-/*
+/**
  * Records the world transforms of scene components, such as objects that have no Mochi physics
  * (Mochi bodies are already recorded by the physics recorder), under
  * "world/sources/<SourceId>.<Id>".
@@ -75,8 +83,10 @@ class SUPERDEXRECORDER_API USuperDexRecordingTransformSourceComponent
   GENERATED_BODY()
 
  public:
+  /** Defaults SourceId to "objects" and ticks in TG_PostUpdateWork. */
   USuperDexRecordingTransformSourceComponent();
 
+  /** The scene components to record. */
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex|Recording")
   TArray<FSuperDexRecordingTransformSourceEntry> Components;
 
@@ -94,6 +104,6 @@ class SUPERDEXRECORDER_API USuperDexRecordingTransformSourceComponent
     FSuperDexRecordingCachedTransformPtr Cached;
   };
 
-  /* The components of the episode being recorded, cached each tick. */
+  /** The components of the episode being recorded, cached each tick. */
   TArray<FRecordedComponent> Recorded;
 };

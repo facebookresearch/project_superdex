@@ -22,6 +22,7 @@
 
 #include "SuperDexWristbandComponent.generated.h"
 
+/** Wristband mesh that shows the name of its poseable actor and of its pose source in text. */
 UCLASS()
 class SUPERDEXPOSE_API USuperDexWristbandComponent : public UStaticMeshComponent {
   GENERATED_BODY()
@@ -60,6 +61,7 @@ class SUPERDEXPOSE_API USuperDexWristbandComponent : public UStaticMeshComponent
   TObjectPtr<class UMaterialInterface> TextMaterial;
 
  public:
+  /** Ticks every 0.25 s. */
   USuperDexWristbandComponent();
 
  protected:

@@ -24,15 +24,20 @@
 
 struct FSuperDexSceneRecorderConfig;
 
-/*
+/**
  * The latest Unreal world transform of a source, written on the game thread and read on the Mochi
  * thread when the recorder samples it.
  */
 class SUPERDEXRECORDER_API FSuperDexRecordingCachedTransform {
  public:
+  /** Stores the latest world transform and marks the source tracked. */
   void Set(const FTransform& WorldTransform);
-  /* Marks the source untracked until the next Set. */
+  /** Marks the source untracked until the next Set. */
   void Clear();
+  /**
+   * Copies the latest world transform into OutWorldTransform and returns true, or returns false
+   * while untracked.
+   */
   bool Get(FTransform& OutWorldTransform) const;
 
  private:
@@ -41,10 +46,11 @@ class SUPERDEXRECORDER_API FSuperDexRecordingCachedTransform {
   bool bIsValid = false;
 };
 
+/** Thread-safe shared pointer to an FSuperDexRecordingCachedTransform. */
 using FSuperDexRecordingCachedTransformPtr =
     TSharedPtr<FSuperDexRecordingCachedTransform, ESPMode::ThreadSafe>;
 
-/*
+/**
  * Base class of a component that adds streams to an ASuperDexRecorder's episodes. Place it on the
  * recorder, or on an actor listed in the recorder's SourceActors. It ticks only while an episode is
  * recording.
@@ -54,17 +60,19 @@ class SUPERDEXRECORDER_API USuperDexRecordingSourceComponent : public UActorComp
   GENERATED_BODY()
 
  public:
+  /** Starts with ticking disabled; ASuperDexRecorder enables it while an episode is recording. */
   USuperDexRecordingSourceComponent();
 
-  /* Identifies this source's streams in the recording. Empty uses the component's name. */
+  /** Identifies this source's streams in the recording. Empty uses the component's name. */
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex|Recording")
   FString SourceId;
 
-  /* Called on the game thread when an episode begins, to add this source's streams. */
+  /** Called on the game thread when an episode begins, to add this source's streams. */
   virtual void ConfigureRecording(FSuperDexSceneRecorderConfig& Config) {}
-  /* Called on the game thread once the episode has ended (committed, aborted or failed). */
+  /** Called on the game thread once the episode has ended (committed, aborted or failed). */
   virtual void OnRecordingEnded() {}
 
  protected:
+  /** Returns SourceId, or the component's name if SourceId is empty. */
   FString GetResolvedSourceId() const;
 };

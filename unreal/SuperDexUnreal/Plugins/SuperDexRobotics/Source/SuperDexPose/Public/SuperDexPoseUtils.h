@@ -36,25 +36,42 @@
 
 //------------------------------------------------------------------------------
 
+/** Centimeters per meter. */
 constexpr float MetersToCm = 100.f;
 
+/** Converts an ANSI C string to an FString. */
 inline FString ToFString(char const* Str) {
   return ANSI_TO_TCHAR(Str);
 }
 
+/**
+ * Converts a vector from a right-handed frame to the left-handed Unreal frame by swapping Y and Z.
+ */
 inline FVector RightHandedToLeftHanded(FVector const& V) {
   return FVector(V.X, V.Z, V.Y);
 }
 
+/**
+ * Converts a rotation from a right-handed frame to the left-handed Unreal frame (see the FVector
+ * overload).
+ */
 inline FQuat RightHandedToLeftHanded(FQuat const& Q) {
   return FQuat(-Q.X, -Q.Z, -Q.Y, Q.W);
 }
 
+/**
+ * Converts a transform's rotation and translation from a right-handed frame to the left-handed
+ * Unreal frame; the result has unit scale.
+ */
 inline FTransform RightHandedToLeftHanded(FTransform const& T) {
   return FTransform(
       RightHandedToLeftHanded(T.GetRotation()), RightHandedToLeftHanded(T.GetTranslation()));
 }
 
+/**
+ * Find the first child component of Root of type T, searching all descendants if
+ * bIncludeAllDescendents is true and only direct children otherwise.
+ */
 template <typename T>
 T* GetFirstChildComponentByType(USceneComponent const* Root, bool bIncludeAllDescendents) {
   if (Root) {
@@ -69,9 +86,11 @@ T* GetFirstChildComponentByType(USceneComponent const* Root, bool bIncludeAllDes
   return nullptr;
 }
 
-// Find the first child component under a given root component with the given type and with a name
-// that starts with the given string. This is useful for finding components at runtime based on name
-// and parent relationship.
+/**
+ * Find the first child component under a given root component with the given type and with a name
+ * that starts with the given string. This is useful for finding components at runtime based on name
+ * and parent relationship.
+ */
 template <typename T>
 T* GetFirstChildComponentByTypeAndNameStartsWith(
     USceneComponent const* Root,
@@ -92,9 +111,11 @@ T* GetFirstChildComponentByTypeAndNameStartsWith(
   return nullptr;
 }
 
-// Find the first child component under a given root component with the given type and with a name
-// that contains the given string. This is useful for finding components at runtime based on name
-// and parent relationship.
+/**
+ * Find the first child component under a given root component with the given type and with a name
+ * that contains the given string. This is useful for finding components at runtime based on name
+ * and parent relationship.
+ */
 template <typename T>
 T* GetFirstChildComponentByTypeAndNameContains(
     USceneComponent const* Root,
@@ -115,6 +136,7 @@ T* GetFirstChildComponentByTypeAndNameContains(
   return nullptr;
 }
 
+/** Sets the visibility of Root and all of its descendant components. */
 inline void SetSelfAndChildrenVisible(USceneComponent* Root, bool bVisible) {
   TArray<USceneComponent*> Children;
   Root->SetVisibility(bVisible);
@@ -124,6 +146,7 @@ inline void SetSelfAndChildrenVisible(USceneComponent* Root, bool bVisible) {
   }
 }
 
+/** Find the first component of type T on Root whose name is Name. */
 template <typename T>
 T* FindComponentByName(AActor const* Root, FString Name) {
   TArray<T*> Components;
@@ -136,6 +159,7 @@ T* FindComponentByName(AActor const* Root, FString Name) {
   return nullptr;
 }
 
+/** Find the first component of type T on Root whose FName is Name. */
 template <typename T>
 T* FindComponentByFName(AActor const* Root, FName Name) {
   TArray<T*> Components;
@@ -148,6 +172,7 @@ T* FindComponentByFName(AActor const* Root, FName Name) {
   return nullptr;
 }
 
+/** Find the first component of type T on Root whose name starts with Prefix, ignoring case. */
 template <typename T>
 T* FindComponentStartsWithName(AActor const* Root, FString Prefix) {
   TArray<T*> Components;
@@ -161,6 +186,7 @@ T* FindComponentStartsWithName(AActor const* Root, FString Prefix) {
   return nullptr;
 }
 
+/** Find the first actor of type T attached to Parent. */
 template <typename T>
 T* FindChildActorByType(AActor* Parent) {
   TArray<AActor*> ChildActors;
@@ -174,6 +200,7 @@ T* FindChildActorByType(AActor* Parent) {
   return nullptr;
 }
 
+/** Shuffles InArray in place with FMath::RandRange. */
 template <class T>
 void ShuffleArray(T& InArray) {
   const int32 LastIndex = InArray.Num() - 1;
@@ -185,12 +212,13 @@ void ShuffleArray(T& InArray) {
   }
 }
 
-// Adds and registers a new component to an Actor at runtime. This can be used
-// to add components from another component in e.g. BeginPlay or TickComponent,
-// but not from constructors (expect crashes). Optionally pass a PreRegistrationSetup
-// lambda to be executed before the component is registered or attached. This allows you
-// to set component properties before the component's BeginPlay will be called.
-
+/**
+ * Adds and registers a new component to an Actor at runtime. This can be used
+ * to add components from another component in e.g. BeginPlay or TickComponent,
+ * but not from constructors (expect crashes). Optionally pass a PreRegistrationSetup
+ * lambda to be executed before the component is registered or attached. This allows you
+ * to set component properties before the component's BeginPlay will be called.
+ */
 template <typename TActorComponent>
 TActorComponent* AddComponentRuntime(
     AActor* Actor,
@@ -205,6 +233,7 @@ TActorComponent* AddComponentRuntime(
   return Component;
 }
 
+/** Like the overload above, and then attaches the component to Parent (if any) at SocketName. */
 template <typename TSceneComponent>
 TSceneComponent* AddComponentRuntime(
     AActor* Actor,
@@ -225,8 +254,10 @@ TSceneComponent* AddComponentRuntime(
   return Component;
 }
 
-// Converts a UENUM value to FString in the form "TEnum::EnumValue".
-// If bStripClassName = true, returns "EnumValue".
+/**
+ * Converts a UENUM value to FString in the form "TEnum::EnumValue".
+ * If bStripClassName = true, returns "EnumValue".
+ */
 template <typename TEnum>
 FString UEnumToString(TEnum EnumValue, bool bStripClassName = false) {
   const UEnum* EnumPtr = StaticEnum<TEnum>();
@@ -240,19 +271,24 @@ FString UEnumToString(TEnum EnumValue, bool bStripClassName = false) {
   return Str;
 }
 
+/** Relative-transform helpers for scene component hierarchies. */
 UCLASS(BlueprintType)
 class SUPERDEXPOSE_API USuperDexPoseUtilsFunctionLibrary : public UBlueprintFunctionLibrary {
   GENERATED_BODY()
 
  public:
-  // Recursively walks up the tree to get the transform from the descendent component to the
-  // ancestor component. If it runs into the root before reaching the ancestor it will stop and
-  // return the relative transform from the descendent component to the actor's root.
+  /**
+   * Recursively walks up the tree to get the transform from the descendent component to the
+   * ancestor component. If it runs into the root before reaching the ancestor it will stop and
+   * return the relative transform from the descendent component to the actor's root.
+   */
   static FTransform GetRelativeTransform_DescendentToAncestor(
       USceneComponent* AncestorComp,
       USceneComponent* DescendentComp);
 
-  // Recursively walks up the tree to get the transform relative to its owning actor's root
-  // component.
+  /**
+   * Recursively walks up the tree to get the transform relative to its owning actor's root
+   * component.
+   */
   static FTransform GetRelativeTransform_CompToRoot(USceneComponent* Comp);
 };

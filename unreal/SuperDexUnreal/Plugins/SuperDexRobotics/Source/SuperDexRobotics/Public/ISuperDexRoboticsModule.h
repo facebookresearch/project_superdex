@@ -25,22 +25,28 @@ namespace superdex::robotics {
 class RoboticsContext;
 } // namespace superdex::robotics
 
-/// Interface for the SuperDexRobotics module. Owns the superdex_robotics native library load and
-/// the superdex::robotics::RoboticsContext singleton; the Mochi context (GetMochiContext()) and
-/// the mochi_physics library load live on IMochiPhysicsModule.
+/**
+ * Interface for the SuperDexRobotics module. Owns the superdex_robotics native library load and
+ * the superdex::robotics::RoboticsContext singleton; the Mochi context (GetMochiContext()) and
+ * the mochi_physics library load live on IMochiPhysicsModule.
+ */
 class ISuperDexRoboticsModule : public IModuleInterface {
  public:
+  /** Loads the SuperDexRobotics module if needed and returns it, or null if it cannot be loaded. */
   static inline ISuperDexRoboticsModule* Get() {
     return FModuleManager::LoadModulePtr<ISuperDexRoboticsModule>("SuperDexRobotics");
   }
 
+  /** Whether the SuperDexRobotics module is loaded. */
   static inline bool IsLoaded() {
     return FModuleManager::Get().IsModuleLoaded("SuperDexRobotics");
   }
 
   // ISuperDexRoboticsModule Interface
 
-  /* Return the RoboticsContext, lazily creating it inside the superdex_robotics DLL memory region
-   * on first call. Safe to call repeatedly -- subsequent calls return the same pointer. */
+  /**
+   * Return the RoboticsContext, lazily creating it inside the superdex_robotics DLL memory region
+   * on first call. Safe to call repeatedly -- subsequent calls return the same pointer.
+   */
   virtual superdex::robotics::RoboticsContext* GetRoboticsContext() = 0;
 };

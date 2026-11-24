@@ -29,6 +29,7 @@
 
 namespace Teleop {
 
+/** Topic names, prefixed by BuildTeleopTopic with "/teleop/" and the robot name, if any. */
 constexpr const char* ArmPoseTargetTopic = "arm_pose_target";
 constexpr const char* ArmJointTargetsTopic = "arm_joint_targets";
 constexpr const char* ArmJointStateTopic = "arm_joint_states";
@@ -50,6 +51,7 @@ constexpr const char* HandJointVelocitiesTopic = "hand_joint_velocities";
 constexpr const char* HandJointEffortsTopic = "hand_joint_efforts";
 constexpr const char* HandControlPolicyEffortsTopic = "hand_joint_control_policy_efforts";
 
+/** Default channel sizes of a teleop node. */
 constexpr int NumDefaultArmJoints = 7;
 constexpr int NumDefaultGripperJoints = 1;
 constexpr int NumDefaultHandJoints = 16;
@@ -61,6 +63,9 @@ constexpr int NumDefaultHandSensors = 5;
 // HANDLE TYPES
 //------------------------------------------------------------------------------
 
+/**
+ * Handle to a publisher created by a teleop communication backend; invalid while Id is negative.
+ */
 USTRUCT(BlueprintType)
 struct FTeleopPublisherHandle {
   GENERATED_BODY()
@@ -68,15 +73,20 @@ struct FTeleopPublisherHandle {
   UPROPERTY()
   int32 Id = -1;
 
+  /** Whether Id is nonnegative; does not check registration with a backend. */
   bool IsValid() const {
     return Id >= 0;
   }
 
+  /** Makes the handle invalid. */
   void Reset() {
     Id = -1;
   }
 };
 
+/**
+ * Handle to a subscriber created by a teleop communication backend; invalid while Id is negative.
+ */
 USTRUCT(BlueprintType)
 struct FTeleopSubscriberHandle {
   GENERATED_BODY()
@@ -84,10 +94,12 @@ struct FTeleopSubscriberHandle {
   UPROPERTY()
   int32 Id = -1;
 
+  /** Whether Id is nonnegative; does not check registration with a backend. */
   bool IsValid() const {
     return Id >= 0;
   }
 
+  /** Makes the handle invalid. */
   void Reset() {
     Id = -1;
   }
@@ -98,14 +110,19 @@ struct FTeleopSubscriberHandle {
 //------------------------------------------------------------------------------
 
 // clang-format off
-// A mutex guarded dynamic array that is gettable only once set.
+/** A mutex guarded dynamic array that is gettable only once set. */
 template <typename T>
 struct TSafeLatentArray {
   TSafeLatentArray() : Data({}) { }
+  /** Resizes to N zeros and marks the array unset. */
   void Init(int N) { FWriteScopeLock Lock(Mutex); Data.SetNumZeroed(N); bIsSet = false; }
+  /** Edits the array under the lock and marks it set. */
   void Mutate(const TFunction<void(TArray<T>&)> Func) { FWriteScopeLock Lock(Mutex); Func(Data); bIsSet = true; }
+  /** Copies the array into Out and returns true once it is set. */
   bool TryGet(TArray<T>& Out) const { FReadScopeLock Lock(Mutex); if (bIsSet) { Out = Data; } return bIsSet; }
+  /** Copies the first element into Out and returns true once the array is set and not empty. */
   bool TryGetFirst(T& Out) const { FReadScopeLock Lock(Mutex); bool bResult = bIsSet && !Data.IsEmpty(); if (bResult) { Out = Data[0]; } return bResult; }
+  /** Whether the array has been set since the last Init, and its size. */
   bool IsSet() const { return bIsSet; }
   int Num() const { return Data.Num(); }
 private:
@@ -115,18 +132,24 @@ private:
 };
 // clang-format on
 
-// Container for related pub/sub and associated data buffers
-// Instances of this type don't need to use both pub and sub, but most do
+/**
+ * Container for related pub/sub and associated data buffers
+ * Instances of this type don't need to use both pub and sub, but most do
+ */
 template <typename T>
 struct TTeleopPubSub {
+  /** Resizes both buffers to N zeros and marks them unset. */
   void Init(int N) {
     PubData.Init(N);
     SubData.Init(N);
   }
+  /** The publisher and the data it publishes. */
   FTeleopPublisherHandle Pub;
   TSafeLatentArray<T> PubData = {};
+  /** The subscriber and the data it last received. */
   FTeleopSubscriberHandle Sub;
   TSafeLatentArray<T> SubData = {};
+  /** The size of the published data. */
   int Num() const {
     return PubData.Num();
   }
@@ -136,7 +159,7 @@ struct TTeleopPubSub {
 // HELPER FUNCTIONS
 //------------------------------------------------------------------------------
 
-// Helper function to remove whitespace and leading/trailing slashes from a string
+/** Helper function to remove whitespace and leading/trailing slashes from a string */
 inline FString SanitizeTopicPathlet(const FString& Str) {
   FString Result;
   for (int32 i = 0; i < Str.Len(); ++i) {
@@ -156,9 +179,11 @@ inline FString SanitizeTopicPathlet(const FString& Str) {
   return Result;
 }
 
-// Concatenates strings using '/' for constructing topics
-// Always starts with "/teleop/"
-// e.g. /teleop/left/arm_joint_states
+/**
+ * Concatenates strings using '/' for constructing topics
+ * Always starts with "/teleop/"
+ * e.g. /teleop/left/arm_joint_states
+ */
 template <typename... Args>
 FString BuildTeleopTopic(Args... Arguments) {
   FString Result = TEXT("/teleop");

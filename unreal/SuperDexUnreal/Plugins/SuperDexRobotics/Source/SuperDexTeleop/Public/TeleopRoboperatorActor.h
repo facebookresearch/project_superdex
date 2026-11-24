@@ -37,22 +37,24 @@ class SUPERDEXTELEOP_API ATeleopRoboperatorActor : public ASuperDexPoseableActor
   GENERATED_BODY()
 
  public:
-  // Operator-side teleop communication node
+  /** Operator-side teleop communication node */
   UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Teleop")
   TObjectPtr<UTeleopNodeOperatorComponent> TeleopNodeOperator;
 
-  // Robot-side teleop communication node
+  /** Robot-side teleop communication node */
   UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Teleop")
   TObjectPtr<UTeleopNodeRobotComponent> TeleopNodeRobot;
 
  public:
-  // Create each bot when the tracked hand driving it is first seen, at that hand's pose and size,
-  // instead of at this actor on Begin Play. Applies to every SuperDexBotComponent on the actor; a
-  // bot's tracked hand is its controller's source poseable (the first poseable attached to it).
+  /**
+   * Create each bot when the tracked hand driving it is first seen, at that hand's pose and size,
+   * instead of at this actor on Begin Play. Applies to every SuperDexBotComponent on the actor; a
+   * bot's tracked hand is its controller's source poseable (the first poseable attached to it).
+   */
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Teleop|Bot Spawn")
   bool bSpawnBotsAtTrackedHand = false;
 
-  // Scale each bot to the tracked hand when it spawns (BotPrefab::scale). Off: nominal size.
+  /** Scale each bot to the tracked hand when it spawns (BotPrefab::scale). Off: nominal size. */
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
@@ -60,8 +62,10 @@ class SUPERDEXTELEOP_API ATeleopRoboperatorActor : public ASuperDexPoseableActor
       meta = (EditCondition = "bSpawnBotsAtTrackedHand"))
   bool bScaleBotsToTrackedHand = true;
 
-  // Seconds the hand must be tracked with a steady scale before its bot spawns. The runtime refines
-  // its hand-size estimate during the first moments of tracking.
+  /**
+   * Seconds the hand must be tracked with a steady scale before its bot spawns. The runtime refines
+   * its hand-size estimate during the first moments of tracking.
+   */
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
@@ -69,7 +73,7 @@ class SUPERDEXTELEOP_API ATeleopRoboperatorActor : public ASuperDexPoseableActor
       meta = (EditCondition = "bSpawnBotsAtTrackedHand", ClampMin = "0"))
   float SpawnSettleSeconds = 0.5f;
 
-  // Largest relative change of the tracked hand scale that still counts as steady.
+  /** Largest relative change of the tracked hand scale that still counts as steady. */
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
@@ -77,7 +81,7 @@ class SUPERDEXTELEOP_API ATeleopRoboperatorActor : public ASuperDexPoseableActor
       meta = (EditCondition = "bSpawnBotsAtTrackedHand", ClampMin = "0"))
   float SpawnScaleTolerance = 0.01f;
 
-  // Spawn with the current scale once the hand has been tracked this long, steady or not.
+  /** Spawn with the current scale once the hand has been tracked this long, steady or not. */
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
@@ -86,6 +90,7 @@ class SUPERDEXTELEOP_API ATeleopRoboperatorActor : public ASuperDexPoseableActor
   float SpawnMaxWaitSeconds = 3.f;
 
  public:
+  /** Creates the root and the operator and robot teleop node components. */
   ATeleopRoboperatorActor();
 
   /** ISuperDexClutchableInterface implementation */
@@ -94,17 +99,19 @@ class SUPERDEXTELEOP_API ATeleopRoboperatorActor : public ASuperDexPoseableActor
   virtual void PostInitializeComponents() override;
   virtual void Tick(float DeltaSeconds) override;
 
-  // How long a pending bot spawn has watched its tracked hand's scale settle.
+  /** How long a pending bot spawn has watched its tracked hand's scale settle. */
   struct FSpawnSettle {
     double TrackedSeconds = 0.0;
     double SteadySeconds = 0.0;
     double ReferenceScale = 0.0;
   };
 
-  // Advances Settle by a tick of DeltaSeconds in which the hand was tracked with scale HandScale.
-  // Returns the scale to spawn the bot at -- HandScale once it has been steady for SettleSeconds or
-  // the hand has been tracked for MaxWaitSeconds, or 1 if HandScale is still not positive and
-  // finite then -- or 0 to keep waiting.
+  /**
+   * Advances Settle by a tick of DeltaSeconds in which the hand was tracked with scale HandScale.
+   * Returns the scale to spawn the bot at -- HandScale once it has been steady for SettleSeconds or
+   * the hand has been tracked for MaxWaitSeconds, or 1 if HandScale is still not positive and
+   * finite then -- or 0 to keep waiting.
+   */
   static double AdvanceSpawnSettle(
       FSpawnSettle& Settle,
       double HandScale,
@@ -118,16 +125,21 @@ class SUPERDEXTELEOP_API ATeleopRoboperatorActor : public ASuperDexPoseableActor
     TWeakObjectPtr<USuperDexBotComponent> Bot;
     TWeakObjectPtr<USuperDexPoseableComponent> Source;
     FSpawnSettle Settle;
-    // Whether a failed spawn has been reported; failed spawns are retried every tick.
+
+    /** Whether a failed spawn has been reported; failed spawns are retried every tick. */
     bool bReportedFailure = false;
-    // Whether the bot was visible before it was hidden until it spawns.
+
+    /** Whether the bot was visible before it was hidden until it spawns. */
     bool bWasVisible = false;
   };
 
-  // Advances one pending spawn; returns true once it is resolved (spawned, or handed back to the
-  // bot's own auto-spawn).
+  /**
+   * Advances one pending spawn; returns true once it is resolved (spawned, or handed back to the
+   * bot's own auto-spawn).
+   */
   bool UpdatePendingBotSpawn(FPendingBotSpawn& Pending, float DeltaSeconds);
-  // Shows a pending bot again if it was visible before it was hidden until it spawns.
+
+  /** Shows a pending bot again if it was visible before it was hidden until it spawns. */
   static void RestoreVisibility(const FPendingBotSpawn& Pending);
 
   TArray<FPendingBotSpawn> PendingBotSpawns;

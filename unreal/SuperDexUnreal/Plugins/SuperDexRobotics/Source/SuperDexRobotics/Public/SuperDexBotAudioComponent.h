@@ -29,36 +29,40 @@ class USuperDexBotComponent;
 
 UENUM()
 enum class ESuperDexBotAudioJointAggregateMode {
-  // Each joint plays its own loop, driven by its own velocity.
+  /** Each joint plays its own loop, driven by its own velocity. */
   Individual,
-  // One loop, at the first joint, driven by the sum of the joints' speeds.
+
+  /** One loop, at the first joint, driven by the sum of the joints' speeds. */
   Sum
 };
 
+/** A looping sound driven by the speed of a set of bot joints. */
 USTRUCT()
 struct FSuperDexBotAudioParams {
   GENERATED_BODY()
-  // The joints these params are applied to.
+  /** The joints these params are applied to. */
   UPROPERTY(
       EditAnywhere,
       meta = (GetOptions = "GetJointNames_EditorOnly"),
       Category = "SuperDex Bot Audio")
   TArray<FName> Joints;
-  // The audio clip to use. Should be seamless loop with constant vol/pitch/tone.
+  /** The audio clip to use. Should be seamless loop with constant vol/pitch/tone. */
   UPROPERTY(EditAnywhere, Category = "SuperDex Bot Audio")
   USoundBase* AudioLoop = nullptr;
-  // Maps joint speed to volume.
+  /** Maps joint speed to volume. */
   UPROPERTY(EditAnywhere, Category = "SuperDex Bot Audio")
   UCurveFloat* VelocityVolumeCurve = nullptr;
-  // Maps joint speed to pitch.
+  /** Maps joint speed to pitch. */
   UPROPERTY(EditAnywhere, Category = "SuperDex Bot Audio")
   UCurveFloat* VelocityPitchCurve = nullptr;
-  // Should each joint have an AudioComponent attached or should all joint velocities
-  // be aggregated
+  /**
+   * Should each joint have an AudioComponent attached or should all joint velocities
+   * be aggregated
+   */
   UPROPERTY(EditAnywhere, Category = "SuperDex Bot Audio")
   ESuperDexBotAudioJointAggregateMode JointAggregateMode =
       ESuperDexBotAudioJointAggregateMode::Individual;
-  // Estimate joint velocity from joint positions instead of using Mochi's joint velocity.
+  /** Estimate joint velocity from joint positions instead of using Mochi's joint velocity. */
   UPROPERTY(EditAnywhere, Category = "SuperDex Bot Audio")
   bool bEstimateVelocity = false;
 };
@@ -81,7 +85,7 @@ struct FSuperDexBotAudioInstance {
   bool bEstimateVelocity = false;
 };
 
-/*
+/**
  * Plays looping sounds at a SuperDex bot's joints, with volume and pitch following each joint's
  * speed. Add it to an actor with a USuperDexBotComponent; the sounds attach to the links the joints
  * move. Sounds and curves are assigned per entry of BotAudioParams.
@@ -90,14 +94,15 @@ UCLASS(ClassGroup = (SuperDex), meta = (BlueprintSpawnableComponent))
 class SUPERDEXROBOTICS_API USuperDexBotAudioComponent : public UActorComponent {
   GENERATED_BODY()
  protected:
-  // Parameters controlling the bot's audio.
+  /** Parameters controlling the bot's audio. */
   UPROPERTY(EditAnywhere, Category = "SuperDex Bot Audio")
   TArray<FSuperDexBotAudioParams> BotAudioParams;
-  // Draw a sphere at each sound, sized by its volume.
+  /** Draw a sphere at each sound, sized by its volume. */
   UPROPERTY(EditAnywhere, Category = "SuperDex Bot Audio")
   bool bDebugDraw = false;
 
 #if WITH_EDITOR
+  /** Lists the joint names of the owning bot component's bot asset, for the Joints picker. */
   UFUNCTION(Category = "SuperDex Bot Audio")
   TArray<FName> GetJointNames_EditorOnly() const;
 #endif
@@ -118,7 +123,8 @@ class SUPERDEXROBOTICS_API USuperDexBotAudioComponent : public UActorComponent {
  private:
   UFUNCTION()
   void HandleBotSpawned(USuperDexBotComponent* InBotComponent);
-  // Spawns the sounds once the bot exists.
+
+  /** Spawns the sounds once the bot exists. */
   void SetUpAudio();
 
   UPROPERTY(Transient)

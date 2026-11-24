@@ -21,13 +21,15 @@
 
 #include "SuperDexBotIKRetargeterTestTypes.generated.h"
 
-// Pose source fixture; instantiated only by dev automation tests.
+/** Pose source fixture; instantiated only by dev automation tests. */
 UCLASS()
 class USuperDexBotIKTestPoseSource : public USuperDexPoseableComponent {
   GENERATED_BODY()
  public:
+  /** The pose GetPose returns. */
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Transient, Category = "Test")
   FSuperDexPose TestPose;
+  /** The value GetPose returns. */
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Transient, Category = "Test")
   bool bTestValid = true;
   virtual bool GetPose(FSuperDexPose& Out) override {

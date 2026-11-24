@@ -27,6 +27,7 @@
 // SUPERDEX BOT ACTOR FACTORY
 //------------------------------------------------------------------------------
 
+/** Places ASuperDexBotActors from SuperDex Bot assets dragged into a level. */
 UCLASS(MinimalAPI, Config = Editor, CollapseCategories, HideCategories = Object)
 class USuperDexBotActorFactory : public UActorFactory {
   GENERATED_UCLASS_BODY()

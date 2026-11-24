@@ -23,8 +23,10 @@
 
 #include "SuperDexSceneFactory.generated.h"
 
-// Imports .superdex_scene and .superdex_scene_archive files authored in SuperDex Studio as
-// USuperDexScene assets.
+/**
+ * Imports .superdex_scene and .superdex_scene_archive files authored in SuperDex Studio as
+ * USuperDexScene assets.
+ */
 UCLASS(HideCategories = Object)
 class USuperDexSceneFactory : public UFactory {
   GENERATED_UCLASS_BODY()
@@ -46,17 +48,19 @@ class USuperDexSceneFactory : public UFactory {
   FSuperDexImportSession ImportSession;
 };
 
+/** Reimports USuperDexScene assets from their source files. */
 UCLASS(HideCategories = Object)
 class UReimportSuperDexSceneFactory : public USuperDexSceneFactory, public FReimportHandler {
   GENERATED_BODY()
 
  public:
+  /** Takes priority over USuperDexSceneFactory for reimports. */
   UReimportSuperDexSceneFactory();
 
-  //~ Begin FReimportHandler Interface
+  // ~ Begin FReimportHandler Interface
   virtual bool CanReimport(UObject* Obj, TArray<FString>& OutFilenames) override;
   virtual void SetReimportPaths(UObject* Obj, const TArray<FString>& NewReimportPaths) override;
   virtual EReimportResult::Type Reimport(UObject* Obj) override;
   virtual int32 GetPriority() const override;
-  //~ End FReimportHandler Interface
+  // ~ End FReimportHandler Interface
 };

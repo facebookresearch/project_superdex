@@ -24,12 +24,16 @@
 
 class USuperDexBotComponent;
 
+/**
+ * Base class of the controllers that drive a USuperDexBotComponent's bot: initialized on the game
+ * thread, stepped on the Mochi simulation thread before each step and ticked on the game thread.
+ */
 UCLASS(Abstract, BlueprintType, DefaultToInstanced)
 class SUPERDEXROBOTICS_API USuperDexBotController : public UObject {
   GENERATED_BODY()
 
  public:
-  /* @brief Return the most recent composed target pose for recorder visualization. */
+  /** Return the most recent composed target pose for recorder visualization. */
   virtual bool GetRecordingTarget(
       int32& OutAnchorLinkIndex,
       mochi::TransformRT& OutWorldFromAnchor,
@@ -37,26 +41,36 @@ class SUPERDEXROBOTICS_API USuperDexBotController : public UObject {
 
  protected:
   friend class USuperDexBotComponent;
-  // Initialize the controller. Called on the game thread in BeginPlay.
-  // Return true on success, false to cancel controller deployment.
+  /**
+   * Initialize the controller. Called on the game thread in BeginPlay.
+   * Return true on success, false to cancel controller deployment.
+   */
   virtual bool Initialize(const USuperDexBotComponent* Component);
-  // Called when the bot has been spawned. Game thread.
+  /** Called when the bot has been spawned. Game thread. */
   virtual void OnBotSpawned(USuperDexBotComponent* Component);
-  // Shutdown the controller. Called on the game thread in EndPlay or when swapped.
+  /** Shutdown the controller. Called on the game thread in EndPlay or when swapped. */
   virtual void Shutdown(const USuperDexBotComponent* Component);
-  // Step the controller on the Mochi simulation thread in a pre-step callback.
-  // MochiDeltaTime is the duration of the step about to be taken.
+  /**
+   * Step the controller on the Mochi simulation thread in a pre-step callback.
+   * MochiDeltaTime is the duration of the step about to be taken.
+   */
   virtual bool StepController(
       const USuperDexBotComponent* Component,
       const FMochiArticulationState& State,
       double MochiDeltaTime,
       mochi::Actor* ArticulatedActor,
       mochi::Scene* Scene);
-  // Tick the controller on the game thread. Called in TickComponent and is thread safe with
-  // StepController.
+  /**
+   * Tick the controller on the game thread. Called in TickComponent and is thread safe with
+   * StepController.
+   */
   virtual void TickController(const USuperDexBotComponent* Component, double GameDeltaTime);
 
  public:
+  /**
+   * Returns the controller entries to export with a bot scene, writing any files to OutputDir. The
+   * default exports none.
+   */
   virtual TArray<superdex::robotics::ControllerEntry> ExportControllerEntries(
       const FString& OutputDir) const;
 };

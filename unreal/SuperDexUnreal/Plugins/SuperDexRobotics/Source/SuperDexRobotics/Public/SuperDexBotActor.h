@@ -26,6 +26,7 @@
 // SUPERDEX BOT ACTOR
 //------------------------------------------------------------------------------
 
+/** Actor whose root component is a USuperDexBotComponent that simulates a SuperDex bot. */
 UCLASS(
     Blueprintable,
     HideCategories = (Input),
@@ -37,6 +38,7 @@ class SUPERDEXROBOTICS_API ASuperDexBotActor : public AActor {
   GENERATED_BODY()
 
  private:
+  /** The root bot component. */
   UPROPERTY(
       Category = SuperDexBotActor,
       VisibleAnywhere,
@@ -47,16 +49,32 @@ class SUPERDEXROBOTICS_API ASuperDexBotActor : public AActor {
   TObjectPtr<class USuperDexBotComponent> BotComponent = nullptr;
 
  public:
+  /**
+   * Sets the bot asset of BotComponent.
+   *
+   * @param NewBot The bot asset to use.
+   */
   UFUNCTION(BlueprintCallable, Category = "SuperDexBotActor")
   void SetBotAsset(USuperDexBot* NewBot);
 
+  /**
+   * Returns the bot asset of BotComponent.
+   *
+   * @return The bot asset.
+   */
   UFUNCTION(BlueprintPure, Category = "SuperDexBotActor")
   USuperDexBot* GetBotAsset() const;
 
+  /**
+   * Returns the root bot component.
+   *
+   * @return BotComponent.
+   */
   UFUNCTION(BlueprintPure, Category = "SuperDexBotActor")
   USuperDexBotComponent* GetBotComponent() const;
 
  public:
+  /** Creates the bot component as the root component. */
   ASuperDexBotActor();
   virtual void Tick(float DeltaTime) override;
 

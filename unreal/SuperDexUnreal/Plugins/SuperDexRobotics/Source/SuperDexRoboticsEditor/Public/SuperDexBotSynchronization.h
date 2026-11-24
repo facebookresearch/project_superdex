@@ -24,37 +24,48 @@
 class USuperDexBot;
 struct FAssetData;
 
-/// Static utility class for checking and resolving sync status of imported SuperDexBot assets.
-/// Used by the Mochi menu "Reimport Bots" action and the ReimportSuperDexBots commandlet.
+/**
+ * Static utility class for checking and resolving sync status of imported SuperDexBot assets.
+ * Used by the Mochi menu "Reimport Bots" action and the ReimportSuperDexBots commandlet.
+ */
 class FSuperDexBotSyncUtils {
  public:
-  /// Discovers all USuperDexBot assets in the project and plugins via the Asset Registry.
+  /** Discovers all USuperDexBot assets in the project and plugins via the Asset Registry. */
   static TArray<FAssetData> FindAllBotAssets();
 
-  /// Loads all USuperDexBot assets and returns those whose source files have changed since
-  /// last import. Calls USuperDexBot::IsOutOfSync() on each, which computes SHA1 hashes of
-  /// the source .superdex_bot file and all referenced assets (.glb, .mochi.h5) and compares
-  /// against the stored hash.
+  /**
+   * Loads all USuperDexBot assets and returns those whose source files have changed since
+   * last import. Calls USuperDexBot::IsOutOfSync() on each, which computes SHA1 hashes of
+   * the source .superdex_bot file and all referenced assets (.glb, .mochi.h5) and compares
+   * against the stored hash.
+   */
   static TArray<USuperDexBot*> FindOutOfSyncBots();
 
-  /// Reimports the given bots via FReimportManager. Returns the number successfully
-  /// reimported. The reimport pipeline has a hash-skip optimization, so calling this on
-  /// an already-synced bot is safe (no-op).
+  /**
+   * Reimports the given bots via FReimportManager. Returns the number successfully
+   * reimported. The reimport pipeline has a hash-skip optimization, so calling this on
+   * an already-synced bot is safe (no-op).
+   */
   static int32 ReimportOutOfSyncBots(const TArray<USuperDexBot*>& Bots);
 
-  /// Displays a modal dialog listing out-of-sync bot names and source paths, with
-  /// "Reimport All" and "Dismiss" buttons. If the user clicks "Reimport All", calls
-  /// ReimportOutOfSyncBots() and returns the count reimported. Returns 0 if dismissed.
+  /**
+   * Displays a modal dialog listing out-of-sync bot names and source paths, with
+   * "Reimport All" and "Dismiss" buttons. If the user clicks "Reimport All", calls
+   * ReimportOutOfSyncBots() and returns the count reimported. Returns 0 if dismissed.
+   */
   static int32 ShowOutOfSyncDialog(const TArray<USuperDexBot*>& OutOfSyncBots);
 };
 
-/// Commandlet that reimports all out-of-sync SuperDexBot assets without opening the editor GUI.
-/// Invoke via: UnrealEditor-Cmd.exe <project.uproject>
-/// -run=SuperDexRoboticsEditor.ReimportSuperDexBots
+/**
+ * Commandlet that reimports all out-of-sync SuperDexBot assets without opening the editor GUI.
+ * Invoke via: UnrealEditor-Cmd.exe <project.uproject>
+ * -run=SuperDexRoboticsEditor.ReimportSuperDexBots
+ */
 UCLASS()
 class UReimportSuperDexBotsCommandlet : public UCommandlet {
   GENERATED_BODY()
  public:
+  /** Runs as an editor commandlet that logs to the console. */
   UReimportSuperDexBotsCommandlet();
   virtual int32 Main(const FString& Params) override;
 };

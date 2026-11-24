@@ -21,12 +21,13 @@
 
 #include "SuperDexRoboticsFunctionLibrary.generated.h"
 
+/** Blueprint helpers for SuperDex robotics scenes. */
 UCLASS(BlueprintType)
 class SUPERDEXROBOTICS_API USuperDexRoboticsFunctionLibrary : public UBlueprintFunctionLibrary {
   GENERATED_BODY()
 
  public:
-  /*
+  /**
    * Exports the SuperDexPhysics game-instance Mochi scene to the archive
    * OutputDir + ".superdex_scene_archive", staging its contents in OutputDir. Bots are exported as
    * bot archives beside the base scene.
@@ -41,6 +42,14 @@ class SUPERDEXROBOTICS_API USuperDexRoboticsFunctionLibrary : public UBlueprintF
    *
    * Pauses the simulation while it exports. Editor only (PIE included): returns false, doing
    * nothing, in packaged builds.
+   *
+   * @param WorldContext Object whose game instance owns the Mochi scene.
+   * @param ExportName Name of the exported scene and its .superdex_scene file.
+   * @param OutputDir Directory to stage the export in; the archive is OutputDir +
+   *   ".superdex_scene_archive".
+   * @param bCaptureLiveScene Capture the live scene, task and spawnables included, instead of the
+   *   reusable base scene.
+   * @return True if the scene was exported.
    */
   UFUNCTION(BlueprintCallable, Category = "SuperDex", meta = (WorldContext = "WorldContext"))
   static bool ExportSuperDexBotScene(
