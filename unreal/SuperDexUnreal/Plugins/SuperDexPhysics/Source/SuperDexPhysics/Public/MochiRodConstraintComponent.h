@@ -26,23 +26,24 @@
 
 #include "MochiRodConstraintComponent.generated.h"
 
+/** Component attaching a native rod endpoint to a rigid actor. */
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class SUPERDEXPHYSICS_API UMochiRodConstraintComponent : public USceneComponent {
   GENERATED_BODY()
 
-  // Name of the UMochiRodMeshComponent to constrain.
+  /** Name of the UMochiRodMeshComponent to constrain. */
   UPROPERTY(EditAnywhere, Category = "Mochi Rod Constraint")
   FName RodComponentName = NAME_None;
 
-  // Name of the rigid Mochi mesh component to constrain to.
+  /** Name of the rigid Mochi mesh component to constrain to. */
   UPROPERTY(EditAnywhere, Category = "Mochi Rod Constraint")
   FName RigidComponentName = NAME_None;
 
-  // Which rod endpoint to attach.
+  /** Which rod endpoint to attach. */
   UPROPERTY(EditAnywhere, Category = "Mochi Rod Constraint")
   EMochiRodAttachmentEnd AttachmentEnd = EMochiRodAttachmentEnd::Last;
 
-  // Whether to allow contact between the constrained pair.
+  /** Whether to allow contact between the constrained pair. */
   UPROPERTY(EditAnywhere, Category = "Mochi Rod Constraint")
   bool bAllowContact = false;
 
@@ -50,18 +51,18 @@ class SUPERDEXPHYSICS_API UMochiRodConstraintComponent : public USceneComponent 
   // POSITION CONSTRAINT
   //----------------------------------------------------------------------------
 
-  // Create a DeformableNodeToRigid constraint for position.
+  /** Create a DeformableNodeToRigid constraint for position. */
   UPROPERTY(EditAnywhere, Category = "Mochi Rod Constraint|Position Constraint")
   bool bConstrainPosition = true;
 
-  // Stiffness for position constraint.
+  /** Stiffness for position constraint. */
   UPROPERTY(
       EditAnywhere,
       Category = "Mochi Rod Constraint|Position Constraint",
       meta = (EditCondition = "bConstrainPosition"))
   float PositionStiffness = mochi::DeformableNodeToRigidConstraintParams{}.stiffness;
 
-  // Damping for position constraint.
+  /** Damping for position constraint. */
   UPROPERTY(
       EditAnywhere,
       Category = "Mochi Rod Constraint|Position Constraint",
@@ -72,18 +73,18 @@ class SUPERDEXPHYSICS_API UMochiRodConstraintComponent : public USceneComponent 
   // ROTATION CONSTRAINT
   //----------------------------------------------------------------------------
 
-  // Create a RodElementRotationToRigid constraint for rotation.
+  /** Create a RodElementRotationToRigid constraint for rotation. */
   UPROPERTY(EditAnywhere, Category = "Mochi Rod Constraint|Rotation Constraint")
   bool bConstrainRotation = true;
 
-  // Stiffness for rotation constraint.
+  /** Stiffness for rotation constraint. */
   UPROPERTY(
       EditAnywhere,
       Category = "Mochi Rod Constraint|Rotation Constraint",
       meta = (EditCondition = "bConstrainRotation"))
   float RotationStiffness = mochi::RodElementRotationToRigidConstraintParams{}.stiffness;
 
-  // Damping for rotation constraint.
+  /** Damping for rotation constraint. */
   UPROPERTY(
       EditAnywhere,
       Category = "Mochi Rod Constraint|Rotation Constraint",
@@ -91,31 +92,48 @@ class SUPERDEXPHYSICS_API UMochiRodConstraintComponent : public USceneComponent 
   float RotationDamping = mochi::RodElementRotationToRigidConstraintParams{}.damping;
 
  public:
-  // Set the position constraint stiffness.
+  /**
+   * Set the position constraint stiffness.
+   *
+   * @param NewStiffness Constraint stiffness to configure.
+   */
   UFUNCTION(BlueprintCallable, Category = "Mochi")
   void SetPositionStiffness(float NewStiffness);
 
-  // Set the position constraint damping.
+  /**
+   * Set the position constraint damping.
+   *
+   * @param NewDamping Constraint damping to configure.
+   */
   UFUNCTION(BlueprintCallable, Category = "Mochi")
   void SetPositionDamping(float NewDamping);
 
-  // Set the rotation constraint stiffness.
+  /**
+   * Set the rotation constraint stiffness.
+   *
+   * @param NewStiffness Constraint stiffness to configure.
+   */
   UFUNCTION(BlueprintCallable, Category = "Mochi")
   void SetRotationStiffness(float NewStiffness);
 
-  // Set the rotation constraint damping.
+  /**
+   * Set the rotation constraint damping.
+   *
+   * @param NewDamping Constraint damping to configure.
+   */
   UFUNCTION(BlueprintCallable, Category = "Mochi")
   void SetRotationDamping(float NewDamping);
 
-  // (Re)create constraints created by this component.
+  /** (Re)create constraints created by this component. */
   UFUNCTION(BlueprintCallable, Category = "Mochi")
   void CreateConstraints();
 
-  // Destroy constraints created by this component.
+  /** Destroy constraints created by this component. */
   UFUNCTION(BlueprintCallable, Category = "Mochi")
   void DestroyConstraints();
 
  public:
+  /** Initialize the rod-constraint component. */
   UMochiRodConstraintComponent();
 
  protected:
@@ -131,6 +149,6 @@ class SUPERDEXPHYSICS_API UMochiRodConstraintComponent : public USceneComponent 
     mochi::ConstraintHandle RotationConstraintHandle;
   };
 
-  // Accessed by the Mochi thread only!
+  /** Accessed by the Mochi thread only! */
   std::shared_ptr<FMochiState> MochiThreadState = std::make_shared<FMochiState>();
 };

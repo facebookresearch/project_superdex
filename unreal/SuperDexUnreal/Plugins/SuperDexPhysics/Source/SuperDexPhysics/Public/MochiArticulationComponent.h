@@ -26,6 +26,7 @@
 
 class UMochiSoftMeshComponent;
 
+/** Component that creates and controls a native articulation from an asset. */
 UCLASS(
     ClassGroup = (Custom),
     HideCategories = (Physics, Collision, Shelling, Navigation),
@@ -34,10 +35,10 @@ class SUPERDEXPHYSICS_API UMochiArticulationComponent : public UPoseableMeshComp
   GENERATED_BODY()
 
  protected:
-  // The MochiArticulation asset from which the articulation will be generated.
+  /** The MochiArticulation asset from which the articulation will be generated. */
   UPROPERTY(EditAnywhere, Category = "Mochi Articulation")
   UMochiArticulation* Articulation = nullptr;
-  // The initial joint positions with which the articulation will be spawned.
+  /** The initial joint positions with which the articulation will be spawned. */
   UPROPERTY(
       EditAnywhere,
       Category = "Mochi Articulation",
@@ -45,42 +46,46 @@ class SUPERDEXPHYSICS_API UMochiArticulationComponent : public UPoseableMeshComp
       EditFixedSize,
       meta = (EditFixedOrder))
   TArray<double> InitialJointPositions;
-  // Optional initial joint velocities [rad/s or m/s], laid out like InitialJointPositions.
+  /** Optional initial joint velocities [rad/s or m/s], laid out like InitialJointPositions. */
   UPROPERTY(EditAnywhere, Category = "Mochi Articulation", BlueprintReadOnly, AdvancedDisplay)
   TArray<double> InitialJointVelocities;
-  // If true, the articulation will be spawned with a fixed root joint, making the articulation
-  // fixed in space at the location it is spawned. Only overrides Free and Hard root joints.
+  /**
+   * If true, the articulation will be spawned with a fixed root joint, making the articulation
+   * fixed in space at the location it is spawned. Only overrides Free and Hard root joints.
+   */
   UPROPERTY(EditAnywhere, Category = "Mochi Articulation", BlueprintReadOnly)
   bool bFixedBase = false;
-  // The layer the articulation will be simulated on.
+  /** The layer the articulation will be simulated on. */
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mochi Articulation")
   FName Layer = FMochiLayer::GenericObject;
-  // Parameters controlling contacts of the links.
+  /** Parameters controlling contacts of the links. */
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mochi Articulation")
   UMochiContactParams* ContactParams = nullptr;
-  // Whether the articulation should be simulated under the influence of gravity.
+  /** Whether the articulation should be simulated under the influence of gravity. */
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mochi Articulation")
   bool bGravityEnabled = mochi::ArticulatedLinkParams{}.hasGravity;
-  // Enable contact queries and events.
+  /** Enable contact queries and events. */
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mochi Articulation")
   bool bEnableContacts = false;
-  // The links that will be included in contact queries and events. Defaults to all links;
-  // can be pruned of uninteresting links for performance gains. Note that fixed base links
-  // will never generate contacts; this is a Mochi limitation.
+  /**
+   * The links that will be included in contact queries and events. Defaults to all links;
+   * can be pruned of uninteresting links for performance gains. Note that fixed base links
+   * will never generate contacts; this is a Mochi limitation.
+   */
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
       Category = "Mochi Articulation",
       meta = (EditCondition = "bEnableContacts"))
   TArray<FName> ContactGeneratingLinks;
-  // Filter contacts against self.
+  /** Filter contacts against self. */
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
       Category = "Mochi Articulation",
       meta = (EditCondition = "bEnableContacts"))
   bool bFilterSelfContacts = true;
-  // The MochiArticulationController class to use.
+  /** The MochiArticulationController class to use. */
   UPROPERTY(EditAnywhere, Category = "Mochi Articulation", BlueprintReadOnly)
   TSubclassOf<UMochiArticulationController> ArticulationControllerClass;
 
@@ -96,107 +101,180 @@ class SUPERDEXPHYSICS_API UMochiArticulationComponent : public UPoseableMeshComp
       const TArray<UMochiSoftMeshComponent*>&,
       SoftLinks);
 
-  // Emitted when the articulation has been spawned.
+  /** Emitted when the articulation has been spawned. */
   UPROPERTY(BlueprintAssignable, Category = "Mochi Articulation")
   FOnArticulationSpawned OnArticulationSpawned;
-  // Emitted when the articulation soft links have been spawned.
+  /** Emitted when the articulation soft links have been spawned. */
   UPROPERTY(BlueprintAssignable, Category = "Mochi Articulation")
   FOnSoftLinksSpawned OnSoftLinksSpawned;
 
-  // Emitted when a nested element in this component begins contact with another Mochi component.
-  // bEnableContacts must be enabled. Occurs before the non-nested equivalent.
+  /**
+   * Emitted when a nested element in this component begins contact with another Mochi component.
+   * bEnableContacts must be enabled. Occurs before the non-nested equivalent.
+   */
   UPROPERTY(BlueprintAssignable, Category = "Mochi Articulation")
   FOnMochiComponentBeginNestedContact OnMochiComponentBeginNestedContact;
-  // Emitted when this component begins contact with another Mochi component.
-  // bEnableContacts must be enabled. Occurs after the nested equivalent.
+  /**
+   * Emitted when this component begins contact with another Mochi component.
+   * bEnableContacts must be enabled. Occurs after the nested equivalent.
+   */
   UPROPERTY(BlueprintAssignable, Category = "Mochi Articulation")
   FOnMochiComponentBeginContact OnMochiComponentBeginContact;
-  // Emitted when a nested element in this component ends contact with another Mochi component.
-  // bEnableContacts must be enabled. Occurs before the non-nested equivalent.
+  /**
+   * Emitted when a nested element in this component ends contact with another Mochi component.
+   * bEnableContacts must be enabled. Occurs before the non-nested equivalent.
+   */
   UPROPERTY(BlueprintAssignable, Category = "Mochi Articulation")
   FOnMochiComponentEndNestedContact OnMochiComponentEndNestedContact;
-  // Emitted when this component ends contact with another Mochi component.
-  // bEnableContacts must be enabled. Occurs after the nested equivalent.
+  /**
+   * Emitted when this component ends contact with another Mochi component.
+   * bEnableContacts must be enabled. Occurs after the nested equivalent.
+   */
   UPROPERTY(BlueprintAssignable, Category = "Mochi Articulation")
   FOnMochiComponentEndContact OnMochiComponentEndContact;
-  // Emitted when a nested element in this component is contacting any other Mochi components.
-  // bEnableContacts must be enabled. Occurs before the non-nested equivalent.
+  /**
+   * Emitted when a nested element in this component is contacting any other Mochi components.
+   * bEnableContacts must be enabled. Occurs before the non-nested equivalent.
+   */
   UPROPERTY(BlueprintAssignable, Category = "Mochi Articulation")
   FOnMochiComponentNestedContact OnMochiComponentNestedContact;
-  // Emitted when this component is contacting any other Mochi components.
-  // bEnableContacts must be enabled. Occurs after the nested equivalent.
+  /**
+   * Emitted when this component is contacting any other Mochi components.
+   * bEnableContacts must be enabled. Occurs after the nested equivalent.
+   */
   UPROPERTY(BlueprintAssignable, Category = "Mochi Articulation")
   FOnMochiComponentContact OnMochiComponentContact;
 
-  // Emitted before any contact events are invoked.
+  /** Emitted before any contact events are invoked. */
   UPROPERTY(BlueprintAssignable, Category = "Mochi Articulation")
   FOnMochiComponentContactProcessing OnMochiComponentBeginContactProcessing;
-  // Emitted after all contact events have been invoked, even if none actually were.
+  /** Emitted after all contact events have been invoked, even if none actually were. */
   UPROPERTY(BlueprintAssignable, Category = "Mochi Articulation")
   FOnMochiComponentContactProcessing OnMochiComponentEndContactProcessing;
 
  public:
-  // Set the articulation asset. This has no effect if the articulation has already been spawned.
+  /**
+   * Set the articulation asset. This has no effect if the articulation has already been spawned.
+   *
+   * @param InArticulation Articulation asset supplied to the operation.
+   */
   UFUNCTION(BlueprintCallable, Category = "Mochi Articulation")
   void SetArticulationAsset(UMochiArticulation* InArticulation);
-  // Get the articulation asset.
+  /**
+   * Get the articulation asset.
+   *
+   * @return The articulation asset.
+   */
   UFUNCTION(BlueprintPure, Category = "Mochi Articulation")
   UMochiArticulation* GetArticulationAsset() const;
-  // Set the initial pose (configuration) of the articulation as an array of joint positions [rad or
-  // m]. Typically used from BP constructors since setting after BeginPlay has no effect. Fails if
-  // array size is not equal to the number of articulation DOFs of if the articulation has already
-  // been spawned.
+  /**
+   * Set the initial pose (configuration) of the articulation as an array of joint positions [rad or
+   * m]. Typically used from BP constructors since setting after BeginPlay has no effect. Fails if
+   * array size is not equal to the number of articulation DOFs of if the articulation has already
+   * been spawned.
+   *
+   * @param NewInitialJointPositions Initial joint positions to configure.
+   * @return Whether the initial joint positions were accepted.
+   */
   UFUNCTION(BlueprintCallable, Category = "Mochi Articulation")
   bool SetInitialJointPositions(const TArray<double>& NewInitialJointPositions);
-  // Get the initial pose (configuration) of the articulation as an array of joint positions [rad or
-  // m].
+  /**
+   * Get the initial pose (configuration) of the articulation as an array of joint positions [rad or
+   * m].
+   *
+   * @return The initial joint positions.
+   */
   UFUNCTION(BlueprintPure, Category = "Mochi Articulation")
   const TArray<double>& GetInitialJointPositions() const;
-  // Returns true if the articulation is spawned with a fixed base.
+  /**
+   * Returns true if the articulation is spawned with a fixed base.
+   *
+   * @return Whether the articulation is configured with a fixed base.
+   */
   UFUNCTION(BlueprintPure, Category = "Mochi Articulation")
   bool IsFixedBase() const;
-  // Returns true if gravity is enabled on this articulation.
+  /**
+   * Returns true if gravity is enabled on this articulation.
+   *
+   * @return Whether gravity is configured for the articulation.
+   */
   UFUNCTION(BlueprintPure, Category = "Mochi Articulation")
   bool GetMochiGravityEnabled() const;
-  // Get the UMochiSoftMeshComponent associated with a soft link.
+  /**
+   * Get the UMochiSoftMeshComponent associated with a soft link.
+   *
+   * @param SoftLinIndex Index of the soft link.
+   * @return The soft link.
+   */
   UFUNCTION(BlueprintPure, Category = "Mochi Articulation")
   const UMochiSoftMeshComponent* GetSoftLink(int SoftLinIndex);
-  // Set the world transform of the articulation base to a new location (non-fixed articulations
-  // only)
   // TODO: This function is untested with robots that do not have a fixed base. It is possible
   // that it does not work as intended in this case. Intent would be to leave the base link in
   // place, but move all other links.
+  /**
+   * Set the world transform of the articulation base to a new location (non-fixed articulations
+   * only)
+   *
+   * @param WorldTransform World transform to apply to the articulation base.
+   */
   UFUNCTION(BlueprintCallable, Category = "Mochi Articulation")
   void SetArticulationWorldTransform(const FTransform& WorldTransform);
-  // Teleport the articulation to a new pose defined by joint positions
+  /**
+   * Teleport the articulation to a new pose defined by joint positions
+   *
+   * @param JointPositions Joint-position values supplied to this operation.
+   */
   UFUNCTION(BlueprintCallable, Category = "Mochi Articulation")
   void SetArticulatedPoseFromJoints(TArray<double> const& JointPositions);
-  // Get the contact params configured on this articulation (editor/initial value).
   // Note: does not reflect runtime changes made via SetLinkContactParams.
+  /**
+   * Get the contact params configured on this articulation (editor/initial value).
+   *
+   * @return The contact params.
+   */
   UFUNCTION(BlueprintPure, Category = "Mochi Articulation")
   UMochiContactParams* GetContactParams() const {
     return ContactParams;
   }
-  // Get the underlying Mochi articulated actor object.
+  /**
+   * Get the underlying Mochi articulated actor object.
+   *
+   * @return The mochi articulated actor.
+   */
   UFUNCTION(BlueprintPure, Category = "Mochi Articulation")
   UMochiArticulatedActorObject* GetMochiArticulatedActor() const;
 
-  // Get the world transform of a link by name. These transforms are updated each
-  // component tick if new data is available from Mochi in the same block that queries
-  // contacts and triggers contact events. This serves as an alternative to
-  // USkinnedMeshComponent::GetBoneTransform when more precise synchronization is
-  // required.
+  /**
+   * Get the world transform of a link by name. These transforms are updated each
+   * component tick if new data is available from Mochi in the same block that queries
+   * contacts and triggers contact events. This serves as an alternative to
+   * USkinnedMeshComponent::GetBoneTransform when more precise synchronization is
+   * required.
+   *
+   * @param LinkName Name of the requested articulation link.
+   * @return The link's cached world transform.
+   */
   UFUNCTION(BlueprintPure, Category = "Mochi Articulation")
   FTransform GetLinkToWorldTransform(FName LinkName) const;
 
-  // Set the MochiArticulationController to a new one (nullptr to remove controller).
+  /**
+   * Set the MochiArticulationController to a new one (nullptr to remove controller).
+   *
+   * @param NewControllerClass Controller class to deploy, or nullptr to remove the controller.
+   * @return Whether the requested controller change was accepted.
+   */
   UFUNCTION(BlueprintCallable, Category = "Mochi Articulation")
   bool SetArticulationController(TSubclassOf<UMochiArticulationController> NewControllerClass);
-  // Get the MochiArticulationController if it exists.
+  /**
+   * Get the MochiArticulationController if it exists.
+   *
+   * @return The articulation controller.
+   */
   UFUNCTION(BlueprintPure, Category = "Mochi Articulation")
   UMochiArticulationController* GetArticulationController() const;
 
  public:
+  /** Initialize the articulation component and its tick settings. */
   UMochiArticulationComponent();
 
  protected:
@@ -237,20 +315,23 @@ class SUPERDEXPHYSICS_API UMochiArticulationComponent : public UPoseableMeshComp
 #endif
 
  protected:
-  // The UMochiArticulatedActorObject owning the articulated actor
+  /** The UMochiArticulatedActorObject owning the articulated actor */
   UPROPERTY() UMochiArticulatedActorObject* ArticulatedActorObject = nullptr;
-  // Set to true once all requirements for articulated actor callbacks have been met.
+
+  /** Set to true once all requirements for articulated actor callbacks have been met. */
   std::atomic<bool> bArticulatedActorReady = false;
 
-  // Contact event handler
+  /** Contact event handler */
   FMochiContactEventHandler ContactEventHandler;
-  // Nested contact event handle
+
+  /** Nested contact event handle */
   FMochiNestedContactEventHandler NestedContactEventHandler;
-  // Dynamic mesh components create for each soft shape
+
+  /** Dynamic mesh components create for each soft shape */
   UPROPERTY()
   TArray<UMochiSoftMeshComponent*> SoftLinkDynamicMeshComponents;
 
-  // Link transforms queried at the same time of contacts and their events.
+  /** Link transforms queried at the same time of contacts and their events. */
   TArray<FTransform> QueriedLinkTransforms;
 
   // DOF Bookeeping

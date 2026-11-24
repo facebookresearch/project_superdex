@@ -27,15 +27,16 @@
 
 #include "MochiPhysicsSettings.generated.h"
 
+/** Settings used to create and debug a Mochi scene. */
 USTRUCT(BlueprintType)
 struct FMochiSceneSettings {
   GENERATED_BODY()
  public:
-  // If true, the SimulationSpace defined below will override the project-level SimulationSpace.
+  /** If true, the SimulationSpace defined below will override the project-level SimulationSpace. */
   UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Scene")
   bool bOverrideSimulationSpace = false;
 
-  // The coordinate space used for simulation. Only used if bOverrideSimulationSpace is true.
+  /** The coordinate space used for simulation. Only used if bOverrideSimulationSpace is true. */
   UPROPERTY(
       BlueprintReadOnly,
       EditAnywhere,
@@ -43,7 +44,7 @@ struct FMochiSceneSettings {
       meta = (EditCondition = "bOverrideSimulationSpace"))
   FMochiSpaceDefinition SimulationSpace = SuperDexSpace;
 
-  // Gravity vector in m/s^2.
+  /** Gravity vector in m/s^2. */
   UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Scene")
   FVector GravityVector = TMochiSpaceConverter<double>(MochiSpace, UnrealMetersSpace)
                               .DirectionToOutput(FVector(
@@ -51,10 +52,11 @@ struct FMochiSceneSettings {
                                   mochi::kDefaultGravity[1],
                                   mochi::kDefaultGravity[2]));
 
-  // Parameters that control how the scene steps on the simulation thread.
+  /** Parameters that control how the scene steps on the simulation thread. */
   UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Scene")
   FMochiAsyncStepParams StepParams;
 
+  /** Solver-parameters asset used when the scene is created. */
   UPROPERTY(
       Config,
       BlueprintReadOnly,
@@ -63,6 +65,7 @@ struct FMochiSceneSettings {
       meta = (AllowedClasses = "/Script/SuperDexPhysics.MochiSolverParams"))
   FSoftObjectPath SolverParams;
 
+  /** Contact-matrix asset used when the scene is created. */
   UPROPERTY(
       Config,
       BlueprintReadOnly,
@@ -71,59 +74,86 @@ struct FMochiSceneSettings {
       meta = (AllowedClasses = "/Script/SuperDexPhysics.MochiContactMatrix"))
   FSoftObjectPath ContactMatrix;
 
+  /** Whether scene creation starts with stepping paused. */
   UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Scene")
   bool bStartPaused = false;
 
+  /** Whether debug drawing is enabled when the scene is created. */
   UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "DebugDraw")
   bool bEnableDebugDraw = false;
 
-  // Scale the length of all lines drawn by mochi. This is useful for scaling elements like contact
-  // forces, but will also alter how elements like mesh edges are drawn. Use at your own risk.
+  /**
+   * Scale the length of all lines drawn by mochi. This is useful for scaling elements like contact
+   * forces, but will also alter how elements like mesh edges are drawn. Use at your own risk.
+   */
   UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "DebugDraw")
   float DebugDraw_Line_Length_Multiplier = 1.0f;
 
+  /** Native debug-draw entities selected for this scene. */
   UPROPERTY(Config, BlueprintReadOnly, EditAnywhere, Category = "DebugDraw")
   FMochiDebugDrawFlags DebugDrawFlags;
 
+  /**
+   * Resolve the configured solver-parameters asset.
+   *
+   * @return The solver asset resolved from the configured path.
+   */
   UMochiSolverParams* GetSolverParams() const;
+  /**
+   * Resolve the configured contact-matrix asset.
+   *
+   * @return The contact-matrix asset resolved from the configured path.
+   */
   UMochiContactMatrix* GetContactMatrix() const;
 };
 
-// Project-level SuperDex Physics settings, shown under Project Settings > Plugins > SuperDex
-// Physics.
+/**
+ * Project-level SuperDex Physics settings, shown under Project Settings > Plugins > SuperDex
+ * Physics.
+ */
 UCLASS(Config = Game, defaultconfig, DisplayName = "SuperDex Physics")
 class SUPERDEXPHYSICS_API UMochiPhysicsSettings : public UDeveloperSettings {
   GENERATED_BODY()
  public:
-  // The coordinate space used for simulation. This choice has no effect on the Unreal
-  // authoring experience, which retains Unreal's left-hand convention, but affects the
-  // coordinate space in which Mochi is simulated as well as exported prefabs. This is
-  // useful if you want to author scenes in Unreal and export them to another application
-  // which simulates Mochi in a different coordinate space. By default, this is the SuperDex
-  // space (+X forward, +Y left, +Z up) with meter scaling, the convention of SuperDex bot and
-  // scene files.
+  /**
+   * The coordinate space used for simulation. This choice has no effect on the Unreal
+   * authoring experience, which retains Unreal's left-hand convention, but affects the
+   * coordinate space in which Mochi is simulated as well as exported prefabs. This is
+   * useful if you want to author scenes in Unreal and export them to another application
+   * which simulates Mochi in a different coordinate space. By default, this is the SuperDex
+   * space (+X forward, +Y left, +Z up) with meter scaling, the convention of SuperDex bot and
+   * scene files.
+   */
   UPROPERTY(Config, BlueprintReadOnly, EditAnywhere, Category = "Simulation")
   FMochiSpaceDefinition SimulationSpace = SuperDexSpace;
 
-  // Start the Mochi physics debugger server when the plugin initializes. This setting is ignored
-  // in Shipping builds. The server advertises the effective simulation space. A scene override
-  // restarts it on the same port so connected debugger clients can immediately reconnect.
+  /**
+   * Start the Mochi physics debugger server when the plugin initializes. This setting is ignored
+   * in Shipping builds. The server advertises the effective simulation space. A scene override
+   * restarts it on the same port so connected debugger clients can immediately reconnect.
+   */
   UPROPERTY(Config, BlueprintReadOnly, EditAnywhere, Category = "Debugging")
   bool bEnablePhysicsDebuggerConnection = false;
 
-  // Number of worker threads Mochi should use. If the value is <= zero, then Mochi will
-  // automatically determine how many threads to use.
+  /**
+   * Number of worker threads Mochi should use. If the value is <= zero, then Mochi will
+   * automatically determine how many threads to use.
+   */
   UPROPERTY(Config, BlueprintReadOnly, EditAnywhere, Category = "Simulation")
   int NumWorkerThreads = 0;
 
-  // Normally, Mochi actors are divided into simulation islands dynamically. However, you still have
-  // the option to force them into a single island. This may be useful for debugging, but it will
-  // hurt performance.
+  /**
+   * Normally, Mochi actors are divided into simulation islands dynamically. However, you still have
+   * the option to force them into a single island. This may be useful for debugging, but it will
+   * hurt performance.
+   */
   UPROPERTY(Config, BlueprintReadOnly, EditAnywhere, Category = "Simulation")
   bool bForceSingleIsland = false;
 
-  // Default settings used for scene creation if the scene does not contain a
-  // MochiSceneSettingsActor.
+  /**
+   * Default settings used for scene creation if the scene does not contain a
+   * MochiSceneSettingsActor.
+   */
   UPROPERTY(
       Config,
       BlueprintReadOnly,
@@ -132,10 +162,12 @@ class SUPERDEXPHYSICS_API UMochiPhysicsSettings : public UDeveloperSettings {
       Category = "Default Scene")
   FMochiSceneSettings DefaultSceneSettings;
 
-  // This setting allows the Editor to run at full performance while not in focus
-  // during Play or Simulate.
-  // **Note that minimizing the Editor will cause the Editor to throttle no matter what.**
-  // This has no effect in Packaged Builds.
+  /**
+   * This setting allows the Editor to run at full performance while not in focus
+   * during Play or Simulate.
+   * **Note that minimizing the Editor will cause the Editor to throttle no matter what.**
+   * This has no effect in Packaged Builds.
+   */
   UPROPERTY(
       Config,
       BlueprintReadOnly,
@@ -144,14 +176,16 @@ class SUPERDEXPHYSICS_API UMochiPhysicsSettings : public UDeveloperSettings {
       meta = (DisplayName = "Turn off 'Use Less CPU when in Background' during Play/Simulate"))
   bool bTurnOffUseLessCPUInBackgroundDuringPlay = true;
 
-  // If true, imported SuperDex prefabs, Mochi scenes and SuperDex scenes are organized under
-  // PrefabRootFolder, mirroring their on-disk directory structure relative to .superdex_root.
-  // Otherwise they are imported into the folder they are dropped into. Prefabs and bots that an
-  // import references are always imported into subfolders of its folder.
+  /**
+   * If true, imported SuperDex prefabs, Mochi scenes and SuperDex scenes are organized under
+   * PrefabRootFolder, mirroring their on-disk directory structure relative to .superdex_root.
+   * Otherwise they are imported into the folder they are dropped into. Prefabs and bots that an
+   * import references are always imported into subfolders of its folder.
+   */
   UPROPERTY(Config, BlueprintReadOnly, EditAnywhere, Category = "Editor")
   bool bOrganizePrefabsInRootFolder = false;
 
-  // Content Browser root folder for imported SuperDex prefabs and Mochi scenes.
+  /** Content Browser root folder for imported SuperDex prefabs and Mochi scenes. */
   UPROPERTY(
       Config,
       BlueprintReadOnly,
@@ -160,8 +194,10 @@ class SUPERDEXPHYSICS_API UMochiPhysicsSettings : public UDeveloperSettings {
       meta = (EditCondition = "bOrganizePrefabsInRootFolder", EditConditionHides))
   FDirectoryPath PrefabRootFolder = {TEXT("/Game/Prefabs")};
 
-  // Map copied to start new maps generated from SuperDex prefab and Mochi scene imports in Map
-  // mode. Defaults to the Basic template of the New Level wizard. If empty, new maps start empty.
+  /**
+   * Map copied to start new maps generated from SuperDex prefab and Mochi scene imports in Map
+   * mode. Defaults to the Basic template of the New Level wizard. If empty, new maps start empty.
+   */
   UPROPERTY(
       Config,
       BlueprintReadOnly,
@@ -172,24 +208,39 @@ class SUPERDEXPHYSICS_API UMochiPhysicsSettings : public UDeveloperSettings {
       TEXT("/Engine/Maps/Templates/Template_Default.Template_Default")};
 
  public:
+  /** Initialize project-level physics settings. */
   UMochiPhysicsSettings();
   virtual FName GetCategoryName() const override;
 
-  // Returns the effective SimulationSpace: the scene-level override if one has been set,
-  // otherwise the project-level setting. Simulation consumers should call this instead of
-  // reading SimulationSpace directly.
+  /**
+   * Returns the effective SimulationSpace: the scene-level override if one has been set,
+   * otherwise the project-level setting. Simulation consumers should call this instead of
+   * reading SimulationSpace directly.
+   *
+   * @return The active simulation space.
+   */
   static const FMochiSpaceDefinition& GetActiveSimulationSpace();
 
-  // Return whether a scene override has been set.
+  /**
+   * Return whether a scene override has been set.
+   *
+   * @return The has active simulation space override state.
+   */
   static bool HasActiveSimulationSpaceOverride();
 
-  // Set a runtime override for SimulationSpace (called when a scene settings actor
-  // with bOverrideSimulationSpace is found). Does not modify the CDO or .ini. Outside Shipping,
-  // restarts a listening debugger on the same port when the active space changes.
+  /**
+   * Set a runtime override for SimulationSpace (called when a scene settings actor
+   * with bOverrideSimulationSpace is found). Does not modify the CDO or .ini. Outside Shipping,
+   * restarts a listening debugger on the same port when the active space changes.
+   *
+   * @param Space Coordinate-space override to apply.
+   */
   static void SetActiveSimulationSpaceOverride(const FMochiSpaceDefinition& Space);
 
-  // Clear the runtime override, reverting to the project-level setting. Outside Shipping,
-  // restarts a listening debugger on the same port when the active space changes.
+  /**
+   * Clear the runtime override, reverting to the project-level setting. Outside Shipping,
+   * restarts a listening debugger on the same port when the active space changes.
+   */
   static void ClearActiveSimulationSpaceOverride();
 
  private:
@@ -197,8 +248,10 @@ class SUPERDEXPHYSICS_API UMochiPhysicsSettings : public UDeveloperSettings {
   static bool bHasActiveOverride;
 };
 
-// Actor which can *optionally* be placed into a level to override project level Mochi scene
-// settings.
+/**
+ * Actor which can *optionally* be placed into a level to override project level Mochi scene
+ * settings.
+ */
 UCLASS(
     HideCategories =
         (Actor,
@@ -219,6 +272,7 @@ UCLASS(
 class SUPERDEXPHYSICS_API AMochiSceneSettingsActor : public AActor {
   GENERATED_BODY()
  public:
+  /** Scene settings supplied by this level actor. */
   UPROPERTY(
       BlueprintReadOnly,
       EditAnywhere,
@@ -227,10 +281,12 @@ class SUPERDEXPHYSICS_API AMochiSceneSettingsActor : public AActor {
   FMochiSceneSettings SceneSettings;
 
  public:
+  /** Initialize the level scene-settings actor. */
   AMochiSceneSettingsActor();
   virtual void BeginPlay() override;
   virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
  public:
+  /** Whether this actor's scene settings have been marked as handled. */
   bool bApplied = false;
 };

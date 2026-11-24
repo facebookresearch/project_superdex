@@ -19,11 +19,18 @@
 #include "CoreMinimal.h"
 #include "IDetailCustomization.h"
 
-// Replaces float and FVector2D property widgets with scientific-notation-aware
-// numeric entry boxes so extreme values display compactly (e.g., 1e-09 instead
-// of 0.000000001).
+/**
+ * Replaces float and FVector2D property widgets with scientific-notation-aware
+ * numeric entry boxes so extreme values display compactly (e.g., 1e-09 instead
+ * of 0.000000001).
+ */
 class FMochiScientificNotationCustomization : public IDetailCustomization {
  public:
+  /**
+   * Create a details customization for scientific-notation values.
+   *
+   * @return The new details customization.
+   */
   static TSharedRef<IDetailCustomization> MakeInstance();
   void CustomizeDetails(IDetailLayoutBuilder& DetailLayout) override;
 };

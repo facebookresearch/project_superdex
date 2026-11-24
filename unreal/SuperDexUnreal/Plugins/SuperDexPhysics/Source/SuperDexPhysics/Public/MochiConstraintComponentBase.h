@@ -30,57 +30,90 @@
 
 class UMochiSceneObject;
 
-// Base of the Mochi constraint components. Each creates Mochi constraints of the type it is set to
-// between the bodies it names, at BeginPlay or as soon as their Mochi actors exist, and destroys
-// them at EndPlay.
+/**
+ * Base of the Mochi constraint components. Each creates Mochi constraints of the type it is set to
+ * between the bodies it names, at BeginPlay or as soon as their Mochi actors exist, and destroys
+ * them at EndPlay.
+ */
 UCLASS(Abstract)
 class SUPERDEXPHYSICS_API UMochiConstraintComponentBase : public USceneComponent {
   GENERATED_BODY()
 
  public:
-  // Stiffness [N/m for a distance, N*m/rad for an angle].
+  /** Stiffness [N/m for a distance, N*m/rad for an angle]. */
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mochi Constraint", meta = (ClampMin = "0"))
   float Stiffness = mochi::ConstraintParams{}.stiffness;
-  // Damping [N*s/m for a distance, N*m*s/rad for an angle].
+  /** Damping [N*s/m for a distance, N*m*s/rad for an angle]. */
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mochi Constraint", meta = (ClampMin = "0"))
   float Damping = mochi::ConstraintParams{}.damping;
-  // Deviation beyond which the constraint force stops growing, in the unit of what the constraint
-  // drives (see the subclass). Negative disables saturation.
+  /**
+   * Deviation beyond which the constraint force stops growing, in the unit of what the constraint
+   * drives (see the subclass). Negative disables saturation.
+   */
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mochi Constraint")
   float Saturation = mochi::ConstraintParams{}.saturation;
 
+  /**
+   * Set the stiffness used by this constraint component.
+   *
+   * @param NewStiffness Constraint stiffness to configure.
+   */
   UFUNCTION(BlueprintCallable, Category = "Mochi Constraint")
   void SetStiffness(float NewStiffness);
+  /**
+   * Set the damping used by this constraint component.
+   *
+   * @param NewDamping Constraint damping to configure.
+   */
   UFUNCTION(BlueprintCallable, Category = "Mochi Constraint")
   void SetDamping(float NewDamping);
+  /**
+   * Set the saturation used by this constraint component.
+   *
+   * @param NewSaturation Constraint saturation to configure.
+   */
   UFUNCTION(BlueprintCallable, Category = "Mochi Constraint")
   void SetSaturation(float NewSaturation);
 
-  // (Re)create the constraints from the current properties, as soon as the bodies' Mochi actors
-  // exist.
+  /**
+   * (Re)create the constraints from the current properties, as soon as the bodies' Mochi actors
+   * exist.
+   */
   UFUNCTION(BlueprintCallable, Category = "Mochi Constraint")
   void CreateConstraints();
-  // Destroy the constraints.
+  /** Destroy the constraints. */
   UFUNCTION(BlueprintCallable, Category = "Mochi Constraint")
   void DestroyConstraints();
-  // Whether the constraints have been queued for creation.
+  /**
+   * Whether the constraints have been queued for creation.
+   *
+   * @return The are constraints created state.
+   */
   UFUNCTION(BlueprintPure, Category = "Mochi Constraint")
   bool AreConstraintsCreated() const {
     return bCreated;
   }
 
+  /** Initialize constraint-component lifecycle and tick settings. */
   UMochiConstraintComponentBase();
 
  protected:
-  // What a subclass resolved and wants created.
+  /** What a subclass resolved and wants created. */
   struct FConstraintRequest {
     UMochiSceneObject* Scene = nullptr;
-    // Creates the constraints on the Mochi thread and returns their handles.
+
+    /** Creates the constraints on the Mochi thread and returns their handles. */
     std::function<std::vector<mochi::ConstraintHandle>(mochi::Scene*)> Create;
-    // Pairs of actors that must not touch once the constraints are created.
+
+    /** Pairs of actors that must not touch once the constraints are created. */
     std::vector<std::pair<mochi::ActorHandle, mochi::ActorHandle>> NoContactPairs;
 
-    // Sets Create to create one constraint from Params with a Scene::Create*Constraint function.
+    /**
+     * Sets Create to create one constraint from Params with a Scene::Create*Constraint function.
+     *
+     * @param Params Native constraint parameters.
+     * @param CreateFn Native scene method used to create the constraint.
+     */
     template <typename TParams>
     void CreateOne(
         const TParams& Params,
@@ -93,23 +126,30 @@ class SUPERDEXPHYSICS_API UMochiConstraintComponentBase : public USceneComponent
     }
   };
 
-  // Resolves the bodies and fills OutRequest when they are Ready. Pending is retried next tick;
-  // Failed is logged.
+  /**
+   * Resolves the bodies and fills OutRequest when they are Ready. Pending is retried next tick;
+   * Failed is logged.
+   */
   virtual EMochiBodyState BuildConstraints(FConstraintRequest& OutRequest) PURE_VIRTUAL(
       UMochiConstraintComponentBase::BuildConstraints, return EMochiBodyState::Failed;);
-  // Mochi units [m or rad] per unit of Saturation.
+
+  /** Mochi units [m or rad] per unit of Saturation. */
   virtual double GetSaturationScale() const
       PURE_VIRTUAL(UMochiConstraintComponentBase::GetSaturationScale, return 1.0;);
 
-  // Saturation in Mochi units.
+  /** Saturation in Mochi units. */
   float GetMochiSaturation() const;
-  // Sets the stiffness, damping and saturation of Params from the properties.
+
+  /** Sets the stiffness, damping and saturation of Params from the properties. */
   void FillCommonParams(mochi::ConstraintParams& Params) const;
-  // Logs an error about this component's constraints.
+
+  /** Logs an error about this component's constraints. */
   void LogError(const FString& Message) const;
-  // Runs Fn on each created constraint, on the Mochi thread.
+
+  /** Runs Fn on each created constraint, on the Mochi thread. */
   void ForEachConstraint(std::function<void(mochi::Constraint&)> Fn) const;
-  // Resolves Path and gets its Mochi actor.
+
+  /** Resolves Path and gets its Mochi actor. */
   EMochiBodyState ResolveBody(
       const FString& Path,
       FMochiConstraintBody& OutBody,
@@ -131,7 +171,8 @@ class SUPERDEXPHYSICS_API UMochiConstraintComponentBase : public USceneComponent
   };
 
   TWeakObjectPtr<UMochiSceneObject> MochiScene;
-  // Accessed by the Mochi thread only!
+
+  /** Accessed by the Mochi thread only! */
   std::shared_ptr<FMochiState> MochiThreadState = std::make_shared<FMochiState>();
   bool bCreatePending = false;
   bool bCreated = false;

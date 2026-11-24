@@ -22,6 +22,7 @@
 
 class FMochiModelEditorCommands : public TCommands<FMochiModelEditorCommands> {
  public:
+  /** Initialize the model editor's command context. */
   FMochiModelEditorCommands()
       : TCommands<FMochiModelEditorCommands>(
             "MochiModelEditor",

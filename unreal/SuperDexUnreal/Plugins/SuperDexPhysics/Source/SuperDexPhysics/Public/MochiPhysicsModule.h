@@ -20,8 +20,10 @@
 #include "Modules/ModuleInterface.h"
 #include "Modules/ModuleManager.h"
 
-// Exported (not just extern) so sibling plugins (e.g. SuperDexRobotics) that were split out of this
-// module can keep logging to the shared "Mochi" category without needing their own.
+/**
+ * Exported (not just extern) so sibling plugins (e.g. SuperDexRobotics) that were split out of this
+ * module can keep logging to the shared "Mochi" category without needing their own.
+ */
 SUPERDEXPHYSICS_API DECLARE_LOG_CATEGORY_EXTERN(LogMochiPhysics, Log, All);
 
 // forward declarations
@@ -29,16 +31,31 @@ namespace mochi {
 class Context;
 } // namespace mochi
 
+/** Module interface providing the native physics context. */
 class IMochiPhysicsModule : public IModuleInterface {
  public:
+  /**
+   * Get the physics module, loading it if needed.
+   *
+   * @return The requested physics module.
+   */
   static inline IMochiPhysicsModule* Get() {
     return FModuleManager::LoadModulePtr<IMochiPhysicsModule>("SuperDexPhysics");
   }
 
+  /**
+   * Get whether the physics module is already loaded.
+   *
+   * @return Whether the module is already loaded.
+   */
   static inline bool IsLoaded() {
     return FModuleManager::Get().IsModuleLoaded("SuperDexPhysics");
   }
 
-  // IMochiPhysicsModule Interface
+  /**
+   * IMochiPhysicsModule Interface
+   *
+   * @return The native context supplied by the physics module.
+   */
   virtual mochi::Context* GetMochiContext() = 0;
 };

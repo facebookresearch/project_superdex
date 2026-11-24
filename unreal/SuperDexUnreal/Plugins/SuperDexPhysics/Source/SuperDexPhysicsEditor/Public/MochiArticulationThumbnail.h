@@ -23,13 +23,29 @@
 
 #include "MochiArticulationThumbnail.generated.h"
 
-// Shows an articulation (or bot) in its default pose on a preview actor.
+/** Shows an articulation (or bot) in its default pose on a preview actor. */
 class FMochiArticulationThumbnailScene : public FMochiThumbnailSceneBase {
  public:
+  /** Initialize the articulation thumbnail scene. */
   FMochiArticulationThumbnailScene();
-  // The articulation the next CreateView shows, or null to clear it.
+  /**
+   * The articulation the next CreateView shows, or null to clear it.
+   *
+   * @param Articulation Articulation asset supplied to the operation.
+   */
   void SetArticulation(class UMochiArticulationBase* Articulation) const;
+  /**
+   * Set the joint pose shown in the articulation thumbnail.
+   *
+   * @param JointPositions Joint-position values supplied to this operation.
+   */
   void SetJointPositions(const TArray<double>& JointPositions) const;
+  /**
+   * Configure skeleton drawing in the articulation thumbnail.
+   *
+   * @param bInDrawDebugSkeleton Whether to draw the thumbnail skeleton.
+   * @param InSkeletonColor Color used for thumbnail skeleton drawing.
+   */
   void SetDrawDebugSkeleton(bool bInDrawDebugSkeleton, const FLinearColor& InSkeletonColor) const;
 
  protected:
@@ -41,15 +57,19 @@ class FMochiArticulationThumbnailScene : public FMochiThumbnailSceneBase {
       float& OutOrbitZoom) const override;
 
  private:
-  // The visual bounds of the articulation in its default pose, or the preview mesh's bounds if
-  // they cannot be computed.
+  /**
+   * The visual bounds of the articulation in its default pose, or the preview mesh's bounds if
+   * they cannot be computed.
+   */
   FBoxSphereBounds GetShownBounds() const;
 
   AMochiArticulationPreviewActor* PreviewActor = nullptr;
 };
 
-// Exported since the sibling SuperDexRoboticsEditor module reuses this renderer for USuperDexBot
-// thumbnails (it is bot-agnostic, so no need for a SuperDexRobotics-side duplicate).
+/**
+ * Exported since the sibling SuperDexRoboticsEditor module reuses this renderer for USuperDexBot
+ * thumbnails (it is bot-agnostic, so no need for a SuperDexRobotics-side duplicate).
+ */
 UCLASS(config = Editor)
 class SUPERDEXPHYSICSEDITOR_API UMochiArticulationThumbnailRenderer
     : public UMochiThumbnailRendererBase {

@@ -27,46 +27,82 @@
 
 #include "MochiGameInstanceSubsystem.generated.h"
 
+/** Native shape and collider mapping associated with a model asset. */
 struct FMochiModelMapping {
+  /** Model asset associated with the native shape mapping. */
   const UMochiModel* MochiModel = nullptr;
+  /** Collider representation used for uniform model scale. */
   EMochiColliderType ColliderUniformScale = EMochiColliderType::None;
+  /** Collider representation used for non-uniform model scale. */
   EMochiColliderType ColliderNonUniformScale = EMochiColliderType::None;
+  /**
+   * Get whether the model mapping contains a model-asset pointer.
+   *
+   * @return Whether the model-asset pointer is non-null.
+   */
   bool IsValid() const {
     return MochiModel != nullptr;
   }
+  /**
+   * Choose the collider representation compatible with the requested model scale.
+   *
+   * @param Scale3D Scale applied to the geometry.
+   * @return Collider representation selected for uniform or non-uniform scale.
+   */
   EMochiColliderType GetColliderTypeForScale3D(const FVector& Scale3D) const {
     return Scale3D.IsUniform() ? ColliderUniformScale : ColliderNonUniformScale;
   }
 };
 
+/** Editor preferences retained while play-session overrides are active. */
 struct FMochiEditorPreferencesBeforeOverride {
+  /** Editor background-throttling preference retained before the play-session override. */
   bool bThrottleCPUWhenNotForeground = true;
 };
 
+/** Game-instance subsystem managing the physics scene and model mappings. */
 UCLASS()
 class SUPERDEXPHYSICS_API UMochiGameInstanceSubsystem final : public UGameInstanceSubsystem,
                                                               public FTickableGameObject {
   GENERATED_BODY()
  public:
+  /** Initialize the game-instance physics subsystem. */
   UMochiGameInstanceSubsystem();
 
-  // Get the game instance scene.
+  /**
+   * Get the game instance scene.
+   *
+   * @return The scene.
+   */
   UFUNCTION(BlueprintPure, Category = "Mochi")
   UMochiSceneObject* GetScene() const;
 
-  // Enable Mochi debug draw for the managed scene.
+  /** Enable Mochi debug draw for the managed scene. */
   void EnableDebugDraw() const;
-  // Disable Mochi debug draw for the managed scene.
+  /** Disable Mochi debug draw for the managed scene. */
   void DisableDebugDraw() const;
-  // Returns true if Mochi debug draw is enabled for the manged scene.
+  /**
+   * Returns true if Mochi debug draw is enabled for the manged scene.
+   *
+   * @return The is debug draw enabled state.
+   */
   bool IsDebugDrawEnabled() const;
 
-  // UGameInstanceSubsystem Implementation
+  /**
+   * UGameInstanceSubsystem Implementation
+   *
+   * @param Outer Unreal outer for the created wrapper object.
+   * @return Whether this game instance should create the physics subsystem.
+   */
   virtual bool ShouldCreateSubsystem(UObject* Outer) const override;
   virtual void Initialize(FSubsystemCollectionBase& Collection) override;
   virtual void Deinitialize() override;
 
-  // FTickableGameObject Implementation
+  /**
+   * FTickableGameObject Implementation
+   *
+   * @return The tickable game object world.
+   */
   virtual UWorld* GetTickableGameObjectWorld() const override;
   virtual ETickableTickType GetTickableTickType() const override;
   virtual bool IsAllowedToTick() const override final;
@@ -81,7 +117,7 @@ class SUPERDEXPHYSICS_API UMochiGameInstanceSubsystem final : public UGameInstan
   void RestoreEditorPreferencesOverrides() const;
 
  public:
-  // Start the subsystem scene paused
+  /** Start the subsystem scene paused */
   bool bStartPaused = false;
 
   /**
@@ -91,10 +127,17 @@ class SUPERDEXPHYSICS_API UMochiGameInstanceSubsystem final : public UGameInstan
    * refuses new actors from Unreal components and keeps Unreal settings from overriding the
    * loader's; these accessors exist because SuperDexPhysics cannot see SuperDexRobotics where the
    * loader lives.
+   *
+   * @return Whether scene contents/settings are managed externally.
    */
   bool IsSceneExternallyOwned() const {
     return Scene && Scene->IsContentsExternallyOwned();
   }
+  /**
+   * Set whether scene contents/settings are managed by an external owner.
+   *
+   * @param bExternallyOwned Whether scene contents/settings are managed by an external owner.
+   */
   void SetSceneExternallyOwned(bool bExternallyOwned) {
     if (Scene) {
       Scene->SetContentsExternallyOwned(bExternallyOwned);
@@ -102,7 +145,7 @@ class SUPERDEXPHYSICS_API UMochiGameInstanceSubsystem final : public UGameInstan
   }
 
  private:
-  // Mochi game instance scene.
+  /** Mochi game instance scene. */
   UPROPERTY()
   UMochiSceneObject* Scene = nullptr;
   bool bSceneRunning = false;

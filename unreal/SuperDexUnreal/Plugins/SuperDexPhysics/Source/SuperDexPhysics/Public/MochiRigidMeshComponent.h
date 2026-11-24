@@ -24,45 +24,50 @@
 
 #include "MochiRigidMeshComponent.generated.h"
 
+/** Static mesh component backed by a native rigid actor. */
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent), HideCategories = (Physics))
 class SUPERDEXPHYSICS_API UMochiRigidMeshComponent : public UStaticMeshComponent,
                                                      public IMochiMeshComponentInterface {
   GENERATED_BODY()
 
-  // If enabled, the static mesh will be simulated directly in mochi as a triangular mesh
-  // If disabled, the mochi model asset will be simulated in mochi as a tetrahedral mesh
-  // Note that it is HIGHLY recommended you toggle bAllowCPUAccess in the static mesh's
-  // properties if this is true. Failure to do this may result in undefined behavior
-  // (particularly packaged builds) due to GPU synchronization issues.
+  /**
+   * If enabled, the static mesh will be simulated directly in mochi as a triangular mesh
+   * If disabled, the mochi model asset will be simulated in mochi as a tetrahedral mesh
+   * Note that it is HIGHLY recommended you toggle bAllowCPUAccess in the static mesh's
+   * properties if this is true. Failure to do this may result in undefined behavior
+   * (particularly packaged builds) due to GPU synchronization issues.
+   */
   UPROPERTY(EditAnywhere, Category = "Mochi")
   bool bUseStaticMeshAsMochiModel = false;
 
-  // How to pull the triangular mesh from the static mesh.
+  /** How to pull the triangular mesh from the static mesh. */
   UPROPERTY(EditAnywhere, meta = (EditCondition = "bUseStaticMeshAsMochiModel"), Category = "Mochi")
   ETriangularMeshCollisionSource CollisionSource = ETriangularMeshCollisionSource::Complex;
 
-  // The Mochi Model to use.
+  /** The Mochi Model to use. */
   UPROPERTY(
       EditAnywhere,
       meta = (EditCondition = "!bUseStaticMeshAsMochiModel"),
       Category = "Mochi")
   UMochiModel* Model = nullptr;
-  // Is this a static Mochi actor (i.e. non-simulated)?
+  /** Is this a static Mochi actor (i.e. non-simulated)? */
   UPROPERTY(EditAnywhere, Category = "Mochi")
   bool bIsStatic = mochi::RigidActorParams{}.isStatic;
-  // Should this mesh be influenced by scene gravity?
+  /** Should this mesh be influenced by scene gravity? */
   UPROPERTY(EditAnywhere, meta = (EditCondition = "!bIsStatic"), Category = "Mochi")
   bool bHasGravity = mochi::RigidActorParams{}.hasGravity;
-  // The layer this object is simulated on.
+  /** The layer this object is simulated on. */
   UPROPERTY(EditAnywhere, Category = "Mochi")
   FName Layer = FMochiLayer::GenericObject;
-  // The Mochi collider type. Auto collides meshes as an Sdf.
+  /**
+   * The Mochi collider type. Auto collides meshes as an Sdf.
+   */
   UPROPERTY(
       EditAnywhere,
       Category = "Mochi",
       meta = (ValidEnumValues = "None, Auto, Sphere, Box, Mesh, Plane, Sdf"))
   EMochiColliderType ColliderType = ::ToUnreal(mochi::RigidActorParams{}.colliderType);
-  // Optionally override default grid SDF params
+  /** Optionally override default grid SDF params */
   UPROPERTY(
       EditAnywhere,
       meta =
@@ -71,55 +76,56 @@ class SUPERDEXPHYSICS_API UMochiRigidMeshComponent : public UStaticMeshComponent
            EditConditionHides),
       Category = "Mochi")
   FMochiGridSdfParams GridSdfParams = {};
-  // The boundary element type used for the rigid actor's surface discretization.
+  /** The boundary element type used for the rigid actor's surface discretization. */
   UPROPERTY(
       EditAnywhere,
       Category = "Mochi",
       meta = (ValidEnumValues = "P1Q1, P1Q3, P1Q6, Default"))
   EMochiActorBoundaryElementType BoundaryElementType =
       ::ToUnreal(mochi::RigidActorParams{}.boundaryElementType);
-  // Enable boundary subsampling to reduce contact sample count.
+  /** Enable boundary subsampling to reduce contact sample count. */
   UPROPERTY(EditAnywhere, Category = "Mochi")
   bool bEnableBoundarySubsampling = false;
-  // Boundary subsampling parameters (density + strategy).
+  /** Boundary subsampling parameters (density + strategy). */
   UPROPERTY(
       EditAnywhere,
       meta = (EditCondition = "bEnableBoundarySubsampling", EditConditionHides),
       Category = "Mochi")
   FMochiBoundarySubsamplingParams BoundarySubsamplingParams;
-  // Parameters controlling physical material properties.
+  /** Parameters controlling physical material properties. */
   UPROPERTY(EditAnywhere, meta = (EditCondition = "!bIsStatic"), Category = "Mochi")
   UMochiMaterialParams* MaterialParams = nullptr;
-  // Parameters controlling contacts.
+  /** Parameters controlling contacts. */
   UPROPERTY(EditAnywhere, Category = "Mochi")
   UMochiContactParams* ContactParams = nullptr;
-  // Override mass value.
+  /** Override mass value. */
   UPROPERTY(EditAnywhere, Category = "Mochi")
   bool bOverrideMass = false;
-  // Overriding mass [kg]
+  /** Overriding mass [kg] */
   UPROPERTY(
       EditAnywhere,
       meta = (EditCondition = "bOverrideMass", EditConditionHides),
       Category = "Mochi")
   double Mass = 0;
-  // Override inertial properties.
+  /** Override inertial properties. */
   UPROPERTY(EditAnywhere, Category = "Mochi")
   bool bOverrideInertialParams = false;
-  // Override center of mass.
+  /** Override center of mass. */
   UPROPERTY(
       EditAnywhere,
       meta = (EditCondition = "bOverrideInertialParams", EditConditionHides),
       Category = "Mochi")
   FVector CenterOfMass = {};
+  /** Moment of inertia used when overriding the actor's inertial properties. */
   UPROPERTY(
       EditAnywhere,
       meta = (EditCondition = "bOverrideInertialParams", EditConditionHides),
       Category = "Mochi")
   FMochiMomentOfInertia MomentOfInertia = {};
-  // Enable contact queries and events.
+  /** Enable contact queries and events. */
   UPROPERTY(EditAnywhere, Category = "Mochi")
   bool bEnableContacts = false;
-  // Freeze actor translation and/or rotation to world-aligned axes.
+  /** Freeze actor translation and/or rotation to world-aligned axes. */
   UPROPERTY(
       EditAnywhere,
       meta = (Bitmask, BitmaskEnum = "/Script/SuperDexPhysics.EMochiFreezeConstraint"),
@@ -127,43 +133,78 @@ class SUPERDEXPHYSICS_API UMochiRigidMeshComponent : public UStaticMeshComponent
   int FreezeConstraints = 0;
 
  public:
-  // Emitted when this component begins contact with another Mochi component.
-  // bEnableContacts must be enabled.
+  /**
+   * Emitted when this component begins contact with another Mochi component.
+   * bEnableContacts must be enabled.
+   */
   UPROPERTY(BlueprintAssignable, Category = "Mochi")
   FOnMochiComponentBeginContact OnMochiComponentBeginContact;
-  // Emitted when this component ends contact with another Mochi component.
-  // bEnableContacts must be enabled.
+  /**
+   * Emitted when this component ends contact with another Mochi component.
+   * bEnableContacts must be enabled.
+   */
   UPROPERTY(BlueprintAssignable, Category = "Mochi")
   FOnMochiComponentEndContact OnMochiComponentEndContact;
-  // Emitted when this component is contacting any other Mochi components.
-  // bEnableContacts must be enabled.
+  /**
+   * Emitted when this component is contacting any other Mochi components.
+   * bEnableContacts must be enabled.
+   */
   UPROPERTY(BlueprintAssignable, Category = "Mochi")
   FOnMochiComponentContact OnMochiComponentContact;
 
  public:
-  // Set the model to be used. Only valid if the Mochi actor has not yet been created
-  // (i.e. before BeginPlay). Returns true if successful.
+  /**
+   * Set the model to be used. Only valid if the Mochi actor has not yet been created
+   * (i.e. before BeginPlay). Returns true if successful.
+   *
+   * @param NewModel Model asset to assign.
+   * @return Whether the model was assigned before native actor creation.
+   */
   UFUNCTION(BlueprintCallable, Category = "Mochi")
   bool SetModel(UMochiModel* NewModel);
 
-  // Set the world location and rotation as boundarty conditions of the Mochi mesh component.
-  // This allows the Mochi actor to update dynamic states, namely previous state, previous velocity
-  // which allow, on the clearing of boundary conditions, for the actor to continue along the the
-  // trajectory imposed by previous boundary conditions (think of pinch and release to throw and
-  // object).
+  /**
+   * Set the world location and rotation as boundarty conditions of the Mochi mesh component.
+   * This allows the Mochi actor to update dynamic states, namely previous state, previous velocity
+   * which allow, on the clearing of boundary conditions, for the actor to continue along the the
+   * trajectory imposed by previous boundary conditions (think of pinch and release to throw and
+   * object).
+   *
+   * @param NewTransform World transform to apply.
+   */
   UFUNCTION(BlueprintCallable, Category = "Mochi")
   void SetWorldLocationAndRotationMochiWithDynamicsTransform(const FTransform& NewTransform);
 
-  // Same as above (the above call this function when invoked filtering scale)
+  /**
+   * Same as above (the above call this function when invoked filtering scale)
+   *
+   * @param NewLocation World location to apply.
+   * @param NewRotation World rotation to apply.
+   */
   UFUNCTION(BlueprintCallable, Category = "Mochi")
   void SetWorldLocationAndRotationMochiWithDynamics(
       const FVector& NewLocation,
       const FRotator& NewRotation);
 
+  /**
+   * Get the rigid actor's world-space linear velocity.
+   *
+   * @return Cached world-space linear velocity.
+   */
   UFUNCTION(BlueprintPure, Category = "Mochi")
   FVector GetWorldLinearVelocity() const;
+  /**
+   * Get the rigid actor's world-space angular velocity.
+   *
+   * @return Cached world-space angular velocity.
+   */
   UFUNCTION(BlueprintPure, Category = "Mochi")
   FVector GetWorldAngularVelocity() const;
+  /**
+   * Get the contact points collected for this rigid component.
+   *
+   * @return Contact points cached for this component.
+   */
   UFUNCTION(BlueprintPure, Category = "Mochi")
   const TArray<FMochiContactPoint>& GetContactPoints() const;
 
@@ -182,8 +223,18 @@ class SUPERDEXPHYSICS_API UMochiRigidMeshComponent : public UStaticMeshComponent
   virtual bool GetContactsEnabled() const override;
 
  public:
+  /**
+   * Initialize the rigid mesh component and its native-actor lifecycle settings.
+   *
+   * @param ObjectInitializer Unreal object-initialization settings.
+   */
   UMochiRigidMeshComponent(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
+  /**
+   * Assign the model asset used by this rigid component.
+   *
+   * @param NewMochiModel Model asset to assign.
+   */
   void SetMochiModel(UMochiModel* NewMochiModel);
 
  public:

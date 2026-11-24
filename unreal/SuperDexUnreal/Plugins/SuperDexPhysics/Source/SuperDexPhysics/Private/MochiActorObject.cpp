@@ -325,6 +325,8 @@ UMochiActorObject* UMochiActorObject::CreateRigidFromMochiShape(
   }
   mochi::Context* const MochiWorld = IMochiPhysicsModule::Get()->GetMochiContext();
   mochi::ActorHandle CreatedActorHandle;
+  // Reference captures rely on the wait below before this scope ends. It completes queued work
+  // only off the async simulation thread; synchronous scenes run this callback inline.
   Scene->QueueOrExecuteCommand([&](mochi::Scene* PhysicsScene) {
     mochi::ErrorLog E{};
     MOCHI_ERROR_RETURN(E);
@@ -394,6 +396,8 @@ UMochiActorObject* UMochiActorObject::CreateSoft(
   mochi::ActorHandle CreatedActorHandle;
   const mochi::ShapeHandle Shape =
       Model->GetMochiShape(WorldFromLocal.GetScale3D(), FTransform::Identity);
+  // Reference captures rely on the wait below before this scope ends. It completes queued work
+  // only off the async simulation thread; synchronous scenes run this callback inline.
   Scene->QueueOrExecuteCommand([&](mochi::Scene* PhysicsScene) {
     mochi::ErrorLog E{};
     MOCHI_ERROR_RETURN(E);
@@ -463,6 +467,8 @@ UMochiActorObject* UMochiActorObject::CreateShell(
     return nullptr;
   }
   mochi::ActorHandle CreatedActorHandle;
+  // Reference captures rely on the wait below before this scope ends. It completes queued work
+  // only off the async simulation thread; synchronous scenes run this callback inline.
   Scene->QueueOrExecuteCommand([&](mochi::Scene* PhysicsScene) {
     mochi::ErrorLog E{};
     MOCHI_ERROR_RETURN(E);
@@ -526,6 +532,8 @@ UMochiActorObject* UMochiActorObject::CreateRod(
     return nullptr;
   }
   mochi::ActorHandle CreatedActorHandle;
+  // Reference captures rely on the wait below before this scope ends. It completes queued work
+  // only off the async simulation thread; synchronous scenes run this callback inline.
   Scene->QueueOrExecuteCommand([&](mochi::Scene* PhysicsScene) {
     mochi::ErrorLog E{};
     MOCHI_ERROR_RETURN(E);
@@ -610,6 +618,8 @@ UMochiActorObject* UMochiActorObject::CreateImplicitPlane(
   }
   mochi::Context* const MochiWorld = IMochiPhysicsModule::Get()->GetMochiContext();
   mochi::ActorHandle CreatedActorHandle;
+  // Reference captures rely on the wait below before this scope ends. It completes queued work
+  // only off the async simulation thread; synchronous scenes run this callback inline.
   Scene->QueueOrExecuteCommand([&](mochi::Scene* PhysicsScene) {
     mochi::ErrorLog E{};
     FUnrealToMochiConverter U2m;
@@ -671,6 +681,8 @@ UMochiActorObject* UMochiActorObject::CreateImplicitSphere(
   }
   mochi::Context* const MochiWorld = IMochiPhysicsModule::Get()->GetMochiContext();
   mochi::ActorHandle CreatedActorHandle;
+  // Reference captures rely on the wait below before this scope ends. It completes queued work
+  // only off the async simulation thread; synchronous scenes run this callback inline.
   Scene->QueueOrExecuteCommand([&](mochi::Scene* PhysicsScene) {
     mochi::ErrorLog E{};
     FUnrealToMochiConverter U2m;
@@ -735,6 +747,8 @@ UMochiActorObject* UMochiActorObject::Create_Internal(
     return nullptr;
   }
   FString ActorName;
+  // Reference captures rely on the wait below before this scope ends. It completes queued work
+  // only off the async simulation thread; synchronous scenes run this callback inline.
   Scene->QueueOrExecuteCommand([&](mochi::Scene* PhysicsScene) {
     mochi::ErrorLog E{};
     if (mochi::Actor* const Actor = PhysicsScene->GetActor(ActorHandle)) {

@@ -22,20 +22,23 @@
 
 #include "MochiShellMeshComponent.generated.h"
 
+/** Dynamic mesh component backed by a native shell actor. */
 UCLASS(ClassGroup = (Custom), ShowCategories = (Mobility), meta = (BlueprintSpawnableComponent))
 class SUPERDEXPHYSICS_API UMochiShellMeshComponent : public UMochiDeformableMeshComponent {
   GENERATED_BODY()
 
  public:
-  // Parameters controlling shell material properties.
+  /** Parameters controlling shell material properties. */
   UPROPERTY(EditAnywhere, Category = "Mochi")
   UMochiShellMaterialParams* ShellMaterialParams = nullptr;
+  /** Collider representation used by the shell actor. */
   UPROPERTY(EditAnywhere, Category = "Mochi", meta = (ValidEnumValues = "None, Auto, PointCloud"))
   EMochiColliderType ColliderType =
       ::ToUnreal(mochi::experimental::ShellActorParams{}.colliderType);
-  // Use the shell's authored contact skin for contact sampling instead of the physics mesh.
+  /** Use the shell's authored contact skin for contact sampling instead of the physics mesh. */
   UPROPERTY(EditAnywhere, Category = "Mochi")
   bool bUseContactSkin = mochi::experimental::ShellActorParams{}.useContactSkin;
+  /** Boundary elements used for shell contact sampling. */
   UPROPERTY(
       EditAnywhere,
       Category = "Mochi",
@@ -43,22 +46,26 @@ class SUPERDEXPHYSICS_API UMochiShellMeshComponent : public UMochiDeformableMesh
   EMochiActorBoundaryElementType ContactElementType =
       ::ToUnreal(mochi::experimental::ShellActorParams{}.contactElementType);
 
-  // Point-cloud collider interaction radius [m]. Contact samples spaced further apart than this
-  // may allow nodes to slip through. Increase for coarser meshes.
+  /**
+   * Point-cloud collider interaction radius [m]. Contact samples spaced further apart than this
+   * may allow nodes to slip through. Increase for coarser meshes.
+   */
   UPROPERTY(EditAnywhere, Category = "Mochi|Point Cloud Collider", meta = (Units = "m"))
   float PointCloudRadius = mochi::PointCloudColliderParams{}.radius;
-  // Enable self-contact for the shell. Experimental - may degrade performance.
+  /** Enable self-contact for the shell. Experimental - may degrade performance. */
   UPROPERTY(EditAnywhere, Category = "Mochi|Point Cloud Collider")
   bool bPointCloudSelfContact = mochi::PointCloudColliderParams{}.selfContact;
-  // Self-contact exclusion ratio. Contact samples within (radius * ratio) of a node are excluded
-  // from self-contact. Should be > 1.
+  /**
+   * Self-contact exclusion ratio. Contact samples within (radius * ratio) of a node are excluded
+   * from self-contact. Should be > 1.
+   */
   UPROPERTY(
       EditAnywhere,
       Category = "Mochi|Point Cloud Collider",
       meta = (EditCondition = "bPointCloudSelfContact"))
   float PointCloudSelfContactExclusionRatio =
       mochi::PointCloudColliderParams{}.selfContactExclusionRatio;
-  // Unset uses one collider point per node; a value selects quadrature-based placement.
+  /** Unset uses one collider point per node; a value selects quadrature-based placement. */
   UPROPERTY(EditAnywhere, Category = "Mochi|Point Cloud Collider")
   TOptional<EMochiActorBoundaryElementType> PointCloudColliderTriangleElementType;
 
@@ -67,6 +74,11 @@ class SUPERDEXPHYSICS_API UMochiShellMeshComponent : public UMochiDeformableMesh
   virtual void CreateMochiActor() override;
 
  public:
+  /**
+   * Initialize the shell mesh component and its native-actor lifecycle settings.
+   *
+   * @param ObjectInitializer Unreal object-initialization settings.
+   */
   UMochiShellMeshComponent(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
 #if WITH_EDITOR

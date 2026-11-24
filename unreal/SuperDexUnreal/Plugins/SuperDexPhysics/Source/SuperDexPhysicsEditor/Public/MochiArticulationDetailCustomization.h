@@ -22,10 +22,23 @@
 #include "MochiArticulation.h"
 #include "UObject/Object.h"
 
+/** Details customization for articulation assets. */
 class FMochiArticulationDetailsCustomization : public IDetailCustomization {
  public:
+  /**
+   * Create a details customization for articulation assets.
+   *
+   * @return The new details customization.
+   */
   static TSharedRef<IDetailCustomization> MakeInstance();
   virtual void CustomizeDetails(IDetailLayoutBuilder& DetailLayout) override;
+  /**
+   * Build a joint-position editor for a details-array entry.
+   *
+   * @param PropertyHandle Handle of the single joint-position element being edited.
+   * @param ArrayIndex Index of the joint-position entry.
+   * @param ChildrenBuilder Details builder to populate.
+   */
   void GenerateDefaultJointPositionsWidget(
       TSharedRef<IPropertyHandle> PropertyHandle,
       int32 ArrayIndex,
@@ -36,10 +49,23 @@ class FMochiArticulationDetailsCustomization : public IDetailCustomization {
   bool bIsUsingSlider = false;
 };
 
+/** Details customization for articulation components. */
 class FMochiArticulationComponentDetailsCustomization : public IDetailCustomization {
  public:
+  /**
+   * Create a details customization for articulation components.
+   *
+   * @return The new details customization.
+   */
   static TSharedRef<IDetailCustomization> MakeInstance();
   virtual void CustomizeDetails(IDetailLayoutBuilder& DetailLayout) override;
+  /**
+   * Build a joint-position editor for a component details-array entry.
+   *
+   * @param PropertyHandle Handle of the single joint-position element being edited.
+   * @param ArrayIndex Index of the joint-position entry.
+   * @param ChildrenBuilder Details builder to populate.
+   */
   void GenerateDefaultJointPositionsWidget(
       TSharedRef<IPropertyHandle> PropertyHandle,
       int32 ArrayIndex,

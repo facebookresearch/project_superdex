@@ -25,6 +25,7 @@
 
 #include "MochiDebugDraw.generated.h"
 
+/** Flags selecting native debug-draw entities and their drawing layer. */
 USTRUCT(BlueprintType)
 struct FMochiDebugDrawFlags {
   GENERATED_BODY()
@@ -33,7 +34,7 @@ struct FMochiDebugDrawFlags {
   // UE SPECIFIC FLAGS
   //----------------------------------------------------------------------------
 
-  // Debug draw all enabled entities in the foreground.
+  /** Debug draw all enabled entities in the foreground. */
   UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Mochi")
   bool bDebugDrawForeground = false;
 
@@ -205,9 +206,20 @@ struct FMochiDebugDrawFlags {
   // clang-format on
 
  public:
+  /**
+   * Apply the selected flags to native debug drawing.
+   *
+   * @param DebugDraw Native debug-draw object to inspect or configure.
+   * @param Flags Debug-draw feature toggles to apply.
+   */
   static void SetMochiDebugDrawFlags(
       mochi::DebugDraw& DebugDraw,
       const FMochiDebugDrawFlags& Flags);
   static constexpr bool bGenerateAndLogMochiDebugDrawFlagsCode = false;
+  /**
+   * Log source declarations for the native debug-draw flags.
+   *
+   * @param DebugDraw Native debug-draw object to inspect or configure.
+   */
   static void GenerateAndLogMochiDebugDrawFlagsCode(const mochi::DebugDraw& DebugDraw);
 };

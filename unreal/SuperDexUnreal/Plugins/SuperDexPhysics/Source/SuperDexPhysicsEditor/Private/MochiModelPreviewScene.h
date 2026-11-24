@@ -20,11 +20,19 @@
 #include "CoreMinimal.h"
 #include "MochiModelEditorToolkit.h"
 
-// This allows us to customize the scene even further
-// gives us access to Tick-level execution
-// we can customize the skybox or floor, for instance.
+/**
+ * This allows us to customize the scene even further
+ * gives us access to Tick-level execution
+ * we can customize the skybox or floor, for instance.
+ */
 class FMochiModelPreviewScene : public FAdvancedPreviewScene {
  public:
+  /**
+   * Create the model editor's preview scene.
+   *
+   * @param CVS Preview-scene construction settings.
+   * @param EditorToolkit Toolkit owning the preview scene.
+   */
   FMochiModelPreviewScene(
       ConstructionValues CVS,
       const TSharedRef<FMochiModelEditorToolkit>& EditorToolkit);
@@ -32,6 +40,11 @@ class FMochiModelPreviewScene : public FAdvancedPreviewScene {
 
   virtual void Tick(float DeltaTime) override;
 
+  /**
+   * Get the toolkit owning this preview scene.
+   *
+   * @return The editor.
+   */
   TSharedRef<FMochiModelEditorToolkit> GetEditor() const {
     return EditorToolkitPtr.Pin().ToSharedRef();
   }

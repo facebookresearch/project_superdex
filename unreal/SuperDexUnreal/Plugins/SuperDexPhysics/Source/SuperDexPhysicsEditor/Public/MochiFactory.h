@@ -29,6 +29,7 @@
 // MOCHI H5 (MOCHI MODEL)
 //------------------------------------------------------------------------------
 
+/** Factory importing native model files into model assets. */
 UCLASS(HideCategories = Object)
 class UMochiH5Factory : public UFactory {
   GENERATED_UCLASS_BODY()
@@ -43,8 +44,10 @@ class UMochiH5Factory : public UFactory {
       bool& bOutOperationCanceled) override;
 };
 
-// Reimports Mochi models from their source file through the editor's standard Reimport and
-// source file actions.
+/**
+ * Reimports Mochi models from their source file through the editor's standard Reimport and
+ * source file actions.
+ */
 UCLASS(HideCategories = Object)
 class UReimportMochiH5Factory : public UMochiH5Factory, public FReimportHandler {
   GENERATED_UCLASS_BODY()
@@ -61,6 +64,7 @@ class UReimportMochiH5Factory : public UMochiH5Factory, public FReimportHandler 
 // MOCHI SOFT MESH ACTOR FACTORY
 //------------------------------------------------------------------------------
 
+/** Factory placing soft mesh actors from model assets. */
 UCLASS(MinimalAPI, Config = Editor, CollapseCategories, HideCategories = Object)
 class UMochiSoftMeshActorFactory : public UActorFactory {
   GENERATED_UCLASS_BODY()
@@ -81,6 +85,7 @@ class UMochiSoftMeshActorFactory : public UActorFactory {
 // MOCHI ARTICULATION ACTOR FACTORY
 //------------------------------------------------------------------------------
 
+/** Factory placing articulation actors from articulation assets. */
 UCLASS(MinimalAPI, Config = Editor, CollapseCategories, HideCategories = Object)
 class UMochiArticulationActorFactory : public UActorFactory {
   GENERATED_UCLASS_BODY()

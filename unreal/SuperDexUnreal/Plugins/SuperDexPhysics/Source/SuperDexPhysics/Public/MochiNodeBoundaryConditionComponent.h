@@ -25,30 +25,39 @@
 
 #include "MochiNodeBoundaryConditionComponent.generated.h"
 
-// Pins every node of a deformable body (a soft or shell component) inside a Box or Sphere Collision
-// component where it is at BeginPlay, with Mochi boundary conditions: the nodes cannot move at all.
-// For a pin that pulls with a stiffness, use a Node Position constraint.
+/**
+ * Pins every node of a deformable body (a soft or shell component) inside a Box or Sphere Collision
+ * component where it is at BeginPlay, with Mochi boundary conditions: the nodes cannot move at all.
+ * For a pin that pulls with a stiffness, use a Node Position constraint.
+ */
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class SUPERDEXPHYSICS_API UMochiNodeBoundaryConditionComponent : public UActorComponent {
   GENERATED_BODY()
 
  public:
-  // The deformable body, by name: "cloth", or "inner/cloth" inside a child actor.
+  /** The deformable body, by name: "cloth", or "inner/cloth" inside a child actor. */
   UPROPERTY(EditAnywhere, Category = "Mochi Boundary Condition")
   FString Body;
-  // The name of the Box Collision or Sphere Collision component whose volume holds the nodes to
-  // pin.
+  /**
+   * The name of the Box Collision or Sphere Collision component whose volume holds the nodes to
+   * pin.
+   */
   UPROPERTY(EditAnywhere, Category = "Mochi Boundary Condition")
   FName Volume = NAME_None;
 
-  // Get the indices of the pinned nodes.
+  /**
+   * Get the indices of the pinned nodes.
+   *
+   * @param OutNodeIndices Storage for the queried node indices.
+   * @return Whether pinned-node indices were available.
+   */
   UFUNCTION(BlueprintCallable, Category = "Mochi")
   bool GetPinnedNodeIndices(TArray<int>& OutNodeIndices) const;
 
-  // (Re)pin the nodes inside the volume where they are now.
+  /** (Re)pin the nodes inside the volume where they are now. */
   UFUNCTION(BlueprintCallable, Category = "Mochi")
   void CreateBoundaryConditions();
-  // Release the pinned nodes. Clears every boundary condition of the body.
+  /** Release the pinned nodes. Clears every boundary condition of the body. */
   UFUNCTION(BlueprintCallable, Category = "Mochi")
   void DestroyBoundaryConditions();
 
@@ -66,6 +75,6 @@ class SUPERDEXPHYSICS_API UMochiNodeBoundaryConditionComponent : public UActorCo
     std::atomic<bool> bReady = false;
   };
 
-  // Accessed by the Mochi thread only, except PinnedNodeIndices once bReady.
+  /** Accessed by the Mochi thread only, except PinnedNodeIndices once bReady. */
   std::shared_ptr<FMochiState> MochiThreadState = std::make_shared<FMochiState>();
 };

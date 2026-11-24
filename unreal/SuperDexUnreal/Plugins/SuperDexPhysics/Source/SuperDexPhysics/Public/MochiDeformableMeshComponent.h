@@ -23,40 +23,44 @@
 
 #include "MochiDeformableMeshComponent.generated.h"
 
-/// Abstract base for Mochi deformable mesh components (shell, soft).
-/// Owns shared UPROPERTYs, lifecycle, and the per-step query pump. Subclasses
-/// implement @ref CreateMochiActor and may override @ref OnQueryDataApplied.
+/**
+ * Abstract base for Mochi deformable mesh components (shell, soft).
+ * Owns shared UPROPERTYs, lifecycle, and the per-step query pump. Subclasses
+ * implement @ref CreateMochiActor and may override @ref OnQueryDataApplied.
+ */
 UCLASS(Abstract, ClassGroup = (Custom), ShowCategories = (Mobility))
 class SUPERDEXPHYSICS_API UMochiDeformableMeshComponent : public UDynamicMeshComponent,
                                                           public IMochiMeshComponentInterface {
   GENERATED_BODY()
 
  public:
-  // The Mochi Model to use.
+  /** The Mochi Model to use. */
   UPROPERTY(EditAnywhere, Category = "Mochi")
   UMochiModel* Model = nullptr;
-  // Should this mesh be influenced by scene gravity?
+  /** Should this mesh be influenced by scene gravity? */
   UPROPERTY(EditAnywhere, Category = "Mochi")
   bool bHasGravity = mochi::SoftActorParams{}.hasGravity;
-  // The layer this object is simulated on.
+  /** The layer this object is simulated on. */
   UPROPERTY(EditAnywhere, Category = "Mochi")
   FName Layer = FMochiLayer::GenericObject;
-  // Parameters controlling contacts.
+  /** Parameters controlling contacts. */
   UPROPERTY(EditAnywhere, Category = "Mochi")
   UMochiContactParams* ContactParams = nullptr;
-  // Use Mochi computed node normals to set the dynamic mesh normals.
+  /** Use Mochi computed node normals to set the dynamic mesh normals. */
   UPROPERTY(EditAnywhere, Category = "Mochi")
   bool bUseMochiNodeNormals = true;
-  // Enable contact queries and events.
+  /** Enable contact queries and events. */
   UPROPERTY(EditAnywhere, Category = "Mochi")
   bool bEnableContacts = false;
-  // Hide self-contacts (where the other component is this same component, e.g.
-  // shell point-cloud self-contacts) from the contact event delegates and
-  // GetContactPoints() - including downstream consumers like
-  // MochiForceVisualizerComponent. This does NOT affect whether self-contacts
-  // are simulated; that is controlled by the actor's own simulation parameters
-  // (e.g. UMochiShellMeshComponent::bPointCloudSelfContact). Defaults to true
-  // to preserve historical behavior.
+  /**
+   * Hide self-contacts (where the other component is this same component, e.g.
+   * shell point-cloud self-contacts) from the contact event delegates and
+   * GetContactPoints() - including downstream consumers like
+   * MochiForceVisualizerComponent. This does NOT affect whether self-contacts
+   * are simulated; that is controlled by the actor's own simulation parameters
+   * (e.g. UMochiShellMeshComponent::bPointCloudSelfContact). Defaults to true
+   * to preserve historical behavior.
+   */
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
@@ -64,26 +68,37 @@ class SUPERDEXPHYSICS_API UMochiDeformableMeshComponent : public UDynamicMeshCom
       meta = (EditCondition = "bEnableContacts", DisplayName = "Filter Self-Contacts From Events"))
   bool bFilterSelfContacts = true;
 
-  // Emitted when this component begins contact with another Mochi component.
-  // bEnableContacts must be enabled.
+  /**
+   * Emitted when this component begins contact with another Mochi component.
+   * bEnableContacts must be enabled.
+   */
   UPROPERTY(BlueprintAssignable, Category = "Mochi")
   FOnMochiComponentBeginContact OnMochiComponentBeginContact;
-  // Emitted when this component ends contact with another Mochi component.
-  // bEnableContacts must be enabled.
+  /**
+   * Emitted when this component ends contact with another Mochi component.
+   * bEnableContacts must be enabled.
+   */
   UPROPERTY(BlueprintAssignable, Category = "Mochi")
   FOnMochiComponentEndContact OnMochiComponentEndContact;
-  // Emitted when this component is contacting any other Mochi components.
-  // bEnableContacts must be enabled.
+  /**
+   * Emitted when this component is contacting any other Mochi components.
+   * bEnableContacts must be enabled.
+   */
   UPROPERTY(BlueprintAssignable, Category = "Mochi")
   FOnMochiComponentContact OnMochiComponentContact;
 
  public:
+  /**
+   * Get the contact points collected for this deformable component.
+   *
+   * @return Contact points cached for this component.
+   */
   UFUNCTION(BlueprintPure, Category = "Mochi")
   const TArray<FMochiContactPoint>& GetContactPoints() const;
 
  public:
   // Begin IMochiMeshComponentInterface
-  /// `PURE_VIRTUAL` because `UCLASS(Abstract)` still instantiates the CDO.
+  /** `PURE_VIRTUAL` because `UCLASS(Abstract)` still instantiates the CDO. */
   virtual void CreateMochiActor() override
       PURE_VIRTUAL(UMochiDeformableMeshComponent::CreateMochiActor, );
   virtual void DestroyMochiActor() override;
@@ -91,8 +106,12 @@ class SUPERDEXPHYSICS_API UMochiDeformableMeshComponent : public UDynamicMeshCom
   virtual UMochiContactParams* GetContactParams() const override {
     return ContactParams;
   }
-  /// Default null for subclasses whose material isn't a `UMochiMaterialParams` (e.g., shell).
-  /// Override otherwise.
+  /**
+   * Default null for subclasses whose material isn't a `UMochiMaterialParams` (e.g., shell).
+   * Override otherwise.
+   *
+   * @return The material params.
+   */
   virtual UMochiMaterialParams* GetMaterialParams() const override {
     return nullptr;
   }
@@ -100,6 +119,11 @@ class SUPERDEXPHYSICS_API UMochiDeformableMeshComponent : public UDynamicMeshCom
   virtual bool GetContactsEnabled() const override;
 
  public:
+  /**
+   * Initialize the dynamic mesh component used by deformable actors.
+   *
+   * @param ObjectInitializer Unreal object-initialization settings.
+   */
   UMochiDeformableMeshComponent(
       const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
@@ -119,14 +143,17 @@ class SUPERDEXPHYSICS_API UMochiDeformableMeshComponent : public UDynamicMeshCom
     bHasRenderModelAttributes = bHasAttributes;
   }
 
-  /// Subclass hook called from @ref TickComponent after the standard per-step update.
-  /// Default no-op.
+  /**
+   * Subclass hook called from @ref TickComponent after the standard per-step update.
+   * Default no-op.
+   */
   virtual void OnQueryDataApplied(const FMochiActorQueryData& QueryData) {}
 
  protected:
   UPROPERTY()
   UMochiActorObject* MochiActorObject = nullptr;
   FMochiContactEventHandler ContactEventHandler;
-  // Set only when the current dynamic mesh was given per-vertex render-model overlays.
+
+  /** Set only when the current dynamic mesh was given per-vertex render-model overlays. */
   bool bHasRenderModelAttributes = false;
 };

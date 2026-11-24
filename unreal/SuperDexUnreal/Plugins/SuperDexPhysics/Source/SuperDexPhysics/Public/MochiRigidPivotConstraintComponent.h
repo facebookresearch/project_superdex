@@ -21,32 +21,40 @@
 
 #include "MochiRigidPivotConstraintComponent.generated.h"
 
+/** Constraint mode attaching a rigid body to a pivot. */
 UENUM(BlueprintType)
 enum class EMochiRigidPivotConstraintType : uint8 {
-  // Pulls a point on the body to this component's location (Mochi RigidPivotPosition).
+  /** Pulls a point on the body to this component's location (Mochi RigidPivotPosition). */
   Position UMETA(DisplayName = "Pivot Position"),
-  // Pulls a point on the body to where it would be if the body's center of mass were at this
-  // component's transform (Mochi RigidPivotToRigidTarget).
+
+  /**
+   * Pulls a point on the body to where it would be if the body's center of mass were at this
+   * component's transform (Mochi RigidPivotToRigidTarget).
+   */
   ToRigidTarget UMETA(DisplayName = "Pivot to Rigid Target"),
-  // Turns a frame on the body to this component's rotation (Mochi RigidPivotRotation).
+
+  /** Turns a frame on the body to this component's rotation (Mochi RigidPivotRotation). */
   Rotation UMETA(DisplayName = "Pivot Rotation"),
 };
 
-// Ties a point or frame of a rigid body (a rigid component or an articulation link) to this
-// component. Move, animate or attach the component to move the target. Saturation is in [cm] for
-// Pivot Position and Pivot to Rigid Target and [deg] for Pivot Rotation.
+/**
+ * Ties a point or frame of a rigid body (a rigid component or an articulation link) to this
+ * component. Move, animate or attach the component to move the target. Saturation is in [cm] for
+ * Pivot Position and Pivot to Rigid Target and [deg] for Pivot Rotation.
+ */
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class SUPERDEXPHYSICS_API UMochiRigidPivotConstraintComponent
     : public UMochiConstraintComponentBase {
   GENERATED_BODY()
 
  public:
+  /** Constraint mode to create at the pivot. */
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mochi Constraint")
   EMochiRigidPivotConstraintType Type = EMochiRigidPivotConstraintType::Position;
-  // The body, by name: "lid", "arm/elbow" for a link, or "inner/lid" inside a child actor.
+  /** The body, by name: "lid", "arm/elbow" for a link, or "inner/lid" inside a child actor. */
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mochi Constraint")
   FString Body;
-  // The pivot point [cm], in the body's local frame.
+  /** The pivot point [cm], in the body's local frame. */
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
@@ -54,7 +62,7 @@ class SUPERDEXPHYSICS_API UMochiRigidPivotConstraintComponent
       meta =
           (EditCondition = "Type != EMochiRigidPivotConstraintType::Rotation", EditConditionHides))
   FVector LocalPosition = FVector::ZeroVector;
-  // The pivot frame, in the body's local frame.
+  /** The pivot frame, in the body's local frame. */
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
@@ -63,6 +71,7 @@ class SUPERDEXPHYSICS_API UMochiRigidPivotConstraintComponent
           (EditCondition = "Type == EMochiRigidPivotConstraintType::Rotation", EditConditionHides))
   FRotator LocalRotation = FRotator::ZeroRotator;
 
+  /** Initialize the rigid pivot-constraint component. */
   UMochiRigidPivotConstraintComponent();
 
  protected:

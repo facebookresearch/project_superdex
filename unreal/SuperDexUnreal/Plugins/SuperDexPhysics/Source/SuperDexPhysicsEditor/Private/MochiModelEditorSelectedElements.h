@@ -21,13 +21,16 @@
 
 #include "MochiModelEditorSelectedElements.generated.h"
 
-// Thin wrapper around a simple TSet<int> just to enable undo/redo
-// of selection (mainly useful for carving using the lasso tool)
+/**
+ * Thin wrapper around a simple TSet<int> just to enable undo/redo
+ * of selection (mainly useful for carving using the lasso tool)
+ */
 UCLASS()
 class SUPERDEXPHYSICSEDITOR_API UMochiModelEditorSelectedElements : public UObject {
   GENERATED_BODY()
 
  public:
+  /** Model elements selected in the editor. */
   UPROPERTY(EditAnywhere)
   TSet<int> SelectedElements;
 };

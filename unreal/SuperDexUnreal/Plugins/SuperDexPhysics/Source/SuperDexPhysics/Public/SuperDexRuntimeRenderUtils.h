@@ -30,45 +30,69 @@ class USkeletalMesh;
 class USuperDexRuntimeMeshPipeline;
 class UStaticMesh;
 
-// Runtime loading of render models (.glb) that were never imported in the editor, e.g. those of a
-// runtime-loaded .superdex_scene.
+/**
+ * Runtime loading of render models (.glb) that were never imported in the editor, e.g. those of a
+ * runtime-loaded .superdex_scene.
+ */
 namespace SuperDexRuntimeRender {
 
-// Read the first skinned mesh of a .glb into OutMesh, in Unreal's basis and units as Interchange
-// imports a .glb: static mesh attributes plus vertex skin weights. Joint j of the glTF skin binds
-// to bone JointToBone[j]. Influences on a joint that maps to no bone (INDEX_NONE or out of range)
-// are dropped and the rest renormalized; a vertex left with none binds fully to bone 0.
-// OutMaterialNames receives the glTF material name of each polygon group, indexed by polygon group
-// ID. Returns false if the file cannot be read or has no skinned mesh, or the platform has no glTF
-// reader (SUPERDEX_WITH_RUNTIME_MESH_IMPORT=0, e.g. Android).
+/**
+ * Read the first skinned mesh of a .glb into OutMesh, in Unreal's basis and units as Interchange
+ * imports a .glb: static mesh attributes plus vertex skin weights. Joint j of the glTF skin binds
+ * to bone JointToBone[j]. Influences on a joint that maps to no bone (INDEX_NONE or out of range)
+ * are dropped and the rest renormalized; a vertex left with none binds fully to bone 0.
+ * OutMaterialNames receives the glTF material name of each polygon group, indexed by polygon group
+ * ID. Returns false if the file cannot be read or has no skinned mesh, or the platform has no glTF
+ * reader (SUPERDEX_WITH_RUNTIME_MESH_IMPORT=0, e.g. Android).
+ *
+ * @param GlbPath GLB file supplying render geometry.
+ * @param JointToBone Mapping from native joints to Unreal bone indices.
+ * @param OutMesh Mesh storage populated by the operation.
+ * @param OutMaterialNames Material-name storage populated while reading geometry.
+ * @return Whether skinned geometry was read.
+ */
 SUPERDEXPHYSICS_API bool ReadSkinnedGlb(
     const FString& GlbPath,
     TConstArrayView<int32> JointToBone,
     FMeshDescription& OutMesh,
     TArray<FString>& OutMaterialNames);
 
-// The material of StaticMesh -- a skinned .glb imported as a static mesh -- for the polygon group
-// ReadSkinnedGlb named MaterialName: the slot of that (imported) name, or else slot 0.
+/**
+ * The material of StaticMesh -- a skinned .glb imported as a static mesh -- for the polygon group
+ * ReadSkinnedGlb named MaterialName: the slot of that (imported) name, or else slot 0.
+ *
+ * @param StaticMesh Mesh whose material slots are inspected.
+ * @param MaterialName Material slot name to resolve.
+ * @return Material resolved for the named slot.
+ */
 SUPERDEXPHYSICS_API UMaterialInterface* FindMaterialForSlot(
     const UStaticMesh& StaticMesh,
     const FString& MaterialName);
 
 } // namespace SuperDexRuntimeRender
 
-// A skinned render model (.glb) and the flat skeleton to build it over (see
-// USuperDexRuntimeMeshSubsystem::RequestSkinnedMesh).
+/**
+ * A skinned render model (.glb) and the flat skeleton to build it over (see
+ * USuperDexRuntimeMeshSubsystem::RequestSkinnedMesh).
+ */
 struct FSuperDexSkinnedMeshRequest {
-  // Absolute .glb path.
+  /** Absolute .glb path. */
   FString FilePath;
-  // Per joint of the glTF skin: the bone (index into the built skeleton, where bone 0 is the root
-  // and bone i + 1 is BoneNames[i]) it binds to, or INDEX_NONE to drop its influence.
+  /**
+   * Per joint of the glTF skin: the bone (index into the built skeleton, where bone 0 is the root
+   * and bone i + 1 is BoneNames[i]) it binds to, or INDEX_NONE to drop its influence.
+   */
   TArray<int32> JointToBone;
-  // The name of skeleton bone i + 1.
+  /** The name of skeleton bone i + 1. */
   TArray<FName> BoneNames;
-  // The reference pose of skeleton bone i + 1 in component space [cm], one per BoneNames entry.
-  // Scale is ignored.
+  /**
+   * The reference pose of skeleton bone i + 1 in component space [cm], one per BoneNames entry.
+   * Scale is ignored.
+   */
   TArray<FTransform> RestBoneToComponent;
-  // The placement of the .glb's vertices in component space, scale (including mirroring) applied.
+  /**
+   * The placement of the .glb's vertices in component space, scale (including mirroring) applied.
+   */
   FTransform MeshToComponent = FTransform::Identity;
 };
 
@@ -106,6 +130,9 @@ class SUPERDEXPHYSICS_API USuperDexRuntimeMeshSubsystem final : public UGameInst
    * immediately if the file was already imported (or already failed), otherwise when the import
    * finishes. It is passed null if the import failed, this process cannot render, or the platform
    * has no runtime import (SUPERDEX_WITH_RUNTIME_MESH_IMPORT=0, e.g. Android).
+   *
+   * @param FilePath Render-mesh file to load.
+   * @param OnLoaded Callback receiving the loaded mesh result.
    */
   void RequestStaticMesh(const FString& FilePath, FOnMeshLoaded OnLoaded);
 
@@ -116,6 +143,9 @@ class SUPERDEXPHYSICS_API USuperDexRuntimeMeshSubsystem final : public UGameInst
    * slot name. OnLoaded runs on the game thread, as for RequestStaticMesh, and is passed null if
    * the file cannot be read or the platform has no runtime import. Meshes are cached for the
    * lifetime of the game instance, keyed on file content and skeleton.
+   *
+   * @param Request Render geometry, skinning and destination settings.
+   * @param OnLoaded Callback receiving the loaded mesh result.
    */
   void RequestSkinnedMesh(FSuperDexSkinnedMeshRequest Request, FOnSkinnedMeshLoaded OnLoaded);
 
@@ -129,8 +159,10 @@ class SUPERDEXPHYSICS_API USuperDexRuntimeMeshSubsystem final : public UGameInst
       UStaticMesh* Mesh,
       const TArray<UObject*>& Imported);
 
-  // Typed as the base class (InterchangeCore) so this header does not need the Interchange plugin's
-  // pipelines, which only exist on desktop platforms.
+  /**
+   * Typed as the base class (InterchangeCore) so this header does not need the Interchange plugin's
+   * pipelines, which only exist on desktop platforms.
+   */
   UPROPERTY()
   TObjectPtr<UInterchangePipelineBase> Pipeline;
 
@@ -140,14 +172,16 @@ class SUPERDEXPHYSICS_API USuperDexRuntimeMeshSubsystem final : public UGameInst
   UPROPERTY()
   TObjectPtr<USuperDexRuntimeMeshPipeline> RuntimeMeshPipeline;
 
-  // Every object the imports created (meshes, materials, textures), kept alive for the session.
+  /**
+   * Every object the imports created (meshes, materials, textures), kept alive for the session.
+   */
   UPROPERTY()
   TArray<TObjectPtr<UObject>> ImportedObjects;
 
   UPROPERTY()
   TMap<FString, TObjectPtr<UStaticMesh>> MeshesByContent;
 
-  // Built skinned meshes, keyed on file content and skeleton; null for a failed build.
+  /** Built skinned meshes, keyed on file content and skeleton; null for a failed build. */
   UPROPERTY()
   TMap<FString, TObjectPtr<USkeletalMesh>> SkinnedMeshesByKey;
 

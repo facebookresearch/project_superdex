@@ -22,27 +22,28 @@
 
 #include "MochiImplicitShapeComponent.generated.h"
 
+/** Component that creates a native plane or sphere actor. */
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class SUPERDEXPHYSICS_API UMochiImplicitShapeComponent : public USceneComponent,
                                                          public IMochiMeshComponentInterface {
   GENERATED_BODY()
 
-  // Implicit shape type.
+  /** Implicit shape type. */
   UPROPERTY(EditAnywhere, Category = "Mochi")
   EMochiImplicitShape Shape = EMochiImplicitShape::Plane;
-  // Sphere radius in world units (centimeters).
+  /** Sphere radius in world units (centimeters). */
   UPROPERTY(
       EditAnywhere,
       meta = (EditCondition = "Shape == EMochiImplicitShape::Sphere", EditConditionHides),
       Category = "Mochi")
   float SphereRadius = 50;
-  // The layer this object is simulated on.
+  /** The layer this object is simulated on. */
   UPROPERTY(EditAnywhere, Category = "Mochi")
   FName Layer = FMochiLayer::GenericObject;
-  // Parameters controlling physical material properties.
+  /** Parameters controlling physical material properties. */
   UPROPERTY(EditAnywhere, Category = "Mochi")
   UMochiMaterialParams* MaterialParams = nullptr;
-  // Parameters controlling contacts.
+  /** Parameters controlling contacts. */
   UPROPERTY(EditAnywhere, Category = "Mochi")
   UMochiContactParams* ContactParams;
 

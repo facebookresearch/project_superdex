@@ -27,6 +27,7 @@
 // BASE SPACE CONVERTER
 //------------------------------------------------------------------------------
 
+/** Converts geometry and dimensional measures between coordinate spaces. */
 template <typename T>
 struct TMochiSpaceConverter {
  public:
@@ -38,8 +39,15 @@ struct TMochiSpaceConverter {
   typedef UE::Math::TTransform<T> TTransform;
 
  public:
+  /** Initialize a coordinate-space conversion with default spaces. */
   FORCEINLINE TMochiSpaceConverter() : TMochiSpaceConverter(UnrealCentimetersSpace, MochiSpace) {}
 
+  /**
+   * Initialize a conversion between the specified coordinate spaces.
+   *
+   * @param InInputSpace Input coordinate-space definition.
+   * @param InOutputSpace Output coordinate-space definition.
+   */
   TMochiSpaceConverter(
       const FMochiSpaceDefinition& InInputSpace,
       const FMochiSpaceDefinition& InOutputSpace) {
@@ -53,18 +61,32 @@ struct TMochiSpaceConverter {
     bFlipsHandedness = InputToOutputMatrix.Determinant() < 0;
   }
 
-  // Returns the inverse converter.
+  /**
+   * Returns the inverse converter.
+   *
+   * @return A converter with input and output spaces exchanged.
+   */
   FORCEINLINE TMochiSpaceConverter Inverse() const {
     return TMochiSpaceConverter(OutputSpace, InputSpace);
   }
 
-  // True if the converter flips handedness (i.e. input and output handedness not equal.)
+  /**
+   * True if the converter flips handedness (i.e. input and output handedness not equal.)
+   *
+   * @return Whether conversion changes handedness.
+   */
   FORCEINLINE bool FlipsHandedness() const {
     return bFlipsHandedness;
   }
 
-  // Converts a scalar measure to output. Use N=1 for distance, N=2 for area, N=3 for volume,
-  // etc.
+  /**
+   * Converts a scalar measure to output. Use N=1 for distance, N=2 for area, N=3 for volume,
+   * etc.
+   *
+   * @param S Measure or scale supplied in the input space.
+   * @param N Number of length-scale factors applied: 1 for distance, 2 for area and 3 for volume.
+   * @return The value expressed in the configured output space.
+   */
   FORCEINLINE T MeasureToOutput(T S, int N = 1) const {
     for (int i = 0; i < N; ++i) {
       S *= InputToOutputScale;
@@ -72,34 +94,59 @@ struct TMochiSpaceConverter {
     return S;
   }
 
-  // Converts a position, point, translation, etc. from the input to output space (i.e. applies
-  // scaling.)
+  /**
+   * Converts a position, point, translation, etc. from the input to output space (i.e. applies
+   * scaling.)
+   *
+   * @param V Vector expressed in the input space.
+   * @return The value expressed in the configured output space.
+   */
   FORCEINLINE TVector TranslationToOutput(const TVector& V) const {
     return InputToOutputMatrix * V * InputToOutputScale;
   }
 
-  // Converts a direction, vector, normal, etc. from the input to output space (i.e. no scaling.)
+  /**
+   * Converts a direction, vector, normal, etc. from the input to output space (i.e. no scaling.)
+   *
+   * @param V Vector expressed in the input space.
+   * @return The value expressed in the configured output space.
+   */
   FORCEINLINE TVector DirectionToOutput(const TVector& V) const {
     return InputToOutputMatrix * V;
   }
 
-  // Converts a rotation from the input to output space.
+  /**
+   * Converts a rotation from the input to output space.
+   *
+   * @param Q Quaternion expressed in the input axis convention.
+   * @return The value expressed in the configured output space.
+   */
   FORCEINLINE TQuat RotationToOutput(const TQuat& Q) const {
     TVector QAxis = bFlipsHandedness ? TVector(-Q.X, -Q.Y, -Q.Z) : TVector(Q.X, Q.Y, Q.Z);
     TVector QAxisOut = DirectionToOutput(QAxis);
     return TQuat(QAxisOut.X, QAxisOut.Y, QAxisOut.Z, Q.W);
   }
 
-  // Converts a transform from the input to output space. The input transform scale is preserved.
+  /**
+   * Converts a transform from the input to output space. The input transform scale is preserved.
+   *
+   * @param X Transform expressed in the input space.
+   * @return The value expressed in the configured output space.
+   */
   FORCEINLINE TTransform TransformToOutput(const TTransform& X) const {
     return TTransform(
         RotationToOutput(X.GetRotation()), TranslationToOutput(X.GetTranslation()), X.GetScale3D());
   }
 
-  // Converts a scale vector from input space to output space.
-  // Unlike DirectionToOutput which applies the full transformation matrix (including sign
-  // changes from axis flips), this function only permutes components based on which input
-  // axis maps to which output axis.
+  /**
+   * Converts a scale vector from input space to output space.
+   * Unlike DirectionToOutput which applies the full transformation matrix (including sign
+   * changes from axis flips), this function only permutes components based on which input
+   * axis maps to which output axis.
+   *
+   * @param S Measure or scale supplied in the input space.
+   * @return The value expressed in the configured output space.
+   */
   FORCEINLINE TVector ScaleToOutput(const TVector& S) const {
     const TMatrix3 InputToOutputMatrixAbs(
         InputToOutputMatrix.Row0.GetAbs(),
@@ -109,14 +156,24 @@ struct TMochiSpaceConverter {
     return InputToOutputMatrixAbs * S;
   }
 
-  // Converts an inertia tensor from the input to output space.
+  /**
+   * Converts an inertia tensor from the input to output space.
+   *
+   * @param I Inertia entries expressed in the input space.
+   * @return The value expressed in the configured output space.
+   */
   FORCEINLINE TMatrix3 InertiaToOutput(const TMatrix3& I) const {
     return InputToOutputMatrix * I * InputToOutputMatrix.Transpose() * InputToOutputScale *
         InputToOutputScale;
   }
 
  public:
-  // Builds the FRU basis from Mochi's authoritative coordinate-space implementation.
+  /**
+   * Builds the FRU basis from Mochi's authoritative coordinate-space implementation.
+   *
+   * @param SpaceDef Coordinate-space definition used to build a basis.
+   * @return Basis matrix for the supplied axis convention.
+   */
   FORCEINLINE static TMatrix3 BuildBasis(const FMochiSpaceDefinition& SpaceDef) {
     const mochi::CoordinateSpace Space = ToMochiCoordinateSpace(SpaceDef);
     auto ToVector = [](const mochi::Real3& V) {
@@ -129,7 +186,12 @@ struct TMochiSpaceConverter {
         false); // bRows = false
   }
 
-  // Utility to convert a 3x3 matrix to a 4x4 matrix.
+  /**
+   * Utility to convert a 3x3 matrix to a 4x4 matrix.
+   *
+   * @param M Three-dimensional matrix to embed.
+   * @return Four-dimensional matrix embedding the given three-dimensional matrix.
+   */
   FORCEINLINE static TMatrix4 ToMatrix4(const TMatrix3& M) {
     return TMatrix4(
         TPlane(M(0, 0), M(0, 1), M(0, 2), 0), // row 0
@@ -139,11 +201,17 @@ struct TMochiSpaceConverter {
   }
 
  public:
+  /** Coordinate-space definition supplying the input convention. */
   FMochiSpaceDefinition InputSpace;
+  /** Coordinate-space definition supplying the output convention. */
   FMochiSpaceDefinition OutputSpace;
+  /** Axis transformation from the input basis to the output basis. */
   TMatrix3 InputToOutputMatrix;
+  /** Length-scale factor from input units to output units. */
   T InputToOutputScale = 0.0f;
+  /** Whether the input and output conventions have different handedness. */
   bool bFlipsHandedness = false;
 };
 
+/** Double-precision coordinate-space converter used by the plugin. */
 typedef TMochiSpaceConverter<double> FMochiSpaceConverter;

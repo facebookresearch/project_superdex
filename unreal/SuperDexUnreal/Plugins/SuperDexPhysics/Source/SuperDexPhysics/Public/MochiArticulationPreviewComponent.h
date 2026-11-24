@@ -23,14 +23,15 @@
 
 #include "MochiArticulationPreviewComponent.generated.h"
 
+/** Poseable mesh component for displaying articulation poses. */
 UCLASS(meta = (BlueprintSpawnableComponent))
 class SUPERDEXPHYSICS_API UMochiArticulationPreviewComponent : public UPoseableMeshComponent {
   GENERATED_BODY()
  protected:
-  // The articulation to preview.
+  /** The articulation to preview. */
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Articulation Poseable Mesh Component")
   TObjectPtr<UMochiArticulationBase> Articulation = nullptr;
-  // The joint positions to pose the articulation preview.
+  /** The joint positions to pose the articulation preview. */
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
@@ -40,19 +41,43 @@ class SUPERDEXPHYSICS_API UMochiArticulationPreviewComponent : public UPoseableM
   TArray<double> JointPositions;
 
  public:
+  /** Initialize the poseable articulation preview component. */
   UMochiArticulationPreviewComponent();
-  // Set the articulation to preview.
+  /**
+   * Set the articulation to preview.
+   *
+   * @param NewArticulation Articulation asset to assign.
+   */
   UFUNCTION(BlueprintCallable, Category = "Articulation Poseable Mesh Component")
   void SetArticulation(UMochiArticulationBase* NewArticulation);
-  // Get the articulation being previewed.
+  /**
+   * Get the articulation being previewed.
+   *
+   * @return The articulation.
+   */
   UFUNCTION(BlueprintPure, Category = "Articulation Poseable Mesh Component")
   UMochiArticulationBase* GetArticulation() const;
-  // Set the joint positions to pose the articulation preview.
+  /**
+   * Set the joint positions to pose the articulation preview.
+   *
+   * @param NewJointPositions Joint positions to apply.
+   */
   UFUNCTION(BlueprintCallable, Category = "Articulation Poseable Mesh Component")
   void SetJointPositions(const TArray<double>& NewJointPositions);
 
+  /**
+   * Set a named bone transform in the articulation preview.
+   *
+   * @param BoneName Name of the preview bone.
+   * @param InTransform Transform to apply to the preview bone.
+   */
   UFUNCTION(BlueprintCallable, Category = "Articulation Poseable Mesh Component")
   void SetBoneLocalTransformByName(FName BoneName, const FTransform& InTransform);
+  /**
+   * Set the local bone rotations in the articulation preview.
+   *
+   * @param InRotations Local bone rotations to apply.
+   */
   UFUNCTION(BlueprintCallable, Category = "Articulation Poseable Mesh Component")
   void SetBoneLocalRotations(const TArray<FQuat>& InRotations);
 

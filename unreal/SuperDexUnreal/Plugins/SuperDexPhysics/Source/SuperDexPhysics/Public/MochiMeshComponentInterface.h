@@ -22,96 +22,160 @@
 
 #include "MochiMeshComponentInterface.generated.h"
 
-// Interface common to all Mochi Mesh types.
+/** Interface common to all Mochi Mesh types. */
 UINTERFACE(NotBlueprintable)
 class SUPERDEXPHYSICS_API UMochiMeshComponentInterface : public UInterface {
  public:
   GENERATED_BODY()
 };
 
-// Interface common to all Mochi Mesh types.
+/** Interface common to all Mochi Mesh types. */
 class SUPERDEXPHYSICS_API IMochiMeshComponentInterface {
  public:
   GENERATED_BODY()
 
-  // (Re)create the underlying MochiActorObject controlling this mesh component.
-  // For advanced use only. Note this will break constraints on this actor.
+  /**
+   * (Re)create the underlying MochiActorObject controlling this mesh component.
+   * For advanced use only. Note this will break constraints on this actor.
+   */
   UFUNCTION(BlueprintCallable, Category = "Mochi")
   virtual void CreateMochiActor() = 0;
-  // Destroy the underlying MochiActorObject controlling this mesh component. This stops
-  // the simulation but keeps the component alive. For advanced use only.
+  /**
+   * Destroy the underlying MochiActorObject controlling this mesh component. This stops
+   * the simulation but keeps the component alive. For advanced use only.
+   */
   UFUNCTION(BlueprintCallable, Category = "Mochi")
   virtual void DestroyMochiActor() = 0;
-  // Get the underlying MochiActorObject controller this mesh component.
+  /**
+   * Get the underlying MochiActorObject controller this mesh component.
+   *
+   * @return The mochi actor.
+   */
   UFUNCTION(BlueprintCallable, Category = "Mochi")
   virtual UMochiActorObject* GetMochiActor() const = 0;
 
-  // Set the world transform of the Mochi mesh component.
+  /**
+   * Set the world transform of the Mochi mesh component.
+   *
+   * @param NewTransform World transform to apply.
+   */
   UFUNCTION(BlueprintCallable, Category = "Mochi")
   virtual void SetWorldTransformMochi(const FTransform& NewTransform);
-  // Set the world location and rotation of the Mochi mesh component.
+  /**
+   * Set the world location and rotation of the Mochi mesh component.
+   *
+   * @param NewLocation World location to apply.
+   * @param NewRotation World rotation to apply.
+   */
   UFUNCTION(BlueprintCallable, Category = "Mochi")
   virtual void SetWorldLocationAndRotationMochi(FVector NewLocation, FRotator NewRotation);
 
-  // Get the contact params configured on this component (editor/initial value).
   // Note: does not reflect runtime changes made via SetContactParams.
+  /**
+   * Get the contact params configured on this component (editor/initial value).
+   *
+   * @return The contact params.
+   */
   UFUNCTION(BlueprintCallable, Category = "Mochi")
   virtual UMochiContactParams* GetContactParams() const = 0;
-  // Get the material params configured on this component (editor/initial value).
   // Note: does not reflect runtime changes made via SetMaterialParams.
+  /**
+   * Get the material params configured on this component (editor/initial value).
+   *
+   * @return The material params.
+   */
   UFUNCTION(BlueprintCallable, Category = "Mochi")
   virtual UMochiMaterialParams* GetMaterialParams() const = 0;
 
-  // Set the contact params of the Mochi mesh component.
+  /**
+   * Set the contact params of the Mochi mesh component.
+   *
+   * @param ContactParams Contact-parameter asset or native values supplied to the operation.
+   */
   UFUNCTION(BlueprintCallable, Category = "Mochi")
   virtual void SetContactParams(const UMochiContactParams* ContactParams);
-  // Set the material params of the Mochi mesh component.
+  /**
+   * Set the material params of the Mochi mesh component.
+   *
+   * @param MaterialParams Material-parameter asset supplied to the operation.
+   */
   UFUNCTION(BlueprintCallable, Category = "Mochi")
   virtual void SetMaterialParams(const UMochiMaterialParams* MaterialParams);
 
-  // Returns the MochiModel used to create this Mochi mesh component. Might be null.
+  /**
+   * Returns the MochiModel used to create this Mochi mesh component. Might be null.
+   *
+   * @return The model asset assigned to this component.
+   */
   UFUNCTION(Blueprintable, Category = "Mochi")
   virtual UMochiModel* GetMochiModel() const = 0;
-  // Returns true if the mesh has enabled contact queries.
+  /**
+   * Returns true if the mesh has enabled contact queries.
+   *
+   * @return Whether contact queries are configured for this component.
+   */
   UFUNCTION(Blueprintable, Category = "Mochi")
   virtual bool GetContactsEnabled() const = 0;
 
-  // Clear boundary conditions
+  /** Clear boundary conditions */
   UFUNCTION(BlueprintCallable, Category = "Mochi")
   virtual void ClearBoundaryConditions();
-  // Resets the local deformation to zero
+  /** Resets the local deformation to zero */
   UFUNCTION(BlueprintCallable, Category = "Mochi")
   virtual void SetZeroDeformation() const;
-  // Set the linear and angular velocities
+  /**
+   * Set the linear and angular velocities
+   *
+   * @param LinearVelocity Linear velocity to apply.
+   * @param AngularVelocity Angular velocity to apply.
+   */
   UFUNCTION(BlueprintCallable, Category = "Mochi")
   virtual void SetVelocities(FVector LinearVelocity, FVector AngularVelocity) const;
-  // Resets the linear and angular velocities to zero
+  /** Resets the linear and angular velocities to zero */
   UFUNCTION(BlueprintCallable, Category = "Mochi")
   virtual void SetZeroVelocities();
-  // Get inertial properties of the actor (mass [kg], COM [cm], MOI [kg*cm^2])
+  /**
+   * Get inertial properties of the actor (mass [kg], COM [cm], MOI [kg*cm^2])
+   *
+   * @param Mass Mass storage supplied to the native query.
+   * @param CenterOfMass Center-of-mass storage supplied to the native query.
+   * @param MomentOfInertia Inertia storage supplied to the native query.
+   */
   UFUNCTION(BlueprintCallable, Category = "Mochi")
   virtual void
   GetInertialParams(double& Mass, FVector& CenterOfMass, FMochiMomentOfInertia& MomentOfInertia);
 };
 
-// Interface common to soft/dynamic Mochi Mesh types.
+/** Interface common to soft/dynamic Mochi Mesh types. */
 UINTERFACE(NotBlueprintable, Category = "Mochi")
 class SUPERDEXPHYSICS_API UMochiSoftMeshComponentInterface : public UInterface {
  public:
   GENERATED_BODY()
 };
 
-// Interface common to soft/dynamic Mochi Mesh types.
+/** Interface common to soft/dynamic Mochi Mesh types. */
 class SUPERDEXPHYSICS_API IMochiSoftMeshComponentInterface {
  public:
   GENERATED_BODY()
-  // Get the mesh volume node reference (i.e. rest) positions in local space.
+  /**
+   * Get the mesh volume node reference (i.e. rest) positions in local space.
+   *
+   * @return The volume node reference positions.
+   */
   UFUNCTION(BlueprintCallable, Category = "Mochi")
   virtual const TArray<FVector>& GetVolumeNodeReferencePositions() const = 0;
-  // Get the mesh volume node current positions in local space.
+  /**
+   * Get the mesh volume node current positions in local space.
+   *
+   * @return The volume node positions.
+   */
   UFUNCTION(BlueprintCallable, Category = "Mochi")
   virtual const TArray<FVector>& GetVolumeNodePositions() const = 0;
-  // Sets the MochiModel's elements using the given MaterialModifiers
+  /**
+   * Sets the MochiModel's elements using the given MaterialModifiers
+   *
+   * @param Modifiers Element material modifiers to apply.
+   */
   UFUNCTION(BlueprintCallable, Category = "Mochi")
   virtual const void ApplyMaterialModifiers(UMochiModelMaterialModifiers* Modifiers) const = 0;
 };

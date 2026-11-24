@@ -36,13 +36,21 @@
 // GENERAL
 //------------------------------------------------------------------------------
 
-// Content Browser type color of every SuperDex asset type: Meta blue (#0064E0). The asset icons in
-// each plugin's Resources/ use the same blue as their accent.
+/**
+ * Content Browser type color of every SuperDex asset type: Meta blue (#0064E0). The asset icons in
+ * each plugin's Resources/ use the same blue as their accent.
+ */
 static constexpr FColor SuperdexAssetColor = FColor(0, 100, 224, 255);
 
+/** Shared editor actions for physics asset types. */
 template <typename TMochiAsset>
 class FMochiAssetActions : public FAssetTypeActions_Base {
  public:
+  /**
+   * Initialize physics-asset actions for the specified editor category.
+   *
+   * @param InAssetCategory Editor category assigned to the asset actions.
+   */
   FMochiAssetActions(EAssetTypeCategories::Type InAssetCategory) : AssetCategory(InAssetCategory) {}
   virtual uint32 GetCategories() override {
     return AssetCategory;
@@ -61,12 +69,21 @@ class FMochiAssetActions : public FAssetTypeActions_Base {
   const EAssetTypeCategories::Type AssetCategory;
 };
 
-// A Slate style registering a 16px "ClassIcon.<ClassName>" and a 64px "ClassThumbnail.<ClassName>"
-// brush for each class name, loaded from <Plugin>/Resources/<ClassName>_16.svg and _64.svg.
-// FSlateIconFinder searches every registered style, so these apply wherever Unreal shows a class
-// icon (Content Browser, asset editors, pickers).
+/**
+ * A Slate style registering a 16px "ClassIcon.<ClassName>" and a 64px "ClassThumbnail.<ClassName>"
+ * brush for each class name, loaded from <Plugin>/Resources/<ClassName>_16.svg and _64.svg.
+ * FSlateIconFinder searches every registered style, so these apply wherever Unreal shows a class
+ * icon (Content Browser, asset editors, pickers).
+ */
 class SUPERDEXPHYSICSEDITOR_API FSuperDexClassIconStyle : public FSlateStyleSet {
  public:
+  /**
+   * Register class icons from the plugin's editor resources.
+   *
+   * @param StyleSetName Name of the registered class-icon style.
+   * @param PluginName Plugin supplying class-icon resources.
+   * @param ClassNames Classes whose icons are registered.
+   */
   FSuperDexClassIconStyle(
       const FName& StyleSetName,
       const TCHAR* PluginName,
@@ -74,8 +91,10 @@ class SUPERDEXPHYSICSEDITOR_API FSuperDexClassIconStyle : public FSlateStyleSet 
   virtual ~FSuperDexClassIconStyle() override;
 };
 
+/** Class-icon style registered by the physics editor module. */
 class FMochiPhysicsEditorStyle final : public FSuperDexClassIconStyle {
  public:
+  /** Initialize the physics editor's class-icon style. */
   FMochiPhysicsEditorStyle();
 };
 
@@ -83,6 +102,7 @@ class FMochiPhysicsEditorStyle final : public FSuperDexClassIconStyle {
 // MOCHI MODEL
 //------------------------------------------------------------------------------
 
+/** Factory creating model assets in the Content Browser. */
 UCLASS(HideCategories = Object)
 class SUPERDEXPHYSICSEDITOR_API UMochiModelFactoryNew : public UFactory {
   GENERATED_UCLASS_BODY()
@@ -96,6 +116,7 @@ class SUPERDEXPHYSICSEDITOR_API UMochiModelFactoryNew : public UFactory {
       FFeedbackContext* Warn) override;
 };
 
+/** Content Browser actions opening the model asset editor. */
 class FMochiModelAssetActions : public FMochiAssetActions<UMochiModel> {
  public:
   using FMochiAssetActions::FMochiAssetActions;
@@ -109,6 +130,7 @@ class FMochiModelAssetActions : public FMochiAssetActions<UMochiModel> {
 // MOCHI MATERIAL PARAMS
 //------------------------------------------------------------------------------
 
+/** Factory creating soft-material parameter assets. */
 UCLASS(HideCategories = Object)
 class UMochiMaterialParamsFactoryNew : public UFactory {
   GENERATED_UCLASS_BODY()
@@ -128,6 +150,7 @@ typedef FMochiAssetActions<UMochiMaterialParams> FMochiMaterialParamsAssetAction
 // MOCHI SHELL MATERIAL PARAMS
 //------------------------------------------------------------------------------
 
+/** Factory creating shell-material parameter assets. */
 UCLASS(HideCategories = Object)
 class UMochiShellMaterialParamsFactoryNew : public UFactory {
   GENERATED_UCLASS_BODY()
@@ -147,6 +170,7 @@ typedef FMochiAssetActions<UMochiShellMaterialParams> FMochiShellMaterialParamsA
 // MOCHI ROD MATERIAL PARAMS
 //------------------------------------------------------------------------------
 
+/** Factory creating rod-material parameter assets. */
 UCLASS(HideCategories = Object)
 class UMochiRodMaterialParamsFactoryNew : public UFactory {
   GENERATED_UCLASS_BODY()
@@ -166,6 +190,7 @@ typedef FMochiAssetActions<UMochiRodMaterialParams> FMochiRodMaterialParamsAsset
 // MOCHI CONTACT PARAMS
 //------------------------------------------------------------------------------
 
+/** Factory creating contact-parameter assets. */
 UCLASS(HideCategories = Object)
 class UMochiContactParamsFactoryNew : public UFactory {
   GENERATED_UCLASS_BODY()
@@ -185,6 +210,7 @@ typedef FMochiAssetActions<UMochiContactParams> FMochiContactParamsAssetActions;
 // MOCHI SOLVER PARAMS
 //------------------------------------------------------------------------------
 
+/** Factory creating solver-parameter assets. */
 UCLASS(HideCategories = Object)
 class UMochiSolverParamsFactoryNew : public UFactory {
   GENERATED_UCLASS_BODY()
@@ -204,6 +230,7 @@ typedef FMochiAssetActions<UMochiSolverParams> FMochiSolverParamsAssetActions;
 // MOCHI CONTACT MATRIX
 //------------------------------------------------------------------------------
 
+/** Factory creating layer-contact matrix assets. */
 UCLASS(HideCategories = Object)
 class UMochiContactMatrixFactoryNew : public UFactory {
   GENERATED_UCLASS_BODY()
@@ -223,6 +250,7 @@ typedef FMochiAssetActions<UMochiContactMatrix> FMochiContactMatrixAssetActions;
 // MOCHI MODEL MATERIAL MODIFIER
 //------------------------------------------------------------------------------
 
+/** Factory creating element material-modifier assets. */
 UCLASS(HideCategories = Object)
 class UMochiModelMaterialModifiersFactoryNew : public UFactory {
   GENERATED_UCLASS_BODY()
@@ -242,8 +270,14 @@ typedef FMochiAssetActions<UMochiModelMaterialModifiers> FMochiModelMaterialModi
 // MOCHI ARTICULATION
 //------------------------------------------------------------------------------
 
+/** Content Browser actions opening the articulation asset editor. */
 class FMochiArticulationAssetActions : public FAssetTypeActions_Base {
  public:
+  /**
+   * Initialize articulation-asset actions for the specified editor category.
+   *
+   * @param InAssetCategory Editor category assigned to the asset actions.
+   */
   FMochiArticulationAssetActions(EAssetTypeCategories::Type InAssetCategory)
       : AssetCategory(InAssetCategory) {}
   virtual uint32 GetCategories() override {
@@ -278,6 +312,7 @@ class FMochiArticulationAssetActions : public FAssetTypeActions_Base {
 // SUPERDEX PREFAB
 //------------------------------------------------------------------------------
 
+/** Content Browser actions for imported prefab assets. */
 class FSuperDexPrefabAssetActions : public FMochiAssetActions<USuperDexPrefab> {
  public:
   using FMochiAssetActions::FMochiAssetActions;

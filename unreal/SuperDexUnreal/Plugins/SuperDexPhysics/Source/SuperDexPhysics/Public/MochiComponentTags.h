@@ -24,6 +24,12 @@ namespace MochiComponentTags {
 
 extern SUPERDEXPHYSICS_API const FName DisableComponents;
 
+/**
+ * Get whether actor tags disable its Mochi components.
+ *
+ * @param Actor Unreal actor whose component configuration is inspected.
+ * @return Whether the actor tags disable its Mochi components.
+ */
 SUPERDEXPHYSICS_API bool AreComponentsDisabled(const AActor* Actor);
 
 } // namespace MochiComponentTags

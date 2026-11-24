@@ -21,16 +21,20 @@
 
 #include "SuperDexGlbAssetNamesPipeline.generated.h"
 
-// Renames the material and texture assets of a GLB import. Runs after the generic assets pipeline,
-// which names them after the GLB's own material and image names; FSuperDexImportSession uses it to
-// give a GLB's materials and textures their own assets when another GLB's same-named ones differ.
+/**
+ * Renames the material and texture assets of a GLB import. Runs after the generic assets pipeline,
+ * which names them after the GLB's own material and image names; FSuperDexImportSession uses it to
+ * give a GLB's materials and textures their own assets when another GLB's same-named ones differ.
+ */
 UCLASS(BlueprintType)
 class USuperDexGlbAssetNamesPipeline : public UInterchangePipelineBase {
   GENERATED_BODY()
 
  public:
-  // New asset names, keyed by the asset name the generic pipeline gave. A property, so it survives
-  // Interchange duplicating the pipeline and storing it with the imported assets for reimports.
+  /**
+   * New asset names, keyed by the asset name the generic pipeline gave. A property, so it survives
+   * Interchange duplicating the pipeline and storing it with the imported assets for reimports.
+   */
   UPROPERTY(VisibleAnywhere, Category = "SuperDex")
   TMap<FString, FString> AssetRenames;
 

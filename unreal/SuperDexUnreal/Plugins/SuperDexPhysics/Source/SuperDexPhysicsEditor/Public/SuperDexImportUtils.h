@@ -22,103 +22,174 @@
 class UMochiModel;
 class UStaticMesh;
 
-// Helpers shared by the SuperDex Studio asset importers (bots, prefabs, SuperDex scenes).
+/** Helpers shared by the SuperDex Studio asset importers (bots, prefabs, SuperDex scenes). */
 namespace SuperDexImportUtils {
 
-// Replace '.' and ' ' with '_'. Other characters are kept, so the result is not guaranteed to be
-// a valid package name.
+/**
+ * Replace '.' and ' ' with '_'. Other characters are kept, so the result is not guaranteed to be
+ * a valid package name.
+ *
+ * @param InStr Text to sanitize.
+ * @return Text with characters unsuitable for package paths replaced.
+ */
 SUPERDEXPHYSICSEDITOR_API FString SanitizeForPackagePath(const FString& InStr);
 
-// Replace every character other than alphanumerics, '_' and '-' with '_'. Returns "link" for an
-// empty name.
+/**
+ * Replace every character other than alphanumerics, '_' and '-' with '_'. Returns "link" for an
+ * empty name.
+ *
+ * @param InStr Text to sanitize.
+ * @return Text with characters unsuitable for file names replaced.
+ */
 SUPERDEXPHYSICSEDITOR_API FString SanitizeForFileName(const FString& InStr);
 
-// Name of the component an importer generates for something named Name (e.g. a prefab actor),
-// before it is made unique: SanitizeForFileName, with a leading '_' if it starts with a digit.
+/**
+ * Name of the component an importer generates for something named Name (e.g. a prefab actor),
+ * before it is made unique: SanitizeForFileName, with a leading '_' if it starts with a digit.
+ *
+ * @param Name Name used by this operation.
+ * @return Text suitable for a component name.
+ */
 SUPERDEXPHYSICSEDITOR_API FString SanitizeForComponentName(const FString& Name);
 
-// Absolute form of a file path with '/' separators, to compare and key source paths by.
+/**
+ * Absolute form of a file path with '/' separators, to compare and key source paths by.
+ *
+ * @param Path Component or asset path supplied to the operation.
+ * @return Normalized path representation.
+ */
 SUPERDEXPHYSICSEDITOR_API FString NormalizePath(const FString& Path);
 
-// Asset base name of a .mochi.h5 file: both extensions stripped, sanitized for package paths.
+/**
+ * Asset base name of a .mochi.h5 file: both extensions stripped, sanitized for package paths.
+ *
+ * @param H5Path Model file supplying native geometry.
+ * @return Base name derived from the native model file.
+ */
 SUPERDEXPHYSICSEDITOR_API FString GetMochiModelBaseName(const FString& H5Path);
 
-// Walk up the directory tree from StartPath looking for a .superdex_root marker file. Returns
-// the directory containing it, or empty if none was found.
+/**
+ * Walk up the directory tree from StartPath looking for a .superdex_root marker file. Returns
+ * the directory containing it, or empty if none was found.
+ *
+ * @param StartPath Path from which parent directories are searched.
+ * @return Root directory found while walking the source path's parents.
+ */
 SUPERDEXPHYSICSEDITOR_API FString FindSuperDexRootDir(const FString& StartPath);
 
-// Map a source file to <RootFolder>/<source dir relative to the .superdex_root dir>. Returns empty
-// if the source file is not beneath a .superdex_root dir.
+/**
+ * Map a source file to <RootFolder>/<source dir relative to the .superdex_root dir>. Returns empty
+ * if the source file is not beneath a .superdex_root dir.
+ *
+ * @param SourceFilePath Source file whose destination folder is computed.
+ * @param RootFolder Content Browser root used for organized imports.
+ * @return Destination package path computed for the source file.
+ */
 SUPERDEXPHYSICSEDITOR_API FString
 ComputeDestinationPackagePath(const FString& SourceFilePath, const FString& RootFolder);
 
-// Folder that a file referenced by an import into ParentFolder (e.g. a nested prefab or a bot of a
-// SuperDex scene) imports into: <ParentFolder>/<source file name>.
+/**
+ * Folder that a file referenced by an import into ParentFolder (e.g. a nested prefab or a bot of a
+ * SuperDex scene) imports into: <ParentFolder>/<source file name>.
+ *
+ * @param ParentFolder Folder containing the importing asset.
+ * @param SourceFilePath Source file whose destination folder is computed.
+ * @return Content Browser folder for a nested import.
+ */
 SUPERDEXPHYSICSEDITOR_API FString
 GetNestedImportFolder(const FString& ParentFolder, const FString& SourceFilePath);
 
 } // namespace SuperDexImportUtils
 
-// Imports the render (.glb) and collision (.mochi.h5) files referenced by SuperDex Studio assets.
-// Results are cached by source path so that one import (including recursive ones, e.g. the bots
-// and prefabs of a SuperDex scene) imports each file only once: a file referenced again returns the
-// asset of its first import, wherever that was. The cache does not keep assets alive, so a session
-// should not outlive the import it serves.
+/**
+ * Imports the render (.glb) and collision (.mochi.h5) files referenced by SuperDex Studio assets.
+ * Results are cached by source path so that one import (including recursive ones, e.g. the bots
+ * and prefabs of a SuperDex scene) imports each file only once: a file referenced again returns the
+ * asset of its first import, wherever that was. The cache does not keep assets alive, so a session
+ * should not outlive the import it serves.
+ */
 class SUPERDEXPHYSICSEDITOR_API FSuperDexImportSession {
  public:
-  // Import a .glb as SM_<AssetName> under DestPackagePath, replacing any existing asset.
-  //
-  // Its materials and textures are named after the GLB's material and image names. Those of named
-  // materials and images are rebuilt from the GLB on every import, replacing existing assets of
-  // those names, also when the mesh already exists (Interchange reimports an existing mesh without
-  // its materials); unnamed ones keep an existing asset as it is. GLBs whose same-named materials
-  // or images have the same content share one asset. If an asset of that name holds a different
-  // GLB's different content (imported earlier in this session, or found on disk with that GLB as
-  // its source), this GLB's asset is named <GLB file name>_<name>, or if that is taken too,
-  // <GLB file name>_<name>_<digest prefix>.
+  /**
+   * Import a .glb as SM_<AssetName> under DestPackagePath, replacing any existing asset.
+   *
+   * Its materials and textures are named after the GLB's material and image names. Those of named
+   * materials and images are rebuilt from the GLB on every import, replacing existing assets of
+   * those names, also when the mesh already exists (Interchange reimports an existing mesh without
+   * its materials); unnamed ones keep an existing asset as it is. GLBs whose same-named materials
+   * or images have the same content share one asset. If an asset of that name holds a different
+   * GLB's different content (imported earlier in this session, or found on disk with that GLB as
+   * its source), this GLB's asset is named <GLB file name>_<name>, or if that is taken too,
+   * <GLB file name>_<name>_<digest prefix>.
+   *
+   * @param GlbPath GLB file supplying render geometry.
+   * @param DestPackagePath Destination package path for the imported asset.
+   * @param AssetName Name of the asset to create.
+   * @return The result of importing the source asset.
+   */
   UStaticMesh* ImportGlbToStaticMesh(
       const FString& GlbPath,
       const FString& DestPackagePath,
       const FString& AssetName);
 
-  // Import a .mochi.h5 as MM_<AssetName> under DestPackagePath. An existing asset is reimported in
-  // place so references to it from other assets are preserved.
+  /**
+   * Import a .mochi.h5 as MM_<AssetName> under DestPackagePath. An existing asset is reimported in
+   * place so references to it from other assets are preserved.
+   *
+   * @param H5Path Model file supplying native geometry.
+   * @param DestPackagePath Destination package path for the imported asset.
+   * @param AssetName Name of the asset to create.
+   * @return The result of importing the source asset.
+   */
   UMochiModel* ImportH5ToMochiModel(
       const FString& H5Path,
       const FString& DestPackagePath,
       const FString& AssetName);
 
+  /** Clear the import session's cached paths and imported assets. */
   void Reset();
 
  private:
-  // Content of a material or texture asset imported in this session.
+  /** Content of a material or texture asset imported in this session. */
   struct FGlbAssetContent {
-    FString GlbPath; // Normalized.
+    /** Normalized. */
+    FString GlbPath;
     FString Digest;
   };
 
-  // Whether the asset ObjectPath, named Name, holds content other than Digest from a GLB other than
-  // the one at the normalized path GlbPath.
+  /**
+   * Whether the asset ObjectPath, named Name, holds content other than Digest from a GLB other than
+   * the one at the normalized path GlbPath.
+   */
   bool HoldsOtherContent(
       const FString& ObjectPath,
       const FString& Name,
       const FString& GlbPath,
       const FString& Digest);
 
-  // Replace every reference to each displaced asset (by the object path it was moved from) with
-  // the asset rebuilt at that path, then discard it; put back those that were not rebuilt.
+  /**
+   * Replace every reference to each displaced asset (by the object path it was moved from) with
+   * the asset rebuilt at that path, then discard it; put back those that were not rebuilt.
+   */
   static void ReplaceDisplacedAssets(
       const FString& GlbPath,
       const TArray<TPair<FString, UObject*>>& Displaced);
 
   TMap<FString, UStaticMesh*> StaticMeshCache;
   TMap<FString, UMochiModel*> MochiModelCache;
-  // By object path.
+
+  /** By object path. */
   TMap<FString, FGlbAssetContent> GlbAssetContents;
-  // Material and image digests of GLBs that earlier imports' assets came from, by normalized path.
+
+  /**
+   * Material and image digests of GLBs that earlier imports' assets came from, by normalized path.
+   */
   TMap<FString, TMap<FString, FString>> SourceGlbDigests;
-  // The Mochi assets pipeline, set not to reuse existing materials, and a copy of it that imports
-  // only materials and textures.
+
+  /**
+   * The Mochi assets pipeline, set not to reuse existing materials, and a copy of it that imports
+   * only materials and textures.
+   */
   TStrongObjectPtr<UObject> GlbAssetsPipeline;
   TStrongObjectPtr<UObject> GlbMaterialsPipeline;
 };

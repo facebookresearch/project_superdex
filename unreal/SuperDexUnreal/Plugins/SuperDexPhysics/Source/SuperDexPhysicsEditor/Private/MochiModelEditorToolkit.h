@@ -25,17 +25,25 @@
 enum class EMochiModelEditorElementViewMode : int8;
 class FMochiModelPreviewScene;
 
-// This is the "entry point" for editing Mochi Models
-// All Viewports, Toolbars, are generated here.
+/**
+ * This is the "entry point" for editing Mochi Models
+ * All Viewports, Toolbars, are generated here.
+ */
 class FMochiModelEditorToolkit : public FAssetEditorToolkit, public FNotifyHook {
  private:
   using Super = FAssetEditorToolkit;
 
  public:
+  /** Initialize the model asset editor toolkit. */
   FMochiModelEditorToolkit();
+  /** Release the model asset editor toolkit. */
   virtual ~FMochiModelEditorToolkit();
 
-  // IToolkit Interface
+  /**
+   * IToolkit Interface
+   *
+   * @return The toolkit fname.
+   */
   virtual FName GetToolkitFName() const override {
     return FName("MochiModelEditor");
   }
@@ -49,21 +57,47 @@ class FMochiModelEditorToolkit : public FAssetEditorToolkit, public FNotifyHook 
     return FLinearColor::White;
   }
 
+  /** Bind model-editor actions to commands. */
   void BindCommands();
+  /** Add model-editor toolbar extensions. */
   void ExtendToolBars();
+  /** Focus the model preview viewport. */
   void FocusViewport() const;
+  /** Add material modifiers for the selected model elements. */
   void AddMaterialModifiers();
+  /** Remove material modifiers for the selected model elements. */
   void RemoveMaterialModifiers();
+  /**
+   * Create the model editor's preview scene.
+   *
+   * @return The object returned by creation.
+   */
   TSharedPtr<FMochiModelPreviewScene> CreatePreviewScene();
 
   virtual void RegisterTabSpawners(const TSharedRef<class FTabManager>& InTabManager) override;
   virtual void UnregisterTabSpawners(const TSharedRef<class FTabManager>& InTabManager) override;
+  /**
+   * Get the model editor's tab layout.
+   *
+   * @return The default layout.
+   */
   const TSharedRef<FTabManager::FLayout> GetDefaultLayout() const;
   virtual void CreateEditorModeManager() override;
 
-  // Hook onto FCoreUObjectDelegates::OnObjectModified to detect when the MochiModel is modified
+  /**
+   * Hook onto FCoreUObjectDelegates::OnObjectModified to detect when the MochiModel is modified
+   *
+   * @param InObject Object whose modification is being handled.
+   */
   void OnObjectModified(UObject* InObject);
 
+  /**
+   * Open the model asset in the requested editor mode and host.
+   *
+   * @param Mode Editor or prefab import mode.
+   * @param InitToolkitHost Host for the asset editor.
+   * @param ObjectToEdit Asset to open in the editor.
+   */
   void InitMochiModelEditor(
       const EToolkitMode::Type Mode,
       const TSharedPtr<class IToolkitHost>& InitToolkitHost,
@@ -75,6 +109,11 @@ class FMochiModelEditorToolkit : public FAssetEditorToolkit, public FNotifyHook 
       FProperty* PropertyThatChanged) override;
   // End FNotifyHookInterface
 
+  /**
+   * Get the model asset being edited.
+   *
+   * @return The model.
+   */
   TObjectPtr<UMochiModel> GetModel();
 
  public:
@@ -84,24 +123,27 @@ class FMochiModelEditorToolkit : public FAssetEditorToolkit, public FNotifyHook 
  protected:
   void RegisterToolbar();
 
-  // Viewport Spawner
+  /** Viewport Spawner */
   TSharedRef<SDockTab> SpawnTab_Viewport(const FSpawnTabArgs& Args);
-  // Detail Panel Spawner
+
+  /** Detail Panel Spawner */
   virtual TSharedRef<SDockTab> SpawnTab_Details(const FSpawnTabArgs& Args);
 
  protected:
-  // Property View
+  /** Property View */
   TSharedPtr<IDetailsView> DetailsView;
-  // Tracking the active viewports in this editor.
+
+  /** Tracking the active viewports in this editor. */
   TSharedPtr<FEditorViewportTabContent> ViewportTabContent;
-  // Extender for adding to the default layout for this asset editor
+
+  /** Extender for adding to the default layout for this asset editor */
   TSharedPtr<FLayoutExtender> LayoutExtender;
   TSharedPtr<FTabManager::FLayout> StandaloneDefaultLayout;
 
-  // Reference to the MochiModel currently being viewed
+  /** Reference to the MochiModel currently being viewed */
   TObjectPtr<UMochiModel> MochiModel;
 
-  // Scene and mesh component for preview rendering (note these are garbage-collected)
+  /** Scene and mesh component for preview rendering (note these are garbage-collected) */
   TSharedPtr<FMochiModelPreviewScene> ModelPreviewScene;
 
   TSharedPtr<SMochiModelEditorViewport> ModelEditorViewport;
@@ -115,7 +157,14 @@ class FMochiModelEditorToolkit : public FAssetEditorToolkit, public FNotifyHook 
   void SetViewportElementViewMode(EMochiModelEditorElementViewMode NewViewMode) const;
 
  public:
-  // Called from FMochiModelAssetActions::OpenAssetEditor()
+  /**
+   * Called from FMochiModelAssetActions::OpenAssetEditor()
+   *
+   * @param Mode Editor or prefab import mode.
+   * @param InitToolkitHost Host for the asset editor.
+   * @param ObjectToEdit Asset to open in the editor.
+   * @return The newly initialized asset editor.
+   */
   static TSharedRef<FMochiModelEditorToolkit> CreateEditor(
       const EToolkitMode::Type Mode,
       const TSharedPtr<IToolkitHost>& InitToolkitHost,

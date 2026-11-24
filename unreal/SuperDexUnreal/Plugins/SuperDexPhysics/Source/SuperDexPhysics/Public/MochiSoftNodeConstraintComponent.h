@@ -24,42 +24,59 @@
 
 #include "MochiSoftNodeConstraintComponent.generated.h"
 
+/** Constraint mode joining deformable nodes to another body. */
 UENUM(BlueprintType)
 enum class EMochiSoftNodeConstraintType : uint8 {
-  // Pulls a node of a deformable body to this component's location (Mochi DeformableNodePosition).
+  /**
+   * Pulls a node of a deformable body to this component's location (Mochi DeformableNodePosition).
+   */
   NodePosition UMETA(DisplayName = "Node Position"),
-  // Ties a node of a deformable body to a rigid body (Mochi DeformableNodeToRigid).
+
+  /** Ties a node of a deformable body to a rigid body (Mochi DeformableNodeToRigid). */
   NodeToRigid UMETA(DisplayName = "Node to Rigid"),
-  // Ties a node of one deformable body to a node of another (Mochi
-  // DeformableNodeToDeformableNode).
+
+  /**
+   * Ties a node of one deformable body to a node of another (Mochi
+   * DeformableNodeToDeformableNode).
+   */
   NodeToNode UMETA(DisplayName = "Node to Node"),
 };
 
+/** Method used to select deformable nodes for a constraint. */
 UENUM(BlueprintType)
 enum class EMochiSoftNodeSelection : uint8 {
-  // The node with the given index.
+  /** The node with the given index. */
   Index,
-  // The boundary node Mochi finds closest: to the rigid point for Node to Rigid, or between the
-  // two bodies for Node to Node.
+
+  /**
+   * The boundary node Mochi finds closest: to the rigid point for Node to Rigid, or between the
+   * two bodies for Node to Node.
+   */
   Closest,
-  // Every node inside the rigid body's bounding box, each with its own constraint. Node to Rigid
-  // only.
+
+  /**
+   * Every node inside the rigid body's bounding box, each with its own constraint. Node to Rigid
+   * only.
+   */
   InsideRigidBounds UMETA(DisplayName = "Inside Rigid Bounds"),
 };
 
-// Ties nodes of a deformable body (a soft, shell or rod component) to this component's location, a
-// rigid body, or another deformable body. Saturation is in [cm].
+/**
+ * Ties nodes of a deformable body (a soft, shell or rod component) to this component's location, a
+ * rigid body, or another deformable body. Saturation is in [cm].
+ */
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class SUPERDEXPHYSICS_API UMochiSoftNodeConstraintComponent : public UMochiConstraintComponentBase {
   GENERATED_BODY()
 
  public:
+  /** Constraint mode to create for the selected nodes. */
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mochi Constraint")
   EMochiSoftNodeConstraintType Type = EMochiSoftNodeConstraintType::NodeToRigid;
-  // The deformable body, by name: "cloth", or "inner/cloth" inside a child actor.
+  /** The deformable body, by name: "cloth", or "inner/cloth" inside a child actor. */
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mochi Constraint")
   FString Body;
-  // The rigid body (Node to Rigid) or the other deformable body (Node to Node).
+  /** The rigid body (Node to Rigid) or the other deformable body (Node to Node). */
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
@@ -68,8 +85,10 @@ class SUPERDEXPHYSICS_API UMochiSoftNodeConstraintComponent : public UMochiConst
           (EditCondition = "Type != EMochiSoftNodeConstraintType::NodePosition",
            EditConditionHides))
   FString OtherBody;
-  // Whether the two bodies can touch once constrained. Contact stays disabled after the
-  // constraints are destroyed.
+  /**
+   * Whether the two bodies can touch once constrained. Contact stays disabled after the
+   * constraints are destroyed.
+   */
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
@@ -78,7 +97,7 @@ class SUPERDEXPHYSICS_API UMochiSoftNodeConstraintComponent : public UMochiConst
           (EditCondition = "Type != EMochiSoftNodeConstraintType::NodePosition",
            EditConditionHides))
   bool bAllowContact = false;
-  // How the node is chosen.
+  /** How the node is chosen. */
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
@@ -89,10 +108,10 @@ class SUPERDEXPHYSICS_API UMochiSoftNodeConstraintComponent : public UMochiConst
   EMochiSoftNodeSelection NodeSelection = mochi::DeformableNodeToRigidConstraintParams{}.findClosest
       ? EMochiSoftNodeSelection::Closest
       : EMochiSoftNodeSelection::Index;
-  // The node of Body.
+  /** The node of Body. */
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mochi Constraint", meta = (ClampMin = "0"))
   int32 NodeIndex = 0;
-  // The node of OtherBody (Node to Node).
+  /** The node of OtherBody (Node to Node). */
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
@@ -102,8 +121,10 @@ class SUPERDEXPHYSICS_API UMochiSoftNodeConstraintComponent : public UMochiConst
            EditCondition = "Type == EMochiSoftNodeConstraintType::NodeToNode",
            EditConditionHides))
   int32 OtherNodeIndex = 0;
-  // Whether the node ties to the rigid body where the node is when the constraint is created,
-  // rather than at RigidLocalPosition.
+  /**
+   * Whether the node ties to the rigid body where the node is when the constraint is created,
+   * rather than at RigidLocalPosition.
+   */
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
@@ -113,8 +134,10 @@ class SUPERDEXPHYSICS_API UMochiSoftNodeConstraintComponent : public UMochiConst
                "Type == EMochiSoftNodeConstraintType::NodeToRigid && NodeSelection != EMochiSoftNodeSelection::InsideRigidBounds",
            EditConditionHides))
   bool bFixToDeformablePosition = mochi::DeformableNodeToRigidConstraintParams{}.fixToDeformablePos;
-  // The point on the rigid body [cm], in its local frame: where the node ties, or the point the
-  // closest node is found from.
+  /**
+   * The point on the rigid body [cm], in its local frame: where the node ties, or the point the
+   * closest node is found from.
+   */
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
@@ -125,11 +148,17 @@ class SUPERDEXPHYSICS_API UMochiSoftNodeConstraintComponent : public UMochiConst
            EditConditionHides))
   FVector RigidLocalPosition = FVector::ZeroVector;
 
-  // Get the indices of the nodes of Body this component constrains, once the constraints exist.
-  // Not known when Mochi chooses the node (Closest).
+  /**
+   * Get the indices of the nodes of Body this component constrains, once the constraints exist.
+   * Not known when Mochi chooses the node (Closest).
+   *
+   * @param OutNodeIndices Storage for the queried node indices.
+   * @return Whether the constrained node indices are known.
+   */
   UFUNCTION(BlueprintCallable, Category = "Mochi Constraint")
   bool GetConstrainedNodeIndices(TArray<int>& OutNodeIndices) const;
 
+  /** Initialize the deformable-node constraint component. */
   UMochiSoftNodeConstraintComponent();
 
  protected:
@@ -139,7 +168,7 @@ class SUPERDEXPHYSICS_API UMochiSoftNodeConstraintComponent : public UMochiConst
       override;
 
  private:
-  // Nodes constrained, written by the Mochi thread when it creates the constraints.
+  /** Nodes constrained, written by the Mochi thread when it creates the constraints. */
   struct FNodes {
     TArray<int> Indices;
     std::atomic<bool> bReady = false;

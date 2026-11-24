@@ -29,32 +29,37 @@ class SMochiModelEditorViewportToolbar : public SCommonEditorViewportToolbarBase
   SLATE_BEGIN_ARGS(SMochiModelEditorViewportToolbar) {}
   SLATE_END_ARGS()
 
-  // Constructs the toolbar
+  /**
+   * Constructs the toolbar
+   *
+   * @param InArgs Slate construction arguments.
+   * @param InInfoProvider Provider of the viewport and its command bindings.
+   */
   void Construct(
       const FArguments& InArgs,
       TSharedPtr<class ICommonEditorViewportToolbarInfoProvider> InInfoProvider);
 
  private:
-  // Populates items in the Show menu, otherwise blank
+  /** Populates items in the Show menu, otherwise blank */
   virtual TSharedRef<SWidget> GenerateShowMenu() const override;
 
-  // Adds more buttons to the toolbar (beyond the Show menu button)
+  /** Adds more buttons to the toolbar (beyond the Show menu button) */
   virtual void ExtendLeftAlignedToolbarSlots(
       TSharedPtr<SHorizontalBox> MainBoxPtr,
       TSharedPtr<SViewportToolBar> ParentToolBarPtr) const override;
 
-  // Hopefully we can "inject" more view modes using this
+  /** Hopefully we can "inject" more view modes using this */
   virtual TSharedPtr<FExtender> GetViewMenuExtender() const override;
 
-  // Lasso vs Box selection
+  /** Lasso vs Box selection */
   TSharedRef<SWidget> GenerateSelectionToolMenu() const;
 
-  // For quickly changing FOV to emulate perspective vs orthographic
+  /** For quickly changing FOV to emulate perspective vs orthographic */
   TSharedRef<SWidget> GenerateCameraProjectionMenu() const;
 
-  // Replaces menu button with "Lasso" or "Box" depending on tool
+  /** Replaces menu button with "Lasso" or "Box" depending on tool */
   FText GetSelectionToolLabel() const;
 
-  // Replaces menu button with "Perspective" or "Faux Orthographic"
+  /** Replaces menu button with "Perspective" or "Faux Orthographic" */
   FText GetCameraProjectionLabel() const;
 };

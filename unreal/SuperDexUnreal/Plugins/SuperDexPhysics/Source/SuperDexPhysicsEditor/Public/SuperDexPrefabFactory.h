@@ -24,15 +24,24 @@
 
 #include "SuperDexPrefabFactory.generated.h"
 
-// Ask the user whether to import AssetName as an actor Blueprint or as a Map. Returns false if
-// they cancel.
+/**
+ * Ask the user whether to import AssetName as an actor Blueprint or as a Map. Returns false if
+ * they cancel.
+ *
+ * @param Title Title shown by the import-mode dialog.
+ * @param AssetName Name of the asset being imported.
+ * @param OutMode Storage for the selected Blueprint or Map import mode.
+ * @return Whether the user selected an import mode rather than cancelling.
+ */
 SUPERDEXPHYSICSEDITOR_API bool PromptForSuperDexPrefabImportMode(
     const FText& Title,
     const FString& AssetName,
     ESuperDexPrefabImportMode& OutMode);
 
-// Imports .superdex_prefab (and the older .mochi_prefab) and .mochi_scene files authored in
-// SuperDex Studio as USuperDexPrefab assets.
+/**
+ * Imports .superdex_prefab (and the older .mochi_prefab) and .mochi_scene files authored in
+ * SuperDex Studio as USuperDexPrefab assets.
+ */
 UCLASS(HideCategories = Object)
 class USuperDexPrefabFactory : public UFactory {
   GENERATED_UCLASS_BODY()
@@ -54,11 +63,13 @@ class USuperDexPrefabFactory : public UFactory {
   FSuperDexImportSession ImportSession;
 };
 
+/** Factory regenerating Unreal prefab outputs from their source files. */
 UCLASS(HideCategories = Object)
 class UReimportSuperDexPrefabFactory : public USuperDexPrefabFactory, public FReimportHandler {
   GENERATED_BODY()
 
  public:
+  /** Initialize the prefab reimport factory. */
   UReimportSuperDexPrefabFactory();
 
   //~ Begin FReimportHandler Interface

@@ -23,12 +23,17 @@
 
 #include "MochiModelThumbnailRenderer.generated.h"
 
-// Shows a Mochi model on a soft mesh actor.
+/** Shows a Mochi model on a soft mesh actor. */
 class SUPERDEXPHYSICSEDITOR_API FMochiModelThumbnailScene : public FMochiThumbnailSceneBase {
  public:
+  /** Initialize the model thumbnail scene. */
   FMochiModelThumbnailScene();
 
-  // The model the next CreateView shows, or null to clear it.
+  /**
+   * The model the next CreateView shows, or null to clear it.
+   *
+   * @param MochiModel Model asset supplied to the operation.
+   */
   void SetMochiModel(class UMochiModel* MochiModel);
 
  protected:

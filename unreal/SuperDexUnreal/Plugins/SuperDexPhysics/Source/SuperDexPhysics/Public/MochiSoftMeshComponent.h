@@ -23,45 +23,52 @@
 
 #include "MochiSoftMeshComponent.generated.h"
 
+/** Dynamic mesh component backed by a native volumetric soft actor. */
 UCLASS(ClassGroup = (Custom), ShowCategories = (Mobility), meta = (BlueprintSpawnableComponent))
 class SUPERDEXPHYSICS_API UMochiSoftMeshComponent : public UMochiDeformableMeshComponent,
                                                     public IMochiSoftMeshComponentInterface {
   GENERATED_BODY()
 
  public:
-  // Parameters controlling physical material properties.
+  /** Parameters controlling physical material properties. */
   UPROPERTY(EditAnywhere, Category = "Mochi")
   UMochiMaterialParams* MaterialParams = nullptr;
+  /** Collider representation used by the soft actor. */
   UPROPERTY(EditAnywhere, Category = "Mochi", meta = (ValidEnumValues = "None, Auto, Sdf"))
   EMochiColliderType ColliderType =
       ::ToUnreal(mochi::experimental::ExperimentalSoftActorParams{}.colliderType);
-  // The boundary element type used for the soft actor's surface discretization.
+  /** The boundary element type used for the soft actor's surface discretization. */
   UPROPERTY(
       EditAnywhere,
       Category = "Mochi",
       meta = (ValidEnumValues = "P1Q1, P1Q3, P1Q6, Default"))
   EMochiActorBoundaryElementType BoundaryElementType =
       ::ToUnreal(mochi::SoftActorParams{}.boundaryElementType);
-  // Use the model's embedded contact skin for contact. Rendering does not depend on this setting:
-  // without a visual mesh, the model's contact skin is rendered whenever it has skinning data.
+  /**
+   * Use the model's embedded contact skin for contact. Rendering does not depend on this setting:
+   * without a visual mesh, the model's contact skin is rendered whenever it has skinning data.
+   */
   UPROPERTY(EditAnywhere, Category = "Mochi", meta = (EditCondition = "!bEnableRom"))
   bool bUseContactSkin = mochi::SoftActorParams{}.useContactSkin;
-  // Modifiers for individual elements that get applied during initialization
+  /** Modifiers for individual elements that get applied during initialization */
   UPROPERTY(EditAnywhere, Category = "Mochi")
   UMochiModelMaterialModifiers* MaterialModifiers = nullptr;
-  // Recomputes local soft actor frame for more optimal performance.
+  /** Recomputes local soft actor frame for more optimal performance. */
   UPROPERTY(EditAnywhere, Category = "Mochi")
   bool bUseRecentering = mochi::experimental::ExperimentalSoftActorParams{}.useRecentering;
-  // Enable volume node positions query.
+  /** Enable volume node positions query. */
   UPROPERTY(EditAnywhere, Category = "Mochi")
   bool bEnableVolumeNodePositionsQuery = false;
-  // Enable elastic energy query.
+  /** Enable elastic energy query. */
   UPROPERTY(EditAnywhere, Category = "Mochi")
   bool bEnableElasticEnergyQuery = false;
-  // TEXCOORD_0 and COLOR_0 (linear RGBA) of the prefab render model, one per visual-mesh node, set
-  // by the prefab importer when the render model is the visual mesh. Either may be empty. They are
-  // drawn only when bUseMochiNodeNormals is set, since flat shading is not supported. Not shown in
-  // the Details panel, which would build a property node per element.
+
+  /**
+   * TEXCOORD_0 and COLOR_0 (linear RGBA) of the prefab render model, one per visual-mesh node, set
+   * by the prefab importer when the render model is the visual mesh. Either may be empty. They are
+   * drawn only when bUseMochiNodeNormals is set, since flat shading is not supported. Not shown in
+   * the Details panel, which would build a property node per element.
+   */
   UPROPERTY()
   TArray<FVector2f> RenderModelUVs;
   UPROPERTY()
@@ -69,10 +76,13 @@ class SUPERDEXPHYSICS_API UMochiSoftMeshComponent : public UMochiDeformableMeshC
 
   // EXPERIMENTAL
 
-  // Enable reduced order model (ROM). The imported .mochi.h5 MochiModel must provide ROM sources
-  // inside of a rom group.
+  /**
+   * Enable reduced order model (ROM). The imported .mochi.h5 MochiModel must provide ROM sources
+   * inside of a rom group.
+   */
   UPROPERTY(EditAnywhere, Category = "MochiSoftMeshComponent|Experimental")
   bool bEnableRom = false;
+  /** Reduced-order-model source and sampling settings. */
   UPROPERTY(
       EditAnywhere,
       Category = "MochiSoftMeshComponent|Experimental",
@@ -80,6 +90,11 @@ class SUPERDEXPHYSICS_API UMochiSoftMeshComponent : public UMochiDeformableMeshC
   FMochiRomParams RomParams;
 
  public:
+  /**
+   * Get the elastic energy collected by the native query.
+   *
+   * @return Elastic energy cached from the native query.
+   */
   UFUNCTION(BlueprintPure, Category = "Mochi")
   float GetElasticEnergy() const {
     return ElasticEnergy;
@@ -91,20 +106,39 @@ class SUPERDEXPHYSICS_API UMochiSoftMeshComponent : public UMochiDeformableMeshC
   virtual UMochiMaterialParams* GetMaterialParams() const override {
     return MaterialParams;
   }
-  // IMochiSoftMeshComponentInterface
+  /**
+   * IMochiSoftMeshComponentInterface
+   *
+   * @return The volume node reference positions.
+   */
   virtual const TArray<FVector>& GetVolumeNodeReferencePositions() const override;
   virtual const TArray<FVector>& GetVolumeNodePositions() const override;
   virtual const void ApplyMaterialModifiers(UMochiModelMaterialModifiers* Modifiers) const override;
 
  public:
+  /**
+   * Initialize the soft mesh component and its native-actor lifecycle settings.
+   *
+   * @param ObjectInitializer Unreal object-initialization settings.
+   */
   UMochiSoftMeshComponent(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
+  /**
+   * Assign the model asset used by this soft component.
+   *
+   * @param NewMochiModel Model asset to assign.
+   */
   void SetMochiModel(UMochiModel* NewMochiModel);
 
   virtual void BeginPlay() override;
 
   // TODO: No the most graceful, but permits a path to create a dynamic mesh component from an
   // existing Mochi actor handle.
+  /**
+   * Configure this component to use an existing native actor handle.
+   *
+   * @param Handle Native actor handle to use for this component.
+   */
   void SetExistingMochiActorHandle(mochi::ActorHandle Handle);
 
   // Begin UObject Interface.
@@ -123,9 +157,10 @@ class SUPERDEXPHYSICS_API UMochiSoftMeshComponent : public UMochiDeformableMeshC
   // existing actor, specifically for skinned hand meshes.
   mochi::ActorHandle MochiExistingActor;
 
-  // Cached node positions in local space.
+  /** Cached node positions in local space. */
   TArray<FVector> VolumeNodeReferencePositions;
   TArray<FVector> VolumeNodePositions;
-  // Total elastic energy in this soft body, relative to rest, received from TryGetQueryData
+
+  /** Total elastic energy in this soft body, relative to rest, received from TryGetQueryData */
   float ElasticEnergy = 0.0f;
 };

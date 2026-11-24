@@ -31,32 +31,57 @@
 class UMochiShellMaterialParams;
 class UMochiRodMaterialParams;
 
-// General purpose query data for use with UMochiActorObject::TryGetQueryData.
+/** General purpose query data for use with UMochiActorObject::TryGetQueryData. */
 struct FMochiActorQueryData {
-  // The root transform of the Mochi actor, in Unreal units (always available).
+  /** The root transform of the Mochi actor, in Unreal units (always available). */
   FTransform RootTransform;
-  // Linear world velocity (always available).
+  /** Linear world velocity (always available). */
   FVector LinearVelocity;
-  // Angular world velocity (always available).
+  /** Angular world velocity (always available). */
   FVector AngularVelocity;
-  // The node positions of the Mochi actor (available if bQueryVolumeNodePositions true).
+  /** The node positions of the Mochi actor (available if bQueryVolumeNodePositions true). */
   TArray<mochi::real> VolumeNodePositions;
-  // The node positions of the Mochi actor (available if bQuerySurfaceNodePositions true).
+  /** The node positions of the Mochi actor (available if bQuerySurfaceNodePositions true). */
   TArray<mochi::real> SurfaceNodePositions;
-  // The node normals of the Mochi actor (available if bQueryNodeNormals true).
+  /** The node normals of the Mochi actor (available if bQueryNodeNormals true). */
   TArray<mochi::real> NodeNormals;
-  // Elastic energy of a soft body relative to rest (available if bQueryElasticEnergy true).
+  /** Elastic energy of a soft body relative to rest (available if bQueryElasticEnergy true). */
   float ElasticEnergy = 0.0f;
-  // The contact points of the Mochi actor (available if bQueryContactPoints true).
+  /** The contact points of the Mochi actor (available if bQueryContactPoints true). */
   TArray<FMochiContactPoint> ContactPoints;
 };
 
+/** Unreal wrapper that creates, queries and updates native rigid and deformable actors. */
 UCLASS()
 class SUPERDEXPHYSICS_API UMochiActorObject : public UObject {
   GENERATED_BODY()
 
  public:
-  // Creates a rigid Mochi actor from a tetrahedral mesh.
+  /**
+   * Creates a rigid Mochi actor from a tetrahedral mesh.
+   *
+   * @param Outer Unreal outer for the created wrapper object.
+   * @param ActorName Name to assign to the created native actor.
+   * @param WorldFromLocal Actor local-to-world transform.
+   * @param Model Model or mesh supplying actor geometry.
+   * @param MaterialParams Material-parameter asset supplied to the operation.
+   * @param ContactParams Contact-parameter asset or native values supplied to the operation.
+   * @param ColliderType Native collider representation.
+   * @param Layer Native contact layer.
+   * @param bIsStatic Whether the created actor is static.
+   * @param bHasGravity Whether gravity affects the created actor.
+   * @param BoundaryElementType Boundary discretization used for contact sampling.
+   * @param BoundarySubsampling Boundary-subsampling parameters supplied to actor creation.
+   * @param GridSdfParams Grid signed-distance-field parameters supplied to actor creation.
+   * @param MassOverride Mass override supplied to actor creation.
+   * @param CenterOfMassOverride Center-of-mass override supplied to actor creation.
+   * @param MomentOfInertiaOverride Inertia override supplied to actor creation.
+   * @param bQuerySurfaceNodePositions Whether to register surface-node position queries.
+   * @param bQueryNodeNormals Whether to register node-normal queries.
+   * @param bQueryContactPoints Whether to register contact-point queries.
+   * @param Scene Scene wrapper associated with the operation.
+   * @return The object returned by creation.
+   */
   static UMochiActorObject* CreateRigid(
       UObject* Outer,
       FString ActorName,
@@ -80,6 +105,32 @@ class SUPERDEXPHYSICS_API UMochiActorObject : public UObject {
       bool bQueryContactPoints = false,
       UMochiSceneObject* Scene = nullptr);
 
+  /**
+   * Create a rigid actor wrapper from collision geometry extracted from a static mesh.
+   *
+   * @param Outer Unreal outer for the created wrapper object.
+   * @param ActorName Name to assign to the created native actor.
+   * @param WorldFromLocal Actor local-to-world transform.
+   * @param Model Model or mesh supplying actor geometry.
+   * @param CollisionSource Static-mesh collision geometry to extract.
+   * @param MaterialParams Material-parameter asset supplied to the operation.
+   * @param ContactParams Contact-parameter asset or native values supplied to the operation.
+   * @param ColliderType Native collider representation.
+   * @param Layer Native contact layer.
+   * @param bIsStatic Whether the created actor is static.
+   * @param bHasGravity Whether gravity affects the created actor.
+   * @param BoundaryElementType Boundary discretization used for contact sampling.
+   * @param BoundarySubsampling Boundary-subsampling parameters supplied to actor creation.
+   * @param GridSdfParams Grid signed-distance-field parameters supplied to actor creation.
+   * @param MassOverride Mass override supplied to actor creation.
+   * @param CenterOfMassOverride Center-of-mass override supplied to actor creation.
+   * @param MomentOfInertiaOverride Inertia override supplied to actor creation.
+   * @param bQuerySurfaceNodePositions Whether to register surface-node position queries.
+   * @param bQueryNodeNormals Whether to register node-normal queries.
+   * @param bQueryContactPoints Whether to register contact-point queries.
+   * @param Scene Scene wrapper associated with the operation.
+   * @return The object returned by creation.
+   */
   static UMochiActorObject* CreateRigidFromSurfaceMesh(
       UObject* Outer,
       FString ActorName,
@@ -104,6 +155,31 @@ class SUPERDEXPHYSICS_API UMochiActorObject : public UObject {
       bool bQueryContactPoints = false,
       UMochiSceneObject* Scene = nullptr);
 
+  /**
+   * Create a rigid actor wrapper from an existing native shape.
+   *
+   * @param Outer Unreal outer for the created wrapper object.
+   * @param ActorName Name to assign to the created native actor.
+   * @param WorldFromLocal Actor local-to-world transform.
+   * @param ModelShape Native shape handle supplying rigid geometry.
+   * @param MaterialParams Material-parameter asset supplied to the operation.
+   * @param ContactParams Contact-parameter asset or native values supplied to the operation.
+   * @param ColliderType Native collider representation.
+   * @param Layer Native contact layer.
+   * @param bIsStatic Whether the created actor is static.
+   * @param bHasGravity Whether gravity affects the created actor.
+   * @param BoundaryElementType Boundary discretization used for contact sampling.
+   * @param BoundarySubsampling Boundary-subsampling parameters supplied to actor creation.
+   * @param GridSdfParams Grid signed-distance-field parameters supplied to actor creation.
+   * @param MassOverride Mass override supplied to actor creation.
+   * @param CenterOfMassOverride Center-of-mass override supplied to actor creation.
+   * @param MomentOfInertiaOverride Inertia override supplied to actor creation.
+   * @param bQuerySurfaceNodePositions Whether to register surface-node position queries.
+   * @param bQueryNodeNormals Whether to register node-normal queries.
+   * @param bQueryContactPoints Whether to register contact-point queries.
+   * @param Scene Scene wrapper associated with the operation.
+   * @return The object returned by creation.
+   */
   static UMochiActorObject* CreateRigidFromMochiShape(
       UObject* Outer,
       FString ActorName,
@@ -127,7 +203,30 @@ class SUPERDEXPHYSICS_API UMochiActorObject : public UObject {
       bool bQueryContactPoints = false,
       UMochiSceneObject* Scene = nullptr);
 
-  // Creates a soft Mochi actor.
+  /**
+   * Creates a soft Mochi actor.
+   *
+   * @param Outer Unreal outer for the created wrapper object.
+   * @param ActorName Name to assign to the created native actor.
+   * @param WorldFromLocal Actor local-to-world transform.
+   * @param Model Model or mesh supplying actor geometry.
+   * @param MaterialParams Material-parameter asset supplied to the operation.
+   * @param ContactParams Contact-parameter asset or native values supplied to the operation.
+   * @param ColliderType Native collider representation.
+   * @param Layer Native contact layer.
+   * @param bHasGravity Whether gravity affects the created actor.
+   * @param BoundaryElementType Boundary discretization used for contact sampling.
+   * @param bUseContactSkin Whether to use the model contact skin.
+   * @param RomParams Reduced-order-model settings supplied to actor creation.
+   * @param bUseRecentering Whether to enable native actor recentering.
+   * @param bQuerySurfaceNodePositions Whether to register surface-node position queries.
+   * @param bQueryVolumeNodePositions Whether to register volume-node position queries.
+   * @param bQueryNodeNormals Whether to register node-normal queries.
+   * @param bQueryContactPoints Whether to register contact-point queries.
+   * @param bQueryElasticEnergy Whether to register an elastic-energy query.
+   * @param Scene Scene wrapper associated with the operation.
+   * @return The object returned by creation.
+   */
   static UMochiActorObject* CreateSoft(
       UObject* Outer,
       FString ActorName,
@@ -150,7 +249,27 @@ class SUPERDEXPHYSICS_API UMochiActorObject : public UObject {
       bool bQueryElasticEnergy = false,
       UMochiSceneObject* Scene = nullptr);
 
-  // Creates a shell Mochi actor from a triangular mesh.
+  /**
+   * Creates a shell Mochi actor from a triangular mesh.
+   *
+   * @param Outer Unreal outer for the created wrapper object.
+   * @param ActorName Name to assign to the created native actor.
+   * @param WorldFromLocal Actor local-to-world transform.
+   * @param Shape Native shape handle supplying actor geometry.
+   * @param ShellMaterialParams Shell-material asset supplied to actor creation.
+   * @param ContactParams Contact-parameter asset or native values supplied to the operation.
+   * @param ColliderType Native collider representation.
+   * @param Layer Native contact layer.
+   * @param bHasGravity Whether gravity affects the created actor.
+   * @param PointCloudParams Point-cloud collider parameters supplied to actor creation.
+   * @param bUseContactSkin Whether to use the model contact skin.
+   * @param ContactElementType Contact-sampling discretization.
+   * @param bQuerySurfaceNodePositions Whether to register surface-node position queries.
+   * @param bQueryNodeNormals Whether to register node-normal queries.
+   * @param bQueryContactPoints Whether to register contact-point queries.
+   * @param Scene Scene wrapper associated with the operation.
+   * @return The object returned by creation.
+   */
   static UMochiActorObject* CreateShell(
       UObject* Outer,
       FString ActorName,
@@ -169,7 +288,28 @@ class SUPERDEXPHYSICS_API UMochiActorObject : public UObject {
       bool bQueryContactPoints = false,
       UMochiSceneObject* Scene = nullptr);
 
-  // Creates a rod Mochi actor from a polyline mesh with an optional contact skin.
+  /**
+   * Creates a rod Mochi actor from a polyline mesh with an optional contact skin.
+   *
+   * @param Outer Unreal outer for the created wrapper object.
+   * @param ActorName Name to assign to the created native actor.
+   * @param WorldFromLocal Actor local-to-world transform.
+   * @param Shape Native shape handle supplying actor geometry.
+   * @param RodMaterialParams Rod-material asset supplied to actor creation.
+   * @param ContactParams Contact-parameter asset or native values supplied to the operation.
+   * @param ColliderType Native collider representation.
+   * @param Layer Native contact layer.
+   * @param bHasGravity Whether gravity affects the created actor.
+   * @param PointCloudParams Point-cloud collider parameters supplied to actor creation.
+   * @param bUseContactSkin Whether to use the model contact skin.
+   * @param ContactElementType Contact-sampling discretization.
+   * @param ContactSkinElementType Boundary discretization used for contact-skin sampling.
+   * @param bQuerySurfaceNodePositions Whether to register surface-node position queries.
+   * @param bQueryNodeNormals Whether to register node-normal queries.
+   * @param bQueryContactPoints Whether to register contact-point queries.
+   * @param Scene Scene wrapper associated with the operation.
+   * @return The object returned by creation.
+   */
   static UMochiActorObject* CreateRod(
       UObject* Outer,
       FString ActorName,
@@ -190,7 +330,19 @@ class SUPERDEXPHYSICS_API UMochiActorObject : public UObject {
       bool bQueryContactPoints = false,
       UMochiSceneObject* Scene = nullptr);
 
-  // Creates a UMochiActorObject wrapper around an existing Mochi actor handle.
+  /**
+   * Creates a UMochiActorObject wrapper around an existing Mochi actor handle.
+   *
+   * @param Outer Unreal outer for the created wrapper object.
+   * @param MochiActorHandle Handle of the existing native actor.
+   * @param bQuerySurfaceNodePositions Whether to register surface-node position queries.
+   * @param bQueryVolumeNodePositions Whether to register volume-node position queries.
+   * @param bQueryNodeNormals Whether to register node-normal queries.
+   * @param bQueryContactPoints Whether to register contact-point queries.
+   * @param Scene Scene wrapper associated with the operation.
+   * @param bUseContactSkinIfPresent Whether to use an available model contact skin.
+   * @return The object returned by creation.
+   */
   static UMochiActorObject* CreateFromExistingActor(
       UObject* Outer,
       mochi::ActorHandle MochiActorHandle,
@@ -201,7 +353,20 @@ class SUPERDEXPHYSICS_API UMochiActorObject : public UObject {
       UMochiSceneObject* Scene = nullptr,
       bool bUseContactSkinIfPresent = false);
 
-  // Creates a static rigid implicit plane.
+  /**
+   * Creates a static rigid implicit plane.
+   *
+   * @param Outer Unreal outer for the created wrapper object.
+   * @param ActorName Name to assign to the created native actor.
+   * @param WorldFromLocal Actor local-to-world transform.
+   * @param Normal Normal of the implicit plane.
+   * @param Distance Offset of the implicit plane.
+   * @param MaterialParams Material-parameter asset supplied to the operation.
+   * @param ContactParams Contact-parameter asset or native values supplied to the operation.
+   * @param Layer Native contact layer.
+   * @param Scene Scene wrapper associated with the operation.
+   * @return The object returned by creation.
+   */
   static UMochiActorObject* CreateImplicitPlane(
       UObject* Outer,
       FString ActorName,
@@ -213,7 +378,20 @@ class SUPERDEXPHYSICS_API UMochiActorObject : public UObject {
       FName Layer,
       UMochiSceneObject* Scene = nullptr);
 
-  // Creates a static rigid implicit sphere.
+  /**
+   * Creates a static rigid implicit sphere.
+   *
+   * @param Outer Unreal outer for the created wrapper object.
+   * @param ActorName Name to assign to the created native actor.
+   * @param WorldFromLocal Actor local-to-world transform.
+   * @param Center Center of the implicit sphere.
+   * @param Radius Radius of the implicit sphere.
+   * @param MaterialParams Material-parameter asset supplied to the operation.
+   * @param ContactParams Contact-parameter asset or native values supplied to the operation.
+   * @param Layer Native contact layer.
+   * @param Scene Scene wrapper associated with the operation.
+   * @return The object returned by creation.
+   */
   static UMochiActorObject* CreateImplicitSphere(
       UObject* Outer,
       FString ActorName,
@@ -226,42 +404,96 @@ class SUPERDEXPHYSICS_API UMochiActorObject : public UObject {
       UMochiSceneObject* Scene = nullptr);
 
  public:
-  // Returns true if the MochiActorObject is associated with valid Scene and Mochi actor handle.
+  /**
+   * Returns true if the MochiActorObject is associated with valid Scene and Mochi actor handle.
+   *
+   * @return Whether a native scene is assigned and the actor handle is non-invalid.
+   */
   bool IsValid() const;
-  // Get the Scene this Mochi actor is associated with.
+  /**
+   * Get the Scene this Mochi actor is associated with.
+   *
+   * @return The scene wrapper associated with the actor.
+   */
   UMochiSceneObject* GetMochiScene() const;
-  // Get the Mochi actor handle.
+  /**
+   * Get the Mochi actor handle.
+   *
+   * @return The native actor handle associated with the wrapper.
+   */
   mochi::ActorHandle GetMochiActorHandle() const;
-  // Try to get the latest query data if available.
+  /**
+   * Try to get the latest query data if available.
+   *
+   * @param Callback Callback supplied to the query or command.
+   */
   void TryGetQueryData(TFunctionRef<void(const FMochiActorQueryData& QueryData)> Callback);
-  // Set the root transform of the Mochi actor.
+  /**
+   * Set the root transform of the Mochi actor.
+   *
+   * @param WorldFromLocal Actor local-to-world transform.
+   * @param bBlocking Whether to wait for queued commands after submitting this operation.
+   */
   void SetRootTransform(const FTransform& WorldFromLocal, bool bBlocking = false) const;
-  // Set the contact params of the Mochi actor.
+  /**
+   * Set the contact params of the Mochi actor.
+   *
+   * @param ContactParams Contact-parameter asset or native values supplied to the operation.
+   * @param bBlocking Whether to wait for queued commands after submitting this operation.
+   */
   void SetContactParams(const UMochiContactParams* ContactParams, bool bBlocking = false) const;
-  // Set the material params of the Mochi actor.
+  /**
+   * Set the material params of the Mochi actor.
+   *
+   * @param MaterialParams Material-parameter asset supplied to the operation.
+   * @param bBlocking Whether to wait for queued commands after submitting this operation.
+   */
   void SetMaterialParams(const UMochiMaterialParams* MaterialParams, bool bBlocking = false);
-  // Set the material params of individual element(s) in the Mochi actor
-  // by default is additive, but can be reset to original first.
+  /**
+   * Set the material params of individual element(s) in the Mochi actor
+   * by default is additive, but can be reset to original first.
+   *
+   * @param Modifiers Element material modifiers to apply.
+   * @param bResetExisting Whether to reset existing element modifiers before applying these values.
+   * @param bBlocking Whether to wait for queued commands after submitting this operation.
+   */
   void ApplyMaterialModifiers(
       const TMap<int, FMochiMaterialModifier>& Modifiers,
       bool bResetExisting = false,
       bool bBlocking = false);
-  // Retrieve cached pointer to last set material parameters.
+  /**
+   * Retrieve cached pointer to last set material parameters.
+   *
+   * @return The material params.
+   */
   const UMochiMaterialParams* GetMaterialParams() const;
-  // Set linear and angular velocity of the Mochi actor
+  /**
+   * Set linear and angular velocity of the Mochi actor
+   *
+   * @param LinearVelocity Linear velocity to apply.
+   * @param AngularVelocity Angular velocity to apply.
+   */
   void SetVelocity(FVector LinearVelocity, FVector AngularVelocity) const;
-  // Get inertial properties of the actor (mass [kg], COM [cm], MOI [kg*cm^2])
+  /**
+   * Get inertial properties of the actor (mass [kg], COM [cm], MOI [kg*cm^2])
+   *
+   * @param Mass Mass storage supplied to the native query.
+   * @param CenterOfMass Center-of-mass storage supplied to the native query.
+   * @param MomentOfInertia Inertia storage supplied to the native query.
+   */
   void GetInertialParams(
       double& Mass,
       FVector& CenterOfMass,
       FMochiMomentOfInertia& MomentOfInertia) const;
-  // Force destroy the underlying Mochi actor and cancel the registered query callback.
-  // This will also happen in BeginDestroy when GC'd. If bDestroyMochiActorOnObjectDestruction
-  // is false, the actor will NOT be destroyed and is assumed to be destroyed elsewhere afterwards.
+  /**
+   * Force destroy the underlying Mochi actor and cancel the registered query callback.
+   * This will also happen in BeginDestroy when GC'd. If bDestroyMochiActorOnObjectDestruction
+   * is false, the actor will NOT be destroyed and is assumed to be destroyed elsewhere afterwards.
+   */
   void DestroyMochiResources();
 
  protected:
-  // Ensures Mochi actor is destroyed when this UMochiActorObject is GC.
+  /** Ensures Mochi actor is destroyed when this UMochiActorObject is GC. */
   virtual void BeginDestroy() override;
 
  private:
@@ -281,12 +513,14 @@ class SUPERDEXPHYSICS_API UMochiActorObject : public UObject {
   void ExtractQueryData_Internal(const mochi::Actor* Actor, mochi::Scene* Scene);
 
  public:
-  // [ADVANCED] If true, the destruction/GC of this MochiActorObject will destroy
-  // the underlying Mochi actor. This is the DEFAULT behavior. The only reason to
-  // set this to false is if the actor lifetime needs to be managed by a higher
-  // level object, component, or system (a.g. articulated actors). Note that
-  // registered queries owned by this MochiActorObject WILL be canceled regardless
-  // of what this is set to.
+  /**
+   * [ADVANCED] If true, the destruction/GC of this MochiActorObject will destroy
+   * the underlying Mochi actor. This is the DEFAULT behavior. The only reason to
+   * set this to false is if the actor lifetime needs to be managed by a higher
+   * level object, component, or system (a.g. articulated actors). Note that
+   * registered queries owned by this MochiActorObject WILL be canceled regardless
+   * of what this is set to.
+   */
   bool bDestroyMochiActorOnObjectDestruction = true;
 
  private:
@@ -302,10 +536,10 @@ class SUPERDEXPHYSICS_API UMochiActorObject : public UObject {
   bool bUseContactSkinIfPresent = false;
   mochi::CallbackHandle ExtractQueryDataCallbackHandle = {};
 
-  // Cached copy of material parameters to avoid having to query the Mochi actor
+  /** Cached copy of material parameters to avoid having to query the Mochi actor */
   const UMochiMaterialParams* MochiMaterialParams = nullptr;
 
-  // Query data synchronization from Mochi thread to UE thread
+  /** Query data synchronization from Mochi thread to UE thread */
   FCriticalSection PendingQueryDataLock;
   FMochiActorQueryData QueryDataStorage[3];
   FMochiActorQueryData* MochiThreadQueryData = &QueryDataStorage[0];

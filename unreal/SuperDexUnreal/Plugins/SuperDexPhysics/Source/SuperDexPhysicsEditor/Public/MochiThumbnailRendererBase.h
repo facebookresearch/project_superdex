@@ -26,14 +26,17 @@
 class FCanvas;
 class FRenderTarget;
 
-// A thumbnail preview scene that shows one transient actor resting on the floor, framed by its
-// bounds.
+/**
+ * A thumbnail preview scene that shows one transient actor resting on the floor, framed by its
+ * bounds.
+ */
 class SUPERDEXPHYSICSEDITOR_API FMochiThumbnailSceneBase : public FThumbnailPreviewScene {
  public:
+  /** Initialize the shared asset-thumbnail scene. */
   FMochiThumbnailSceneBase();
 
  protected:
-  // Spawns the actor the scene shows.
+  /** Spawns the actor the scene shows. */
   template <typename TActor>
   TActor* SpawnShownActor() {
     FActorSpawnParameters SpawnParams;
@@ -43,12 +46,16 @@ class SUPERDEXPHYSICSEDITOR_API FMochiThumbnailSceneBase : public FThumbnailPrev
     return GetWorld()->SpawnActor<TActor>(SpawnParams);
   }
 
-  // Moves Actor so that the bounds GetBounds returns with the actor at the origin are centered
-  // over the origin and rest on the floor.
+  /**
+   * Moves Actor so that the bounds GetBounds returns with the actor at the origin are centered
+   * over the origin and rest on the floor.
+   */
   void SetOnFloor(AActor& Actor, TFunctionRef<FBoxSphereBounds()> GetBounds) const;
 
-  // View parameters that fit a sphere of FramedRadius around floor-placed Bounds into a view of
-  // FOVDegrees, orbiting at the default scene thumbnail angles.
+  /**
+   * View parameters that fit a sphere of FramedRadius around floor-placed Bounds into a view of
+   * FOVDegrees, orbiting at the default scene thumbnail angles.
+   */
   void FrameBounds(
       const FBoxSphereBounds& Bounds,
       double FramedRadius,
@@ -59,14 +66,16 @@ class SUPERDEXPHYSICSEDITOR_API FMochiThumbnailSceneBase : public FThumbnailPrev
       float& OutOrbitZoom) const;
 };
 
-// Base class of the Mochi asset thumbnail renderers: renders a preview scene into the thumbnail.
+/**
+ * Base class of the Mochi asset thumbnail renderers: renders a preview scene into the thumbnail.
+ */
 UCLASS(Abstract, config = Editor)
 class SUPERDEXPHYSICSEDITOR_API UMochiThumbnailRendererBase
     : public UDefaultSizedThumbnailRenderer {
   GENERATED_BODY()
 
  protected:
-  // The scene in Scene, created on first use and again if its world has gone away.
+  /** The scene in Scene, created on first use and again if its world has gone away. */
   template <typename TScene>
   static TScene& GetOrCreateScene(TUniquePtr<TScene>& Scene) {
     if (!Scene || !ensure(Scene->GetWorld() != nullptr)) {
@@ -80,7 +89,7 @@ class SUPERDEXPHYSICSEDITOR_API UMochiThumbnailRendererBase
     return *Scene;
   }
 
-  // Renders the view of Scene into the thumbnail rectangle.
+  /** Renders the view of Scene into the thumbnail rectangle. */
   void RenderScene(
       const FThumbnailPreviewScene& Scene,
       int32 X,

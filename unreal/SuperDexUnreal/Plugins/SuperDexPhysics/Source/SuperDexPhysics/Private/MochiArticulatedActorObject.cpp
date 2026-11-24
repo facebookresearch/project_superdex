@@ -414,6 +414,8 @@ UMochiArticulatedActorObject* UMochiArticulatedActorObject::CreateFromExistingAr
   }
   FActorSetupData SetupData;
   mochi::ErrorLog E{};
+  // Reference captures rely on the wait below before this scope ends. It completes queued work
+  // only off the async simulation thread; synchronous scenes run this callback inline.
   Scene->QueueOrExecuteCommand([&](mochi::Scene* SyncScene) {
     mochi::Actor* ArticulatedActor = SyncScene->GetActor(ArticulatedActorHandle);
     if (!ArticulatedActor) {
@@ -928,6 +930,8 @@ TArray<UMochiContactParams*> UMochiArticulatedActorObject::GetLinkContactParams(
   }
   ContactParams.SetNum(LinkActorHandles.Num());
   for (int i = 0; i < LinkActorHandles.Num(); ++i) {
+    // Captured result storage stays in this scope through the wait below. That wait completes
+    // queued work only off the async simulation thread; synchronous scenes run inline.
     MochiSceneObject->QueueOrExecuteActorCommand(
         LinkActorHandles[i], [&ContactParams, i](mochi::Actor* Actor) {
           mochi::ErrorLog E{};
@@ -1038,6 +1042,8 @@ void UMochiArticulatedActorObject::SetLinkDensity(int LinkIndex, float Density, 
 void UMochiArticulatedActorObject::DestroyMochiResources() {
   MOCHI_PROFILE_SCOPE();
   if (MochiSceneObject) {
+    // The wait below precedes resetting callback/member state. It completes queued work only
+    // off the async simulation thread; synchronous scenes run this callback inline.
     MochiSceneObject->QueueOrExecuteCommand([&](mochi::Scene* Scene) {
       mochi::ErrorLog E{};
       Scene->CancelCallback(ExtractQueryDataCallbackHandle);

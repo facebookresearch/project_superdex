@@ -46,12 +46,14 @@ class FMochiArticulationEditorPreviewScene;
 // TOOLKIT (ENTRY POINT)
 //------------------------------------------------------------------------------
 
+/** Asset editor for articulation definitions and previews. */
 class SUPERDEXPHYSICSEDITOR_API FMochiArticulationEditorToolkit : public FAssetEditorToolkit,
                                                                   public FNotifyHook {
  private:
   using Super = FAssetEditorToolkit;
 
  public:
+  /** Initialize the articulation asset editor toolkit. */
   FMochiArticulationEditorToolkit();
   virtual ~FMochiArticulationEditorToolkit() override;
 
@@ -63,6 +65,11 @@ class SUPERDEXPHYSICSEDITOR_API FMochiArticulationEditorToolkit : public FAssetE
   virtual FLinearColor GetWorldCentricTabColorScale() const override;
   virtual void RegisterTabSpawners(const TSharedRef<class FTabManager>& InTabManager) override;
   virtual void UnregisterTabSpawners(const TSharedRef<class FTabManager>& InTabManager) override;
+  /**
+   * Get the articulation editor's tab layout.
+   *
+   * @return The default layout.
+   */
   const TSharedRef<FTabManager::FLayout> GetDefaultLayout() const;
   virtual void CreateEditorModeManager() override;
   virtual void OnClose() override;
@@ -76,36 +83,104 @@ class SUPERDEXPHYSICSEDITOR_API FMochiArticulationEditorToolkit : public FAssetE
   // End FNotifyHookInterface
 
  public:
+  /**
+   * Get the articulation asset being edited.
+   *
+   * @return The articulation.
+   */
   TObjectPtr<UMochiArticulationBase> GetArticulation();
+  /**
+   * Create the articulation-details tab.
+   *
+   * @param Args Tab-spawning arguments.
+   * @return The tab containing articulation details.
+   */
   TSharedRef<SDockTab> SpawnTab_Details(const FSpawnTabArgs& Args);
+  /**
+   * Create the articulation-preview tab.
+   *
+   * @param Args Tab-spawning arguments.
+   * @return The tab containing the articulation preview.
+   */
   TSharedRef<SDockTab> SpawnTab_Viewport(const FSpawnTabArgs& Args);
+  /** Bind articulation-editor actions to commands. */
   void BindCommands();
+  /**
+   * Create the articulation editor's preview scene.
+   *
+   * @return The object returned by creation.
+   */
   TSharedPtr<FMochiArticulationEditorPreviewScene> CreatePreviewScene();
+  /** Add articulation-editor toolbar extensions. */
   void ExtendToolbars();
+  /** Focus the articulation preview viewport. */
   void FocusViewport();
+  /** Toggle the preview screen-percentage setting. */
   void ToggleScreenPercentage() const;
+  /** Export the articulation as URDF. */
   void Export() const;
+  /**
+   * Get whether the articulation can be exported as URDF.
+   *
+   * @return Whether the articulation supports URDF export.
+   */
   bool CanExport() const;
+  /** Generate the articulation's skeletal mesh. */
   void GenerateSkeletalMesh() const;
+  /**
+   * Get whether skeletal-mesh generation is available.
+   *
+   * @return Whether the editor holds an asset of type UMochiArticulation.
+   */
   bool CanGenerateSkeletalMesh() const;
+  /** Generate a source header describing the articulation skeleton. */
   void GenerateSkeletonHeader() const;
+  /**
+   * Get whether skeleton-header generation is available.
+   *
+   * @return Whether skeleton-header generation is available for the articulation.
+   */
   bool CanGenerateSkeletonHeader() const;
+  /**
+   * Handle modifications to objects used by the editor.
+   *
+   * @param InObject Object whose modification is being handled.
+   */
   void OnObjectModified(UObject* InObject);
+  /**
+   * Open the articulation asset in the requested editor mode and host.
+   *
+   * @param Mode Editor or prefab import mode.
+   * @param InitToolkitHost Host for the asset editor.
+   * @param ObjectToEdit Asset to open in the editor.
+   */
   void InitEditor(
       const EToolkitMode::Type Mode,
       const TSharedPtr<class IToolkitHost>& InitToolkitHost,
       UMochiArticulationBase* ObjectToEdit);
 
  public:
+  /**
+   * Create and initialize an articulation asset editor.
+   *
+   * @param Mode Editor or prefab import mode.
+   * @param InitToolkitHost Host for the asset editor.
+   * @param ObjectToEdit Asset to open in the editor.
+   * @return The newly initialized asset editor.
+   */
   static TSharedRef<FMochiArticulationEditorToolkit> CreateEditor(
       const EToolkitMode::Type Mode,
       const TSharedPtr<IToolkitHost>& InitToolkitHost,
       UMochiArticulationBase* ObjectToEdit);
 
  public:
+  /** Identifier used to register the articulation viewport tab. */
   static const FName ViewportTabID;
+  /** Identifier used to register the articulation details tab. */
   static const FName DetailsTabID;
+  /** High preview-render resolution percentage. */
   static constexpr int HighPreviewScreenPercentage = 200;
+  /** Nominal preview-render resolution percentage. */
   static constexpr int NominalPreviewScreenPercentage = 100;
 
  private:
@@ -120,8 +195,10 @@ class SUPERDEXPHYSICSEDITOR_API FMochiArticulationEditorToolkit : public FAssetE
 // COMMANDS
 //------------------------------------------------------------------------------
 
+/** Commands exposed by the articulation editor. */
 class FMochiArticulationEditorCommands : public TCommands<FMochiArticulationEditorCommands> {
  public:
+  /** Initialize the articulation editor's command context. */
   FMochiArticulationEditorCommands()
       : TCommands<FMochiArticulationEditorCommands>(
             "MochiArticulationEditor",
@@ -131,17 +208,23 @@ class FMochiArticulationEditorCommands : public TCommands<FMochiArticulationEdit
 
   // Viewport manipulation
   TSharedPtr<FUICommandInfo> FocusViewport;
-  // Preview screen percentage/resolution
+
+  /** Preview screen percentage/resolution */
   TSharedPtr<FUICommandInfo> ToggleScreenPercentage;
-  // Export
+
+  /** Export */
   TSharedPtr<FUICommandInfo> Export;
-  // Regenerate the skeletal mesh of a UMochiArticulation
+
+  /** Regenerate the skeletal mesh of a UMochiArticulation */
   TSharedPtr<FUICommandInfo> GenerateSkeletalMesh;
-  // Write a SuperDexSkeleton header for the skeletal mesh (MochiSkeletonHeaderExport)
+
+  /** Write a SuperDexSkeleton header for the skeletal mesh (MochiSkeletonHeaderExport) */
   TSharedPtr<FUICommandInfo> GenerateSkeletonHeader;
   // Articulation "Show" menu
   TSharedPtr<FUICommandInfo> SetShowLinkTransforms;
+  /** Command controlling joint annotations in the viewport. */
   TSharedPtr<FUICommandInfo> SetShowJoints;
+  /** Command controlling visual-bounds annotations in the viewport. */
   TSharedPtr<FUICommandInfo> SetShowBounds;
 
   virtual void RegisterCommands() override;
@@ -151,6 +234,7 @@ class FMochiArticulationEditorCommands : public TCommands<FMochiArticulationEdit
 // VIEWPORT CLIENT
 //------------------------------------------------------------------------------
 
+/** Object retaining materials used by the articulation preview viewport. */
 UCLASS()
 class UMochiArticulationEditorViewportClientMaterials : public UObject {
   GENERATED_BODY()
@@ -176,8 +260,17 @@ class UMochiArticulationEditorViewportClientMaterials : public UObject {
   bool bShow##NAME = false;
 #endif
 
+/** Viewport client rendering articulation previews and debug annotations. */
 class FMochiArticulationEditorViewportClient : public FEditorViewportClient {
  public:
+  /**
+   * Create a viewport client for the articulation preview.
+   *
+   * @param InEditorViewport Viewport widget associated with this client.
+   * @param InPreviewScene Scene containing the preview objects.
+   * @param InArticulation Articulation asset supplied to the operation.
+   * @param InPreviewMeshComponent Mesh component displayed in the preview.
+   */
   FMochiArticulationEditorViewportClient(
       const TSharedRef<SMochiArticulationEditorViewport> InEditorViewport,
       const TSharedRef<FAdvancedPreviewScene> InPreviewScene,
@@ -186,6 +279,11 @@ class FMochiArticulationEditorViewportClient : public FEditorViewportClient {
 
  public:
   // Begin FEditorViewportClient Overrides
+  /**
+   * Select the manipulation mode stored by this articulation viewport.
+   *
+   * @param NewMode Requested editor viewport widget mode.
+   */
   virtual void SetWidgetMode(UE::Widget::EWidgetMode NewMode) override;
   virtual UE::Widget::EWidgetMode GetWidgetMode() const override;
   virtual bool CanSetWidgetMode(UE::Widget::EWidgetMode NewMode) const override;
@@ -193,10 +291,25 @@ class FMochiArticulationEditorViewportClient : public FEditorViewportClient {
   virtual void DrawCanvas(FViewport& InViewport, FSceneView& View, FCanvas& Canvas) override;
   // End FEditorViewportClient Overrides
 
+  /**
+   * Draw articulation geometry and debug annotations in the viewport.
+   *
+   * @param Articulation Articulation asset supplied to the operation.
+   * @param View Scene view used for editor rendering.
+   * @param PDI Primitive drawing interface used for debug geometry.
+   */
   void DrawArticulation(
       UMochiArticulation* Articulation,
       const FSceneView* View,
       FPrimitiveDrawInterface* PDI);
+  /**
+   * Draw articulation annotations on the viewport canvas.
+   *
+   * @param Articulation Articulation asset supplied to the operation.
+   * @param InViewport Viewport used by the editor operation.
+   * @param View Scene view used for editor rendering.
+   * @param Canvas Canvas used for editor annotations.
+   */
   void DrawCanvasArticulation(
       UMochiArticulation* Articulation,
       FViewport& InViewport,
@@ -210,6 +323,12 @@ class FMochiArticulationEditorViewportClient : public FEditorViewportClient {
   // End FGCObject Interface
 
  public:
+  /**
+   * Set the articulation and mesh component shown in the preview.
+   *
+   * @param InArticulation Articulation asset supplied to the operation.
+   * @param InPreviewMeshComponent Mesh component displayed in the preview.
+   */
   void SetPreviewMesh(
       UMochiArticulationBase* InArticulation,
       UMochiArticulationPreviewComponent* InPreviewMeshComponent);
@@ -220,7 +339,9 @@ class FMochiArticulationEditorViewportClient : public FEditorViewportClient {
   MOCHI_ARTICULATION_VIEWPORT_SHOW(Bounds)
 
  public:
+  /** Viewport widget associated with this client. */
   TWeakPtr<SMochiArticulationEditorViewport> ViewportPtr;
+  /** Manipulation mode stored by this viewport client. */
   UE::Widget::EWidgetMode WidgetMode;
 
  private:
@@ -235,10 +356,17 @@ class FMochiArticulationEditorViewportClient : public FEditorViewportClient {
 // VIEWPORT TOOLBAR SLATE
 //------------------------------------------------------------------------------
 
+/** Toolbar widget for the articulation preview viewport. */
 class SMochiArticulationEditorViewportToolbar : public SCommonEditorViewportToolbarBase {
  public:
   SLATE_BEGIN_ARGS(SMochiArticulationEditorViewportToolbar) {}
   SLATE_END_ARGS()
+  /**
+   * Construct the viewport toolbar using its information provider.
+   *
+   * @param InArgs Slate construction arguments.
+   * @param InInfoProvider Provider of the viewport and its command bindings.
+   */
   void Construct(
       const FArguments& InArgs,
       TSharedPtr<class ICommonEditorViewportToolbarInfoProvider> InInfoProvider);
@@ -249,7 +377,8 @@ class SMochiArticulationEditorViewportToolbar : public SCommonEditorViewportTool
       TSharedPtr<SHorizontalBox> MainBoxPtr,
       TSharedPtr<SViewportToolBar> ParentToolBarPtr) const override;
   virtual TSharedPtr<FExtender> GetViewMenuExtender() const override;
-  // Generate Articulation Menu
+
+  /** Generate Articulation Menu */
   TSharedRef<SWidget> GenerateArticulationMenu() const;
 };
 
@@ -257,12 +386,20 @@ class SMochiArticulationEditorViewportToolbar : public SCommonEditorViewportTool
 // VIEWPORT SLATE
 //------------------------------------------------------------------------------
 
+/** Widget hosting the articulation preview viewport. */
 class SMochiArticulationEditorViewport : public SAssetEditorViewport,
                                          public FGCObject,
                                          public ICommonEditorViewportToolbarInfoProvider {
  public:
   SLATE_BEGIN_ARGS(SMochiArticulationEditorViewport) {}
   SLATE_END_ARGS()
+  /**
+   * Construct the articulation preview widget and connect its toolkit and preview scene.
+   *
+   * @param InArgs Slate construction arguments.
+   * @param InEditorToolkit Toolkit owning the articulation editor.
+   * @param InPreviewScene Scene containing the articulation preview objects.
+   */
   void Construct(
       const FArguments& InArgs,
       TSharedPtr<FMochiArticulationEditorToolkit> InEditorToolkit,
@@ -281,8 +418,12 @@ class SMochiArticulationEditorViewport : public SAssetEditorViewport,
   virtual TSharedPtr<SWidget> MakeViewportToolbar() override;
 #endif
   virtual void PopulateViewportOverlays(TSharedRef<SOverlay> Overlay) override;
-  // Makes the viewport toolbar. SEditorViewport adds it through MakeViewportToolbar() before
-  // UE 5.7; from 5.7 that is deprecated and final, so PopulateViewportOverlays() adds it.
+  /**
+   * Makes the viewport toolbar. SEditorViewport adds it through MakeViewportToolbar() before
+   * UE 5.7; from 5.7 that is deprecated and final, so PopulateViewportOverlays() adds it.
+   *
+   * @return The viewport toolbar widget.
+   */
   TSharedRef<SWidget> MakeLegacyViewportToolbar();
   // End SAssetEditorViewport Interface
 
@@ -294,11 +435,27 @@ class SMochiArticulationEditorViewport : public SAssetEditorViewport,
   // End FGCObject Interface
 
  public:
+  /**
+   * Set the text displayed in the viewport overlay.
+   *
+   * @param TextItems Text entries displayed in the viewport overlay.
+   */
   void PopulateOverlayText(const TArray<FText>& TextItems) const;
+  /**
+   * Get the client controlling this preview viewport.
+   *
+   * @return The viewport client.
+   */
   TSharedPtr<class FMochiArticulationEditorViewportClient> GetViewportClient();
+  /**
+   * Get the mesh component displayed in the preview.
+   *
+   * @return The preview mesh component.
+   */
   UMochiArticulationPreviewComponent* GetPreviewMeshComponent();
 
  public:
+  /** Toolkit associated with the articulation viewport widget. */
   TSharedPtr<FMochiArticulationEditorToolkit> EditorToolkit;
 
  private:
@@ -313,13 +470,25 @@ class SMochiArticulationEditorViewport : public SAssetEditorViewport,
 // PREVIEW SCENE
 //------------------------------------------------------------------------------
 
+/** Preview scene containing the articulation editor's display objects. */
 class FMochiArticulationEditorPreviewScene : public FAdvancedPreviewScene {
  public:
+  /**
+   * Create the articulation editor's preview scene.
+   *
+   * @param CVS Preview-scene construction settings.
+   * @param EditorToolkit Toolkit owning the preview scene.
+   */
   FMochiArticulationEditorPreviewScene(
       ConstructionValues CVS,
       const TSharedRef<FMochiArticulationEditorToolkit>& EditorToolkit);
   virtual ~FMochiArticulationEditorPreviewScene() override;
   virtual void Tick(float DeltaTime) override;
+  /**
+   * Get the toolkit owning this preview scene.
+   *
+   * @return The editor.
+   */
   TSharedRef<FMochiArticulationEditorToolkit> GetEditor() const {
     return EditorToolkitPtr.Pin().ToSharedRef();
   }

@@ -22,25 +22,29 @@
 
 #include "MochiRodMeshComponent.generated.h"
 
+/** Dynamic mesh component backed by a native rod actor. */
 UCLASS(ClassGroup = (Custom), ShowCategories = (Mobility), meta = (BlueprintSpawnableComponent))
 class SUPERDEXPHYSICS_API UMochiRodMeshComponent : public UMochiDeformableMeshComponent {
   GENERATED_BODY()
 
  public:
-  // Parameters controlling rod material properties.
+  /** Parameters controlling rod material properties. */
   UPROPERTY(EditAnywhere, Category = "Mochi")
   UMochiRodMaterialParams* RodMaterialParams = nullptr;
+  /** Collider representation used by the rod actor. */
   UPROPERTY(EditAnywhere, Category = "Mochi", meta = (ValidEnumValues = "None, Auto, PointCloud"))
   EMochiColliderType ColliderType = ::ToUnreal(mochi::RodActorParams{}.colliderType);
-  // Use the rod's contact skin for contact sampling instead of the centerline.
+  /** Use the rod's contact skin for contact sampling instead of the centerline. */
   UPROPERTY(EditAnywhere, Category = "Mochi")
   bool bUseContactSkin = mochi::RodActorParams{}.useContactSkin;
+  /** Segment elements used for rod contact sampling. */
   UPROPERTY(
       EditAnywhere,
       Category = "Mochi",
       meta = (ValidEnumValues = "P1Q1, P1Q2, P1Q3, Default", EditCondition = "!bUseContactSkin"))
   EMochiActorSegmentElementType ContactElementType =
       ::ToUnreal(mochi::RodActorParams{}.contactElementType);
+  /** Boundary elements used for contact-skin sampling. */
   UPROPERTY(
       EditAnywhere,
       Category = "Mochi",
@@ -48,20 +52,20 @@ class SUPERDEXPHYSICS_API UMochiRodMeshComponent : public UMochiDeformableMeshCo
   EMochiActorBoundaryElementType ContactSkinElementType =
       ::ToUnreal(mochi::RodActorParams{}.contactSkinElementType);
 
-  // Point-cloud collider interaction radius [m].
+  /** Point-cloud collider interaction radius [m]. */
   UPROPERTY(EditAnywhere, Category = "Mochi|Point Cloud Collider", meta = (Units = "m"))
   float PointCloudRadius = mochi::PointCloudColliderParams{}.radius;
-  // Enable self-contact for the rod.
+  /** Enable self-contact for the rod. */
   UPROPERTY(EditAnywhere, Category = "Mochi|Point Cloud Collider")
   bool bPointCloudSelfContact = mochi::PointCloudColliderParams{}.selfContact;
-  // Self-contact exclusion ratio. Should be > 1.
+  /** Self-contact exclusion ratio. Should be > 1. */
   UPROPERTY(
       EditAnywhere,
       Category = "Mochi|Point Cloud Collider",
       meta = (EditCondition = "bPointCloudSelfContact"))
   float PointCloudSelfContactExclusionRatio =
       mochi::PointCloudColliderParams{}.selfContactExclusionRatio;
-  // Unset uses one collider point per node; a value selects quadrature-based placement.
+  /** Unset uses one collider point per node; a value selects quadrature-based placement. */
   UPROPERTY(EditAnywhere, Category = "Mochi|Point Cloud Collider")
   TOptional<EMochiActorSegmentElementType> PointCloudColliderSegmentElementType;
 
@@ -77,11 +81,15 @@ class SUPERDEXPHYSICS_API UMochiRodMeshComponent : public UMochiDeformableMeshCo
   virtual void OnRegister() override;
 
  private:
-  /// Rebuild the editor preview's dynamic mesh from Model. Skipped on archetypes/CDOs to avoid
-  /// creating a private UBodySetup on the Blueprint CDO.
+  /**
+   * Rebuild the editor preview's dynamic mesh from Model. Skipped on archetypes/CDOs to avoid
+   * creating a private UBodySetup on the Blueprint CDO.
+   */
   void RebuildPreviewMesh();
 
-  /// Mark any UBodySetup on this component RF_Public so it serializes legally
-  /// when attached to a Blueprint CDO. See body for the failure mode.
+  /**
+   * Mark any UBodySetup on this component RF_Public so it serializes legally
+   * when attached to a Blueprint CDO. See body for the failure mode.
+   */
   void EnsureBodySetupPublic();
 };

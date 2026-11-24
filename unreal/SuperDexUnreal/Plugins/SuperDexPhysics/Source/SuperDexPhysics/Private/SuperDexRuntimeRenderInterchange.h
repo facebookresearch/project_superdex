@@ -28,8 +28,10 @@ class USuperDexRuntimeMeshPipeline final : public UInterchangePipelineBase {
   GENERATED_BODY()
 
  public:
-  // Each file imports into its own folder to keep Interchange from reusing another file's
-  // materials.
+  /**
+   * Each file imports into its own folder to keep Interchange from reusing another file's
+   * materials.
+   */
   static constexpr const TCHAR* ImportRoot = TEXT("/Temp/SuperDexRuntimeMeshes");
 
   virtual void ExecutePostFactoryPipeline(
@@ -51,11 +53,20 @@ class USuperDexInterchangeGameUtilities : public UInterchangeEditorUtilitiesBase
   GENERATED_BODY()
 
  public:
-  // Became const in newer engines: define both signatures (no `override`), so whichever the
-  // engine's UInterchangeEditorUtilitiesBase declares is overridden.
+  /**
+   * Became const in newer engines: define both signatures (no `override`), so whichever the
+   * engine's UInterchangeEditorUtilitiesBase declares is overridden.
+   *
+   * @return Always true for this runtime import utility.
+   */
   virtual bool IsRuntimeOrPIE() {
     return true;
   }
+  /**
+   * Mark these runtime mesh imports as runtime or play-in-editor imports.
+   *
+   * @return Always true for this runtime import utility.
+   */
   virtual bool IsRuntimeOrPIE() const {
     return true;
   }

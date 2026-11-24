@@ -29,6 +29,12 @@ class FCanvas;
  */
 class FMochiModelEditorDragTool : public FDragTool {
  public:
+  /**
+   * Create a model-selection drag tool for the viewport.
+   *
+   * @param InViewportClient Client associated with the drag tool.
+   * @param InViewport Viewport used by the editor operation.
+   */
   explicit FMochiModelEditorDragTool(
       FMochiModelEditorViewportClient* InViewportClient,
       SMochiModelEditorViewport* InViewport)
@@ -43,7 +49,17 @@ class FMochiModelEditorDragTool : public FDragTool {
   virtual void AddDelta(const FVector& InDelta) override;
   virtual void EndDrag() override;
   virtual void Render(const FSceneView* View, FCanvas* Canvas) override;
+  /**
+   * Select lasso or box dragging.
+   *
+   * @param bUseLasso Whether selection uses a lasso rather than a box.
+   */
   void SetSelectLasso(bool bUseLasso);
+  /**
+   * Get whether lasso dragging is selected.
+   *
+   * @return The is using lasso state.
+   */
   bool IsUsingLasso() const;
 
  private:
@@ -63,9 +79,14 @@ class FMochiModelEditorDragTool : public FDragTool {
 
   bool bUseLassoSelect = true;
 
-  // Applies the current selection mode to the elements at Positions that lie inside the dragged
-  // box or lasso.
+  /**
+   * Applies the current selection mode to the elements at Positions that lie inside the dragged
+   * box or lasso.
+   */
   void UpdateSelectedElementIndices(const TArray<FVector>& Positions, TSet<int>& InOutIndices);
-  // The world-space volumes covered by the dragged box (one volume) or lasso (one per triangle).
+
+  /**
+   * The world-space volumes covered by the dragged box (one volume) or lasso (one per triangle).
+   */
   TArray<FConvexVolume> CalculateSelectionVolumes(const FSceneView& View) const;
 };

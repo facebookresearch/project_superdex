@@ -22,40 +22,45 @@
 
 #include "MochiForceVisualizerComponent.generated.h"
 
+/** Mapping from force magnitude to visualization colors. */
 UENUM(BlueprintType)
 enum class EMochiForceVisualizerColorMode : uint8 {
-  // Use two user-defined colors with linear interpolation
+  /** Use two user-defined colors with linear interpolation */
   TwoTone = 0,
-  // Use the 'turbo' color map, with pressure mapped to hue
+
+  /** Use the 'turbo' color map, with pressure mapped to hue */
   Rainbow = 1
 };
 
+/** Component that draws contact forces from Mochi contact queries. */
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class SUPERDEXPHYSICS_API UMochiForceVisualizerComponent : public ULineSetComponent {
   GENERATED_BODY()
  public:
-  // Enable/disable rendering visualization.
+  /** Enable/disable rendering visualization. */
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
   bool bEnabled = true;
 
-  // Used to determine min/max force [N] for interpolating color and line length.
+  /** Used to determine min/max force [N] for interpolating color and line length. */
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
   FVector2D ForceMinMax = FVector2D(0.0f, 1.0f);
 
-  // Use to determine the line length [cm] given ForceMinMax.
+  /** Use to determine the line length [cm] given ForceMinMax. */
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
   FVector2D LineLengthMinMax = FVector2D(0.0f, 10.0f);
 
-  // How to map forces to colors
+  /** How to map forces to colors */
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
   EMochiForceVisualizerColorMode ColorMode = EMochiForceVisualizerColorMode::TwoTone;
 
-  // The number of discrete color bands to which color should be quantized
-  // (set to zero to disable)
+  /**
+   * The number of discrete color bands to which color should be quantized
+   * (set to zero to disable)
+   */
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
   int NumColorBands = 0;
 
-  // Color representing low force (for the TwoTone color mode).
+  /** Color representing low force (for the TwoTone color mode). */
   UPROPERTY(
       EditAnywhere,
       BlueprintReadWrite,
@@ -65,7 +70,7 @@ class SUPERDEXPHYSICS_API UMochiForceVisualizerComponent : public ULineSetCompon
       Category = "Mochi")
   FLinearColor LowColor = FColor::Blue;
 
-  // Color representing high force (for the TwoTone color mode).
+  /** Color representing high force (for the TwoTone color mode). */
   UPROPERTY(
       EditAnywhere,
       BlueprintReadWrite,
@@ -75,11 +80,13 @@ class SUPERDEXPHYSICS_API UMochiForceVisualizerComponent : public ULineSetCompon
       Category = "Mochi")
   FLinearColor HighColor = FColor::Red;
 
-  // The range of the turbo color map used by the Rainbow color mode
-  // Minimum force maps to RainbowRange.X
-  // Maximum force maps to RainbowRange.Y
-  // Intermediate values are linearly interpolated between these extremes
-  // X may be greater than Y
+  /**
+   * The range of the turbo color map used by the Rainbow color mode
+   * Minimum force maps to RainbowRange.X
+   * Maximum force maps to RainbowRange.Y
+   * Intermediate values are linearly interpolated between these extremes
+   * X may be greater than Y
+   */
   UPROPERTY(
       EditAnywhere,
       BlueprintReadWrite,
@@ -89,8 +96,10 @@ class SUPERDEXPHYSICS_API UMochiForceVisualizerComponent : public ULineSetCompon
       Category = "Mochi")
   FVector2D RainbowRange = FVector2D(0.0f, 1.0f);
 
-  // A distinct color value to use when force is exactly equal to ForceMinMax.X
-  // (e.g so you can identify non-inflated bubbles)
+  /**
+   * A distinct color value to use when force is exactly equal to ForceMinMax.X
+   * (e.g so you can identify non-inflated bubbles)
+   */
   UPROPERTY(
       EditAnywhere,
       BlueprintReadWrite,
@@ -100,8 +109,10 @@ class SUPERDEXPHYSICS_API UMochiForceVisualizerComponent : public ULineSetCompon
       Category = "Mochi")
   FColor MinColor = FColor::Black;
 
-  // A distinct color value to use when force is exactly equal to ForceMinMax.Y
-  // (e.g so you can identify fully-inflated bubbles)
+  /**
+   * A distinct color value to use when force is exactly equal to ForceMinMax.Y
+   * (e.g so you can identify fully-inflated bubbles)
+   */
   UPROPERTY(
       EditAnywhere,
       BlueprintReadWrite,
@@ -112,6 +123,7 @@ class SUPERDEXPHYSICS_API UMochiForceVisualizerComponent : public ULineSetCompon
   FColor MaxColor = FColor::White;
 
  public:
+  /** Initialize contact-force visualization and its tick settings. */
   UMochiForceVisualizerComponent();
 
  protected:
@@ -141,6 +153,12 @@ class SUPERDEXPHYSICS_API UMochiForceVisualizerComponent : public ULineSetCompon
       const TArray<FMochiContactPoint>& Contacts);
 
  public:
+  /**
+   * Map a contact-force magnitude to the configured visualization color.
+   *
+   * @param Force Contact-force magnitude to visualize.
+   * @return Visualization color corresponding to the force magnitude.
+   */
   FColor GetColorFromForce(float Force) const;
 
  protected:
