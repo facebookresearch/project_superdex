@@ -23,22 +23,44 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogAndroidInput, Log, All);
 
+/** Additional Android input keys and their registration. */
 struct ANDROIDINPUT_API FAndroidInputKeys {
+  /** Key for the Android SysRq/Print Screen button. */
   static const FKey AndroidPrintScreen;
+
+  /** Adds the plugin's key and input-menu category to the engine key registry. */
   static void RegisterKeys();
 };
 
+/** Stored Android gamepad axis values, protected by the module's axis-state lock. */
 struct FAxisState {
+  /** Stored left thumbstick X value. */
   float LeftStickX = 0.0f;
+
+  /** Stored left thumbstick Y value. */
   float LeftStickY = 0.0f;
+
+  /** Stored right thumbstick X value. */
   float RightStickX = 0.0f;
+
+  /** Stored right thumbstick Y value. */
   float RightStickY = 0.0f;
+
+  /** Stored left trigger value. */
   float LeftTrigger = 0.0f;
+
+  /** Stored right trigger value. */
   float RightTrigger = 0.0f;
 };
 
+/** Registers Android input keys and installs the native input-queue hook on Android. */
 class FAndroidInputModule : public IModuleInterface {
  public:
+  /**
+   * Loads and retrieves the Android input module.
+   *
+   * @return The module pointer, or nullptr if the module cannot be loaded.
+   */
   static FAndroidInputModule* Get() {
     return FModuleManager::LoadModulePtr<FAndroidInputModule>("AndroidInput");
   }
@@ -46,6 +68,9 @@ class FAndroidInputModule : public IModuleInterface {
   virtual void StartupModule() override;
   virtual void ShutdownModule() override;
 
+  /** Axis values retained when the native input hook submits an axis event for dispatch. */
   FAxisState AxisState;
+
+  /** Protects axis-state updates while processing native motion events. */
   FCriticalSection AxisStateLock;
 };
