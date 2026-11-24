@@ -1070,12 +1070,6 @@ struct prefab::LayerContactEntry [equality(default)] {
 
 // @brief Contact filtering parameters for a prefab.
 //
-// @warning Scene export does not record explicit settings that enable contact between actor
-// pairs. If such a setting enables contact between adjacent links of an articulated or
-// soft-skinned actor, adding the exported prefab to a scene applies automatic adjacent-link
-// filtering and disables contact for that pair again. To preserve this behavior, add an equivalent
-// enabling entry to the exported prefab or re-enable the pair after adding the prefab to a scene.
-//
 // @note By default, all actor pairs can potentially collide with each other, except that automatic
 // contact filtering disables adjacent links in articulated and soft-skinned actors. To prevent
 // additional contact, use this contact filter in one of two ways (or both): 1) Use
@@ -1094,8 +1088,10 @@ struct prefab::LayerContactEntry [equality(default)] {
 // list, entries are applied in array order, so later entries can override earlier entries in the
 // same actor-vs-actor or layer-vs-layer filter table.
 // @note Contact filter settings are not necessarily symmetric.
-// @note Exporting a scene stores disabled pairs from the effective contact-filter state, not the
-// exact JSON representation originally used to author it. Exporting may emit a canonical
+// @note Exporting a scene stores the effective contact-filter state, not the exact JSON
+// representation originally used to author it. It omits the actor pairs whose contact is disabled
+// when an articulated or soft-skinned actor is created, and writes enabling entries for those pairs
+// whose contact was enabled after creation. Exporting may emit a canonical
 // representation whose contact-filter category differs from the original JSON. For example,
 // self-contact may be emitted as @ref actorContactSymmetric because the forward and reverse
 // resolved actor pair are the same. Entry order and duplicate, redundant, or overridden entries
@@ -1659,17 +1655,17 @@ struct prefab::ExportParams [no_reflection] {
 // @param[in] params Export options, see @ref ExportParams. Can optionally be omitted in Python.
 //
 // @warning Currently exports only rigid, soft, articulated, soft-skinned, and rod actors.
-// Constraints, pose controllers, shell actors, and implicit (non-mesh) shapes are NOT exported.
+// Constraints, pose controllers, shell actors, and implicit (non-mesh) shapes are NOT exported. A
+// link with an implicit shape is exported without a shape, so its articulated actor may get
+// different default contact filtering when the prefab is added to a scene.
 // @warning Velocities are NOT exported. Soft actor displacements, articulated joint poses, and rod
 // poses are exported only when @ref ExportParams::exportCurrentPose is true.
-// @warning Scene export does not record explicit settings that enable contact between actor
-// pairs. If such a setting enables contact between adjacent links of an articulated or
-// soft-skinned actor, adding the exported prefab to a scene applies automatic adjacent-link
-// filtering and disables contact for that pair again. To preserve this behavior, add an equivalent
-// enabling entry to the exported prefab or re-enable the pair after adding the prefab to a scene.
 //
 // @note Generated mesh files (.mochi.h5) are written under generated_assets/ and referenced
 // from the prefab using "./generated_assets/" paths.
+// @note The actor contact filter omits the pairs whose contact is disabled when an articulated or
+// soft-skinned actor is created, as adding the prefab to a scene disables them again. Such pairs
+// whose contact was enabled after creation are exported as enabling entries.
 // @note Exported actor names are made unique: when two actors share a name, later ones receive a
 // numeric suffix (e.g. "box", "box1"), so an exported name may differ from the runtime name.
 // @note Scene export reconstructs supported creation and configuration data from effective runtime

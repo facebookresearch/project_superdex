@@ -618,6 +618,15 @@ void GetLinkTransformsComFromPose(
     Span<TransformRT> outLinkTransformsCom);
 
 /**
+ * Collect the pairs of actors of an articulated actor whose contact is disabled at creation, each
+ * pair once: links and attached nested soft actors with shape that are adjacent in the hierarchy,
+ * or connected through hard joints or actors with no shape. Prefab export omits these defaults.
+ */
+[[nodiscard]] DynamicArray<std::pair<entt::entity, entt::entity>> CollectDefaultNoContactPairs(
+    entt::registry const& reg,
+    entt::entity e);
+
+/**
  * System to assemble the objective, residual and dresidual of the inertia forces acting on joints
  * of the articulated body. Internally called by EntityAssemble.
  */

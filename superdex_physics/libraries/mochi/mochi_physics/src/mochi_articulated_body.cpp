@@ -500,6 +500,94 @@ void articulated::compound::GetLinkTransformsComFromPose(
       outLinkTransformsCom);
 }
 
+DynamicArray<std::pair<entt::entity, entt::entity>>
+articulated::compound::CollectDefaultNoContactPairs(entt::registry const& reg, entt::entity e) {
+  // Graph of the links and the attached nested soft actors, with joints and attachments as edges
+  struct Node {
+    entt::entity entity{};
+    bool hasShape{};
+    DynamicArray<int> edges{};
+  };
+  struct Edge {
+    int nodeA{};
+    int nodeB{};
+    bool isHard{};
+  };
+  auto const& links = reg.get<CGroupMembers const>(e).actors;
+  auto const* joints = reg.get<CArticulatedBodyShape const>(e).shape->GetJointsData();
+  auto const* attachments = reg.try_get<CSoftAttachmentLinks const>(e);
+  int const numAttachments = attachments ? isize(attachments->softAttachLinks) : 0;
+  DynamicArray<Node> nodes;
+  nodes.reserve(links.size() + numAttachments);
+  for (entt::entity const link : links) {
+    nodes.push_back(Node{.entity = link, .hasShape = reg.all_of<CShape>(link)});
+  }
+  DynamicArray<Edge> edges;
+  edges.reserve(joints->jointsChildLinks.size() + numAttachments);
+  auto addEdge = [&](int nodeA, int nodeB, bool isHard) {
+    nodes[nodeA].edges.push_back(isize(edges));
+    nodes[nodeB].edges.push_back(isize(edges));
+    edges.push_back(Edge{.nodeA = nodeA, .nodeB = nodeB, .isHard = isHard});
+  };
+  for (int i = 0; i < isize(joints->jointsChildLinks); ++i) {
+    if (joints->jointsParentLinks[i] >= 0) {
+      addEdge(
+          joints->jointsChildLinks[i],
+          joints->jointsParentLinks[i],
+          joints->jointTypes[i] == ArticulatedJointType::Hard);
+    }
+  }
+  // Since a nested soft actor deforms, the edge with its attachment link is not hard.
+  if (attachments) {
+    auto const& softActors = reg.get<CBlendedComposition const>(e).soft;
+    for (int i = 0; i < numAttachments; ++i) {
+      nodes.push_back(Node{.entity = softActors[i], .hasShape = true});
+      addEdge(isize(nodes) - 1, attachments->softAttachLinks[i], /*isHard*/ false);
+    }
+  }
+
+  // Pairs of nodes with shape connected directly, or through hard edges or nodes with no shape.
+  // Each edge typically gives one pair.
+  DynamicArray<std::pair<entt::entity, entt::entity>> pairs;
+  pairs.reserve(edges.size());
+  DynamicArray<bool> visited(nodes.size(), false);
+  DynamicArray<int> cache;
+  cache.reserve(nodes.size());
+  for (int i = 0; i < isize(nodes); ++i) {
+    if (!nodes[i].hasShape) {
+      continue;
+    }
+    std::function<void(int)> dfsTraverse = [&](int current) {
+      for (int edge : nodes[current].edges) {
+        int const neighbor = edges[edge].nodeA == current ? edges[edge].nodeB : edges[edge].nodeA;
+        if (visited[neighbor]) {
+          continue;
+        }
+        visited[neighbor] = true;
+        cache.push_back(neighbor);
+
+        // List each pair once
+        if (nodes[neighbor].hasShape && neighbor > i) {
+          pairs.emplace_back(nodes[i].entity, nodes[neighbor].entity);
+        }
+
+        // Continue traversal through hard edges or shapeless nodes
+        if (edges[edge].isHard || !nodes[neighbor].hasShape) {
+          dfsTraverse(neighbor);
+        }
+      }
+    };
+    visited[i] = true;
+    cache.push_back(i);
+    dfsTraverse(i);
+    for (int j : cache) {
+      visited[j] = false;
+    }
+    cache.clear();
+  }
+  return pairs;
+}
+
 void articulated::compound::GetArticulatedJointVelocities(
     entt::registry const& reg,
     entt::entity e,

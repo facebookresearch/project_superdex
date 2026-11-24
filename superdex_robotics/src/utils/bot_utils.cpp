@@ -2197,7 +2197,7 @@ bool superdex::robotics::IsContactImplicitlyDisabled(
   if (botPrefab.links[linkA].shapeFile.empty() || botPrefab.links[linkB].shapeFile.empty()) {
     return false;
   }
-  // Mirror Scene::CreateArticulatedActor's DisableContactForAdjacentActors DFS:
+  // Mirror Mochi's articulated::compound::CollectDefaultNoContactPairs DFS:
   // starting at linkA, traverse undirected link graph; we may pass *through* a node only
   // if it has no shape, or the edge entering it is a Hard joint. The destination
   // (linkB) counts as reached upon arrival via any edge.

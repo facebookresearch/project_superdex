@@ -78,7 +78,8 @@ struct CSoftSkinnedAssemblyScratchMemory {
   Matrix<real> JartT_A_Jart; // Will be resized on the fly.
 };
 
-// Component to store soft attachment links for soft skinned actors (for export purposes)
+// Component to store soft attachment links for soft skinned actors. They define default contacts
+// (see articulated::compound::CollectDefaultNoContactPairs) and are exported.
 // Note: This only stores external attachments (softAttachLinks parameter).
 // Internal skinning data (whole-hand skins) is stored in the shape file, not here.
 struct CSoftAttachmentLinks {

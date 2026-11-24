@@ -2134,125 +2134,16 @@ static std::vector<bool> IdentifyStaticLinks(ArticulatedBodyShape const* shape) 
   return isStatic;
 }
 
-namespace {
-struct GraphNode {
-  ActorHandle actor{};
-  bool hasShape{};
-  DynamicArray<int> edges{};
-};
-
-struct GraphEdge {
-  int nodeA{};
-  int nodeB{};
-  bool isHard{};
-};
-} // namespace
-
-static void CreateGraphOfLinks(
-    Span<ActorHandle const> links,
-    ArticulatedBodyShape const* shapePtr,
-    Span<ShapeHandle const> linkShapes,
-    DynamicArray<GraphNode>& outNodes,
-    DynamicArray<GraphEdge>& outEdges) {
-  MOCHI_ASSERT_VERBOSE(
-      isize(links) == isize(linkShapes), "Expected one link shape per link actor.");
-  outNodes.reserve(links.size());
-  for (int i = 0; i < isize(links); ++i) {
-    outNodes.emplace_back(GraphNode{.actor = links[i], .hasShape = linkShapes[i].IsValid()});
-  }
-
-  auto const& children = shapePtr->GetJointsData()->jointsChildLinks;
-  auto const& parents = shapePtr->GetJointsData()->jointsParentLinks;
-  auto const& types = shapePtr->GetJointsData()->jointTypes;
-  outEdges.reserve(children.size());
-  for (auto i = 0; i < isize(children); ++i) {
-    if (parents[i] >= 0) {
-      int const nodeA = children[i];
-      int const nodeB = parents[i];
-      outNodes[nodeA].edges.push_back(isize(outEdges));
-      outNodes[nodeB].edges.push_back(isize(outEdges));
-      bool isHard = types[i] == ArticulatedJointType::Hard;
-      outEdges.emplace_back(GraphEdge{.nodeA = nodeA, .nodeB = nodeB, .isHard = isHard});
-    }
-  }
-}
-
-static void AddSoftActorsToGraph(
-    Span<ActorHandle const> actors,
-    Span<int const> parents,
-    DynamicArray<GraphNode>& outNodes,
-    DynamicArray<GraphEdge>& outEdges) {
-  for (int i = 0; i < isize(parents); ++i) {
-    int const nodeA = isize(outNodes);
-    int const nodeB = parents[i];
-    outNodes.push_back(GraphNode{.actor = actors[i], .hasShape = true});
-    outNodes[nodeA].edges.push_back(isize(outEdges));
-    outNodes[nodeB].edges.push_back(isize(outEdges));
-    // Since the soft actor deforms, we do not consider the edge with its parent hard.
-    outEdges.emplace_back(GraphEdge{.nodeA = nodeA, .nodeB = nodeB, .isHard = false});
-  }
-}
-
-// Disable contact for actors based on graph connectivity. Contact is disabled if two actors have
-// shape and:
-// - The actors are connected.
-// - OR the actors are connected by a sequence of hard joints.
-// - OR the actors are connected by a sequence of actors with no shape.
-static void DisableContactForAdjacentActors(
-    SceneImpl* scene,
-    Span<GraphNode const> nodes,
-    Span<GraphEdge const> edges,
-    Error& error) {
-  MOCHI_ERROR_RETURN(error);
-
-  // Reusable containers
-  DynamicArray<bool> visited(nodes.size(), false);
-  DynamicArray<int> cache;
-  cache.reserve(nodes.size());
-  for (int i = 0; i < isize(nodes); ++i) {
-    if (!nodes[i].hasShape) {
-      continue;
-    }
-
-    // Recursive lambda
-    std::function<void(int)> dfsTraverse = [&](int current) {
-      for (int edge : nodes[current].edges) {
-        int neighbor = edges[edge].nodeA == current ? edges[edge].nodeB : edges[edge].nodeA;
-        if (visited[neighbor]) {
-          continue;
-        }
-
-        visited[neighbor] = true;
-        cache.push_back(neighbor);
-
-        // Disable contact if neighbor has shape (consider symmetry)
-        if (nodes[neighbor].hasShape && neighbor > i) {
-          scene->EnableActorContactSymmetric(
-              nodes[i].actor,
-              nodes[neighbor].actor,
-              /*enable*/ false,
-              IncludeNestedActors::No,
-              error);
-          MOCHI_ERROR_RETURN(error);
-        }
-
-        // Continue traversal through hard edges or shapeless nodes
-        if (edges[edge].isHard || !nodes[neighbor].hasShape) {
-          dfsTraverse(neighbor);
-        }
-      }
-    };
-
-    // DFS to find all nodes reachable from node i
-    visited[i] = true;
-    cache.push_back(i);
-    dfsTraverse(i);
-
-    // Reset visited nodes
-    for (int j : cache) {
-      visited[j] = false;
-    }
-    cache.clear();
+// Disable contact between the actors of a new articulated actor whose contact is disabled by
+// default (see articulated::compound::CollectDefaultNoContactPairs). The table is written directly:
+// the new actor's island is awake, and tagging its static links already woke their surroundings.
+static void DisableDefaultContacts(entt::registry& reg, ActorHandle actor) {
+  auto const pairs = articulated::compound::CollectDefaultNoContactPairs(
+      reg, GetEntity(reg, actor, ErrorAssert{}));
+  auto& table = reg.ctx<CContactFilterTable>();
+  for (auto const& [entityA, entityB] : pairs) {
+    table.EnableEntityContact(entityA, entityB, /*enable*/ false);
+    table.EnableEntityContact(entityB, entityA, /*enable*/ false);
   }
 }
 
@@ -2675,21 +2566,17 @@ Actor* SceneImpl::CreateArticulatedActorImpl(
   }
   MOCHI_ERROR_RETURN(error, {});
 
-  // Disable contact for actors that are adjacent in the hierarchy. Adjacency also considers hard
-  // joints and shapeless links.
-  DynamicArray<GraphNode> nodes;
-  DynamicArray<GraphEdge> edges;
-  CreateGraphOfLinks(links, shapePtr.get(), MakeConstSpan(linkShapes), nodes, edges);
-  DisableContactForAdjacentActors(this, nodes, edges, error);
-  MOCHI_ERROR_RETURN(error, {});
-
-  // Finally create the articulated body actor
+  // Create the articulated body actor
   Actor* actor =
       CreateArticulatedActorImpl(params, /* useContact */ true, shapePtr, links, skinShape, error);
   if (actor) {
     actorRollback.ReplaceWithOwner(actor->GetHandle());
   }
   MOCHI_ERROR_RETURN(error, {});
+
+  // Disable the default contacts between adjacent actors (see
+  // articulated::compound::CollectDefaultNoContactPairs).
+  DisableDefaultContacts(_registry, actor->GetHandle());
   actorRollback.Release();
   return actor;
 }
@@ -3007,15 +2894,6 @@ Actor* SceneImpl::CreateSoftSkinnedActorImpl(
     }
   }
 
-  // Disable contact for actors that are adjacent in the hierarchy. Adjacency also considers hard
-  // joints and shapeless links.
-  DynamicArray<GraphNode> nodes;
-  DynamicArray<GraphEdge> edges;
-  CreateGraphOfLinks(links, articulatedShapePtr.get(), MakeConstSpan(linkShapes), nodes, edges);
-  AddSoftActorsToGraph(softActors, softLinkParents, nodes, edges);
-  DisableContactForAdjacentActors(this, nodes, edges, error);
-  MOCHI_ERROR_RETURN(error, {});
-
   // Once attached, the skeleton destroys its nested soft actors with itself, so it is the only
   // rollback root needed.
   auto const skeletonEntity = GetEntity(_registry, skeletonActor->GetHandle(), ErrorAssert{});
@@ -3033,10 +2911,14 @@ Actor* SceneImpl::CreateSoftSkinnedActorImpl(
   blended::InitBlendedActor(_registry, skeletonEntity, skeletonParams, blendedShapePtr, error);
   MOCHI_ERROR_RETURN(error, {});
 
-  // Store the soft attachment links in the ECS for export purposes
+  // Store the soft attachment links, which define default contacts and are exported
   if (!softLinkParents.empty()) {
     _registry.emplace<CSoftAttachmentLinks>(skeletonEntity, std::move(softLinkParents));
   }
+
+  // Disable the default contacts between adjacent actors (see
+  // articulated::compound::CollectDefaultNoContactPairs).
+  DisableDefaultContacts(_registry, skeletonActor->GetHandle());
 
   // Return the skeleton actor
   actorRollback.Release();

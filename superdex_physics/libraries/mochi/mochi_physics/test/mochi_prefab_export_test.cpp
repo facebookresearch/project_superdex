@@ -2658,3 +2658,221 @@ TEST_IF_F(MOCHI_USE_HDF5, PrefabExportRodTest, ExportScene_MovedRod) {
     }
   }
 }
+
+// Finds an actor by name, or returns null.
+[[nodiscard]] static Actor const* FindActorByName(Scene const* scene, std::string_view name) {
+  Actor const* actor = nullptr;
+  scene->ForEachActor([&](Actor const* candidate) {
+    if (name == candidate->GetName()) {
+      actor = candidate;
+    }
+  });
+  return actor;
+}
+
+// Contact between adjacent links, and between nested soft actors and their attachment links, is
+// disabled at creation. Export omits these defaults, so the samples, otherwise filtered by layers,
+// export no actor entries.
+TEST_IF(MOCHI_USE_HDF5, PrefabExport, ExportContactFilter_OmitsDefaultArticulatedPairs) {
+  auto* context = CreateContext(0);
+  MOCHI_DEFER(DestroyContext(context));
+  auto* scene = context->CreateScene("contact_filter_default_pairs_export_test");
+  MOCHI_DEFER(context->DestroyScene(scene));
+  for (char const* path :
+       {"samples/articulations_skinned_double_pendulum.mochi_scene",
+        "samples/articulations_soft_skinned_double_pendulum.mochi_scene"}) {
+    prefab::AddToScene(
+        GetAssetPath(path), GetAssetsDir(), scene, prefab::PrefabParams{}, ExpectOK{});
+  }
+
+  auto tempDir = CreateTempDirectory("export_contact_filter_default_pairs", ExpectOK{});
+  auto prefabFile = ExportScene(scene, "contact_filter_default_pairs", tempDir.Path());
+  auto exportedPrefab = prefab::ShallowLoadFromFile(prefabFile.string(), ExpectOK{});
+  ASSERT_TRUE(exportedPrefab.contactFilter.has_value());
+  auto const& filter = *exportedPrefab.contactFilter;
+  EXPECT_TRUE(!filter.actorContactSymmetric.has_value() || filter.actorContactSymmetric->empty());
+  EXPECT_TRUE(!filter.actorContactAsymmetric.has_value() || filter.actorContactAsymmetric->empty());
+}
+
+// Contact enabled after creation between actors whose contact is disabled by default is exported,
+// in one or both directions, and survives a round trip.
+TEST_IF(MOCHI_USE_HDF5, PrefabExport, ExportContactFilter_RoundTripsEnabledDefaultPairs) {
+  constexpr std::string_view kUpperArm = "SkinnedDoublePendulum/UpperArm";
+  constexpr std::string_view kLowerArm = "SkinnedDoublePendulum/LowerArm";
+  struct EnabledDirections {
+    bool forward;
+    bool reverse;
+  };
+  for (auto const [forward, reverse] :
+       {EnabledDirections{.forward = true, .reverse = false},
+        EnabledDirections{.forward = false, .reverse = true},
+        EnabledDirections{.forward = true, .reverse = true}}) {
+    SCOPED_TRACE(testing::Message() << "forward " << forward << ", reverse " << reverse);
+    auto* context = CreateContext(0);
+    MOCHI_DEFER(DestroyContext(context));
+    auto* scene = context->CreateScene("contact_filter_enabled_default_pairs_export_test");
+    MOCHI_DEFER(context->DestroyScene(scene));
+    prefab::AddToScene(
+        GetAssetPath("samples/articulations_skinned_double_pendulum.mochi_scene"),
+        GetAssetsDir(),
+        scene,
+        prefab::PrefabParams{},
+        ExpectOK{});
+    auto enable = [&](std::string_view colliding, std::string_view collider) {
+      scene->EnableActorContactAsymmetric(
+          FindActorByName(scene, colliding)->GetHandle(),
+          FindActorByName(scene, collider)->GetHandle(),
+          /*enable*/ true,
+          IncludeNestedActors::No,
+          ExpectOK{});
+    };
+    if (forward) {
+      enable(kUpperArm, kLowerArm);
+    }
+    if (reverse) {
+      enable(kLowerArm, kUpperArm);
+    }
+
+    auto tempDir = CreateTempDirectory("export_contact_filter_enabled_default_pairs", ExpectOK{});
+    auto prefabFile = ExportScene(scene, "contact_filter_enabled_default_pairs", tempDir.Path());
+    auto exportedPrefab = prefab::ShallowLoadFromFile(prefabFile.string(), ExpectOK{});
+    ASSERT_TRUE(exportedPrefab.contactFilter.has_value());
+    auto const& filter = *exportedPrefab.contactFilter;
+    auto const& symmetric = filter.actorContactSymmetric;
+    auto const& asymmetric = filter.actorContactAsymmetric;
+    if (forward && reverse) {
+      EXPECT_TRUE(!asymmetric.has_value() || asymmetric->empty());
+      ASSERT_TRUE(symmetric.has_value());
+      ASSERT_EQ(1, isize(*symmetric));
+      EXPECT_TRUE((*symmetric)[0].enable);
+      EXPECT_EQ(
+          (std::unordered_set<std::string_view>{kUpperArm, kLowerArm}),
+          (std::unordered_set<std::string_view>{
+              (*symmetric)[0].actors[0], (*symmetric)[0].actors[1]}));
+    } else {
+      EXPECT_TRUE(!symmetric.has_value() || symmetric->empty());
+      ASSERT_TRUE(asymmetric.has_value());
+      ASSERT_EQ(1, isize(*asymmetric));
+      EXPECT_TRUE((*asymmetric)[0].enable);
+      EXPECT_EQ(forward ? kUpperArm : kLowerArm, std::string_view((*asymmetric)[0].actors[0]));
+      EXPECT_EQ(forward ? kLowerArm : kUpperArm, std::string_view((*asymmetric)[0].actors[1]));
+    }
+
+    auto reloaded =
+        prefab::LoadFromFile(prefabFile.string(), tempDir.Path().string(), context, ExpectOK{});
+    auto* newScene = context->CreateScene("roundtrip");
+    MOCHI_DEFER(context->DestroyScene(newScene));
+    prefab::AddToScene(reloaded, newScene, {}, ExpectOK{});
+    auto const* sceneImpl = static_cast<SceneImpl const*>(newScene);
+    auto isEnabled = [&](std::string_view colliding, std::string_view collider) {
+      return sceneImpl->IsActorContactEnabled(
+          FindActorByName(newScene, colliding)->GetHandle(),
+          FindActorByName(newScene, collider)->GetHandle(),
+          ExpectOK{});
+    };
+    EXPECT_EQ(forward, isEnabled(kUpperArm, kLowerArm));
+    EXPECT_EQ(reverse, isEnabled(kLowerArm, kUpperArm));
+  }
+}
+
+// Contact is disabled at creation between links with shape that are adjacent, or connected through
+// hard joints or links with no shape, and between nested soft actors and their attachment links.
+// Export omits these defaults, and adding the exported prefab to a scene disables them again.
+TEST_IF(MOCHI_USE_HDF5, PrefabExport, ExportContactFilter_DefaultPairsRoundTrip) {
+  auto* context = CreateContext(0);
+  MOCHI_DEFER(DestroyContext(context));
+  auto* scene = context->CreateScene("contact_filter_default_pairs_round_trip_test");
+  MOCHI_DEFER(context->DestroyScene(scene));
+  ShapeHandle const shape = CreateUnitCubeTetMeshShape(context);
+  auto makeLink = [&](char const* name, int parentLink) {
+    return ArticulatedLinkParams{
+        .name = name, .parentLink = parentLink, .shape = shape, .colliderType = ColliderType::None};
+  };
+  Real3 const axis{0_r, 0_r, 1_r};
+
+  // l0 -Hard- l1 - l2 (no shape) - l3 - l4
+  ArticulatedActorParams chain;
+  chain.name = "Chain";
+  chain.joints = {
+      {.type = ArticulatedJointType::Free},
+      {.type = ArticulatedJointType::Hard},
+      {.type = ArticulatedJointType::Revolute, .axis = axis},
+      {.type = ArticulatedJointType::Revolute, .axis = axis},
+      {.type = ArticulatedJointType::Revolute, .axis = axis}};
+  ArticulatedLinkParams shapeless = makeLink("l2", 1);
+  shapeless.shape = {};
+  shapeless.mass = 1_r;
+  shapeless.centerOfMass = Real3{};
+  shapeless.momentOfInertia = Real6{1_r, 0_r, 0_r, 1_r, 0_r, 1_r};
+  chain.links = {
+      makeLink("l0", -1), makeLink("l1", 0), shapeless, makeLink("l3", 2), makeLink("l4", 3)};
+  scene->CreateArticulatedActor(chain, ExpectOK{});
+
+  // A nested soft actor attached to the child link
+  SoftSkinnedActorParams skinned;
+  skinned.skeletonParams.name = "Skel";
+  skinned.skeletonParams.joints = {
+      {.type = ArticulatedJointType::Free}, {.type = ArticulatedJointType::Revolute, .axis = axis}};
+  skinned.skeletonParams.links = {makeLink("root", -1), makeLink("child", 0)};
+  auto& soft = skinned.softParams.push_back();
+  soft.name = "soft";
+  soft.shape = CreateUnitCubeTetSoftShape(context);
+  soft.hasGravity = false;
+  skinned.softAttachLinks.push_back("child");
+  scene->CreateSoftSkinnedActor(skinned, ExpectOK{});
+
+  constexpr std::string_view kActors[] = {
+      "Chain/l0",
+      "Chain/l1",
+      "Chain/l2",
+      "Chain/l3",
+      "Chain/l4",
+      "Skel/root",
+      "Skel/child",
+      "Skel/soft"};
+  constexpr std::pair<std::string_view, std::string_view> kDisabled[] = {
+      {"Chain/l0", "Chain/l1"},
+      {"Chain/l0", "Chain/l3"},
+      {"Chain/l1", "Chain/l3"},
+      {"Chain/l3", "Chain/l4"},
+      {"Skel/root", "Skel/child"},
+      {"Skel/child", "Skel/soft"}};
+  auto expectDefaultContacts = [&](Scene const* s) {
+    auto const* sceneImpl = static_cast<SceneImpl const*>(s);
+    for (std::string_view const colliding : kActors) {
+      for (std::string_view const collider : kActors) {
+        if (colliding == collider) {
+          continue;
+        }
+        bool const disabled = std::ranges::any_of(kDisabled, [&](auto const& pair) {
+          return (pair.first == colliding && pair.second == collider) ||
+              (pair.first == collider && pair.second == colliding);
+        });
+        EXPECT_EQ(
+            !disabled,
+            sceneImpl->IsActorContactEnabled(
+                FindActorByName(s, colliding)->GetHandle(),
+                FindActorByName(s, collider)->GetHandle(),
+                ExpectOK{}))
+            << colliding << " vs " << collider;
+      }
+    }
+  };
+  expectDefaultContacts(scene);
+
+  auto tempDir = CreateTempDirectory("export_contact_filter_default_pairs_round_trip", ExpectOK{});
+  auto prefabFile = ExportScene(scene, "contact_filter_default_pairs_round_trip", tempDir.Path());
+  auto exportedPrefab = prefab::ShallowLoadFromFile(prefabFile.string(), ExpectOK{});
+  auto const& filter = exportedPrefab.contactFilter;
+  EXPECT_TRUE(
+      !filter.has_value() ||
+      ((!filter->actorContactSymmetric.has_value() || filter->actorContactSymmetric->empty()) &&
+       (!filter->actorContactAsymmetric.has_value() || filter->actorContactAsymmetric->empty())));
+
+  auto reloaded =
+      prefab::LoadFromFile(prefabFile.string(), tempDir.Path().string(), context, ExpectOK{});
+  auto* newScene = context->CreateScene("roundtrip");
+  MOCHI_DEFER(context->DestroyScene(newScene));
+  prefab::AddToScene(reloaded, newScene, {}, ExpectOK{});
+  expectDefaultContacts(newScene);
+}

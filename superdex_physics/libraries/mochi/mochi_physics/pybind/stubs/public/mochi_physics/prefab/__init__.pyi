@@ -3196,21 +3196,16 @@ class ContactFilter:
         Contact filter settings are not necessarily symmetric.
 
     Note:
-        Exporting a scene stores disabled pairs from the effective contact-filter
-        state, not the exact JSON representation originally used to author it.
-        Exporting may emit a canonical representation whose contact-filter category
-        differs from the original JSON. For example, self-contact may be emitted as
-        :attr:`actor_contact_symmetric` because the forward and reverse resolved
-        actor pair are the same. Entry order and duplicate, redundant, or overridden
-        entries from the source prefab are not preserved.
-
-    Warning:
-        Scene export does not record explicit settings that enable contact between
-        actor pairs. If such a setting enables contact between adjacent links of an
-        articulated or soft-skinned actor, adding the exported prefab to a scene
-        applies automatic adjacent-link filtering and disables contact for that pair
-        again. To preserve this behavior, add an equivalent enabling entry to the
-        exported prefab or re-enable the pair after adding the prefab to a scene.
+        Exporting a scene stores the effective contact-filter state, not the exact
+        JSON representation originally used to author it. It omits the actor pairs
+        whose contact is disabled when an articulated or soft-skinned actor is
+        created, and writes enabling entries for those pairs whose contact was
+        enabled after creation. Exporting may emit a canonical representation whose
+        contact-filter category differs from the original JSON. For example,
+        self-contact may be emitted as :attr:`actor_contact_symmetric` because the
+        forward and reverse resolved actor pair are the same. Entry order and
+        duplicate, redundant, or overridden entries from the source prefab are not
+        preserved.
 
     See Also:
         :class:`~superdex.physics.prefab.ActorContactEntry`,
@@ -4219,6 +4214,12 @@ def export_scene(
         referenced from the prefab using "./generated_assets/" paths.
 
     Note:
+        The actor contact filter omits the pairs whose contact is disabled when an
+        articulated or soft-skinned actor is created, as adding the prefab to a
+        scene disables them again. Such pairs whose contact was enabled after
+        creation are exported as enabling entries.
+
+    Note:
         Exported actor names are made unique: when two actors share a name, later
         ones receive a numeric suffix (e.g. "box", "box1"), so an exported name may
         differ from the runtime name.
@@ -4231,20 +4232,14 @@ def export_scene(
     Warning:
         Currently exports only rigid, soft, articulated, soft-skinned, and rod
         actors. Constraints, pose controllers, shell actors, and implicit (non-mesh)
-        shapes are NOT exported.
+        shapes are NOT exported. A link with an implicit shape is exported without a
+        shape, so its articulated actor may get different default contact filtering
+        when the prefab is added to a scene.
 
     Warning:
         Velocities are NOT exported. Soft actor displacements, articulated joint
         poses, and rod poses are exported only when
         :attr:`~superdex.physics.prefab.ExportParams.export_current_pose` is true.
-
-    Warning:
-        Scene export does not record explicit settings that enable contact between
-        actor pairs. If such a setting enables contact between adjacent links of an
-        articulated or soft-skinned actor, adding the exported prefab to a scene
-        applies automatic adjacent-link filtering and disables contact for that pair
-        again. To preserve this behavior, add an equivalent enabling entry to the
-        exported prefab or re-enable the pair after adding the prefab to a scene.
 
     See Also:
         :class:`~superdex.physics.prefab.ExportParams`,

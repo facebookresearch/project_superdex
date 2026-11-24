@@ -588,41 +588,80 @@ static std::optional<ContactFilter> ExportContactFilter(
     }
   }
 
-  // Directly iterate over disabled entity pairs
-  for (auto const& [entityA, entityB] : contactTable.entitiesWithNoContact) {
-    // Look up actor names — skip entries referencing actors not in the export
-    // (e.g. actors excluded via ExportParams::excludeActors).
+  // Actor entry for a pair of exported actors, or nothing if one is not exported (e.g. excluded via
+  // ExportParams::excludeActors).
+  auto makeActorEntry = [&](entt::entity entityA,
+                            entt::entity entityB,
+                            bool enable) -> std::optional<ActorContactEntry> {
     auto itA = exportedActorNames.find(entityA);
     auto itB = exportedActorNames.find(entityB);
     if (itA == exportedActorNames.end() || itB == exportedActorNames.end()) {
+      return std::nullopt;
+    }
+    ActorContactEntry entry;
+    entry.enable = enable;
+    entry.actors = {itA->second, itB->second};
+    if (actor::CanOwnNestedActors(registry.get<CActorInfo const>(entityA).type) ||
+        actor::CanOwnNestedActors(registry.get<CActorInfo const>(entityB).type)) {
+      // Each exported entry represents one concrete pair. Prevent a parent name from expanding to
+      // additional pairs when the exported prefab is loaded.
+      entry.includeNestedActors = false;
+    }
+    return entry;
+  };
+
+  // Articulated actors disable contact between some of their actors at creation (see
+  // articulated::compound::CollectDefaultNoContactPairs). Do not export these defaults.
+  DynamicArray<std::pair<entt::entity, entt::entity>> defaultPairs;
+  for (entt::entity const e : registry.view<TagArticulatedActor const>()) {
+    if (exportedActorNames.contains(e)) {
+      defaultPairs.append(articulated::compound::CollectDefaultNoContactPairs(registry, e));
+    }
+  }
+  std::unordered_set<CContactFilterTable::EntityPair, CContactFilterTable::EntityPairHash>
+      defaultPairSet;
+  for (auto const& [entityA, entityB] : defaultPairs) {
+    defaultPairSet.insert({entityA, entityB});
+    defaultPairSet.insert({entityB, entityA});
+  }
+
+  // Directly iterate over disabled entity pairs
+  for (auto const& [entityA, entityB] : contactTable.entitiesWithNoContact) {
+    if (defaultPairSet.contains({entityA, entityB})) {
       continue;
     }
-    auto const& nameA = itA->second;
-    auto const& nameB = itB->second;
-
-    bool const containsExpandableParent =
-        actor::CanOwnNestedActors(registry.get<CActorInfo const>(entityA).type) ||
-        actor::CanOwnNestedActors(registry.get<CActorInfo const>(entityB).type);
-
-    ActorContactEntry entry;
-    entry.enable = false;
-    entry.actors = {nameA, nameB};
-    if (containsExpandableParent) {
-      // Each exported entry represents one concrete disabled pair. Prevent a parent name from
-      // expanding to additional pairs when the exported prefab is loaded.
-      entry.includeNestedActors = false;
+    auto entry = makeActorEntry(entityA, entityB, /*enable*/ false);
+    if (!entry) {
+      continue;
     }
 
     // Check if reverse pair also disabled to determine symmetry
     if (contactTable.entitiesWithNoContact.contains({entityB, entityA})) {
       // Both directions disabled - export as symmetric, only when A <= B to avoid duplicates
       if (entityA <= entityB) {
-        CanonicalizePair(entry.actors[0], entry.actors[1]);
-        contactFilter.actorContactSymmetric->push_back(entry);
+        CanonicalizePair(entry->actors[0], entry->actors[1]);
+        contactFilter.actorContactSymmetric->push_back(*entry);
       }
     } else {
       // Only one direction disabled - export as asymmetric
-      contactFilter.actorContactAsymmetric->push_back(entry);
+      contactFilter.actorContactAsymmetric->push_back(*entry);
+    }
+  }
+
+  // Export the default pairs whose contact was enabled after creation
+  for (auto const& [entityA, entityB] : defaultPairs) {
+    bool const enabledAB = !contactTable.entitiesWithNoContact.contains({entityA, entityB});
+    bool const enabledBA = !contactTable.entitiesWithNoContact.contains({entityB, entityA});
+    if (enabledAB && enabledBA) {
+      if (auto entry = makeActorEntry(entityA, entityB, /*enable*/ true)) {
+        CanonicalizePair(entry->actors[0], entry->actors[1]);
+        contactFilter.actorContactSymmetric->push_back(*entry);
+      }
+    } else if (enabledAB || enabledBA) {
+      if (auto entry = enabledAB ? makeActorEntry(entityA, entityB, /*enable*/ true)
+                                 : makeActorEntry(entityB, entityA, /*enable*/ true)) {
+        contactFilter.actorContactAsymmetric->push_back(*entry);
+      }
     }
   }
 
