@@ -312,7 +312,7 @@ TEST(Rodrigues, DRotIncrementDRotVector) {
 // ones match them, to rounding.
 TEST(Rodrigues, DRotVectorJacobiansAccuracy) {
   double const switchF = Sqrt(static_cast<double>(drotvector::kSeriesSwitchNormSqr<float>));
-  double const switchD = Sqrt(drotvector::kSeriesSwitchNormSqr<double>);
+  auto const switchD = Sqrt(drotvector::kSeriesSwitchNormSqr<double>);
   double const kAngles[] = {1.001 * switchF, 0.999 * switchD, 1.001 * switchD};
   double constexpr kTolD = 4.0 * std::numeric_limits<double>::epsilon();
   double constexpr kTolF = 4.0 * std::numeric_limits<float>::epsilon();
