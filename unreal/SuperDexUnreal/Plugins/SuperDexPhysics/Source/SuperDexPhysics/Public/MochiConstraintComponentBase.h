@@ -86,9 +86,9 @@ class SUPERDEXPHYSICS_API UMochiConstraintComponentBase : public USceneComponent
         const TParams& Params,
         mochi::Constraint* (mochi::Scene::*CreateFn)(TParams const&, mochi::Error&)) {
       Create = [Params, CreateFn](mochi::Scene* Scene) {
-        mochi::ErrorLog e;
-        const mochi::Constraint* constraint = (Scene->*CreateFn)(Params, e);
-        return std::vector{constraint ? constraint->GetHandle() : mochi::ConstraintHandle{}};
+        mochi::ErrorLog E;
+        const mochi::Constraint* Constraint = (Scene->*CreateFn)(Params, E);
+        return std::vector{Constraint ? Constraint->GetHandle() : mochi::ConstraintHandle{}};
       };
     }
   };

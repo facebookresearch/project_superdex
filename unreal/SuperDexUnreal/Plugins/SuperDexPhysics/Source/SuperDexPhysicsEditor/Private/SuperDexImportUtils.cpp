@@ -39,13 +39,13 @@ namespace {
 using SuperDexGlbAssetDigests::AssetName;
 using SuperDexGlbAssetDigests::AssetObjectPath;
 
-constexpr const TCHAR* kMochiAssetsPipelinePath =
+constexpr const TCHAR* MochiAssetsPipelinePath =
     TEXT("/SuperDexPhysics/Editor/MochiAssetsPipeline.MochiAssetsPipeline");
 
 // The asset at ObjectPath, loaded if it exists on disk, or null.
 UObject* LoadExistingObject(const FString& ObjectPath) {
-  if (UObject* asset = FindObject<UObject>(nullptr, *ObjectPath)) {
-    return asset;
+  if (UObject* Asset = FindObject<UObject>(nullptr, *ObjectPath)) {
+    return Asset;
   }
   return FPackageName::DoesPackageExist(FPackageName::ObjectPathToPackageName(ObjectPath))
       ? LoadObject<UObject>(nullptr, *ObjectPath, nullptr, LOAD_NoWarn | LOAD_Quiet)
@@ -54,24 +54,24 @@ UObject* LoadExistingObject(const FString& ObjectPath) {
 
 // The first source file of an existing asset's import data, or empty.
 FString GetAssetSourceFile(const FString& ObjectPath) {
-  UObject* asset = LoadExistingObject(ObjectPath);
-  if (!asset) {
+  UObject* Asset = LoadExistingObject(ObjectPath);
+  if (!Asset) {
     return FString();
   }
-  const FObjectProperty* property =
-      FindFProperty<FObjectProperty>(asset->GetClass(), TEXT("AssetImportData"));
-  const UAssetImportData* importData = property
-      ? Cast<UAssetImportData>(property->GetObjectPropertyValue_InContainer(asset))
+  const FObjectProperty* Property =
+      FindFProperty<FObjectProperty>(Asset->GetClass(), TEXT("AssetImportData"));
+  const UAssetImportData* ImportData = Property
+      ? Cast<UAssetImportData>(Property->GetObjectPropertyValue_InContainer(Asset))
       : nullptr;
-  return importData ? importData->GetFirstFilename() : FString();
+  return ImportData ? ImportData->GetFirstFilename() : FString();
 }
 
 // The asset names a GLB's material or image may import as, in order of preference: its own, then
 // prefixed with the GLB file name, then also suffixed with its content digest.
 TArray<FString, TInlineAllocator<3>>
 CandidateAssetNames(const FString& GlbPath, const FString& Name, const FString& Digest) {
-  const FString prefixed = AssetName(FPaths::GetBaseFilename(GlbPath) + TEXT("_") + Name);
-  return {Name, prefixed, AssetName(prefixed + TEXT("_") + Digest.Left(8))};
+  const FString Prefixed = AssetName(FPaths::GetBaseFilename(GlbPath) + TEXT("_") + Name);
+  return {Name, Prefixed, AssetName(Prefixed + TEXT("_") + Digest.Left(8))};
 }
 
 } // namespace
@@ -95,14 +95,14 @@ FString SanitizeForFileName(const FString& InStr) {
 }
 
 FString SanitizeForComponentName(const FString& Name) {
-  const FString name = SanitizeForFileName(Name);
-  return FChar::IsDigit(name[0]) ? TEXT("_") + name : name;
+  const FString SanitizedName = SanitizeForFileName(Name);
+  return FChar::IsDigit(SanitizedName[0]) ? TEXT("_") + SanitizedName : SanitizedName;
 }
 
 FString NormalizePath(const FString& Path) {
-  FString normalized = FPaths::ConvertRelativePathToFull(Path);
-  FPaths::NormalizeFilename(normalized);
-  return normalized;
+  FString Normalized = FPaths::ConvertRelativePathToFull(Path);
+  FPaths::NormalizeFilename(Normalized);
+  return Normalized;
 }
 
 FString GetMochiModelBaseName(const FString& H5Path) {
@@ -168,34 +168,34 @@ UStaticMesh* FSuperDexImportSession::ImportGlbToStaticMesh(
   }
 
   if (!GlbAssetsPipeline) {
-    const UInterchangeGenericAssetsPipeline* pipeline = Cast<UInterchangeGenericAssetsPipeline>(
-        FSoftObjectPath(kMochiAssetsPipelinePath).TryLoad());
-    if (!pipeline) {
+    const UInterchangeGenericAssetsPipeline* Pipeline =
+        Cast<UInterchangeGenericAssetsPipeline>(FSoftObjectPath(MochiAssetsPipelinePath).TryLoad());
+    if (!Pipeline) {
       UE_LOG(
           LogMochiPhysicsEditor,
           Error,
           TEXT("Failed to load Interchange pipeline %s, cannot import GLB meshes"),
-          kMochiAssetsPipelinePath);
+          MochiAssetsPipelinePath);
       return nullptr;
     }
     // Left to search, the pipeline would bind a GLB material to any existing material of its name
     // and skip importing it, so changes to the GLB's materials would never reach Unreal.
-    UInterchangeGenericAssetsPipeline* copy = DuplicateObject(pipeline, GetTransientPackage());
-    copy->MaterialPipeline->SearchLocation = EInterchangeMaterialSearchLocation::DoNotSearch;
-    GlbAssetsPipeline.Reset(copy);
+    UInterchangeGenericAssetsPipeline* Copy = DuplicateObject(Pipeline, GetTransientPackage());
+    Copy->MaterialPipeline->SearchLocation = EInterchangeMaterialSearchLocation::DoNotSearch;
+    GlbAssetsPipeline.Reset(Copy);
     // The same, importing only the materials and textures.
-    UInterchangeGenericAssetsPipeline* materialsOnly = DuplicateObject(copy, GetTransientPackage());
-    materialsOnly->MeshPipeline->bImportStaticMeshes = false;
-    materialsOnly->MeshPipeline->bImportSkeletalMeshes = false;
-    GlbMaterialsPipeline.Reset(materialsOnly);
+    UInterchangeGenericAssetsPipeline* MaterialsOnly = DuplicateObject(Copy, GetTransientPackage());
+    MaterialsOnly->MeshPipeline->bImportStaticMeshes = false;
+    MaterialsOnly->MeshPipeline->bImportSkeletalMeshes = false;
+    GlbMaterialsPipeline.Reset(MaterialsOnly);
   }
 
   // Name the GLB's named materials and images so they don't replace different ones of another GLB.
-  const FString glbKey = SuperDexImportUtils::NormalizePath(GlbPath);
-  TStrongObjectPtr<USuperDexGlbAssetNamesPipeline> namesPipeline(
+  const FString GlbKey = SuperDexImportUtils::NormalizePath(GlbPath);
+  TStrongObjectPtr<USuperDexGlbAssetNamesPipeline> NamesPipeline(
       NewObject<USuperDexGlbAssetNamesPipeline>(GetTransientPackage()));
-  TMap<FString, FString> digests;
-  if (!SuperDexGlbAssetDigests::Read(GlbPath, digests)) {
+  TMap<FString, FString> Digests;
+  if (!SuperDexGlbAssetDigests::Read(GlbPath, Digests)) {
     UE_LOG(
         LogMochiPhysicsEditor,
         Warning,
@@ -203,58 +203,58 @@ UStaticMesh* FSuperDexImportSession::ImportGlbToStaticMesh(
             "%s is not a readable .glb; its existing materials and textures are kept as they are."),
         *GlbPath);
   }
-  TMap<FString, FString> assetNames;
+  TMap<FString, FString> AssetNames;
   // Existing materials and textures to rebuild, moved out of the way so Interchange, which never
   // overwrites an existing material or texture outside a reimport of that asset, makes new ones in
   // their place.
-  TArray<TPair<FString, UObject*>> displaced;
-  for (const TPair<FString, FString>& digest : digests) {
-    FString name;
-    for (const FString& candidate : CandidateAssetNames(GlbPath, digest.Key, digest.Value)) {
-      name = candidate;
-      if (!HoldsOtherContent(AssetObjectPath(DestPackagePath, name), name, glbKey, digest.Value)) {
+  TArray<TPair<FString, UObject*>> Displaced;
+  for (const TPair<FString, FString>& Digest : Digests) {
+    FString Name;
+    for (const FString& Candidate : CandidateAssetNames(GlbPath, Digest.Key, Digest.Value)) {
+      Name = Candidate;
+      if (!HoldsOtherContent(AssetObjectPath(DestPackagePath, Name), Name, GlbKey, Digest.Value)) {
         break;
       }
     }
-    if (name != digest.Key) {
-      namesPipeline->AssetRenames.Add(digest.Key, name);
+    if (Name != Digest.Key) {
+      NamesPipeline->AssetRenames.Add(Digest.Key, Name);
       UE_LOG(
           LogMochiPhysicsEditor,
           Display,
           TEXT("%s: another GLB's %s differs, importing this GLB's as %s"),
           *GlbPath,
-          *digest.Key,
-          *name);
+          *Digest.Key,
+          *Name);
     }
-    assetNames.Add(digest.Key, name);
-    const FString assetPath = AssetObjectPath(DestPackagePath, name);
-    const FGlbAssetContent* built = GlbAssetContents.Find(assetPath);
-    if (!built || built->Digest != digest.Value) {
-      if (UObject* existing = LoadExistingObject(assetPath)) {
-        if (existing->IsA<UMaterialInterface>() || existing->IsA<UTexture>()) {
-          existing->Rename(
-              *MakeUniqueObjectName(GetTransientPackage(), existing->GetClass()).ToString(),
+    AssetNames.Add(Digest.Key, Name);
+    const FString AssetPath = AssetObjectPath(DestPackagePath, Name);
+    const FGlbAssetContent* Built = GlbAssetContents.Find(AssetPath);
+    if (!Built || Built->Digest != Digest.Value) {
+      if (UObject* Existing = LoadExistingObject(AssetPath)) {
+        if (Existing->IsA<UMaterialInterface>() || Existing->IsA<UTexture>()) {
+          Existing->Rename(
+              *MakeUniqueObjectName(GetTransientPackage(), Existing->GetClass()).ToString(),
               GetTransientPackage(),
               REN_DontCreateRedirectors | REN_NonTransactional | REN_DoNotDirty);
-          displaced.Emplace(assetPath, existing);
+          Displaced.Emplace(AssetPath, Existing);
         }
       }
     }
-    GlbAssetContents.Add(assetPath, {glbKey, digest.Value});
+    GlbAssetContents.Add(AssetPath, {GlbKey, Digest.Value});
   }
 
   UInterchangeManager& InterchangeManager = UInterchangeManager::GetInterchangeManager();
-  const FString meshName = FString::Printf(TEXT("SM_%s"), *AssetName);
-  const FString meshPackage = FPaths::Combine(DestPackagePath, meshName);
+  const FString MeshName = FString::Printf(TEXT("SM_%s"), *AssetName);
+  const FString MeshPackage = FPaths::Combine(DestPackagePath, MeshName);
   const bool bMeshExists =
-      FindPackage(nullptr, *meshPackage) != nullptr || FPackageName::DoesPackageExist(meshPackage);
+      FindPackage(nullptr, *MeshPackage) != nullptr || FPackageName::DoesPackageExist(MeshPackage);
 
   FImportAssetParameters ImportParams;
   ImportParams.bIsAutomated = true;
   ImportParams.bReplaceExisting = true;
   ImportParams.OverridePipelines.Add(FSoftObjectPath(GlbAssetsPipeline.Get()));
-  ImportParams.OverridePipelines.Add(FSoftObjectPath(namesPipeline.Get()));
-  ImportParams.DestinationName = meshName;
+  ImportParams.OverridePipelines.Add(FSoftObjectPath(NamesPipeline.Get()));
+  ImportParams.DestinationName = MeshName;
 
   TArray<UObject*> ImportedObjects;
   InterchangeManager.ImportAsset(
@@ -280,8 +280,8 @@ UStaticMesh* FSuperDexImportSession::ImportGlbToStaticMesh(
     MaterialParams.bIsAutomated = true;
     MaterialParams.bReplaceExisting = true;
     MaterialParams.OverridePipelines.Add(FSoftObjectPath(GlbMaterialsPipeline.Get()));
-    MaterialParams.OverridePipelines.Add(FSoftObjectPath(namesPipeline.Get()));
-    MaterialParams.DestinationName = meshName + TEXT("_GlbMaterials");
+    MaterialParams.OverridePipelines.Add(FSoftObjectPath(NamesPipeline.Get()));
+    MaterialParams.DestinationName = MeshName + TEXT("_GlbMaterials");
     TArray<UObject*> ImportedMaterials;
     InterchangeManager.ImportAsset(
         DestPackagePath,
@@ -290,24 +290,24 @@ UStaticMesh* FSuperDexImportSession::ImportGlbToStaticMesh(
         ImportedMaterials);
   }
 
-  ReplaceDisplacedAssets(GlbPath, displaced);
+  ReplaceDisplacedAssets(GlbPath, Displaced);
 
   // Point the mesh's material slots, named after the GLB's materials, at this import's materials:
   // a reimported mesh keeps the materials its slots had, which may have been renamed since.
   if (Result) {
     bool bChanged = false;
-    for (FStaticMaterial& slot : Result->GetStaticMaterials()) {
-      const FString* name = assetNames.Find(
-          SuperDexGlbAssetDigests::AssetName(slot.ImportedMaterialSlotName.ToString()));
-      UMaterialInterface* material = name ? LoadObject<UMaterialInterface>(
+    for (FStaticMaterial& Slot : Result->GetStaticMaterials()) {
+      const FString* Name = AssetNames.Find(
+          SuperDexGlbAssetDigests::AssetName(Slot.ImportedMaterialSlotName.ToString()));
+      UMaterialInterface* Material = Name ? LoadObject<UMaterialInterface>(
                                                 nullptr,
-                                                *AssetObjectPath(DestPackagePath, *name),
+                                                *AssetObjectPath(DestPackagePath, *Name),
                                                 nullptr,
                                                 LOAD_NoWarn | LOAD_Quiet)
                                           : nullptr;
-      if (material && slot.MaterialInterface != material) {
+      if (Material && Slot.MaterialInterface != Material) {
         Result->Modify();
-        slot.MaterialInterface = material;
+        Slot.MaterialInterface = Material;
         bChanged = true;
       }
     }
@@ -401,25 +401,25 @@ bool FSuperDexImportSession::HoldsOtherContent(
     const FString& Name,
     const FString& GlbPath,
     const FString& Digest) {
-  if (const FGlbAssetContent* content = GlbAssetContents.Find(ObjectPath)) {
+  if (const FGlbAssetContent* Content = GlbAssetContents.Find(ObjectPath)) {
     // Both must differ: another GLB's same content is shared, and a GLB's own record never
     // conflicts with it (its digests are keyed by asset name, so it has one entry per name).
-    return content->GlbPath != GlbPath && content->Digest != Digest;
+    return Content->GlbPath != GlbPath && Content->Digest != Digest;
   }
   // An asset from an earlier import: compare with what its source GLB holds now. One whose source
   // is gone is stale and may be replaced.
-  const FString sourcePath = GetAssetSourceFile(ObjectPath);
-  if (sourcePath.IsEmpty() || !FPaths::FileExists(sourcePath) ||
-      SuperDexImportUtils::NormalizePath(sourcePath) == GlbPath) {
+  const FString SourcePath = GetAssetSourceFile(ObjectPath);
+  if (SourcePath.IsEmpty() || !FPaths::FileExists(SourcePath) ||
+      SuperDexImportUtils::NormalizePath(SourcePath) == GlbPath) {
     return false;
   }
-  const FString sourceKey = SuperDexImportUtils::NormalizePath(sourcePath);
-  if (!SourceGlbDigests.Contains(sourceKey)) {
-    SuperDexGlbAssetDigests::Read(sourcePath, SourceGlbDigests.Add(sourceKey));
+  const FString SourceKey = SuperDexImportUtils::NormalizePath(SourcePath);
+  if (!SourceGlbDigests.Contains(SourceKey)) {
+    SuperDexGlbAssetDigests::Read(SourcePath, SourceGlbDigests.Add(SourceKey));
   }
-  for (const TPair<FString, FString>& sourceDigest : SourceGlbDigests[sourceKey]) {
-    if (CandidateAssetNames(sourcePath, sourceDigest.Key, sourceDigest.Value).Contains(Name)) {
-      return sourceDigest.Value != Digest;
+  for (const TPair<FString, FString>& SourceDigest : SourceGlbDigests[SourceKey]) {
+    if (CandidateAssetNames(SourcePath, SourceDigest.Key, SourceDigest.Value).Contains(Name)) {
+      return SourceDigest.Value != Digest;
     }
   }
   return false;
@@ -428,52 +428,52 @@ bool FSuperDexImportSession::HoldsOtherContent(
 void FSuperDexImportSession::ReplaceDisplacedAssets(
     const FString& GlbPath,
     const TArray<TPair<FString, UObject*>>& Displaced) {
-  TArray<UObject*> olds;
-  TArray<UObject*> rebuilts;
-  for (const TPair<FString, UObject*>& old : Displaced) {
-    const FString name = FPackageName::ObjectPathToObjectName(old.Key);
-    UPackage* package = FindPackage(nullptr, *FPackageName::ObjectPathToPackageName(old.Key));
-    UObject* rebuilt = package ? StaticFindObject(nullptr, package, *name) : nullptr;
-    if (!rebuilt) {
-      if (!package) {
-        package = CreatePackage(*FPackageName::ObjectPathToPackageName(old.Key));
+  TArray<UObject*> Olds;
+  TArray<UObject*> Rebuilts;
+  for (const TPair<FString, UObject*>& Old : Displaced) {
+    const FString Name = FPackageName::ObjectPathToObjectName(Old.Key);
+    UPackage* Package = FindPackage(nullptr, *FPackageName::ObjectPathToPackageName(Old.Key));
+    UObject* Rebuilt = Package ? StaticFindObject(nullptr, Package, *Name) : nullptr;
+    if (!Rebuilt) {
+      if (!Package) {
+        Package = CreatePackage(*FPackageName::ObjectPathToPackageName(Old.Key));
       }
-      old.Value->Rename(
-          *name, package, REN_DontCreateRedirectors | REN_NonTransactional | REN_DoNotDirty);
+      Old.Value->Rename(
+          *Name, Package, REN_DontCreateRedirectors | REN_NonTransactional | REN_DoNotDirty);
       UE_LOG(
           LogMochiPhysicsEditor,
           Warning,
           TEXT("%s: %s was not rebuilt and is kept as it was."),
           *GlbPath,
-          *old.Key);
+          *Old.Key);
       continue;
     }
-    if (rebuilt->GetClass() != old.Value->GetClass()) {
+    if (Rebuilt->GetClass() != Old.Value->GetClass()) {
       UE_LOG(
           LogMochiPhysicsEditor,
           Warning,
           TEXT("%s: %s was rebuilt as a %s instead of a %s; references to it were cleared."),
           *GlbPath,
-          *old.Key,
-          *rebuilt->GetClass()->GetName(),
-          *old.Value->GetClass()->GetName());
-      rebuilt = nullptr;
+          *Old.Key,
+          *Rebuilt->GetClass()->GetName(),
+          *Old.Value->GetClass()->GetName());
+      Rebuilt = nullptr;
     }
-    olds.Add(old.Value);
-    rebuilts.Add(rebuilt);
+    Olds.Add(Old.Value);
+    Rebuilts.Add(Rebuilt);
   }
-  if (olds.IsEmpty()) {
+  if (Olds.IsEmpty()) {
     return;
   }
   // Replace through the editor, which tells every referencer of the change (Pre/PostEditChange, so
   // meshes, components and materials refresh their render state) before the old objects go away.
   // (This engine doesn't export the batched overload.)
-  for (int32 i = 0; i < olds.Num(); ++i) {
-    TArray<UObject*> old = {olds[i]};
-    ObjectTools::ForceReplaceReferences(rebuilts[i], old);
+  for (int32 i = 0; i < Olds.Num(); ++i) {
+    TArray<UObject*> Old = {Olds[i]};
+    ObjectTools::ForceReplaceReferences(Rebuilts[i], Old);
   }
-  for (UObject* old : olds) {
-    old->ClearFlags(RF_Public | RF_Standalone);
-    old->MarkAsGarbage();
+  for (UObject* Old : Olds) {
+    Old->ClearFlags(RF_Public | RF_Standalone);
+    Old->MarkAsGarbage();
   }
 }

@@ -26,10 +26,10 @@
 #endif
 
 template <typename T, size_t N>
-int IndexOf(const T (&array)[N], const T& value) {
-  const T* it = std::find(std::begin(array), std::end(array), value);
-  if (it != std::end(array)) {
-    return std::distance(std::begin(array), it);
+int IndexOf(const T (&array)[N], const T& Value) {
+  const T* It = std::find(std::begin(array), std::end(array), Value);
+  if (It != std::end(array)) {
+    return std::distance(std::begin(array), It);
   }
   UE_LOG(LogMochiPhysics, Error, TEXT("Failed to find index of Mochi string argument!"));
   return -1;
@@ -44,60 +44,60 @@ UMochiMaterialParams::UMochiMaterialParams() {
 }
 
 mochi::SoftMaterialParams UMochiMaterialParams::ToMochi() const {
-  constexpr float k_MPaToPa = 1e6;
-  mochi::SoftMaterialParams result;
-  result.type = ::ToMochi(MaterialType);
-  result.density = mochi::real(Density);
-  result.massDampingCoefficient = mochi::real(MassDampingCoefficient);
-  result.stiffnessDampingCoefficient = mochi::real(StiffnessDampingCoefficient);
+  constexpr float MPaToPa = 1e6;
+  mochi::SoftMaterialParams Result;
+  Result.type = ::ToMochi(MaterialType);
+  Result.density = mochi::real(Density);
+  Result.massDampingCoefficient = mochi::real(MassDampingCoefficient);
+  Result.stiffnessDampingCoefficient = mochi::real(StiffnessDampingCoefficient);
 
-  const mochi::real ym = mochi::real(YoungsModulus * k_MPaToPa);
-  const mochi::real pr = mochi::real(PoissonRatio);
-  const mochi::MaterialPsdStrategy psd = ::ToMochi(PsdStrategy);
-  const mochi::real arapStiffness = mochi::real(ArapStiffness);
-  switch (result.type) {
+  const mochi::real Ym = mochi::real(YoungsModulus * MPaToPa);
+  const mochi::real Pr = mochi::real(PoissonRatio);
+  const mochi::MaterialPsdStrategy Psd = ::ToMochi(PsdStrategy);
+  const mochi::real MochiArapStiffness = mochi::real(ArapStiffness);
+  switch (Result.type) {
     case mochi::SoftMaterialType::NeoHookean:
-      result.neoHookean.youngsModulus = ym;
-      result.neoHookean.poissonRatio = pr;
-      result.neoHookean.psdStrategy = psd;
+      Result.neoHookean.youngsModulus = Ym;
+      Result.neoHookean.poissonRatio = Pr;
+      Result.neoHookean.psdStrategy = Psd;
       break;
     case mochi::SoftMaterialType::StVenantKirchhoff:
-      result.stVenantKirchhoff.youngsModulus = ym;
-      result.stVenantKirchhoff.poissonRatio = pr;
-      result.stVenantKirchhoff.psdStrategy = psd;
+      Result.stVenantKirchhoff.youngsModulus = Ym;
+      Result.stVenantKirchhoff.poissonRatio = Pr;
+      Result.stVenantKirchhoff.psdStrategy = Psd;
       break;
     case mochi::SoftMaterialType::LinearElastic:
-      result.linearElastic.youngsModulus = ym;
-      result.linearElastic.poissonRatio = pr;
+      Result.linearElastic.youngsModulus = Ym;
+      Result.linearElastic.poissonRatio = Pr;
       break;
     case mochi::SoftMaterialType::ActiveNeoHookean:
-      result.activeNeoHookean.passiveIsotropic.youngsModulus = ym;
-      result.activeNeoHookean.passiveIsotropic.poissonRatio = pr;
-      result.activeNeoHookean.passiveIsotropic.psdStrategy = psd;
-      result.activeNeoHookean.activeAnisotropic.alpha = mochi::real(AnisoAlpha);
-      result.activeNeoHookean.activeAnisotropic.length = mochi::real(AnisoLength);
-      result.activeNeoHookean.activeAnisotropic.anisoDir =
+      Result.activeNeoHookean.passiveIsotropic.youngsModulus = Ym;
+      Result.activeNeoHookean.passiveIsotropic.poissonRatio = Pr;
+      Result.activeNeoHookean.passiveIsotropic.psdStrategy = Psd;
+      Result.activeNeoHookean.activeAnisotropic.alpha = mochi::real(AnisoAlpha);
+      Result.activeNeoHookean.activeAnisotropic.length = mochi::real(AnisoLength);
+      Result.activeNeoHookean.activeAnisotropic.anisoDir =
           mochi::Real3(AnisoDirection.X, AnisoDirection.Y, AnisoDirection.Z);
-      result.activeNeoHookean.activeAnisotropic.psdStrategy = psd;
+      Result.activeNeoHookean.activeAnisotropic.psdStrategy = Psd;
       break;
     case mochi::SoftMaterialType::ActiveShapeTargetingArap:
-      result.activeShapeTargetingArap.stiffness = arapStiffness;
-      result.activeShapeTargetingArap.shapeTargetTensor = ShapeTargetTensor.ToMochi();
-      result.activeShapeTargetingArap.psdStrategy = psd;
+      Result.activeShapeTargetingArap.stiffness = MochiArapStiffness;
+      Result.activeShapeTargetingArap.shapeTargetTensor = ShapeTargetTensor.ToMochi();
+      Result.activeShapeTargetingArap.psdStrategy = Psd;
       break;
     case mochi::SoftMaterialType::Arap:
-      result.arap.stiffness = arapStiffness;
-      result.arap.psdStrategy = psd;
+      Result.arap.stiffness = MochiArapStiffness;
+      Result.arap.psdStrategy = Psd;
       break;
     case mochi::SoftMaterialType::Count:
       checkNoEntry();
       break;
   }
-  return result;
+  return Result;
 }
 
 void UMochiMaterialParams::FromMochi(const mochi::SoftMaterialParams& Mochi) {
-  constexpr mochi::real k_PaToMPa = 1e-6;
+  constexpr mochi::real PaToMPa = 1e-6;
   MaterialType = ToUnreal(Mochi.type);
   Density = Mochi.density;
   MassDampingCoefficient = Mochi.massDampingCoefficient;
@@ -118,22 +118,22 @@ void UMochiMaterialParams::FromMochi(const mochi::SoftMaterialParams& Mochi) {
 
   switch (Mochi.type) {
     case mochi::SoftMaterialType::NeoHookean:
-      YoungsModulus = Mochi.neoHookean.youngsModulus * k_PaToMPa;
+      YoungsModulus = Mochi.neoHookean.youngsModulus * PaToMPa;
       PoissonRatio = Mochi.neoHookean.poissonRatio;
       PsdStrategy = ToUnreal(Mochi.neoHookean.psdStrategy);
       break;
     case mochi::SoftMaterialType::StVenantKirchhoff:
-      YoungsModulus = Mochi.stVenantKirchhoff.youngsModulus * k_PaToMPa;
+      YoungsModulus = Mochi.stVenantKirchhoff.youngsModulus * PaToMPa;
       PoissonRatio = Mochi.stVenantKirchhoff.poissonRatio;
       PsdStrategy = ToUnreal(Mochi.stVenantKirchhoff.psdStrategy);
       break;
     case mochi::SoftMaterialType::LinearElastic:
       // Linear elastic has a constant, already-PSD Hessian and so no strategy to mirror.
-      YoungsModulus = Mochi.linearElastic.youngsModulus * k_PaToMPa;
+      YoungsModulus = Mochi.linearElastic.youngsModulus * PaToMPa;
       PoissonRatio = Mochi.linearElastic.poissonRatio;
       break;
     case mochi::SoftMaterialType::ActiveNeoHookean:
-      YoungsModulus = Mochi.activeNeoHookean.passiveIsotropic.youngsModulus * k_PaToMPa;
+      YoungsModulus = Mochi.activeNeoHookean.passiveIsotropic.youngsModulus * PaToMPa;
       PoissonRatio = Mochi.activeNeoHookean.passiveIsotropic.poissonRatio;
       PsdStrategy = ToUnreal(Mochi.activeNeoHookean.passiveIsotropic.psdStrategy);
       break;
@@ -161,33 +161,33 @@ UMochiShellMaterialParams::UMochiShellMaterialParams() {
 #if WITH_EDITOR
 bool UMochiShellMaterialParams::TryDeriveFrom3DMaterial(
     mochi::experimental::ShellMaterialParams& Result) const {
-  mochi::Error error;
+  mochi::Error Error;
   Result = mochi::experimental::ShellMaterialParamsFrom3dIsotropic(
       mochi::real(YoungModulus3D),
       mochi::real(PoissonsRatio3D),
       mochi::real(Density3D),
       mochi::real(Thickness),
-      error);
-  if (error.IsOK()) {
+      Error);
+  if (Error.IsOK()) {
     return true;
   }
   UE_LOG(
       LogMochiPhysics,
       Error,
       TEXT("[UMochiShellMaterialParams] Failed to derive shell material from 3D params: %hs"),
-      error.GetDescription());
-  FNotificationInfo notification(
+      Error.GetDescription());
+  FNotificationInfo Notification(
       FText::Format(
           NSLOCTEXT(
               "MochiShellMaterialParams",
               "EstimateFailed",
               "Could not estimate shell material: {0}"),
-          FText::FromString(UTF8_TO_TCHAR(error.GetDescription()))));
-  notification.ExpireDuration = 8.0f;
-  notification.bFireAndForget = true;
-  if (TSharedPtr<SNotificationItem> notificationItem =
-          FSlateNotificationManager::Get().AddNotification(notification)) {
-    notificationItem->SetCompletionState(SNotificationItem::CS_Fail);
+          FText::FromString(UTF8_TO_TCHAR(Error.GetDescription()))));
+  Notification.ExpireDuration = 8.0f;
+  Notification.bFireAndForget = true;
+  if (TSharedPtr<SNotificationItem> NotificationItem =
+          FSlateNotificationManager::Get().AddNotification(Notification)) {
+    NotificationItem->SetCompletionState(SNotificationItem::CS_Fail);
   }
   return false;
 }
@@ -203,16 +203,16 @@ void UMochiShellMaterialParams::SetElasticAndDensityParameters(
 }
 
 mochi::experimental::ShellMaterialParams UMochiShellMaterialParams::ToMochi() const {
-  mochi::experimental::ShellMaterialParams result;
-  result.membraneLambda = mochi::real(MembraneLambda);
-  result.membraneMu = mochi::real(MembraneMu);
-  result.bendingAlpha = mochi::real(BendingAlpha);
-  result.bendingBeta = mochi::real(BendingBeta);
-  result.density = mochi::real(Density);
-  result.massDampingCoefficient = mochi::real(MassDampingCoefficient);
-  result.stiffnessDampingCoefficient = mochi::real(StiffnessDampingCoefficient);
-  result.membraneCollapseBarrierScale = mochi::real(MembraneCollapseBarrierScale);
-  return result;
+  mochi::experimental::ShellMaterialParams Result;
+  Result.membraneLambda = mochi::real(MembraneLambda);
+  Result.membraneMu = mochi::real(MembraneMu);
+  Result.bendingAlpha = mochi::real(BendingAlpha);
+  Result.bendingBeta = mochi::real(BendingBeta);
+  Result.density = mochi::real(Density);
+  Result.massDampingCoefficient = mochi::real(MassDampingCoefficient);
+  Result.stiffnessDampingCoefficient = mochi::real(StiffnessDampingCoefficient);
+  Result.membraneCollapseBarrierScale = mochi::real(MembraneCollapseBarrierScale);
+  return Result;
 }
 
 // Populate from native Mochi type.
@@ -225,12 +225,12 @@ void UMochiShellMaterialParams::FromMochi(const mochi::experimental::ShellMateri
 
 #if WITH_EDITOR
 void UMochiShellMaterialParams::Apply3DParametersTo2D() {
-  mochi::experimental::ShellMaterialParams material;
-  if (!TryDeriveFrom3DMaterial(material)) {
+  mochi::experimental::ShellMaterialParams Material;
+  if (!TryDeriveFrom3DMaterial(Material)) {
     return;
   }
   Modify();
-  SetElasticAndDensityParameters(material);
+  SetElasticAndDensityParameters(Material);
   PostEditChange();
 }
 #endif
@@ -244,16 +244,16 @@ UMochiRodMaterialParams::UMochiRodMaterialParams() {
 }
 
 mochi::RodMaterialParams UMochiRodMaterialParams::ToMochi() const {
-  mochi::RodMaterialParams result;
-  result.linearDensity = mochi::real(LinearDensity);
-  result.linearRotationalInertia = mochi::real(LinearRotationalInertia);
-  result.axialStiffness = mochi::real(AxialStiffness);
-  result.torsionalStiffness = mochi::real(TorsionalStiffness);
-  result.flexuralStiffness = {mochi::real(FlexuralStiffness.X), mochi::real(FlexuralStiffness.Y)};
-  result.massDampingCoefficient = mochi::real(MassDampingCoefficient);
-  result.stiffnessDampingCoefficient = mochi::real(StiffnessDampingCoefficient);
-  result.axialCollapseBarrierScale = mochi::real(AxialCollapseBarrierScale);
-  return result;
+  mochi::RodMaterialParams Result;
+  Result.linearDensity = mochi::real(LinearDensity);
+  Result.linearRotationalInertia = mochi::real(LinearRotationalInertia);
+  Result.axialStiffness = mochi::real(AxialStiffness);
+  Result.torsionalStiffness = mochi::real(TorsionalStiffness);
+  Result.flexuralStiffness = {mochi::real(FlexuralStiffness.X), mochi::real(FlexuralStiffness.Y)};
+  Result.massDampingCoefficient = mochi::real(MassDampingCoefficient);
+  Result.stiffnessDampingCoefficient = mochi::real(StiffnessDampingCoefficient);
+  Result.axialCollapseBarrierScale = mochi::real(AxialCollapseBarrierScale);
+  return Result;
 }
 // Populate from native Mochi type.
 void UMochiRodMaterialParams::FromMochi(const mochi::RodMaterialParams& Mochi) {
@@ -276,29 +276,29 @@ UMochiContactParams::UMochiContactParams() {
 }
 
 mochi::ContactParams UMochiContactParams::ToMochi() const {
-  constexpr float k_MPaToPa = 1e6;
-  mochi::ContactParams result;
-  result.penaltyCoefficient = mochi::real(PenaltyCoefficient * k_MPaToPa);
-  result.penaltyThresholdDefault = mochi::real(PenaltyThresholdDist);
-  result.penaltyThresholdExtraPadding = mochi::real(PenaltyExtraPadding);
-  result.collidingPenaltyThresholdPadding = mochi::real(CollidingPenaltyThresholdPadding);
-  result.penaltySmoothingHalfDistance = mochi::real(PenaltySmoothingHalfDistance);
-  result.distanceErrorBound = mochi::real(DistanceErrorBound);
-  result.viscousFrictionCoefficient = mochi::real(ViscousFrictionCoefficient);
-  result.coulombFrictionCoefficient = mochi::real(CoulombFrictionCoefficient);
-  result.preferElastoPlasticFriction = bPreferElastoPlasticFriction;
-  result.frictionFalloffVel = mochi::real(FrictionFalloffVel);
-  result.preslidingDisplacement = mochi::real(PreslidingDisplacement);
-  result.normalViscousDampingCoefficient = mochi::real(NormalViscousDampingCoefficient);
-  result.frictionWithColliderNormal = bFrictionWithColliderNormal;
-  result.maxAlignmentNormals = mochi::real(MaxAlignmentNormals);
-  result.alignmentSmoothingFraction = mochi::real(AlignmentSmoothingFraction);
-  return result;
+  constexpr float MPaToPa = 1e6;
+  mochi::ContactParams Result;
+  Result.penaltyCoefficient = mochi::real(PenaltyCoefficient * MPaToPa);
+  Result.penaltyThresholdDefault = mochi::real(PenaltyThresholdDist);
+  Result.penaltyThresholdExtraPadding = mochi::real(PenaltyExtraPadding);
+  Result.collidingPenaltyThresholdPadding = mochi::real(CollidingPenaltyThresholdPadding);
+  Result.penaltySmoothingHalfDistance = mochi::real(PenaltySmoothingHalfDistance);
+  Result.distanceErrorBound = mochi::real(DistanceErrorBound);
+  Result.viscousFrictionCoefficient = mochi::real(ViscousFrictionCoefficient);
+  Result.coulombFrictionCoefficient = mochi::real(CoulombFrictionCoefficient);
+  Result.preferElastoPlasticFriction = bPreferElastoPlasticFriction;
+  Result.frictionFalloffVel = mochi::real(FrictionFalloffVel);
+  Result.preslidingDisplacement = mochi::real(PreslidingDisplacement);
+  Result.normalViscousDampingCoefficient = mochi::real(NormalViscousDampingCoefficient);
+  Result.frictionWithColliderNormal = bFrictionWithColliderNormal;
+  Result.maxAlignmentNormals = mochi::real(MaxAlignmentNormals);
+  Result.alignmentSmoothingFraction = mochi::real(AlignmentSmoothingFraction);
+  return Result;
 }
 
 void UMochiContactParams::FromMochi(const mochi::ContactParams& Mochi) {
-  constexpr mochi::real k_PaToMPa = 1e-6;
-  PenaltyCoefficient = Mochi.penaltyCoefficient * k_PaToMPa;
+  constexpr mochi::real PaToMPa = 1e-6;
+  PenaltyCoefficient = Mochi.penaltyCoefficient * PaToMPa;
   PenaltyThresholdDist = Mochi.GetPenaltyThresholdDist(false);
   PenaltyExtraPadding = Mochi.GetPenaltyThresholdDist(true) - PenaltyThresholdDist;
   CollidingPenaltyThresholdPadding = Mochi.collidingPenaltyThresholdPadding;
@@ -320,17 +320,17 @@ void UMochiContactParams::FromMochi(const mochi::ContactParams& Mochi) {
 //------------------------------------------------------------------------------
 
 UMochiSolverParams::UMochiSolverParams() {
-  mochi::SolverParams mochi = mochi::SolverParams{};
-  IntegrationMethod = ::ToUnreal(mochi.integrationMethod);
+  mochi::SolverParams Mochi = mochi::SolverParams{};
+  IntegrationMethod = ::ToUnreal(Mochi.integrationMethod);
 }
 
 mochi::SolverParams UMochiSolverParams::ToMochi() const {
-  mochi::SolverParams result;
-  result.nonLinearSolver = ::ToMochi(NonLinearSolverParams);
-  result.linearSolver = ::ToMochi(LinearSolverParams);
-  result.integrationMethod = ::ToMochi(IntegrationMethod);
-  result.experimentalEval = ::ToMochi(ExperimentalEvalParams);
-  return result;
+  mochi::SolverParams Result;
+  Result.nonLinearSolver = ::ToMochi(NonLinearSolverParams);
+  Result.linearSolver = ::ToMochi(LinearSolverParams);
+  Result.integrationMethod = ::ToMochi(IntegrationMethod);
+  Result.experimentalEval = ::ToMochi(ExperimentalEvalParams);
+  return Result;
 }
 
 void UMochiSolverParams::FromMochi(const mochi::SolverParams& Mochi) {

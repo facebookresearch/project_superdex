@@ -157,11 +157,11 @@ struct SUPERDEXPHYSICS_API FMochiSpaceDefinition {
       : Axes(InAxes), UnitsPerMeter(InMeterScale) {}
 };
 
-constexpr bool operator==(const FMochiSpaceDefinition& lhs, const FMochiSpaceDefinition& rhs) {
-  return lhs.Axes == rhs.Axes && lhs.UnitsPerMeter == rhs.UnitsPerMeter;
+constexpr bool operator==(const FMochiSpaceDefinition& Lhs, const FMochiSpaceDefinition& Rhs) {
+  return Lhs.Axes == Rhs.Axes && Lhs.UnitsPerMeter == Rhs.UnitsPerMeter;
 }
-constexpr bool operator!=(const FMochiSpaceDefinition& lhs, const FMochiSpaceDefinition& rhs) {
-  return !(lhs == rhs);
+constexpr bool operator!=(const FMochiSpaceDefinition& Lhs, const FMochiSpaceDefinition& Rhs) {
+  return !(Lhs == Rhs);
 }
 
 static constexpr FMochiSpaceDefinition kMochiSpace(EMochiSpaceAxes::Mochi, 1.0);
@@ -499,8 +499,8 @@ struct SUPERDEXPHYSICS_API FMochiMaterialModifier {
   GENERATED_BODY()
 
   FMochiMaterialModifier() {
-    constexpr mochi::real k_PaToMPa = 1e-6;
-    YoungsModulus = mochi::kDefaultYoungsModulus * k_PaToMPa;
+    constexpr mochi::real PaToMPa = 1e-6;
+    YoungsModulus = mochi::kDefaultYoungsModulus * PaToMPa;
     PoissonRatio = mochi::kDefaultPoissonRatio;
   }
 

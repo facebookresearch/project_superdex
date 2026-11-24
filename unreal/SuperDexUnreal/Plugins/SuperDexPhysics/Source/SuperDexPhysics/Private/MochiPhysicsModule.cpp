@@ -82,14 +82,14 @@ void FMochiPhysicsModule::Initialize() {
 
   // Load library
   // TODO: figure out Android
-  const FString baseDir = IPluginManager::Get().FindPlugin(TEXT("SuperDexPhysics"))->GetBaseDir();
+  const FString BaseDir = IPluginManager::Get().FindPlugin(TEXT("SuperDexPhysics"))->GetBaseDir();
 #if PLATFORM_WINDOWS
-  FString BinariesDirectory = FPaths::Combine(baseDir, TEXT("/ThirdParty/mochi_physics/lib/Win64"));
+  FString BinariesDirectory = FPaths::Combine(BaseDir, TEXT("/ThirdParty/mochi_physics/lib/Win64"));
 #elif PLATFORM_LINUX
-  FString BinariesDirectory = FPaths::Combine(baseDir, TEXT("/ThirdParty/mochi_physics/lib/Linux"));
+  FString BinariesDirectory = FPaths::Combine(BaseDir, TEXT("/ThirdParty/mochi_physics/lib/Linux"));
 #else
   FString BinariesDirectory =
-      FPaths::Combine(baseDir, TEXT("/ThirdParty/mochi_physics/lib/Android"));
+      FPaths::Combine(BaseDir, TEXT("/ThirdParty/mochi_physics/lib/Android"));
 #endif
 
   FPlatformProcess::PushDllDirectory(*BinariesDirectory);
@@ -104,9 +104,9 @@ void FMochiPhysicsModule::Initialize() {
   // The superdex_robotics library is loaded by the SuperDexRobotics plugin's own module.
 
   // Create MochiContext
-  const UMochiPhysicsSettings* const settings = GetDefault<UMochiPhysicsSettings>();
-  if (settings && (settings->NumWorkerThreads > 0)) {
-    MochiContext = mochi::CreateContext(settings->NumWorkerThreads);
+  const UMochiPhysicsSettings* const Settings = GetDefault<UMochiPhysicsSettings>();
+  if (Settings && (Settings->NumWorkerThreads > 0)) {
+    MochiContext = mochi::CreateContext(Settings->NumWorkerThreads);
   } else {
     // Let Mochi decide how many worker threads to use on this machine
     MochiContext = mochi::CreateContext();
@@ -119,7 +119,7 @@ void FMochiPhysicsModule::Initialize() {
       MochiContext->GetNumThreads());
 
 #if !UE_BUILD_SHIPPING
-  if (settings && settings->bEnablePhysicsDebuggerConnection) {
+  if (Settings && Settings->bEnablePhysicsDebuggerConnection) {
     mochi::DebugServer& DebugServer = MochiContext->GetDebugServer();
     DebugServer.SetCoordinateSpace(
         ToMochiCoordinateSpace(UMochiPhysicsSettings::GetActiveSimulationSpace()));
@@ -142,25 +142,25 @@ void FMochiPhysicsModule::Initialize() {
 #endif
 
   MochiContext->SetLogCallback(
-      [](mochi::LogChannel channel, const char* msg, const char* file, int line) {
+      [](mochi::LogChannel Channel, const char* Msg, const char* File, int Line) {
         // Note that the ANSI_TO_TCHAR macro uses "a class instance declared in local scope and
         // allocate space on the stack, so it is very important you do not retain pointers to them!
         // They are intended only for passing strings to function calls."
-        if (channel == mochi::LogChannel::Verbose) {
-          UE_LOG(LogMochiPhysics, Verbose, TEXT("%s"), ANSI_TO_TCHAR(msg));
-        } else if (channel == mochi::LogChannel::Info) {
-          UE_LOG(LogMochiPhysics, Display, TEXT("%s"), ANSI_TO_TCHAR(msg));
-        } else if (channel == mochi::LogChannel::Warning) {
-          UE_LOG(LogMochiPhysics, Warning, TEXT("%s"), ANSI_TO_TCHAR(msg));
-        } else if (channel == mochi::LogChannel::Error) {
-          UE_LOG(LogMochiPhysics, Error, TEXT("%s"), ANSI_TO_TCHAR(msg));
+        if (Channel == mochi::LogChannel::Verbose) {
+          UE_LOG(LogMochiPhysics, Verbose, TEXT("%s"), ANSI_TO_TCHAR(Msg));
+        } else if (Channel == mochi::LogChannel::Info) {
+          UE_LOG(LogMochiPhysics, Display, TEXT("%s"), ANSI_TO_TCHAR(Msg));
+        } else if (Channel == mochi::LogChannel::Warning) {
+          UE_LOG(LogMochiPhysics, Warning, TEXT("%s"), ANSI_TO_TCHAR(Msg));
+        } else if (Channel == mochi::LogChannel::Error) {
+          UE_LOG(LogMochiPhysics, Error, TEXT("%s"), ANSI_TO_TCHAR(Msg));
         } else {
           UE_LOG(
               LogMochiPhysics,
               Error,
               TEXT("Unexpected mochi log level [%d]"),
-              static_cast<int>(channel));
-          UE_LOG(LogMochiPhysics, Error, TEXT("%s"), ANSI_TO_TCHAR(msg));
+              static_cast<int>(Channel));
+          UE_LOG(LogMochiPhysics, Error, TEXT("%s"), ANSI_TO_TCHAR(Msg));
         }
       });
 }

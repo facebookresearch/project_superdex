@@ -154,13 +154,13 @@ static bool PopulateFromMochiMesh_SoftInternal(
         true /* use contact skin if present */);
   } else if (MochiExistingActor.IsValid()) {
     // If this dynamic mesh was created at run time with existing actor, get the mesh from there.
-    UGameInstance* const game = World->GetGameInstance();
-    UMochiGameInstanceSubsystem* const subsys = game->GetSubsystem<UMochiGameInstanceSubsystem>();
-    if (subsys) {
+    UGameInstance* const Game = World->GetGameInstance();
+    UMochiGameInstanceSubsystem* const Subsys = Game->GetSubsystem<UMochiGameInstanceSubsystem>();
+    if (Subsys) {
       PopulateMeshFromMochiActor(
           &Mesh,
           MochiExistingActor,
-          subsys->GetScene(),
+          Subsys->GetScene(),
           true /* use visual mesh if present */,
           true /* use contact skin if present */);
     }
@@ -170,9 +170,9 @@ static bool PopulateFromMochiMesh_SoftInternal(
   // Vertex IDs are visual-mesh node indices. A count mismatch means the model changed after import,
   // or the mesh came from the contact skin or surface instead. Flat shading is not supported: it
   // draws face normals, but the material's tangents are built from the normal overlay.
-  const auto fits = [&Mesh](int32 Num) { return Num == 0 || Num == Mesh.MaxVertexID(); };
+  const auto Fits = [&Mesh](int32 Num) { return Num == 0 || Num == Mesh.MaxVertexID(); };
   if (bUseMochiNodeNormals && !(RenderModelUVs.IsEmpty() && RenderModelColors.IsEmpty())) {
-    if (fits(RenderModelUVs.Num()) && fits(RenderModelColors.Num())) {
+    if (Fits(RenderModelUVs.Num()) && Fits(RenderModelColors.Num())) {
       EnableRenderModelAttributes(Mesh, RenderModelUVs, RenderModelColors);
       return true;
     } else {

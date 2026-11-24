@@ -37,27 +37,27 @@
 namespace {
 template <typename TAsset>
 TAsset* CreateOrReuseAsset(const FString& AssetPath, EObjectFlags Flags, bool bForceNew) {
-  UPackage* package = FindPackage(nullptr, *AssetPath);
-  TAsset* asset = nullptr;
-  if (package) {
+  UPackage* Package = FindPackage(nullptr, *AssetPath);
+  TAsset* Asset = nullptr;
+  if (Package) {
     UE_LOG(
         LogMochiPhysicsEditor,
         Display,
         TEXT("[MochiArticulationAssetUtils] Package %s already exists; reusing it,"),
         *AssetPath);
-    asset = Cast<TAsset>(package->FindAssetInPackage());
+    Asset = Cast<TAsset>(Package->FindAssetInPackage());
   } else {
-    package = CreatePackage(*AssetPath);
+    Package = CreatePackage(*AssetPath);
   }
-  if (asset == nullptr || bForceNew) {
-    if (asset) {
-      FAssetRegistryModule::AssetDeleted(asset);
+  if (Asset == nullptr || bForceNew) {
+    if (Asset) {
+      FAssetRegistryModule::AssetDeleted(Asset);
     }
-    FString objName = FPackageName::GetLongPackageAssetName(AssetPath);
-    asset = NewObject<TAsset>(package, FName(*objName), Flags);
-    FAssetRegistryModule::AssetCreated(asset);
+    FString ObjName = FPackageName::GetLongPackageAssetName(AssetPath);
+    Asset = NewObject<TAsset>(Package, FName(*ObjName), Flags);
+    FAssetRegistryModule::AssetCreated(Asset);
   }
-  return asset;
+  return Asset;
 }
 
 // Unregisters the components that show any of Meshes for as long as it lives. Regenerating a
@@ -66,9 +66,9 @@ TAsset* CreateOrReuseAsset(const FString& AssetPath, EObjectFlags Flags, bool bF
 class FScopedUnregisterMeshComponents {
  public:
   explicit FScopedUnregisterMeshComponents(TArrayView<const USkinnedAsset* const> Meshes) {
-    for (TObjectIterator<USkinnedMeshComponent> it; it; ++it) {
-      if (it->IsRegistered() && it->GetSkinnedAsset() && Meshes.Contains(it->GetSkinnedAsset())) {
-        Contexts.Add(MakeUnique<FComponentReregisterContext>(*it));
+    for (TObjectIterator<USkinnedMeshComponent> It; It; ++It) {
+      if (It->IsRegistered() && It->GetSkinnedAsset() && Meshes.Contains(It->GetSkinnedAsset())) {
+        Contexts.Add(MakeUnique<FComponentReregisterContext>(*It));
       }
     }
   }
@@ -231,31 +231,31 @@ FString FMochiArticulationAssetUtils::MakeAssetName(
     const FString& ArticulationName,
     const FString& AssetName,
     const FString& Postfix) {
-  FString name;
-  name += !Prefix.IsEmpty() ? Prefix + "_" : "";
-  name += ArticulationName;
-  name += !AssetName.IsEmpty() ? "_" + AssetName : "";
-  name += !Postfix.IsEmpty() ? "_" + Postfix : "";
-  return name;
+  FString Name;
+  Name += !Prefix.IsEmpty() ? Prefix + "_" : "";
+  Name += ArticulationName;
+  Name += !AssetName.IsEmpty() ? "_" + AssetName : "";
+  Name += !Postfix.IsEmpty() ? "_" + Postfix : "";
+  return Name;
 }
 
 TArray<FMochiArticulationSkeletonLink> FMochiArticulationAssetUtils::GetSkeletonLinks(
     const UMochiArticulation* Articulation) {
-  const TArray<FMochiArticulatedLink>& links = Articulation->GetLinks();
-  TArray<FMochiArticulationSkeletonLink> skeletonLinks;
-  skeletonLinks.SetNum(links.Num());
-  for (int iLink = 0; iLink < links.Num(); ++iLink) {
-    const FMochiArticulatedLink& link = links[iLink];
-    FMochiArticulationSkeletonLink& skeletonLink = skeletonLinks[iLink];
-    skeletonLink.Name = link.Name;
-    skeletonLink.ParentIndex = link.ParentLink;
-    skeletonLink.LinkToParent = Articulation->GetRestLinkToParent(iLink);
-    skeletonLink.LinkToRoot = Articulation->GetRestLinkToRoot(iLink);
-    skeletonLink.RenderModel = link.RenderModel;
-    skeletonLink.RenderModelToLink = link.GetRenderModelTransform();
-    skeletonLink.UniqueMaterialSlots = link.UniqueMaterialSlots;
+  const TArray<FMochiArticulatedLink>& Links = Articulation->GetLinks();
+  TArray<FMochiArticulationSkeletonLink> SkeletonLinks;
+  SkeletonLinks.SetNum(Links.Num());
+  for (int LinkIndex = 0; LinkIndex < Links.Num(); ++LinkIndex) {
+    const FMochiArticulatedLink& Link = Links[LinkIndex];
+    FMochiArticulationSkeletonLink& SkeletonLink = SkeletonLinks[LinkIndex];
+    SkeletonLink.Name = Link.Name;
+    SkeletonLink.ParentIndex = Link.ParentLink;
+    SkeletonLink.LinkToParent = Articulation->GetRestLinkToParent(LinkIndex);
+    SkeletonLink.LinkToRoot = Articulation->GetRestLinkToRoot(LinkIndex);
+    SkeletonLink.RenderModel = Link.RenderModel;
+    SkeletonLink.RenderModelToLink = Link.GetRenderModelTransform();
+    SkeletonLink.UniqueMaterialSlots = Link.UniqueMaterialSlots;
   }
-  return skeletonLinks;
+  return SkeletonLinks;
 }
 
 UDataTable* FMochiArticulationAssetUtils::GenerateJointControlGainsTable(
@@ -264,24 +264,24 @@ UDataTable* FMochiArticulationAssetUtils::GenerateJointControlGainsTable(
     const FString& TableAssetName,
     EObjectFlags Flags) {
   // If package already exists, try numerical suffixes until we find a new one.
-  FString assetPath = FPaths::Combine(PackagePath, TableAssetName);
-  UPackage* package = FindPackage(nullptr, *assetPath);
-  for (int i = 1; package; ++i) {
-    const FString suffixed = FString::Printf(TEXT("%s_%d"), *assetPath, i);
-    package = FindPackage(nullptr, *suffixed);
-    if (!package) {
-      assetPath = suffixed;
+  FString AssetPath = FPaths::Combine(PackagePath, TableAssetName);
+  UPackage* Package = FindPackage(nullptr, *AssetPath);
+  for (int i = 1; Package; ++i) {
+    const FString Suffixed = FString::Printf(TEXT("%s_%d"), *AssetPath, i);
+    Package = FindPackage(nullptr, *Suffixed);
+    if (!Package) {
+      AssetPath = Suffixed;
     }
   }
   // Create the package and asset within
-  package = CreatePackage(*assetPath);
-  FString objName = FPackageName::GetLongPackageAssetName(assetPath);
-  UDataTable* dataTable = NewObject<UDataTable>(package, FName(*objName), Flags);
-  FAssetRegistryModule::AssetCreated(dataTable);
-  FMochiJointControlGains::PopulateTable(dataTable, Joints);
-  dataTable->MarkPackageDirty();
-  dataTable->PostEditChange();
-  return dataTable;
+  Package = CreatePackage(*AssetPath);
+  FString ObjName = FPackageName::GetLongPackageAssetName(AssetPath);
+  UDataTable* DataTable = NewObject<UDataTable>(Package, FName(*ObjName), Flags);
+  FAssetRegistryModule::AssetCreated(DataTable);
+  FMochiJointControlGains::PopulateTable(DataTable, Joints);
+  DataTable->MarkPackageDirty();
+  DataTable->PostEditChange();
+  return DataTable;
 }
 
 USkeleton* FMochiArticulationAssetUtils::GenerateSkeleton(
@@ -289,17 +289,17 @@ USkeleton* FMochiArticulationAssetUtils::GenerateSkeleton(
     const FString& PackagePath,
     const FString& SkeletonName,
     EObjectFlags Flags) {
-  const FString assetPath = FPaths::Combine(PackagePath, SkeletonName);
-  USkeleton* skeleton = CreateOrReuseAsset<USkeleton>(assetPath, Flags, true);
+  const FString AssetPath = FPaths::Combine(PackagePath, SkeletonName);
+  USkeleton* Skeleton = CreateOrReuseAsset<USkeleton>(AssetPath, Flags, true);
   // One bone per link, at the link's rest transform relative to its parent.
-  FReferenceSkeletonModifier boneAdder(skeleton);
-  for (const FMochiArticulationSkeletonLink& link : Links) {
-    boneAdder.Add(
-        FMeshBoneInfo(link.Name, link.Name.ToString(), link.ParentIndex), link.LinkToParent);
+  FReferenceSkeletonModifier BoneAdder(Skeleton);
+  for (const FMochiArticulationSkeletonLink& Link : Links) {
+    BoneAdder.Add(
+        FMeshBoneInfo(Link.Name, Link.Name.ToString(), Link.ParentIndex), Link.LinkToParent);
   }
-  skeleton->MarkPackageDirty();
-  skeleton->PostEditChange();
-  return skeleton;
+  Skeleton->MarkPackageDirty();
+  Skeleton->PostEditChange();
+  return Skeleton;
 }
 
 USkeletalMesh* FMochiArticulationAssetUtils::GenerateSkeletalMesh(
@@ -309,57 +309,57 @@ USkeletalMesh* FMochiArticulationAssetUtils::GenerateSkeletalMesh(
     const FString& SkeletalMeshAssetName,
     EObjectFlags Flags,
     const TArray<FMochiArticulationSkinnedPart>& SkinnedParts) {
-  const FReferenceSkeleton& refSkeleton = Skeleton->GetReferenceSkeleton();
-  const int32 numBones = refSkeleton.GetRawBoneNum();
+  const FReferenceSkeleton& RefSkeleton = Skeleton->GetReferenceSkeleton();
+  const int32 NumBones = RefSkeleton.GetRawBoneNum();
 
   // Materials: those of the links' render models first, then those of the skinned parts. A
   // material shared by several render models gets one slot, unless a link keeps its slot unique.
-  FMaterialListBuilder materials;
-  TMap<UMaterialInterface*, int32> mergeableMaterials;
+  FMaterialListBuilder Materials;
+  TMap<UMaterialInterface*, int32> MergeableMaterials;
   // Links with a render model.
   struct FRigidLink {
     const UStaticMesh* RenderModel = nullptr;
     int32 Bone = INDEX_NONE;
     FMeshPart Part;
   };
-  TArray<FRigidLink> rigidLinks;
-  int32 numLODs = 0;
-  for (int32 iLink = 0; iLink < Links.Num(); ++iLink) {
-    const FMochiArticulationSkeletonLink& link = Links[iLink];
-    const FStaticMeshRenderData* renderData =
-        link.RenderModel ? link.RenderModel->GetRenderData() : nullptr;
-    if (renderData == nullptr || renderData->LODResources.IsEmpty()) {
+  TArray<FRigidLink> RigidLinks;
+  int32 NumLODs = 0;
+  for (int32 LinkIndex = 0; LinkIndex < Links.Num(); ++LinkIndex) {
+    const FMochiArticulationSkeletonLink& Link = Links[LinkIndex];
+    const FStaticMeshRenderData* RenderData =
+        Link.RenderModel ? Link.RenderModel->GetRenderData() : nullptr;
+    if (RenderData == nullptr || RenderData->LODResources.IsEmpty()) {
       continue;
     }
-    numLODs = FMath::Max(numLODs, renderData->LODResources.Num());
-    FRigidLink& rigidLink = rigidLinks.AddDefaulted_GetRef();
-    rigidLink.RenderModel = link.RenderModel;
-    rigidLink.Bone = iLink;
-    FMeshPart& part = rigidLink.Part;
-    part.MeshToRoot = link.RenderModelToLink * link.LinkToRoot;
-    int32 numSlots = link.RenderModel->GetStaticMaterials().Num();
-    for (const FStaticMeshLODResources& lod : renderData->LODResources) {
-      for (const FStaticMeshSection& section : lod.Sections) {
-        numSlots = FMath::Max(numSlots, section.MaterialIndex + 1);
+    NumLODs = FMath::Max(NumLODs, RenderData->LODResources.Num());
+    FRigidLink& RigidLink = RigidLinks.AddDefaulted_GetRef();
+    RigidLink.RenderModel = Link.RenderModel;
+    RigidLink.Bone = LinkIndex;
+    FMeshPart& Part = RigidLink.Part;
+    Part.MeshToRoot = Link.RenderModelToLink * Link.LinkToRoot;
+    int32 NumSlots = Link.RenderModel->GetStaticMaterials().Num();
+    for (const FStaticMeshLODResources& Lod : RenderData->LODResources) {
+      for (const FStaticMeshSection& Section : Lod.Sections) {
+        NumSlots = FMath::Max(NumSlots, Section.MaterialIndex + 1);
       }
     }
-    for (int32 slot = 0; slot < numSlots; ++slot) {
-      UMaterialInterface* material = link.RenderModel->GetMaterial(slot);
-      const bool bMergeable = !link.UniqueMaterialSlots.Contains(slot);
-      const int32* existing = bMergeable ? mergeableMaterials.Find(material) : nullptr;
-      if (existing) {
-        part.GroupMaterials.Add(*existing);
+    for (int32 Slot = 0; Slot < NumSlots; ++Slot) {
+      UMaterialInterface* Material = Link.RenderModel->GetMaterial(Slot);
+      const bool bMergeable = !Link.UniqueMaterialSlots.Contains(Slot);
+      const int32* Existing = bMergeable ? MergeableMaterials.Find(Material) : nullptr;
+      if (Existing) {
+        Part.GroupMaterials.Add(*Existing);
         continue;
       }
-      const int32 index =
-          materials.Add(material, material ? material->GetName() : FString(TEXT("Material")));
-      part.GroupMaterials.Add(index);
+      const int32 Index =
+          Materials.Add(Material, Material ? Material->GetName() : FString(TEXT("Material")));
+      Part.GroupMaterials.Add(Index);
       if (bMergeable) {
-        mergeableMaterials.Add(material, index);
+        MergeableMaterials.Add(Material, Index);
       }
     }
   }
-  if (numLODs == 0 && SkinnedParts.IsEmpty()) {
+  if (NumLODs == 0 && SkinnedParts.IsEmpty()) {
     UE_LOG(
         LogMochiPhysicsEditor,
         Error,
@@ -368,54 +368,54 @@ USkeletalMesh* FMochiArticulationAssetUtils::GenerateSkeletalMesh(
     return nullptr;
   }
 
-  TArray<FMeshPart> skinParts;
-  for (const FMochiArticulationSkinnedPart& skinnedPart : SkinnedParts) {
-    FMeshPart& part = skinParts.AddDefaulted_GetRef();
-    part.MeshToRoot = skinnedPart.MeshToRoot;
-    for (const FPolygonGroupID groupID : skinnedPart.Mesh.PolygonGroups().GetElementIDs()) {
-      UMaterialInterface* material = skinnedPart.Materials.IsValidIndex(groupID.GetValue())
-          ? skinnedPart.Materials[groupID.GetValue()]
+  TArray<FMeshPart> SkinParts;
+  for (const FMochiArticulationSkinnedPart& SkinnedPart : SkinnedParts) {
+    FMeshPart& Part = SkinParts.AddDefaulted_GetRef();
+    Part.MeshToRoot = SkinnedPart.MeshToRoot;
+    for (const FPolygonGroupID GroupID : SkinnedPart.Mesh.PolygonGroups().GetElementIDs()) {
+      UMaterialInterface* Material = SkinnedPart.Materials.IsValidIndex(GroupID.GetValue())
+          ? SkinnedPart.Materials[GroupID.GetValue()]
           : nullptr;
-      if (part.GroupMaterials.Num() <= groupID.GetValue()) {
-        part.GroupMaterials.SetNum(groupID.GetValue() + 1);
+      if (Part.GroupMaterials.Num() <= GroupID.GetValue()) {
+        Part.GroupMaterials.SetNum(GroupID.GetValue() + 1);
       }
-      part.GroupMaterials[groupID.GetValue()] =
-          materials.Add(material, material ? material->GetName() : FString(TEXT("Skin")));
+      Part.GroupMaterials[GroupID.GetValue()] =
+          Materials.Add(Material, Material ? Material->GetName() : FString(TEXT("Skin")));
     }
   }
 
   // One mesh description per LOD: every link's render model at that LOD, bound rigidly to its
   // bone, followed by the skinned parts.
-  TArray<FMeshDescription> lodMeshes;
-  lodMeshes.SetNum(FMath::Max(numLODs, 1));
-  for (int32 iLOD = 0; iLOD < lodMeshes.Num(); ++iLOD) {
-    FMeshDescription& lodMesh = lodMeshes[iLOD];
-    InitLODMesh(refSkeleton, materials.Materials, lodMesh);
-    for (const FRigidLink& rigidLink : rigidLinks) {
-      FMeshDescription linkMesh;
-      if (MakeRigidLinkMesh(*rigidLink.RenderModel, iLOD, rigidLink.Bone, linkMesh)) {
-        AppendMeshPart(linkMesh, rigidLink.Part, numBones, lodMesh);
+  TArray<FMeshDescription> LodMeshes;
+  LodMeshes.SetNum(FMath::Max(NumLODs, 1));
+  for (int32 LODIndex = 0; LODIndex < LodMeshes.Num(); ++LODIndex) {
+    FMeshDescription& LodMesh = LodMeshes[LODIndex];
+    InitLODMesh(RefSkeleton, Materials.Materials, LodMesh);
+    for (const FRigidLink& RigidLink : RigidLinks) {
+      FMeshDescription LinkMesh;
+      if (MakeRigidLinkMesh(*RigidLink.RenderModel, LODIndex, RigidLink.Bone, LinkMesh)) {
+        AppendMeshPart(LinkMesh, RigidLink.Part, NumBones, LodMesh);
       } else {
         UE_LOG(
             LogMochiPhysicsEditor,
             Warning,
             TEXT(
                 "[MochiArticulationAssetUtils] Skipping %s in LOD %d of %s: its render geometry could not be read"),
-            *rigidLink.RenderModel->GetName(),
-            iLOD,
+            *RigidLink.RenderModel->GetName(),
+            LODIndex,
             *SkeletalMeshAssetName);
       }
     }
-    for (int32 iSkin = 0; iSkin < SkinnedParts.Num(); ++iSkin) {
-      AppendMeshPart(SkinnedParts[iSkin].Mesh, skinParts[iSkin], numBones, lodMesh);
+    for (int32 SkinIndex = 0; SkinIndex < SkinnedParts.Num(); ++SkinIndex) {
+      AppendMeshPart(SkinnedParts[SkinIndex].Mesh, SkinParts[SkinIndex], NumBones, LodMesh);
     }
   }
 
-  const FString assetPath = FPaths::Combine(PackagePath, SkeletalMeshAssetName);
-  USkeletalMesh* skeletalMesh = CreateOrReuseAsset<USkeletalMesh>(assetPath, Flags, true);
-  TArray<const FMeshDescription*> lodMeshPointers;
-  for (const FMeshDescription& lodMesh : lodMeshes) {
-    lodMeshPointers.Add(&lodMesh);
+  const FString AssetPath = FPaths::Combine(PackagePath, SkeletalMeshAssetName);
+  USkeletalMesh* SkeletalMesh = CreateOrReuseAsset<USkeletalMesh>(AssetPath, Flags, true);
+  TArray<const FMeshDescription*> LodMeshPointers;
+  for (const FMeshDescription& LodMesh : LodMeshes) {
+    LodMeshPointers.Add(&LodMesh);
   }
   // The render models come with the normals and tangents of their own build, and the skinned parts
   // with those of their files. A mesh made only of skinned parts has them recomputed only if a part
@@ -429,55 +429,55 @@ USkeletalMesh* FMochiArticulationAssetUtils::GenerateSkeletalMesh(
     bSkinTangents =
         bSkinTangents && HasAllVectors(skinnedPart.Mesh, attributes.GetVertexInstanceTangents());
   }
-  const bool bRecomputeNormals = rigidLinks.IsEmpty() && !bSkinNormals;
-  const bool bRecomputeTangents = rigidLinks.IsEmpty() && !bSkinTangents;
+  const bool bRecomputeNormals = RigidLinks.IsEmpty() && !bSkinNormals;
+  const bool bRecomputeTangents = RigidLinks.IsEmpty() && !bSkinTangents;
 #if UE_VERSION_OLDER_THAN(5, 8, 0)
   const bool bBuilt = FStaticToSkeletalMeshConverter::InitializeSkeletalMeshFromMeshDescriptions(
-      skeletalMesh,
-      lodMeshPointers,
-      materials.Materials,
-      refSkeleton,
+      SkeletalMesh,
+      LodMeshPointers,
+      Materials.Materials,
+      RefSkeleton,
       bRecomputeNormals,
       bRecomputeTangents);
 #else
-  FStaticToSkeletalMeshConverter::FInitializationParams initParams;
-  initParams.Materials = materials.Materials;
-  initParams.bRecomputeNormals = bRecomputeNormals;
-  initParams.bRecomputeTangents = bRecomputeTangents;
+  FStaticToSkeletalMeshConverter::FInitializationParams InitParams;
+  InitParams.Materials = Materials.Materials;
+  InitParams.bRecomputeNormals = bRecomputeNormals;
+  InitParams.bRecomputeTangents = bRecomputeTangents;
   const bool bBuilt = FStaticToSkeletalMeshConverter::InitializeSkeletalMeshFromMeshDescriptions(
-      skeletalMesh, lodMeshPointers, refSkeleton, initParams);
+      SkeletalMesh, LodMeshPointers, RefSkeleton, InitParams);
 #endif
   if (!bBuilt) {
     UE_LOG(
         LogMochiPhysicsEditor,
         Error,
         TEXT("[MochiArticulationAssetUtils] Failed to build skeletal mesh %s"),
-        *assetPath);
+        *AssetPath);
     return nullptr;
   }
 
   // Bounds around the vertices of LOD 0 in the reference pose.
-  TArray<FVector> lod0Positions;
-  const TVertexAttributesConstRef<FVector3f> positions =
-      FStaticMeshConstAttributes(lodMeshes[0]).GetVertexPositions();
-  for (const FVertexID vertexID : lodMeshes[0].Vertices().GetElementIDs()) {
-    lod0Positions.Add(FVector(positions[vertexID]));
+  TArray<FVector> Lod0Positions;
+  const TVertexAttributesConstRef<FVector3f> Positions =
+      FStaticMeshConstAttributes(LodMeshes[0]).GetVertexPositions();
+  for (const FVertexID VertexID : LodMeshes[0].Vertices().GetElementIDs()) {
+    Lod0Positions.Add(FVector(Positions[VertexID]));
   }
-  if (!lod0Positions.IsEmpty()) {
-    skeletalMesh->SetImportedBounds(FBoxSphereBounds(lod0Positions.GetData(), lod0Positions.Num()));
+  if (!Lod0Positions.IsEmpty()) {
+    SkeletalMesh->SetImportedBounds(FBoxSphereBounds(Lod0Positions.GetData(), Lod0Positions.Num()));
   }
 
-  skeletalMesh->SetSkeleton(Skeleton);
-  Skeleton->MergeAllBonesToBoneTree(skeletalMesh);
+  SkeletalMesh->SetSkeleton(Skeleton);
+  Skeleton->MergeAllBonesToBoneTree(SkeletalMesh);
   if (!Skeleton->GetPreviewMesh()) {
-    Skeleton->SetPreviewMesh(skeletalMesh);
+    Skeleton->SetPreviewMesh(SkeletalMesh);
   }
   Skeleton->PostEditChange();
 
-  skeletalMesh->MarkPackageDirty();
-  skeletalMesh->PostEditChange();
+  SkeletalMesh->MarkPackageDirty();
+  SkeletalMesh->PostEditChange();
 
-  return skeletalMesh;
+  return SkeletalMesh;
 }
 
 bool FMochiArticulationAssetUtils::GenerateSkeletalMesh(
@@ -485,43 +485,43 @@ bool FMochiArticulationAssetUtils::GenerateSkeletalMesh(
     const FString& PackagePath) {
   if (Articulation->PreGenValidateOrUpdateDerivedData()) {
     bool bPrefix = false;
-    const FString rootName =
+    const FString RootName =
         UMochiArticulation::RemoveAssetTypePrefix(Articulation->GetName(), &bPrefix);
-    const FString skelName = MakeAssetName(
+    const FString SkelName = MakeAssetName(
         bPrefix ? TEXT("SKEL") : TEXT(""),
-        rootName,
+        RootName,
         TEXT(""),
         bPrefix ? TEXT("") : TEXT("Skeleton"));
-    const FString skelMeshName = MakeAssetName(
+    const FString SkelMeshName = MakeAssetName(
         bPrefix ? TEXT("SKM") : TEXT(""),
-        rootName,
+        RootName,
         TEXT(""),
         bPrefix ? TEXT("") : TEXT("SkeletalMesh"));
-    constexpr EObjectFlags kFlags = RF_Public | RF_Standalone;
-    const TArray<FMochiArticulationSkeletonLink> links = GetSkeletonLinks(Articulation);
+    constexpr EObjectFlags Flags = RF_Public | RF_Standalone;
+    const TArray<FMochiArticulationSkeletonLink> Links = GetSkeletonLinks(Articulation);
     {
       // Components showing the mesh being replaced, e.g. in an open level, would otherwise keep
       // rendering with its released render data.
-      const USkinnedAsset* const replacedMeshes[] = {
+      const USkinnedAsset* const ReplacedMeshes[] = {
           Articulation->GetSkeletalMesh(),
           FindObject<USkeletalMesh>(
-              nullptr, *(FPaths::Combine(PackagePath, skelMeshName) + TEXT(".") + skelMeshName))};
-      const FScopedUnregisterMeshComponents unregisterComponents(replacedMeshes);
-      USkeleton* const skeleton = GenerateSkeleton(links, PackagePath, skelName, kFlags);
+              nullptr, *(FPaths::Combine(PackagePath, SkelMeshName) + TEXT(".") + SkelMeshName))};
+      const FScopedUnregisterMeshComponents UnregisterComponents(ReplacedMeshes);
+      USkeleton* const Skeleton = GenerateSkeleton(Links, PackagePath, SkelName, Flags);
       Articulation->SkeletalMesh =
-          GenerateSkeletalMesh(links, skeleton, PackagePath, skelMeshName, kFlags);
-      FProperty* prop = FindFieldChecked<FProperty>(
+          GenerateSkeletalMesh(Links, Skeleton, PackagePath, SkelMeshName, Flags);
+      FProperty* Prop = FindFieldChecked<FProperty>(
           Articulation->StaticClass(), GET_MEMBER_NAME_CHECKED(UMochiArticulation, SkeletalMesh));
-      FPropertyChangedEvent event(prop, EPropertyChangeType::ValueSet);
-      Articulation->PostEditChangeProperty(event);
+      FPropertyChangedEvent Event(Prop, EPropertyChangeType::ValueSet);
+      Articulation->PostEditChangeProperty(Event);
       Articulation->Modify(true);
       if (Articulation->OnSkeletalMeshRegenerated) {
         Articulation->OnSkeletalMeshRegenerated(Articulation->SkeletalMesh);
       }
     }
-    const bool result = Articulation->SkeletalMesh != nullptr;
-    Articulation->bNeedGenerateSkeletalMesh = !result;
-    return result;
+    const bool bResult = Articulation->SkeletalMesh != nullptr;
+    Articulation->bNeedGenerateSkeletalMesh = !bResult;
+    return bResult;
   }
   UE_LOG(
       LogMochiPhysicsEditor,
@@ -533,35 +533,35 @@ bool FMochiArticulationAssetUtils::GenerateSkeletalMesh(
 }
 
 void FMochiArticulationAssetUtils::GenerateSkeletalMesh(UMochiArticulation* Articulation) {
-  const FString articulationFolder =
+  const FString ArticulationFolder =
       FPackageName::GetLongPackagePath(Articulation->GetPackage()->GetName());
-  const USkeletalMesh* currentMesh = Articulation->GetSkeletalMesh();
-  const FString currentMeshFolder = currentMesh
-      ? FPackageName::GetLongPackagePath(currentMesh->GetPackage()->GetName())
+  const USkeletalMesh* CurrentMesh = Articulation->GetSkeletalMesh();
+  const FString CurrentMeshFolder = CurrentMesh
+      ? FPackageName::GetLongPackagePath(CurrentMesh->GetPackage()->GetName())
       : FString();
   // Meshes generated before skeletal meshes moved out of "Generated" subfolders are regenerated
   // next to the articulation instead.
-  const bool bRegenerateInPlace = !currentMeshFolder.IsEmpty() &&
-      FPaths::GetCleanFilename(currentMeshFolder) != TEXT("Generated");
-  GenerateSkeletalMesh(Articulation, bRegenerateInPlace ? currentMeshFolder : articulationFolder);
+  const bool bRegenerateInPlace = !CurrentMeshFolder.IsEmpty() &&
+      FPaths::GetCleanFilename(CurrentMeshFolder) != TEXT("Generated");
+  GenerateSkeletalMesh(Articulation, bRegenerateInPlace ? CurrentMeshFolder : ArticulationFolder);
 }
 
 UDataTable* FMochiArticulationAssetUtils::GenerateJointControlGainsTable(
     UMochiArticulation* Articulation) {
   bool bPrefix = false;
-  const FString rootName =
+  const FString RootName =
       UMochiArticulation::RemoveAssetTypePrefix(Articulation->GetName(), &bPrefix);
   if (Articulation->PreGenValidateOrUpdateDerivedData()) {
-    const FString packPath =
+    const FString PackPath =
         FPackageName::GetLongPackagePath(Articulation->GetPackage()->GetName());
-    const FString gainsTableName = MakeAssetName(
+    const FString GainsTableName = MakeAssetName(
         bPrefix ? TEXT("DT_Gains") : TEXT(""),
-        rootName,
+        RootName,
         TEXT(""),
         bPrefix ? TEXT("") : TEXT("DataTable"));
-    UDataTable* gainsTable = GenerateJointControlGainsTable(
-        Articulation->Joints, packPath, gainsTableName, RF_Public | RF_Standalone);
-    return gainsTable;
+    UDataTable* GainsTable = GenerateJointControlGainsTable(
+        Articulation->Joints, PackPath, GainsTableName, RF_Public | RF_Standalone);
+    return GainsTable;
   }
   return nullptr;
 }

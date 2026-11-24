@@ -37,9 +37,9 @@ void UMochiRodConstraintComponent::SetPositionStiffness(float NewStiffness) {
   PositionStiffness = NewStiffness;
   if (MochiSceneObject.IsValid()) {
     MochiSceneObject->QueueOrExecuteCommand([NewStiffness,
-                                             state = MochiThreadState](mochi::Scene* Scene) {
-      if (mochi::Constraint* constraint = Scene->GetConstraint(state->PositionConstraintHandle)) {
-        constraint->SetStiffness(NewStiffness, mochi::ErrorLog{});
+                                             State = MochiThreadState](mochi::Scene* Scene) {
+      if (mochi::Constraint* Constraint = Scene->GetConstraint(State->PositionConstraintHandle)) {
+        Constraint->SetStiffness(NewStiffness, mochi::ErrorLog{});
       }
     });
   }
@@ -49,9 +49,9 @@ void UMochiRodConstraintComponent::SetPositionDamping(float NewDamping) {
   PositionDamping = NewDamping;
   if (MochiSceneObject.IsValid()) {
     MochiSceneObject->QueueOrExecuteCommand([NewDamping,
-                                             state = MochiThreadState](mochi::Scene* Scene) {
-      if (mochi::Constraint* constraint = Scene->GetConstraint(state->PositionConstraintHandle)) {
-        constraint->SetDamping(NewDamping, mochi::ErrorLog{});
+                                             State = MochiThreadState](mochi::Scene* Scene) {
+      if (mochi::Constraint* Constraint = Scene->GetConstraint(State->PositionConstraintHandle)) {
+        Constraint->SetDamping(NewDamping, mochi::ErrorLog{});
       }
     });
   }
@@ -61,9 +61,9 @@ void UMochiRodConstraintComponent::SetRotationStiffness(float NewStiffness) {
   RotationStiffness = NewStiffness;
   if (MochiSceneObject.IsValid()) {
     MochiSceneObject->QueueOrExecuteCommand([NewStiffness,
-                                             state = MochiThreadState](mochi::Scene* Scene) {
-      if (mochi::Constraint* constraint = Scene->GetConstraint(state->RotationConstraintHandle)) {
-        constraint->SetStiffness(NewStiffness, mochi::ErrorLog{});
+                                             State = MochiThreadState](mochi::Scene* Scene) {
+      if (mochi::Constraint* Constraint = Scene->GetConstraint(State->RotationConstraintHandle)) {
+        Constraint->SetStiffness(NewStiffness, mochi::ErrorLog{});
       }
     });
   }
@@ -73,9 +73,9 @@ void UMochiRodConstraintComponent::SetRotationDamping(float NewDamping) {
   RotationDamping = NewDamping;
   if (MochiSceneObject.IsValid()) {
     MochiSceneObject->QueueOrExecuteCommand([NewDamping,
-                                             state = MochiThreadState](mochi::Scene* Scene) {
-      if (mochi::Constraint* constraint = Scene->GetConstraint(state->RotationConstraintHandle)) {
-        constraint->SetDamping(NewDamping, mochi::ErrorLog{});
+                                             State = MochiThreadState](mochi::Scene* Scene) {
+      if (mochi::Constraint* Constraint = Scene->GetConstraint(State->RotationConstraintHandle)) {
+        Constraint->SetDamping(NewDamping, mochi::ErrorLog{});
       }
     });
   }
@@ -123,11 +123,11 @@ void UMochiRodConstraintComponent::CreateConstraints() {
   // Get Mochi actor objects. EnsureMochiActor above guarantees both components implement
   // IMochiMeshComponentInterface, so these casts are expected to succeed. Guard defensively
   // in case that invariant ever changes.
-  IMochiMeshComponentInterface* const rodMochiMesh =
+  IMochiMeshComponentInterface* const RodMochiMesh =
       Cast<IMochiMeshComponentInterface>(RodComponent);
-  IMochiMeshComponentInterface* const rigidMochiMesh =
+  IMochiMeshComponentInterface* const RigidMochiMesh =
       Cast<IMochiMeshComponentInterface>(RigidComponent);
-  if (rodMochiMesh == nullptr || rigidMochiMesh == nullptr) {
+  if (RodMochiMesh == nullptr || RigidMochiMesh == nullptr) {
     UE_LOG(
         LogMochiPhysics,
         Error,
@@ -135,9 +135,9 @@ void UMochiRodConstraintComponent::CreateConstraints() {
             "[UMochiRodConstraintComponent] RodComponent or RigidComponent does not implement IMochiMeshComponentInterface!"));
     return;
   }
-  UMochiActorObject* const rodActorObj = rodMochiMesh->GetMochiActor();
-  UMochiActorObject* const rigidActorObj = rigidMochiMesh->GetMochiActor();
-  if (rodActorObj->GetMochiScene() != rigidActorObj->GetMochiScene()) {
+  UMochiActorObject* const RodActorObj = RodMochiMesh->GetMochiActor();
+  UMochiActorObject* const RigidActorObj = RigidMochiMesh->GetMochiActor();
+  if (RodActorObj->GetMochiScene() != RigidActorObj->GetMochiScene()) {
     UE_LOG(
         LogMochiPhysics,
         Error,
@@ -145,28 +145,28 @@ void UMochiRodConstraintComponent::CreateConstraints() {
             "[UMochiRodConstraintComponent] RodComponent and RigidComponent are not in the same Mochi scene."));
     return;
   }
-  MochiSceneObject = rodActorObj->GetMochiScene();
-  const mochi::ActorHandle rodHandle = rodActorObj->GetMochiActorHandle();
-  const mochi::ActorHandle rigidHandle = rigidActorObj->GetMochiActorHandle();
+  MochiSceneObject = RodActorObj->GetMochiScene();
+  const mochi::ActorHandle RodHandle = RodActorObj->GetMochiActorHandle();
+  const mochi::ActorHandle RigidHandle = RigidActorObj->GetMochiActorHandle();
 
   // Capture parameters by value into lambda
-  MochiSceneObject->QueueOrExecuteCommand([rodHandle,
-                                           rigidHandle,
-                                           attachEnd = AttachmentEnd,
+  MochiSceneObject->QueueOrExecuteCommand([RodHandle,
+                                           RigidHandle,
+                                           AttachEnd = AttachmentEnd,
                                            bConstrainPosition = this->bConstrainPosition,
                                            bConstrainRotation = this->bConstrainRotation,
-                                           posStiffness = this->PositionStiffness,
-                                           posDamping = this->PositionDamping,
-                                           rotStiffness = this->RotationStiffness,
-                                           rotDamping = this->RotationDamping,
-                                           allowContact = this->bAllowContact,
-                                           state = MochiThreadState](mochi::Scene* Scene) {
-    mochi::ErrorLog e;
-    mochi::Actor* rodActor = Scene->GetActor(rodHandle);
-    mochi::Actor* rigidActor = Scene->GetActor(rigidHandle);
+                                           PosStiffness = this->PositionStiffness,
+                                           PosDamping = this->PositionDamping,
+                                           RotStiffness = this->RotationStiffness,
+                                           RotDamping = this->RotationDamping,
+                                           bAllowContact = this->bAllowContact,
+                                           State = MochiThreadState](mochi::Scene* Scene) {
+    mochi::ErrorLog E;
+    mochi::Actor* RodActor = Scene->GetActor(RodHandle);
+    mochi::Actor* RigidActor = Scene->GetActor(RigidHandle);
 
     // Guard against actors that were destroyed between queuing and execution.
-    if (rodActor == nullptr || rigidActor == nullptr) {
+    if (RodActor == nullptr || RigidActor == nullptr) {
       UE_LOG(
           LogMochiPhysics,
           Error,
@@ -176,14 +176,14 @@ void UMochiRodConstraintComponent::CreateConstraints() {
     }
 
     // Validate actor types
-    if (rodActor->GetType() != mochi::ActorType::Rod) {
+    if (RodActor->GetType() != mochi::ActorType::Rod) {
       UE_LOG(
           LogMochiPhysics,
           Error,
           TEXT("[UMochiRodConstraintComponent] RodComponent actor is not of type Rod!"));
       return;
     }
-    if (rigidActor->GetType() != mochi::ActorType::Rigid) {
+    if (RigidActor->GetType() != mochi::ActorType::Rigid) {
       UE_LOG(
           LogMochiPhysics,
           Error,
@@ -191,46 +191,46 @@ void UMochiRodConstraintComponent::CreateConstraints() {
       return;
     }
 
-    const mochi::MeshDataView rodMesh = rodActor->GetMesh();
+    const mochi::MeshDataView RodMesh = RodActor->GetMesh();
 
     // Compute indices based on attachment end
-    const int elementIndex =
-        (attachEnd == EMochiRodAttachmentEnd::First) ? 0 : rodMesh.GetNumElements() - 1;
-    const int nodeIndex =
-        (attachEnd == EMochiRodAttachmentEnd::First) ? 0 : rodMesh.GetNumNodes() - 1;
+    const int ElementIndex =
+        (AttachEnd == EMochiRodAttachmentEnd::First) ? 0 : RodMesh.GetNumElements() - 1;
+    const int NodeIndex =
+        (AttachEnd == EMochiRodAttachmentEnd::First) ? 0 : RodMesh.GetNumNodes() - 1;
 
     // Position constraint (DeformableNodeToRigid)
     if (bConstrainPosition) {
-      mochi::DeformableNodeToRigidConstraintParams params;
-      params.deformableActor = rodHandle;
-      params.rigidActor = rigidHandle;
-      params.deformableNodeIndex = nodeIndex;
-      params.stiffness = posStiffness;
-      params.damping = posDamping;
-      mochi::Constraint* constraint = Scene->CreateDeformableNodeToRigidConstraint(params, e);
-      if (e.IsOK() && constraint) {
-        state->PositionConstraintHandle = constraint->GetHandle();
+      mochi::DeformableNodeToRigidConstraintParams Params;
+      Params.deformableActor = RodHandle;
+      Params.rigidActor = RigidHandle;
+      Params.deformableNodeIndex = NodeIndex;
+      Params.stiffness = PosStiffness;
+      Params.damping = PosDamping;
+      mochi::Constraint* Constraint = Scene->CreateDeformableNodeToRigidConstraint(Params, E);
+      if (E.IsOK() && Constraint) {
+        State->PositionConstraintHandle = Constraint->GetHandle();
       }
     }
 
     // Rotation constraint (RodElementRotationToRigid)
     if (bConstrainRotation) {
-      mochi::RodElementRotationToRigidConstraintParams params;
-      params.rodActor = rodHandle;
-      params.rigidActor = rigidHandle;
-      params.elementIndex = elementIndex;
-      params.stiffness = rotStiffness;
-      params.damping = rotDamping;
-      mochi::Constraint* constraint = Scene->CreateRodElementRotationToRigidConstraint(params, e);
-      if (e.IsOK() && constraint) {
-        state->RotationConstraintHandle = constraint->GetHandle();
+      mochi::RodElementRotationToRigidConstraintParams Params;
+      Params.rodActor = RodHandle;
+      Params.rigidActor = RigidHandle;
+      Params.elementIndex = ElementIndex;
+      Params.stiffness = RotStiffness;
+      Params.damping = RotDamping;
+      mochi::Constraint* Constraint = Scene->CreateRodElementRotationToRigidConstraint(Params, E);
+      if (E.IsOK() && Constraint) {
+        State->RotationConstraintHandle = Constraint->GetHandle();
       }
     }
 
     // Optionally disable contact between the pair
-    if (!allowContact) {
+    if (!bAllowContact) {
       Scene->EnableActorContactSymmetric(
-          rodHandle, rigidHandle, /*enable*/ false, mochi::IncludeNestedActors::No, e);
+          RodHandle, RigidHandle, /*enable*/ false, mochi::IncludeNestedActors::No, E);
     }
   });
 
@@ -244,18 +244,18 @@ void UMochiRodConstraintComponent::DestroyConstraints() {
   // If the scene is still alive, queue destruction of the constraints.
   if (MochiSceneObject.IsValid()) {
     MochiSceneObject->QueueOrExecuteCommand(
-        [state = std::move(MochiThreadState)](mochi::Scene* Scene) {
+        [State = std::move(MochiThreadState)](mochi::Scene* Scene) {
           auto TryDestroyConstraint = [Scene](mochi::ConstraintHandle& Handle) {
             if (Handle.IsValid()) {
               Scene->DestroyConstraint(Handle);
             }
             Handle = {};
           };
-          TryDestroyConstraint(state->PositionConstraintHandle);
-          TryDestroyConstraint(state->RotationConstraintHandle);
+          TryDestroyConstraint(State->PositionConstraintHandle);
+          TryDestroyConstraint(State->RotationConstraintHandle);
         });
     MochiSceneObject->WaitForQueuedCommands();
   }
-  MochiThreadState = std::make_shared<MochiState>();
+  MochiThreadState = std::make_shared<FMochiState>();
   bConstraintsCreated = false;
 }

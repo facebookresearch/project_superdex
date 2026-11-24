@@ -63,7 +63,7 @@ namespace {
 
 // Texture inputs of the glTF reference materials that hold data rather than colour, and so must be
 // sampled without sRGB decoding. Matches the colour spaces Interchange's glTF translator assigns.
-const FName kLinearTextureInputs[] = {
+const FName LinearTextureInputs[] = {
     TEXT("NormalTexture"),
     TEXT("MetallicRoughnessTexture"),
     TEXT("OcclusionTexture"),
@@ -111,7 +111,7 @@ void BuildMipChain(UTexture2D& Texture) {
     return;
   }
   const EGammaSpace Gamma = Texture.SRGB ? EGammaSpace::sRGB : EGammaSpace::Linear;
-  constexpr FImageCore::EResizeImageFilter kFilter = FImageCore::EResizeImageFilter::Box |
+  constexpr FImageCore::EResizeImageFilter Filter = FImageCore::EResizeImageFilter::Box |
       FImageCore::EResizeImageFilter::Flag_WrapX | FImageCore::EResizeImageFilter::Flag_WrapY;
 
   FTexture2DMipMap& Top = Data->Mips[0];
@@ -125,7 +125,7 @@ void BuildMipChain(UTexture2D& Texture) {
         FMath::Max(1, Previous.SizeY / 2),
         ERawImageFormat::BGRA8,
         Gamma);
-    FImageCore::ResizeImage(Previous, Next, kFilter);
+    FImageCore::ResizeImage(Previous, Next, Filter);
     FTexture2DMipMap* Mip = new FTexture2DMipMap(Next.SizeX, Next.SizeY);
     Mip->BulkData.Lock(LOCK_READ_WRITE);
     FMemory::Memcpy(
@@ -163,7 +163,7 @@ void FixUpRuntimeTextures(const TArray<UObject*>& Imported) {
     if (const UMaterialInstance* Material = Cast<UMaterialInstance>(Object)) {
       for (const FTextureParameterValue& Value : Material->TextureParameterValues) {
         bool* SRGB = SRGBByTexture.Find(Cast<UTexture2D>(Value.ParameterValue));
-        if (SRGB && Algo::Find(kLinearTextureInputs, Value.ParameterInfo.Name)) {
+        if (SRGB && Algo::Find(LinearTextureInputs, Value.ParameterInfo.Name)) {
           *SRGB = false;
         }
       }
@@ -277,7 +277,7 @@ void LogMeshMaterials(const FString& FilePath, const UStaticMesh& Mesh) {
 }
 
 // Most influences kept per vertex.
-constexpr int32 kMaxInfluences = 8;
+constexpr int32 MaxInfluences = 8;
 
 // Creates a transient skeletal mesh from Mesh (as SuperDexRuntimeRender::ReadSkinnedGlb returns
 // it) over a flat skeleton: bone 0 is a root at the component origin, and bone i + 1 is named
@@ -419,15 +419,15 @@ USkeletalMesh* CreateTransientSkeletalMesh(
         }
 
         // The strongest influences, quantized to 16 bits summing to 65535.
-        TArray<UE::AnimationCore::FBoneWeight, TInlineAllocator<kMaxInfluences * 2>> Influences;
+        TArray<UE::AnimationCore::FBoneWeight, TInlineAllocator<MaxInfluences * 2>> Influences;
         for (const UE::AnimationCore::FBoneWeight BoneWeight : SkinWeights.Get(VertexID)) {
           if (BoneWeight.GetWeight() > 0.f && BoneWeight.GetBoneIndex() < NumBones) {
             Influences.Add(BoneWeight);
           }
         }
         Influences.Sort([](const auto& A, const auto& B) { return A.GetWeight() > B.GetWeight(); });
-        if (Influences.Num() > kMaxInfluences) {
-          Influences.SetNum(kMaxInfluences);
+        if (Influences.Num() > MaxInfluences) {
+          Influences.SetNum(MaxInfluences);
         }
         FSkinWeightInfo& Weight = Weights.AddZeroed_GetRef();
         if (Influences.IsEmpty()) {
@@ -549,9 +549,9 @@ bool ReadSkinnedGlb(
 
   // glTF ignores a skinned mesh node's own transform: vertices are in the skeleton's bind space.
   // glTF is in meters, Unreal in centimeters.
-  constexpr float kGltfToUnrealScale = 100.f;
+  constexpr float GltfToUnrealScale = 100.f;
   GLTF::FMeshFactory MeshFactory;
-  MeshFactory.SetUniformScale(kGltfToUnrealScale);
+  MeshFactory.SetUniformScale(GltfToUnrealScale);
   OutMesh.Empty();
   MeshFactory.FillMeshDescription(Mesh, FTransform::Identity, &OutMesh);
 
@@ -587,9 +587,9 @@ bool ReadSkinnedGlb(
       if (!VertexID) {
         continue;
       }
-      constexpr int32 kNumSlots = UE_ARRAY_COUNT(GLTF::FJointInfluence::ID);
-      TArray<UE::AnimationCore::FBoneWeight, TInlineAllocator<kNumSlots>> BoneWeights;
-      for (int32 Slot = 0; Slot < kNumSlots; ++Slot) {
+      constexpr int32 NumSlots = UE_ARRAY_COUNT(GLTF::FJointInfluence::ID);
+      TArray<UE::AnimationCore::FBoneWeight, TInlineAllocator<NumSlots>> BoneWeights;
+      for (int32 Slot = 0; Slot < NumSlots; ++Slot) {
         const int32 Joint = Influences[PositionIndex].ID[Slot];
         const float Weight = static_cast<float>(Influences[PositionIndex].Weight[Slot]);
         const int32 Bone = JointToBone.IsValidIndex(Joint) ? JointToBone[Joint] : INDEX_NONE;

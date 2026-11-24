@@ -45,10 +45,10 @@ struct TMochiSpaceConverter {
       const FMochiSpaceDefinition& InOutputSpace) {
     InputSpace = InInputSpace;
     OutputSpace = InOutputSpace;
-    const TMatrix3 input = BuildBasis(InputSpace);
-    const TMatrix3 inputInv = input.Transpose(); // orthonormal -> transpose=inverse
-    const TMatrix3 output = BuildBasis(OutputSpace);
-    InputToOutputMatrix = output * inputInv;
+    const TMatrix3 Input = BuildBasis(InputSpace);
+    const TMatrix3 InputInv = Input.Transpose(); // orthonormal -> transpose=inverse
+    const TMatrix3 Output = BuildBasis(OutputSpace);
+    InputToOutputMatrix = Output * InputInv;
     InputToOutputScale = OutputSpace.UnitsPerMeter / InputSpace.UnitsPerMeter;
     bFlipsHandedness = InputToOutputMatrix.Determinant() < 0;
   }
@@ -85,9 +85,9 @@ struct TMochiSpaceConverter {
 
   // Converts a rotation from the input to output space.
   FORCEINLINE TQuat RotationToOutput(const TQuat& Q) const {
-    TVector qAxis = bFlipsHandedness ? TVector(-Q.X, -Q.Y, -Q.Z) : TVector(Q.X, Q.Y, Q.Z);
-    TVector qAxisOut = DirectionToOutput(qAxis);
-    return TQuat(qAxisOut.X, qAxisOut.Y, qAxisOut.Z, Q.W);
+    TVector QAxis = bFlipsHandedness ? TVector(-Q.X, -Q.Y, -Q.Z) : TVector(Q.X, Q.Y, Q.Z);
+    TVector QAxisOut = DirectionToOutput(QAxis);
+    return TQuat(QAxisOut.X, QAxisOut.Y, QAxisOut.Z, Q.W);
   }
 
   // Converts a transform from the input to output space. The input transform scale is preserved.

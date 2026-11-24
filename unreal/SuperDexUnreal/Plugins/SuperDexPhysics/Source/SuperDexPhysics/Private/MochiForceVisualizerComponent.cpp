@@ -41,29 +41,29 @@ void UMochiForceVisualizerComponent::BeginPlay() {
   MOCHI_PROFILE_SCOPE();
   Super::BeginPlay();
   // TODO: generalize using IMochiMeshComponentInterface if possible
-  USceneComponent* const parent = GetAttachParent();
+  USceneComponent* const Parent = GetAttachParent();
   // UMochiSoftMeshComponent parent
-  if (UMochiSoftMeshComponent* const dynMeshComp = Cast<UMochiSoftMeshComponent>(parent)) {
-    if (!dynMeshComp->GetContactsEnabled()) {
+  if (UMochiSoftMeshComponent* const DynMeshComp = Cast<UMochiSoftMeshComponent>(Parent)) {
+    if (!DynMeshComp->GetContactsEnabled()) {
       UE_LOG(
           LogMochiPhysics,
           Warning,
           TEXT(
               "[%hs] Force visualizer attached to %s but contact queries are not enabled; visualization will not render!"),
           __FUNCTION__,
-          *dynMeshComp->GetName());
+          *DynMeshComp->GetName());
       return;
     }
-    dynMeshComp->OnMochiComponentBeginContact.AddDynamic(
+    DynMeshComp->OnMochiComponentBeginContact.AddDynamic(
         this, &UMochiForceVisualizerComponent::OnMochiComponentBeginContact);
-    dynMeshComp->OnMochiComponentEndContact.AddDynamic(
+    DynMeshComp->OnMochiComponentEndContact.AddDynamic(
         this, &UMochiForceVisualizerComponent::OnMochiComponentEndContact);
-    dynMeshComp->OnMochiComponentContact.AddDynamic(
+    DynMeshComp->OnMochiComponentContact.AddDynamic(
         this, &UMochiForceVisualizerComponent::OnMochiComponentContact);
   }
   // UMochiRigidMeshComponent parent
-  else if (UMochiRigidMeshComponent* const statMeshComp = Cast<UMochiRigidMeshComponent>(parent)) {
-    if (!statMeshComp->GetContactsEnabled()) {
+  else if (UMochiRigidMeshComponent* const StatMeshComp = Cast<UMochiRigidMeshComponent>(Parent)) {
+    if (!StatMeshComp->GetContactsEnabled()) {
       UE_LOG(
           LogMochiPhysics,
           Warning,
@@ -73,38 +73,38 @@ void UMochiForceVisualizerComponent::BeginPlay() {
           *UMochiRigidMeshComponent::StaticClass()->GetName());
       return;
     }
-    statMeshComp->OnMochiComponentBeginContact.AddDynamic(
+    StatMeshComp->OnMochiComponentBeginContact.AddDynamic(
         this, &UMochiForceVisualizerComponent::OnMochiComponentBeginContact);
-    statMeshComp->OnMochiComponentEndContact.AddDynamic(
+    StatMeshComp->OnMochiComponentEndContact.AddDynamic(
         this, &UMochiForceVisualizerComponent::OnMochiComponentEndContact);
-    statMeshComp->OnMochiComponentContact.AddDynamic(
+    StatMeshComp->OnMochiComponentContact.AddDynamic(
         this, &UMochiForceVisualizerComponent::OnMochiComponentContact);
   }
   // try using reflection on everything else, assuming the component copies
   // the patterns set forth by the components above
   else {
-    const TCHAR* onBeginContactPropName = TEXT("OnMochiComponentBeginContact");
-    const TCHAR* onEndContactPropName = TEXT("OnMochiComponentEndContact");
-    const TCHAR* onContactPropName = TEXT("OnMochiComponentContact");
-    const TCHAR* enableContactsPropName = TEXT("bEnableContacts");
+    const TCHAR* OnBeginContactPropName = TEXT("OnMochiComponentBeginContact");
+    const TCHAR* OnEndContactPropName = TEXT("OnMochiComponentEndContact");
+    const TCHAR* OnContactPropName = TEXT("OnMochiComponentContact");
+    const TCHAR* EnableContactsPropName = TEXT("bEnableContacts");
 
-    const UClass* parentClass = parent->GetClass();
-    const FMulticastDelegateProperty* onBeginContactProp = CastField<FMulticastDelegateProperty>(
-        parentClass->FindPropertyByName(FName(onBeginContactPropName)));
-    const FMulticastDelegateProperty* onEndContactProp = CastField<FMulticastDelegateProperty>(
-        parentClass->FindPropertyByName(FName(onEndContactPropName)));
-    const FMulticastDelegateProperty* onContactProp = CastField<FMulticastDelegateProperty>(
-        parentClass->FindPropertyByName(FName(onContactPropName)));
-    if (onBeginContactProp && onEndContactProp && onContactProp) {
+    const UClass* ParentClass = Parent->GetClass();
+    const FMulticastDelegateProperty* OnBeginContactProp = CastField<FMulticastDelegateProperty>(
+        ParentClass->FindPropertyByName(FName(OnBeginContactPropName)));
+    const FMulticastDelegateProperty* OnEndContactProp = CastField<FMulticastDelegateProperty>(
+        ParentClass->FindPropertyByName(FName(OnEndContactPropName)));
+    const FMulticastDelegateProperty* OnContactProp = CastField<FMulticastDelegateProperty>(
+        ParentClass->FindPropertyByName(FName(OnContactPropName)));
+    if (OnBeginContactProp && OnEndContactProp && OnContactProp) {
       const FBoolProperty* bEnableContactsProp =
-          CastField<FBoolProperty>(parentClass->FindPropertyByName(FName(enableContactsPropName)));
-      bool parentEnableContacts = false;
+          CastField<FBoolProperty>(ParentClass->FindPropertyByName(FName(EnableContactsPropName)));
+      bool bParentEnableContacts = false;
       if (bEnableContactsProp) {
-        const uint8* address =
-            reinterpret_cast<const uint8*>(parent) + bEnableContactsProp->GetOffset_ForInternal();
-        parentEnableContacts = bEnableContactsProp->GetPropertyValue(address);
+        const uint8* Address =
+            reinterpret_cast<const uint8*>(Parent) + bEnableContactsProp->GetOffset_ForInternal();
+        bParentEnableContacts = bEnableContactsProp->GetPropertyValue(Address);
       }
-      if (bEnableContactsProp && parentEnableContacts == false) {
+      if (bEnableContactsProp && bParentEnableContacts == false) {
         UE_LOG(
             LogMochiPhysics,
             Warning,
@@ -113,15 +113,15 @@ void UMochiForceVisualizerComponent::BeginPlay() {
             __FUNCTION__);
         return;
       }
-      auto Bind = [this, parent](
+      auto Bind = [this, Parent](
                       const FMulticastDelegateProperty* PropToBindTo, FName ForceVizCompFuncName) {
-        FScriptDelegate binding;
-        binding.BindUFunction(this, ForceVizCompFuncName);
-        PropToBindTo->AddDelegate(MoveTemp(binding), parent);
+        FScriptDelegate Binding;
+        Binding.BindUFunction(this, ForceVizCompFuncName);
+        PropToBindTo->AddDelegate(MoveTemp(Binding), Parent);
       };
-      Bind(onBeginContactProp, FName(onBeginContactPropName));
-      Bind(onEndContactProp, FName(onEndContactPropName));
-      Bind(onContactProp, FName(onContactPropName));
+      Bind(OnBeginContactProp, FName(OnBeginContactPropName));
+      Bind(OnEndContactProp, FName(OnEndContactPropName));
+      Bind(OnContactProp, FName(OnContactPropName));
     }
     // The parent exposes no compatible contact events.
     else {
@@ -133,10 +133,10 @@ void UMochiForceVisualizerComponent::BeginPlay() {
               "%s, %s, and %s, or is missing a bool property named %s. You can make your custom Mochi component "
               "compatible by copying the patterns used in %s, %s, etc."),
           __FUNCTION__,
-          onBeginContactPropName,
-          onEndContactPropName,
-          onContactPropName,
-          enableContactsPropName,
+          OnBeginContactPropName,
+          OnEndContactPropName,
+          OnContactPropName,
+          EnableContactsPropName,
           *UStaticMeshComponent::StaticClass()->GetName(),
           *UMochiSoftMeshComponent::StaticClass()->GetName());
     }
@@ -153,20 +153,20 @@ void UMochiForceVisualizerComponent::TickComponent(
   Clear();
   if (bEnabled) {
     // iterate map of mochi components
-    for (TPair<USceneComponent*, TArray<FMochiContactPoint>>& pair : ContactsMap) {
-      TArray<FMochiContactPoint>& contacts = pair.Value;
+    for (TPair<USceneComponent*, TArray<FMochiContactPoint>>& Pair : ContactsMap) {
+      TArray<FMochiContactPoint>& Contacts = Pair.Value;
       // add a line for each contact force
-      for (int iLine = 0; iLine < contacts.Num(); ++iLine) {
-        const double force = contacts[iLine].Force.Size();
-        const FVector forceNormal = contacts[iLine].Force.GetSafeNormal();
-        const double forceLength =
-            FMath::GetMappedRangeValueUnclamped(ForceMinMax, LineLengthMinMax, force);
-        const FVector worldStart = contacts[iLine].Location;
-        const FVector worldEnd = worldStart + forceNormal * forceLength;
-        const FVector localStart = GetComponentTransform().InverseTransformPosition(worldStart);
-        const FVector localEnd = GetComponentTransform().InverseTransformPosition(worldEnd);
-        const FColor color = GetColorFromForce(force);
-        AddLine(localStart, localEnd, color, 0);
+      for (int LineIndex = 0; LineIndex < Contacts.Num(); ++LineIndex) {
+        const double Force = Contacts[LineIndex].Force.Size();
+        const FVector ForceNormal = Contacts[LineIndex].Force.GetSafeNormal();
+        const double ForceLength =
+            FMath::GetMappedRangeValueUnclamped(ForceMinMax, LineLengthMinMax, Force);
+        const FVector WorldStart = Contacts[LineIndex].Location;
+        const FVector WorldEnd = WorldStart + ForceNormal * ForceLength;
+        const FVector LocalStart = GetComponentTransform().InverseTransformPosition(WorldStart);
+        const FVector LocalEnd = GetComponentTransform().InverseTransformPosition(WorldEnd);
+        const FColor Color = GetColorFromForce(Force);
+        AddLine(LocalStart, LocalEnd, Color, 0);
       }
     }
   } else {
@@ -215,14 +215,14 @@ FColor UMochiForceVisualizerComponent::GetColorFromForce(float Force) const {
   // Remap min/max pressure to [0,1]
   Force = FMath::GetMappedRangeValueClamped(ForceMinMax, {0.0f, 1.0f}, Force);
   // Optionally quantize to discrete color bands
-  float t = Force;
+  float T = Force;
   if (NumColorBands) {
-    const int band = int(t * (NumColorBands - 0.0001f));
-    t = band / (NumColorBands - 1.0f);
+    const int Band = int(T * (NumColorBands - 0.0001f));
+    T = Band / (NumColorBands - 1.0f);
   }
 
   if (ColorMode == EMochiForceVisualizerColorMode::TwoTone) {
-    return FMath::Lerp(LowColor, HighColor, t).ToFColor(true);
+    return FMath::Lerp(LowColor, HighColor, T).ToFColor(true);
   } else /* EMochiForceVisualizerColorMode::Rainbow */ {
     // The Turbo colormap (sRGB bytes) by Anton Mikhailov, Google LLC. Copyright 2019 Google LLC,
     // licensed under the Apache License, Version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
@@ -238,8 +238,8 @@ FColor UMochiForceVisualizerComponent::GetColorFromForce(float Force) const {
       return MaxColor;
     }
     // Remap to the sub-range of the turbo color palette that we are using
-    t = FMath::GetMappedRangeValueClamped(FVector2D(0.0f, 1.0f), RainbowRange, t);
-    const int index = int(t * (256 - 0.0001f));
-    return FColor(turbo_srgb[index][0], turbo_srgb[index][1], turbo_srgb[index][2]);
+    T = FMath::GetMappedRangeValueClamped(FVector2D(0.0f, 1.0f), RainbowRange, T);
+    const int Index = int(T * (256 - 0.0001f));
+    return FColor(turbo_srgb[Index][0], turbo_srgb[Index][1], turbo_srgb[Index][2]);
   }
 }

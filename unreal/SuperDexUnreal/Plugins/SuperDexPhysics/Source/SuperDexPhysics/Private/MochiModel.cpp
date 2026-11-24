@@ -46,25 +46,25 @@
 
 namespace {
 
-inline mochi::Quaternion ToMochiType(FQuat r) {
-  using mr = mochi::real;
-  return mochi::Quaternion((mr)r.X, (mr)r.Y, (mr)r.Z, (mr)r.W);
+inline mochi::Quaternion ToMochiType(FQuat R) {
+  using Mr = mochi::real;
+  return mochi::Quaternion((Mr)R.X, (Mr)R.Y, (Mr)R.Z, (Mr)R.W);
 }
 
-inline mochi::Real3 ToMochiType(FVector t) {
-  using mr = mochi::real;
-  return mochi::Real3((mr)t.X, (mr)t.Y, (mr)t.Z);
+inline mochi::Real3 ToMochiType(FVector T) {
+  using Mr = mochi::real;
+  return mochi::Real3((Mr)T.X, (Mr)T.Y, (Mr)T.Z);
 }
 
 // Input: LH, Z up, centimeters (Unreal)
 // Output: LH, Z up, meters (Unreal)
 inline mochi::VMatrix4x4r UnrealToMatrix(const FVector& S, const FTransform& RT) {
-  mochi::VMatrix4x4r s = mochi::VDiagonalMatrix<4>(ToSimd(ToMochiType(S), 1_r));
-  mochi::Quaternion r = ToMochiType(RT.GetRotation());
-  mochi::Real3 t = ToMochiType(RT.GetTranslation() / kUnrealCentimetersSpace.UnitsPerMeter);
-  mochi::VMatrix4x4r rt = ToVMatrix4x4(mochi::TransformRT(r, t));
-  mochi::VMatrix4x4r srt = Dot4x4(rt, s);
-  return srt;
+  mochi::VMatrix4x4r ScaleMatrix = mochi::VDiagonalMatrix<4>(ToSimd(ToMochiType(S), 1_r));
+  mochi::Quaternion R = ToMochiType(RT.GetRotation());
+  mochi::Real3 T = ToMochiType(RT.GetTranslation() / kUnrealCentimetersSpace.UnitsPerMeter);
+  mochi::VMatrix4x4r Rt = ToVMatrix4x4(mochi::TransformRT(R, T));
+  mochi::VMatrix4x4r Srt = Dot4x4(Rt, ScaleMatrix);
+  return Srt;
 }
 
 bool HasModelGeometry(const FMochiModelData& Data) {
@@ -93,9 +93,9 @@ class FLegacyBoundsPayloadArchive final : public FArchiveProxy {
       Fail();
       return *this;
     }
-    const int64 before = Tell();
+    const int64 Before = Tell();
     InnerArchive << Name;
-    if (Tell() > End || Tell() - before != 2 * sizeof(int32)) {
+    if (Tell() > End || Tell() - Before != 2 * sizeof(int32)) {
       Fail();
     }
     return *this;
@@ -111,8 +111,8 @@ class FLegacyBoundsPayloadArchive final : public FArchiveProxy {
 
  private:
   bool CanRead(int64 NumBytes) {
-    const int64 position = Tell();
-    return NumBytes >= 0 && position >= Begin && position <= End && NumBytes <= End - position;
+    const int64 Position = Tell();
+    return NumBytes >= 0 && Position >= Begin && Position <= End && NumBytes <= End - Position;
   }
 
   void Fail() {
@@ -134,26 +134,26 @@ class FLegacyModelBoundsArchive final : public FArchiveProxy {
   using FArchiveProxy::operator<<;
 
   virtual void Serialize(void* Data, int64 NumBytes) override {
-    const int64 before = Tell();
+    const int64 Before = Tell();
     InnerArchive.Serialize(Data, NumBytes);
     if (NumBytes != sizeof(int32) || HeaderSizePosition >= 0 || !IsModelSdfScope()) {
       return;
     }
     if (InnerArchive.UEVer() < EUnrealEngineObjectUE5Version::PROPERTY_TAG_COMPLETE_TYPE_NAME) {
       if (State == ETagState::StructType) {
-        HeaderSizePosition = before;
+        HeaderSizePosition = Before;
       }
     } else if (State == ETagState::LegacyOwner) {
       if (!bReadLeafInnerCount) {
-        int32 innerCount;
-        FMemory::Memcpy(&innerCount, Data, sizeof(innerCount));
-        if (innerCount != 0) {
+        int32 InnerCount;
+        FMemory::Memcpy(&InnerCount, Data, sizeof(InnerCount));
+        if (InnerCount != 0) {
           State = ETagState::None;
           return;
         }
         bReadLeafInnerCount = true;
       } else {
-        HeaderSizePosition = before;
+        HeaderSizePosition = Before;
       }
     }
   }
@@ -167,9 +167,9 @@ class FLegacyModelBoundsArchive final : public FArchiveProxy {
   }
 
   virtual FArchive& operator<<(FName& Name) override {
-    const int64 before = Tell();
+    const int64 Before = Tell();
     InnerArchive << Name;
-    if (!IsModelSdfScope() || Tell() - before != 2 * sizeof(int32)) {
+    if (!IsModelSdfScope() || Tell() - Before != 2 * sizeof(int32)) {
       State = ETagState::None;
       return *this;
     }
@@ -227,47 +227,47 @@ class FLegacyModelBoundsArchive final : public FArchiveProxy {
 
     // This matched-property callback runs after the tag and before conversion or
     // unknown-property tracking consumes its body. A peek must restore that cursor.
-    const int64 begin = Tell();
-    const int64 sizePosition = HeaderSizePosition;
+    const int64 Begin = Tell();
+    const int64 SizePosition = HeaderSizePosition;
     const bool bRecoverNegativeBounds = bNegativeBounds;
     State = ETagState::None;
     HeaderSizePosition = INDEX_NONE;
-    constexpr int64 kSizeFieldBytes = sizeof(int32);
-    if (begin < kSizeFieldBytes || sizePosition > begin - kSizeFieldBytes) {
+    constexpr int64 SizeFieldBytes = sizeof(int32);
+    if (Begin < SizeFieldBytes || SizePosition > Begin - SizeFieldBytes) {
       Fail();
       return;
     }
-    InnerArchive.Seek(sizePosition);
-    FLegacyBoundsPayloadArchive sizeArchive(
-        InnerArchive, sizePosition, sizePosition + kSizeFieldBytes);
-    int32 payloadSize = 0;
-    sizeArchive << payloadSize;
+    InnerArchive.Seek(SizePosition);
+    FLegacyBoundsPayloadArchive SizeArchive(
+        InnerArchive, SizePosition, SizePosition + SizeFieldBytes);
+    int32 PayloadSize = 0;
+    SizeArchive << PayloadSize;
     const bool bBadSize =
-        sizeArchive.IsError() || sizeArchive.Tell() != sizePosition + kSizeFieldBytes;
-    InnerArchive.Seek(begin);
-    constexpr int32 kMaxLegacyBoundsPayloadBytes = 4096;
-    const int64 totalSize = InnerArchive.TotalSize();
-    if (bBadSize || payloadSize <= 0 || payloadSize > kMaxLegacyBoundsPayloadBytes ||
-        totalSize < begin || payloadSize > totalSize - begin) {
+        SizeArchive.IsError() || SizeArchive.Tell() != SizePosition + SizeFieldBytes;
+    InnerArchive.Seek(Begin);
+    constexpr int32 MaxLegacyBoundsPayloadBytes = 4096;
+    const int64 TotalSize = InnerArchive.TotalSize();
+    if (bBadSize || PayloadSize <= 0 || PayloadSize > MaxLegacyBoundsPayloadBytes ||
+        TotalSize < Begin || PayloadSize > TotalSize - Begin) {
       Fail();
       return;
     }
-    const int64 end = begin + payloadSize;
-    FMochiLegacyBounds old;
-    FLegacyBoundsPayloadArchive payload(InnerArchive, begin, end);
+    const int64 End = Begin + PayloadSize;
+    FMochiLegacyBounds Old;
+    FLegacyBoundsPayloadArchive Payload(InnerArchive, Begin, End);
     FMochiLegacyBounds::StaticStruct()->SerializeTaggedProperties(
-        FStructuredArchiveFromArchive(payload).GetSlot(),
-        reinterpret_cast<uint8*>(&old),
+        FStructuredArchiveFromArchive(Payload).GetSlot(),
+        reinterpret_cast<uint8*>(&Old),
         FMochiLegacyBounds::StaticStruct(),
         nullptr);
-    const bool bBadPayload = payload.IsError() || payload.Tell() != end;
-    InnerArchive.Seek(begin);
+    const bool bBadPayload = Payload.IsError() || Payload.Tell() != End;
+    InnerArchive.Seek(Begin);
     if (bBadPayload) {
       Fail();
     } else if (bRecoverNegativeBounds) {
-      NegativeValueBounds = FBox3f(old.Min, old.Max);
+      NegativeValueBounds = FBox3f(Old.Min, Old.Max);
     } else {
-      Bounds = FBox3f(old.Min, old.Max);
+      Bounds = FBox3f(Old.Min, Old.Max);
     }
   }
 
@@ -285,7 +285,7 @@ class FLegacyModelBoundsArchive final : public FArchiveProxy {
   TOptional<FBox3f> NegativeValueBounds;
 };
 
-constexpr int64 kBytesPerFloat = sizeof(float);
+constexpr int64 BytesPerFloat = sizeof(float);
 
 // Regroups a float array so that every first byte precedes every second byte, and so on.
 // Across a distance field the exponent and high mantissa bytes change slowly while the
@@ -294,19 +294,19 @@ constexpr int64 kBytesPerFloat = sizeof(float);
 // HDF5's shuffle filter does, and it accounts for most of the ratio the H5 binary
 // achieves over plain zlib.
 void ShuffleFloatBytes(const float* Src, uint8* Dst, int64 NumElements) {
-  const uint8* srcBytes = reinterpret_cast<const uint8*>(Src);
+  const uint8* SrcBytes = reinterpret_cast<const uint8*>(Src);
   for (int64 i = 0; i < NumElements; ++i) {
-    for (int64 b = 0; b < kBytesPerFloat; ++b) {
-      Dst[b * NumElements + i] = srcBytes[i * kBytesPerFloat + b];
+    for (int64 B = 0; B < BytesPerFloat; ++B) {
+      Dst[B * NumElements + i] = SrcBytes[i * BytesPerFloat + B];
     }
   }
 }
 
 void UnshuffleFloatBytes(const uint8* Src, float* Dst, int64 NumElements) {
-  uint8* dstBytes = reinterpret_cast<uint8*>(Dst);
+  uint8* DstBytes = reinterpret_cast<uint8*>(Dst);
   for (int64 i = 0; i < NumElements; ++i) {
-    for (int64 b = 0; b < kBytesPerFloat; ++b) {
-      dstBytes[i * kBytesPerFloat + b] = Src[b * NumElements + i];
+    for (int64 B = 0; B < BytesPerFloat; ++B) {
+      DstBytes[i * BytesPerFloat + B] = Src[B * NumElements + i];
     }
   }
 }
@@ -315,24 +315,24 @@ void UnshuffleFloatBytes(const uint8* Src, float* Dst, int64 NumElements) {
 
 void UMochiModel::Serialize(FArchive& Ar) {
   Ar.UsingCustomVersion(FMochiObjectVersion::GUID);
-  const int32 modelVersion = Ar.CustomVer(FMochiObjectVersion::GUID);
+  const int32 ModelVersion = Ar.CustomVer(FMochiObjectVersion::GUID);
   const bool bLegacyBounds = Ar.IsLoading() && Ar.IsPersistent() && !Ar.IsTransacting() &&
       !Ar.UseUnversionedPropertySerialization() &&
-      modelVersion >= FMochiObjectVersion::TypedModelData &&
-      modelVersion < FMochiObjectVersion::NativeGeneratedStructs;
+      ModelVersion >= FMochiObjectVersion::TypedModelData &&
+      ModelVersion < FMochiObjectVersion::NativeGeneratedStructs;
   if (bLegacyBounds) {
-    FLegacyModelBoundsArchive legacy(Ar);
-    Super::Serialize(legacy);
+    FLegacyModelBoundsArchive Legacy(Ar);
+    Super::Serialize(Legacy);
     if (Ar.IsError()) {
       return;
     }
-    legacy.Apply(ModelData);
+    Legacy.Apply(ModelData);
   } else if (Ar.IsSaving() && ModelData.Sdf.IsSet()) {
     // The reflected array must stay out of the int32-sized tagged property payload.
     // Its contents are restored before the 64-bit bulk serializer reads them.
-    TArray<float> values = MoveTemp(ModelData.Sdf->Values);
+    TArray<float> Values = MoveTemp(ModelData.Sdf->Values);
     Super::Serialize(Ar);
-    ModelData.Sdf->Values = MoveTemp(values);
+    ModelData.Sdf->Values = MoveTemp(Values);
   } else {
     Super::Serialize(Ar);
   }
@@ -349,33 +349,33 @@ void UMochiModel::SerializeSdfValues(FArchive& Ar) {
     // element count and on-disk size in the bulk header off int32; the payload being
     // 64-bit is not enough on its own.
     SdfValues.SetBulkDataFlags(BULKDATA_SerializeCompressed | BULKDATA_Size64Bit);
-    const TArray<float>* values = ModelData.Sdf.IsSet() ? &ModelData.Sdf->Values : nullptr;
-    const int64 numElements = values ? values->Num() : 0;
+    const TArray<float>* Values = ModelData.Sdf.IsSet() ? &ModelData.Sdf->Values : nullptr;
+    const int64 NumElements = Values ? Values->Num() : 0;
     // Shuffling straight into the bulk buffer keeps this from needing a second copy of a
     // grid that can run to gigabytes.
     SdfValues.Lock(LOCK_READ_WRITE);
     ShuffleFloatBytes(
-        values ? values->GetData() : nullptr,
-        static_cast<uint8*>(SdfValues.Realloc(numElements * kBytesPerFloat)),
-        numElements);
+        Values ? Values->GetData() : nullptr,
+        static_cast<uint8*>(SdfValues.Realloc(NumElements * BytesPerFloat)),
+        NumElements);
     SdfValues.Unlock();
   }
 
   SdfValues.Serialize(Ar, this);
 
   if (Ar.IsLoading()) {
-    const int64 numElements = SdfValues.GetBulkDataSize() / kBytesPerFloat;
-    if (numElements == 0) {
+    const int64 NumElements = SdfValues.GetBulkDataSize() / BytesPerFloat;
+    if (NumElements == 0) {
       if (ModelData.Sdf.IsSet()) {
         ModelData.Sdf->Values.Reset();
       }
       return;
     }
-    TArray<float>& values =
+    TArray<float>& Values =
         ModelData.Sdf.IsSet() ? ModelData.Sdf->Values : ModelData.Sdf.Emplace().Values;
-    values.SetNumUninitialized(static_cast<int32>(numElements));
+    Values.SetNumUninitialized(static_cast<int32>(NumElements));
     UnshuffleFloatBytes(
-        static_cast<const uint8*>(SdfValues.LockReadOnly()), values.GetData(), numElements);
+        static_cast<const uint8*>(SdfValues.LockReadOnly()), Values.GetData(), NumElements);
     SdfValues.Unlock();
     // ModelData owns the values from here; keeping the bulk copy would double the
     // resident cost of a large grid.
@@ -443,35 +443,35 @@ void UMochiModel::PostLoad() {
 //
 // Final Order (Right to Left):
 //
-// finalMatrix = (basis change * units scale) * (BakTransformRT * BakeScale) * ImportTransform
-//             = (spaceMatrix)                * (bakeMatrix)                 * importMatrix
+// FinalMatrix = (basis change * units scale) * (BakTransformRT * BakeScale) * ImportTransform
+//             = (SpaceMatrix)                * (BakeMatrix)                 * ImportMatrix
 
 mochi::ShapeHandle UMochiModel::GetMochiShape(
     const FVector& BakeScale,
     const FTransform& BakeTransformRT) const {
-  FUnrealToMochiConverter u2m;
-  mochi::VMatrix4x4r importMatrix = UnrealToMatrix(ImportTransform.GetScale3D(), ImportTransform);
-  mochi::VMatrix4x4r bakeMatrix = UnrealToMatrix(BakeScale, BakeTransformRT);
-  mochi::VMatrix4x4r spaceMatrix = Dot4x4(
-      u2m.GetBasisChangeMatrix(),
-      mochi::VDiagonalMatrix<4>(static_cast<mochi::real>(u2m.OutputSpace.UnitsPerMeter)));
-  mochi::VMatrix4x4r finalMatrix = Dot4x4(spaceMatrix, Dot4x4(bakeMatrix, importMatrix));
-  return GetMochiShape_Raw(finalMatrix);
+  FUnrealToMochiConverter U2m;
+  mochi::VMatrix4x4r ImportMatrix = UnrealToMatrix(ImportTransform.GetScale3D(), ImportTransform);
+  mochi::VMatrix4x4r BakeMatrix = UnrealToMatrix(BakeScale, BakeTransformRT);
+  mochi::VMatrix4x4r SpaceMatrix = Dot4x4(
+      U2m.GetBasisChangeMatrix(),
+      mochi::VDiagonalMatrix<4>(static_cast<mochi::real>(U2m.OutputSpace.UnitsPerMeter)));
+  mochi::VMatrix4x4r FinalMatrix = Dot4x4(SpaceMatrix, Dot4x4(BakeMatrix, ImportMatrix));
+  return GetMochiShape_Raw(FinalMatrix);
 }
 
 mochi::ShapeHandle UMochiModel::GetMochiShape(
     const FVector& BakeScale,
     const mochi::VMatrix4x4r& BakeTransformRT) const {
   MOCHI_PROFILE_SCOPE();
-  FUnrealToMochiConverter u2m;
-  mochi::VMatrix4x4r importMatrix = UnrealToMatrix(ImportTransform.GetScale3D(), ImportTransform);
-  mochi::VMatrix4x4r bakeMatrix =
+  FUnrealToMochiConverter U2m;
+  mochi::VMatrix4x4r ImportMatrix = UnrealToMatrix(ImportTransform.GetScale3D(), ImportTransform);
+  mochi::VMatrix4x4r BakeMatrix =
       Dot4x4(BakeTransformRT, mochi::VDiagonalMatrix<4>(ToSimd(ToMochiType(BakeScale), 1_r)));
-  mochi::VMatrix4x4r spaceMatrix = Dot4x4(
-      u2m.GetBasisChangeMatrix(),
-      mochi::VDiagonalMatrix<4>(static_cast<mochi::real>(u2m.OutputSpace.UnitsPerMeter)));
-  mochi::VMatrix4x4r finalMatrix = Dot4x4(spaceMatrix, Dot4x4(bakeMatrix, importMatrix));
-  return GetMochiShape_Raw(finalMatrix);
+  mochi::VMatrix4x4r SpaceMatrix = Dot4x4(
+      U2m.GetBasisChangeMatrix(),
+      mochi::VDiagonalMatrix<4>(static_cast<mochi::real>(U2m.OutputSpace.UnitsPerMeter)));
+  mochi::VMatrix4x4r FinalMatrix = Dot4x4(SpaceMatrix, Dot4x4(BakeMatrix, ImportMatrix));
+  return GetMochiShape_Raw(FinalMatrix);
 }
 
 mochi::ShapeHandle UMochiModel::GetMochiShape_Raw(const mochi::VMatrix4x4r& BakeMatrix) const {
@@ -485,12 +485,12 @@ mochi::ShapeHandle UMochiModel::GetMochiShape_Raw(const mochi::VMatrix4x4r& Bake
             "It is highly recommended that all shape loading be performed on the UE game thread."),
         *GetName());
   }
-  mochi::ErrorLog e{};
-  mochi::Context* const mochiWorld = IMochiPhysicsModule::Get()->GetMochiContext();
-  std::pair<mochi::Real3, mochi::TransformRT> bakeTransform =
+  mochi::ErrorLog E{};
+  mochi::Context* const MochiWorld = IMochiPhysicsModule::Get()->GetMochiContext();
+  std::pair<mochi::Real3, mochi::TransformRT> BakeTransform =
       mochi::DecomposeMatrixTransform(BakeMatrix);
-  mochi::Real3& bakeScale = bakeTransform.first;
-  mochi::TransformRT& bakeTransformRT = bakeTransform.second;
+  mochi::Real3& BakeScale = BakeTransform.first;
+  mochi::TransformRT& BakeTransformRT = BakeTransform.second;
 
   if (!HasModelGeometry(ModelData)) {
     UE_LOG(
@@ -506,63 +506,63 @@ mochi::ShapeHandle UMochiModel::GetMochiShape_Raw(const mochi::VMatrix4x4r& Bake
   // bake-aware overload upstream would remove one of the two. It also runs AutoCorrect and
   // Validate, which LoadShapeFromBytes did not, so a model Mochi considers malformed now
   // fails here instead of loading and simulating badly.
-  mochi::ModelData baked = ::ToMochi(ModelData);
-  mochi::model_utils::BakeTransform(baked, bakeScale, bakeTransformRT, e);
-  MOCHI_ERROR_RETURN(e, {});
-  const mochi::ShapeHandle shape = mochiWorld->CreateModelShape(baked, e);
-  MOCHI_ERROR_RETURN(e, {});
-  return shape;
+  mochi::ModelData Baked = ::ToMochi(ModelData);
+  mochi::model_utils::BakeTransform(Baked, BakeScale, BakeTransformRT, E);
+  MOCHI_ERROR_RETURN(E, {});
+  const mochi::ShapeHandle Shape = MochiWorld->CreateModelShape(Baked, E);
+  MOCHI_ERROR_RETURN(E, {});
+  return Shape;
 }
 
 bool UMochiModel::IsValid() const {
   return HasModelGeometry(ModelData);
 }
 
-mochi::ModelData UMochiModel::GetMochiModelData(mochi::Error& error) const {
-  MOCHI_ERROR_RETURN(error, {});
+mochi::ModelData UMochiModel::GetMochiModelData(mochi::Error& Error) const {
+  MOCHI_ERROR_RETURN(Error, {});
   if (!HasModelGeometry(ModelData)) {
-    MOCHI_ERROR_SET(error, "UMochiModel::GetMochiModelData called on asset with no data");
+    MOCHI_ERROR_SET(Error, "UMochiModel::GetMochiModelData called on asset with no data");
     return {};
   }
-  mochi::ModelData modelData = ::ToMochi(ModelData);
+  mochi::ModelData MochiModelData = ::ToMochi(ModelData);
 
   // Bake the same import/space transform the shape-loading path applies (GetMochiShape ->
   // GetMochiShape_Raw, which bakes before CreateModelShape). With no explicit bake,
-  // BakeScale is 1 and BakeTransformRT is identity, so finalMatrix = spaceMatrix * importMatrix:
+  // BakeScale is 1 and BakeTransformRT is identity, so FinalMatrix = SpaceMatrix * ImportMatrix:
   // the asset's editor-time ImportTransform followed by the Unreal->mochi basis change and units
   // scale. This puts ModelData in the same native mochi space the shape path produces, keeping the
   // two loaders consistent for any ImportTransform / simulation space. For the SuperDex bots
   // configuration the net transform is identity, so this is a no-op there.
-  FUnrealToMochiConverter u2m;
-  mochi::VMatrix4x4r importMatrix = UnrealToMatrix(ImportTransform.GetScale3D(), ImportTransform);
-  mochi::VMatrix4x4r spaceMatrix = Dot4x4(
-      u2m.GetBasisChangeMatrix(),
-      mochi::VDiagonalMatrix<4>(static_cast<mochi::real>(u2m.OutputSpace.UnitsPerMeter)));
-  mochi::VMatrix4x4r finalMatrix = Dot4x4(spaceMatrix, importMatrix);
-  std::pair<mochi::Real3, mochi::TransformRT> bakeTransform =
-      mochi::DecomposeMatrixTransform(finalMatrix);
-  mochi::Real3& bakeScale = bakeTransform.first;
-  mochi::TransformRT& bakeTransformRT = bakeTransform.second;
-  mochi::model_utils::BakeTransform(modelData, bakeScale, bakeTransformRT, error);
-  MOCHI_ERROR_RETURN(error, {});
+  FUnrealToMochiConverter U2m;
+  mochi::VMatrix4x4r ImportMatrix = UnrealToMatrix(ImportTransform.GetScale3D(), ImportTransform);
+  mochi::VMatrix4x4r SpaceMatrix = Dot4x4(
+      U2m.GetBasisChangeMatrix(),
+      mochi::VDiagonalMatrix<4>(static_cast<mochi::real>(U2m.OutputSpace.UnitsPerMeter)));
+  mochi::VMatrix4x4r FinalMatrix = Dot4x4(SpaceMatrix, ImportMatrix);
+  std::pair<mochi::Real3, mochi::TransformRT> BakeTransform =
+      mochi::DecomposeMatrixTransform(FinalMatrix);
+  mochi::Real3& BakeScale = BakeTransform.first;
+  mochi::TransformRT& BakeTransformRT = BakeTransform.second;
+  mochi::model_utils::BakeTransform(MochiModelData, BakeScale, BakeTransformRT, Error);
+  MOCHI_ERROR_RETURN(Error, {});
 
-  return modelData;
+  return MochiModelData;
 }
 
 mochi::ShapeHandle UMochiModel::GetTriangularMochiShapeFromStaticMesh(
-    const UStaticMesh* mesh,
-    const ETriangularMeshCollisionSource collisionSource,
-    FVector scale3D) {
-  mochi::Context* const mochiWorld = IMochiPhysicsModule::Get()->GetMochiContext();
+    const UStaticMesh* Mesh,
+    const ETriangularMeshCollisionSource CollisionSource,
+    FVector Scale3D) {
+  mochi::Context* const MochiWorld = IMochiPhysicsModule::Get()->GetMochiContext();
 
-  if (!mesh) {
+  if (!Mesh) {
     UE_LOG(
         LogMochiPhysics,
         Error,
         TEXT("[UMochiModel] Failed to create triangular mesh because static mesh is invalid!"))
     return mochi::ShapeHandle();
   }
-  if (!mesh->bAllowCPUAccess) {
+  if (!Mesh->bAllowCPUAccess) {
     UE_LOG(
         LogMochiPhysics,
         Warning,
@@ -570,33 +570,33 @@ mochi::ShapeHandle UMochiModel::GetTriangularMochiShapeFromStaticMesh(
             "[UMochiModel] Static mesh does not have bAllowCPUAccess enabled; undefined behavior may occur, especially in packaged builds!"))
   }
 
-  FUnrealToMochiConverter u2m;
-  scale3D = u2m.ScaleToOutput(scale3D);
+  FUnrealToMochiConverter U2m;
+  Scale3D = U2m.ScaleToOutput(Scale3D);
   // complex collision and simple collision seem to have different winding order
-  bool bReverseWindingOrder = collisionSource == ETriangularMeshCollisionSource::Simple;
+  bool bReverseWindingOrder = CollisionSource == ETriangularMeshCollisionSource::Simple;
   // if handedness changes we need to rever winding order again
-  bReverseWindingOrder = u2m.FlipsHandedness() != bReverseWindingOrder;
+  bReverseWindingOrder = U2m.FlipsHandedness() != bReverseWindingOrder;
 
   TArray<mochi::real> Coordinates;
   TArray<int> Connectivity;
 
-  UBodySetup* bodySetup = mesh->GetBodySetup();
+  UBodySetup* BodySetup = Mesh->GetBodySetup();
 
-  switch (collisionSource) {
+  switch (CollisionSource) {
     case ETriangularMeshCollisionSource::Simple:
-      if (!bodySetup || bodySetup->AggGeom.ConvexElems.IsEmpty()) {
+      if (!BodySetup || BodySetup->AggGeom.ConvexElems.IsEmpty()) {
         UE_LOG(
             LogMochiPhysics,
             Error,
             TEXT(
                 "[UMochiModel] Failed to create triangular mesh because simple collider is not present! [%s]"),
-            *mesh->GetName())
+            *Mesh->GetName())
         return mochi::ShapeHandle();
       }
 
-      for (const FKConvexElem& convexElem : bodySetup->AggGeom.ConvexElems) {
-        const TArray<FVector>& ElemVertices = convexElem.VertexData;
-        const TArray<int32> ElemIndices = convexElem.IndexData;
+      for (const FKConvexElem& ConvexElem : BodySetup->AggGeom.ConvexElems) {
+        const TArray<FVector>& ElemVertices = ConvexElem.VertexData;
+        const TArray<int32> ElemIndices = ConvexElem.IndexData;
 
         if (ElemIndices.Num() % 3 != 0) {
           UE_LOG(
@@ -604,29 +604,29 @@ mochi::ShapeHandle UMochiModel::GetTriangularMochiShapeFromStaticMesh(
               Error,
               TEXT(
                   "[UMochiModel] Failed to create triangular mesh because simple collider is invalid! [%s]"),
-              *mesh->GetName())
+              *Mesh->GetName())
           return mochi::ShapeHandle();
         }
 
-        const int32 vertexOffset = Coordinates.Num() / 3;
-        for (const FVector& Vertex : convexElem.VertexData) {
-          mochi::Real3 v = u2m.TranslationToMochi(Vertex);
-          Coordinates.Add(scale3D.X * v[0]);
-          Coordinates.Add(scale3D.Y * v[1]);
-          Coordinates.Add(scale3D.Z * v[2]);
+        const int32 VertexOffset = Coordinates.Num() / 3;
+        for (const FVector& Vertex : ConvexElem.VertexData) {
+          mochi::Real3 V = U2m.TranslationToMochi(Vertex);
+          Coordinates.Add(Scale3D.X * V[0]);
+          Coordinates.Add(Scale3D.Y * V[1]);
+          Coordinates.Add(Scale3D.Z * V[2]);
         }
 
         for (int32 i = 0; i < ElemIndices.Num(); i += 3) {
           if (bReverseWindingOrder) {
             // Inverted triangle winding
-            Connectivity.Add(vertexOffset + ElemIndices[i]);
-            Connectivity.Add(vertexOffset + ElemIndices[i + 1]);
-            Connectivity.Add(vertexOffset + ElemIndices[i + 2]);
+            Connectivity.Add(VertexOffset + ElemIndices[i]);
+            Connectivity.Add(VertexOffset + ElemIndices[i + 1]);
+            Connectivity.Add(VertexOffset + ElemIndices[i + 2]);
           } else {
             // Standard triangle winding
-            Connectivity.Add(vertexOffset + ElemIndices[i]);
-            Connectivity.Add(vertexOffset + ElemIndices[i + 2]);
-            Connectivity.Add(vertexOffset + ElemIndices[i + 1]);
+            Connectivity.Add(VertexOffset + ElemIndices[i]);
+            Connectivity.Add(VertexOffset + ElemIndices[i + 2]);
+            Connectivity.Add(VertexOffset + ElemIndices[i + 1]);
           }
         }
       }
@@ -635,23 +635,23 @@ mochi::ShapeHandle UMochiModel::GetTriangularMochiShapeFromStaticMesh(
           Display,
           TEXT(
               "[UMochiModel] Created triangular mesh using simple colliders for [%s] (%d coordinates, %d connectivity)"),
-          *mesh->GetName(),
+          *Mesh->GetName(),
           Coordinates.Num(),
           Connectivity.Num());
       break;
 
     default:
     case ETriangularMeshCollisionSource::Complex:
-      if (!mesh->GetRenderData()) {
+      if (!Mesh->GetRenderData()) {
         UE_LOG(
             LogMochiPhysics,
             Error,
             TEXT(
                 "[UMochiModel] Failed to create triangular mesh because complex collider render data is invalid! [%s]"),
-            *mesh->GetName())
+            *Mesh->GetName())
         return mochi::ShapeHandle();
       }
-      const FStaticMeshLODResources* LOD = mesh->GetRenderData()->GetCurrentFirstLOD(0);
+      const FStaticMeshLODResources* LOD = Mesh->GetRenderData()->GetCurrentFirstLOD(0);
 
       if (!LOD) {
         UE_LOG(
@@ -659,46 +659,46 @@ mochi::ShapeHandle UMochiModel::GetTriangularMochiShapeFromStaticMesh(
             Error,
             TEXT(
                 "[UMochiModel] Failed to create triangular mesh because unable to retrieve LOD data! [%s]"),
-            *mesh->GetName())
+            *Mesh->GetName())
         return mochi::ShapeHandle();
       }
 
-      uint32 vertexCount = LOD->VertexBuffers.PositionVertexBuffer.GetNumVertices();
-      uint32 indexCount = LOD->IndexBuffer.GetArrayView().Num();
+      uint32 VertexCount = LOD->VertexBuffers.PositionVertexBuffer.GetNumVertices();
+      uint32 IndexCount = LOD->IndexBuffer.GetArrayView().Num();
 
-      if (indexCount % 3 != 0 || vertexCount == 0) {
+      if (IndexCount % 3 != 0 || VertexCount == 0) {
         UE_LOG(
             LogMochiPhysics,
             Error,
             TEXT(
                 "[UMochiModel] Failed to create triangular mesh because complex collider mesh is invalid! [%s]"),
-            *mesh->GetName())
+            *Mesh->GetName())
         return mochi::ShapeHandle();
       }
 
-      if (indexCount == 0) {
+      if (IndexCount == 0) {
         UE_LOG(
             LogMochiPhysics,
             Error,
             TEXT("[UMochiModel] Failed to create triangular mesh. Index buffer is empty! [%s]"),
-            *mesh->GetName())
+            *Mesh->GetName())
         return mochi::ShapeHandle();
       }
 
       // 3 coords per vertex
-      Coordinates.SetNum(vertexCount * 3);
-      Connectivity.SetNum(indexCount);
+      Coordinates.SetNum(VertexCount * 3);
+      Connectivity.SetNum(IndexCount);
 
-      for (uint32 i = 0; i < vertexCount; i++) {
-        FVector3f position = LOD->VertexBuffers.PositionVertexBuffer.VertexPosition(i);
-        mochi::Real3 p = u2m.TranslationToMochi(static_cast<FVector>(position));
-        int idx = i * 3;
-        Coordinates[idx] = scale3D.X * p[0];
-        Coordinates[idx + 1] = scale3D.Y * p[1];
-        Coordinates[idx + 2] = scale3D.Z * p[2];
+      for (uint32 i = 0; i < VertexCount; i++) {
+        FVector3f Position = LOD->VertexBuffers.PositionVertexBuffer.VertexPosition(i);
+        mochi::Real3 P = U2m.TranslationToMochi(static_cast<FVector>(Position));
+        int Idx = i * 3;
+        Coordinates[Idx] = Scale3D.X * P[0];
+        Coordinates[Idx + 1] = Scale3D.Y * P[1];
+        Coordinates[Idx + 2] = Scale3D.Z * P[2];
       }
 
-      for (uint32 i = 0; i < indexCount; i += 3) {
+      for (uint32 i = 0; i < IndexCount; i += 3) {
         if (bReverseWindingOrder) {
           // Inverted triangle winding
           Connectivity[i] = LOD->IndexBuffer.GetArrayView()[i];
@@ -716,7 +716,7 @@ mochi::ShapeHandle UMochiModel::GetTriangularMochiShapeFromStaticMesh(
           Display,
           TEXT(
               "[UMochiModel] Created triangular mesh using complex colliders for [%s] (%d coordinates, %d connectivity)"),
-          *mesh->GetName(),
+          *Mesh->GetName(),
           Coordinates.Num(),
           Connectivity.Num())
       break;
@@ -728,34 +728,34 @@ mochi::ShapeHandle UMochiModel::GetTriangularMochiShapeFromStaticMesh(
         Error,
         TEXT(
             "[UMochiModel] Failed to create mochi::ShapeHandle from triangular mesh because coordinates and/or connectivity were empty; did you enable bAllowCPUAccess? [%s]"),
-        *mesh->GetName());
+        *Mesh->GetName());
     return mochi::ShapeHandle();
   }
 
-  mochi::Error e;
-  mochi::ShapeHandle shapeHandle =
-      mochiWorld->CreateTriMeshShape(ToMochiSpan(Coordinates), ToMochiSpan(Connectivity), e);
+  mochi::Error E;
+  mochi::ShapeHandle ShapeHandle =
+      MochiWorld->CreateTriMeshShape(ToMochiSpan(Coordinates), ToMochiSpan(Connectivity), E);
 
-  if (!shapeHandle.IsValid()) {
+  if (!ShapeHandle.IsValid()) {
     UE_LOG(
         LogMochiPhysics,
         Error,
         TEXT("[UMochiModel] Failed to create mochi::ShapeHandle from triangular mesh [%s]"),
-        *mesh->GetName());
+        *Mesh->GetName());
     return mochi::ShapeHandle();
   }
 
-  if (!e.IsOK()) {
+  if (!E.IsOK()) {
     UE_LOG(
         LogMochiPhysics,
         Error,
         TEXT("[UMochiModel] Failed to initialize triangular mesh [%s] : %hs"),
-        *mesh->GetName(),
-        e.GetDescription())
+        *Mesh->GetName(),
+        E.GetDescription())
     return mochi::ShapeHandle();
   }
 
-  return shapeHandle;
+  return ShapeHandle;
 }
 
 #if WITH_EDITOR
@@ -782,67 +782,67 @@ FString UMochiModel::GetSourceFilePath() const {
 
 void UMochiModel::Import() {
   MOCHI_PROFILE_SCOPE();
-  IDesktopPlatform* desktopPlatform = FDesktopPlatformModule::Get();
-  if (!desktopPlatform) {
+  IDesktopPlatform* DesktopPlatform = FDesktopPlatformModule::Get();
+  if (!DesktopPlatform) {
     return;
   }
-  const void* parentWindowWindowHandle =
+  const void* ParentWindowWindowHandle =
       FSlateApplication::Get().FindBestParentWindowHandleForDialogs(nullptr);
-  const FString fileTypes = TEXT("HDF5 files (*.h5)|*.h5|All files (*.*)|*.*");
-  const FString sourcePath = GetSourceFilePath();
-  const FString defaultPath = sourcePath.Len()
-      ? sourcePath
+  const FString FileTypes = TEXT("HDF5 files (*.h5)|*.h5|All files (*.*)|*.*");
+  const FString SourcePath = GetSourceFilePath();
+  const FString DefaultPath = SourcePath.Len()
+      ? SourcePath
       : FEditorDirectories::Get().GetLastDirectory(ELastDirectory::GENERIC_IMPORT);
-  TArray<FString> openFilenames;
-  int32 filterIndex = -1;
-  const bool bOpened = desktopPlatform->OpenFileDialog(
-      parentWindowWindowHandle,
+  TArray<FString> OpenFilenames;
+  int32 FilterIndex = -1;
+  const bool bOpened = DesktopPlatform->OpenFileDialog(
+      ParentWindowWindowHandle,
       TEXT("Open Mochi H5 File"),
-      defaultPath,
+      DefaultPath,
       TEXT(""),
-      fileTypes,
+      FileTypes,
       EFileDialogFlags::None,
-      openFilenames,
-      filterIndex);
+      OpenFilenames,
+      FilterIndex);
   if (bOpened) {
     // Did not set flag for multiple selections, so should be just one
-    check(openFilenames.Num() == 1);
-    ImportFromFilename(openFilenames[0]);
+    check(OpenFilenames.Num() == 1);
+    ImportFromFilename(OpenFilenames[0]);
   }
 }
 
 void UMochiModel::Reimport() {
-  const FString sourcePath = GetSourceFilePath();
-  if (!sourcePath.IsEmpty()) {
-    ImportFromFilename(sourcePath);
+  const FString SourcePath = GetSourceFilePath();
+  if (!SourcePath.IsEmpty()) {
+    ImportFromFilename(SourcePath);
   }
 }
 
 bool UMochiModel::ImportFromFilename(const FString& InFilename) {
   MOCHI_PROFILE_SCOPE();
-  TArray<uint8> bytes;
-  if (!FFileHelper::LoadFileToArray(bytes, *InFilename)) {
+  TArray<uint8> Bytes;
+  if (!FFileHelper::LoadFileToArray(Bytes, *InFilename)) {
     UE_LOG(LogMochiPhysics, Error, TEXT("[UMochiModel] Failed to read file: [%s]"), *InFilename);
     return false;
   }
-  if (bytes.Num() == 0) {
+  if (Bytes.Num() == 0) {
     UE_LOG(LogMochiPhysics, Error, TEXT("[UMochiModel] File is empty: [%s]"), *InFilename);
     return false;
   }
 
-  mochi::Error error;
-  const mochi::ModelData modelData =
-      mochi::model_utils::LoadFromBytes(ToMochiBinarySpan(bytes), error);
-  if (!error.IsOK()) {
+  mochi::Error Error;
+  const mochi::ModelData MochiModelData =
+      mochi::model_utils::LoadFromBytes(ToMochiBinarySpan(Bytes), Error);
+  if (!Error.IsOK()) {
     UE_LOG(
         LogMochiPhysics,
         Error,
         TEXT("[UMochiModel] Failed to read the model in [%s]. Reason: %hs"),
         *InFilename,
-        error.ToString().c_str());
+        Error.ToString().c_str());
     return false;
   }
-  if (modelData.experimentalDataDetected) {
+  if (MochiModelData.experimentalDataDetected) {
     UE_LOG(
         LogMochiPhysics,
         Error,
@@ -853,7 +853,7 @@ bool UMochiModel::ImportFromFilename(const FString& InFilename) {
     return false;
   }
 
-  if (!ApplyModelData(modelData)) {
+  if (!ApplyModelData(MochiModelData)) {
     UE_LOG(LogMochiPhysics, Error, TEXT("[UMochiModel] Failed to import: [%s]"), *InFilename);
     return false;
   }
@@ -872,16 +872,16 @@ bool UMochiModel::ExportToFilename(const FString& InFilename) const {
         *GetPathName());
     return false;
   }
-  mochi::Error error;
+  mochi::Error Error;
   mochi::model_utils::SaveToFile(
-      ::ToMochi(ModelData), std::string{TCHAR_TO_ANSI(*InFilename)}, mochi::FileFormat::H5, error);
-  if (!error.IsOK()) {
+      ::ToMochi(ModelData), std::string{TCHAR_TO_ANSI(*InFilename)}, mochi::FileFormat::H5, Error);
+  if (!Error.IsOK()) {
     UE_LOG(
         LogMochiPhysics,
         Error,
         TEXT("[UMochiModel] Failed to export %s. Reason: %hs"),
         *GetPathName(),
-        error.ToString().c_str());
+        Error.ToString().c_str());
     return false;
   }
   return true;
@@ -893,10 +893,10 @@ bool UMochiModel::ApplyModelData(const mochi::ModelData& Data) {
   // needs ModelData already set to do that. Hold onto the old contents until it passes so
   // that a failed import or bake leaves the asset as it was rather than half-replaced.
   // Moving is cheap, and RefreshMeshCounts writes no counts unless it succeeds.
-  FMochiModelData previous = MoveTemp(ModelData);
+  FMochiModelData Previous = MoveTemp(ModelData);
   ModelData = ::ToUnreal(Data);
   if (!RefreshMeshCounts()) {
-    ModelData = MoveTemp(previous);
+    ModelData = MoveTemp(Previous);
     return false;
   }
   MarkPackageDirty();
@@ -905,24 +905,24 @@ bool UMochiModel::ApplyModelData(const mochi::ModelData& Data) {
 
 bool UMochiModel::RefreshMeshCounts() {
   MOCHI_PROFILE_SCOPE();
-  mochi::Context* const mochiWorld = IMochiPhysicsModule::Get()->GetMochiContext();
-  const mochi::ShapeHandle shape = GetMochiShape(FVector::OneVector, FTransform::Identity);
-  if (!shape.IsValid()) {
+  mochi::Context* const MochiWorld = IMochiPhysicsModule::Get()->GetMochiContext();
+  const mochi::ShapeHandle Shape = GetMochiShape(FVector::OneVector, FTransform::Identity);
+  if (!Shape.IsValid()) {
     UE_LOG(LogMochiPhysics, Error, TEXT("[UMochiModel] Shape is invalid"));
     return false;
   }
-  mochi::Error e{};
-  const mochi::MeshDataView shapeMesh = mochiWorld->GetShapeMesh(shape, e);
-  MOCHI_ERROR_RETURN(e, false);
-  if (shapeMesh.IsEmpty()) {
+  mochi::Error E{};
+  const mochi::MeshDataView ShapeMesh = MochiWorld->GetShapeMesh(Shape, E);
+  MOCHI_ERROR_RETURN(E, false);
+  if (ShapeMesh.IsEmpty()) {
     UE_LOG(LogMochiPhysics, Error, TEXT("[UMochiModel] Shape does not have mesh data"));
     return false;
   }
 
   // Polyline mesh (rod) - no surface mesh or volume elements
-  if (shapeMesh.nodesPerElement == 2) {
-    NumNodes = shapeMesh.GetNumNodes();
-    NumEdges = shapeMesh.GetNumElements();
+  if (ShapeMesh.nodesPerElement == 2) {
+    NumNodes = ShapeMesh.GetNumNodes();
+    NumEdges = ShapeMesh.GetNumElements();
     NumPolyhedrons = 0;
     NumSurfaceNodes = 0;
     NumSurfaceEdges = 0;
@@ -930,26 +930,26 @@ bool UMochiModel::RefreshMeshCounts() {
     return true;
   }
 
-  const mochi::MeshDataView surfaceMesh = mochiWorld->GetShapeSurfaceMesh(shape, e);
-  MOCHI_ERROR_RETURN(e, false);
-  if (surfaceMesh.IsEmpty()) {
+  const mochi::MeshDataView SurfaceMesh = MochiWorld->GetShapeSurfaceMesh(Shape, E);
+  MOCHI_ERROR_RETURN(E, false);
+  if (SurfaceMesh.IsEmpty()) {
     UE_LOG(LogMochiPhysics, Error, TEXT("[UMochiModel] Shape does not have surface mesh data"));
     return false;
   }
   // Tetrahedral mesh
-  if (shapeMesh.nodesPerElement == 4) {
-    NumNodes = shapeMesh.GetNumNodes();
-    NumEdges = static_cast<int>(mochi::ComputeEdgeIndices(shapeMesh).size() / 2);
-    NumPolyhedrons = shapeMesh.GetNumElements();
+  if (ShapeMesh.nodesPerElement == 4) {
+    NumNodes = ShapeMesh.GetNumNodes();
+    NumEdges = static_cast<int>(mochi::ComputeEdgeIndices(ShapeMesh).size() / 2);
+    NumPolyhedrons = ShapeMesh.GetNumElements();
   } else {
     NumNodes = 0;
     NumEdges = 0;
     NumPolyhedrons = 0;
   }
   // Surface mesh
-  NumSurfaceNodes = surfaceMesh.GetNumNodes();
-  NumSurfaceEdges = static_cast<int>(mochi::ComputeEdgeIndices(surfaceMesh).size() / 2);
-  NumSurfaceFaces = surfaceMesh.GetNumElements();
+  NumSurfaceNodes = SurfaceMesh.GetNumNodes();
+  NumSurfaceEdges = static_cast<int>(mochi::ComputeEdgeIndices(SurfaceMesh).size() / 2);
+  NumSurfaceFaces = SurfaceMesh.GetNumElements();
   return true;
 }
 
@@ -959,13 +959,13 @@ bool UMochiModel::ConvertTetMeshToSurfaceMesh() {
     return false;
   }
 
-  mochi::Error error;
-  mochi::Context* const mochiContext = IMochiPhysicsModule::Get()->GetMochiContext();
+  mochi::Error Error;
+  mochi::Context* const MochiContext = IMochiPhysicsModule::Get()->GetMochiContext();
 
-  mochi::ModelData model = ::ToMochi(ModelData);
+  mochi::ModelData Model = ::ToMochi(ModelData);
 
   // early-out if no mesh or not a tetrahedral mesh
-  if (!model.mesh.has_value() || model.mesh->nodesPerElement != 4) {
+  if (!Model.mesh.has_value() || Model.mesh->nodesPerElement != 4) {
     UE_LOG(
         LogMochiPhysics,
         Warning,
@@ -975,26 +975,26 @@ bool UMochiModel::ConvertTetMeshToSurfaceMesh() {
   }
 
   // The surface of a tet mesh is derived by Mochi, so go through a shape to read it back.
-  const mochi::ShapeHandle shape = mochiContext->CreateModelShape(model, error);
-  if (!error.IsOK() || !shape.IsValid()) {
+  const mochi::ShapeHandle Shape = MochiContext->CreateModelShape(Model, Error);
+  if (!Error.IsOK() || !Shape.IsValid()) {
     UE_LOG(
         LogMochiPhysics,
         Error,
         TEXT("[UMochiModel] Failed to create shape from model data. Reason: %hs"),
-        error.ToString().c_str());
+        Error.ToString().c_str());
     return false;
   }
 
-  const mochi::MeshDataView surfaceMeshView = mochiContext->GetShapeSurfaceMesh(shape, error);
-  if (!error.IsOK()) {
+  const mochi::MeshDataView SurfaceMeshView = MochiContext->GetShapeSurfaceMesh(Shape, Error);
+  if (!Error.IsOK()) {
     UE_LOG(
         LogMochiPhysics,
         Error,
         TEXT("[UMochiModel] Failed to get surface mesh from shape. Reason: %hs"),
-        error.ToString().c_str());
+        Error.ToString().c_str());
     return false;
   }
-  if (surfaceMeshView.IsEmpty()) {
+  if (SurfaceMeshView.IsEmpty()) {
     UE_LOG(
         LogMochiPhysics,
         Error,
@@ -1004,27 +1004,27 @@ bool UMochiModel::ConvertTetMeshToSurfaceMesh() {
   }
 
   // Replace existing mesh with surface mesh
-  model.mesh.emplace();
-  model.mesh->nodesPerElement = surfaceMeshView.nodesPerElement;
-  // assign to copy from temporary surfaceMeshView
-  model.mesh->coordinates.assign(
-      surfaceMeshView.coordinates.begin(), surfaceMeshView.coordinates.end());
-  model.mesh->connectivity.assign(
-      surfaceMeshView.connectivity.begin(), surfaceMeshView.connectivity.end());
+  Model.mesh.emplace();
+  Model.mesh->nodesPerElement = SurfaceMeshView.nodesPerElement;
+  // assign to copy from temporary SurfaceMeshView
+  Model.mesh->coordinates.assign(
+      SurfaceMeshView.coordinates.begin(), SurfaceMeshView.coordinates.end());
+  Model.mesh->connectivity.assign(
+      SurfaceMeshView.connectivity.begin(), SurfaceMeshView.connectivity.end());
 
   // Validate the new model data
-  mochi::model_utils::AutoCorrect(model, error);
-  mochi::model_utils::Validate(model, error);
-  if (!error.IsOK()) {
+  mochi::model_utils::AutoCorrect(Model, Error);
+  mochi::model_utils::Validate(Model, Error);
+  if (!Error.IsOK()) {
     UE_LOG(
         LogMochiPhysics,
         Error,
         TEXT("[UMochiModel] Surface mesh data is invalid. Reason: %hs"),
-        error.ToString().c_str());
+        Error.ToString().c_str());
     return false;
   }
 
-  if (!ApplyModelData(model)) {
+  if (!ApplyModelData(Model)) {
     return false;
   }
 
@@ -1044,30 +1044,30 @@ bool UMochiModel::BakeSdf(const FMochiGridSdfParams* SdfParams) {
     return false;
   }
 
-  mochi::Error error;
-  mochi::ModelData modelData = ::ToMochi(ModelData);
+  mochi::Error Error;
+  mochi::ModelData MochiModelData = ::ToMochi(ModelData);
 
   // Check if this has a mesh
-  if (!modelData.mesh.has_value()) {
+  if (!MochiModelData.mesh.has_value()) {
     UE_LOG(LogMochiPhysics, Error, TEXT("[UMochiModel] Cannot bake SDF: no mesh data."));
     return false;
   }
 
   // Use provided params or default
-  mochi::GridSdfParams sdfParams = SdfParams ? ::ToMochi(*SdfParams) : mochi::GridSdfParams{};
+  mochi::GridSdfParams MochiSdfParams = SdfParams ? ::ToMochi(*SdfParams) : mochi::GridSdfParams{};
 
   // Bake the SDF
-  mochi::model_utils::BakeSdf(modelData, sdfParams, error);
-  if (!error.IsOK()) {
+  mochi::model_utils::BakeSdf(MochiModelData, MochiSdfParams, Error);
+  if (!Error.IsOK()) {
     UE_LOG(
         LogMochiPhysics,
         Error,
         TEXT("[UMochiModel] Failed to bake SDF. Reason: %hs"),
-        error.ToString().c_str());
+        Error.ToString().c_str());
     return false;
   }
 
-  if (!ApplyModelData(modelData)) {
+  if (!ApplyModelData(MochiModelData)) {
     return false;
   }
 

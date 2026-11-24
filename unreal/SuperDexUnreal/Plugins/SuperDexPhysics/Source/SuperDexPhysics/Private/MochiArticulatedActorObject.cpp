@@ -34,24 +34,24 @@ inline void ApplyContactOverrides(
     mochi::Scene* Scene,
     const TArray<mochi::ActorHandle>& LinkActorHandles,
     const UMochiArticulation* Articulation,
-    mochi::ErrorLog& e) {
-  MOCHI_ERROR_RETURN(e);
-  for (const FMochiArticulationContactOverride& contact : Articulation->GetContactOverrides()) {
-    const int iA = Articulation->GetLinkIndex(contact.LinkAName);
-    const int iB = Articulation->GetLinkIndex(contact.LinkBName);
-    if (iA == -1 || iB == -1) {
+    mochi::ErrorLog& E) {
+  MOCHI_ERROR_RETURN(E);
+  for (const FMochiArticulationContactOverride& Contact : Articulation->GetContactOverrides()) {
+    const int AIndex = Articulation->GetLinkIndex(Contact.LinkAName);
+    const int BIndex = Articulation->GetLinkIndex(Contact.LinkBName);
+    if (AIndex == -1 || BIndex == -1) {
       continue;
     }
-    const mochi::ActorHandle linkA = LinkActorHandles[iA];
-    const mochi::ActorHandle linkB = LinkActorHandles[iB];
+    const mochi::ActorHandle LinkA = LinkActorHandles[AIndex];
+    const mochi::ActorHandle LinkB = LinkActorHandles[BIndex];
     Scene->EnableActorContactSymmetric(
-        linkA, linkB, contact.bEnable, mochi::IncludeNestedActors::No, e);
-    if (!e.IsOK()) {
+        LinkA, LinkB, Contact.bEnable, mochi::IncludeNestedActors::No, E);
+    if (!E.IsOK()) {
       UE_LOG(
           LogTemp,
           Error,
           TEXT("[UMochiArticulatedActorObject] Failed to set link contact : %hs"),
-          e._error.GetDescription());
+          E._error.GetDescription());
     }
   }
 }
@@ -60,38 +60,38 @@ inline void CreateAdditionalConstraints(
     mochi::Scene* Scene,
     const TArray<mochi::ActorHandle>& LinkActorHandles,
     const UMochiArticulation* Articulation,
-    mochi::ErrorLog& e) {
-  MOCHI_ERROR_RETURN(e);
-  FUnrealToMochiConverter u2m;
-  const TArray<FMochiArticulationConstraint>& additionalConstraints =
+    mochi::ErrorLog& E) {
+  MOCHI_ERROR_RETURN(E);
+  FUnrealToMochiConverter U2m;
+  const TArray<FMochiArticulationConstraint>& AdditionalConstraints =
       Articulation->GetAdditionalConstraints();
-  for (const FMochiArticulationConstraint& constraint : additionalConstraints) {
-    const int iA = Articulation->GetLinkIndex(constraint.LinkAName);
-    const int iB = Articulation->GetLinkIndex(constraint.LinkBName);
-    if (iA == -1 || iB == -1) {
+  for (const FMochiArticulationConstraint& Constraint : AdditionalConstraints) {
+    const int AIndex = Articulation->GetLinkIndex(Constraint.LinkAName);
+    const int BIndex = Articulation->GetLinkIndex(Constraint.LinkBName);
+    if (AIndex == -1 || BIndex == -1) {
       continue;
     }
-    const mochi::ActorHandle linkA = LinkActorHandles[iA];
-    const mochi::ActorHandle linkB = LinkActorHandles[iB];
-    const mochi::Real3 posA = u2m.TranslationToMochi(constraint.LinkAPosition);
-    const mochi::Real3 posB = u2m.TranslationToMochi(constraint.LinkBPosition);
-    mochi::RigidSphericalJointConstraintParams params;
-    params.actorA = linkA;
-    params.actorB = linkB;
-    params.localPosA = posA;
-    params.localPosB = posB;
-    params.stiffness = constraint.Stiffness;
-    params.damping = constraint.Damping;
-    params.saturation = constraint.Saturation;
-    Scene->CreateRigidSphericalJointConstraint(params, e);
+    const mochi::ActorHandle LinkA = LinkActorHandles[AIndex];
+    const mochi::ActorHandle LinkB = LinkActorHandles[BIndex];
+    const mochi::Real3 PosA = U2m.TranslationToMochi(Constraint.LinkAPosition);
+    const mochi::Real3 PosB = U2m.TranslationToMochi(Constraint.LinkBPosition);
+    mochi::RigidSphericalJointConstraintParams Params;
+    Params.actorA = LinkA;
+    Params.actorB = LinkB;
+    Params.localPosA = PosA;
+    Params.localPosB = PosB;
+    Params.stiffness = Constraint.Stiffness;
+    Params.damping = Constraint.Damping;
+    Params.saturation = Constraint.Saturation;
+    Scene->CreateRigidSphericalJointConstraint(Params, E);
     Scene->EnableActorContactSymmetric(
-        linkA, linkB, /*enable*/ false, mochi::IncludeNestedActors::No, e);
-    if (!e.IsOK()) {
+        LinkA, LinkB, /*enable*/ false, mochi::IncludeNestedActors::No, E);
+    if (!E.IsOK()) {
       UE_LOG(
           LogTemp,
           Error,
           TEXT("[UMochiArticulatedActorObject] Failed to create additional constraint : %hs"),
-          e._error.GetDescription());
+          E._error.GetDescription());
     }
   }
 }
@@ -103,17 +103,17 @@ inline mochi::CallbackHandle RegisterGetPoseCallback(
   return Scene->RegisterPostStepCallback(
       "UMochiArticulatedActorObject::PostStepCallback",
       [Scene, ArticulatedActor, GetPose](mochi::StepInfo const&) {
-        mochi::ErrorLog e{};
-        thread_local TArray<mochi::TransformRT> linkTransforms;
-        thread_local TArray<mochi::real> jointPositions;
-        const int numLinks = ArticulatedActor->GetNestedLinkActors(e).size();
-        linkTransforms.SetNum(numLinks);
-        const int numDofs = ArticulatedActor->GetNumDofs();
-        jointPositions.SetNum(numDofs);
-        ArticulatedActor->GetArticulatedLinkTransforms(ToMochiSpan(linkTransforms), e);
-        ArticulatedActor->GetArticulatedPose(ToMochiSpan(jointPositions), e);
-        GetPose(linkTransforms, jointPositions, ArticulatedActor, Scene);
-        MOCHI_ERROR_RETURN(e);
+        mochi::ErrorLog E{};
+        thread_local TArray<mochi::TransformRT> LinkTransforms;
+        thread_local TArray<mochi::real> JointPositions;
+        const int NumLinks = ArticulatedActor->GetNestedLinkActors(E).size();
+        LinkTransforms.SetNum(NumLinks);
+        const int NumDofs = ArticulatedActor->GetNumDofs();
+        JointPositions.SetNum(NumDofs);
+        ArticulatedActor->GetArticulatedLinkTransforms(ToMochiSpan(LinkTransforms), E);
+        ArticulatedActor->GetArticulatedPose(ToMochiSpan(JointPositions), E);
+        GetPose(LinkTransforms, JointPositions, ArticulatedActor, Scene);
+        MOCHI_ERROR_RETURN(E);
       });
 }
 
@@ -126,65 +126,65 @@ static bool SetupController(
     const std::vector<mochi::TransformRT>& InitialWorldFromLink,
     mochi::CallbackHandle& OutPreStepCallbackHandle,
     mochi::QueryHandle& OutArticulatedControllerForceQueryHandle,
-    mochi::ErrorLog& e) {
-  MOCHI_ERROR_RETURN(e, false);
+    mochi::ErrorLog& E) {
+  MOCHI_ERROR_RETURN(E, false);
   if (bAddPoseController) {
-    const size_t numLinks = ArticulatedActor->GetNestedLinkActors(e).size();
-    const int numPosGains = PoseControllerGains.PositionTrackingGains.Num();
-    const int numRotGains = PoseControllerGains.RotationTrackingGains.Num();
-    const int numJointGains = PoseControllerGains.JointTrackingGains.Num();
-    check(numPosGains == 0 || numPosGains == numLinks);
-    check(numRotGains == 0 || numRotGains == numLinks);
-    check(numJointGains == 0 || numJointGains == numLinks);
-    mochi::PoseControllerParams poseControllerParams;
-    poseControllerParams.linkPosTracking = ToMochiSpan(PoseControllerGains.PositionTrackingGains);
-    poseControllerParams.linkRotTracking = ToMochiSpan(PoseControllerGains.RotationTrackingGains);
-    poseControllerParams.jointTracking = ToMochiSpan(PoseControllerGains.JointTrackingGains);
+    const size_t NumLinks = ArticulatedActor->GetNestedLinkActors(E).size();
+    const int NumPosGains = PoseControllerGains.PositionTrackingGains.Num();
+    const int NumRotGains = PoseControllerGains.RotationTrackingGains.Num();
+    const int NumJointGains = PoseControllerGains.JointTrackingGains.Num();
+    check(NumPosGains == 0 || NumPosGains == NumLinks);
+    check(NumRotGains == 0 || NumRotGains == NumLinks);
+    check(NumJointGains == 0 || NumJointGains == NumLinks);
+    mochi::PoseControllerParams PoseControllerParams;
+    PoseControllerParams.linkPosTracking = ToMochiSpan(PoseControllerGains.PositionTrackingGains);
+    PoseControllerParams.linkRotTracking = ToMochiSpan(PoseControllerGains.RotationTrackingGains);
+    PoseControllerParams.jointTracking = ToMochiSpan(PoseControllerGains.JointTrackingGains);
 
-    ArticulatedActor->AddArticulatedPoseController(poseControllerParams, e);
-    MOCHI_ERROR_RETURN(e, false);
-    const bool bPoseControllerCreated = ArticulatedActor->HasArticulatedPoseController(e);
-    MOCHI_ERROR_RETURN(e, false)
+    ArticulatedActor->AddArticulatedPoseController(PoseControllerParams, E);
+    MOCHI_ERROR_RETURN(E, false);
+    const bool bPoseControllerCreated = ArticulatedActor->HasArticulatedPoseController(E);
+    MOCHI_ERROR_RETURN(E, false)
     if (!bPoseControllerCreated) {
       return false;
     }
     if (!OutArticulatedControllerForceQueryHandle.IsValid()) {
       OutArticulatedControllerForceQueryHandle =
-          ArticulatedActor->RegisterQuery(mochi::QueryType::ArticulatedControllerForce, e);
+          ArticulatedActor->RegisterQuery(mochi::QueryType::ArticulatedControllerForce, E);
     }
-    MOCHI_ERROR_RETURN(e, false);
+    MOCHI_ERROR_RETURN(E, false);
     // init controller targets
-    ArticulatedActor->ResetArticulatedTargetLinkTransforms(InitialWorldFromLink, e);
+    ArticulatedActor->ResetArticulatedTargetLinkTransforms(InitialWorldFromLink, E);
   }
   // register pre step pose target callback
   if (SetPoseTarget) {
     OutPreStepCallbackHandle = Scene->RegisterPreStepCallback(
         "UMochiArticulatedActorObject::PreStepCallback",
-        [Scene, ArticulatedActor, SetPoseTarget, bAddPoseController](mochi::StepInfo const& info) {
-          mochi::ErrorLog e{};
+        [Scene, ArticulatedActor, SetPoseTarget, bAddPoseController](mochi::StepInfo const& Info) {
+          mochi::ErrorLog E{};
           // get target transforms from user
-          FMochiArticulatedActorPoseVariant pose;
-          if (SetPoseTarget(pose, ArticulatedActor, Scene, info.timeStepSec)) {
-            if (pose.IsType<TArray<mochi::TransformRT>>() && bAddPoseController) {
-              TArray<mochi::TransformRT>& linkTransforms = pose.Get<TArray<mochi::TransformRT>>();
-              const int numLinks = ArticulatedActor->GetNestedLinkActors(e).size();
-              if (linkTransforms.Num() == numLinks) {
+          FMochiArticulatedActorPoseVariant Pose;
+          if (SetPoseTarget(Pose, ArticulatedActor, Scene, Info.timeStepSec)) {
+            if (Pose.IsType<TArray<mochi::TransformRT>>() && bAddPoseController) {
+              TArray<mochi::TransformRT>& LinkTransforms = Pose.Get<TArray<mochi::TransformRT>>();
+              const int NumLinks = ArticulatedActor->GetNestedLinkActors(E).size();
+              if (LinkTransforms.Num() == NumLinks) {
                 ArticulatedActor->SetArticulatedTargetLinkTransforms(
-                    ToMochiSpan(linkTransforms), e);
+                    ToMochiSpan(LinkTransforms), E);
               } else {
                 UE_LOG(
                     LogMochiPhysics,
                     Error,
                     TEXT(
                         "[UMochiArticulatedActorObject] Failed to set articulated target link transforms due to num links mismatch. Expected %d, received %d!"),
-                    numLinks,
-                    linkTransforms.Num())
+                    NumLinks,
+                    LinkTransforms.Num())
               }
-            } else if (pose.IsType<TArray<mochi::real>>() && bAddPoseController) {
-              TArray<mochi::real>& jointPositions = pose.Get<TArray<mochi::real>>();
-              const int numDofs = ArticulatedActor->GetNumDofs();
-              if (jointPositions.Num() == numDofs) {
-                ArticulatedActor->SetArticulatedTargetPose(ToMochiSpan(jointPositions), e);
+            } else if (Pose.IsType<TArray<mochi::real>>() && bAddPoseController) {
+              TArray<mochi::real>& JointPositions = Pose.Get<TArray<mochi::real>>();
+              const int NumDofs = ArticulatedActor->GetNumDofs();
+              if (JointPositions.Num() == NumDofs) {
+                ArticulatedActor->SetArticulatedTargetPose(ToMochiSpan(JointPositions), E);
               } else {
                 UE_LOG(
                     LogMochiPhysics,
@@ -192,8 +192,8 @@ static bool SetupController(
                     TEXT(
                         "[UMochiArticulatedActorObject] Failed to set articulated target joint positions due "
                         "to num DOFs mismatch. Expected %d, received %d!"),
-                    numDofs,
-                    jointPositions.Num())
+                    NumDofs,
+                    JointPositions.Num())
               }
             } else if (bAddPoseController) {
               UE_LOG(
@@ -204,7 +204,7 @@ static bool SetupController(
                       "variant does not contain a TArray<mochi::TransformRT> or a TArray<mochi::real>!"));
             }
           }
-          MOCHI_ERROR_RETURN(e);
+          MOCHI_ERROR_RETURN(E);
         });
   }
   return true;
@@ -239,15 +239,15 @@ UMochiArticulatedActorObject* UMochiArticulatedActorObject::CreateArticulation(
     return nullptr;
   }
   // get context pointers
-  mochi::Context* mochiContext = IMochiPhysicsModule::Get()->GetMochiContext();
-  FUnrealToMochiConverter u2m;
+  mochi::Context* MochiContext = IMochiPhysicsModule::Get()->GetMochiContext();
+  FUnrealToMochiConverter U2m;
   // checks
   check(Scene);
-  check(mochiContext);
+  check(MochiContext);
   check(Articulation);
   // confirm we have links
-  const int numLinks = Articulation->GetLinks().Num();
-  if (numLinks == 0) {
+  const int NumLinks = Articulation->GetLinks().Num();
+  if (NumLinks == 0) {
     UE_LOG(
         LogMochiPhysics,
         Error,
@@ -256,139 +256,139 @@ UMochiArticulatedActorObject* UMochiArticulatedActorObject::CreateArticulation(
     return nullptr;
   }
   // build per-link shapes; soft shapes are still loaded separately for soft-skinned actors
-  const TArray<mochi::ShapeHandle> linkShapes = Articulation->GetLinkShapes();
-  const TArray<mochi::ShapeHandle> softShapes = Articulation->GetSoftShapes();
-  const mochi::ShapeHandle skinShape = Articulation->GetSkinShape();
+  const TArray<mochi::ShapeHandle> LinkShapes = Articulation->GetLinkShapes();
+  const TArray<mochi::ShapeHandle> SoftShapes = Articulation->GetSoftShapes();
+  const mochi::ShapeHandle SkinShape = Articulation->GetSkinShape();
   // data we will pull off the mochi thread
-  FActorSetupData setupData;
-  const int numSoftLinks = Articulation->GetSoftLinks().Num();
+  FActorSetupData SetupData;
+  const int NumSoftLinks = Articulation->GetSoftLinks().Num();
   bool bHasArticulatedPoseController = false;
-  mochi::ErrorLog e{};
+  mochi::ErrorLog E{};
   // Build the shared articulated-actor params (topology + per-link/per-joint properties) on
   // the UE game thread, BEFORE queuing the scene command. The helper dereferences UObject
   // pointers (e.g. link.ContactParams) and reads UMochiArticulation state, both of which
   // require game-thread access; matches the legacy code which also called shape/param
   // construction outside Scene->QueueOrExecuteCommand.
-  const FString nameStr = ArticulationName + "___Articulation";
-  const FString layerStr = Layer.ToString();
-  mochi::ArticulatedActorParams skeletonParams = Articulation->GetArticulatedActorParams(
+  const FString NameStr = ArticulationName + "___Articulation";
+  const FString LayerStr = Layer.ToString();
+  mochi::ArticulatedActorParams SkeletonParams = Articulation->GetArticulatedActorParams(
       bFixedBase,
       ContactParams,
       Layer,
       bHasGravity,
-      ToMochiSpan(linkShapes),
-      skinShape,
+      ToMochiSpan(LinkShapes),
+      SkinShape,
       InitialJointVelocities);
-  skeletonParams.name = TCHAR_TO_ANSI(*nameStr);
-  skeletonParams.worldFromRoot = u2m.TransformToMochi_RT(WorldFromRoot);
-  TArray<mochi::SoftMaterialParams> softMaterials;
-  for (const FMochiArticulationSoftLink& softLink : Articulation->GetSoftLinks()) {
-    softMaterials.Add(
-        softLink.MaterialParams ? softLink.MaterialParams->ToMochi() : mochi::SoftMaterialParams{});
+  SkeletonParams.name = TCHAR_TO_ANSI(*NameStr);
+  SkeletonParams.worldFromRoot = U2m.TransformToMochi_RT(WorldFromRoot);
+  TArray<mochi::SoftMaterialParams> SoftMaterials;
+  for (const FMochiArticulationSoftLink& SoftLink : Articulation->GetSoftLinks()) {
+    SoftMaterials.Add(
+        SoftLink.MaterialParams ? SoftLink.MaterialParams->ToMochi() : mochi::SoftMaterialParams{});
   }
   const bool bEnableCollidingLinks = Articulation->GetEnableCollidingLinks();
   // queue command to create actor
   Scene->QueueOrExecuteCommand([&](mochi::Scene* SyncScene) {
-    mochi::Actor* articulatedActor = nullptr;
+    mochi::Actor* ArticulatedActor = nullptr;
     // we create a different type of actor depending on presence of soft links
-    if (numSoftLinks == 0) {
-      articulatedActor = SyncScene->CreateArticulatedActor(skeletonParams, e);
-      MOCHI_ERROR_RETURN(e);
+    if (NumSoftLinks == 0) {
+      ArticulatedActor = SyncScene->CreateArticulatedActor(SkeletonParams, E);
+      MOCHI_ERROR_RETURN(E);
     } else {
-      mochi::SoftSkinnedActorParams softSkinnedParams;
-      softSkinnedParams.skeletonParams = std::move(skeletonParams);
+      mochi::SoftSkinnedActorParams SoftSkinnedParams;
+      SoftSkinnedParams.skeletonParams = std::move(SkeletonParams);
       // create soft params
-      mochi::SoftActorParams softParamsCommon;
-      softParamsCommon.layer = TCHAR_TO_ANSI(*layerStr);
+      mochi::SoftActorParams SoftParamsCommon;
+      SoftParamsCommon.layer = TCHAR_TO_ANSI(*LayerStr);
       // Mochi takes the gravity of soft-skinned actors from SoftSkinnedActorParams::hasGravity.
-      softParamsCommon.hasGravity = false;
-      TArray<mochi::SoftActorParams> softParams;
-      softParams.Init(softParamsCommon, numSoftLinks);
-      for (int i = 0; i < numSoftLinks; ++i) {
-        softParams[i].shape = softShapes[i];
-        softParams[i].name = TCHAR_TO_ANSI(*Articulation->GetSoftLinks()[i].Name.ToString());
-        softParams[i].material = softMaterials[i];
+      SoftParamsCommon.hasGravity = false;
+      TArray<mochi::SoftActorParams> SoftParams;
+      SoftParams.Init(SoftParamsCommon, NumSoftLinks);
+      for (int i = 0; i < NumSoftLinks; ++i) {
+        SoftParams[i].shape = SoftShapes[i];
+        SoftParams[i].name = TCHAR_TO_ANSI(*Articulation->GetSoftLinks()[i].Name.ToString());
+        SoftParams[i].material = SoftMaterials[i];
       }
-      softSkinnedParams.softParams = ToMochiSpan(softParams);
+      SoftSkinnedParams.softParams = ToMochiSpan(SoftParams);
       // initialize soft attachments
-      TArray<std::string> softAttachLinks;
-      softAttachLinks.SetNum(numSoftLinks);
-      for (int i = 0; i < numSoftLinks; ++i) {
-        softAttachLinks[i] = TCHAR_TO_ANSI(*Articulation->GetSoftLinks()[i].ParentName.ToString());
+      TArray<std::string> SoftAttachLinks;
+      SoftAttachLinks.SetNum(NumSoftLinks);
+      for (int i = 0; i < NumSoftLinks; ++i) {
+        SoftAttachLinks[i] = TCHAR_TO_ANSI(*Articulation->GetSoftLinks()[i].ParentName.ToString());
       }
-      softSkinnedParams.softAttachLinks = ToMochiSpan(softAttachLinks);
-      softSkinnedParams.enableCollidingLinks = bEnableCollidingLinks;
+      SoftSkinnedParams.softAttachLinks = ToMochiSpan(SoftAttachLinks);
+      SoftSkinnedParams.enableCollidingLinks = bEnableCollidingLinks;
       // create articulated actor
-      articulatedActor = SyncScene->CreateSoftSkinnedActor(softSkinnedParams, e);
+      ArticulatedActor = SyncScene->CreateSoftSkinnedActor(SoftSkinnedParams, E);
     }
-    if (articulatedActor == nullptr) {
-      MOCHI_ERROR_SET(e, "Failed to create articulated actor!");
-      MOCHI_ERROR_RETURN(e);
+    if (ArticulatedActor == nullptr) {
+      MOCHI_ERROR_SET(E, "Failed to create articulated actor!");
+      MOCHI_ERROR_RETURN(E);
     }
     // shared setup: extract handles/names, register contact queries and callbacks
     SetupActorHandlesAndCallbacks(
         SyncScene,
-        articulatedActor,
+        ArticulatedActor,
         Outer,
         GetPoseCallback,
         {},
         LinksThatQueryContactPoints,
         bSkinQueriesContactPoints,
-        setupData,
-        e);
-    MOCHI_ERROR_RETURN(e);
-    check(setupData.LinkActorHandles.Num() == numLinks);
-    check(setupData.SoftActorHandles.Num() == numSoftLinks);
+        SetupData,
+        E);
+    MOCHI_ERROR_RETURN(E);
+    check(SetupData.LinkActorHandles.Num() == NumLinks);
+    check(SetupData.SoftActorHandles.Num() == NumSoftLinks);
     // UMochiArticulation-specific: link contact overrides
     if (Articulation->GetContactOverrides().Num() > 0) {
-      ApplyContactOverrides(SyncScene, setupData.LinkActorHandles, Articulation, e);
-      MOCHI_ERROR_RETURN(e);
+      ApplyContactOverrides(SyncScene, SetupData.LinkActorHandles, Articulation, E);
+      MOCHI_ERROR_RETURN(E);
     }
     // UMochiArticulation-specific: additional constraints
     if (Articulation->GetAdditionalConstraints().Num() > 0) {
-      CreateAdditionalConstraints(SyncScene, setupData.LinkActorHandles, Articulation, e);
-      MOCHI_ERROR_RETURN(e);
+      CreateAdditionalConstraints(SyncScene, SetupData.LinkActorHandles, Articulation, E);
+      MOCHI_ERROR_RETURN(E);
     }
     // init pose
-    const mochi::TransformSRT worldFromRoot = u2m.TransformToMochi_SRT(WorldFromRoot);
-    std::vector<mochi::TransformRT> worldFromLinks(RootFromLinks.Num());
-    for (int iLink = 0; iLink < RootFromLinks.Num(); ++iLink) {
-      const mochi::TransformRT rootFromLinkRT = u2m.TransformToMochi_RT(RootFromLinks[iLink]);
-      const mochi::TransformSRT worldFromLinkSRT = worldFromRoot * rootFromLinkRT;
-      worldFromLinks[iLink] = worldFromLinkSRT.GetTransformRT();
+    const mochi::TransformSRT WorldFromRootMochi = U2m.TransformToMochi_SRT(WorldFromRoot);
+    std::vector<mochi::TransformRT> WorldFromLinks(RootFromLinks.Num());
+    for (int LinkIndex = 0; LinkIndex < RootFromLinks.Num(); ++LinkIndex) {
+      const mochi::TransformRT RootFromLinkRT = U2m.TransformToMochi_RT(RootFromLinks[LinkIndex]);
+      const mochi::TransformSRT WorldFromLinkSRT = WorldFromRootMochi * RootFromLinkRT;
+      WorldFromLinks[LinkIndex] = WorldFromLinkSRT.GetTransformRT();
     }
-    articulatedActor->SetArticulatedPoseFromLinks(worldFromLinks, e);
-    MOCHI_ERROR_RETURN(e);
+    ArticulatedActor->SetArticulatedPoseFromLinks(WorldFromLinks, E);
+    MOCHI_ERROR_RETURN(E);
     // create pose controller (UMochiArticulation-specific)
     if (bAddPoseController || ControlCallback) {
       SetupController(
           SyncScene,
-          articulatedActor,
+          ArticulatedActor,
           bAddPoseController,
           PoseControllerGains,
           ControlCallback,
-          worldFromLinks,
-          setupData.PreStepCallback,
-          setupData.ArticulatedControllerForceQueryHandle,
-          e);
-      MOCHI_ERROR_RETURN(e);
+          WorldFromLinks,
+          SetupData.PreStepCallback,
+          SetupData.ArticulatedControllerForceQueryHandle,
+          E);
+      MOCHI_ERROR_RETURN(E);
     }
-    bHasArticulatedPoseController = articulatedActor->HasArticulatedPoseController(e);
-    MOCHI_ERROR_RETURN(e);
+    bHasArticulatedPoseController = ArticulatedActor->HasArticulatedPoseController(E);
+    MOCHI_ERROR_RETURN(E);
   });
   // wait for creation to finish
   Scene->WaitForQueuedCommands();
-  if (!e.IsOK()) {
+  if (!E.IsOK()) {
     UE_LOG(
         LogMochiPhysics,
         Error,
         TEXT(
             "[UMochiArticulatedActorObject] Failed to create UMochiArticulatedActorObject because an error was encountered: %hs!"),
-        e._error.GetDescription())
+        E._error.GetDescription())
     return nullptr;
   }
-  setupData.bHasPoseController = bHasArticulatedPoseController;
-  return CreateFromSetupData(Outer, Scene, setupData);
+  SetupData.bHasPoseController = bHasArticulatedPoseController;
+  return CreateFromSetupData(Outer, Scene, SetupData);
 }
 
 UMochiArticulatedActorObject* UMochiArticulatedActorObject::CreateFromExistingArticulatedActor(
@@ -412,36 +412,36 @@ UMochiArticulatedActorObject* UMochiArticulatedActorObject::CreateFromExistingAr
             "[UMochiArticulatedActorObject] CreateFromExistingArticulatedActor: invalid actor handle!"))
     return nullptr;
   }
-  FActorSetupData setupData;
-  mochi::ErrorLog e{};
+  FActorSetupData SetupData;
+  mochi::ErrorLog E{};
   Scene->QueueOrExecuteCommand([&](mochi::Scene* SyncScene) {
-    mochi::Actor* articulatedActor = SyncScene->GetActor(ArticulatedActorHandle);
-    if (!articulatedActor) {
-      MOCHI_ERROR_SET(e, "CreateFromExistingArticulatedActor: actor not found in scene");
+    mochi::Actor* ArticulatedActor = SyncScene->GetActor(ArticulatedActorHandle);
+    if (!ArticulatedActor) {
+      MOCHI_ERROR_SET(E, "CreateFromExistingArticulatedActor: actor not found in scene");
       return;
     }
     SetupActorHandlesAndCallbacks(
         SyncScene,
-        articulatedActor,
+        ArticulatedActor,
         Outer,
         GetPoseCallback,
         ControlCallback,
         LinksThatQueryContactPoints,
         bSkinQueriesContactPoints,
-        setupData,
-        e);
+        SetupData,
+        E);
   });
   Scene->WaitForQueuedCommands();
-  if (!e.IsOK()) {
+  if (!E.IsOK()) {
     UE_LOG(
         LogMochiPhysics,
         Error,
         TEXT(
             "[UMochiArticulatedActorObject] Failed to create UMochiArticulatedActorObject from existing actor: %hs!"),
-        e._error.GetDescription())
+        E._error.GetDescription())
     return nullptr;
   }
-  return CreateFromSetupData(Outer, Scene, setupData);
+  return CreateFromSetupData(Outer, Scene, SetupData);
 }
 
 void UMochiArticulatedActorObject::SetupActorHandlesAndCallbacks(
@@ -453,72 +453,72 @@ void UMochiArticulatedActorObject::SetupActorHandlesAndCallbacks(
     const TArray<FName>& LinksThatQueryContactPoints,
     bool bSkinQueriesContactPoints,
     FActorSetupData& OutData,
-    mochi::ErrorLog& e) {
-  MOCHI_ERROR_RETURN(e);
+    mochi::ErrorLog& E) {
+  MOCHI_ERROR_RETURN(E);
   OutData.ActorName = ArticulatedActor->GetName();
   ArticulatedActor->SetUserData(Outer);
   OutData.ActorHandle = ArticulatedActor->GetHandle();
   OutData.NumDofs = ArticulatedActor->GetNumDofs();
   // strip the articulated actor name path from nested actor names
-  const FString toStripFromName = OutData.ActorName + TEXT("/");
-  auto GetNestedName = [&SyncScene, &toStripFromName](mochi::ActorHandle ActorHandle) {
-    mochi::Actor* actor = SyncScene->GetActor(ActorHandle);
-    FString nestedActorName = actor->GetName();
-    nestedActorName.ReplaceInline(*toStripFromName, TEXT(""));
-    return FName(nestedActorName);
+  const FString ToStripFromName = OutData.ActorName + TEXT("/");
+  auto GetNestedName = [&SyncScene, &ToStripFromName](mochi::ActorHandle ActorHandle) {
+    mochi::Actor* Actor = SyncScene->GetActor(ActorHandle);
+    FString NestedActorName = Actor->GetName();
+    NestedActorName.ReplaceInline(*ToStripFromName, TEXT(""));
+    return FName(NestedActorName);
   };
   // extract link actors
-  const mochi::Span<mochi::ActorHandle const> linkActors = ArticulatedActor->GetNestedLinkActors(e);
-  MOCHI_ERROR_RETURN(e);
-  const int numLinks = linkActors.size();
-  OutData.LinkActorHandles.Init({}, numLinks);
-  OutData.LinkActorNames.Init(NAME_None, numLinks);
-  for (int i = 0; i < numLinks; ++i) {
-    OutData.LinkActorHandles[i] = linkActors[i];
-    OutData.LinkActorNames[i] = GetNestedName(linkActors[i]);
-    SyncScene->GetActor(linkActors[i])->SetUserData(Outer);
+  const mochi::Span<mochi::ActorHandle const> LinkActors = ArticulatedActor->GetNestedLinkActors(E);
+  MOCHI_ERROR_RETURN(E);
+  const int NumLinks = LinkActors.size();
+  OutData.LinkActorHandles.Init({}, NumLinks);
+  OutData.LinkActorNames.Init(NAME_None, NumLinks);
+  for (int i = 0; i < NumLinks; ++i) {
+    OutData.LinkActorHandles[i] = LinkActors[i];
+    OutData.LinkActorNames[i] = GetNestedName(LinkActors[i]);
+    SyncScene->GetActor(LinkActors[i])->SetUserData(Outer);
   }
   // extract soft actors
-  const mochi::Span<mochi::ActorHandle const> softActors = ArticulatedActor->GetNestedSoftActors(e);
-  const int numSoftLinks = softActors.size();
-  if (numSoftLinks > 0) {
-    OutData.SoftActorHandles.Init({}, numSoftLinks);
-    OutData.SoftActorNames.Init(NAME_None, numSoftLinks);
-    for (int i = 0; i < numSoftLinks; ++i) {
-      OutData.SoftActorHandles[i] = softActors[i];
-      OutData.SoftActorNames[i] = GetNestedName(softActors[i]);
-      SyncScene->GetActor(softActors[i])->SetUserData(Outer);
+  const mochi::Span<mochi::ActorHandle const> SoftActors = ArticulatedActor->GetNestedSoftActors(E);
+  const int NumSoftLinks = SoftActors.size();
+  if (NumSoftLinks > 0) {
+    OutData.SoftActorHandles.Init({}, NumSoftLinks);
+    OutData.SoftActorNames.Init(NAME_None, NumSoftLinks);
+    for (int i = 0; i < NumSoftLinks; ++i) {
+      OutData.SoftActorHandles[i] = SoftActors[i];
+      OutData.SoftActorNames[i] = GetNestedName(SoftActors[i]);
+      SyncScene->GetActor(SoftActors[i])->SetUserData(Outer);
     }
   }
   // register contact queries
   if (LinksThatQueryContactPoints.Num() > 0) {
     auto AddContactableActors =
-        [&LinksThatQueryContactPoints, &SyncScene, &OutData, &GetNestedName, &e](
+        [&LinksThatQueryContactPoints, &SyncScene, &OutData, &GetNestedName, &E](
             const TArray<mochi::ActorHandle>& ActorHandles) {
-          for (int iHandle = 0; iHandle < ActorHandles.Num(); ++iHandle) {
-            const mochi::ActorHandle handle = ActorHandles[iHandle];
-            const FName name = GetNestedName(handle);
-            if (LinksThatQueryContactPoints.Contains(name)) {
-              mochi::Actor* actor = SyncScene->GetActor(handle);
+          for (int HandleIndex = 0; HandleIndex < ActorHandles.Num(); ++HandleIndex) {
+            const mochi::ActorHandle Handle = ActorHandles[HandleIndex];
+            const FName Name = GetNestedName(Handle);
+            if (LinksThatQueryContactPoints.Contains(Name)) {
+              mochi::Actor* Actor = SyncScene->GetActor(Handle);
               // A link the skin covers is not a colliding actor and carries no contact samples, so
               // registering the query on it would fail and abort setup for the whole actor.
-              if (!actor->IsStatic() && actor->IsQuerySupported(mochi::QueryType::ContactPoints)) {
-                actor->RegisterQuery(mochi::QueryType::ContactPoints, e);
-                OutData.ContactableActorHandles.Add({name, handle});
+              if (!Actor->IsStatic() && Actor->IsQuerySupported(mochi::QueryType::ContactPoints)) {
+                Actor->RegisterQuery(mochi::QueryType::ContactPoints, E);
+                OutData.ContactableActorHandles.Add({Name, Handle});
               }
             }
           }
         };
     AddContactableActors(OutData.LinkActorHandles);
     AddContactableActors(OutData.SoftActorHandles);
-    MOCHI_ERROR_RETURN(e);
+    MOCHI_ERROR_RETURN(E);
   }
   // The skin has no actor of its own -- its contact samples live on the top-level articulated
   // actor -- so it is registered separately and reported under that actor's name.
   if (bSkinQueriesContactPoints) {
     if (ArticulatedActor->IsQuerySupported(mochi::QueryType::ContactPoints)) {
-      ArticulatedActor->RegisterQuery(mochi::QueryType::ContactPoints, e);
-      MOCHI_ERROR_RETURN(e);
+      ArticulatedActor->RegisterQuery(mochi::QueryType::ContactPoints, E);
+      MOCHI_ERROR_RETURN(E);
       OutData.ContactableActorHandles.Add({FName(OutData.ActorName), OutData.ActorHandle});
     } else {
       UE_LOG(
@@ -545,8 +545,8 @@ void UMochiArticulatedActorObject::SetupActorHandlesAndCallbacks(
         {},
         OutData.PreStepCallback,
         OutData.ArticulatedControllerForceQueryHandle,
-        e);
-    MOCHI_ERROR_RETURN(e);
+        E);
+    MOCHI_ERROR_RETURN(E);
   }
 }
 
@@ -554,28 +554,28 @@ UMochiArticulatedActorObject* UMochiArticulatedActorObject::CreateFromSetupData(
     UObject* Outer,
     UMochiSceneObject* Scene,
     const FActorSetupData& Data) {
-  UMochiArticulatedActorObject* mochiActorObj =
+  UMochiArticulatedActorObject* MochiActorObj =
       NewObject<UMochiArticulatedActorObject>(Outer, FName(*Data.ActorName));
-  mochiActorObj->MochiSceneObject = Scene;
-  mochiActorObj->MochiActorHandle = Data.ActorHandle;
-  mochiActorObj->LinkActorHandles = Data.LinkActorHandles;
-  mochiActorObj->LinkActorNames = Data.LinkActorNames;
-  mochiActorObj->SoftActorHandles = Data.SoftActorHandles;
-  mochiActorObj->SoftActorNames = Data.SoftActorNames;
-  mochiActorObj->PreStepCallbackHandle = Data.PreStepCallback;
-  mochiActorObj->PostStepCallbackHandle = Data.PostStepCallback;
-  mochiActorObj->NumDofs = Data.NumDofs;
-  mochiActorObj->bHasArticulatedPoseController = Data.bHasPoseController;
-  mochiActorObj->bQueryContactPoints = Data.ContactableActorHandles.Num() > 0;
-  mochiActorObj->ContactableActorHandles = Data.ContactableActorHandles;
-  mochiActorObj->ArticulatedControllerForceQueryHandle = Data.ArticulatedControllerForceQueryHandle;
-  mochiActorObj->ExtractQueryDataCallbackHandle = Scene->RegisterPostStepCallback(
+  MochiActorObj->MochiSceneObject = Scene;
+  MochiActorObj->MochiActorHandle = Data.ActorHandle;
+  MochiActorObj->LinkActorHandles = Data.LinkActorHandles;
+  MochiActorObj->LinkActorNames = Data.LinkActorNames;
+  MochiActorObj->SoftActorHandles = Data.SoftActorHandles;
+  MochiActorObj->SoftActorNames = Data.SoftActorNames;
+  MochiActorObj->PreStepCallbackHandle = Data.PreStepCallback;
+  MochiActorObj->PostStepCallbackHandle = Data.PostStepCallback;
+  MochiActorObj->NumDofs = Data.NumDofs;
+  MochiActorObj->bHasArticulatedPoseController = Data.bHasPoseController;
+  MochiActorObj->bQueryContactPoints = Data.ContactableActorHandles.Num() > 0;
+  MochiActorObj->ContactableActorHandles = Data.ContactableActorHandles;
+  MochiActorObj->ArticulatedControllerForceQueryHandle = Data.ArticulatedControllerForceQueryHandle;
+  MochiActorObj->ExtractQueryDataCallbackHandle = Scene->RegisterPostStepCallback(
       "UMochiArticulatedActorObject::ExtractQueryData_Internal",
-      [mochiActorObj](mochi::StepInfo const& info) {
-        mochi::Actor* actor = info.scene->GetActor(mochiActorObj->MochiActorHandle);
-        mochiActorObj->ExtractQueryData_Internal(actor, info.scene);
+      [MochiActorObj](mochi::StepInfo const& Info) {
+        mochi::Actor* Actor = Info.scene->GetActor(MochiActorObj->MochiActorHandle);
+        MochiActorObj->ExtractQueryData_Internal(Actor, Info.scene);
       });
-  return mochiActorObj;
+  return MochiActorObj;
 }
 
 bool UMochiArticulatedActorObject::IsValid() const {
@@ -605,27 +605,27 @@ void UMochiArticulatedActorObject::AddPoseController(
         TEXT("[UMochiArticulatedActorObject] UMochiArticulatedActorObject is invalid!"))
     return;
   }
-  const int numLinks = LinkActorHandles.Num();
-  const int numPosGains = PoseControllerGains.PositionTrackingGains.Num();
-  const int numRotGains = PoseControllerGains.RotationTrackingGains.Num();
-  const int numJointGains = PoseControllerGains.JointTrackingGains.Num();
-  check(numPosGains == 0 || numPosGains == numLinks);
-  check(numRotGains == 0 || numRotGains == numLinks);
-  check(numJointGains == 0 || numJointGains == numLinks);
-  mochi::PoseControllerParams poseControllerParams;
-  poseControllerParams.linkPosTracking = ToMochiSpan(PoseControllerGains.PositionTrackingGains);
-  poseControllerParams.linkRotTracking = ToMochiSpan(PoseControllerGains.RotationTrackingGains);
-  poseControllerParams.jointTracking = ToMochiSpan(PoseControllerGains.JointTrackingGains);
+  const int NumLinks = LinkActorHandles.Num();
+  const int NumPosGains = PoseControllerGains.PositionTrackingGains.Num();
+  const int NumRotGains = PoseControllerGains.RotationTrackingGains.Num();
+  const int NumJointGains = PoseControllerGains.JointTrackingGains.Num();
+  check(NumPosGains == 0 || NumPosGains == NumLinks);
+  check(NumRotGains == 0 || NumRotGains == NumLinks);
+  check(NumJointGains == 0 || NumJointGains == NumLinks);
+  mochi::PoseControllerParams PoseControllerParams;
+  PoseControllerParams.linkPosTracking = ToMochiSpan(PoseControllerGains.PositionTrackingGains);
+  PoseControllerParams.linkRotTracking = ToMochiSpan(PoseControllerGains.RotationTrackingGains);
+  PoseControllerParams.jointTracking = ToMochiSpan(PoseControllerGains.JointTrackingGains);
   MochiSceneObject->QueueOrExecuteActorCommand(
-      MochiActorHandle, [this, poseControllerParams](mochi::Actor* ArticulatedActor) {
-        mochi::ErrorLog e;
-        bHasArticulatedPoseController = ArticulatedActor->HasArticulatedPoseController(e);
-        MOCHI_ERROR_RETURN(e);
+      MochiActorHandle, [this, PoseControllerParams](mochi::Actor* ArticulatedActor) {
+        mochi::ErrorLog E;
+        bHasArticulatedPoseController = ArticulatedActor->HasArticulatedPoseController(E);
+        MOCHI_ERROR_RETURN(E);
         if (bHasArticulatedPoseController) {
-          ArticulatedActor->RemoveArticulatedPoseController(e);
-          MOCHI_ERROR_RETURN(e);
-          bHasArticulatedPoseController = ArticulatedActor->HasArticulatedPoseController(e);
-          MOCHI_ERROR_RETURN(e);
+          ArticulatedActor->RemoveArticulatedPoseController(E);
+          MOCHI_ERROR_RETURN(E);
+          bHasArticulatedPoseController = ArticulatedActor->HasArticulatedPoseController(E);
+          MOCHI_ERROR_RETURN(E);
           if (bHasArticulatedPoseController) {
             UE_LOG(
                 LogMochiPhysics,
@@ -637,24 +637,24 @@ void UMochiArticulatedActorObject::AddPoseController(
             ArticulatedActor->CancelQuery(ArticulatedControllerForceQueryHandle);
             ArticulatedControllerForceQueryHandle = {};
           }
-          MOCHI_ERROR_RETURN(e);
+          MOCHI_ERROR_RETURN(E);
           UE_LOG(
               LogMochiPhysics,
               Display,
               TEXT(
                   "[UMochiArticulatedActorObject] Removed existing pose controller when adding a new one."));
-          MOCHI_ERROR_RETURN(e);
+          MOCHI_ERROR_RETURN(E);
         }
-        ArticulatedActor->AddArticulatedPoseController(poseControllerParams, e);
-        MOCHI_ERROR_RETURN(e);
-        bHasArticulatedPoseController = ArticulatedActor->HasArticulatedPoseController(e);
-        MOCHI_ERROR_RETURN(e);
+        ArticulatedActor->AddArticulatedPoseController(PoseControllerParams, E);
+        MOCHI_ERROR_RETURN(E);
+        bHasArticulatedPoseController = ArticulatedActor->HasArticulatedPoseController(E);
+        MOCHI_ERROR_RETURN(E);
         if (bHasArticulatedPoseController) {
           if (!ArticulatedControllerForceQueryHandle.IsValid()) {
             ArticulatedControllerForceQueryHandle =
-                ArticulatedActor->RegisterQuery(mochi::QueryType::ArticulatedControllerForce, e);
+                ArticulatedActor->RegisterQuery(mochi::QueryType::ArticulatedControllerForce, E);
           }
-          MOCHI_ERROR_RETURN(e);
+          MOCHI_ERROR_RETURN(E);
         } else {
           UE_LOG(
               LogMochiPhysics,
@@ -677,13 +677,13 @@ void UMochiArticulatedActorObject::RemovePoseController(bool bBlocking) {
     return;
   }
   MochiSceneObject->QueueOrExecuteActorCommand(MochiActorHandle, [this](mochi::Actor* ArticulatedActor) {
-    mochi::ErrorLog e;
-    bHasArticulatedPoseController = ArticulatedActor->HasArticulatedPoseController(e);
-    MOCHI_ERROR_RETURN(e);
+    mochi::ErrorLog E;
+    bHasArticulatedPoseController = ArticulatedActor->HasArticulatedPoseController(E);
+    MOCHI_ERROR_RETURN(E);
     if (bHasArticulatedPoseController) {
-      ArticulatedActor->RemoveArticulatedPoseController(e);
-      MOCHI_ERROR_RETURN(e);
-      bHasArticulatedPoseController = ArticulatedActor->HasArticulatedPoseController(e);
+      ArticulatedActor->RemoveArticulatedPoseController(E);
+      MOCHI_ERROR_RETURN(E);
+      bHasArticulatedPoseController = ArticulatedActor->HasArticulatedPoseController(E);
       if (bHasArticulatedPoseController) {
         UE_LOG(
             LogMochiPhysics,
@@ -695,14 +695,14 @@ void UMochiArticulatedActorObject::RemovePoseController(bool bBlocking) {
         ArticulatedActor->CancelQuery(ArticulatedControllerForceQueryHandle);
         ArticulatedControllerForceQueryHandle = {};
       }
-      MOCHI_ERROR_RETURN(e);
+      MOCHI_ERROR_RETURN(E);
     } else {
       UE_LOG(
           LogMochiPhysics,
           Warning,
           TEXT(
               "[UMochiArticulatedActorObject] Articulated actor has no pose controller to remove!"));
-      MOCHI_ERROR_RETURN(e);
+      MOCHI_ERROR_RETURN(E);
     }
   });
   if (bBlocking) {
@@ -743,8 +743,8 @@ void UMochiArticulatedActorObject::TryGetQueryData(
   MOCHI_PROFILE_SCOPE();
   if (bHasPendingQueryData.load()) {
     // Sanity check
-    const bool wasIsUpdatingUnrealQueryData = bIsUpdatingUnrealQueryData.exchange(true);
-    if (wasIsUpdatingUnrealQueryData) {
+    const bool bWasIsUpdatingUnrealQueryData = bIsUpdatingUnrealQueryData.exchange(true);
+    if (bWasIsUpdatingUnrealQueryData) {
       UE_LOG(
           LogMochiPhysics,
           Error,
@@ -755,77 +755,77 @@ void UMochiArticulatedActorObject::TryGetQueryData(
     MOCHI_DEFER(bIsUpdatingUnrealQueryData.store(false));
 
     // Synchronize
-    bool hasNewData = false;
+    bool bHasNewData = false;
     {
-      FScopeLock lock(&PendingQueryDataLock);
+      FScopeLock Lock(&PendingQueryDataLock);
       if (bHasPendingQueryData) {
         std::swap(PendingQueryData, UnrealThreadQueryData);
         bHasPendingQueryData = false;
-        hasNewData = true;
+        bHasNewData = true;
       }
     }
 
-    if (hasNewData) {
+    if (bHasNewData) {
       // Fix up data here on the Unreal (render) thread. We don't do this part on the Mochi
       // simulation thread because it requires access to the Unreal components and actors.
       if (UnrealThreadQueryData->ContactPoints.Num() > 0) {
-        UObject* const outer = GetOuter();
-        for (FMochiContactPoint& contact : UnrealThreadQueryData->ContactPoints) {
-          contact.MochiActor =
-              contact.MochiComponent ? contact.MochiComponent->GetOwner() : nullptr;
-          contact.OtherMochiActor =
-              contact.OtherMochiComponent ? contact.OtherMochiComponent->GetOwner() : nullptr;
+        UObject* const Outer = GetOuter();
+        for (FMochiContactPoint& Contact : UnrealThreadQueryData->ContactPoints) {
+          Contact.MochiActor =
+              Contact.MochiComponent ? Contact.MochiComponent->GetOwner() : nullptr;
+          Contact.OtherMochiActor =
+              Contact.OtherMochiComponent ? Contact.OtherMochiComponent->GetOwner() : nullptr;
           // There's no guarantee that OtherMochiActor is registered.
           // ensure(contact.MochiActor && contact.OtherMochiActor);
           constexpr bool bVerboseContactWarnings = false;
           if (bVerboseContactWarnings) {
-            if (!contact.MochiActor || !contact.OtherMochiActor || !contact.MochiComponent ||
-                !contact.MochiComponent) {
-              FString aA = contact.MochiActor ? *contact.MochiActor->GetName() : TEXT("NULL");
-              FString cA =
-                  contact.MochiComponent ? *contact.MochiComponent->GetName() : TEXT("NULL");
-              FString mA = contact.InternalMochiActor.ToString();
-              FString aB =
-                  contact.OtherMochiActor ? *contact.OtherMochiActor->GetName() : TEXT("NULL");
-              FString cB = contact.OtherMochiComponent ? *contact.OtherMochiComponent->GetName()
+            if (!Contact.MochiActor || !Contact.OtherMochiActor || !Contact.MochiComponent ||
+                !Contact.MochiComponent) {
+              FString AA = Contact.MochiActor ? *Contact.MochiActor->GetName() : TEXT("NULL");
+              FString CA =
+                  Contact.MochiComponent ? *Contact.MochiComponent->GetName() : TEXT("NULL");
+              FString MA = Contact.InternalMochiActor.ToString();
+              FString AB =
+                  Contact.OtherMochiActor ? *Contact.OtherMochiActor->GetName() : TEXT("NULL");
+              FString CB = Contact.OtherMochiComponent ? *Contact.OtherMochiComponent->GetName()
                                                        : TEXT("NULL");
-              FString mB = contact.OtherInternalMochiActor.ToString();
+              FString MB = Contact.OtherInternalMochiActor.ToString();
               UE_LOG(
                   LogMochiPhysics,
                   Warning,
                   TEXT(
                       "[UMochiArticulatedActorObject] Untraceable contact detected: "
                       "AActorA=%s : USceneComponentA=%s : MochiActorA=%s  <---> AActorB=%s : USceneComponentB=%s : MochiActorB=%s"),
-                  *aA,
-                  *cA,
-                  *mA,
-                  *aB,
-                  *cB,
-                  *mB);
+                  *AA,
+                  *CA,
+                  *MA,
+                  *AB,
+                  *CB,
+                  *MB);
               continue;
             }
-            if (contact.MochiComponent && contact.MochiComponent == contact.OtherMochiComponent) {
+            if (Contact.MochiComponent && Contact.MochiComponent == Contact.OtherMochiComponent) {
               UE_LOG(
                   LogMochiPhysics,
                   Warning,
                   TEXT("[UMochiArticulatedActorObject] Self-contact detected on component %s"),
-                  *contact.MochiComponent->GetName());
+                  *Contact.MochiComponent->GetName());
             }
           }
-          if (contact.MochiComponent != outer) {
+          if (Contact.MochiComponent != Outer) {
             // Swap the direction of this contact (by convention)
-            ensure(contact.OtherMochiComponent == outer);
-            std::swap(contact.InternalMochiActor, contact.OtherInternalMochiActor);
-            std::swap(contact.MochiComponent, contact.OtherMochiComponent);
-            std::swap(contact.MochiActor, contact.OtherMochiActor);
-            std::swap(contact.Location, contact.OtherLocation);
-            std::swap(contact.Velocity, contact.OtherVelocity);
-            contact.Normal = -contact.Normal;
-            contact.Force = -contact.Force;
+            ensure(Contact.OtherMochiComponent == Outer);
+            std::swap(Contact.InternalMochiActor, Contact.OtherInternalMochiActor);
+            std::swap(Contact.MochiComponent, Contact.OtherMochiComponent);
+            std::swap(Contact.MochiActor, Contact.OtherMochiActor);
+            std::swap(Contact.Location, Contact.OtherLocation);
+            std::swap(Contact.Velocity, Contact.OtherVelocity);
+            Contact.Normal = -Contact.Normal;
+            Contact.Force = -Contact.Force;
 
             // Unambiguously record that this is a swapped (other->this) contact,
             // for clients that need to process contacts in an asymmetric manner
-            contact.ContactDirection = EMochiContactDirection::OtherContactsThis;
+            Contact.ContactDirection = EMochiContactDirection::OtherContactsThis;
           }
         }
       }
@@ -851,20 +851,20 @@ void UMochiArticulatedActorObject::SetRootTransform(
         TEXT("[UMochiArticulatedActorObject] UMochiArticulatedActorObject is invalid!"))
     return;
   }
-  MochiSceneObject->QueueOrExecuteCommand([WorldFromLocal, this](mochi::Scene* scene) {
-    FUnrealToMochiConverter u2m;
-    mochi::Actor* articulatedActor = scene->GetActor(MochiActorHandle);
-    if (articulatedActor == nullptr) {
+  MochiSceneObject->QueueOrExecuteCommand([WorldFromLocal, this](mochi::Scene* Scene) {
+    FUnrealToMochiConverter U2m;
+    mochi::Actor* ArticulatedActor = Scene->GetActor(MochiActorHandle);
+    if (ArticulatedActor == nullptr) {
       return; // actor no longer exists; UE component must be shutting down
     }
-    mochi::ErrorLog e{};
-    const int numLinks = articulatedActor->GetNestedLinkActors(e).size();
-    MOCHI_ERROR_RETURN(e);
-    std::vector<mochi::TransformRT> transforms(numLinks);
-    articulatedActor->GetArticulatedLinkTransforms(transforms, e);
-    MOCHI_ERROR_RETURN(e);
-    transforms[0] = u2m.TransformToMochi_RT(WorldFromLocal);
-    TeleportArticulatedActor(articulatedActor, transforms, e);
+    mochi::ErrorLog E{};
+    const int NumLinks = ArticulatedActor->GetNestedLinkActors(E).size();
+    MOCHI_ERROR_RETURN(E);
+    std::vector<mochi::TransformRT> Transforms(NumLinks);
+    ArticulatedActor->GetArticulatedLinkTransforms(Transforms, E);
+    MOCHI_ERROR_RETURN(E);
+    Transforms[0] = U2m.TransformToMochi_RT(WorldFromLocal);
+    TeleportArticulatedActor(ArticulatedActor, Transforms, E);
   });
   if (bBlocking) {
     MochiSceneObject->WaitForQueuedCommands();
@@ -893,23 +893,23 @@ void UMochiArticulatedActorObject::SetArticulatedPoseFromJoints(
             "[UMochiArticulatedActorObject] JointPositions array size does not match number of joints!"))
     return;
   }
-  MochiSceneObject->QueueOrExecuteCommand([JointPositions, this](mochi::Scene* scene) {
-    mochi::Actor* articulatedActor = scene->GetActor(MochiActorHandle);
-    if (articulatedActor == nullptr) {
+  MochiSceneObject->QueueOrExecuteCommand([JointPositions, this](mochi::Scene* Scene) {
+    mochi::Actor* ArticulatedActor = Scene->GetActor(MochiActorHandle);
+    if (ArticulatedActor == nullptr) {
       return; // actor no longer exists; UE component must be shutting down
     }
-    const int numDofs = articulatedActor->GetNumDofs();
-    std::vector<mochi::real> newJointPose(numDofs, 0);
+    const int ActorNumDofs = ArticulatedActor->GetNumDofs();
+    std::vector<mochi::real> NewJointPose(ActorNumDofs, 0);
     for (int i = 0; i < JointPositions.Num(); ++i) {
-      newJointPose[i] = static_cast<mochi::real>(JointPositions[i]);
+      NewJointPose[i] = static_cast<mochi::real>(JointPositions[i]);
     }
-    mochi::ErrorLog e{};
-    articulatedActor->SetArticulatedPoseFromJoints(newJointPose, e);
-    MOCHI_ERROR_RETURN(e);
+    mochi::ErrorLog E{};
+    ArticulatedActor->SetArticulatedPoseFromJoints(NewJointPose, E);
+    MOCHI_ERROR_RETURN(E);
 
-    std::vector<mochi::real> zeroVel(numDofs, 0);
-    articulatedActor->SetArticulatedJointVelocities(zeroVel, e);
-    MOCHI_ERROR_RETURN(e);
+    std::vector<mochi::real> ZeroVel(ActorNumDofs, 0);
+    ArticulatedActor->SetArticulatedJointVelocities(ZeroVel, E);
+    MOCHI_ERROR_RETURN(E);
   });
   if (bBlocking) {
     MochiSceneObject->WaitForQueuedCommands();
@@ -918,34 +918,34 @@ void UMochiArticulatedActorObject::SetArticulatedPoseFromJoints(
 
 TArray<UMochiContactParams*> UMochiArticulatedActorObject::GetLinkContactParams() const {
   MOCHI_PROFILE_SCOPE();
-  TArray<UMochiContactParams*> contactParams;
+  TArray<UMochiContactParams*> ContactParams;
   if (!IsValid()) {
     UE_LOG(
         LogMochiPhysics,
         Warning,
         TEXT("[UMochiArticulatedActorObject] UMochiArticulatedActorObject is invalid!"))
-    return contactParams;
+    return ContactParams;
   }
-  contactParams.SetNum(LinkActorHandles.Num());
+  ContactParams.SetNum(LinkActorHandles.Num());
   for (int i = 0; i < LinkActorHandles.Num(); ++i) {
     MochiSceneObject->QueueOrExecuteActorCommand(
-        LinkActorHandles[i], [&contactParams, i](mochi::Actor* actor) {
-          mochi::ErrorLog e{};
-          const mochi::ContactParams mochiContactParams = actor->GetContactParams(e);
-          if (e.IsOK()) {
+        LinkActorHandles[i], [&ContactParams, i](mochi::Actor* Actor) {
+          mochi::ErrorLog E{};
+          const mochi::ContactParams MochiContactParams = Actor->GetContactParams(E);
+          if (E.IsOK()) {
             // Convert mochi params to UE params
-            UMochiContactParams* ueContactParams =
+            UMochiContactParams* UeContactParams =
                 NewObject<UMochiContactParams>(GetTransientPackage());
-            ueContactParams->FromMochi(mochiContactParams);
-            contactParams[i] = ueContactParams;
+            UeContactParams->FromMochi(MochiContactParams);
+            ContactParams[i] = UeContactParams;
           } else {
             // Link doesn't have contact params (dummy link, static actor, etc.)
-            contactParams[i] = nullptr;
+            ContactParams[i] = nullptr;
           }
         });
   }
   MochiSceneObject->WaitForQueuedCommands();
-  return contactParams;
+  return ContactParams;
 }
 
 void UMochiArticulatedActorObject::SetLinkContactParams(
@@ -972,11 +972,11 @@ void UMochiArticulatedActorObject::SetLinkContactParams(
   if (!ContactParams) {
     return;
   }
-  const mochi::ContactParams mochiContactParams = ContactParams->ToMochi();
+  const mochi::ContactParams MochiContactParams = ContactParams->ToMochi();
   MochiSceneObject->QueueOrExecuteActorCommand(
-      LinkActorHandles[LinkIndex], [mochiContactParams](mochi::Actor* actor) {
-        mochi::ErrorLog e{};
-        actor->SetContactParams(mochiContactParams, e);
+      LinkActorHandles[LinkIndex], [MochiContactParams](mochi::Actor* Actor) {
+        mochi::ErrorLog E{};
+        Actor->SetContactParams(MochiContactParams, E);
       });
   if (bBlocking) {
     MochiSceneObject->WaitForQueuedCommands();
@@ -985,24 +985,24 @@ void UMochiArticulatedActorObject::SetLinkContactParams(
 
 TArray<float> UMochiArticulatedActorObject::GetLinkDensities() const {
   MOCHI_PROFILE_SCOPE();
-  TArray<float> densities;
+  TArray<float> Densities;
   if (!IsValid()) {
     UE_LOG(
         LogMochiPhysics,
         Warning,
         TEXT("[UMochiArticulatedActorObject] UMochiArticulatedActorObject is invalid!"))
-    return densities;
+    return Densities;
   }
-  densities.SetNum(LinkActorHandles.Num());
+  Densities.SetNum(LinkActorHandles.Num());
   for (int i = 0; i < LinkActorHandles.Num(); ++i) {
     MochiSceneObject->QueueOrExecuteActorCommand(
-        LinkActorHandles[i], [&densities, i](mochi::Actor* actor) {
-          mochi::ErrorLog e{};
-          densities[i] = static_cast<float>(actor->GetDensity(e));
+        LinkActorHandles[i], [&Densities, i](mochi::Actor* Actor) {
+          mochi::ErrorLog E{};
+          Densities[i] = static_cast<float>(Actor->GetDensity(E));
         });
   }
   MochiSceneObject->WaitForQueuedCommands();
-  return densities;
+  return Densities;
 }
 
 void UMochiArticulatedActorObject::SetLinkDensity(int LinkIndex, float Density, bool bBlocking)
@@ -1024,11 +1024,11 @@ void UMochiArticulatedActorObject::SetLinkDensity(int LinkIndex, float Density, 
         LinkActorHandles.Num())
     return;
   }
-  const mochi::real mochiDensity = static_cast<mochi::real>(Density);
+  const mochi::real MochiDensity = static_cast<mochi::real>(Density);
   MochiSceneObject->QueueOrExecuteActorCommand(
-      LinkActorHandles[LinkIndex], [mochiDensity](mochi::Actor* actor) {
-        mochi::ErrorLog e{};
-        actor->SetDensity(mochiDensity, e);
+      LinkActorHandles[LinkIndex], [MochiDensity](mochi::Actor* Actor) {
+        mochi::ErrorLog E{};
+        Actor->SetDensity(MochiDensity, E);
       });
   if (bBlocking) {
     MochiSceneObject->WaitForQueuedCommands();
@@ -1038,19 +1038,19 @@ void UMochiArticulatedActorObject::SetLinkDensity(int LinkIndex, float Density, 
 void UMochiArticulatedActorObject::DestroyMochiResources() {
   MOCHI_PROFILE_SCOPE();
   if (MochiSceneObject) {
-    MochiSceneObject->QueueOrExecuteCommand([&](mochi::Scene* scene) {
-      mochi::ErrorLog e{};
-      scene->CancelCallback(ExtractQueryDataCallbackHandle);
+    MochiSceneObject->QueueOrExecuteCommand([&](mochi::Scene* Scene) {
+      mochi::ErrorLog E{};
+      Scene->CancelCallback(ExtractQueryDataCallbackHandle);
       if (PreStepCallbackHandle.IsValid()) {
-        scene->CancelCallback(PreStepCallbackHandle);
+        Scene->CancelCallback(PreStepCallbackHandle);
       }
       if (PostStepCallbackHandle.IsValid()) {
-        scene->CancelCallback(PostStepCallbackHandle);
+        Scene->CancelCallback(PostStepCallbackHandle);
       }
       if (bDestroyMochiActorOnObjectDestruction) {
-        scene->DestroyActor(MochiActorHandle);
+        Scene->DestroyActor(MochiActorHandle);
       }
-      MOCHI_ERROR_RETURN(e);
+      MOCHI_ERROR_RETURN(E);
     });
     MochiSceneObject->WaitForQueuedCommands();
     MochiSceneObject = nullptr;
@@ -1078,56 +1078,57 @@ void UMochiArticulatedActorObject::ExtractQueryData_Internal(
     mochi::Actor* Actor,
     mochi::Scene* SyncScene) {
   MOCHI_PROFILE_SCOPE();
-  mochi::ErrorLog e;
+  mochi::ErrorLog E;
   if (Actor == nullptr || SyncScene == nullptr) {
     return;
   }
-  FMochiToUnrealConverter m2u;
+  FMochiToUnrealConverter M2u;
   // extract root transform
-  MochiThreadQueryData->RootToWorld = m2u.TransformToUnreal(Actor->GetRootTransform());
+  MochiThreadQueryData->RootToWorld = M2u.TransformToUnreal(Actor->GetRootTransform());
   // extract link transforms
-  thread_local TArray<mochi::TransformRT> linkTransforms;
-  const int numLinks = Actor->GetNestedLinkActors(e).size();
-  linkTransforms.SetNum(numLinks);
-  Actor->GetArticulatedLinkTransforms(ToMochiSpan(linkTransforms), e);
-  MochiThreadQueryData->LinksToWorld.SetNum(numLinks);
-  for (int i = 0; i < numLinks; i++) {
-    MochiThreadQueryData->LinksToWorld[i] = m2u.TransformToUnreal(linkTransforms[i]);
+  thread_local TArray<mochi::TransformRT> LinkTransforms;
+  const int NumLinks = Actor->GetNestedLinkActors(E).size();
+  LinkTransforms.SetNum(NumLinks);
+  Actor->GetArticulatedLinkTransforms(ToMochiSpan(LinkTransforms), E);
+  MochiThreadQueryData->LinksToWorld.SetNum(NumLinks);
+  for (int i = 0; i < NumLinks; i++) {
+    MochiThreadQueryData->LinksToWorld[i] = M2u.TransformToUnreal(LinkTransforms[i]);
   }
   // extract joint state
-  FMochiArticulationState state = ExtractArticulatedActorState(Actor);
-  ConvertArticulatedActorDofsToUnreal(Actor, state.JointPositions);
-  ConvertArticulatedActorDofsToUnreal(Actor, state.JointVelocities);
+  FMochiArticulationState State = ExtractArticulatedActorState(Actor);
+  ConvertArticulatedActorDofsToUnreal(Actor, State.JointPositions);
+  ConvertArticulatedActorDofsToUnreal(Actor, State.JointVelocities);
   MochiThreadQueryData->JointPositions.Reset();
-  MochiThreadQueryData->JointPositions.Append(state.JointPositions);
+  MochiThreadQueryData->JointPositions.Append(State.JointPositions);
   MochiThreadQueryData->JointVelocities.Reset();
-  MochiThreadQueryData->JointVelocities.Append(state.JointVelocities);
+  MochiThreadQueryData->JointVelocities.Append(State.JointVelocities);
   // extract contact points
   if (bQueryContactPoints) {
-    TArray<FMochiContactPoint>& contacts = MochiThreadQueryData->ContactPoints;
-    contacts.Reset();
-    for (const TPair<FName, mochi::ActorHandle>& pair : ContactableActorHandles) {
-      const FName name = pair.Get<0>();
-      const mochi::ActorHandle handle = pair.Get<1>();
-      mochi::Actor* const actor = SyncScene->GetActor(handle);
-      const mochi::Span<const mochi::ContactPoint> mochiContactPoints =
-          actor->GetContactPointsWorld(e);
-      if (e.IsOK()) {
+    TArray<FMochiContactPoint>& Contacts = MochiThreadQueryData->ContactPoints;
+    Contacts.Reset();
+    for (const TPair<FName, mochi::ActorHandle>& Pair : ContactableActorHandles) {
+      const FName Name = Pair.Get<0>();
+      const mochi::ActorHandle Handle = Pair.Get<1>();
+      mochi::Actor* const ContactActor = SyncScene->GetActor(Handle);
+      const mochi::Span<const mochi::ContactPoint> MochiContactPoints =
+          ContactActor->GetContactPointsWorld(E);
+      if (E.IsOK()) {
         MOCHI_PROFILE_SCOPE_N("Convert Contact Points For Unreal");
         // TODO: Convert on the game thread instead; see
         // UMochiActorObject::ExtractQueryData_Internal.
-        for (int iMochiContact = 0; iMochiContact < mochiContactPoints.size(); ++iMochiContact) {
-          const mochi::ContactPoint& mochiContact = mochiContactPoints[iMochiContact];
-          FMochiContactPoint unrealContact = {};
-          ContactPointToUnreal(mochiContact, SyncScene, name, m2u, unrealContact);
-          contacts.Add(unrealContact);
+        for (int MochiContactIndex = 0; MochiContactIndex < MochiContactPoints.size();
+             ++MochiContactIndex) {
+          const mochi::ContactPoint& MochiContact = MochiContactPoints[MochiContactIndex];
+          FMochiContactPoint UnrealContact = {};
+          ContactPointToUnreal(MochiContact, SyncScene, Name, M2u, UnrealContact);
+          Contacts.Add(UnrealContact);
         }
       }
     }
   }
   // synchronize
   {
-    FScopeLock lock(&PendingQueryDataLock);
+    FScopeLock Lock(&PendingQueryDataLock);
     std::swap(MochiThreadQueryData, PendingQueryData);
     bHasPendingQueryData = true;
   }

@@ -31,7 +31,7 @@ bool UMochiArticulationController::Control(
     const FMochiArticulationState& State,
     double MochiDeltaTime,
     FMochiArticulationControllerCommands& OutCommands,
-    mochi::Scene* mochiScene) {
+    mochi::Scene* MochiScene) {
   return false;
 }
 

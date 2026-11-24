@@ -32,9 +32,9 @@ bool PromptForSuperDexPrefabImportMode(
     const FText& Title,
     const FString& AssetName,
     ESuperDexPrefabImportMode& OutMode) {
-  constexpr int32 kBlueprintButton = 0;
-  constexpr int32 kMapButton = 1;
-  TSharedRef<SCustomDialog> dialog =
+  constexpr int32 BlueprintButton = 0;
+  constexpr int32 MapButton = 1;
+  TSharedRef<SCustomDialog> Dialog =
       SNew(SCustomDialog)
           .Title(Title)
           .Content()[SNew(STextBlock)
@@ -48,12 +48,12 @@ bool PromptForSuperDexPrefabImportMode(
               {SCustomDialog::FButton(LOCTEXT("ImportAsBlueprint", "Blueprint")),
                SCustomDialog::FButton(LOCTEXT("ImportAsMap", "Map")),
                SCustomDialog::FButton(LOCTEXT("ImportCancel", "Cancel"))});
-  const int32 choice = dialog->ShowModal();
-  if (choice != kBlueprintButton && choice != kMapButton) {
+  const int32 Choice = Dialog->ShowModal();
+  if (Choice != BlueprintButton && Choice != MapButton) {
     return false;
   }
-  OutMode = choice == kBlueprintButton ? ESuperDexPrefabImportMode::Blueprint
-                                       : ESuperDexPrefabImportMode::Map;
+  OutMode = Choice == BlueprintButton ? ESuperDexPrefabImportMode::Blueprint
+                                      : ESuperDexPrefabImportMode::Map;
   return true;
 }
 
@@ -81,52 +81,52 @@ UObject* USuperDexPrefabFactory::FactoryCreateFile(
     FFeedbackContext* Warn,
     bool& bOutOperationCanceled) {
   bOutOperationCanceled = false;
-  const FString prefabName = FSuperDexPrefabImporter::GetPrefabName(Filename);
-  const FString destFolder = FSuperDexPrefabImporter::GetDestinationFolder(
+  const FString PrefabName = FSuperDexPrefabImporter::GetPrefabName(Filename);
+  const FString DestFolder = FSuperDexPrefabImporter::GetDestinationFolder(
       Filename, FPackageName::GetLongPackagePath(InParent->GetPathName()));
 
-  if (USuperDexPrefab* existing =
-          FSuperDexPrefabImporter::FindPrefabAsset(destFolder, prefabName)) {
+  if (USuperDexPrefab* Existing =
+          FSuperDexPrefabImporter::FindPrefabAsset(DestFolder, PrefabName)) {
     UE_LOG(
         LogMochiPhysicsEditor,
         Display,
         TEXT("SuperDex prefab %s already exists in %s, reimporting it from %s"),
-        *prefabName,
-        *destFolder,
+        *PrefabName,
+        *DestFolder,
         *Filename);
-    if (existing->AssetImportData) {
-      existing->AssetImportData->UpdateFilenameOnly(Filename);
+    if (Existing->AssetImportData) {
+      Existing->AssetImportData->UpdateFilenameOnly(Filename);
     }
-    return FReimportManager::Instance()->Reimport(existing, false, true) ? existing : nullptr;
+    return FReimportManager::Instance()->Reimport(Existing, false, true) ? Existing : nullptr;
   }
 
-  ESuperDexPrefabImportMode mode = Filename.EndsWith(TEXT(".mochi_scene"))
+  ESuperDexPrefabImportMode Mode = Filename.EndsWith(TEXT(".mochi_scene"))
       ? ESuperDexPrefabImportMode::Map
       : ESuperDexPrefabImportMode::Blueprint;
   if (!IsAutomatedImport() && !FApp::IsUnattended() &&
       !PromptForSuperDexPrefabImportMode(
-          LOCTEXT("ImportModeTitle", "Import SuperDex Prefab"), prefabName, mode)) {
+          LOCTEXT("ImportModeTitle", "Import SuperDex Prefab"), PrefabName, Mode)) {
     bOutOperationCanceled = true;
     return nullptr;
   }
 
-  USuperDexPrefab* prefab = FSuperDexPrefabImporter::CreatePrefabAsset(destFolder, prefabName);
+  USuperDexPrefab* Prefab = FSuperDexPrefabImporter::CreatePrefabAsset(DestFolder, PrefabName);
 
-  FScopedSlowTask slowTask(
+  FScopedSlowTask SlowTask(
       0,
       FText::Format(
           LOCTEXT("ImportingPrefab", "Importing SuperDex prefab {0}..."),
-          FText::FromString(prefabName)));
-  slowTask.MakeDialog();
-  FSuperDexPrefabImporter importer(ImportSession);
-  if (!importer.Import(prefab, Filename, mode)) {
+          FText::FromString(PrefabName)));
+  SlowTask.MakeDialog();
+  FSuperDexPrefabImporter Importer(ImportSession);
+  if (!Importer.Import(Prefab, Filename, Mode)) {
     // Discard the empty asset rather than leaving it behind.
-    FAssetRegistryModule::AssetDeleted(prefab);
-    prefab->ClearFlags(RF_Public | RF_Standalone);
-    prefab->MarkAsGarbage();
+    FAssetRegistryModule::AssetDeleted(Prefab);
+    Prefab->ClearFlags(RF_Public | RF_Standalone);
+    Prefab->MarkAsGarbage();
     return nullptr;
   }
-  return prefab;
+  return Prefab;
 }
 
 void USuperDexPrefabFactory::CleanUp() {
@@ -143,12 +143,12 @@ UReimportSuperDexPrefabFactory::UReimportSuperDexPrefabFactory() {
 }
 
 bool UReimportSuperDexPrefabFactory::CanReimport(UObject* Obj, TArray<FString>& OutFilenames) {
-  USuperDexPrefab* prefab = Cast<USuperDexPrefab>(Obj);
-  if (!prefab) {
+  USuperDexPrefab* Prefab = Cast<USuperDexPrefab>(Obj);
+  if (!Prefab) {
     return false;
   }
-  if (prefab->AssetImportData) {
-    prefab->AssetImportData->ExtractFilenames(OutFilenames);
+  if (Prefab->AssetImportData) {
+    Prefab->AssetImportData->ExtractFilenames(OutFilenames);
   }
   return true;
 }
@@ -156,39 +156,39 @@ bool UReimportSuperDexPrefabFactory::CanReimport(UObject* Obj, TArray<FString>& 
 void UReimportSuperDexPrefabFactory::SetReimportPaths(
     UObject* Obj,
     const TArray<FString>& NewReimportPaths) {
-  USuperDexPrefab* prefab = Cast<USuperDexPrefab>(Obj);
-  if (prefab && prefab->AssetImportData && NewReimportPaths.Num() > 0) {
-    prefab->AssetImportData->UpdateFilenameOnly(NewReimportPaths[0]);
+  USuperDexPrefab* Prefab = Cast<USuperDexPrefab>(Obj);
+  if (Prefab && Prefab->AssetImportData && NewReimportPaths.Num() > 0) {
+    Prefab->AssetImportData->UpdateFilenameOnly(NewReimportPaths[0]);
   }
 }
 
 EReimportResult::Type UReimportSuperDexPrefabFactory::Reimport(UObject* Obj) {
-  USuperDexPrefab* prefab = Cast<USuperDexPrefab>(Obj);
-  if (!prefab) {
+  USuperDexPrefab* Prefab = Cast<USuperDexPrefab>(Obj);
+  if (!Prefab) {
     return EReimportResult::Failed;
   }
-  const FString sourcePath = prefab->GetSourceFilePath();
-  if (sourcePath.IsEmpty() || !FPaths::FileExists(sourcePath)) {
-    UE_LOG(LogMochiPhysicsEditor, Error, TEXT("Source file not found: %s"), *sourcePath);
+  const FString SourcePath = Prefab->GetSourceFilePath();
+  if (SourcePath.IsEmpty() || !FPaths::FileExists(SourcePath)) {
+    UE_LOG(LogMochiPhysicsEditor, Error, TEXT("Source file not found: %s"), *SourcePath);
     return EReimportResult::Failed;
   }
-  if (FSuperDexPrefabImporter::IsUpToDate(prefab)) {
+  if (FSuperDexPrefabImporter::IsUpToDate(Prefab)) {
     UE_LOG(
         LogMochiPhysicsEditor,
         Display,
         TEXT("SuperDex prefab %s is already up to date, skipping reimport"),
-        *prefab->GetName());
+        *Prefab->GetName());
     return EReimportResult::Succeeded;
   }
-  FScopedSlowTask slowTask(
+  FScopedSlowTask SlowTask(
       0,
       FText::Format(
           LOCTEXT("ReimportingPrefab", "Reimporting SuperDex prefab {0}..."),
-          FText::FromString(prefab->PrefabName)));
-  slowTask.MakeDialog();
+          FText::FromString(Prefab->PrefabName)));
+  SlowTask.MakeDialog();
   ImportSession.Reset();
-  FSuperDexPrefabImporter importer(ImportSession);
-  return importer.Import(prefab, sourcePath, prefab->ImportMode) ? EReimportResult::Succeeded
+  FSuperDexPrefabImporter Importer(ImportSession);
+  return Importer.Import(Prefab, SourcePath, Prefab->ImportMode) ? EReimportResult::Succeeded
                                                                  : EReimportResult::Failed;
 }
 

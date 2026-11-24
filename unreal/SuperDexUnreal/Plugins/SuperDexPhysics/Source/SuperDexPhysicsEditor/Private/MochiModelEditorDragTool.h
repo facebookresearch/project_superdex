@@ -47,7 +47,7 @@ class FMochiModelEditorDragTool : public FDragTool {
   bool IsUsingLasso() const;
 
  private:
-  struct MochiState {
+  struct FMochiState {
     TArray<int> FoundNodeIndices;
     mochi::ActorHandle ActorHandle;
   };
@@ -57,7 +57,7 @@ class FMochiModelEditorDragTool : public FDragTool {
   FMochiModelEditorViewportClient* MochiViewportClient;
 
   FVector PreviousPosition;
-  float kMinSqrDistance = 1000.0f;
+  float MinSqrDistance = 1000.0f;
 
   TArray<FVector2D> SelectionScreenPath;
 

@@ -39,7 +39,7 @@ void SUPERDEXPHYSICS_API PopulateMeshFromMochiActor(
 
 void SUPERDEXPHYSICS_API PopulateMeshFromMochiShape(
     UE::Geometry::FDynamicMesh3* OutMesh,
-    mochi::ShapeHandle shape,
+    mochi::ShapeHandle Shape,
     bool bUseVisualMeshIfPresent,
     bool bUseContactSkinIfPresent);
 

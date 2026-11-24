@@ -21,16 +21,16 @@
 
 void UMochiArticulationJointConstraintComponent::SetTargetValue(double NewTargetValue) {
   TargetValue = NewTargetValue;
-  const mochi::real target = MochiDofSign * NewTargetValue;
-  ForEachConstraint([target](mochi::Constraint& C) { C.SetTargetDof(target, mochi::ErrorLog{}); });
+  const mochi::real Target = MochiDofSign * NewTargetValue;
+  ForEachConstraint([Target](mochi::Constraint& C) { C.SetTargetDof(Target, mochi::ErrorLog{}); });
 }
 
 void UMochiArticulationJointConstraintComponent::SetTargetRotation(FRotator NewTargetRotation) {
   TargetRotation = NewTargetRotation;
-  const mochi::Quaternion target =
+  const mochi::Quaternion Target =
       FUnrealToMochiConverter().RotationToMochi(NewTargetRotation.Quaternion());
   ForEachConstraint(
-      [target](mochi::Constraint& C) { C.SetTargetRotation(target, mochi::ErrorLog{}); });
+      [Target](mochi::Constraint& C) { C.SetTargetRotation(Target, mochi::ErrorLog{}); });
 }
 
 double UMochiArticulationJointConstraintComponent::GetSaturationScale() const {
@@ -39,37 +39,37 @@ double UMochiArticulationJointConstraintComponent::GetSaturationScale() const {
 
 EMochiBodyState UMochiArticulationJointConstraintComponent::BuildConstraints(
     FConstraintRequest& OutRequest) {
-  FMochiConstraintBody body;
-  mochi::ActorHandle actor;
-  const EMochiBodyState state = ResolveBody(Articulation, body, OutRequest.Scene, actor);
-  if (state != EMochiBodyState::Ready) {
-    return state;
+  FMochiConstraintBody Body;
+  mochi::ActorHandle Actor;
+  const EMochiBodyState State = ResolveBody(Articulation, Body, OutRequest.Scene, Actor);
+  if (State != EMochiBodyState::Ready) {
+    return State;
   }
-  const UMochiArticulation* asset =
-      body.Articulation ? body.Articulation->GetArticulationAsset() : nullptr;
-  if (asset == nullptr || !body.Link.IsNone()) {
+  const UMochiArticulation* Asset =
+      Body.Articulation ? Body.Articulation->GetArticulationAsset() : nullptr;
+  if (Asset == nullptr || !Body.Link.IsNone()) {
     LogError(FString::Printf(TEXT("\"%s\" is not an articulation."), *Articulation));
     return EMochiBodyState::Failed;
   }
-  const int jointIndex = asset->GetJointIndex(Joint);
-  if (jointIndex < 0) {
+  const int JointIndex = Asset->GetJointIndex(Joint);
+  if (JointIndex < 0) {
     LogError(
         FString::Printf(
             TEXT("articulation %s has no joint %s."), *Articulation, *Joint.ToString()));
     return EMochiBodyState::Failed;
   }
-  const EMochiArticulatedJointType jointType = asset->GetJoints()[jointIndex].Type;
-  const FUnrealToMochiConverter u2m;
+  const EMochiArticulatedJointType JointType = Asset->GetJoints()[JointIndex].Type;
+  const FUnrealToMochiConverter U2m;
 
   switch (Type) {
     case EMochiArticulationJointConstraintType::Target:
     case EMochiArticulationJointConstraintType::Range: {
       // Mochi constrains single DOFs of translations and of 1-DOF rotations only.
-      const bool bRotationVector = jointType == EMochiArticulatedJointType::Spherical ||
-          (jointType == EMochiArticulatedJointType::Free && Dof >= 3);
-      int32 dof = 0;
+      const bool bRotationVector = JointType == EMochiArticulatedJointType::Spherical ||
+          (JointType == EMochiArticulatedJointType::Free && Dof >= 3);
+      int32 MochiDof = 0;
       if (bRotationVector ||
-          !ConvertArticulatedDofIndexToMochi(jointType, Dof, u2m, dof, MochiDofSign)) {
+          !ConvertArticulatedDofIndexToMochi(JointType, Dof, U2m, MochiDof, MochiDofSign)) {
         LogError(
             FString::Printf(
                 TEXT(
@@ -80,42 +80,42 @@ EMochiBodyState UMochiArticulationJointConstraintComponent::BuildConstraints(
         return EMochiBodyState::Failed;
       }
       if (Type == EMochiArticulationJointConstraintType::Target) {
-        mochi::ArticulatedSingleDofTargetConstraintParams params;
-        FillCommonParams(params);
-        params.actor = actor;
-        params.jointIndex = jointIndex;
-        params.dofIndex = dof;
-        params.targetValue = MochiDofSign * TargetValue;
-        OutRequest.CreateOne(params, &mochi::Scene::CreateArticulatedSingleDofTargetConstraint);
+        mochi::ArticulatedSingleDofTargetConstraintParams Params;
+        FillCommonParams(Params);
+        Params.actor = Actor;
+        Params.jointIndex = JointIndex;
+        Params.dofIndex = MochiDof;
+        Params.targetValue = MochiDofSign * TargetValue;
+        OutRequest.CreateOne(Params, &mochi::Scene::CreateArticulatedSingleDofTargetConstraint);
       } else {
-        mochi::ArticulatedSingleDofRangeConstraintParams params;
-        FillCommonParams(params);
-        params.actor = actor;
-        params.jointIndex = jointIndex;
-        params.dofIndex = dof;
-        params.minValue = FMath::Min(MochiDofSign * MinValue, MochiDofSign * MaxValue);
-        params.maxValue = FMath::Max(MochiDofSign * MinValue, MochiDofSign * MaxValue);
-        OutRequest.CreateOne(params, &mochi::Scene::CreateArticulatedSingleDofRangeConstraint);
+        mochi::ArticulatedSingleDofRangeConstraintParams Params;
+        FillCommonParams(Params);
+        Params.actor = Actor;
+        Params.jointIndex = JointIndex;
+        Params.dofIndex = MochiDof;
+        Params.minValue = FMath::Min(MochiDofSign * MinValue, MochiDofSign * MaxValue);
+        Params.maxValue = FMath::Max(MochiDofSign * MinValue, MochiDofSign * MaxValue);
+        OutRequest.CreateOne(Params, &mochi::Scene::CreateArticulatedSingleDofRangeConstraint);
       }
       break;
     }
     case EMochiArticulationJointConstraintType::RotationTarget: {
-      mochi::Articulated3dRotationTargetConstraintParams params;
-      FillCommonParams(params);
-      params.actor = actor;
-      params.jointIndex = jointIndex;
-      params.target = u2m.RotationToMochi(TargetRotation.Quaternion());
-      OutRequest.CreateOne(params, &mochi::Scene::CreateArticulated3dRotationTargetConstraint);
+      mochi::Articulated3dRotationTargetConstraintParams Params;
+      FillCommonParams(Params);
+      Params.actor = Actor;
+      Params.jointIndex = JointIndex;
+      Params.target = U2m.RotationToMochi(TargetRotation.Quaternion());
+      OutRequest.CreateOne(Params, &mochi::Scene::CreateArticulated3dRotationTargetConstraint);
       break;
     }
     case EMochiArticulationJointConstraintType::RotationRange: {
-      mochi::Articulated3dRotationRangeConstraintParams params;
-      FillCommonParams(params);
-      params.actor = actor;
-      params.jointIndex = jointIndex;
+      mochi::Articulated3dRotationRangeConstraintParams Params;
+      FillCommonParams(Params);
+      Params.actor = Actor;
+      Params.jointIndex = JointIndex;
       ConvertRotationBoundsToMochi(
-          MinRotation, MaxRotation, u2m, params.minValues, params.maxValues);
-      OutRequest.CreateOne(params, &mochi::Scene::CreateArticulated3dRotationRangeConstraint);
+          MinRotation, MaxRotation, U2m, Params.minValues, Params.maxValues);
+      OutRequest.CreateOne(Params, &mochi::Scene::CreateArticulated3dRotationRangeConstraint);
       break;
     }
   }

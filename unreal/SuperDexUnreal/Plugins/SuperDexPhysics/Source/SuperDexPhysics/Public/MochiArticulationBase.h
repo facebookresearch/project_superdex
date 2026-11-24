@@ -38,14 +38,14 @@ class SUPERDEXPHYSICS_API UMochiArticulationBase : public UObject {
   /// Get the name of the articulation (e.g. "my_arm", "left_hand").
   UFUNCTION(BlueprintPure, Category = "Mochi|Articulation")
   virtual const FString& GetArticulationName() const PURE_VIRTUAL(
-      UMochiArticulationBase::GetArticulationName, static FString empty; return empty;);
+      UMochiArticulationBase::GetArticulationName, static FString Empty; return Empty;);
   /// Get the number of revolute/prismatic DOFs.
   UFUNCTION(BlueprintPure, Category = "Mochi|Articulation")
   virtual int GetNumDofs() const PURE_VIRTUAL(UMochiArticulationBase::GetNumDofs, return 0;);
   /// Get the default or home pose joint positions [rad or m].
   UFUNCTION(BlueprintPure, Category = "Mochi|Articulation")
   virtual const TArray<double>& GetDefaultJointPositions() const PURE_VIRTUAL(
-      UMochiArticulationBase::GetDefaultJointPositions, static TArray<double> empty; return empty;);
+      UMochiArticulationBase::GetDefaultJointPositions, static TArray<double> Empty; return Empty;);
   /// Compute each link relative to its parent. The root entry retains the asset's root
   /// convention: UMochiArticulation includes its root-joint transform; USuperDexBot uses identity.
   /// AngleScale and LengthScale convert joint units to radians/centimeters (default: rad/m).

@@ -26,16 +26,16 @@
 
 namespace {
 inline FQuat FQuatFromRollPitchYaw(FVector const& RPY) {
-  const FQuat roll(FVector::XAxisVector, RPY.X);
-  const FQuat pitch(FVector::YAxisVector, RPY.Y);
-  const FQuat yaw(FVector::ZAxisVector, RPY.Z);
-  return yaw * pitch * roll;
+  const FQuat Roll(FVector::XAxisVector, RPY.X);
+  const FQuat Pitch(FVector::YAxisVector, RPY.Y);
+  const FQuat Yaw(FVector::ZAxisVector, RPY.Z);
+  return Yaw * Pitch * Roll;
 }
 
 template <typename TLink>
 FTransform GetModelTransform(const TLink& Link) {
-  const FQuat orientation = FQuatFromRollPitchYaw(Link.ModelOriginRPY);
-  return FTransform(orientation, Link.ModelOriginXYZ);
+  const FQuat Orientation = FQuatFromRollPitchYaw(Link.ModelOriginRPY);
+  return FTransform(Orientation, Link.ModelOriginXYZ);
 }
 
 // Motion of a joint in its own frame for the joint positions starting at InOutDofIndex, which is
@@ -53,12 +53,12 @@ FTransform GetJointMotion(
     case EMochiArticulatedJointType::Prismatic:
       return FTransform(Joint.Axis.GetSafeNormal() * JointPositions[InOutDofIndex++] * LengthScale);
     case EMochiArticulatedJointType::Spherical: {
-      const FVector rotationVector(
+      const FVector RotationVector(
           JointPositions[InOutDofIndex],
           JointPositions[InOutDofIndex + 1],
           JointPositions[InOutDofIndex + 2]);
       InOutDofIndex += 3;
-      return FTransform(FQuat::MakeFromRotationVector(rotationVector * AngleScale));
+      return FTransform(FQuat::MakeFromRotationVector(RotationVector * AngleScale));
     }
     case EMochiArticulatedJointType::Free:
     case EMochiArticulatedJointType::Hard:
@@ -96,18 +96,18 @@ void SetJointPositionsFromMotion(
     double LengthScale) {
   // Below this squared norm of the twist quaternion (a swing within about 2e-5 rad of a half turn
   // off a revolute axis), the revolute angle is undetermined.
-  static constexpr double kDegenerateTwistSq = 1e-10;
+  static constexpr double DegenerateTwistSq = 1e-10;
   switch (Joint.Type) {
     case EMochiArticulatedJointType::Revolute: {
       // Twist of the rotation about the axis: the nearest rotation about the axis. Both components
       // vanish when every angle is equally near (a half turn about a perpendicular axis); the angle
       // is then 0 rather than whatever rounding gives.
-      const FQuat q = Motion.GetRotation();
-      const double sinHalfAngle = FVector(q.X, q.Y, q.Z) | Joint.Axis.GetSafeNormal();
-      const double angle = FMath::Square(sinHalfAngle) + FMath::Square(q.W) > kDegenerateTwistSq
-          ? 2.0 * FMath::Atan2(sinHalfAngle, q.W)
+      const FQuat Q = Motion.GetRotation();
+      const double SinHalfAngle = FVector(Q.X, Q.Y, Q.Z) | Joint.Axis.GetSafeNormal();
+      const double Angle = FMath::Square(SinHalfAngle) + FMath::Square(Q.W) > DegenerateTwistSq
+          ? 2.0 * FMath::Atan2(SinHalfAngle, Q.W)
           : 0.0;
-      InOutJointPositions[InOutDofIndex++] = FMath::UnwindRadians(angle) / AngleScale;
+      InOutJointPositions[InOutDofIndex++] = FMath::UnwindRadians(Angle) / AngleScale;
       break;
     }
     case EMochiArticulatedJointType::Prismatic:
@@ -115,14 +115,14 @@ void SetJointPositionsFromMotion(
           (Motion.GetTranslation() | Joint.Axis.GetSafeNormal()) / LengthScale;
       break;
     case EMochiArticulatedJointType::Spherical: {
-      FQuat q = Motion.GetRotation();
-      if (q.W < 0.0) {
-        q = FQuat(-q.X, -q.Y, -q.Z, -q.W); // same rotation, angle <= pi
+      FQuat Q = Motion.GetRotation();
+      if (Q.W < 0.0) {
+        Q = FQuat(-Q.X, -Q.Y, -Q.Z, -Q.W); // same rotation, angle <= pi
       }
-      const FVector rotationVector = q.ToRotationVector() / AngleScale;
-      InOutJointPositions[InOutDofIndex++] = rotationVector.X;
-      InOutJointPositions[InOutDofIndex++] = rotationVector.Y;
-      InOutJointPositions[InOutDofIndex++] = rotationVector.Z;
+      const FVector RotationVector = Q.ToRotationVector() / AngleScale;
+      InOutJointPositions[InOutDofIndex++] = RotationVector.X;
+      InOutJointPositions[InOutDofIndex++] = RotationVector.Y;
+      InOutJointPositions[InOutDofIndex++] = RotationVector.Z;
       break;
     }
     case EMochiArticulatedJointType::Free:
@@ -159,17 +159,17 @@ const FMochiArticulatedJoint* UMochiArticulation::FindJoint(FName JointName) con
 }
 
 bool UMochiArticulation::ValidateLinkNames() const {
-  TSet<FName> names;
-  for (const FMochiArticulatedLink& link : Links) {
-    if (names.Contains(link.Name)) {
+  TSet<FName> Names;
+  for (const FMochiArticulatedLink& Link : Links) {
+    if (Names.Contains(Link.Name)) {
       UE_LOG(
           LogMochiPhysics,
           Error,
           TEXT("[UMochiArticulation] Detected duplicate link name [%s]!"),
-          *link.Name.ToString());
+          *Link.Name.ToString());
       return false;
     }
-    names.Add(link.Name);
+    Names.Add(Link.Name);
   }
   return true;
 }
@@ -201,20 +201,20 @@ bool UMochiArticulation::IsReady(bool bLogWarnings, TArray<FString>* OutWarnings
   READY_CHECK(!Links.IsEmpty(), "Links are empty!");
   READY_CHECK(
       Joints.Num() == Links.Num(), "Num joints [%d] != num links [%d]", Joints.Num(), Links.Num());
-  for (int iLink = 0; iLink < Links.Num(); ++iLink) {
-    const int parent = Links[iLink].ParentLink;
+  for (int LinkIndex = 0; LinkIndex < Links.Num(); ++LinkIndex) {
+    const int Parent = Links[LinkIndex].ParentLink;
     READY_CHECK(
-        iLink == 0 ? parent == INDEX_NONE : parent >= 0 && parent < iLink,
+        LinkIndex == 0 ? Parent == INDEX_NONE : Parent >= 0 && Parent < LinkIndex,
         "Link [%s] has invalid parent link index [%d]",
-        *Links[iLink].Name.ToString(),
-        parent);
+        *Links[LinkIndex].Name.ToString(),
+        Parent);
   }
-  for (int iJoint = 1; iJoint < Joints.Num(); ++iJoint) {
+  for (int JointIndex = 1; JointIndex < Joints.Num(); ++JointIndex) {
     READY_CHECK(
-        Joints[iJoint].Type != EMochiArticulatedJointType::Free &&
-            Joints[iJoint].Type != EMochiArticulatedJointType::Cycle,
+        Joints[JointIndex].Type != EMochiArticulatedJointType::Free &&
+            Joints[JointIndex].Type != EMochiArticulatedJointType::Cycle,
         "Joint [%s] is a Free or Cycle joint, which is only supported as the root joint or in Cycles",
-        *Joints[iJoint].Name.ToString());
+        *Joints[JointIndex].Name.ToString());
   }
   READY_CHECK(
       DefaultJointPositions.Num() == GetNumDofs(),
@@ -316,8 +316,8 @@ int UMochiArticulation::GetLinkIndex(FName LinkName) const {
 }
 
 bool UMochiArticulation::GetLink(FName LinkName, FMochiArticulatedLink& OutLink) const {
-  if (const FMochiArticulatedLink* const link = FindLink(LinkName)) {
-    OutLink = *link;
+  if (const FMochiArticulatedLink* const Link = FindLink(LinkName)) {
+    OutLink = *Link;
     return true;
   }
   return false;
@@ -329,8 +329,8 @@ int UMochiArticulation::GetJointIndex(FName JointName) const {
 }
 
 bool UMochiArticulation::GetJoint(FName JointName, FMochiArticulatedJoint& OutJoint) const {
-  if (const FMochiArticulatedJoint* const joint = FindJoint(JointName)) {
-    OutJoint = *joint;
+  if (const FMochiArticulatedJoint* const Joint = FindJoint(JointName)) {
+    OutJoint = *Joint;
     return true;
   }
   return false;
@@ -349,13 +349,13 @@ TArray<int> UMochiArticulation::GetChildLinkIndices(int LinkIndex) const {
 }
 
 TArray<int> UMochiArticulation::GetLeafLinkIndices() const {
-  TArray<int> indices;
+  TArray<int> Indices;
   for (int i = 0; i < ChildLinkIndices.Num(); ++i) {
     if (ChildLinkIndices[i].Num() == 0) {
-      indices.Add(i);
+      Indices.Add(i);
     }
   }
-  return indices;
+  return Indices;
 }
 
 FMochiArticulatedLink UMochiArticulation::GetLastOrFirstForkingLink() const {
@@ -376,11 +376,11 @@ const TArray<int>& UMochiArticulation::GetDofIndices() const {
 }
 
 int UMochiArticulation::GetDofIndex(FName JointName) const {
-  const int iJoint = GetJointIndex(JointName);
-  if (iJoint == INDEX_NONE) {
+  const int JointIndex = GetJointIndex(JointName);
+  if (JointIndex == INDEX_NONE) {
     return INDEX_NONE;
   }
-  return DofIndices.Find(iJoint);
+  return DofIndices.Find(JointIndex);
 }
 
 bool UMochiArticulation::GetDof(int DofIndex, FMochiArticulatedJoint& OutJoint) const {
@@ -395,9 +395,9 @@ bool UMochiArticulation::GetDofLimits(int DofIndex, double& OutLower, double& Ou
   if (!DofIndices.IsValidIndex(DofIndex) || !Joints.IsValidIndex(DofIndices[DofIndex])) {
     return false;
   }
-  const int iJoint = DofIndices[DofIndex];
-  const int firstDof = DofIndices.Find(iJoint);
-  Joints[iJoint].GetDofLimits(DofIndex - firstDof, OutLower, OutUpper);
+  const int JointIndex = DofIndices[DofIndex];
+  const int FirstDof = DofIndices.Find(JointIndex);
+  Joints[JointIndex].GetDofLimits(DofIndex - FirstDof, OutLower, OutUpper);
   return true;
 }
 
@@ -412,19 +412,19 @@ FTransform UMochiArticulation::GetRestLinkToRoot(int LinkIndex) const {
 }
 
 TArray<FName> UMochiArticulation::GetLinkNames() const {
-  TArray<FName> names;
-  for (const FMochiArticulatedLink& link : Links) {
-    names.AddUnique(link.Name);
+  TArray<FName> Names;
+  for (const FMochiArticulatedLink& Link : Links) {
+    Names.AddUnique(Link.Name);
   }
-  return names;
+  return Names;
 }
 
 TArray<FName> UMochiArticulation::GetJointNames() const {
-  TArray<FName> names;
-  for (const FMochiArticulatedJoint& joint : Joints) {
-    names.AddUnique(joint.Name);
+  TArray<FName> Names;
+  for (const FMochiArticulatedJoint& Joint : Joints) {
+    Names.AddUnique(Joint.Name);
   }
-  return names;
+  return Names;
 }
 
 USkeletalMesh* UMochiArticulation::GetSkeletalMesh() const {
@@ -450,16 +450,18 @@ bool UMochiArticulation::ComputeLinkTransformsInternal(
     UE_LOG(LogMochiPhysics, Warning, TEXT("[UMochiArticulation] Articulation data is invalid!!"));
     return false;
   }
-  const int iFinal = FinalLinkIndex < 0 ? Links.Num() : FinalLinkIndex + 1;
-  OutLinkTransforms.SetNum(iFinal);
-  int iDof = 0;
-  for (int iLink = 0; iLink < iFinal; ++iLink) {
-    const FMochiArticulatedLink& link = Links[iLink];
-    const FMochiArticulatedJoint& joint = Joints[iLink];
-    const FTransform motion = GetJointMotion(joint, JointPositions, iDof, AngleScale, LengthScale);
-    OutLinkTransforms[iLink] = link.ParentJointFromLink * motion * joint.ParentLinkFromJoint;
-    if (bToArticulationRoot && link.ParentLink != INDEX_NONE) {
-      OutLinkTransforms[iLink] = OutLinkTransforms[iLink] * OutLinkTransforms[link.ParentLink];
+  const int FinalIndex = FinalLinkIndex < 0 ? Links.Num() : FinalLinkIndex + 1;
+  OutLinkTransforms.SetNum(FinalIndex);
+  int DofIndex = 0;
+  for (int LinkIndex = 0; LinkIndex < FinalIndex; ++LinkIndex) {
+    const FMochiArticulatedLink& Link = Links[LinkIndex];
+    const FMochiArticulatedJoint& Joint = Joints[LinkIndex];
+    const FTransform Motion =
+        GetJointMotion(Joint, JointPositions, DofIndex, AngleScale, LengthScale);
+    OutLinkTransforms[LinkIndex] = Link.ParentJointFromLink * Motion * Joint.ParentLinkFromJoint;
+    if (bToArticulationRoot && Link.ParentLink != INDEX_NONE) {
+      OutLinkTransforms[LinkIndex] =
+          OutLinkTransforms[LinkIndex] * OutLinkTransforms[Link.ParentLink];
     }
   }
   return true;
@@ -484,27 +486,27 @@ bool UMochiArticulation::ComputeJointPositionsInternal(
     return false;
   }
   // The motion DOFs must fit the joint position layout.
-  int numMotionDofs = 0;
-  for (const FMochiArticulatedJoint& joint : Joints) {
-    numMotionDofs += GetNumMotionDofs(joint);
+  int NumMotionDofs = 0;
+  for (const FMochiArticulatedJoint& Joint : Joints) {
+    NumMotionDofs += GetNumMotionDofs(Joint);
   }
-  if (numMotionDofs > GetNumDofs()) {
+  if (NumMotionDofs > GetNumDofs()) {
     UE_LOG(LogMochiPhysics, Warning, TEXT("[UMochiArticulation] Joint DOFs exceed GetNumDofs()!"));
     return false;
   }
   OutJointPositions.Init(0.0, GetNumDofs());
-  int iDof = 0;
-  for (int iLink = 0; iLink < Links.Num(); ++iLink) {
-    const FMochiArticulatedLink& link = Links[iLink];
-    FTransform linkToParent = LinkTransforms[iLink];
-    if (bFromArticulationRoot && link.ParentLink != INDEX_NONE) {
-      linkToParent = LinkTransforms[iLink] * LinkTransforms[link.ParentLink].Inverse();
+  int DofIndex = 0;
+  for (int LinkIndex = 0; LinkIndex < Links.Num(); ++LinkIndex) {
+    const FMochiArticulatedLink& Link = Links[LinkIndex];
+    FTransform LinkToParent = LinkTransforms[LinkIndex];
+    if (bFromArticulationRoot && Link.ParentLink != INDEX_NONE) {
+      LinkToParent = LinkTransforms[LinkIndex] * LinkTransforms[Link.ParentLink].Inverse();
     }
     // LinkToParent = ParentJointFromLink * Motion * ParentLinkFromJoint.
-    const FTransform motion = link.ParentJointFromLink.Inverse() * linkToParent *
-        Joints[iLink].ParentLinkFromJoint.Inverse();
+    const FTransform Motion = Link.ParentJointFromLink.Inverse() * LinkToParent *
+        Joints[LinkIndex].ParentLinkFromJoint.Inverse();
     SetJointPositionsFromMotion(
-        Joints[iLink], motion, OutJointPositions, iDof, AngleScale, LengthScale);
+        Joints[LinkIndex], Motion, OutJointPositions, DofIndex, AngleScale, LengthScale);
   }
   return true;
 }
@@ -515,14 +517,14 @@ bool UMochiArticulation::ForwardKinematics(
     FTransform& OutLinkTransform,
     double AngleScale,
     double LengthScale) const {
-  const int iLink = GetLinkIndex(LinkName);
-  if (iLink == -1) {
+  const int LinkIndex = GetLinkIndex(LinkName);
+  if (LinkIndex == -1) {
     return false;
   }
-  thread_local TArray<FTransform> sLinkTransforms;
+  thread_local TArray<FTransform> LinkTransforms;
   if (ComputeLinkToArticulationRootTransforms(
-          JointPositions, sLinkTransforms, AngleScale, LengthScale, iLink)) {
-    OutLinkTransform = sLinkTransforms[iLink];
+          JointPositions, LinkTransforms, AngleScale, LengthScale, LinkIndex)) {
+    OutLinkTransform = LinkTransforms[LinkIndex];
     return true;
   }
   return false;
@@ -535,40 +537,40 @@ bool UMochiArticulation::ComputeVisualBoundsInternal(
   if (LinksToTransformSpace.Num() != Links.Num()) {
     return false;
   }
-  TArray<FTransform> linksToRoot;
+  TArray<FTransform> LinksToRoot;
   if (!bToArticulationRoot) {
-    linksToRoot.SetNum(Links.Num());
+    LinksToRoot.SetNum(Links.Num());
     for (int i = 0; i < Links.Num(); ++i) {
-      const int iParent = Links[i].ParentLink;
-      if (iParent == INDEX_NONE) {
-        linksToRoot[i] = LinksToTransformSpace[i];
+      const int ParentIndex = Links[i].ParentLink;
+      if (ParentIndex == INDEX_NONE) {
+        LinksToRoot[i] = LinksToTransformSpace[i];
       } else {
-        linksToRoot[i] = LinksToTransformSpace[i] * linksToRoot[iParent];
+        LinksToRoot[i] = LinksToTransformSpace[i] * LinksToRoot[ParentIndex];
       }
     }
   }
-  const TArray<FTransform>& linkToRootTransforms =
-      bToArticulationRoot ? LinksToTransformSpace : linksToRoot;
-  FBox compositeBox(EForceInit::ForceInit);
+  const TArray<FTransform>& LinkToRootTransforms =
+      bToArticulationRoot ? LinksToTransformSpace : LinksToRoot;
+  FBox CompositeBox(EForceInit::ForceInit);
   for (int i = 0; i < Links.Num(); ++i) {
     if (Links[i].RenderModel) {
-      FBoxSphereBounds linkLocalBounds = Links[i].RenderModel->GetBounds();
-      FTransform meshToRoot = Links[i].GetRenderModelTransform() * linkToRootTransforms[i];
-      FBox transformedBox = linkLocalBounds.GetBox().TransformBy(meshToRoot);
-      compositeBox += transformedBox;
+      FBoxSphereBounds LinkLocalBounds = Links[i].RenderModel->GetBounds();
+      FTransform MeshToRoot = Links[i].GetRenderModelTransform() * LinkToRootTransforms[i];
+      FBox TransformedBox = LinkLocalBounds.GetBox().TransformBy(MeshToRoot);
+      CompositeBox += TransformedBox;
     }
   }
-  OutBounds = FBoxSphereBounds(compositeBox);
+  OutBounds = FBoxSphereBounds(CompositeBox);
   return true;
 }
 
 void UMochiArticulation::ClampJointPositions(TArray<double>& JointPositions) const {
-  const int iMax = FMath::Min(JointPositions.Num(), GetNumDofs());
-  for (int iDof = 0; iDof < iMax; ++iDof) {
-    double lower = 0;
-    double upper = 0;
-    GetDofLimits(iDof, lower, upper);
-    JointPositions[iDof] = FMath::Clamp(JointPositions[iDof], lower, upper);
+  const int MaxIndex = FMath::Min(JointPositions.Num(), GetNumDofs());
+  for (int DofIndex = 0; DofIndex < MaxIndex; ++DofIndex) {
+    double Lower = 0;
+    double Upper = 0;
+    GetDofLimits(DofIndex, Lower, Upper);
+    JointPositions[DofIndex] = FMath::Clamp(JointPositions[DofIndex], Lower, Upper);
   }
 }
 
@@ -576,26 +578,26 @@ void UMochiArticulation::RandomJointPositions(
     TArray<double>& JointPositions,
     bool NormalDistribution) const {
   // for generating normally distributed random numbers
-  std::random_device rd{};
-  std::mt19937 gen{rd()};
-  std::normal_distribution d{0.0, 1.0}; // zero mean, unit variance
+  std::random_device Rd{};
+  std::mt19937 Gen{Rd()};
+  std::normal_distribution D{0.0, 1.0}; // zero mean, unit variance
 
-  const int iMax = FMath::Min(JointPositions.Num(), GetNumDofs());
-  for (int iDof = 0; iDof < iMax; ++iDof) {
-    double lower = 0;
-    double upper = 0;
-    GetDofLimits(iDof, lower, upper);
+  const int MaxIndex = FMath::Min(JointPositions.Num(), GetNumDofs());
+  for (int DofIndex = 0; DofIndex < MaxIndex; ++DofIndex) {
+    double Lower = 0;
+    double Upper = 0;
+    GetDofLimits(DofIndex, Lower, Upper);
     // Unlimited DOFs sample one revolution, or a meter for translations.
     const bool bTranslation =
-        Joints[DofIndices[iDof]].Type == EMochiArticulatedJointType::Prismatic;
-    const double fallback = bTranslation ? 1.0 : UE_DOUBLE_PI;
-    lower = FMath::IsFinite(lower) ? lower : -fallback;
-    upper = FMath::IsFinite(upper) ? upper : +fallback;
+        Joints[DofIndices[DofIndex]].Type == EMochiArticulatedJointType::Prismatic;
+    const double Fallback = bTranslation ? 1.0 : UE_DOUBLE_PI;
+    Lower = FMath::IsFinite(Lower) ? Lower : -Fallback;
+    Upper = FMath::IsFinite(Upper) ? Upper : +Fallback;
     if (NormalDistribution) {
-      JointPositions[iDof] = FMath::GetMappedRangeValueClamped(
-          TRange<double>{-2.5, 2.5}, TRange<double>{lower, upper}, d(gen));
+      JointPositions[DofIndex] = FMath::GetMappedRangeValueClamped(
+          TRange<double>{-2.5, 2.5}, TRange<double>{Lower, Upper}, D(Gen));
     } else {
-      JointPositions[iDof] = FMath::RandRange(lower, upper);
+      JointPositions[DofIndex] = FMath::RandRange(Lower, Upper);
     }
   }
 }
@@ -611,56 +613,56 @@ TArray<mochi::ShapeHandle> UMochiArticulation::GetLinkShapes() const {
             "It is highly recommended that all shape loading be performed on the UE game thread."),
         *GetName());
   }
-  TArray<mochi::ShapeHandle> shapes;
-  for (const FMochiArticulatedLink& link : Links) {
-    shapes.Add(
-        link.Shape ? link.Shape->GetMochiShape(link.ShapeScale, link.GetShapeTransform())
+  TArray<mochi::ShapeHandle> Shapes;
+  for (const FMochiArticulatedLink& Link : Links) {
+    Shapes.Add(
+        Link.Shape ? Link.Shape->GetMochiShape(Link.ShapeScale, Link.GetShapeTransform())
                    : mochi::ShapeHandle{});
   }
-  return shapes;
+  return Shapes;
 }
 
 TArray<mochi::ShapeHandle> UMochiArticulation::GetSoftShapes() const {
-  int const numSoftLinks = SoftLinks.Num();
-  if (numSoftLinks == 0) {
+  int const NumSoftLinks = SoftLinks.Num();
+  if (NumSoftLinks == 0) {
     return {};
   }
-  TArray<mochi::ShapeHandle> result;
-  result.SetNum(numSoftLinks);
-  for (int i = 0; i < numSoftLinks; ++i) {
-    const FMochiArticulationSoftLink& softLink = SoftLinks[i];
-    const int parentLinkIndex = GetLinkIndex(softLink.ParentName);
-    if (softLink.Model == nullptr) {
+  TArray<mochi::ShapeHandle> Result;
+  Result.SetNum(NumSoftLinks);
+  for (int i = 0; i < NumSoftLinks; ++i) {
+    const FMochiArticulationSoftLink& SoftLink = SoftLinks[i];
+    const int ParentLinkIndex = GetLinkIndex(SoftLink.ParentName);
+    if (SoftLink.Model == nullptr) {
       UE_LOG(
           LogMochiPhysics,
           Error,
           TEXT("[UMochiArticulation] SoftLinks[%d] %s Model is null! Returning invalid shape."),
           i,
-          *softLink.Name.ToString());
-      result[i] = {};
-    } else if (parentLinkIndex != INDEX_NONE) {
+          *SoftLink.Name.ToString());
+      Result[i] = {};
+    } else if (ParentLinkIndex != INDEX_NONE) {
       // Reuse the transform of the parent link's shape.
-      const FTransform softModelToParentModel = GetModelTransform(softLink);
-      const FTransform parentModelToParentLink = Links[parentLinkIndex].GetShapeTransform();
-      const FTransform parentLinkToRoot = GetRestLinkToRoot(parentLinkIndex);
-      const FTransform parentLinkToArticulationRoot(
-          parentLinkToRoot.GetRotation(), parentLinkToRoot.GetTranslation());
-      const FTransform softModelToArticulationRoot =
-          softModelToParentModel * parentModelToParentLink * parentLinkToArticulationRoot;
-      result[i] = softLink.Model->GetMochiShape(softLink.ModelScale, softModelToArticulationRoot);
+      const FTransform SoftModelToParentModel = GetModelTransform(SoftLink);
+      const FTransform ParentModelToParentLink = Links[ParentLinkIndex].GetShapeTransform();
+      const FTransform ParentLinkToRoot = GetRestLinkToRoot(ParentLinkIndex);
+      const FTransform ParentLinkToArticulationRoot(
+          ParentLinkToRoot.GetRotation(), ParentLinkToRoot.GetTranslation());
+      const FTransform SoftModelToArticulationRoot =
+          SoftModelToParentModel * ParentModelToParentLink * ParentLinkToArticulationRoot;
+      Result[i] = SoftLink.Model->GetMochiShape(SoftLink.ModelScale, SoftModelToArticulationRoot);
     } else {
       UE_LOG(
           LogMochiPhysics,
           Warning,
           TEXT(
               "[UMochiArticulation] Failed to find parent link %s for SoftLinks[%d] %s; using identity transform."),
-          *softLink.ParentName.ToString(),
+          *SoftLink.ParentName.ToString(),
           i,
-          *softLink.Name.ToString());
-      result[i] = softLink.Model->GetMochiShape(FVector::OneVector, FTransform::Identity);
+          *SoftLink.Name.ToString());
+      Result[i] = SoftLink.Model->GetMochiShape(FVector::OneVector, FTransform::Identity);
     }
   }
-  return result;
+  return Result;
 }
 
 mochi::ShapeHandle UMochiArticulation::GetSkinShape() const {
@@ -695,48 +697,48 @@ mochi::ArticulatedActorParams UMochiArticulation::GetArticulatedActorParams(
   // a callsite bug (e.g. forgetting to call GetLinkShapes()) is caught immediately.
   check(InLinkShapes.size() == static_cast<size_t>(Links.Num()));
   check(Joints.Num() == Links.Num());
-  FUnrealToMochiConverter u2m;
-  mochi::ContactParams defaultContact;
+  FUnrealToMochiConverter U2m;
+  mochi::ContactParams DefaultContact;
   if (InContactParams) {
-    defaultContact = InContactParams->ToMochi();
+    DefaultContact = InContactParams->ToMochi();
   }
-  const EMochiArticulatedJointType rootType = GetEffectiveRootJointType(bInFixedBase);
-  mochi::ArticulatedActorParams params;
-  params.joints.reserve(Joints.Num());
-  params.links.reserve(Links.Num());
+  const EMochiArticulatedJointType RootType = GetEffectiveRootJointType(bInFixedBase);
+  mochi::ArticulatedActorParams Params;
+  Params.joints.reserve(Joints.Num());
+  Params.links.reserve(Links.Num());
   for (int i = 0; i < Links.Num(); ++i) {
-    mochi::ArticulatedJointParams jointParams = Joints[i].ToMochi(u2m);
+    mochi::ArticulatedJointParams JointParams = Joints[i].ToMochi(U2m);
     if (i == 0) {
-      jointParams.type = ::ToMochi(rootType);
+      JointParams.type = ::ToMochi(RootType);
     }
-    params.joints.push_back(std::move(jointParams));
-    params.links.push_back(
-        Links[i].ToMochi(u2m, InLinkShapes[i], InLayer, defaultContact, bInHasGravity));
+    Params.joints.push_back(std::move(JointParams));
+    Params.links.push_back(
+        Links[i].ToMochi(U2m, InLinkShapes[i], InLayer, DefaultContact, bInHasGravity));
   }
-  for (const FMochiArticulatedCycleJoint& cycle : Cycles) {
-    params.cycles.push_back(cycle.ToMochi(u2m));
+  for (const FMochiArticulatedCycleJoint& Cycle : Cycles) {
+    Params.cycles.push_back(Cycle.ToMochi(U2m));
   }
   if (bHasSkin && InSkinShape.IsValid()) {
-    params.skin = Skin.ToMochi(InSkinShape, InLayer, defaultContact);
+    Params.skin = Skin.ToMochi(InSkinShape, InLayer, DefaultContact);
   }
   if (!InitialJointVelocities.IsEmpty()) {
     if (InitialJointVelocities.Num() == GetNumDofs()) {
-      TArray<double> velocities = InitialJointVelocities;
-      TArray<EMochiArticulatedJointType> types;
-      for (const FMochiArticulatedJoint& joint : Joints) {
-        types.Add(joint.Type);
+      TArray<double> Velocities = InitialJointVelocities;
+      TArray<EMochiArticulatedJointType> Types;
+      for (const FMochiArticulatedJoint& Joint : Joints) {
+        Types.Add(Joint.Type);
       }
-      ConvertArticulatedDofsToMochi(types, false, velocities, u2m);
+      ConvertArticulatedDofsToMochi(Types, false, Velocities, U2m);
       // Mochi's velocities also cover a Free root's DOFs, which start at rest.
-      mochi::DynamicArray<mochi::real> mochiVelocities;
-      if (rootType == EMochiArticulatedJointType::Free) {
-        mochiVelocities.resize(GetArticulatedJointNumDofs(EMochiArticulatedJointType::Free), 0);
+      mochi::DynamicArray<mochi::real> MochiVelocities;
+      if (RootType == EMochiArticulatedJointType::Free) {
+        MochiVelocities.resize(GetArticulatedJointNumDofs(EMochiArticulatedJointType::Free), 0);
       }
-      mochiVelocities.reserve(mochiVelocities.size() + velocities.Num());
-      for (const double v : velocities) {
-        mochiVelocities.push_back(static_cast<mochi::real>(v));
+      MochiVelocities.reserve(MochiVelocities.size() + Velocities.Num());
+      for (const double V : Velocities) {
+        MochiVelocities.push_back(static_cast<mochi::real>(V));
       }
-      params.jointVelocities = std::move(mochiVelocities);
+      Params.jointVelocities = std::move(MochiVelocities);
     } else {
       UE_LOG(
           LogMochiPhysics,
@@ -748,7 +750,7 @@ mochi::ArticulatedActorParams UMochiArticulation::GetArticulatedActorParams(
           GetNumDofs());
     }
   }
-  return params;
+  return Params;
 }
 
 void UMochiArticulation::PostLoad() {
@@ -757,12 +759,12 @@ void UMochiArticulation::PostLoad() {
 }
 
 FString UMochiArticulation::RemoveAssetTypePrefix(const FString& AssetName, bool* bOutHadPrefix) {
-  for (const TCHAR* prefix : {TEXT("MA_"), TEXT("URDF_")}) {
-    if (AssetName.StartsWith(prefix)) {
+  for (const TCHAR* Prefix : {TEXT("MA_"), TEXT("URDF_")}) {
+    if (AssetName.StartsWith(Prefix)) {
       if (bOutHadPrefix) {
         *bOutHadPrefix = true;
       }
-      return AssetName.RightChop(FCString::Strlen(prefix));
+      return AssetName.RightChop(FCString::Strlen(Prefix));
     }
   }
   if (bOutHadPrefix) {
@@ -785,48 +787,48 @@ bool UMochiArticulation::PreGenValidateOrUpdateDerivedData() {
 }
 
 bool UMochiArticulation::BuildDerivedData() {
-  const int numLinks = Links.Num();
-  auto resetDerivedData = [&] {
+  const int NumLinks = Links.Num();
+  auto ResetDerivedData = [&] {
     DofIndices.Reset();
-    RestLinksToParent.Init(FTransform::Identity, numLinks);
-    RestLinksToRoot.Init(FTransform::Identity, numLinks);
-    ChildLinkIndices.Init(TArray<int>(), numLinks);
+    RestLinksToParent.Init(FTransform::Identity, NumLinks);
+    RestLinksToRoot.Init(FTransform::Identity, NumLinks);
+    ChildLinkIndices.Init(TArray<int>(), NumLinks);
   };
-  resetDerivedData();
-  if (Joints.Num() != numLinks) {
+  ResetDerivedData();
+  if (Joints.Num() != NumLinks) {
     UE_LOG(
         LogMochiPhysics,
         Error,
         TEXT("[UMochiArticulation] %s has %d joints but %d links!"),
         *GetName(),
         Joints.Num(),
-        numLinks);
+        NumLinks);
     return false;
   }
-  for (int iLink = 0; iLink < numLinks; ++iLink) {
-    const FMochiArticulatedLink& link = Links[iLink];
-    const FMochiArticulatedJoint& joint = Joints[iLink];
-    const int iParent = link.ParentLink;
-    if (iLink == 0 ? iParent != INDEX_NONE : iParent < 0 || iParent >= iLink) {
+  for (int LinkIndex = 0; LinkIndex < NumLinks; ++LinkIndex) {
+    const FMochiArticulatedLink& Link = Links[LinkIndex];
+    const FMochiArticulatedJoint& Joint = Joints[LinkIndex];
+    const int ParentIndex = Link.ParentLink;
+    if (LinkIndex == 0 ? ParentIndex != INDEX_NONE : ParentIndex < 0 || ParentIndex >= LinkIndex) {
       UE_LOG(
           LogMochiPhysics,
           Error,
           TEXT("[UMochiArticulation] Link %s of %s has invalid parent link index %d!"),
-          *link.Name.ToString(),
+          *Link.Name.ToString(),
           *GetName(),
-          iParent);
-      resetDerivedData();
+          ParentIndex);
+      ResetDerivedData();
       return false;
     }
-    RestLinksToParent[iLink] = link.ParentJointFromLink * joint.ParentLinkFromJoint;
-    if (iParent == INDEX_NONE) {
-      RestLinksToRoot[iLink] = RestLinksToParent[iLink];
+    RestLinksToParent[LinkIndex] = Link.ParentJointFromLink * Joint.ParentLinkFromJoint;
+    if (ParentIndex == INDEX_NONE) {
+      RestLinksToRoot[LinkIndex] = RestLinksToParent[LinkIndex];
     } else {
-      RestLinksToRoot[iLink] = RestLinksToParent[iLink] * RestLinksToRoot[iParent];
-      ChildLinkIndices[iParent].Add(iLink);
+      RestLinksToRoot[LinkIndex] = RestLinksToParent[LinkIndex] * RestLinksToRoot[ParentIndex];
+      ChildLinkIndices[ParentIndex].Add(LinkIndex);
     }
-    for (int i = 0; i < GetNumLayoutDofs(joint, iLink == 0); ++i) {
-      DofIndices.Add(iLink);
+    for (int i = 0; i < GetNumLayoutDofs(Joint, LinkIndex == 0); ++i) {
+      DofIndices.Add(LinkIndex);
     }
   }
   if (DefaultJointPositions.Num() != DofIndices.Num()) {

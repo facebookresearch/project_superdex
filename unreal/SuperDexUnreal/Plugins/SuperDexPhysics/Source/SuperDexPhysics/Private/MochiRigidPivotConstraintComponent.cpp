@@ -31,55 +31,55 @@ void UMochiRigidPivotConstraintComponent::OnUpdateTransform(
     EUpdateTransformFlags UpdateTransformFlags,
     ETeleportType Teleport) {
   Super::OnUpdateTransform(UpdateTransformFlags, Teleport);
-  const FUnrealToMochiConverter u2m;
-  const mochi::Real3 position = u2m.TranslationToMochi(GetComponentLocation());
-  const mochi::Quaternion rotation = u2m.RotationToMochi(GetComponentQuat());
-  const EMochiRigidPivotConstraintType type = Type;
-  ForEachConstraint([type, position, rotation](mochi::Constraint& C) {
-    if (type != EMochiRigidPivotConstraintType::Rotation) {
-      C.SetTargetPosition(position, mochi::ErrorLog{});
+  const FUnrealToMochiConverter U2m;
+  const mochi::Real3 Position = U2m.TranslationToMochi(GetComponentLocation());
+  const mochi::Quaternion Rotation = U2m.RotationToMochi(GetComponentQuat());
+  const EMochiRigidPivotConstraintType ConstraintType = Type;
+  ForEachConstraint([ConstraintType, Position, Rotation](mochi::Constraint& C) {
+    if (ConstraintType != EMochiRigidPivotConstraintType::Rotation) {
+      C.SetTargetPosition(Position, mochi::ErrorLog{});
     }
-    if (type != EMochiRigidPivotConstraintType::Position) {
-      C.SetTargetRotation(rotation, mochi::ErrorLog{});
+    if (ConstraintType != EMochiRigidPivotConstraintType::Position) {
+      C.SetTargetRotation(Rotation, mochi::ErrorLog{});
     }
   });
 }
 
 EMochiBodyState UMochiRigidPivotConstraintComponent::BuildConstraints(
     FConstraintRequest& OutRequest) {
-  FMochiConstraintBody body;
-  mochi::ActorHandle actor;
-  const EMochiBodyState state = ResolveBody(Body, body, OutRequest.Scene, actor);
-  if (state != EMochiBodyState::Ready) {
-    return state;
+  FMochiConstraintBody ResolvedBody;
+  mochi::ActorHandle Actor;
+  const EMochiBodyState State = ResolveBody(Body, ResolvedBody, OutRequest.Scene, Actor);
+  if (State != EMochiBodyState::Ready) {
+    return State;
   }
-  const FUnrealToMochiConverter u2m;
+  const FUnrealToMochiConverter U2m;
   switch (Type) {
     case EMochiRigidPivotConstraintType::Position: {
-      mochi::RigidPivotPositionConstraintParams params;
-      FillCommonParams(params);
-      params.actor = actor;
-      params.localPosition = body.LocalPositionToMochi(LocalPosition);
-      params.targetPosition = u2m.TranslationToMochi(GetComponentLocation());
-      OutRequest.CreateOne(params, &mochi::Scene::CreateRigidPivotPositionConstraint);
+      mochi::RigidPivotPositionConstraintParams Params;
+      FillCommonParams(Params);
+      Params.actor = Actor;
+      Params.localPosition = ResolvedBody.LocalPositionToMochi(LocalPosition);
+      Params.targetPosition = U2m.TranslationToMochi(GetComponentLocation());
+      OutRequest.CreateOne(Params, &mochi::Scene::CreateRigidPivotPositionConstraint);
       break;
     }
     case EMochiRigidPivotConstraintType::ToRigidTarget: {
-      mochi::RigidPivotToRigidTargetConstraintParams params;
-      FillCommonParams(params);
-      params.actor = actor;
-      params.localPosition = body.LocalPositionToMochi(LocalPosition);
-      params.targetTransform = u2m.TransformToMochi_RT(GetComponentTransform());
-      OutRequest.CreateOne(params, &mochi::Scene::CreateRigidPivotToRigidTargetConstraint);
+      mochi::RigidPivotToRigidTargetConstraintParams Params;
+      FillCommonParams(Params);
+      Params.actor = Actor;
+      Params.localPosition = ResolvedBody.LocalPositionToMochi(LocalPosition);
+      Params.targetTransform = U2m.TransformToMochi_RT(GetComponentTransform());
+      OutRequest.CreateOne(Params, &mochi::Scene::CreateRigidPivotToRigidTargetConstraint);
       break;
     }
     case EMochiRigidPivotConstraintType::Rotation: {
-      mochi::RigidPivotRotationConstraintParams params;
-      FillCommonParams(params);
-      params.actor = actor;
-      params.localRotation = u2m.RotationToMochi(LocalRotation.Quaternion()).ToRotationVector();
-      params.targetRotation = u2m.RotationToMochi(GetComponentQuat()).ToRotationVector();
-      OutRequest.CreateOne(params, &mochi::Scene::CreateRigidPivotRotationConstraint);
+      mochi::RigidPivotRotationConstraintParams Params;
+      FillCommonParams(Params);
+      Params.actor = Actor;
+      Params.localRotation = U2m.RotationToMochi(LocalRotation.Quaternion()).ToRotationVector();
+      Params.targetRotation = U2m.RotationToMochi(GetComponentQuat()).ToRotationVector();
+      OutRequest.CreateOne(Params, &mochi::Scene::CreateRigidPivotRotationConstraint);
       break;
     }
   }

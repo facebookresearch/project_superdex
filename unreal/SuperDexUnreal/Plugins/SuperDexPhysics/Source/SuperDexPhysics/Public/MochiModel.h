@@ -109,16 +109,16 @@ class SUPERDEXPHYSICS_API UMochiModel : public UObject {
   virtual mochi::ShapeHandle GetMochiShape_Raw(const mochi::VMatrix4x4r& BakeMatrix) const;
 
   static mochi::ShapeHandle GetTriangularMochiShapeFromStaticMesh(
-      const UStaticMesh* mesh,
-      const ETriangularMeshCollisionSource collisionSource,
-      FVector scale3D);
+      const UStaticMesh* Mesh,
+      const ETriangularMeshCollisionSource CollisionSource,
+      FVector Scale3D);
 
   // [Internal] Get the model's raw data (mesh + skinning) from ModelData.
   // Unlike GetMochiShape (which builds a physics ShapeHandle), this returns owning CPU-side
   // ModelData so callers can inspect or transform it -- e.g. the bot loader remaps a skin's baked
   // bone indices onto a composed skeleton before creating a shape. Returns default-constructed data
-  // with `error` set on failure (including when the asset holds no data).
-  mochi::ModelData GetMochiModelData(mochi::Error& error) const;
+  // with `Error` set on failure (including when the asset holds no data).
+  mochi::ModelData GetMochiModelData(mochi::Error& Error) const;
 
 #if WITH_EDITOR
   virtual void PostInitProperties() override;
@@ -143,8 +143,8 @@ class SUPERDEXPHYSICS_API UMochiModel : public UObject {
   // Bakes an SDF into the model data using the provided parameters.
   // If no parameters are provided, uses default GridSdfParams.
   bool BakeSdf(const FMochiGridSdfParams* SdfParams = nullptr);
-  void SetImportTransform(FTransform transform) {
-    ImportTransform = transform;
+  void SetImportTransform(FTransform Transform) {
+    ImportTransform = Transform;
   }
 #endif
 

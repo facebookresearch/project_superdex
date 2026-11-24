@@ -42,7 +42,7 @@ mochi::Real3 ToReal3(const FVector& V) {
 
 // Basis changes are matrix products, so unlimited (infinite) limit components go through them as
 // huge finite values instead.
-constexpr double kHugeLimit = 1e30;
+constexpr double HugeLimit = 1e30;
 
 // Spherical limits bound each rotation vector component separately. A basis change that negates a
 // component turns its lower bound into an upper bound and vice versa, so a one-sided limit can
@@ -54,26 +54,26 @@ void SortSphericalLimits(
     FVector& InOutMin,
     bool& bInOutHasMax,
     FVector& InOutMax) {
-  constexpr double kInf = std::numeric_limits<double>::infinity();
-  FVector lower(-kInf);
-  FVector upper(kInf);
+  constexpr double Inf = std::numeric_limits<double>::infinity();
+  FVector Lower(-Inf);
+  FVector Upper(Inf);
   for (int32 i = 0; i < 3; ++i) {
     const bool bFlipped = ComponentSigns[i] < 0;
     const bool bHasLower = bFlipped ? bInOutHasMax : bInOutHasMin;
     const bool bHasUpper = bFlipped ? bInOutHasMin : bInOutHasMax;
-    const double lowerValue = bFlipped ? InOutMax[i] : InOutMin[i];
-    const double upperValue = bFlipped ? InOutMin[i] : InOutMax[i];
-    if (bHasLower && lowerValue > -kHugeLimit) {
-      lower[i] = lowerValue;
+    const double LowerValue = bFlipped ? InOutMax[i] : InOutMin[i];
+    const double UpperValue = bFlipped ? InOutMin[i] : InOutMax[i];
+    if (bHasLower && LowerValue > -HugeLimit) {
+      Lower[i] = LowerValue;
     }
-    if (bHasUpper && upperValue < kHugeLimit) {
-      upper[i] = upperValue;
+    if (bHasUpper && UpperValue < HugeLimit) {
+      Upper[i] = UpperValue;
     }
   }
-  bInOutHasMin = lower != FVector(-kInf);
-  bInOutHasMax = upper != FVector(kInf);
-  InOutMin = bInOutHasMin ? lower : FVector::ZeroVector;
-  InOutMax = bInOutHasMax ? upper : FVector::ZeroVector;
+  bInOutHasMin = Lower != FVector(-Inf);
+  bInOutHasMax = Upper != FVector(Inf);
+  InOutMin = bInOutHasMin ? Lower : FVector::ZeroVector;
+  InOutMax = bInOutHasMax ? Upper : FVector::ZeroVector;
 }
 
 // Shape and render model scales are per-axis magnitudes; a basis change only permutes them.
@@ -87,35 +87,35 @@ void ConvertArticulatedDofs(
     bool bIncludesRootFreeDofs,
     TArrayView<double> Dofs,
     TVectorConverter VectorConverter) {
-  int32 iDof = 0;
-  auto convertVector = [&](bool bRotational) {
-    if (iDof + 3 > Dofs.Num()) {
+  int32 DofIndex = 0;
+  auto ConvertVector = [&](bool bRotational) {
+    if (DofIndex + 3 > Dofs.Num()) {
       return;
     }
-    const FVector converted =
-        VectorConverter(FVector(Dofs[iDof], Dofs[iDof + 1], Dofs[iDof + 2]), bRotational);
-    Dofs[iDof] = converted.X;
-    Dofs[iDof + 1] = converted.Y;
-    Dofs[iDof + 2] = converted.Z;
+    const FVector Converted = VectorConverter(
+        FVector(Dofs[DofIndex], Dofs[DofIndex + 1], Dofs[DofIndex + 2]), bRotational);
+    Dofs[DofIndex] = Converted.X;
+    Dofs[DofIndex + 1] = Converted.Y;
+    Dofs[DofIndex + 2] = Converted.Z;
   };
-  for (int32 iJoint = 0; iJoint < Types.Num(); ++iJoint) {
-    switch (Types[iJoint]) {
+  for (int32 JointIndex = 0; JointIndex < Types.Num(); ++JointIndex) {
+    switch (Types[JointIndex]) {
       case EMochiArticulatedJointType::Free:
-        if (iJoint == 0 && !bIncludesRootFreeDofs) {
+        if (JointIndex == 0 && !bIncludesRootFreeDofs) {
           break;
         }
-        convertVector(false);
-        iDof += 3;
-        convertVector(true);
-        iDof += 3;
+        ConvertVector(false);
+        DofIndex += 3;
+        ConvertVector(true);
+        DofIndex += 3;
         break;
       case EMochiArticulatedJointType::Spherical:
-        convertVector(true);
-        iDof += 3;
+        ConvertVector(true);
+        DofIndex += 3;
         break;
       case EMochiArticulatedJointType::Prismatic:
       case EMochiArticulatedJointType::Revolute:
-        iDof += 1;
+        DofIndex += 1;
         break;
       case EMochiArticulatedJointType::Hard:
       case EMochiArticulatedJointType::Cycle:
@@ -147,13 +147,13 @@ int32 GetArticulatedJointNumDofs(EMochiArticulatedJointType Type) {
 //------------------------------------------------------------------------------
 
 mochi::ArticulatedJointFrictionParams FMochiArticulatedJointFriction::ToMochi() const {
-  mochi::ArticulatedJointFrictionParams params;
-  params.viscous = Viscous;
-  params.coulomb = Coulomb;
-  params.preslidingDisplacement = PreslidingDisplacement;
-  params.stictionExtra = StictionExtra;
-  params.stribeckVel = StribeckVel;
-  return params;
+  mochi::ArticulatedJointFrictionParams Params;
+  Params.viscous = Viscous;
+  Params.coulomb = Coulomb;
+  Params.preslidingDisplacement = PreslidingDisplacement;
+  Params.stictionExtra = StictionExtra;
+  Params.stribeckVel = StribeckVel;
+  return Params;
 }
 
 void FMochiArticulatedJointFriction::FromMochi(const mochi::ArticulatedJointFrictionParams& Mochi) {
@@ -174,17 +174,17 @@ int32 FMochiArticulatedJoint::GetNumDofs() const {
 
 void FMochiArticulatedJoint::GetDofLimits(int32 DofIndex, double& OutLower, double& OutUpper)
     const {
-  constexpr double kInf = std::numeric_limits<double>::infinity();
-  OutLower = -kInf;
-  OutUpper = +kInf;
+  constexpr double Inf = std::numeric_limits<double>::infinity();
+  OutLower = -Inf;
+  OutUpper = +Inf;
   if (Type == EMochiArticulatedJointType::Prismatic ||
       Type == EMochiArticulatedJointType::Revolute) {
-    const FVector axis = Axis.GetSafeNormal();
+    const FVector NormalizedAxis = Axis.GetSafeNormal();
     if (bHasMinLimit) {
-      OutLower = FVector::DotProduct(MinLimit, axis);
+      OutLower = FVector::DotProduct(MinLimit, NormalizedAxis);
     }
     if (bHasMaxLimit) {
-      OutUpper = FVector::DotProduct(MaxLimit, axis);
+      OutUpper = FVector::DotProduct(MaxLimit, NormalizedAxis);
     }
   } else if (Type == EMochiArticulatedJointType::Spherical && DofIndex >= 0 && DofIndex < 3) {
     if (bHasMinLimit) {
@@ -202,41 +202,41 @@ void FMochiArticulatedJoint::GetDofLimits(int32 DofIndex, double& OutLower, doub
 
 mochi::ArticulatedJointParams FMochiArticulatedJoint::ToMochi(
     const FUnrealToMochiConverter& U2M) const {
-  const double sign = PseudovectorSign(Type, U2M.FlipsHandedness());
-  mochi::ArticulatedJointParams params;
-  params.name = TCHAR_TO_ANSI(*Name.ToString());
-  params.type = ::ToMochi(Type);
-  params.parentLinkFromJoint = U2M.TransformToMochi_RT(ParentLinkFromJoint);
+  const double Sign = PseudovectorSign(Type, U2M.FlipsHandedness());
+  mochi::ArticulatedJointParams Params;
+  Params.name = TCHAR_TO_ANSI(*Name.ToString());
+  Params.type = ::ToMochi(Type);
+  Params.parentLinkFromJoint = U2M.TransformToMochi_RT(ParentLinkFromJoint);
   if (Type == EMochiArticulatedJointType::Prismatic ||
       Type == EMochiArticulatedJointType::Revolute) {
-    params.axis = U2M.DirectionToMochi(sign * Axis);
+    Params.axis = U2M.DirectionToMochi(Sign * Axis);
   }
-  params.friction = Friction.ToMochi();
+  Params.friction = Friction.ToMochi();
   if (bOverrideInertia) {
-    params.inertia = Inertia;
+    Params.inertia = Inertia;
   }
   // Limits are joint-space quantities: change their basis like Axis but keep their units.
   bool bHasMin = bHasMinLimit;
-  FVector minLimit = ToFVector(U2M.DirectionToMochi(sign * MinLimit.BoundToCube(kHugeLimit)));
+  FVector MochiMinLimit = ToFVector(U2M.DirectionToMochi(Sign * MinLimit.BoundToCube(HugeLimit)));
   bool bHasMax = bHasMaxLimit;
-  FVector maxLimit = ToFVector(U2M.DirectionToMochi(sign * MaxLimit.BoundToCube(kHugeLimit)));
+  FVector MochiMaxLimit = ToFVector(U2M.DirectionToMochi(Sign * MaxLimit.BoundToCube(HugeLimit)));
   if (Type == EMochiArticulatedJointType::Spherical) {
     SortSphericalLimits(
-        ToFVector(U2M.DirectionToMochi(sign * FVector::OneVector)),
+        ToFVector(U2M.DirectionToMochi(Sign * FVector::OneVector)),
         bHasMin,
-        minLimit,
+        MochiMinLimit,
         bHasMax,
-        maxLimit);
+        MochiMaxLimit);
   }
   if (bHasMin) {
-    params.minLimit = ToReal3(minLimit);
+    Params.minLimit = ToReal3(MochiMinLimit);
   }
   if (bHasMax) {
-    params.maxLimit = ToReal3(maxLimit);
+    Params.maxLimit = ToReal3(MochiMaxLimit);
   }
-  params.limitStiffness = LimitStiffness;
-  params.limitDamping = LimitDamping;
-  return params;
+  Params.limitStiffness = LimitStiffness;
+  Params.limitDamping = LimitDamping;
+  return Params;
 }
 
 void FMochiArticulatedJoint::FromMochi(
@@ -244,22 +244,22 @@ void FMochiArticulatedJoint::FromMochi(
     const FMochiToUnrealConverter& M2U) {
   Name = FName(UTF8_TO_TCHAR(Mochi.name.c_str()));
   Type = ::ToUnreal(Mochi.type);
-  const double sign = PseudovectorSign(Type, M2U.FlipsHandedness());
+  const double Sign = PseudovectorSign(Type, M2U.FlipsHandedness());
   ParentLinkFromJoint = M2U.TransformToUnreal(Mochi.parentLinkFromJoint);
   if (Type == EMochiArticulatedJointType::Prismatic ||
       Type == EMochiArticulatedJointType::Revolute) {
-    Axis = sign * M2U.DirectionToUnreal(Mochi.axis);
+    Axis = Sign * M2U.DirectionToUnreal(Mochi.axis);
   }
   Friction.FromMochi(Mochi.friction);
   bOverrideInertia = Mochi.inertia.has_value();
   Inertia = Mochi.inertia.value_or(0);
   bHasMinLimit = Mochi.minLimit.has_value();
-  MinLimit = bHasMinLimit ? sign * M2U.DirectionToUnreal(*Mochi.minLimit) : FVector::ZeroVector;
+  MinLimit = bHasMinLimit ? Sign * M2U.DirectionToUnreal(*Mochi.minLimit) : FVector::ZeroVector;
   bHasMaxLimit = Mochi.maxLimit.has_value();
-  MaxLimit = bHasMaxLimit ? sign * M2U.DirectionToUnreal(*Mochi.maxLimit) : FVector::ZeroVector;
+  MaxLimit = bHasMaxLimit ? Sign * M2U.DirectionToUnreal(*Mochi.maxLimit) : FVector::ZeroVector;
   if (Type == EMochiArticulatedJointType::Spherical) {
     SortSphericalLimits(
-        sign * M2U.DirectionToUnreal(ToReal3(FVector::OneVector)),
+        Sign * M2U.DirectionToUnreal(ToReal3(FVector::OneVector)),
         bHasMinLimit,
         MinLimit,
         bHasMaxLimit,
@@ -287,32 +287,32 @@ mochi::ArticulatedLinkParams FMochiArticulatedLink::ToMochi(
     FName DefaultLayer,
     const mochi::ContactParams& DefaultContact,
     bool bInHasGravity) const {
-  mochi::ArticulatedLinkParams params;
-  params.name = TCHAR_TO_ANSI(*Name.ToString());
-  params.parentLink = ParentLink;
-  params.parentJointFromLink = U2M.TransformToMochi_RT(ParentJointFromLink);
-  params.shape = InShape;
-  params.layer = TCHAR_TO_ANSI(*(Layer.IsNone() ? DefaultLayer : Layer).ToString());
-  params.colliderType = ::ToMochi(ColliderType);
-  params.contact = ContactParams ? ContactParams->ToMochi() : DefaultContact;
-  params.hasGravity = bHasGravity && bInHasGravity;
+  mochi::ArticulatedLinkParams Params;
+  Params.name = TCHAR_TO_ANSI(*Name.ToString());
+  Params.parentLink = ParentLink;
+  Params.parentJointFromLink = U2M.TransformToMochi_RT(ParentJointFromLink);
+  Params.shape = InShape;
+  Params.layer = TCHAR_TO_ANSI(*(Layer.IsNone() ? DefaultLayer : Layer).ToString());
+  Params.colliderType = ::ToMochi(ColliderType);
+  Params.contact = ContactParams ? ContactParams->ToMochi() : DefaultContact;
+  Params.hasGravity = bHasGravity && bInHasGravity;
   if (bOverrideDensity) {
-    params.density = Density;
+    Params.density = Density;
   }
   if (bOverrideMass) {
-    params.mass = Mass;
+    Params.mass = Mass;
   }
   if (bOverrideCenterOfMass) {
-    params.centerOfMass = U2M.TranslationToMochi(CenterOfMass);
+    Params.centerOfMass = U2M.TranslationToMochi(CenterOfMass);
   }
   if (bOverrideMomentOfInertia) {
-    params.momentOfInertia = U2M.InertiaToMochi(MomentOfInertia);
+    Params.momentOfInertia = U2M.InertiaToMochi(MomentOfInertia);
   }
-  params.boundaryElementType = ::ToMochi(BoundaryElementType);
+  Params.boundaryElementType = ::ToMochi(BoundaryElementType);
   if (bEnableBoundarySubsampling) {
-    params.boundarySubsampling = ::ToMochi(BoundarySubsampling);
+    Params.boundarySubsampling = ::ToMochi(BoundarySubsampling);
   }
-  return params;
+  return Params;
 }
 
 void FMochiArticulatedLink::FromMochi(
@@ -354,23 +354,23 @@ mochi::ArticulatedSkinParams FMochiArticulatedSkin::ToMochi(
     mochi::ShapeHandle InShape,
     FName DefaultLayer,
     const mochi::ContactParams& DefaultContact) const {
-  mochi::ArticulatedSkinParams params;
-  params.shape = InShape;
-  params.layer = TCHAR_TO_ANSI(*(Layer.IsNone() ? DefaultLayer : Layer).ToString());
-  params.contact = ContactParams ? ContactParams->ToMochi() : DefaultContact;
-  params.boundaryElementType = ::ToMochi(BoundaryElementType);
+  mochi::ArticulatedSkinParams Params;
+  Params.shape = InShape;
+  Params.layer = TCHAR_TO_ANSI(*(Layer.IsNone() ? DefaultLayer : Layer).ToString());
+  Params.contact = ContactParams ? ContactParams->ToMochi() : DefaultContact;
+  Params.boundaryElementType = ::ToMochi(BoundaryElementType);
   if (bEnableBoundarySubsampling) {
-    params.boundarySubsampling = ::ToMochi(BoundarySubsampling);
+    Params.boundarySubsampling = ::ToMochi(BoundarySubsampling);
   }
   if (bOverrideNonCollidingLinks) {
-    mochi::DynamicArray<mochi::DynamicString> links;
-    links.reserve(NonCollidingLinks.Num());
-    for (const FName& link : NonCollidingLinks) {
-      links.push_back(mochi::DynamicString(TCHAR_TO_ANSI(*link.ToString())));
+    mochi::DynamicArray<mochi::DynamicString> Links;
+    Links.reserve(NonCollidingLinks.Num());
+    for (const FName& Link : NonCollidingLinks) {
+      Links.push_back(mochi::DynamicString(TCHAR_TO_ANSI(*Link.ToString())));
     }
-    params.nonCollidingLinks = std::move(links);
+    Params.nonCollidingLinks = std::move(Links);
   }
-  return params;
+  return Params;
 }
 
 void FMochiArticulatedSkin::FromMochi(const mochi::prefab::ArticulatedSkinPrefab& Mochi) {
@@ -382,8 +382,8 @@ void FMochiArticulatedSkin::FromMochi(const mochi::prefab::ArticulatedSkinPrefab
   bOverrideNonCollidingLinks = Mochi.nonCollidingLinks.has_value();
   NonCollidingLinks.Reset();
   if (bOverrideNonCollidingLinks) {
-    for (const mochi::DynamicString& link : *Mochi.nonCollidingLinks) {
-      NonCollidingLinks.Add(FName(UTF8_TO_TCHAR(link.c_str())));
+    for (const mochi::DynamicString& Link : *Mochi.nonCollidingLinks) {
+      NonCollidingLinks.Add(FName(UTF8_TO_TCHAR(Link.c_str())));
     }
   }
 }
@@ -394,12 +394,12 @@ void FMochiArticulatedSkin::FromMochi(const mochi::prefab::ArticulatedSkinPrefab
 
 mochi::ArticulatedCycleJointParams FMochiArticulatedCycleJoint::ToMochi(
     const FUnrealToMochiConverter& U2M) const {
-  mochi::ArticulatedCycleJointParams params;
-  params.parentLink = ParentLink;
-  params.childLink = ChildLink;
-  params.jointFromChildLink = U2M.TransformToMochi_RT(JointFromChildLink);
-  params.stiffness = Stiffness;
-  return params;
+  mochi::ArticulatedCycleJointParams Params;
+  Params.parentLink = ParentLink;
+  Params.childLink = ChildLink;
+  Params.jointFromChildLink = U2M.TransformToMochi_RT(JointFromChildLink);
+  Params.stiffness = Stiffness;
+  return Params;
 }
 
 void FMochiArticulatedCycleJoint::FromMochi(
@@ -422,16 +422,16 @@ void FMochiJointControlGains::PopulateTable(
     float Damping) {
   Table->RowStruct = FMochiJointControlGains::StaticStruct();
   Table->EmptyTable();
-  for (int32 iJoint = 0; iJoint < Joints.Num(); ++iJoint) {
-    const FMochiArticulatedJoint& joint = Joints[iJoint];
+  for (int32 JointIndex = 0; JointIndex < Joints.Num(); ++JointIndex) {
+    const FMochiArticulatedJoint& Joint = Joints[JointIndex];
     // The root joint's DOFs belong to the base, which has separate gains.
-    const bool bRootFree = iJoint == 0 && joint.Type == EMochiArticulatedJointType::Free;
-    if (joint.GetNumDofs() > 0 && !bRootFree) {
-      FMochiJointControlGains gains;
-      gains.JointName = joint.Name;
-      gains.Stiffness = Stiffness;
-      gains.Damping = Damping;
-      Table->AddRow(joint.Name, gains);
+    const bool bRootFree = JointIndex == 0 && Joint.Type == EMochiArticulatedJointType::Free;
+    if (Joint.GetNumDofs() > 0 && !bRootFree) {
+      FMochiJointControlGains Gains;
+      Gains.JointName = Joint.Name;
+      Gains.Stiffness = Stiffness;
+      Gains.Damping = Damping;
+      Table->AddRow(Joint.Name, Gains);
     }
   }
 }
@@ -445,10 +445,10 @@ void ConvertArticulatedDofsToMochi(
     bool bIncludesRootFreeDofs,
     TArrayView<double> Dofs,
     const FUnrealToMochiConverter& U2M) {
-  const double sign = U2M.FlipsHandedness() ? -1.0 : 1.0;
+  const double Sign = U2M.FlipsHandedness() ? -1.0 : 1.0;
   ConvertArticulatedDofs(
       Types, bIncludesRootFreeDofs, Dofs, [&](const FVector& V, bool bRotational) -> FVector {
-        return ToFVector(U2M.DirectionToMochi(bRotational ? sign * V : V));
+        return ToFVector(U2M.DirectionToMochi(bRotational ? Sign * V : V));
       });
 }
 
@@ -457,11 +457,11 @@ void ConvertArticulatedDofsToUnreal(
     bool bIncludesRootFreeDofs,
     TArrayView<double> Dofs,
     const FMochiToUnrealConverter& M2U) {
-  const double sign = M2U.FlipsHandedness() ? -1.0 : 1.0;
+  const double Sign = M2U.FlipsHandedness() ? -1.0 : 1.0;
   ConvertArticulatedDofs(
       Types, bIncludesRootFreeDofs, Dofs, [&](const FVector& V, bool bRotational) {
-        const FVector converted = M2U.DirectionToUnreal(ToReal3(V));
-        return bRotational ? sign * converted : converted;
+        const FVector Converted = M2U.DirectionToUnreal(ToReal3(V));
+        return bRotational ? Sign * Converted : Converted;
       });
 }
 
@@ -475,15 +475,15 @@ bool ConvertArticulatedDofIndex(
     TConvertDofs ConvertDofs,
     int32& OutDof,
     double& OutSign) {
-  TArray<double> dofs;
-  dofs.SetNumZeroed(GetArticulatedJointNumDofs(Type));
-  if (!dofs.IsValidIndex(Dof)) {
+  TArray<double> Dofs;
+  Dofs.SetNumZeroed(GetArticulatedJointNumDofs(Type));
+  if (!Dofs.IsValidIndex(Dof)) {
     return false;
   }
-  dofs[Dof] = 1.0;
-  ConvertDofs(MakeArrayView(dofs));
-  OutDof = dofs.IndexOfByPredicate([](double Value) { return !FMath::IsNearlyZero(Value); });
-  OutSign = dofs[OutDof] > 0 ? 1.0 : -1.0;
+  Dofs[Dof] = 1.0;
+  ConvertDofs(MakeArrayView(Dofs));
+  OutDof = Dofs.IndexOfByPredicate([](double Value) { return !FMath::IsNearlyZero(Value); });
+  OutSign = Dofs[OutDof] > 0 ? 1.0 : -1.0;
   return true;
 }
 
@@ -495,15 +495,15 @@ void ConvertRotationBounds(
     TConvertDofs ConvertDofs,
     FVector& OutMin,
     FVector& OutMax) {
-  double a[3] = {Min.X, Min.Y, Min.Z};
-  double b[3] = {Max.X, Max.Y, Max.Z};
-  ConvertDofs(MakeArrayView(a));
-  ConvertDofs(MakeArrayView(b));
-  OutMin = FVector(a[0], a[1], a[2]).ComponentMin(FVector(b[0], b[1], b[2]));
-  OutMax = FVector(a[0], a[1], a[2]).ComponentMax(FVector(b[0], b[1], b[2]));
+  double A[3] = {Min.X, Min.Y, Min.Z};
+  double B[3] = {Max.X, Max.Y, Max.Z};
+  ConvertDofs(MakeArrayView(A));
+  ConvertDofs(MakeArrayView(B));
+  OutMin = FVector(A[0], A[1], A[2]).ComponentMin(FVector(B[0], B[1], B[2]));
+  OutMax = FVector(A[0], A[1], A[2]).ComponentMax(FVector(B[0], B[1], B[2]));
 }
 
-constexpr EMochiArticulatedJointType kSpherical = EMochiArticulatedJointType::Spherical;
+constexpr EMochiArticulatedJointType Spherical = EMochiArticulatedJointType::Spherical;
 
 } // namespace
 
@@ -545,18 +545,18 @@ void ConvertRotationBoundsToMochi(
     const FUnrealToMochiConverter& U2M,
     mochi::Real3& OutMin,
     mochi::Real3& OutMax) {
-  FVector min;
-  FVector max;
+  FVector ConvertedMin;
+  FVector ConvertedMax;
   ConvertRotationBounds(
       Min,
       Max,
       [&](TArrayView<double> Dofs) {
-        ConvertArticulatedDofsToMochi(MakeArrayView(&kSpherical, 1), true, Dofs, U2M);
+        ConvertArticulatedDofsToMochi(MakeArrayView(&Spherical, 1), true, Dofs, U2M);
       },
-      min,
-      max);
-  OutMin = ToReal3(min);
-  OutMax = ToReal3(max);
+      ConvertedMin,
+      ConvertedMax);
+  OutMin = ToReal3(ConvertedMin);
+  OutMax = ToReal3(ConvertedMax);
 }
 
 void ConvertRotationBoundsToUnreal(
@@ -569,7 +569,7 @@ void ConvertRotationBoundsToUnreal(
       ToFVector(Min),
       ToFVector(Max),
       [&](TArrayView<double> Dofs) {
-        ConvertArticulatedDofsToUnreal(MakeArrayView(&kSpherical, 1), true, Dofs, M2U);
+        ConvertArticulatedDofsToUnreal(MakeArrayView(&Spherical, 1), true, Dofs, M2U);
       },
       OutMin,
       OutMax);

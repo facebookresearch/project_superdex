@@ -45,7 +45,7 @@ UObject* UMochiH5Factory::FactoryCreateFile(
     FFeedbackContext* Warn,
     bool& bOutOperationCanceled) {
   bOutOperationCanceled = false;
-  UMochiModel* model = NewObject<UMochiModel>(InParent, UMochiModel::StaticClass(), InName, Flags);
+  UMochiModel* Model = NewObject<UMochiModel>(InParent, UMochiModel::StaticClass(), InName, Flags);
   if (Filename.EndsWith(TEXT(".mochi.h5")) || Filename.EndsWith(TEXT(".mochi.json")) ||
       Filename.EndsWith(TEXT(".mochi.hdf5"))) {
     // Mochi assets were created for a right-handed coordinate system with:
@@ -61,15 +61,15 @@ UObject* UMochiH5Factory::FactoryCreateFile(
     // Set a default import transform to accomplish this conversion.
     // In the editor, you will see euler angles of (-90.0, 0.0, 90.0) degrees.
     //
-    model->SetImportTransform(
+    Model->SetImportTransform(
         FTransform{
             FRotator{UE::Math::TQuat<double>(0.5, 0.5, 0.5, 0.5)}, // rotation
             FVector{0.0, 0.0, 0.0}, // translation
             FVector{1.0, 1.0, -1.0} // scale
         });
   }
-  if (model->ImportFromFilename(Filename)) {
-    return model;
+  if (Model->ImportFromFilename(Filename)) {
+    return Model;
   }
 
   // ImportFromFilename rejects anything that is not a single Mochi shape/model (e.g. an articulated
@@ -92,43 +92,43 @@ UReimportMochiH5Factory::UReimportMochiH5Factory(const FObjectInitializer& Objec
 }
 
 bool UReimportMochiH5Factory::CanReimport(UObject* Obj, TArray<FString>& OutFilenames) {
-  UMochiModel* model = Cast<UMochiModel>(Obj);
-  if (!model || !model->AssetImportData) {
+  UMochiModel* Model = Cast<UMochiModel>(Obj);
+  if (!Model || !Model->AssetImportData) {
     return false;
   }
-  model->AssetImportData->ExtractFilenames(OutFilenames);
+  Model->AssetImportData->ExtractFilenames(OutFilenames);
   return true;
 }
 
 void UReimportMochiH5Factory::SetReimportPaths(
     UObject* Obj,
     const TArray<FString>& NewReimportPaths) {
-  UMochiModel* model = Cast<UMochiModel>(Obj);
-  if (model && model->AssetImportData && NewReimportPaths.Num() > 0) {
-    model->AssetImportData->UpdateFilenameOnly(NewReimportPaths[0]);
+  UMochiModel* Model = Cast<UMochiModel>(Obj);
+  if (Model && Model->AssetImportData && NewReimportPaths.Num() > 0) {
+    Model->AssetImportData->UpdateFilenameOnly(NewReimportPaths[0]);
   }
 }
 
 EReimportResult::Type UReimportMochiH5Factory::Reimport(UObject* Obj) {
-  UMochiModel* model = Cast<UMochiModel>(Obj);
-  if (!model) {
+  UMochiModel* Model = Cast<UMochiModel>(Obj);
+  if (!Model) {
     return EReimportResult::Failed;
   }
-  const FString sourcePath = model->GetSourceFilePath();
-  if (sourcePath.IsEmpty() || !FPaths::FileExists(sourcePath)) {
+  const FString SourcePath = Model->GetSourceFilePath();
+  if (SourcePath.IsEmpty() || !FPaths::FileExists(SourcePath)) {
     UE_LOG(
         LogMochiPhysicsEditor,
         Error,
         TEXT("[%hs] Source file not found for %s: [%s]"),
         __FUNCTION__,
-        *model->GetName(),
-        *sourcePath);
+        *Model->GetName(),
+        *SourcePath);
     return EReimportResult::Failed;
   }
-  if (!model->ImportFromFilename(sourcePath)) {
+  if (!Model->ImportFromFilename(SourcePath)) {
     return EReimportResult::Failed;
   }
-  model->MarkPackageDirty();
+  Model->MarkPackageDirty();
   return EReimportResult::Succeeded;
 }
 
@@ -161,32 +161,32 @@ bool UMochiSoftMeshActorFactory::CanCreateActorFrom(
 void UMochiSoftMeshActorFactory::PostSpawnActor(UObject* Asset, AActor* NewActor) {
   Super::PostSpawnActor(Asset, NewActor);
 
-  UMochiModel* mochiModel = CastChecked<UMochiModel>(Asset);
-  AMochiSoftMeshActor* mochiSoftMeshActor = CastChecked<AMochiSoftMeshActor>(NewActor);
-  UMochiSoftMeshComponent* mochiSoftMeshComponent = mochiSoftMeshActor->GetMochiSoftMeshComponent();
-  check(mochiSoftMeshComponent);
-  mochiSoftMeshComponent->UnregisterComponent();
-  mochiSoftMeshComponent->SetMochiModel(mochiModel);
-  mochiSoftMeshComponent->RegisterComponent();
+  UMochiModel* MochiModel = CastChecked<UMochiModel>(Asset);
+  AMochiSoftMeshActor* MochiSoftMeshActor = CastChecked<AMochiSoftMeshActor>(NewActor);
+  UMochiSoftMeshComponent* MochiSoftMeshComponent = MochiSoftMeshActor->GetMochiSoftMeshComponent();
+  check(MochiSoftMeshComponent);
+  MochiSoftMeshComponent->UnregisterComponent();
+  MochiSoftMeshComponent->SetMochiModel(MochiModel);
+  MochiSoftMeshComponent->RegisterComponent();
 }
 
 UObject* UMochiSoftMeshActorFactory::GetAssetFromActorInstance(AActor* Instance) {
   check(Instance->IsA(NewActorClass));
-  AMochiSoftMeshActor* mochiSoftMeshActor = CastChecked<AMochiSoftMeshActor>(Instance);
+  AMochiSoftMeshActor* MochiSoftMeshActor = CastChecked<AMochiSoftMeshActor>(Instance);
 
-  check(mochiSoftMeshActor->GetMochiSoftMeshComponent());
-  return mochiSoftMeshActor->GetMochiSoftMeshComponent()->GetMochiModel();
+  check(MochiSoftMeshActor->GetMochiSoftMeshComponent());
+  return MochiSoftMeshActor->GetMochiSoftMeshComponent()->GetMochiModel();
 }
 
 #if UE_VERSION_OLDER_THAN(5, 4, 0)
 void UMochiSoftMeshActorFactory::PostCreateBlueprint(UObject* Asset, AActor* CDO) {
   if (Asset != nullptr && CDO != nullptr) {
-    UMochiModel* mochiModel = CastChecked<UMochiModel>(Asset);
-    AMochiSoftMeshActor* mochiSoftMeshActor = CastChecked<AMochiSoftMeshActor>(CDO);
-    UMochiSoftMeshComponent* mochiSoftMeshComponent =
-        mochiSoftMeshActor->GetMochiSoftMeshComponent();
+    UMochiModel* MochiModel = CastChecked<UMochiModel>(Asset);
+    AMochiSoftMeshActor* MochiSoftMeshActor = CastChecked<AMochiSoftMeshActor>(CDO);
+    UMochiSoftMeshComponent* MochiSoftMeshComponent =
+        MochiSoftMeshActor->GetMochiSoftMeshComponent();
 
-    mochiSoftMeshComponent->SetMochiModel(mochiModel);
+    MochiSoftMeshComponent->SetMochiModel(MochiModel);
   }
 }
 #endif
@@ -222,15 +222,15 @@ bool UMochiArticulationActorFactory::CanCreateActorFrom(
 
 void UMochiArticulationActorFactory::PostSpawnActor(UObject* Asset, AActor* NewActor) {
   Super::PostSpawnActor(Asset, NewActor);
-  UMochiArticulation* articulation = CastChecked<UMochiArticulation>(Asset);
-  AMochiArticulationActor* actor = CastChecked<AMochiArticulationActor>(NewActor);
-  actor->SetArticulationAsset(articulation);
+  UMochiArticulation* Articulation = CastChecked<UMochiArticulation>(Asset);
+  AMochiArticulationActor* Actor = CastChecked<AMochiArticulationActor>(NewActor);
+  Actor->SetArticulationAsset(Articulation);
 }
 
 UObject* UMochiArticulationActorFactory::GetAssetFromActorInstance(AActor* Instance) {
   check(Instance->IsA(NewActorClass));
-  AMochiArticulationActor* actor = CastChecked<AMochiArticulationActor>(Instance);
-  return actor->GetArticulationAsset();
+  AMochiArticulationActor* Actor = CastChecked<AMochiArticulationActor>(Instance);
+  return Actor->GetArticulationAsset();
 }
 
 FQuat UMochiArticulationActorFactory::AlignObjectToSurfaceNormal(

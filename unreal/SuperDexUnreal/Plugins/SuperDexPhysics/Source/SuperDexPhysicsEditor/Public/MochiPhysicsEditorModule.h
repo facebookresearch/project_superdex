@@ -59,9 +59,9 @@ class FMochiPhysicsEditorModule : public IModuleInterface {
  private:
   template <typename TAssetActions>
   void RegisterAssetActions(IAssetTools& AssetTools, EAssetTypeCategories::Type Category) {
-    const TSharedRef<IAssetTypeActions> actions = MakeShareable(new TAssetActions(Category));
-    AssetTools.RegisterAssetTypeActions(actions);
-    RegisteredAssetTypeActions.Add(actions);
+    const TSharedRef<IAssetTypeActions> Actions = MakeShareable(new TAssetActions(Category));
+    AssetTools.RegisterAssetTypeActions(Actions);
+    RegisteredAssetTypeActions.Add(Actions);
   }
   void RegisterAssetContextMenu();
 

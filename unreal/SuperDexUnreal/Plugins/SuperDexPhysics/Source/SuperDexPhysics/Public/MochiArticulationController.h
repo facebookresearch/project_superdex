@@ -66,7 +66,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationController : public UObject {
       const FMochiArticulationState& State,
       double MochiDeltaTime,
       FMochiArticulationControllerCommands& OutCommands,
-      mochi::Scene* mochiScene);
+      mochi::Scene* MochiScene);
 
   // Tick the controller on the game thread. Called in TickComponent and is
   // thread safe with Control.

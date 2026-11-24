@@ -115,7 +115,7 @@ class SMochiModelEditorViewport : public SAssetEditorViewport,
   bool bUseOrthographic = false;
 
   // 5.0f is the minimum FOV you can set
-  float kOrthographicFOV = 5.0f;
+  float OrthographicFOV = 5.0f;
   // this is the same as the default FOV for most UE cameras
-  float kPerspectiveFOV = 90.0f;
+  float PerspectiveFOV = 90.0f;
 };

@@ -85,7 +85,7 @@ class SUPERDEXPHYSICS_API UMochiActorObject : public UObject {
       FString ActorName,
       const FTransform& WorldFromLocal,
       const UStaticMesh* Model,
-      const ETriangularMeshCollisionSource collisionSource,
+      const ETriangularMeshCollisionSource CollisionSource,
       const UMochiMaterialParams* MaterialParams,
       const UMochiContactParams* ContactParams,
       EMochiColliderType ColliderType,

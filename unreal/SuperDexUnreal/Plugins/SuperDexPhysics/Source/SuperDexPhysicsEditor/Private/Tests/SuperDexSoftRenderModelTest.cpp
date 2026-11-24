@@ -34,10 +34,10 @@ using SuperDexSoftRenderModel::FRenderModelAttributes;
 using SuperDexSoftRenderModel::ReadRenderModelAttributes;
 
 // Two triangles over four vertices, listed out of vertex order.
-const TArray<float> kPositions = {0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0};
-const TArray<uint32> kIndices = {0, 2, 1, 0, 3, 2};
-const TArray<float> kUVs = {0, 0, 1, 0, 1, 1, 0, 1};
-const TArray<float> kColors = {1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 0.5f};
+const TArray<float> Positions = {0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0};
+const TArray<uint32> Indices = {0, 2, 1, 0, 3, 2};
+const TArray<float> UVs = {0, 0, 1, 0, 1, 1, 0, 1};
+const TArray<float> Colors = {1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 0.5f};
 
 TArray<FVector2f> ExpectedUVs() {
   return {{0, 0}, {1, 0}, {1, 1}, {0, 1}};
@@ -49,14 +49,14 @@ TArray<FLinearColor> ExpectedColors() {
 
 // The visual mesh a Studio Model Editor would embed for the test GLB.
 FMochiMeshData MakeVisualMesh() {
-  FMochiMeshData mesh;
-  mesh.NodesPerElement = 3;
-  mesh.Coordinates = kPositions;
-  for (const uint32 index : kIndices) {
-    mesh.Connectivity.Add(static_cast<int32>(index));
+  FMochiMeshData Mesh;
+  Mesh.NodesPerElement = 3;
+  Mesh.Coordinates = Positions;
+  for (const uint32 Index : Indices) {
+    Mesh.Connectivity.Add(static_cast<int32>(Index));
   }
-  mesh.Skinning.Emplace();
-  return mesh;
+  Mesh.Skinning.Emplace();
+  return Mesh;
 }
 
 template <typename T>
@@ -70,25 +70,25 @@ void AppendUint32(TArray<uint8>& Out, uint32 Value) {
 
 // A binary glTF container holding Json and Bin, each chunk padded to four bytes.
 TArray<uint8> AssembleGlb(const FString& Json, TArray<uint8> Bin) {
-  const FTCHARToUTF8 utf8(*Json);
-  TArray<uint8> json(reinterpret_cast<const uint8*>(utf8.Get()), utf8.Length());
-  while (json.Num() % 4 != 0) {
-    json.Add(' ');
+  const FTCHARToUTF8 Utf8(*Json);
+  TArray<uint8> JsonBytes(reinterpret_cast<const uint8*>(Utf8.Get()), Utf8.Length());
+  while (JsonBytes.Num() % 4 != 0) {
+    JsonBytes.Add(' ');
   }
   while (Bin.Num() % 4 != 0) {
     Bin.Add(0);
   }
-  TArray<uint8> glb;
-  AppendUint32(glb, 0x46546C67); // "glTF"
-  AppendUint32(glb, 2);
-  AppendUint32(glb, 12 + 8 + json.Num() + 8 + Bin.Num());
-  AppendUint32(glb, json.Num());
-  AppendUint32(glb, 0x4E4F534A); // "JSON"
-  glb.Append(json);
-  AppendUint32(glb, Bin.Num());
-  AppendUint32(glb, 0x004E4942); // "BIN"
-  glb.Append(Bin);
-  return glb;
+  TArray<uint8> Glb;
+  AppendUint32(Glb, 0x46546C67); // "glTF"
+  AppendUint32(Glb, 2);
+  AppendUint32(Glb, 12 + 8 + JsonBytes.Num() + 8 + Bin.Num());
+  AppendUint32(Glb, JsonBytes.Num());
+  AppendUint32(Glb, 0x4E4F534A); // "JSON"
+  Glb.Append(JsonBytes);
+  AppendUint32(Glb, Bin.Num());
+  AppendUint32(Glb, 0x004E4942); // "BIN"
+  Glb.Append(Bin);
+  return Glb;
 }
 
 // Writes a GLB of the test triangles, with a constant material, to a file named Name and returns
@@ -99,17 +99,17 @@ FString WriteTestGlb(
     const TCHAR* Attributes,
     int32 NumPrimitives = 1,
     const TCHAR* Extensions = TEXT("")) {
-  TArray<uint8> bin;
-  AppendBytes(bin, kPositions);
-  AppendBytes(bin, kIndices);
-  AppendBytes(bin, kUVs);
-  AppendBytes(bin, kColors);
+  TArray<uint8> Bin;
+  AppendBytes(Bin, Positions);
+  AppendBytes(Bin, Indices);
+  AppendBytes(Bin, UVs);
+  AppendBytes(Bin, Colors);
 
-  const FString primitive = FString::Printf(
+  const FString Primitive = FString::Printf(
       TEXT(R"({"attributes":{"POSITION":0%s},"indices":1,"material":0})"), Attributes);
-  TArray<FString> primitives;
-  primitives.Init(primitive, NumPrimitives);
-  const FString json = FString::Printf(
+  TArray<FString> Primitives;
+  Primitives.Init(Primitive, NumPrimitives);
+  const FString Json = FString::Printf(
       TEXT(
           R"({"asset":{"version":"2.0"},%s"scene":0,"scenes":[{"nodes":[0]}],)"
           R"("nodes":[{"mesh":0}],"meshes":[{"primitives":[%s]}],)"
@@ -126,41 +126,41 @@ FString WriteTestGlb(
           R"({"buffer":0,"byteOffset":104,"byteLength":64}],)"
           R"("buffers":[{"byteLength":%d}]})"),
       Extensions,
-      *FString::Join(primitives, TEXT(",")),
-      bin.Num());
+      *FString::Join(Primitives, TEXT(",")),
+      Bin.Num());
 
-  const FString path =
+  const FString Path =
       FPaths::Combine(FPaths::AutomationTransientDir(), TEXT("SoftRenderModel"), Name) +
       TEXT(".glb");
-  FFileHelper::SaveArrayToFile(AssembleGlb(json, MoveTemp(bin)), *path);
-  return path;
+  FFileHelper::SaveArrayToFile(AssembleGlb(Json, MoveTemp(Bin)), *Path);
+  return Path;
 }
 
 // The attributes of a test GLB, which must be readable. Deletes the GLB.
 FRenderModelAttributes ReadTestGlb(FAutomationTestBase& Test, const FString& Path) {
-  FRenderModelAttributes attributes;
-  FString reason;
-  const bool bRead = ReadRenderModelAttributes(Path, attributes, reason);
+  FRenderModelAttributes Attributes;
+  FString Reason;
+  const bool bRead = ReadRenderModelAttributes(Path, Attributes, Reason);
   IFileManager::Get().Delete(*Path);
-  Test.TestTrue(*FString::Printf(TEXT("Read (%s)"), *reason), bRead);
-  return attributes;
+  Test.TestTrue(*FString::Printf(TEXT("Read (%s)"), *Reason), bRead);
+  return Attributes;
 }
 
 // The reason a test GLB can't be read. Deletes the GLB.
 FString ReadFailureReason(FAutomationTestBase& Test, const FString& Path) {
-  FRenderModelAttributes attributes;
-  FString reason;
-  const bool bRead = ReadRenderModelAttributes(Path, attributes, reason);
+  FRenderModelAttributes Attributes;
+  FString Reason;
+  const bool bRead = ReadRenderModelAttributes(Path, Attributes, Reason);
   IFileManager::Get().Delete(*Path);
   Test.TestFalse(TEXT("Read"), bRead);
-  return reason;
+  return Reason;
 }
 
 FRenderModelAttributes MakeAttributes() {
-  FRenderModelAttributes attributes;
-  attributes.NumVertices = 4;
-  attributes.TriangleIndices = kIndices;
-  return attributes;
+  FRenderModelAttributes Attributes;
+  Attributes.NumVertices = 4;
+  Attributes.TriangleIndices = Indices;
+  return Attributes;
 }
 
 } // namespace
@@ -171,14 +171,14 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     SUPERDEX_SOFT_RENDER_MODEL_TEST_FLAGS)
 
 bool FSuperDexSoftRenderModelReadsAccessorOrderTest::RunTest(const FString& Parameters) {
-  const FRenderModelAttributes attributes = ReadTestGlb(
+  const FRenderModelAttributes Attributes = ReadTestGlb(
       *this, WriteTestGlb(TEXT("UVsAndColors"), TEXT(R"(,"TEXCOORD_0":2,"COLOR_0":3)")));
-  TestEqual(TEXT("Vertex count"), attributes.NumVertices, 4);
-  TestTrue(TEXT("Triangle indices"), attributes.TriangleIndices == kIndices);
-  TestTrue(TEXT("UVs"), attributes.UVs == ExpectedUVs());
-  TestTrue(TEXT("Colors"), attributes.Colors == ExpectedColors());
-  const FMochiMeshData visualMesh = MakeVisualMesh();
-  TestEqual(TEXT("Reason"), CheckSoftRenderModelLink(attributes, &visualMesh), FString());
+  TestEqual(TEXT("Vertex count"), Attributes.NumVertices, 4);
+  TestTrue(TEXT("Triangle indices"), Attributes.TriangleIndices == Indices);
+  TestTrue(TEXT("UVs"), Attributes.UVs == ExpectedUVs());
+  TestTrue(TEXT("Colors"), Attributes.Colors == ExpectedColors());
+  const FMochiMeshData VisualMesh = MakeVisualMesh();
+  TestEqual(TEXT("Reason"), CheckSoftRenderModelLink(Attributes, &VisualMesh), FString());
   return true;
 }
 
@@ -188,12 +188,12 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     SUPERDEX_SOFT_RENDER_MODEL_TEST_FLAGS)
 
 bool FSuperDexSoftRenderModelNoUVsTest::RunTest(const FString& Parameters) {
-  const FRenderModelAttributes attributes =
+  const FRenderModelAttributes Attributes =
       ReadTestGlb(*this, WriteTestGlb(TEXT("NoUVs"), TEXT("")));
-  TestTrue(TEXT("No UVs"), attributes.UVs.IsEmpty());
-  TestTrue(TEXT("No colors"), attributes.Colors.IsEmpty());
-  const FMochiMeshData visualMesh = MakeVisualMesh();
-  TestEqual(TEXT("Reason"), CheckSoftRenderModelLink(attributes, &visualMesh), FString());
+  TestTrue(TEXT("No UVs"), Attributes.UVs.IsEmpty());
+  TestTrue(TEXT("No colors"), Attributes.Colors.IsEmpty());
+  const FMochiMeshData VisualMesh = MakeVisualMesh();
+  TestEqual(TEXT("Reason"), CheckSoftRenderModelLink(Attributes, &VisualMesh), FString());
   return true;
 }
 
@@ -203,10 +203,10 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     SUPERDEX_SOFT_RENDER_MODEL_TEST_FLAGS)
 
 bool FSuperDexSoftRenderModelColorsWithoutUVsTest::RunTest(const FString& Parameters) {
-  const FRenderModelAttributes attributes =
+  const FRenderModelAttributes Attributes =
       ReadTestGlb(*this, WriteTestGlb(TEXT("ColorsOnly"), TEXT(R"(,"COLOR_0":3)")));
-  TestTrue(TEXT("No UVs"), attributes.UVs.IsEmpty());
-  TestTrue(TEXT("Colors"), attributes.Colors == ExpectedColors());
+  TestTrue(TEXT("No UVs"), Attributes.UVs.IsEmpty());
+  TestTrue(TEXT("Colors"), Attributes.Colors == ExpectedColors());
   return true;
 }
 
@@ -216,10 +216,10 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     SUPERDEX_SOFT_RENDER_MODEL_TEST_FLAGS)
 
 bool FSuperDexSoftRenderModelMultiplePrimitivesTest::RunTest(const FString& Parameters) {
-  const FString reason = ReadFailureReason(*this, WriteTestGlb(TEXT("TwoPrimitives"), TEXT(""), 2));
+  const FString Reason = ReadFailureReason(*this, WriteTestGlb(TEXT("TwoPrimitives"), TEXT(""), 2));
   TestTrue(
-      *FString::Printf(TEXT("Reason: %s"), *reason),
-      reason.Contains(TEXT("exactly one mesh primitive")));
+      *FString::Printf(TEXT("Reason: %s"), *Reason),
+      Reason.Contains(TEXT("exactly one mesh primitive")));
   return true;
 }
 
@@ -229,9 +229,9 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     SUPERDEX_SOFT_RENDER_MODEL_TEST_FLAGS)
 
 bool FSuperDexSoftRenderModelSecondUVSetTest::RunTest(const FString& Parameters) {
-  const FString reason = ReadFailureReason(
+  const FString Reason = ReadFailureReason(
       *this, WriteTestGlb(TEXT("SecondUVSet"), TEXT(R"(,"TEXCOORD_0":2,"TEXCOORD_1":2)")));
-  TestTrue(*FString::Printf(TEXT("Reason: %s"), *reason), reason.Contains(TEXT("TEXCOORD_0")));
+  TestTrue(*FString::Printf(TEXT("Reason: %s"), *Reason), Reason.Contains(TEXT("TEXCOORD_0")));
   return true;
 }
 
@@ -241,7 +241,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     SUPERDEX_SOFT_RENDER_MODEL_TEST_FLAGS)
 
 bool FSuperDexSoftRenderModelMeshoptTest::RunTest(const FString& Parameters) {
-  const FString reason = ReadFailureReason(
+  const FString Reason = ReadFailureReason(
       *this,
       WriteTestGlb(
           TEXT("RequiredMeshopt"),
@@ -251,8 +251,8 @@ bool FSuperDexSoftRenderModelMeshoptTest::RunTest(const FString& Parameters) {
               R"("extensionsUsed":["EXT_meshopt_compression"],)"
               R"("extensionsRequired":["EXT_meshopt_compression"],)")));
   TestTrue(
-      *FString::Printf(TEXT("Reason: %s"), *reason),
-      reason.Contains(TEXT("EXT_meshopt_compression")));
+      *FString::Printf(TEXT("Reason: %s"), *Reason),
+      Reason.Contains(TEXT("EXT_meshopt_compression")));
   return true;
 }
 
@@ -262,8 +262,8 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     SUPERDEX_SOFT_RENDER_MODEL_TEST_FLAGS)
 
 bool FSuperDexSoftRenderModelNoVisualMeshTest::RunTest(const FString& Parameters) {
-  const FString reason = CheckSoftRenderModelLink(MakeAttributes(), nullptr);
-  TestTrue(*FString::Printf(TEXT("Reason: %s"), *reason), reason.Contains(TEXT("no visual mesh")));
+  const FString Reason = CheckSoftRenderModelLink(MakeAttributes(), nullptr);
+  TestTrue(*FString::Printf(TEXT("Reason: %s"), *Reason), Reason.Contains(TEXT("no visual mesh")));
   return true;
 }
 
@@ -273,12 +273,12 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     SUPERDEX_SOFT_RENDER_MODEL_TEST_FLAGS)
 
 bool FSuperDexSoftRenderModelNoSkinningTest::RunTest(const FString& Parameters) {
-  FMochiMeshData visualMesh = MakeVisualMesh();
-  visualMesh.Skinning.Reset();
-  const FString reason = CheckSoftRenderModelLink(MakeAttributes(), &visualMesh);
+  FMochiMeshData VisualMesh = MakeVisualMesh();
+  VisualMesh.Skinning.Reset();
+  const FString Reason = CheckSoftRenderModelLink(MakeAttributes(), &VisualMesh);
   TestTrue(
-      *FString::Printf(TEXT("Reason: %s"), *reason),
-      reason.Contains(TEXT("no deformation embedding")));
+      *FString::Printf(TEXT("Reason: %s"), *Reason),
+      Reason.Contains(TEXT("no deformation embedding")));
   return true;
 }
 
@@ -288,13 +288,13 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     SUPERDEX_SOFT_RENDER_MODEL_TEST_FLAGS)
 
 bool FSuperDexSoftRenderModelVertexCountTest::RunTest(const FString& Parameters) {
-  FRenderModelAttributes attributes = MakeAttributes();
-  attributes.NumVertices = 3;
-  const FMochiMeshData visualMesh = MakeVisualMesh();
-  const FString reason = CheckSoftRenderModelLink(attributes, &visualMesh);
+  FRenderModelAttributes Attributes = MakeAttributes();
+  Attributes.NumVertices = 3;
+  const FMochiMeshData VisualMesh = MakeVisualMesh();
+  const FString Reason = CheckSoftRenderModelLink(Attributes, &VisualMesh);
   TestTrue(
-      *FString::Printf(TEXT("Reason: %s"), *reason),
-      reason.Contains(TEXT("has 3 vertices, but the visual mesh has 4")));
+      *FString::Printf(TEXT("Reason: %s"), *Reason),
+      Reason.Contains(TEXT("has 3 vertices, but the visual mesh has 4")));
   return true;
 }
 
@@ -304,17 +304,17 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     SUPERDEX_SOFT_RENDER_MODEL_TEST_FLAGS)
 
 bool FSuperDexSoftRenderModelAttributeCountTest::RunTest(const FString& Parameters) {
-  const FMochiMeshData visualMesh = MakeVisualMesh();
-  FRenderModelAttributes shortUVs = MakeAttributes();
-  shortUVs.UVs = ExpectedUVs();
-  shortUVs.UVs.Pop();
-  FRenderModelAttributes shortColors = MakeAttributes();
-  shortColors.Colors = ExpectedColors();
-  shortColors.Colors.Pop();
-  for (const FRenderModelAttributes& attributes : {shortUVs, shortColors}) {
-    const FString reason = CheckSoftRenderModelLink(attributes, &visualMesh);
+  const FMochiMeshData VisualMesh = MakeVisualMesh();
+  FRenderModelAttributes ShortUVs = MakeAttributes();
+  ShortUVs.UVs = ExpectedUVs();
+  ShortUVs.UVs.Pop();
+  FRenderModelAttributes ShortColors = MakeAttributes();
+  ShortColors.Colors = ExpectedColors();
+  ShortColors.Colors.Pop();
+  for (const FRenderModelAttributes& Attributes : {ShortUVs, ShortColors}) {
+    const FString Reason = CheckSoftRenderModelLink(Attributes, &VisualMesh);
     TestTrue(
-        *FString::Printf(TEXT("Reason: %s"), *reason), reason.Contains(TEXT("UV or color count")));
+        *FString::Printf(TEXT("Reason: %s"), *Reason), Reason.Contains(TEXT("UV or color count")));
   }
   return true;
 }
@@ -325,11 +325,11 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     SUPERDEX_SOFT_RENDER_MODEL_TEST_FLAGS)
 
 bool FSuperDexSoftRenderModelTrianglesTest::RunTest(const FString& Parameters) {
-  FRenderModelAttributes attributes = MakeAttributes();
-  attributes.TriangleIndices[5] = 1;
-  const FMochiMeshData visualMesh = MakeVisualMesh();
-  const FString reason = CheckSoftRenderModelLink(attributes, &visualMesh);
-  TestTrue(*FString::Printf(TEXT("Reason: %s"), *reason), reason.Contains(TEXT("triangles")));
+  FRenderModelAttributes Attributes = MakeAttributes();
+  Attributes.TriangleIndices[5] = 1;
+  const FMochiMeshData VisualMesh = MakeVisualMesh();
+  const FString Reason = CheckSoftRenderModelLink(Attributes, &VisualMesh);
+  TestTrue(*FString::Printf(TEXT("Reason: %s"), *Reason), Reason.Contains(TEXT("triangles")));
   return true;
 }
 

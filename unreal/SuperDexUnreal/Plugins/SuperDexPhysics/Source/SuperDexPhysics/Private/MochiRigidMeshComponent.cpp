@@ -201,21 +201,21 @@ void UMochiRigidMeshComponent::BeginPlay() {
 
   // freeze degrees of freedom
   if (MochiActorObject && (FreezeConstraints != (uint8)EMochiFreezeConstraint::None)) {
-    mochi::ActorHandle handle = MochiActorObject->GetMochiActorHandle();
+    mochi::ActorHandle Handle = MochiActorObject->GetMochiActorHandle();
     MochiActorObject->GetMochiScene()->QueueOrExecuteActorCommand(
-        handle, [this](mochi::Actor* Actor) {
-          mochi::ErrorLog e{};
-          std::vector<int> dofIndices;
-          dofIndices.reserve(6);
-          for (int iDof = 0; iDof < 6; ++iDof) {
-            const uint8 dofFlag = 1 << iDof;
-            if ((FreezeConstraints & dofFlag) == dofFlag) {
-              dofIndices.push_back(iDof);
+        Handle, [this](mochi::Actor* Actor) {
+          mochi::ErrorLog E{};
+          std::vector<int> DofIndices;
+          DofIndices.reserve(6);
+          for (int DofIndex = 0; DofIndex < 6; ++DofIndex) {
+            const uint8 DofFlag = 1 << DofIndex;
+            if ((FreezeConstraints & DofFlag) == DofFlag) {
+              DofIndices.push_back(DofIndex);
             }
           }
-          std::vector<mochi::real> dofValues(dofIndices.size(), 0.0f);
-          Actor->GetDofValues(dofIndices, dofValues, e);
-          Actor->AddBoundaryConditionDofsWorld(dofIndices, dofValues, e);
+          std::vector<mochi::real> DofValues(DofIndices.size(), 0.0f);
+          Actor->GetDofValues(DofIndices, DofValues, E);
+          Actor->AddBoundaryConditionDofsWorld(DofIndices, DofValues, E);
         });
   }
 }
@@ -233,52 +233,52 @@ void UMochiRigidMeshComponent::SetWorldLocationAndRotationMochiWithDynamics(
     const FVector& NewLocation,
     const FRotator& NewRotation) {
   FTransform NewTransform(NewRotation, NewLocation);
-  mochi::ActorHandle handle = GetMochiActor()->GetMochiActorHandle();
-  FUnrealToMochiConverter u2m;
+  mochi::ActorHandle Handle = GetMochiActor()->GetMochiActorHandle();
+  FUnrealToMochiConverter U2m;
   GetMochiActor()->GetMochiScene()->QueueOrExecuteActorCommand(
-      handle, [NewTransform, u2m](mochi::Actor* Actor) {
-        std::array<int, 6> dofIndices{0, 1, 2, 3, 4, 5};
-        std::array<mochi::real, 6> dofValues{};
-        mochi::ErrorLog e{};
+      Handle, [NewTransform, U2m](mochi::Actor* Actor) {
+        std::array<int, 6> DofIndices{0, 1, 2, 3, 4, 5};
+        std::array<mochi::real, 6> DofValues{};
+        mochi::ErrorLog E{};
 
         // Get the degrees of freedom value
-        Actor->GetDofValues(dofIndices, dofValues, e);
-        mochi::Real3 dofWorldPosition{dofValues[0], dofValues[1], dofValues[2]};
+        Actor->GetDofValues(DofIndices, DofValues, E);
+        mochi::Real3 DofWorldPosition{DofValues[0], DofValues[1], DofValues[2]};
 
         // Get Root Transform Information
-        mochi::TransformRT root = Actor->GetRootTransform();
-        mochi::Real3 rootWorldPosition = root.GetTranslation();
+        mochi::TransformRT Root = Actor->GetRootTransform();
+        mochi::Real3 RootWorldPosition = Root.GetTranslation();
 
         // The dof transform is about the center of mass.
         // The root transform is about the origin of the local space.
         // So the position of the center of mass in world space is merely
         // the dof translation or the root translation + the local com coordinates rotated to world
         // space.
-        mochi::Real3 comLocalPos =
-            root.TransformDirectionInverse(dofWorldPosition - rootWorldPosition);
+        mochi::Real3 ComLocalPos =
+            Root.TransformDirectionInverse(DofWorldPosition - RootWorldPosition);
 
         // Get the new transform
         mochi::TransformRT NewTransform_Mochi =
-            u2m.TransformToMochi_RT(NewTransform); // world from local of grip
+            U2m.TransformToMochi_RT(NewTransform); // world from local of grip
         mochi::TransformRT NewTransformInverse_Mochi =
-            mochi::Invert(u2m.TransformToMochi_RT(NewTransform));
-        mochi::Real3 translation = NewTransform_Mochi.GetTranslation();
-        mochi::Real3 rotationVec = NewTransform_Mochi.GetRotation().ToRotationVector();
+            mochi::Invert(U2m.TransformToMochi_RT(NewTransform));
+        mochi::Real3 Translation = NewTransform_Mochi.GetTranslation();
+        mochi::Real3 RotationVec = NewTransform_Mochi.GetRotation().ToRotationVector();
 
         // Get new dof
-        mochi::Real3 translationDof =
-            translation + NewTransform_Mochi.TransformDirection(comLocalPos);
-        mochi::Real3 rotationDof = rotationVec;
+        mochi::Real3 TranslationDof =
+            Translation + NewTransform_Mochi.TransformDirection(ComLocalPos);
+        mochi::Real3 RotationDof = RotationVec;
 
         for (int i = 0; i < 3; ++i) {
-          dofValues[i] = translationDof[i];
+          DofValues[i] = TranslationDof[i];
         }
         for (int i = 3; i < 6; ++i) {
-          dofValues[i] = rotationDof[i - 3];
+          DofValues[i] = RotationDof[i - 3];
         }
 
         Actor->ClearBoundaryConditions();
-        Actor->AddBoundaryConditionDofsWorld(dofIndices, dofValues, e);
+        Actor->AddBoundaryConditionDofsWorld(DofIndices, DofValues, E);
       });
 }
 
@@ -335,20 +335,20 @@ void UMochiRigidMeshComponent::PostEditChangeProperty(FPropertyChangedEvent& Pro
           LogMochiPhysics, Display, TEXT("  - package name = %s"), *Model->GetPackage()->GetName());
 
       // Attempt to auto-assign corresponding static mesh asset if it exists
-      FString staticMeshPath = Model->GetPackage()->GetName() + TEXT("_StaticMesh");
-      if (UEditorAssetLibrary::DoesAssetExist(staticMeshPath)) {
-        FAssetData data = UEditorAssetLibrary::FindAssetData(staticMeshPath);
+      FString StaticMeshPath = Model->GetPackage()->GetName() + TEXT("_StaticMesh");
+      if (UEditorAssetLibrary::DoesAssetExist(StaticMeshPath)) {
+        FAssetData Data = UEditorAssetLibrary::FindAssetData(StaticMeshPath);
         // If it's indeed a static mesh, try to assign
-        if (UStaticMesh* mesh = Cast<UStaticMesh>(data.GetAsset())) {
-          SetStaticMesh(mesh);
+        if (UStaticMesh* Mesh = Cast<UStaticMesh>(Data.GetAsset())) {
+          SetStaticMesh(Mesh);
         }
       }
     }
   }
   // check static mesh CPU access
   if (bUseStaticMeshAsMochiModel) {
-    if (TObjectPtr<UStaticMesh> mesh = GetStaticMesh()) {
-      if (!mesh->bAllowCPUAccess) {
+    if (TObjectPtr<UStaticMesh> Mesh = GetStaticMesh()) {
+      if (!Mesh->bAllowCPUAccess) {
         UE_LOG(
             LogMochiPhysics,
             Warning,

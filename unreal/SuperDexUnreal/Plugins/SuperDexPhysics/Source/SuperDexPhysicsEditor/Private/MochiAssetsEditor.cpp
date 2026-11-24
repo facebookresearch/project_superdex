@@ -28,16 +28,16 @@ FSuperDexClassIconStyle::FSuperDexClassIconStyle(
     : FSlateStyleSet(StyleSetName) {
   const FVector2D Icon16x16(16.f, 16.f);
   const FVector2D Icon64x64(64.f, 64.f);
-  const FString baseDir = IPluginManager::Get().FindPlugin(PluginName)->GetBaseDir();
-  SetContentRoot(FPaths::Combine(baseDir, TEXT("Resources")));
+  const FString BaseDir = IPluginManager::Get().FindPlugin(PluginName)->GetBaseDir();
+  SetContentRoot(FPaths::Combine(BaseDir, TEXT("Resources")));
 
-  for (const TCHAR* className : ClassNames) {
-    Set(*FString::Printf(TEXT("ClassIcon.%s"), className),
+  for (const TCHAR* ClassName : ClassNames) {
+    Set(*FString::Printf(TEXT("ClassIcon.%s"), ClassName),
         new FSlateVectorImageBrush(
-            RootToContentDir(FString::Printf(TEXT("%s_16.svg"), className)), Icon16x16));
-    Set(*FString::Printf(TEXT("ClassThumbnail.%s"), className),
+            RootToContentDir(FString::Printf(TEXT("%s_16.svg"), ClassName)), Icon16x16));
+    Set(*FString::Printf(TEXT("ClassThumbnail.%s"), ClassName),
         new FSlateVectorImageBrush(
-            RootToContentDir(FString::Printf(TEXT("%s_64.svg"), className)), Icon64x64));
+            RootToContentDir(FString::Printf(TEXT("%s_64.svg"), ClassName)), Icon64x64));
   }
 
   FSlateStyleRegistry::RegisterSlateStyle(*this);
@@ -48,7 +48,7 @@ FSuperDexClassIconStyle::~FSuperDexClassIconStyle() {
 }
 
 // Class names without their U prefix.
-static const TCHAR* const kMochiPhysicsClassIcons[] = {
+static const TCHAR* const MochiPhysicsClassIcons[] = {
     TEXT("MochiModel"),
     TEXT("MochiMaterialParams"),
     TEXT("MochiShellMaterialParams"),
@@ -65,7 +65,7 @@ FMochiPhysicsEditorStyle::FMochiPhysicsEditorStyle()
     : FSuperDexClassIconStyle(
           TEXT("MochiPhysicsEditorStyle"),
           TEXT("SuperDexPhysics"),
-          kMochiPhysicsClassIcons) {}
+          MochiPhysicsClassIcons) {}
 
 //------------------------------------------------------------------------------
 // MOCHI MODEL
@@ -93,9 +93,9 @@ void FMochiModelAssetActions::OpenAssetEditor(
     TSharedPtr<class IToolkitHost> EditWithinLevelEditor) {
   UE_LOG(LogMochiPhysicsEditor, Display, TEXT("[FMochiModelAssetActions] OpenAssetEditor()"));
   if (InObjects.Num() > 0) {
-    if (UMochiModel* object = Cast<UMochiModel>(InObjects[0])) {
+    if (UMochiModel* Object = Cast<UMochiModel>(InObjects[0])) {
       FMochiModelEditorToolkit::CreateEditor(
-          EToolkitMode::Standalone, EditWithinLevelEditor, object);
+          EToolkitMode::Standalone, EditWithinLevelEditor, Object);
     }
   }
 }

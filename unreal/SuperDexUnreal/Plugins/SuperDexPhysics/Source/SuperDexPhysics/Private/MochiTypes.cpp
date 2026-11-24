@@ -63,19 +63,19 @@ void FMochiRomParams::FromMochi(const mochi::experimental::RomParams& Mochi) {
 }
 
 mochi::experimental::RomParams FMochiRomParams::ToMochi() const {
-  mochi::experimental::RomParams params;
-  params.source = std::string(TCHAR_TO_ANSI(*Source));
+  mochi::experimental::RomParams Params;
+  Params.source = std::string(TCHAR_TO_ANSI(*Source));
   if (HyperReductionStrategy == EMochiHyperReductionStrategy::NoHyperReduction) {
-    params.hyperReduction = {};
+    Params.hyperReduction = {};
   } else if (
       HyperReductionStrategy ==
       EMochiHyperReductionStrategy::StaticHyperReductionUsingRandomSampling) {
-    params.hyperReduction = mochi::experimental::HyperReductionParams{
+    Params.hyperReduction = mochi::experimental::HyperReductionParams{
         mochi::experimental::SampleMeshInitRandomSampling{
             StepSizeForBoundaryElementsSelection, StepSizeForInteriorElementsSelection},
         {}};
   }
-  return params;
+  return Params;
 }
 
 mochi::Real6 FMochiShapeTargetTensor::ToMochi() const {
@@ -110,33 +110,33 @@ inline void ContactEventHandlerBehavior(
   // collect contacts and contacting components
   OutContactPoints.SetNum(0);
   OuContactingComponents.Reset();
-  for (const FMochiContactPoint& contact : NewContactPoints) {
+  for (const FMochiContactPoint& Contact : NewContactPoints) {
     // We can sometimes get null component pointers for some reason so we will remove them as they
     // make no sense and are untraceable
-    if (contact.OtherMochiComponent &&
-        (!bFilterSelfContacts || CallingMochiComponent != contact.OtherMochiComponent)) {
-      OutContactPoints.Add(contact);
-      OuContactingComponents.Add(contact.OtherMochiComponent);
+    if (Contact.OtherMochiComponent &&
+        (!bFilterSelfContacts || CallingMochiComponent != Contact.OtherMochiComponent)) {
+      OutContactPoints.Add(Contact);
+      OuContactingComponents.Add(Contact.OtherMochiComponent);
     }
   }
   // begin contact events
-  for (USceneComponent* const otherComp : OuContactingComponents) {
-    if (!OutPreviousContactingComponents.Contains(otherComp)) {
+  for (USceneComponent* const OtherComp : OuContactingComponents) {
+    if (!OutPreviousContactingComponents.Contains(OtherComp)) {
       // create temp array of contacts for only this component
-      thread_local TArray<FMochiContactPoint> beginContacts;
-      beginContacts.Reset();
-      for (FMochiContactPoint& contact : OutContactPoints) {
-        if (contact.OtherMochiComponent == otherComp) {
-          beginContacts.Add(contact);
+      thread_local TArray<FMochiContactPoint> BeginContacts;
+      BeginContacts.Reset();
+      for (FMochiContactPoint& Contact : OutContactPoints) {
+        if (Contact.OtherMochiComponent == OtherComp) {
+          BeginContacts.Add(Contact);
         }
       }
-      OnBeginContact(otherComp, beginContacts);
+      OnBeginContact(OtherComp, BeginContacts);
     }
   }
   // end contact events
-  for (USceneComponent* const otherComp : OutPreviousContactingComponents) {
-    if (!OuContactingComponents.Contains(otherComp)) {
-      OnEndContact(otherComp);
+  for (USceneComponent* const OtherComp : OutPreviousContactingComponents) {
+    if (!OuContactingComponents.Contains(OtherComp)) {
+      OnEndContact(OtherComp);
     }
   }
   // persistent contact event
@@ -189,36 +189,36 @@ void FMochiNestedContactEventHandler::Update(
   // sort and copy new points by nested name
   SortedContactPoints.Reset();
   // first we need to add previously observed nested names otherwise we'll never call EndContact
-  for (TPair<FName, TSet<USceneComponent*>>& pair : PreviousContactingComponents) {
-    SortedContactPoints.Add(pair.Key, {});
+  for (TPair<FName, TSet<USceneComponent*>>& Pair : PreviousContactingComponents) {
+    SortedContactPoints.Add(Pair.Key, {});
   }
-  for (const FMochiContactPoint& contact : NewContactPoints) {
-    SortedContactPoints.FindOrAdd(contact.NestedName).Add(contact);
+  for (const FMochiContactPoint& Contact : NewContactPoints) {
+    SortedContactPoints.FindOrAdd(Contact.NestedName).Add(Contact);
   }
-  for (TPair<FName, TArray<FMochiContactPoint>>& pair : SortedContactPoints) {
-    FName name = pair.Key;
-    TArray<FMochiContactPoint>& newContactPoints = pair.Value;
+  for (TPair<FName, TArray<FMochiContactPoint>>& Pair : SortedContactPoints) {
+    FName Name = Pair.Key;
+    TArray<FMochiContactPoint>& NestedContactPoints = Pair.Value;
     ContactEventHandlerBehavior(
         CallingMochiComponent,
-        ContactPoints.FindOrAdd(name),
-        ContactingComponents.FindOrAdd(name),
-        PreviousContactingComponents.FindOrAdd(name),
-        newContactPoints,
+        ContactPoints.FindOrAdd(Name),
+        ContactingComponents.FindOrAdd(Name),
+        PreviousContactingComponents.FindOrAdd(Name),
+        NestedContactPoints,
         bFilterSelfContacts,
         [&](USceneComponent* OtherMochiComponent, const TArray<FMochiContactPoint>& BeginContacts) {
           OnMochiComponentBeginNestedContact.Broadcast(
               CallingMochiComponent,
-              name,
+              Name,
               OtherMochiComponent->GetOwner(),
               OtherMochiComponent,
               BeginContacts);
         },
         [&](USceneComponent* OtherMochiComponent) {
           OnMochiComponentEndNestedContact.Broadcast(
-              CallingMochiComponent, name, OtherMochiComponent->GetOwner(), OtherMochiComponent);
+              CallingMochiComponent, Name, OtherMochiComponent->GetOwner(), OtherMochiComponent);
         },
         [&](const TArray<FMochiContactPoint>& PersistContacts) {
-          OnMochiComponentNestedContact.Broadcast(CallingMochiComponent, name, PersistContacts);
+          OnMochiComponentNestedContact.Broadcast(CallingMochiComponent, Name, PersistContacts);
         });
   }
 }

@@ -56,11 +56,11 @@ class FConstraintActorFinder {
 
   // Finds the actor Name names, or sets Error.
   bool Find(const mochi::DynamicString& Name, FConstraintActor& OutActor) {
-    TArray<FString> segments;
-    ToFString(Name).ParseIntoArray(segments, TEXT("/"));
+    TArray<FString> Segments;
+    ToFString(Name).ParseIntoArray(Segments, TEXT("/"));
     OutActor = {};
     Error = FString::Printf(TEXT("names %s, which the prefab does not have"), *ToFString(Name));
-    return !segments.IsEmpty() && FindIn(Prefab, SourcePath, segments, 0, OutActor);
+    return !Segments.IsEmpty() && FindIn(Prefab, SourcePath, Segments, 0, OutActor);
   }
 
   FString Error;
@@ -72,54 +72,54 @@ class FConstraintActorFinder {
       const TArray<FString>& Segments,
       int Index,
       FConstraintActor& OutActor) {
-    const FString& name = Segments[Index];
+    const FString& SegmentName = Segments[Index];
     const bool bLast = Index == Segments.Num() - 1;
     // Appends the component an actor or nested prefab of In was imported as. Its name is made
     // unique only against the names of the other components, so it must not collide with them.
-    auto appendComponent = [&](const FString& Name) {
-      const FString component = SuperDexImportUtils::SanitizeForComponentName(Name);
-      if (CountComponentsNamed(In, InSourcePath, component) > 1) {
+    auto AppendComponent = [&](const FString& Name) {
+      const FString Component = SuperDexImportUtils::SanitizeForComponentName(Name);
+      if (CountComponentsNamed(In, InSourcePath, Component) > 1) {
         Error = FString::Printf(
             TEXT("names %s, whose component name %s is not unique in its prefab"),
             *Name,
-            *component);
+            *Component);
         return false;
       }
-      OutActor.Path = OutActor.Path.IsEmpty() ? component : OutActor.Path + TEXT("/") + component;
+      OutActor.Path = OutActor.Path.IsEmpty() ? Component : OutActor.Path + TEXT("/") + Component;
       return true;
     };
-    for (const mochi::prefab::RigidActorPrefab& actor : In.actors.rigid) {
-      if (bLast && ToFString(actor.name) == name) {
-        OutActor.ShapeToActor = GetShapeToActor(actor, M2U);
-        return appendComponent(name);
+    for (const mochi::prefab::RigidActorPrefab& Actor : In.actors.rigid) {
+      if (bLast && ToFString(Actor.name) == SegmentName) {
+        OutActor.ShapeToActor = GetShapeToActor(Actor, M2U);
+        return AppendComponent(SegmentName);
       }
     }
-    for (const mochi::prefab::SoftActorPrefab& actor : In.actors.soft) {
-      if (bLast && ToFString(actor.name) == name) {
-        OutActor.ShapeToActor = GetShapeToActor(actor, M2U);
-        return appendComponent(name);
+    for (const mochi::prefab::SoftActorPrefab& Actor : In.actors.soft) {
+      if (bLast && ToFString(Actor.name) == SegmentName) {
+        OutActor.ShapeToActor = GetShapeToActor(Actor, M2U);
+        return AppendComponent(SegmentName);
       }
     }
-    for (const mochi::prefab::RodActorPrefab& actor : In.actors.rod) {
-      if (bLast && ToFString(actor.name) == name) {
-        OutActor.ShapeToActor = GetShapeToActor(actor, M2U);
-        return appendComponent(name);
+    for (const mochi::prefab::RodActorPrefab& Actor : In.actors.rod) {
+      if (bLast && ToFString(Actor.name) == SegmentName) {
+        OutActor.ShapeToActor = GetShapeToActor(Actor, M2U);
+        return AppendComponent(SegmentName);
       }
     }
-    for (const mochi::prefab::ArticulatedActorPrefab& actor : In.actors.articulated) {
-      if (ToFString(actor.name) != name || Index < Segments.Num() - 2) {
+    for (const mochi::prefab::ArticulatedActorPrefab& Actor : In.actors.articulated) {
+      if (ToFString(Actor.name) != SegmentName || Index < Segments.Num() - 2) {
         continue;
       }
-      OutActor.Articulated = &actor;
-      if (!appendComponent(name)) {
+      OutActor.Articulated = &Actor;
+      if (!AppendComponent(SegmentName)) {
         return false;
       }
       if (bLast) {
         return true;
       }
       // Links keep their names in the articulation asset.
-      for (int i = 0; i < static_cast<int>(actor.links.size()); ++i) {
-        if (ToFString(actor.links[i].name) == Segments[Index + 1]) {
+      for (int i = 0; i < static_cast<int>(Actor.links.size()); ++i) {
+        if (ToFString(Actor.links[i].name) == Segments[Index + 1]) {
           OutActor.Link = i;
           OutActor.Path += TEXT("/") + Segments[Index + 1];
           return true;
@@ -127,27 +127,27 @@ class FConstraintActorFinder {
       }
       return false;
     }
-    for (const mochi::prefab::PrefabReference& reference : In.prefabs) {
+    for (const mochi::prefab::PrefabReference& Reference : In.prefabs) {
       // Mochi gives the actors of an unnamed nested prefab no namespace, while the importer names
       // its component after the prefab.
-      const bool bNamed = !reference.name.empty();
-      if (bNamed && (bLast || ToFString(reference.name) != name)) {
+      const bool bNamed = !Reference.name.empty();
+      if (bNamed && (bLast || ToFString(Reference.name) != SegmentName)) {
         continue;
       }
-      const FString path = ResolvePrefabPath(RootDir, InSourcePath, reference.path);
-      const mochi::prefab::ScenePrefab* nested = Load(path);
-      const FString pathBefore = OutActor.Path;
-      if (nested == nullptr ||
-          !appendComponent(bNamed ? name : FSuperDexPrefabImporter::GetPrefabName(path))) {
+      const FString Path = ResolvePrefabPath(RootDir, InSourcePath, Reference.path);
+      const mochi::prefab::ScenePrefab* Nested = Load(Path);
+      const FString PathBefore = OutActor.Path;
+      if (Nested == nullptr ||
+          !AppendComponent(bNamed ? SegmentName : FSuperDexPrefabImporter::GetPrefabName(Path))) {
         return false;
       }
-      if (FindIn(*nested, path, Segments, bNamed ? Index + 1 : Index, OutActor)) {
+      if (FindIn(*Nested, Path, Segments, bNamed ? Index + 1 : Index, OutActor)) {
         return true;
       }
       if (bNamed) {
         return false;
       }
-      OutActor.Path = pathBefore;
+      OutActor.Path = PathBefore;
     }
     return false;
   }
@@ -157,38 +157,38 @@ class FConstraintActorFinder {
       const mochi::prefab::ScenePrefab& In,
       const FString& InSourcePath,
       const FString& Component) {
-    int count = 0;
-    auto add = [&](const FString& Name) {
-      count += SuperDexImportUtils::SanitizeForComponentName(Name) == Component ? 1 : 0;
+    int Count = 0;
+    auto Add = [&](const FString& Name) {
+      Count += SuperDexImportUtils::SanitizeForComponentName(Name) == Component ? 1 : 0;
     };
-    for (const mochi::prefab::RigidActorPrefab& actor : In.actors.rigid) {
-      add(ToFString(actor.name));
+    for (const mochi::prefab::RigidActorPrefab& Actor : In.actors.rigid) {
+      Add(ToFString(Actor.name));
     }
-    for (const mochi::prefab::SoftActorPrefab& actor : In.actors.soft) {
-      add(ToFString(actor.name));
+    for (const mochi::prefab::SoftActorPrefab& Actor : In.actors.soft) {
+      Add(ToFString(Actor.name));
     }
-    for (const mochi::prefab::RodActorPrefab& actor : In.actors.rod) {
-      add(ToFString(actor.name));
+    for (const mochi::prefab::RodActorPrefab& Actor : In.actors.rod) {
+      Add(ToFString(Actor.name));
     }
-    for (const mochi::prefab::ArticulatedActorPrefab& actor : In.actors.articulated) {
-      add(ToFString(actor.name));
+    for (const mochi::prefab::ArticulatedActorPrefab& Actor : In.actors.articulated) {
+      Add(ToFString(Actor.name));
     }
-    for (const mochi::prefab::PrefabReference& reference : In.prefabs) {
-      add(reference.name.empty() ? FSuperDexPrefabImporter::GetPrefabName(
-                                       ResolvePrefabPath(RootDir, InSourcePath, reference.path))
-                                 : ToFString(reference.name));
+    for (const mochi::prefab::PrefabReference& Reference : In.prefabs) {
+      Add(Reference.name.empty() ? FSuperDexPrefabImporter::GetPrefabName(
+                                       ResolvePrefabPath(RootDir, InSourcePath, Reference.path))
+                                 : ToFString(Reference.name));
     }
-    return count;
+    return Count;
   }
 
   const mochi::prefab::ScenePrefab* Load(const FString& Path) {
-    if (const TUniquePtr<mochi::prefab::ScenePrefab>* loaded = Loaded.Find(Path)) {
-      return loaded->Get();
+    if (const TUniquePtr<mochi::prefab::ScenePrefab>* LoadedPrefab = Loaded.Find(Path)) {
+      return LoadedPrefab->Get();
     }
     bool bLoaded = false;
-    TUniquePtr<mochi::prefab::ScenePrefab> prefab =
+    TUniquePtr<mochi::prefab::ScenePrefab> PrefabData =
         MakeUnique<mochi::prefab::ScenePrefab>(LoadPrefab(Path, bLoaded));
-    return bLoaded ? Loaded.Add(Path, MoveTemp(prefab)).Get() : nullptr;
+    return bLoaded ? Loaded.Add(Path, MoveTemp(PrefabData)).Get() : nullptr;
   }
 
   const mochi::prefab::ScenePrefab& Prefab;
@@ -201,12 +201,12 @@ class FConstraintActorFinder {
 } // namespace
 
 void FSuperDexPrefabImporter::AddConstraints(FPrefabContext& Context, FOutput& Output) {
-  const mochi::prefab::ConstraintLists& constraints = Context.Data.constraints;
-  FConstraintActorFinder finder(Context.Data, Context.SourcePath, Context.RootDir, M2U);
-  int numSkipped = 0;
+  const mochi::prefab::ConstraintLists& Constraints = Context.Data.constraints;
+  FConstraintActorFinder Finder(Context.Data, Context.SourcePath, Context.RootDir, M2U);
+  int NumSkipped = 0;
   // Finds the actor Name names, or counts the constraint as skipped.
-  auto find = [&](const mochi::DynamicString& Name, FConstraintActor& OutActor) {
-    if (finder.Find(Name, OutActor)) {
+  auto Find = [&](const mochi::DynamicString& Name, FConstraintActor& OutActor) {
+    if (Finder.Find(Name, OutActor)) {
       return true;
     }
     UE_LOG(
@@ -214,35 +214,35 @@ void FSuperDexPrefabImporter::AddConstraints(FPrefabContext& Context, FOutput& O
         Warning,
         TEXT("[%s] A constraint %s; it was skipped."),
         *Context.PrefabName,
-        *finder.Error);
-    ++numSkipped;
+        *Finder.Error);
+    ++NumSkipped;
     return false;
   };
   // A position [m] in a prefab actor's frame, in the frame of the component it was imported as
   // [cm]. A rigid, soft or rod component sits at the actor's shape frame, scale included; a link
   // carries the articulation's scale, which Mochi applies to constraint positions too.
-  auto localPosition = [&](const FConstraintActor& Actor, const mochi::Real3& Position) {
-    const FVector position = M2U.TranslationToUnreal(Position);
-    return Actor.Articulated ? position * Actor.Articulated->scale
-                             : Actor.ShapeToActor.InverseTransformPosition(position);
+  auto LocalPosition = [&](const FConstraintActor& Actor, const mochi::Real3& Position) {
+    const FVector UnrealPosition = M2U.TranslationToUnreal(Position);
+    return Actor.Articulated ? UnrealPosition * Actor.Articulated->scale
+                             : Actor.ShapeToActor.InverseTransformPosition(UnrealPosition);
   };
-  auto localRotation = [&](const FConstraintActor& Actor, const mochi::Real3& RotationVector) {
-    const FQuat rotation =
+  auto LocalRotation = [&](const FConstraintActor& Actor, const mochi::Real3& RotationVector) {
+    const FQuat Rotation =
         M2U.RotationToUnreal(mochi::Quaternion::FromRotationVector(RotationVector));
-    return Actor.ShapeToActor.GetRotation().Inverse() * rotation;
+    return Actor.ShapeToActor.GetRotation().Inverse() * Rotation;
   };
-  auto distanceSaturation = [&](mochi::real Saturation) {
+  auto DistanceSaturation = [&](mochi::real Saturation) {
     return Saturation < 0 ? -1.0f : static_cast<float>(M2U.MeasureToUnreal(Saturation));
   };
-  auto angleSaturation = [](mochi::real Saturation) {
+  auto AngleSaturation = [](mochi::real Saturation) {
     return Saturation < 0 ? -1.0f : static_cast<float>(FMath::RadiansToDegrees(Saturation));
   };
   // Joint constraints.
-  auto addJoint = [&](const auto& C,
+  auto AddJoint = [&](const auto& C,
                       EMochiArticulationJointConstraintType Type,
                       const TCHAR* Label,
                       FConstraintActor& OutActor) -> UMochiArticulationJointConstraintComponent* {
-    if (!find(C.actorName, OutActor)) {
+    if (!Find(C.actorName, OutActor)) {
       return static_cast<UMochiArticulationJointConstraintComponent*>(nullptr);
     }
     if (!OutActor.Articulated || OutActor.Link >= 0 || C.jointIndex < 0 ||
@@ -256,156 +256,156 @@ void FSuperDexPrefabImporter::AddConstraints(FPrefabContext& Context, FOutput& O
           *Context.PrefabName,
           C.jointIndex,
           *ToFString(C.actorName));
-      ++numSkipped;
+      ++NumSkipped;
       return static_cast<UMochiArticulationJointConstraintComponent*>(nullptr);
     }
-    const mochi::prefab::ArticulatedJointPrefab& joint = OutActor.Articulated->joints[C.jointIndex];
-    const FString jointName = joint.name.empty() ? FString::Printf(TEXT("joint_%d"), C.jointIndex)
-                                                 : ToFString(joint.name);
-    UMochiArticulationJointConstraintComponent* component =
+    const mochi::prefab::ArticulatedJointPrefab& Joint = OutActor.Articulated->joints[C.jointIndex];
+    const FString JointName = Joint.name.empty() ? FString::Printf(TEXT("joint_%d"), C.jointIndex)
+                                                 : ToFString(Joint.name);
+    UMochiArticulationJointConstraintComponent* Component =
         CastChecked<UMochiArticulationJointConstraintComponent>(Output.AddActor(
             UMochiArticulationJointConstraintComponent::StaticClass(),
-            FString::Printf(TEXT("%s_%s"), Label, *jointName)));
-    component->Type = Type;
-    component->Articulation = OutActor.Path;
-    component->Joint = FName(jointName);
-    component->Stiffness = C.stiffness;
-    component->Damping = C.damping;
-    component->Saturation = C.saturation;
-    return component;
+            FString::Printf(TEXT("%s_%s"), Label, *JointName)));
+    Component->Type = Type;
+    Component->Articulation = OutActor.Path;
+    Component->Joint = FName(JointName);
+    Component->Stiffness = C.stiffness;
+    Component->Damping = C.damping;
+    Component->Saturation = C.saturation;
+    return Component;
   };
   // A single-DOF value in the joint units of the imported articulation, which carry its scale.
-  auto singleDof = [&](const auto& C,
+  auto SingleDof = [&](const auto& C,
                        const FConstraintActor& Actor,
                        int& OutDof,
                        double& OutSign,
                        double& OutScale) {
-    const mochi::prefab::ArticulatedJointPrefab& joint = Actor.Articulated->joints[C.jointIndex];
+    const mochi::prefab::ArticulatedJointPrefab& Joint = Actor.Articulated->joints[C.jointIndex];
     OutDof = C.dofIndex;
     OutSign = 1.0;
     ConvertArticulatedDofIndexToUnreal(
-        static_cast<EMochiArticulatedJointType>(joint.type), C.dofIndex, M2U, OutDof, OutSign);
-    const bool bTranslational = joint.type == mochi::ArticulatedJointType::Prismatic ||
-        (joint.type == mochi::ArticulatedJointType::Free && C.dofIndex < 3);
+        static_cast<EMochiArticulatedJointType>(Joint.type), C.dofIndex, M2U, OutDof, OutSign);
+    const bool bTranslational = Joint.type == mochi::ArticulatedJointType::Prismatic ||
+        (Joint.type == mochi::ArticulatedJointType::Free && C.dofIndex < 3);
     OutScale = bTranslational ? Actor.Articulated->scale : 1.0;
   };
-  for (const mochi::prefab::ArticulatedSingleDofTargetConstraintPrefab& c :
-       constraints.articulatedSingleDofTarget) {
-    FConstraintActor actor;
-    if (UMochiArticulationJointConstraintComponent* component = addJoint(
-            c, EMochiArticulationJointConstraintType::Target, TEXT("JointTarget"), actor)) {
-      double sign = 1.0;
-      double scale = 1.0;
-      singleDof(c, actor, component->Dof, sign, scale);
-      component->TargetValue = sign * scale * c.targetValue;
+  for (const mochi::prefab::ArticulatedSingleDofTargetConstraintPrefab& C :
+       Constraints.articulatedSingleDofTarget) {
+    FConstraintActor Actor;
+    if (UMochiArticulationJointConstraintComponent* Component = AddJoint(
+            C, EMochiArticulationJointConstraintType::Target, TEXT("JointTarget"), Actor)) {
+      double Sign = 1.0;
+      double Scale = 1.0;
+      SingleDof(C, Actor, Component->Dof, Sign, Scale);
+      Component->TargetValue = Sign * Scale * C.targetValue;
     }
   }
-  for (const mochi::prefab::ArticulatedSingleDofRangeConstraintPrefab& c :
-       constraints.articulatedSingleDofRange) {
-    FConstraintActor actor;
-    if (UMochiArticulationJointConstraintComponent* component =
-            addJoint(c, EMochiArticulationJointConstraintType::Range, TEXT("JointRange"), actor)) {
-      double sign = 1.0;
-      double scale = 1.0;
-      singleDof(c, actor, component->Dof, sign, scale);
-      component->MinValue = FMath::Min(sign * c.minValue, sign * c.maxValue) * scale;
-      component->MaxValue = FMath::Max(sign * c.minValue, sign * c.maxValue) * scale;
+  for (const mochi::prefab::ArticulatedSingleDofRangeConstraintPrefab& C :
+       Constraints.articulatedSingleDofRange) {
+    FConstraintActor Actor;
+    if (UMochiArticulationJointConstraintComponent* Component =
+            AddJoint(C, EMochiArticulationJointConstraintType::Range, TEXT("JointRange"), Actor)) {
+      double Sign = 1.0;
+      double Scale = 1.0;
+      SingleDof(C, Actor, Component->Dof, Sign, Scale);
+      Component->MinValue = FMath::Min(Sign * C.minValue, Sign * C.maxValue) * Scale;
+      Component->MaxValue = FMath::Max(Sign * C.minValue, Sign * C.maxValue) * Scale;
     }
   }
-  for (const mochi::prefab::Articulated3dRotationTargetConstraintPrefab& c :
-       constraints.articulated3dRotationTarget) {
-    FConstraintActor actor;
-    if (UMochiArticulationJointConstraintComponent* component = addJoint(
-            c,
+  for (const mochi::prefab::Articulated3dRotationTargetConstraintPrefab& C :
+       Constraints.articulated3dRotationTarget) {
+    FConstraintActor Actor;
+    if (UMochiArticulationJointConstraintComponent* Component = AddJoint(
+            C,
             EMochiArticulationJointConstraintType::RotationTarget,
             TEXT("JointRotationTarget"),
-            actor)) {
-      component->TargetRotation = M2U.RotationToUnreal(c.target).Rotator();
+            Actor)) {
+      Component->TargetRotation = M2U.RotationToUnreal(C.target).Rotator();
     }
   }
-  for (const mochi::prefab::Articulated3dRotationRangeConstraintPrefab& c :
-       constraints.articulated3dRotationRange) {
-    FConstraintActor actor;
-    if (UMochiArticulationJointConstraintComponent* component = addJoint(
-            c,
+  for (const mochi::prefab::Articulated3dRotationRangeConstraintPrefab& C :
+       Constraints.articulated3dRotationRange) {
+    FConstraintActor Actor;
+    if (UMochiArticulationJointConstraintComponent* Component = AddJoint(
+            C,
             EMochiArticulationJointConstraintType::RotationRange,
             TEXT("JointRotationRange"),
-            actor)) {
+            Actor)) {
       ConvertRotationBoundsToUnreal(
-          c.minValues, c.maxValues, M2U, component->MinRotation, component->MaxRotation);
+          C.minValues, C.maxValues, M2U, Component->MinRotation, Component->MaxRotation);
     }
   }
 
   // Joints between two rigid bodies.
-  auto addRigidJoint = [&](const auto& C,
+  auto AddRigidJoint = [&](const auto& C,
                            EMochiRigidJointConstraintType Type,
                            const TCHAR* Label,
                            FConstraintActor& OutA,
                            FConstraintActor& OutB) -> UMochiRigidJointConstraintComponent* {
-    if (!find(C.actorNameA, OutA) || !find(C.actorNameB, OutB)) {
+    if (!Find(C.actorNameA, OutA) || !Find(C.actorNameB, OutB)) {
       return static_cast<UMochiRigidJointConstraintComponent*>(nullptr);
     }
-    UMochiRigidJointConstraintComponent* component =
+    UMochiRigidJointConstraintComponent* Component =
         CastChecked<UMochiRigidJointConstraintComponent>(Output.AddActor(
             UMochiRigidJointConstraintComponent::StaticClass(),
             FString::Printf(
                 TEXT("%s_%s_%s"), Label, *ToFString(C.actorNameA), *ToFString(C.actorNameB))));
-    component->Type = Type;
-    component->BodyA = OutA.Path;
-    component->BodyB = OutB.Path;
+    Component->Type = Type;
+    Component->BodyA = OutA.Path;
+    Component->BodyB = OutB.Path;
     // Mochi leaves contact between constrained actors to the contact filter.
-    component->bAllowContact = true;
-    component->Stiffness = C.stiffness;
-    component->Damping = C.damping;
-    return component;
+    Component->bAllowContact = true;
+    Component->Stiffness = C.stiffness;
+    Component->Damping = C.damping;
+    return Component;
   };
-  for (const mochi::prefab::RigidSphericalJointConstraintPrefab& c :
-       constraints.rigidSphericalJoint) {
-    FConstraintActor a;
-    FConstraintActor b;
-    if (UMochiRigidJointConstraintComponent* component = addRigidJoint(
-            c, EMochiRigidJointConstraintType::SphericalJoint, TEXT("SphericalJoint"), a, b)) {
-      component->LocalPositionA = localPosition(a, c.localPosA);
-      component->LocalPositionB = localPosition(b, c.localPosB);
-      component->Saturation = distanceSaturation(c.saturation);
+  for (const mochi::prefab::RigidSphericalJointConstraintPrefab& C :
+       Constraints.rigidSphericalJoint) {
+    FConstraintActor A;
+    FConstraintActor B;
+    if (UMochiRigidJointConstraintComponent* Component = AddRigidJoint(
+            C, EMochiRigidJointConstraintType::SphericalJoint, TEXT("SphericalJoint"), A, B)) {
+      Component->LocalPositionA = LocalPosition(A, C.localPosA);
+      Component->LocalPositionB = LocalPosition(B, C.localPosB);
+      Component->Saturation = DistanceSaturation(C.saturation);
     }
   }
-  for (const mochi::prefab::RigidPrismaticJointConstraintPrefab& c :
-       constraints.rigidPrismaticJoint) {
-    FConstraintActor a;
-    FConstraintActor b;
-    if (UMochiRigidJointConstraintComponent* component = addRigidJoint(
-            c, EMochiRigidJointConstraintType::PrismaticJoint, TEXT("PrismaticJoint"), a, b)) {
+  for (const mochi::prefab::RigidPrismaticJointConstraintPrefab& C :
+       Constraints.rigidPrismaticJoint) {
+    FConstraintActor A;
+    FConstraintActor B;
+    if (UMochiRigidJointConstraintComponent* Component = AddRigidJoint(
+            C, EMochiRigidJointConstraintType::PrismaticJoint, TEXT("PrismaticJoint"), A, B)) {
       // The joint slides along the component's X axis.
-      component->SetRelativeRotation(
+      Component->SetRelativeRotation(
           FQuat::FindBetweenNormals(
-              FVector::XAxisVector, M2U.DirectionToUnreal(c.freeAxis).GetSafeNormal()));
-      component->bHasMinLimit = c.min.has_value();
-      component->MinLimit = c.min ? M2U.MeasureToUnreal(*c.min) : 0.0;
-      component->bHasMaxLimit = c.max.has_value();
-      component->MaxLimit = c.max ? M2U.MeasureToUnreal(*c.max) : 0.0;
-      component->Saturation = distanceSaturation(c.saturation);
+              FVector::XAxisVector, M2U.DirectionToUnreal(C.freeAxis).GetSafeNormal()));
+      Component->bHasMinLimit = C.min.has_value();
+      Component->MinLimit = C.min ? M2U.MeasureToUnreal(*C.min) : 0.0;
+      Component->bHasMaxLimit = C.max.has_value();
+      Component->MaxLimit = C.max ? M2U.MeasureToUnreal(*C.max) : 0.0;
+      Component->Saturation = DistanceSaturation(C.saturation);
     }
   }
-  for (const mochi::prefab::JointRotationTrackingConstraintPrefab& c :
-       constraints.jointRotationTracking) {
-    FConstraintActor a;
-    FConstraintActor b;
-    if (UMochiRigidJointConstraintComponent* component = addRigidJoint(
-            c, EMochiRigidJointConstraintType::RotationTracking, TEXT("RotationTracking"), a, b)) {
-      component->SetRelativeRotation(
-          M2U.RotationToUnreal(mochi::Quaternion::FromRotationVector(c.refFrameRotVec)));
-      component->Saturation = angleSaturation(c.saturation);
+  for (const mochi::prefab::JointRotationTrackingConstraintPrefab& C :
+       Constraints.jointRotationTracking) {
+    FConstraintActor A;
+    FConstraintActor B;
+    if (UMochiRigidJointConstraintComponent* Component = AddRigidJoint(
+            C, EMochiRigidJointConstraintType::RotationTracking, TEXT("RotationTracking"), A, B)) {
+      Component->SetRelativeRotation(
+          M2U.RotationToUnreal(mochi::Quaternion::FromRotationVector(C.refFrameRotVec)));
+      Component->Saturation = AngleSaturation(C.saturation);
     }
   }
-  for (const mochi::prefab::JointRotationRangeConstraintPrefab& c :
-       constraints.jointRotationRange) {
-    FConstraintActor a;
-    FConstraintActor b;
+  for (const mochi::prefab::JointRotationRangeConstraintPrefab& C :
+       Constraints.jointRotationRange) {
+    FConstraintActor A;
+    FConstraintActor B;
     // Absolute limits bound the relative rotation of the bodies' frames. The components sit at the
     // shape frames, which only preserves it if both are rotated alike.
-    if (!c.rangeAroundRest && finder.Find(c.actorNameA, a) && finder.Find(c.actorNameB, b) &&
-        !a.ShapeToActor.GetRotation().Equals(b.ShapeToActor.GetRotation())) {
+    if (!C.rangeAroundRest && Finder.Find(C.actorNameA, A) && Finder.Find(C.actorNameB, B) &&
+        !A.ShapeToActor.GetRotation().Equals(B.ShapeToActor.GetRotation())) {
       UE_LOG(
           LogMochiPhysicsEditor,
           Warning,
@@ -413,147 +413,147 @@ void FSuperDexPrefabImporter::AddConstraints(FPrefabContext& Context, FOutput& O
               "[%s] A rotation range between %s and %s has absolute limits, which the different "
               "shape rotations of the two actors change; it was skipped."),
           *Context.PrefabName,
-          *ToFString(c.actorNameA),
-          *ToFString(c.actorNameB));
-      ++numSkipped;
+          *ToFString(C.actorNameA),
+          *ToFString(C.actorNameB));
+      ++NumSkipped;
       continue;
     }
-    if (UMochiRigidJointConstraintComponent* component = addRigidJoint(
-            c, EMochiRigidJointConstraintType::RotationRange, TEXT("RotationRange"), a, b)) {
-      component->SetRelativeRotation(
-          M2U.RotationToUnreal(mochi::Quaternion::FromRotationVector(c.refFrameRotVec)));
-      FVector minAngles;
-      FVector maxAngles;
+    if (UMochiRigidJointConstraintComponent* Component = AddRigidJoint(
+            C, EMochiRigidJointConstraintType::RotationRange, TEXT("RotationRange"), A, B)) {
+      Component->SetRelativeRotation(
+          M2U.RotationToUnreal(mochi::Quaternion::FromRotationVector(C.refFrameRotVec)));
+      FVector MinAngles;
+      FVector MaxAngles;
       ConvertRotationBoundsToUnreal(
-          {c.angleRangeX[0], c.angleRangeY[0], c.angleRangeZ[0]},
-          {c.angleRangeX[1], c.angleRangeY[1], c.angleRangeZ[1]},
+          {C.angleRangeX[0], C.angleRangeY[0], C.angleRangeZ[0]},
+          {C.angleRangeX[1], C.angleRangeY[1], C.angleRangeZ[1]},
           M2U,
-          minAngles,
-          maxAngles);
-      component->MinAngles = FMath::RadiansToDegrees(minAngles);
-      component->MaxAngles = FMath::RadiansToDegrees(maxAngles);
-      component->bRangeAroundRest = c.rangeAroundRest;
-      component->Saturation = angleSaturation(c.saturation);
+          MinAngles,
+          MaxAngles);
+      Component->MinAngles = FMath::RadiansToDegrees(MinAngles);
+      Component->MaxAngles = FMath::RadiansToDegrees(MaxAngles);
+      Component->bRangeAroundRest = C.rangeAroundRest;
+      Component->Saturation = AngleSaturation(C.saturation);
     }
   }
 
   // Pivots: the target is the component's own transform.
-  auto addPivot = [&](const auto& C,
+  auto AddPivot = [&](const auto& C,
                       EMochiRigidPivotConstraintType Type,
                       const TCHAR* Label,
                       FConstraintActor& OutActor) -> UMochiRigidPivotConstraintComponent* {
-    if (!find(C.actorName, OutActor)) {
+    if (!Find(C.actorName, OutActor)) {
       return static_cast<UMochiRigidPivotConstraintComponent*>(nullptr);
     }
-    UMochiRigidPivotConstraintComponent* component =
+    UMochiRigidPivotConstraintComponent* Component =
         CastChecked<UMochiRigidPivotConstraintComponent>(Output.AddActor(
             UMochiRigidPivotConstraintComponent::StaticClass(),
             FString::Printf(TEXT("%s_%s"), Label, *ToFString(C.actorName))));
-    component->Type = Type;
-    component->Body = OutActor.Path;
-    component->Stiffness = C.stiffness;
-    component->Damping = C.damping;
-    return component;
+    Component->Type = Type;
+    Component->Body = OutActor.Path;
+    Component->Stiffness = C.stiffness;
+    Component->Damping = C.damping;
+    return Component;
   };
-  for (const mochi::prefab::RigidPivotPositionConstraintPrefab& c :
-       constraints.rigidPivotPosition) {
-    FConstraintActor actor;
-    if (UMochiRigidPivotConstraintComponent* component =
-            addPivot(c, EMochiRigidPivotConstraintType::Position, TEXT("PivotPosition"), actor)) {
-      component->SetRelativeLocation(M2U.TranslationToUnreal(c.targetPosition));
-      component->LocalPosition = localPosition(actor, c.localPosition);
-      component->Saturation = distanceSaturation(c.saturation);
+  for (const mochi::prefab::RigidPivotPositionConstraintPrefab& C :
+       Constraints.rigidPivotPosition) {
+    FConstraintActor Actor;
+    if (UMochiRigidPivotConstraintComponent* Component =
+            AddPivot(C, EMochiRigidPivotConstraintType::Position, TEXT("PivotPosition"), Actor)) {
+      Component->SetRelativeLocation(M2U.TranslationToUnreal(C.targetPosition));
+      Component->LocalPosition = LocalPosition(Actor, C.localPosition);
+      Component->Saturation = DistanceSaturation(C.saturation);
     }
   }
-  for (const mochi::prefab::RigidPivotToRigidTargetConstraintPrefab& c :
-       constraints.rigidPivotToRigidTarget) {
-    FConstraintActor actor;
-    if (UMochiRigidPivotConstraintComponent* component = addPivot(
-            c, EMochiRigidPivotConstraintType::ToRigidTarget, TEXT("PivotToRigidTarget"), actor)) {
+  for (const mochi::prefab::RigidPivotToRigidTargetConstraintPrefab& C :
+       Constraints.rigidPivotToRigidTarget) {
+    FConstraintActor Actor;
+    if (UMochiRigidPivotConstraintComponent* Component = AddPivot(
+            C, EMochiRigidPivotConstraintType::ToRigidTarget, TEXT("PivotToRigidTarget"), Actor)) {
       // The target is the actor's center of mass and orientation; the component's orientation is
       // its shape frame's.
-      FTransform target = M2U.TransformToUnreal(c.targetTransform);
-      target.SetRotation(target.GetRotation() * actor.ShapeToActor.GetRotation());
-      component->SetRelativeTransform(target);
-      component->LocalPosition = localPosition(actor, c.localPosition);
-      component->Saturation = distanceSaturation(c.saturation);
+      FTransform Target = M2U.TransformToUnreal(C.targetTransform);
+      Target.SetRotation(Target.GetRotation() * Actor.ShapeToActor.GetRotation());
+      Component->SetRelativeTransform(Target);
+      Component->LocalPosition = LocalPosition(Actor, C.localPosition);
+      Component->Saturation = DistanceSaturation(C.saturation);
     }
   }
-  for (const mochi::prefab::RigidPivotRotationConstraintPrefab& c :
-       constraints.rigidPivotRotation) {
-    FConstraintActor actor;
-    if (UMochiRigidPivotConstraintComponent* component =
-            addPivot(c, EMochiRigidPivotConstraintType::Rotation, TEXT("PivotRotation"), actor)) {
-      component->SetRelativeRotation(
-          M2U.RotationToUnreal(mochi::Quaternion::FromRotationVector(c.targetRotation)));
-      component->LocalRotation = localRotation(actor, c.localRotation).Rotator();
-      component->Saturation = angleSaturation(c.saturation);
+  for (const mochi::prefab::RigidPivotRotationConstraintPrefab& C :
+       Constraints.rigidPivotRotation) {
+    FConstraintActor Actor;
+    if (UMochiRigidPivotConstraintComponent* Component =
+            AddPivot(C, EMochiRigidPivotConstraintType::Rotation, TEXT("PivotRotation"), Actor)) {
+      Component->SetRelativeRotation(
+          M2U.RotationToUnreal(mochi::Quaternion::FromRotationVector(C.targetRotation)));
+      Component->LocalRotation = LocalRotation(Actor, C.localRotation).Rotator();
+      Component->Saturation = AngleSaturation(C.saturation);
     }
   }
 
   // Deformable nodes.
-  auto addNode = [&](const auto& C,
+  auto AddNode = [&](const auto& C,
                      EMochiSoftNodeConstraintType Type,
                      const TCHAR* Label,
                      const FConstraintActor& Actor) -> UMochiSoftNodeConstraintComponent* {
-    UMochiSoftNodeConstraintComponent* component =
+    UMochiSoftNodeConstraintComponent* Component =
         CastChecked<UMochiSoftNodeConstraintComponent>(Output.AddActor(
             UMochiSoftNodeConstraintComponent::StaticClass(),
             FString::Printf(TEXT("%s_%s"), Label, *Actor.Path.Replace(TEXT("/"), TEXT("_")))));
-    component->Type = Type;
-    component->Body = Actor.Path;
-    component->bAllowContact = true;
-    component->Stiffness = C.stiffness;
-    component->Damping = C.damping;
-    component->Saturation = distanceSaturation(C.saturation);
-    return component;
+    Component->Type = Type;
+    Component->Body = Actor.Path;
+    Component->bAllowContact = true;
+    Component->Stiffness = C.stiffness;
+    Component->Damping = C.damping;
+    Component->Saturation = DistanceSaturation(C.saturation);
+    return Component;
   };
-  for (const mochi::prefab::DeformableNodePositionConstraintPrefab& c :
-       constraints.deformableNodePosition) {
-    FConstraintActor actor;
-    if (find(c.actorName, actor)) {
-      UMochiSoftNodeConstraintComponent* component =
-          addNode(c, EMochiSoftNodeConstraintType::NodePosition, TEXT("NodePosition"), actor);
-      component->NodeIndex = c.nodeIndex;
-      component->SetRelativeLocation(M2U.TranslationToUnreal(c.position));
+  for (const mochi::prefab::DeformableNodePositionConstraintPrefab& C :
+       Constraints.deformableNodePosition) {
+    FConstraintActor Actor;
+    if (Find(C.actorName, Actor)) {
+      UMochiSoftNodeConstraintComponent* Component =
+          AddNode(C, EMochiSoftNodeConstraintType::NodePosition, TEXT("NodePosition"), Actor);
+      Component->NodeIndex = C.nodeIndex;
+      Component->SetRelativeLocation(M2U.TranslationToUnreal(C.position));
     }
   }
-  for (const mochi::prefab::DeformableNodeToRigidConstraintPrefab& c :
-       constraints.deformableNodeToRigid) {
-    FConstraintActor deformable;
-    FConstraintActor rigid;
-    if (find(c.deformableActorName, deformable) && find(c.rigidActorName, rigid)) {
-      UMochiSoftNodeConstraintComponent* component =
-          addNode(c, EMochiSoftNodeConstraintType::NodeToRigid, TEXT("NodeToRigid"), deformable);
-      component->OtherBody = rigid.Path;
-      component->NodeSelection =
-          c.findClosest ? EMochiSoftNodeSelection::Closest : EMochiSoftNodeSelection::Index;
-      component->NodeIndex = FMath::Max(c.deformableNodeIndex, 0);
-      component->bFixToDeformablePosition = c.fixToDeformablePos;
-      component->RigidLocalPosition = localPosition(rigid, c.rigidLocalPos);
+  for (const mochi::prefab::DeformableNodeToRigidConstraintPrefab& C :
+       Constraints.deformableNodeToRigid) {
+    FConstraintActor Deformable;
+    FConstraintActor Rigid;
+    if (Find(C.deformableActorName, Deformable) && Find(C.rigidActorName, Rigid)) {
+      UMochiSoftNodeConstraintComponent* Component =
+          AddNode(C, EMochiSoftNodeConstraintType::NodeToRigid, TEXT("NodeToRigid"), Deformable);
+      Component->OtherBody = Rigid.Path;
+      Component->NodeSelection =
+          C.findClosest ? EMochiSoftNodeSelection::Closest : EMochiSoftNodeSelection::Index;
+      Component->NodeIndex = FMath::Max(C.deformableNodeIndex, 0);
+      Component->bFixToDeformablePosition = C.fixToDeformablePos;
+      Component->RigidLocalPosition = LocalPosition(Rigid, C.rigidLocalPos);
     }
   }
-  for (const mochi::prefab::DeformableNodeToDeformableNodeConstraintPrefab& c :
-       constraints.deformableNodeToDeformableNode) {
-    FConstraintActor a;
-    FConstraintActor b;
-    if (find(c.actorNameA, a) && find(c.actorNameB, b)) {
-      UMochiSoftNodeConstraintComponent* component =
-          addNode(c, EMochiSoftNodeConstraintType::NodeToNode, TEXT("NodeToNode"), a);
-      component->OtherBody = b.Path;
-      component->NodeSelection =
-          c.findClosest ? EMochiSoftNodeSelection::Closest : EMochiSoftNodeSelection::Index;
-      component->NodeIndex = FMath::Max(c.nodeIndexA, 0);
-      component->OtherNodeIndex = FMath::Max(c.nodeIndexB, 0);
+  for (const mochi::prefab::DeformableNodeToDeformableNodeConstraintPrefab& C :
+       Constraints.deformableNodeToDeformableNode) {
+    FConstraintActor A;
+    FConstraintActor B;
+    if (Find(C.actorNameA, A) && Find(C.actorNameB, B)) {
+      UMochiSoftNodeConstraintComponent* Component =
+          AddNode(C, EMochiSoftNodeConstraintType::NodeToNode, TEXT("NodeToNode"), A);
+      Component->OtherBody = B.Path;
+      Component->NodeSelection =
+          C.findClosest ? EMochiSoftNodeSelection::Closest : EMochiSoftNodeSelection::Index;
+      Component->NodeIndex = FMath::Max(C.nodeIndexA, 0);
+      Component->OtherNodeIndex = FMath::Max(C.nodeIndexB, 0);
     }
   }
 
-  if (numSkipped > 0) {
+  if (NumSkipped > 0) {
     UE_LOG(
         LogMochiPhysicsEditor,
         Warning,
         TEXT("[%s] %d constraints were skipped."),
         *Context.PrefabName,
-        numSkipped);
+        NumSkipped);
   }
 }

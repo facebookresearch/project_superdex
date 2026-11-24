@@ -31,43 +31,43 @@ namespace {
 using UE::Geometry::FDynamicMesh3;
 
 FDynamicMesh3 MakeTwoTriangleMesh() {
-  FDynamicMesh3 mesh;
-  mesh.AppendVertex(FVector3d(0, 0, 0));
-  mesh.AppendVertex(FVector3d(100, 0, 0));
-  mesh.AppendVertex(FVector3d(100, 100, 0));
-  mesh.AppendVertex(FVector3d(0, 100, 0));
-  mesh.AppendTriangle(0, 1, 2);
-  mesh.AppendTriangle(0, 2, 3);
-  mesh.EnableVertexNormals(FVector3f::UnitZ());
-  return mesh;
+  FDynamicMesh3 Mesh;
+  Mesh.AppendVertex(FVector3d(0, 0, 0));
+  Mesh.AppendVertex(FVector3d(100, 0, 0));
+  Mesh.AppendVertex(FVector3d(100, 100, 0));
+  Mesh.AppendVertex(FVector3d(0, 100, 0));
+  Mesh.AppendTriangle(0, 1, 2);
+  Mesh.AppendTriangle(0, 2, 3);
+  Mesh.EnableVertexNormals(FVector3f::UnitZ());
+  return Mesh;
 }
 
-const TArray<FVector2f> kUVs = {{0.f, 0.f}, {1.f, 0.f}, {1.f, 1.f}, {0.f, 1.f}};
-const TArray<FLinearColor> kColors = {
+const TArray<FVector2f> UVs = {{0.f, 0.f}, {1.f, 0.f}, {1.f, 1.f}, {0.f, 1.f}};
+const TArray<FLinearColor> Colors = {
     {1.f, 0.f, 0.f, 1.f},
     {0.f, 1.f, 0.f, 1.f},
     {0.f, 0.f, 1.f, 1.f},
     {1.f, 1.f, 1.f, 0.5f}};
 // Mochi query data for the four nodes, in Mochi units and axes.
-const TArray<mochi::real> kNodePositions = {0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0};
-const TArray<mochi::real> kNodeNormals = {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -1};
+const TArray<mochi::real> NodePositions = {0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0};
+const TArray<mochi::real> NodeNormals = {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -1};
 
 FVector3f ExpectedNormal(int32 Node) {
   return FMochiToUnrealConverter_float().DirectionToUnreal(
-      {kNodeNormals[3 * Node], kNodeNormals[3 * Node + 1], kNodeNormals[3 * Node + 2]});
+      {NodeNormals[3 * Node], NodeNormals[3 * Node + 1], NodeNormals[3 * Node + 2]});
 }
 
 FVector ExpectedPosition(int32 Node) {
   return FVector(
       FMochiToUnrealConverter_float().TranslationToUnreal(
-          {kNodePositions[3 * Node], kNodePositions[3 * Node + 1], kNodePositions[3 * Node + 2]}));
+          {NodePositions[3 * Node], NodePositions[3 * Node + 1], NodePositions[3 * Node + 2]}));
 }
 
 // Whether each overlay triangle of Overlay has the corners of its mesh triangle.
 template <typename OverlayType>
 bool CornersAreVertices(const FDynamicMesh3& Mesh, const OverlayType& Overlay) {
-  for (const int triIdx : Mesh.TriangleIndicesItr()) {
-    if (!(Overlay.GetTriangle(triIdx) == Mesh.GetTriangle(triIdx))) {
+  for (const int TriIdx : Mesh.TriangleIndicesItr()) {
+    if (!(Overlay.GetTriangle(TriIdx) == Mesh.GetTriangle(TriIdx))) {
       return false;
     }
   }
@@ -75,12 +75,12 @@ bool CornersAreVertices(const FDynamicMesh3& Mesh, const OverlayType& Overlay) {
 }
 
 bool HasColorsOfNodes(const FDynamicMesh3& Mesh) {
-  const UE::Geometry::FDynamicMeshColorOverlay* colorOverlay = Mesh.Attributes()->PrimaryColors();
-  if (!colorOverlay || !CornersAreVertices(Mesh, *colorOverlay)) {
+  const UE::Geometry::FDynamicMeshColorOverlay* ColorOverlay = Mesh.Attributes()->PrimaryColors();
+  if (!ColorOverlay || !CornersAreVertices(Mesh, *ColorOverlay)) {
     return false;
   }
-  for (int32 vertIdx = 0; vertIdx < kColors.Num(); ++vertIdx) {
-    if (colorOverlay->GetElement(vertIdx) != FVector4f(kColors[vertIdx])) {
+  for (int32 VertIdx = 0; VertIdx < Colors.Num(); ++VertIdx) {
+    if (ColorOverlay->GetElement(VertIdx) != FVector4f(Colors[VertIdx])) {
       return false;
     }
   }
@@ -88,12 +88,12 @@ bool HasColorsOfNodes(const FDynamicMesh3& Mesh) {
 }
 
 bool HasUVsOfNodes(const FDynamicMesh3& Mesh) {
-  const UE::Geometry::FDynamicMeshUVOverlay* uvOverlay = Mesh.Attributes()->PrimaryUV();
-  if (!CornersAreVertices(Mesh, *uvOverlay)) {
+  const UE::Geometry::FDynamicMeshUVOverlay* UvOverlay = Mesh.Attributes()->PrimaryUV();
+  if (!CornersAreVertices(Mesh, *UvOverlay)) {
     return false;
   }
-  for (int32 vertIdx = 0; vertIdx < kUVs.Num(); ++vertIdx) {
-    if (uvOverlay->GetElement(vertIdx) != kUVs[vertIdx]) {
+  for (int32 VertIdx = 0; VertIdx < UVs.Num(); ++VertIdx) {
+    if (UvOverlay->GetElement(VertIdx) != UVs[VertIdx]) {
       return false;
     }
   }
@@ -108,18 +108,18 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     MOCHI_SOFT_MESH_TEXTURE_TEST_FLAGS)
 
 bool FMochiSoftMeshTextureAttributesTest::RunTest(const FString& Parameters) {
-  FDynamicMesh3 mesh = MakeTwoTriangleMesh();
+  FDynamicMesh3 Mesh = MakeTwoTriangleMesh();
 
-  EnableRenderModelAttributes(mesh, kUVs, kColors);
+  EnableRenderModelAttributes(Mesh, UVs, Colors);
 
-  const UE::Geometry::FDynamicMeshNormalOverlay* normalOverlay =
-      mesh.Attributes()->PrimaryNormals();
-  TestTrue(TEXT("Normal corners are vertices"), CornersAreVertices(mesh, *normalOverlay));
-  for (int32 vertIdx = 0; vertIdx < mesh.VertexCount(); ++vertIdx) {
-    TestEqual(TEXT("Initial normal"), normalOverlay->GetElement(vertIdx), FVector3f::UnitZ());
+  const UE::Geometry::FDynamicMeshNormalOverlay* NormalOverlay =
+      Mesh.Attributes()->PrimaryNormals();
+  TestTrue(TEXT("Normal corners are vertices"), CornersAreVertices(Mesh, *NormalOverlay));
+  for (int32 VertIdx = 0; VertIdx < Mesh.VertexCount(); ++VertIdx) {
+    TestEqual(TEXT("Initial normal"), NormalOverlay->GetElement(VertIdx), FVector3f::UnitZ());
   }
-  TestTrue(TEXT("UVs of the nodes"), HasUVsOfNodes(mesh));
-  TestTrue(TEXT("Colors of the nodes"), HasColorsOfNodes(mesh));
+  TestTrue(TEXT("UVs of the nodes"), HasUVsOfNodes(Mesh));
+  TestTrue(TEXT("Colors of the nodes"), HasColorsOfNodes(Mesh));
   return true;
 }
 
@@ -129,12 +129,12 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     MOCHI_SOFT_MESH_TEXTURE_TEST_FLAGS)
 
 bool FMochiSoftMeshTextureNoColorsTest::RunTest(const FString& Parameters) {
-  FDynamicMesh3 mesh = MakeTwoTriangleMesh();
+  FDynamicMesh3 Mesh = MakeTwoTriangleMesh();
 
-  EnableRenderModelAttributes(mesh, kUVs, {});
+  EnableRenderModelAttributes(Mesh, UVs, {});
 
-  TestTrue(TEXT("UVs of the nodes"), HasUVsOfNodes(mesh));
-  TestFalse(TEXT("Has a color overlay"), mesh.Attributes()->HasPrimaryColors());
+  TestTrue(TEXT("UVs of the nodes"), HasUVsOfNodes(Mesh));
+  TestFalse(TEXT("Has a color overlay"), Mesh.Attributes()->HasPrimaryColors());
   return true;
 }
 
@@ -144,18 +144,18 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     MOCHI_SOFT_MESH_TEXTURE_TEST_FLAGS)
 
 bool FMochiSoftMeshTextureColorsWithoutUVsTest::RunTest(const FString& Parameters) {
-  FDynamicMesh3 mesh = MakeTwoTriangleMesh();
+  FDynamicMesh3 Mesh = MakeTwoTriangleMesh();
 
-  EnableRenderModelAttributes(mesh, {}, kColors);
+  EnableRenderModelAttributes(Mesh, {}, Colors);
 
-  TestTrue(TEXT("Colors of the nodes"), HasColorsOfNodes(mesh));
+  TestTrue(TEXT("Colors of the nodes"), HasColorsOfNodes(Mesh));
   TestTrue(
       TEXT("Normal corners are vertices"),
-      CornersAreVertices(mesh, *mesh.Attributes()->PrimaryNormals()));
-  const UE::Geometry::FDynamicMeshUVOverlay* uvOverlay = mesh.Attributes()->PrimaryUV();
-  TestEqual(TEXT("UV elements"), uvOverlay->ElementCount(), 0);
-  for (const int triIdx : mesh.TriangleIndicesItr()) {
-    TestFalse(TEXT("UV triangle is set"), uvOverlay->IsSetTriangle(triIdx));
+      CornersAreVertices(Mesh, *Mesh.Attributes()->PrimaryNormals()));
+  const UE::Geometry::FDynamicMeshUVOverlay* UvOverlay = Mesh.Attributes()->PrimaryUV();
+  TestEqual(TEXT("UV elements"), UvOverlay->ElementCount(), 0);
+  for (const int TriIdx : Mesh.TriangleIndicesItr()) {
+    TestFalse(TEXT("UV triangle is set"), UvOverlay->IsSetTriangle(TriIdx));
   }
   return true;
 }
@@ -166,19 +166,18 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     MOCHI_SOFT_MESH_TEXTURE_TEST_FLAGS)
 
 bool FMochiSoftMeshTextureNormalUpdateTest::RunTest(const FString& Parameters) {
-  FDynamicMesh3 mesh = MakeTwoTriangleMesh();
-  EnableRenderModelAttributes(mesh, kUVs, kColors);
+  FDynamicMesh3 Mesh = MakeTwoTriangleMesh();
+  EnableRenderModelAttributes(Mesh, UVs, Colors);
 
-  UpdateDynamicMeshFromMochiQuery(
-      kNodePositions, kNodeNormals, true, true, FVector::OneVector, mesh);
+  UpdateDynamicMeshFromMochiQuery(NodePositions, NodeNormals, true, true, FVector::OneVector, Mesh);
 
-  const UE::Geometry::FDynamicMeshNormalOverlay* normalOverlay =
-      mesh.Attributes()->PrimaryNormals();
-  for (int32 vertIdx = 0; vertIdx < mesh.VertexCount(); ++vertIdx) {
-    TestEqual(TEXT("Overlay normal"), normalOverlay->GetElement(vertIdx), ExpectedNormal(vertIdx));
+  const UE::Geometry::FDynamicMeshNormalOverlay* NormalOverlay =
+      Mesh.Attributes()->PrimaryNormals();
+  for (int32 VertIdx = 0; VertIdx < Mesh.VertexCount(); ++VertIdx) {
+    TestEqual(TEXT("Overlay normal"), NormalOverlay->GetElement(VertIdx), ExpectedNormal(VertIdx));
   }
-  TestTrue(TEXT("UVs of the nodes"), HasUVsOfNodes(mesh));
-  TestTrue(TEXT("Colors of the nodes"), HasColorsOfNodes(mesh));
+  TestTrue(TEXT("UVs of the nodes"), HasUVsOfNodes(Mesh));
+  TestTrue(TEXT("Colors of the nodes"), HasColorsOfNodes(Mesh));
   return true;
 }
 
@@ -188,21 +187,21 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     MOCHI_SOFT_MESH_TEXTURE_TEST_FLAGS)
 
 bool FMochiSoftMeshTextureEmptyNormalOverlayTest::RunTest(const FString& Parameters) {
-  FDynamicMesh3 mesh = MakeTwoTriangleMesh();
-  mesh.EnableAttributes();
-  UE::Geometry::FDynamicMeshNormalOverlay* normalOverlay = mesh.Attributes()->PrimaryNormals();
-  TestEqual(TEXT("Initial overlay elements"), normalOverlay->ElementCount(), 0);
+  FDynamicMesh3 Mesh = MakeTwoTriangleMesh();
+  Mesh.EnableAttributes();
+  UE::Geometry::FDynamicMeshNormalOverlay* NormalOverlay = Mesh.Attributes()->PrimaryNormals();
+  TestEqual(TEXT("Initial overlay elements"), NormalOverlay->ElementCount(), 0);
 
   UpdateDynamicMeshFromMochiQuery(
-      kNodePositions, kNodeNormals, true, false, FVector::OneVector, mesh);
+      NodePositions, NodeNormals, true, false, FVector::OneVector, Mesh);
 
-  TestEqual(TEXT("Overlay elements"), normalOverlay->ElementCount(), 0);
-  for (const int triIdx : mesh.TriangleIndicesItr()) {
-    TestFalse(TEXT("Overlay triangle is set"), normalOverlay->IsSetTriangle(triIdx));
+  TestEqual(TEXT("Overlay elements"), NormalOverlay->ElementCount(), 0);
+  for (const int TriIdx : Mesh.TriangleIndicesItr()) {
+    TestFalse(TEXT("Overlay triangle is set"), NormalOverlay->IsSetTriangle(TriIdx));
   }
-  for (int32 vertIdx = 0; vertIdx < mesh.VertexCount(); ++vertIdx) {
-    TestTrue(TEXT("Position"), mesh.GetVertex(vertIdx).Equals(ExpectedPosition(vertIdx)));
-    TestEqual(TEXT("Vertex normal"), mesh.GetVertexNormal(vertIdx), ExpectedNormal(vertIdx));
+  for (int32 VertIdx = 0; VertIdx < Mesh.VertexCount(); ++VertIdx) {
+    TestTrue(TEXT("Position"), Mesh.GetVertex(VertIdx).Equals(ExpectedPosition(VertIdx)));
+    TestEqual(TEXT("Vertex normal"), Mesh.GetVertexNormal(VertIdx), ExpectedNormal(VertIdx));
   }
   return true;
 }
@@ -213,16 +212,16 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     MOCHI_SOFT_MESH_TEXTURE_TEST_FLAGS)
 
 bool FMochiSoftMeshTextureUntexturedUpdateTest::RunTest(const FString& Parameters) {
-  FDynamicMesh3 mesh = MakeTwoTriangleMesh();
+  FDynamicMesh3 Mesh = MakeTwoTriangleMesh();
 
   UpdateDynamicMeshFromMochiQuery(
-      kNodePositions, kNodeNormals, true, false, FVector::OneVector, mesh);
+      NodePositions, NodeNormals, true, false, FVector::OneVector, Mesh);
 
-  TestFalse(TEXT("Has attributes"), mesh.HasAttributes());
-  TestEqual(TEXT("Triangle count"), mesh.TriangleCount(), 2);
-  for (int32 vertIdx = 0; vertIdx < mesh.VertexCount(); ++vertIdx) {
-    TestTrue(TEXT("Position"), mesh.GetVertex(vertIdx).Equals(ExpectedPosition(vertIdx)));
-    TestEqual(TEXT("Vertex normal"), mesh.GetVertexNormal(vertIdx), ExpectedNormal(vertIdx));
+  TestFalse(TEXT("Has attributes"), Mesh.HasAttributes());
+  TestEqual(TEXT("Triangle count"), Mesh.TriangleCount(), 2);
+  for (int32 VertIdx = 0; VertIdx < Mesh.VertexCount(); ++VertIdx) {
+    TestTrue(TEXT("Position"), Mesh.GetVertex(VertIdx).Equals(ExpectedPosition(VertIdx)));
+    TestEqual(TEXT("Vertex normal"), Mesh.GetVertexNormal(VertIdx), ExpectedNormal(VertIdx));
   }
   return true;
 }

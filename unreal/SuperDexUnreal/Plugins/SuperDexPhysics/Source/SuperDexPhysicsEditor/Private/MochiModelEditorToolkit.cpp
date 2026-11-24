@@ -99,7 +99,7 @@ void FMochiModelEditorToolkit::BindCommands() {
 
 void FMochiModelEditorToolkit::ExtendToolBars() {
   // Follows the toolbar extension pattern of the engine's asset editor toolkits.
-  struct Local {
+  struct FLocal {
     static void FillToolbar(FToolBarBuilder& ToolBarBuilder) {
       ToolBarBuilder.BeginSection("ExtendToolbarItem");
       {
@@ -141,7 +141,7 @@ void FMochiModelEditorToolkit::ExtendToolBars() {
       "Asset",
       EExtensionHook::After,
       GetToolkitCommands(),
-      FToolBarExtensionDelegate::CreateStatic(&Local::FillToolbar));
+      FToolBarExtensionDelegate::CreateStatic(&FLocal::FillToolbar));
 
   ToolBarExtender->AddToolBarExtension(
       "Asset",
@@ -296,32 +296,32 @@ TSharedRef<SDockTab> FMochiModelEditorToolkit::SpawnTab_Viewport(const FSpawnTab
   if (ModelEditorViewport.IsValid()) {
     SpawnedTab->SetContent(ModelEditorViewport.ToSharedRef());
 
-    int nNodes = 0;
-    int nElements = 0;
-    if (UMochiModel* model = Cast<UMochiModel>(MochiModel)) {
-      nNodes = model->NumNodes;
-      nElements = model->NumPolyhedrons;
+    int NNodes = 0;
+    int NElements = 0;
+    if (UMochiModel* Model = Cast<UMochiModel>(MochiModel)) {
+      NNodes = Model->NumNodes;
+      NElements = Model->NumPolyhedrons;
     }
 
-    TArray<FText> overlayItems;
-    overlayItems.Add(FText::Format(LOCTEXT("Nodes_F", "Nodes: {0}"), FText::AsNumber(nNodes)));
-    overlayItems.Add(
-        FText::Format(LOCTEXT("Elements_F", "Elements: {0}"), FText::AsNumber(nElements)));
+    TArray<FText> OverlayItems;
+    OverlayItems.Add(FText::Format(LOCTEXT("Nodes_F", "Nodes: {0}"), FText::AsNumber(NNodes)));
+    OverlayItems.Add(
+        FText::Format(LOCTEXT("Elements_F", "Elements: {0}"), FText::AsNumber(NElements)));
 
     UMochiSoftMeshComponent* PreviewMeshComponent = ModelEditorViewport->GetPreviewMeshComponent();
     if (PreviewMeshComponent) {
-      FVector box = PreviewMeshComponent->GetLocalBounds().BoxExtent * 2.0;
-      FNumberFormattingOptions opt;
-      opt.SetMaximumFractionalDigits(2);
-      overlayItems.Add(
+      FVector Box = PreviewMeshComponent->GetLocalBounds().BoxExtent * 2.0;
+      FNumberFormattingOptions Opt;
+      Opt.SetMaximumFractionalDigits(2);
+      OverlayItems.Add(
           FText::Format(
               LOCTEXT("ApproxSize_F", "Approx Size: {0}x{1}x{2}"),
-              FText::AsNumber(box.X, &opt),
-              FText::AsNumber(box.Y, &opt),
-              FText::AsNumber(box.Z, &opt)));
+              FText::AsNumber(Box.X, &Opt),
+              FText::AsNumber(Box.Y, &Opt),
+              FText::AsNumber(Box.Z, &Opt)));
     }
 
-    overlayItems.Add(LOCTEXT(
+    OverlayItems.Add(LOCTEXT(
         "Tips",
         "\nOrbit Camera: Hold down ALT+LeftMouseButton"
         "\nSelection: Use CTRL+ALT+LeftMouseButton"
@@ -331,7 +331,7 @@ TSharedRef<SDockTab> FMochiModelEditorToolkit::SpawnTab_Viewport(const FSpawnTab
         "\nTip: Elements hard to see? Use Wireframe mode."
         "\nTip: Lasso selection always red? Draw in the opposite direction."));
 
-    ModelEditorViewport->PopulateOverlayText(overlayItems);
+    ModelEditorViewport->PopulateOverlayText(OverlayItems);
   }
 
   return SpawnedTab;
@@ -361,7 +361,7 @@ void FMochiModelEditorToolkit::OnObjectModified(UObject* InObject) {
         TEXT("[%hs](%s) - updating preview mesh"),
         __FUNCTION__,
         *InObject->GetName());
-    FComponentReregisterContext reregister(PreviewMeshComponent);
+    FComponentReregisterContext Reregister(PreviewMeshComponent);
   }
 }
 

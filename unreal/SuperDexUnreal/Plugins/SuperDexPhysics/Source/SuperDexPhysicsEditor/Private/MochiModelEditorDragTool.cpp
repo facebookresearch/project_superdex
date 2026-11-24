@@ -88,7 +88,7 @@ void FMochiModelEditorDragTool::AddDelta(const FVector& InDelta) {
   EndWk = FVector(MousePos);
   End = EndWk;
 
-  if ((End - PreviousPosition).SquaredLength() > kMinSqrDistance) {
+  if ((End - PreviousPosition).SquaredLength() > MinSqrDistance) {
     PreviousPosition = End;
     SelectionScreenPath.Add(FVector2D(End));
   }
@@ -171,17 +171,17 @@ void FMochiModelEditorDragTool::UpdateSelectedElementIndices(
   // or GEngine did not work here; the selected elements are already held in a UObject.
 
   // A linear scan over all elements is fast enough for an editor tool.
-  for (int32 iElement = 0; iElement < Positions.Num(); ++iElement) {
+  for (int32 ElementIndex = 0; ElementIndex < Positions.Num(); ++ElementIndex) {
     const bool bInside = Algo::AnyOf(Volumes, [&](const FConvexVolume& Volume) -> bool {
-      return Volume.IntersectPoint(Positions[iElement]);
+      return Volume.IntersectPoint(Positions[ElementIndex]);
     });
     if (!bInside) {
       continue;
     }
     if (SelectionMode == EMochiModelEditorSelectionMode::Subtractive) {
-      InOutIndices.Remove(iElement);
+      InOutIndices.Remove(ElementIndex);
     } else {
-      InOutIndices.Add(iElement);
+      InOutIndices.Add(ElementIndex);
     }
   }
 }

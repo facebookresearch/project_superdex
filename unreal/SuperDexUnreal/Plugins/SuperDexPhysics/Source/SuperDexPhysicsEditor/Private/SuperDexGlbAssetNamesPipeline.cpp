@@ -28,13 +28,13 @@ void USuperDexGlbAssetNamesPipeline::ExecutePipeline(
   if (!BaseNodeContainer || AssetRenames.IsEmpty()) {
     return;
   }
-  auto rename = [this](const FString&, UInterchangeFactoryBaseNode* Node) {
-    if (const FString* newName =
+  auto Rename = [this](const FString&, UInterchangeFactoryBaseNode* Node) {
+    if (const FString* NewName =
             AssetRenames.Find(SuperDexGlbAssetDigests::AssetName(Node->GetAssetName()))) {
-      Node->SetAssetName(*newName);
-      Node->SetDisplayLabel(*newName);
+      Node->SetAssetName(*NewName);
+      Node->SetDisplayLabel(*NewName);
     }
   };
-  BaseNodeContainer->IterateNodesOfType<UInterchangeBaseMaterialFactoryNode>(rename);
-  BaseNodeContainer->IterateNodesOfType<UInterchangeTextureFactoryNode>(rename);
+  BaseNodeContainer->IterateNodesOfType<UInterchangeBaseMaterialFactoryNode>(Rename);
+  BaseNodeContainer->IterateNodesOfType<UInterchangeTextureFactoryNode>(Rename);
 }

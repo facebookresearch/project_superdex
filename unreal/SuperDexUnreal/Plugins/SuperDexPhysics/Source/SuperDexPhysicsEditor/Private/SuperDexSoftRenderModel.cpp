@@ -27,61 +27,61 @@ bool ReadRenderModelAttributes(
     const FString& Path,
     FRenderModelAttributes& OutAttributes,
     FString& OutReason) {
-  GLTF::FAsset asset;
-  GLTF::FFileReader reader;
-  reader.ReadFile(Path, /*bInLoadImageData=*/false, /*bInLoadMetadata=*/false, asset);
-  for (const GLTF::FLogMessage& message : reader.GetLogMessages()) {
-    if (message.Get<0>() == GLTF::EMessageSeverity::Error) {
+  GLTF::FAsset Asset;
+  GLTF::FFileReader Reader;
+  Reader.ReadFile(Path, /*bInLoadImageData=*/false, /*bInLoadMetadata=*/false, Asset);
+  for (const GLTF::FLogMessage& Message : Reader.GetLogMessages()) {
+    if (Message.Get<0>() == GLTF::EMessageSeverity::Error) {
       OutReason =
-          FString::Printf(TEXT("The GLB could not be read: %s"), *message.Get<1>().ToString());
+          FString::Printf(TEXT("The GLB could not be read: %s"), *Message.Get<1>().ToString());
       return false;
     }
   }
   // The reader records required extensions it can't decode, such as EXT_meshopt_compression,
   // without failing; their accessors would then hold no data. Only the extensions GLTFCore lists
   // as supported are accepted, which conservatively excludes some it does decode.
-  for (const FString& extension : asset.ExtensionsRequired) {
-    if (!Algo::AnyOf(GLTF::FAsset::SupportedExtensions, [&extension](GLTF::EExtension Supported) {
-          return extension.Equals(GLTF::ToString(Supported), ESearchCase::CaseSensitive);
+  for (const FString& Extension : Asset.ExtensionsRequired) {
+    if (!Algo::AnyOf(GLTF::FAsset::SupportedExtensions, [&Extension](GLTF::EExtension Supported) {
+          return Extension.Equals(GLTF::ToString(Supported), ESearchCase::CaseSensitive);
         })) {
       OutReason = FString::Printf(
           TEXT("The GLB requires %s, which soft-actor render models don't support in Unreal."),
-          *extension);
+          *Extension);
       return false;
     }
   }
-  if (asset.Meshes.Num() != 1 || asset.Meshes[0].Primitives.Num() != 1) {
+  if (Asset.Meshes.Num() != 1 || Asset.Meshes[0].Primitives.Num() != 1) {
     OutReason = TEXT("The GLB does not have exactly one mesh primitive.");
     return false;
   }
-  GLTF::FPrimitive& primitive = asset.Meshes[0].Primitives[0];
-  if (!primitive.IsValid() || !primitive.HasPositions()) {
+  GLTF::FPrimitive& Primitive = Asset.Meshes[0].Primitives[0];
+  if (!Primitive.IsValid() || !Primitive.HasPositions()) {
     OutReason = TEXT("The GLB's primitive geometry is invalid.");
     return false;
   }
   // The imported material may sample TEXCOORD_1, which the soft mesh does not supply.
-  if (primitive.HasTexCoords(1)) {
+  if (Primitive.HasTexCoords(1)) {
     OutReason = TEXT("The GLB's primitive has a texture-coordinate set other than TEXCOORD_0.");
     return false;
   }
 
   // Raw accessor data, in file order: GLTF::FMeshFactory would weld and reorder vertices.
   OutAttributes.NumVertices =
-      asset.Accessors[primitive.GetAttributeAccessorIndex(GLTF::EMeshAttributeType::POSITION)]
+      Asset.Accessors[Primitive.GetAttributeAccessorIndex(GLTF::EMeshAttributeType::POSITION)]
           .Count;
   OutAttributes.TriangleIndices.Reset();
-  primitive.GetTriangleIndices(OutAttributes.TriangleIndices);
+  Primitive.GetTriangleIndices(OutAttributes.TriangleIndices);
   OutAttributes.UVs.Reset();
-  if (primitive.HasTexCoords(0)) {
-    primitive.GetTexCoords(0, OutAttributes.UVs);
+  if (Primitive.HasTexCoords(0)) {
+    Primitive.GetTexCoords(0, OutAttributes.UVs);
   }
   OutAttributes.Colors.Reset();
-  if (primitive.HasColors()) {
-    TArray<FVector4f> colors;
-    primitive.GetColors(colors);
-    OutAttributes.Colors.Reserve(colors.Num());
-    for (const FVector4f& color : colors) {
-      OutAttributes.Colors.Add(color);
+  if (Primitive.HasColors()) {
+    TArray<FVector4f> Colors;
+    Primitive.GetColors(Colors);
+    OutAttributes.Colors.Reserve(Colors.Num());
+    for (const FVector4f& Color : Colors) {
+      OutAttributes.Colors.Add(Color);
     }
   }
   return true;
@@ -96,21 +96,21 @@ FString CheckSoftRenderModelLink(
   if (!VisualMesh->Skinning.IsSet()) {
     return TEXT("The visual mesh has no deformation embedding.");
   }
-  const int32 visualNodeCount = VisualMesh->Coordinates.Num() / 3;
-  if (Attributes.NumVertices != visualNodeCount) {
+  const int32 VisualNodeCount = VisualMesh->Coordinates.Num() / 3;
+  if (Attributes.NumVertices != VisualNodeCount) {
     return FString::Printf(
         TEXT("The render model has %d vertices, but the visual mesh has %d."),
         Attributes.NumVertices,
-        visualNodeCount);
+        VisualNodeCount);
   }
-  const auto fits = [&Attributes](int32 Num) { return Num == 0 || Num == Attributes.NumVertices; };
-  if (!fits(Attributes.UVs.Num()) || !fits(Attributes.Colors.Num())) {
+  const auto Fits = [&Attributes](int32 Num) { return Num == 0 || Num == Attributes.NumVertices; };
+  if (!Fits(Attributes.UVs.Num()) || !Fits(Attributes.Colors.Num())) {
     return TEXT("The render model's UV or color count differs from its vertex count.");
   }
-  const TArray<int32>& connectivity = VisualMesh->Connectivity;
-  bool bSameTriangles = Attributes.TriangleIndices.Num() == connectivity.Num();
-  for (int32 i = 0; bSameTriangles && i < connectivity.Num(); ++i) {
-    bSameTriangles = Attributes.TriangleIndices[i] == static_cast<uint32>(connectivity[i]);
+  const TArray<int32>& Connectivity = VisualMesh->Connectivity;
+  bool bSameTriangles = Attributes.TriangleIndices.Num() == Connectivity.Num();
+  for (int32 i = 0; bSameTriangles && i < Connectivity.Num(); ++i) {
+    bSameTriangles = Attributes.TriangleIndices[i] == static_cast<uint32>(Connectivity[i]);
   }
   if (!bSameTriangles) {
     return TEXT("The render model's triangles differ from the visual mesh's.");

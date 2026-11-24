@@ -35,19 +35,19 @@ void UMochiShellMeshComponent::CreateMochiActor() {
     return;
   }
 
-  const mochi::ShapeHandle shape =
+  const mochi::ShapeHandle Shape =
       Model->GetMochiShape(GetComponentTransform().GetScale3D(), FTransform::Identity);
-  if (!shape.IsValid()) {
+  if (!Shape.IsValid()) {
     UE_LOG(LogMochiPhysics, Error, TEXT("[%hs] Failed: shape handle is invalid."), __FUNCTION__);
     return;
   }
 
-  mochi::PointCloudColliderParams pointCloudParams;
-  pointCloudParams.radius = mochi::real(PointCloudRadius);
-  pointCloudParams.selfContact = bPointCloudSelfContact;
-  pointCloudParams.selfContactExclusionRatio = mochi::real(PointCloudSelfContactExclusionRatio);
+  mochi::PointCloudColliderParams PointCloudParams;
+  PointCloudParams.radius = mochi::real(PointCloudRadius);
+  PointCloudParams.selfContact = bPointCloudSelfContact;
+  PointCloudParams.selfContactExclusionRatio = mochi::real(PointCloudSelfContactExclusionRatio);
   if (PointCloudColliderTriangleElementType.IsSet()) {
-    pointCloudParams.colliderTriangleElementType =
+    PointCloudParams.colliderTriangleElementType =
         ToMochi(PointCloudColliderTriangleElementType.GetValue());
   }
 
@@ -55,13 +55,13 @@ void UMochiShellMeshComponent::CreateMochiActor() {
       this,
       GetName(),
       GetComponentTransform(),
-      shape,
+      Shape,
       ShellMaterialParams,
       ContactParams,
       ColliderType,
       Layer,
       bHasGravity,
-      &pointCloudParams,
+      &PointCloudParams,
       bUseContactSkin,
       ContactElementType,
       true, /* surface positions */

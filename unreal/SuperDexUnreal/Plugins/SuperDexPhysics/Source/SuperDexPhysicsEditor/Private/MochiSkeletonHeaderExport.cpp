@@ -35,8 +35,8 @@
 
 namespace {
 
-// The generated enum reserves Count, Any (= kMaxBones) and Invalid after the bones.
-constexpr int32 kMaxBones = 100;
+// The generated enum reserves Count, Any (= MaxBones) and Invalid after the bones.
+constexpr int32 MaxBones = 100;
 
 bool IsReservedEnumName(const FString& Name) {
   return Name == TEXT("Count") || Name == TEXT("Any") || Name == TEXT("Invalid");
@@ -55,9 +55,9 @@ FString GetDefaultSkeletonsDir() {
 // Replaces every character that can't appear in a C++ identifier with an underscore.
 FString ToIdentifier(const FString& Name) {
   FString Identifier = Name;
-  for (TCHAR& c : Identifier) {
-    if (!FChar::IsAlnum(c) && c != TEXT('_')) {
-      c = TEXT('_');
+  for (TCHAR& C : Identifier) {
+    if (!FChar::IsAlnum(C) && C != TEXT('_')) {
+      C = TEXT('_');
     }
   }
   if (Identifier.IsEmpty() || FChar::IsDigit(Identifier[0])) {
@@ -70,8 +70,8 @@ FString ToIdentifier(const FString& Name) {
 // same name.
 bool GetBoneEnumNames(const FReferenceSkeleton& Skeleton, TArray<FString>& OutNames) {
   OutNames.Reset(Skeleton.GetNum());
-  for (int32 iBone = 0; iBone < Skeleton.GetNum(); ++iBone) {
-    FString Name = ToIdentifier(Skeleton.GetBoneName(iBone).ToString());
+  for (int32 BoneIndex = 0; BoneIndex < Skeleton.GetNum(); ++BoneIndex) {
+    FString Name = ToIdentifier(Skeleton.GetBoneName(BoneIndex).ToString());
     if (IsReservedEnumName(Name)) {
       Name += TEXT("_");
     }
@@ -81,7 +81,7 @@ bool GetBoneEnumNames(const FReferenceSkeleton& Skeleton, TArray<FString>& OutNa
           Error,
           TEXT("[SuperDexSkeleton] Bones [%s] and [%s] both become the enum value [%s]."),
           *Skeleton.GetBoneName(OutNames.IndexOfByKey(Name)).ToString(),
-          *Skeleton.GetBoneName(iBone).ToString(),
+          *Skeleton.GetBoneName(BoneIndex).ToString(),
           *Name);
       return false;
     }
@@ -130,13 +130,13 @@ FString MakeHeaderContents(
       "UENUM(BlueprintType)\n"
       "enum class " + EnumType + " : uint8 {\n";
   // clang-format on
-  for (int32 iBone = 0; iBone < NumBones; ++iBone) {
-    Contents += "  " + BoneEnumNames[iBone] + " = " + FString::FromInt(iBone) + ",\n";
+  for (int32 BoneIndex = 0; BoneIndex < NumBones; ++BoneIndex) {
+    Contents += "  " + BoneEnumNames[BoneIndex] + " = " + FString::FromInt(BoneIndex) + ",\n";
   }
   // clang-format off
   Contents +=
       "  Count = " + FString::FromInt(NumBones) + " UMETA(Hidden),\n"
-      "  Any = " + FString::FromInt(kMaxBones) + ",\n"
+      "  Any = " + FString::FromInt(MaxBones) + ",\n"
       "  Invalid = 255 UMETA(Hidden)\n"
       "};\n"
       "ENUM_RANGE_BY_COUNT(" + EnumType + ", " + EnumType + "::Count);\n"
@@ -144,8 +144,8 @@ FString MakeHeaderContents(
       "/** Bone names of the " + SkeletonName + " skeleton, indexed by " + EnumType + ". */\n"
       "static const FName kSuperDexBoneNames_" + SkeletonName + "[] = {\n";
   // clang-format on
-  for (int32 iBone = 0; iBone < NumBones; ++iBone) {
-    Contents += "    \"" + Skeleton.GetBoneName(iBone).ToString() + "\",\n";
+  for (int32 BoneIndex = 0; BoneIndex < NumBones; ++BoneIndex) {
+    Contents += "    \"" + Skeleton.GetBoneName(BoneIndex).ToString() + "\",\n";
   }
   // clang-format off
   Contents +=
@@ -156,8 +156,8 @@ FString MakeHeaderContents(
       "/** Parent bone of each " + EnumType + ", or Invalid for the root. */\n"
       "static constexpr " + EnumType + " kSuperDexBoneParents_" + SkeletonName + "[] = {\n";
   // clang-format on
-  for (int32 iBone = 0; iBone < NumBones; ++iBone) {
-    const int32 Parent = Skeleton.GetParentIndex(iBone);
+  for (int32 BoneIndex = 0; BoneIndex < NumBones; ++BoneIndex) {
+    const int32 Parent = Skeleton.GetParentIndex(BoneIndex);
     Contents += "    " + EnumType +
         "::" + (Parent == INDEX_NONE ? FString(TEXT("Invalid")) : BoneEnumNames[Parent]) + ",\n";
   }
@@ -188,14 +188,14 @@ void Generate(const UMochiArticulationBase* Articulation) {
     return;
   }
   const FReferenceSkeleton& Skeleton = Articulation->GetSkeletalMesh()->GetRefSkeleton();
-  if (Skeleton.GetNum() >= kMaxBones) {
+  if (Skeleton.GetNum() >= MaxBones) {
     UE_LOG(
         LogMochiPhysicsEditor,
         Error,
         TEXT("[SuperDexSkeleton] [%s] has %d bones; a skeleton header supports at most %d."),
         *Articulation->GetArticulationName(),
         Skeleton.GetNum(),
-        kMaxBones - 1);
+        MaxBones - 1);
     return;
   }
   TArray<FString> BoneEnumNames;
@@ -260,8 +260,8 @@ void AddDetailsRow(
     IDetailLayoutBuilder& DetailLayout,
     IDetailCategoryBuilder& Category,
     const UMochiArticulationBase* Articulation) {
-  FDetailWidgetRow& header = Category.AddCustomRow(FText::FromString("Header"));
-  header
+  FDetailWidgetRow& Header = Category.AddCustomRow(FText::FromString("Header"));
+  Header
       .NameContent()
           [SNew(STextBlock).Font(DetailLayout.GetDetailFont()).Text(FText::FromString("Header"))]
       .ValueContent()[SNew(SBox)

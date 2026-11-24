@@ -44,22 +44,22 @@ DEFINE_LOG_CATEGORY(LogMochiPhysicsEditor);
 
 void FMochiPhysicsEditorModule::StartupModule() {
   // get asset tools
-  IAssetTools& assetTools =
+  IAssetTools& AssetTools =
       FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools").Get();
   // create Mochi category
-  EAssetTypeCategories::Type mochiCategory =
-      assetTools.RegisterAdvancedAssetCategory(FName(TEXT("Mochi")), FText::FromString("SuperDex"));
+  EAssetTypeCategories::Type MochiCategory =
+      AssetTools.RegisterAdvancedAssetCategory(FName(TEXT("Mochi")), FText::FromString("SuperDex"));
   // register assets
-  RegisterAssetActions<FMochiMaterialParamsAssetActions>(assetTools, mochiCategory);
-  RegisterAssetActions<FMochiShellMaterialParamsAssetActions>(assetTools, mochiCategory);
-  RegisterAssetActions<FMochiRodMaterialParamsAssetActions>(assetTools, mochiCategory);
-  RegisterAssetActions<FMochiContactParamsAssetActions>(assetTools, mochiCategory);
-  RegisterAssetActions<FMochiSolverParamsAssetActions>(assetTools, mochiCategory);
-  RegisterAssetActions<FMochiContactMatrixAssetActions>(assetTools, mochiCategory);
-  RegisterAssetActions<FMochiModelAssetActions>(assetTools, mochiCategory);
-  RegisterAssetActions<FMochiModelMaterialModifiersAssetActions>(assetTools, mochiCategory);
-  RegisterAssetActions<FMochiArticulationAssetActions>(assetTools, mochiCategory);
-  RegisterAssetActions<FSuperDexPrefabAssetActions>(assetTools, mochiCategory);
+  RegisterAssetActions<FMochiMaterialParamsAssetActions>(AssetTools, MochiCategory);
+  RegisterAssetActions<FMochiShellMaterialParamsAssetActions>(AssetTools, MochiCategory);
+  RegisterAssetActions<FMochiRodMaterialParamsAssetActions>(AssetTools, MochiCategory);
+  RegisterAssetActions<FMochiContactParamsAssetActions>(AssetTools, MochiCategory);
+  RegisterAssetActions<FMochiSolverParamsAssetActions>(AssetTools, MochiCategory);
+  RegisterAssetActions<FMochiContactMatrixAssetActions>(AssetTools, MochiCategory);
+  RegisterAssetActions<FMochiModelAssetActions>(AssetTools, MochiCategory);
+  RegisterAssetActions<FMochiModelMaterialModifiersAssetActions>(AssetTools, MochiCategory);
+  RegisterAssetActions<FMochiArticulationAssetActions>(AssetTools, MochiCategory);
+  RegisterAssetActions<FSuperDexPrefabAssetActions>(AssetTools, MochiCategory);
   // register asset context menu actions
   RegisterAssetContextMenu();
   // register actor factories
@@ -94,21 +94,21 @@ void FMochiPhysicsEditorModule::StartupModule() {
   UThumbnailManager::Get().RegisterCustomRenderer(
       UMochiArticulation::StaticClass(), UMochiArticulationThumbnailRenderer::StaticClass());
   // register details customization
-  FPropertyEditorModule& propEd =
+  FPropertyEditorModule& PropEd =
       FModuleManager::LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
-  propEd.RegisterCustomClassLayout(
+  PropEd.RegisterCustomClassLayout(
       UMochiArticulation::StaticClass()->GetFName(),
       FOnGetDetailCustomizationInstance::CreateStatic(
           &FMochiArticulationDetailsCustomization::MakeInstance));
-  propEd.RegisterCustomClassLayout(
+  PropEd.RegisterCustomClassLayout(
       UMochiArticulationComponent::StaticClass()->GetFName(),
       FOnGetDetailCustomizationInstance::CreateStatic(
           &FMochiArticulationComponentDetailsCustomization::MakeInstance));
-  propEd.RegisterCustomClassLayout(
+  PropEd.RegisterCustomClassLayout(
       UMochiShellMaterialParams::StaticClass()->GetFName(),
       FOnGetDetailCustomizationInstance::CreateStatic(
           &FMochiScientificNotationCustomization::MakeInstance));
-  propEd.RegisterCustomClassLayout(
+  PropEd.RegisterCustomClassLayout(
       UMochiRodMaterialParams::StaticClass()->GetFName(),
       FOnGetDetailCustomizationInstance::CreateStatic(
           &FMochiScientificNotationCustomization::MakeInstance));
@@ -131,12 +131,12 @@ void FMochiPhysicsEditorModule::ShutdownModule() {
   }
   // unregister details customization
   if (FModuleManager::Get().IsModuleLoaded("PropertyEditor")) {
-    FPropertyEditorModule& propEdit =
+    FPropertyEditorModule& PropEdit =
         FModuleManager::GetModuleChecked<FPropertyEditorModule>("PropertyEditor");
-    propEdit.UnregisterCustomClassLayout(UMochiArticulation::StaticClass()->GetFName());
-    propEdit.UnregisterCustomClassLayout(UMochiArticulationComponent::StaticClass()->GetFName());
-    propEdit.UnregisterCustomClassLayout(UMochiShellMaterialParams::StaticClass()->GetFName());
-    propEdit.UnregisterCustomClassLayout(UMochiRodMaterialParams::StaticClass()->GetFName());
+    PropEdit.UnregisterCustomClassLayout(UMochiArticulation::StaticClass()->GetFName());
+    PropEdit.UnregisterCustomClassLayout(UMochiArticulationComponent::StaticClass()->GetFName());
+    PropEdit.UnregisterCustomClassLayout(UMochiShellMaterialParams::StaticClass()->GetFName());
+    PropEdit.UnregisterCustomClassLayout(UMochiRodMaterialParams::StaticClass()->GetFName());
   }
 }
 
@@ -156,11 +156,11 @@ void FMochiPhysicsEditorModule::RegisterAssetContextMenu() {
               FToolMenuExecuteAction::CreateLambda([](const FToolMenuContext& InMenuContext) {
                 if (const UContentBrowserAssetContextMenuContext* Context =
                         InMenuContext.FindContext<UContentBrowserAssetContextMenuContext>()) {
-                  TArray<FAssetData> assets =
+                  TArray<FAssetData> Assets =
                       Context->GetSelectedAssetsOfType(UMochiModel::StaticClass());
-                  for (FAssetData const& asset : assets) {
-                    if (UMochiModel* model = Cast<UMochiModel>(asset.GetAsset())) {
-                      ExecuteExportMochiModelToHDF5(model, asset.AssetName);
+                  for (FAssetData const& Asset : Assets) {
+                    if (UMochiModel* Model = Cast<UMochiModel>(Asset.GetAsset())) {
+                      ExecuteExportMochiModelToHDF5(Model, Asset.AssetName);
                     }
                   }
                 }
@@ -187,11 +187,11 @@ void FMochiPhysicsEditorModule::RegisterAssetContextMenu() {
               FToolMenuExecuteAction::CreateLambda([](const FToolMenuContext& InMenuContext) {
                 if (const UContentBrowserAssetContextMenuContext* Context =
                         InMenuContext.FindContext<UContentBrowserAssetContextMenuContext>()) {
-                  TArray<FAssetData> assets =
+                  TArray<FAssetData> Assets =
                       Context->GetSelectedAssetsOfType(UMochiModel::StaticClass());
-                  for (FAssetData const& asset : assets) {
-                    if (UMochiModel* model = Cast<UMochiModel>(asset.GetAsset())) {
-                      model->ConvertTetMeshToSurfaceMesh();
+                  for (FAssetData const& Asset : Assets) {
+                    if (UMochiModel* Model = Cast<UMochiModel>(Asset.GetAsset())) {
+                      Model->ConvertTetMeshToSurfaceMesh();
                     }
                   }
                 }
@@ -211,14 +211,14 @@ void FMochiPhysicsEditorModule::RegisterAssetContextMenu() {
               FToolMenuExecuteAction::CreateLambda([](const FToolMenuContext& InMenuContext) {
                 if (const UContentBrowserAssetContextMenuContext* Context =
                         InMenuContext.FindContext<UContentBrowserAssetContextMenuContext>()) {
-                  TArray<FAssetData> assets =
+                  TArray<FAssetData> Assets =
                       Context->GetSelectedAssetsOfType(UMochiModel::StaticClass());
-                  if (assets.Num() == 0) {
+                  if (Assets.Num() == 0) {
                     return;
                   }
 
                   // Create options object
-                  UBakeSdfOptions* opt = NewObject<UBakeSdfOptions>();
+                  UBakeSdfOptions* Opt = NewObject<UBakeSdfOptions>();
 
                   // Create details view for the options
                   FPropertyEditorModule& PropertyModule =
@@ -230,17 +230,17 @@ void FMochiPhysicsEditorModule::RegisterAssetContextMenu() {
                   DetailsViewArgs.NameAreaSettings = FDetailsViewArgs::HideNameArea;
                   TSharedRef<IDetailsView> DetailsView =
                       PropertyModule.CreateDetailView(DetailsViewArgs);
-                  DetailsView->SetObject(opt);
+                  DetailsView->SetObject(Opt);
 
-                  auto onBakeLambda = [assets, opt]() {
-                    for (FAssetData const& asset : assets) {
-                      if (UMochiModel* model = Cast<UMochiModel>(asset.GetAsset())) {
-                        model->BakeSdf(&opt->GridSdfParams);
+                  auto OnBakeLambda = [Assets, Opt]() {
+                    for (FAssetData const& Asset : Assets) {
+                      if (UMochiModel* Model = Cast<UMochiModel>(Asset.GetAsset())) {
+                        Model->BakeSdf(&Opt->GridSdfParams);
                       }
                     }
                   };
 
-                  TSharedRef<SCustomDialog> dialog =
+                  TSharedRef<SCustomDialog> Dialog =
                       SNew(SCustomDialog)
                           .Title(LOCTEXT("BakeSdfDialogTitle", "Bake SDF Options"))
                           .UseScrollBox(false)
@@ -249,9 +249,9 @@ void FMochiPhysicsEditorModule::RegisterAssetContextMenu() {
                           .Buttons(
                               {SCustomDialog::FButton(
                                    LOCTEXT("BakeSdfButtonBake", "Bake"),
-                                   FSimpleDelegate::CreateLambda(onBakeLambda)),
+                                   FSimpleDelegate::CreateLambda(OnBakeLambda)),
                                SCustomDialog::FButton(LOCTEXT("BakeSdfButtonCancel", "Cancel"))});
-                  dialog->Show();
+                  Dialog->Show();
                 }
               });
 
@@ -277,18 +277,18 @@ void FMochiPhysicsEditorModule::RegisterAssetContextMenu() {
               FToolMenuExecuteAction::CreateLambda([](const FToolMenuContext& InMenuContext) {
                 if (const UContentBrowserAssetContextMenuContext* Context =
                         InMenuContext.FindContext<UContentBrowserAssetContextMenuContext>()) {
-                  TArray<FAssetData> assets =
+                  TArray<FAssetData> Assets =
                       Context->GetSelectedAssetsOfType(UMochiArticulation::StaticClass());
-                  for (FAssetData const& asset : assets) {
-                    if (UMochiArticulation* articulation =
-                            Cast<UMochiArticulation>(asset.GetAsset())) {
+                  for (FAssetData const& Asset : Assets) {
+                    if (UMochiArticulation* Articulation =
+                            Cast<UMochiArticulation>(Asset.GetAsset())) {
                       UE_LOG(
                           LogMochiPhysicsEditor,
                           Display,
                           TEXT("[%hs] Attempting to create joint control gains on %s"),
                           __FUNCTION__,
-                          *articulation->GetName());
-                      FMochiArticulationAssetUtils::GenerateJointControlGainsTable(articulation);
+                          *Articulation->GetName());
+                      FMochiArticulationAssetUtils::GenerateJointControlGainsTable(Articulation);
                     }
                   }
                 }
@@ -335,12 +335,12 @@ void FMochiPhysicsEditorModule::ExecuteExportMochiModelToHDF5(
           __FUNCTION__,
           *SelectedFilePath);
 
-      auto onOpenFileLocation = [MochiModel, SelectedFilePath]() {
+      auto OnOpenFileLocation = [MochiModel, SelectedFilePath]() {
         FPlatformProcess::ExploreFolder(*SelectedFilePath);
       };
 
       // Success dialog with "open file location"
-      TSharedRef<SCustomDialog> successDialog =
+      TSharedRef<SCustomDialog> SuccessDialog =
           SNew(SCustomDialog)
               .Title(LOCTEXT("HDF5ExportSuccessTitle", "Success"))
               .Content()
@@ -356,9 +356,9 @@ void FMochiPhysicsEditorModule::ExecuteExportMochiModelToHDF5(
               .Buttons(
                   {SCustomDialog::FButton(
                        LOCTEXT("OpenFileLocationButton", "Open Location"),
-                       FSimpleDelegate::CreateLambda(onOpenFileLocation)),
+                       FSimpleDelegate::CreateLambda(OnOpenFileLocation)),
                    SCustomDialog::FButton(LOCTEXT("DialogButtonDone", "Done"))});
-      successDialog->Show();
+      SuccessDialog->Show();
     }
   }
 }
@@ -469,14 +469,14 @@ void FMochiPhysicsEditorModule::ExecuteExportMochiScene() {
       *FilePath);
 
   // Use the directory path since the file may not exist yet (export is async)
-  auto onOpenFileLocation = [FilePath]() {
+  auto OnOpenFileLocation = [FilePath]() {
     FString NormalizedPath = FilePath;
     FPaths::NormalizeDirectoryName(NormalizedPath);
     FPaths::MakePlatformFilename(NormalizedPath);
     FPlatformProcess::ExploreFolder(*NormalizedPath);
   };
 
-  TSharedRef<SCustomDialog> successDialog =
+  TSharedRef<SCustomDialog> SuccessDialog =
       SNew(SCustomDialog)
           .Title(LOCTEXT("MochiExportSuccessTitle", "Export Started"))
           .Content()
@@ -496,9 +496,9 @@ void FMochiPhysicsEditorModule::ExecuteExportMochiScene() {
           .Buttons(
               {SCustomDialog::FButton(
                    LOCTEXT("OpenFileLocationButton", "Open Location"),
-                   FSimpleDelegate::CreateLambda(onOpenFileLocation)),
+                   FSimpleDelegate::CreateLambda(OnOpenFileLocation)),
                SCustomDialog::FButton(LOCTEXT("DialogButtonDone", "Done"))});
-  successDialog->Show();
+  SuccessDialog->Show();
 }
 
 IMPLEMENT_MODULE(FMochiPhysicsEditorModule, SuperDexPhysicsEditor)

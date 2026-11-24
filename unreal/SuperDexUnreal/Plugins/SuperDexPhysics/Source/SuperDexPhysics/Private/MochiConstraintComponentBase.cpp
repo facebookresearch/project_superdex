@@ -44,9 +44,10 @@ float UMochiConstraintComponentBase::GetMochiSaturation() const {
 
 void UMochiConstraintComponentBase::SetSaturation(float NewSaturation) {
   Saturation = NewSaturation;
-  const float saturation = GetMochiSaturation();
-  ForEachConstraint(
-      [saturation](mochi::Constraint& C) { C.SetSaturation(saturation, mochi::ErrorLog{}); });
+  const float MochiSaturation = GetMochiSaturation();
+  ForEachConstraint([MochiSaturation](mochi::Constraint& C) {
+    C.SetSaturation(MochiSaturation, mochi::ErrorLog{});
+  });
 }
 
 void UMochiConstraintComponentBase::CreateConstraints() {
@@ -63,10 +64,10 @@ void UMochiConstraintComponentBase::DestroyConstraints() {
   }
   bCreated = false;
   if (MochiScene.IsValid()) {
-    MochiScene->QueueOrExecuteCommand([state = std::move(MochiThreadState)](mochi::Scene* Scene) {
-      for (const mochi::ConstraintHandle handle : state->Constraints) {
-        if (handle.IsValid()) {
-          Scene->DestroyConstraint(handle);
+    MochiScene->QueueOrExecuteCommand([State = std::move(MochiThreadState)](mochi::Scene* Scene) {
+      for (const mochi::ConstraintHandle Handle : State->Constraints) {
+        if (Handle.IsValid()) {
+          Scene->DestroyConstraint(Handle);
         }
       }
     });
@@ -92,10 +93,10 @@ void UMochiConstraintComponentBase::ForEachConstraint(
     return;
   }
   MochiScene->QueueOrExecuteCommand(
-      [Fn = std::move(Fn), state = MochiThreadState](mochi::Scene* Scene) {
-        for (const mochi::ConstraintHandle handle : state->Constraints) {
-          if (mochi::Constraint* constraint = Scene->GetConstraint(handle)) {
-            Fn(*constraint);
+      [Fn = std::move(Fn), State = MochiThreadState](mochi::Scene* Scene) {
+        for (const mochi::ConstraintHandle Handle : State->Constraints) {
+          if (mochi::Constraint* Constraint = Scene->GetConstraint(Handle)) {
+            Fn(*Constraint);
           }
         }
       });
@@ -140,35 +141,35 @@ void UMochiConstraintComponentBase::TryCreateConstraints() {
     bCreatePending = false;
     return;
   }
-  FConstraintRequest request;
-  const EMochiBodyState state = BuildConstraints(request);
-  if (state == EMochiBodyState::Pending) {
+  FConstraintRequest Request;
+  const EMochiBodyState State = BuildConstraints(Request);
+  if (State == EMochiBodyState::Pending) {
     return;
   }
   bCreatePending = false;
-  if (state == EMochiBodyState::Failed || !request.Create || request.Scene == nullptr) {
+  if (State == EMochiBodyState::Failed || !Request.Create || Request.Scene == nullptr) {
     return;
   }
-  MochiScene = request.Scene;
+  MochiScene = Request.Scene;
   bCreated = true;
-  request.Scene->QueueOrExecuteCommand(
-      [request, mochiState = MochiThreadState](mochi::Scene* Scene) {
-        std::vector<mochi::ConstraintHandle>& constraints = mochiState->Constraints;
-        constraints = request.Create(Scene);
-        const bool bAllCreated = !constraints.empty() &&
+  Request.Scene->QueueOrExecuteCommand(
+      [Request, MochiState = MochiThreadState](mochi::Scene* Scene) {
+        std::vector<mochi::ConstraintHandle>& Constraints = MochiState->Constraints;
+        Constraints = Request.Create(Scene);
+        const bool bAllCreated = !Constraints.empty() &&
             std::all_of(
-                constraints.begin(), constraints.end(), [](mochi::ConstraintHandle Handle) -> bool {
+                Constraints.begin(), Constraints.end(), [](mochi::ConstraintHandle Handle) -> bool {
                   return Handle.IsValid();
                 });
         if (!bAllCreated) {
           return;
         }
         for (const std::pair<mochi::ActorHandle, mochi::ActorHandle>& NoContactPair :
-             request.NoContactPairs) {
-          const mochi::ActorHandle& a = NoContactPair.first;
-          const mochi::ActorHandle& b = NoContactPair.second;
+             Request.NoContactPairs) {
+          const mochi::ActorHandle& A = NoContactPair.first;
+          const mochi::ActorHandle& B = NoContactPair.second;
           Scene->EnableActorContactSymmetric(
-              a, b, /*enable*/ false, mochi::IncludeNestedActors::No, mochi::ErrorLog{});
+              A, B, /*enable*/ false, mochi::IncludeNestedActors::No, mochi::ErrorLog{});
         }
       });
 }

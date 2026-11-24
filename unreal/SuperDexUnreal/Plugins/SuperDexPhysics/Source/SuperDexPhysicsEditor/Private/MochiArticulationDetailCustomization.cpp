@@ -74,7 +74,7 @@ void AddFancyAsset(
 {
   // The icon tracks whether the asset is out of date: a warning while it needs regenerating, a
   // check mark once it is current.
-  TSharedRef<SWidget> buttons = MakeIconButton(
+  TSharedRef<SWidget> Buttons = MakeIconButton(
       LOCTEXT("GenerateButtonToolTipText", "Generate Asset"),
       TAttribute<const FSlateBrush*>::CreateLambda([GetWarn]() -> const FSlateBrush* {
         return FAppStyle::GetBrush(GetWarn() ? "Icons.Warning" : "Icons.Check");
@@ -85,13 +85,13 @@ void AddFancyAsset(
       OnGenerate,
       /*bIsFocusable=*/false);
 
-  TSharedRef<IPropertyHandle> assProp = DetailLayout.GetProperty(PropertyName);
-  IDetailPropertyRow& row = AssCat.AddProperty(assProp);
-  row.ShowPropertyButtons(false);
-  row.CustomWidget(false)
+  TSharedRef<IPropertyHandle> AssProp = DetailLayout.GetProperty(PropertyName);
+  IDetailPropertyRow& Row = AssCat.AddProperty(AssProp);
+  Row.ShowPropertyButtons(false);
+  Row.CustomWidget(false)
       .NameContent()
       [
-        assProp->CreatePropertyNameWidget() // default widget
+        AssProp->CreatePropertyNameWidget() // default widget
       ]
       .ValueContent()
       .MinDesiredWidth(250)
@@ -104,7 +104,7 @@ void AddFancyAsset(
         .MaxWidth(250)
         .FillWidth(1.0f)
         [
-          assProp->CreatePropertyValueWidget()
+          AssProp->CreatePropertyValueWidget()
         ] +
         // Buttons shown after the property value
         SHorizontalBox::Slot()
@@ -112,9 +112,9 @@ void AddFancyAsset(
         .Padding(2.f, 5.f)
         [
             // PropertyCustomizationHelpers::MakeEditButton(FSimpleDelegate::CreateLambda([]{}))
-            buttons
+            Buttons
         ]
-        // assProp->CreatePropertyValueWidget() // default widget
+        // AssProp->CreatePropertyValueWidget() // default widget
       ];
 }
 
@@ -154,29 +154,29 @@ TSharedRef<SWidget> CreateDefaultJointPositionsSliderWidget(
     EMochiArticulatedJointType Type,
     bool& bIsUsingSlider) {
   const bool bRadial = Type != EMochiArticulatedJointType::Prismatic;
-  const FString unitStr = bRadial ? TEXT("radians") : TEXT("meters");
-  const EUnit unit = bRadial ? EUnit::Radians : EUnit::Meters;
-  const TSharedRef<TNumericUnitTypeInterface<double>> unitTypeInterface = MakeShared<TNumericUnitTypeInterface<double>>(unit);
+  const FString UnitStr = bRadial ? TEXT("radians") : TEXT("meters");
+  const EUnit Unit = bRadial ? EUnit::Radians : EUnit::Meters;
+  const TSharedRef<TNumericUnitTypeInterface<double>> UnitTypeInterface = MakeShared<TNumericUnitTypeInterface<double>>(Unit);
   // Calling SetupFixedDisplay will make UE use localized units according to project settings.
   // This means radians will probably be displayed as degrees, and meters as centimeters.
   // If we want to use meters for prismatic joints, we can condition this function call.
-  unitTypeInterface->SetupFixedDisplay(bRadial ? 2 * PI : 1.0);
+  UnitTypeInterface->SetupFixedDisplay(bRadial ? 2 * PI : 1.0);
   // limits optionals will dictate slider or not slider
-  TOptional<double> minValue;
-  TOptional<double> maxValue;
+  TOptional<double> MinValue;
+  TOptional<double> MaxValue;
   if (FMath::IsFinite(LimitLower) && FMath::IsFinite(LimitUpper)) {
-    minValue = LimitLower;
-    maxValue = LimitUpper;
+    MinValue = LimitLower;
+    MaxValue = LimitUpper;
   }
   return
   SNew(SNumericEntryBox<double>)
-  .MinValue(minValue)
-  .MaxValue(maxValue)
-  .MinSliderValue(minValue)
-  .MaxSliderValue(maxValue)
+  .MinValue(MinValue)
+  .MaxValue(MaxValue)
+  .MinSliderValue(MinValue)
+  .MaxSliderValue(MaxValue)
   .AllowSpin(true)
   .SliderExponent(1.0f)
-  .TypeInterface(unitTypeInterface)
+  .TypeInterface(UnitTypeInterface)
   .MinFractionalDigits(0)
   .MaxFractionalDigits(3)
   .Font(IDetailLayoutBuilder::GetDetailFont())
@@ -187,14 +187,14 @@ TSharedRef<SWidget> CreateDefaultJointPositionsSliderWidget(
   })
   .OnValueChanged_Lambda([&bIsUsingSlider, LimitLower, LimitUpper, PropertyHandle](double NewValue) {
     if (bIsUsingSlider) {
-      const double clamped = FMath::Clamp(NewValue, LimitLower, LimitUpper);
-      PropertyHandle->SetValue(clamped, EPropertyValueSetFlags::InteractiveChange);
+      const double Clamped = FMath::Clamp(NewValue, LimitLower, LimitUpper);
+      PropertyHandle->SetValue(Clamped, EPropertyValueSetFlags::InteractiveChange);
     }
   })
   .OnValueCommitted_Lambda([LimitLower, LimitUpper, PropertyHandle](double Value, ETextCommit::Type)
   {
-    const double clamped = FMath::Clamp(Value, LimitLower, LimitUpper);
-    PropertyHandle->SetValue(clamped, EPropertyValueSetFlags::DefaultFlags);
+    const double Clamped = FMath::Clamp(Value, LimitLower, LimitUpper);
+    PropertyHandle->SetValue(Clamped, EPropertyValueSetFlags::DefaultFlags);
   })
   .OnBeginSliderMovement_Lambda([&bIsUsingSlider]()    {
     bIsUsingSlider = true;
@@ -213,37 +213,37 @@ void GenerateDefaultJointPositionsWidget(
     const UMochiArticulation* Articulation,
     IDetailChildrenBuilder& ChildrenBuilder,
     bool& bIsUsingSlider) {
-  FMochiArticulatedJoint joint;
-  double limitLower = 0;
-  double limitUpper = 0;
-  if (!Articulation->GetDof(ArrayIndex, joint) ||
-      !Articulation->GetDofLimits(ArrayIndex, limitLower, limitUpper)) {
+  FMochiArticulatedJoint Joint;
+  double LimitLower = 0;
+  double LimitUpper = 0;
+  if (!Articulation->GetDof(ArrayIndex, Joint) ||
+      !Articulation->GetDofLimits(ArrayIndex, LimitLower, LimitUpper)) {
     return;
   }
   IDetailPropertyRow& Row = ChildrenBuilder.AddProperty(PropertyHandle);
   FNumberFormattingOptions NoCommas;
   NoCommas.UseGrouping = false;
-  const FString dofTypeStr = joint.Type == EMochiArticulatedJointType::Revolute ? TEXT("R") :
-    joint.Type == EMochiArticulatedJointType::Prismatic ? TEXT("P") :
-    joint.Type == EMochiArticulatedJointType::Spherical ? TEXT("S") :  TEXT("?");
-  const FText dofIndexText = FText::Format(LOCTEXT("DefaultJointPositionsIndex", "[ {0} ] ( {1} )"),
+  const FString DofTypeStr = Joint.Type == EMochiArticulatedJointType::Revolute ? TEXT("R") :
+    Joint.Type == EMochiArticulatedJointType::Prismatic ? TEXT("P") :
+    Joint.Type == EMochiArticulatedJointType::Spherical ? TEXT("S") :  TEXT("?");
+  const FText DofIndexText = FText::Format(LOCTEXT("DefaultJointPositionsIndex", "[ {0} ] ( {1} )"),
     FText::AsNumber(ArrayIndex, &NoCommas),
-    FText::FromString(dofTypeStr));
-  const FText dofNameText = FText::FromString(joint.Name.ToString());
-  Row.DisplayName(dofIndexText);
+    FText::FromString(DofTypeStr));
+  const FText DofNameText = FText::FromString(Joint.Name.ToString());
+  Row.DisplayName(DofIndexText);
   Row.ShowPropertyButtons(false);
   Row.CustomWidget(false)
       .NameContent()
       [
         // PropertyHandle->CreatePropertyNameWidget() // default widget
-        CreateDefaultJointPositionsNameWidget(PropertyHandle, dofNameText)
+        CreateDefaultJointPositionsNameWidget(PropertyHandle, DofNameText)
       ]
       .ValueContent()
       .MinDesiredWidth(250)
       .MaxDesiredWidth(TOptional<float>())
       [
         // PropertyHandle->CreatePropertyValueWidget() // default widget
-        CreateDefaultJointPositionsSliderWidget(PropertyHandle, limitLower, limitUpper, joint.Type, bIsUsingSlider)
+        CreateDefaultJointPositionsSliderWidget(PropertyHandle, LimitLower, LimitUpper, Joint.Type, bIsUsingSlider)
       ];
 }
 } // namespace
@@ -258,22 +258,22 @@ TSharedRef<IDetailCustomization> FMochiArticulationDetailsCustomization::MakeIns
 }
 
 void FMochiArticulationDetailsCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailLayout) {
-  TArray<TWeakObjectPtr<UObject>> objects;
-  DetailLayout.GetObjectsBeingCustomized(objects);
-  for (int iObj = 0; iObj < objects.Num(); ++iObj) {
-    Articulation = Cast<UMochiArticulation>(objects[iObj]);
+  TArray<TWeakObjectPtr<UObject>> Objects;
+  DetailLayout.GetObjectsBeingCustomized(Objects);
+  for (int ObjIndex = 0; ObjIndex < Objects.Num(); ++ObjIndex) {
+    Articulation = Cast<UMochiArticulation>(Objects[ObjIndex]);
     if (Articulation) {
       // Warnings category
-      TArray<FString> warnings;
-      if (!Articulation->IsReady(true, &warnings)) {
-        IDetailCategoryBuilder& warnCat = DetailLayout.EditCategory("Warnings");
-        for (const FString& msg : warnings) {
-          warnCat.AddCustomRow(FText::FromString(msg))
+      TArray<FString> Warnings;
+      if (!Articulation->IsReady(true, &Warnings)) {
+        IDetailCategoryBuilder& WarnCat = DetailLayout.EditCategory("Warnings");
+        for (const FString& Msg : Warnings) {
+          WarnCat.AddCustomRow(FText::FromString(Msg))
               .WholeRowContent()[SNew(SWarningOrErrorBox)
                                      .MessageStyle(EMessageStyle::Warning)
                                      .IconSize({16, 16})
                                      .Padding(8.0f)
-                                     .Message(FText::FromString(msg))]
+                                     .Message(FText::FromString(Msg))]
               .ResetToDefaultContent()[MakeIconButton(
                   LOCTEXT("RefreshWarningsTooltipText", "Refresh Warnings"),
                   FAppStyle::GetBrush("PropertyWindow.DiffersFromDefault"),
@@ -284,47 +284,47 @@ void FMochiArticulationDetailsCustomization::CustomizeDetails(IDetailLayoutBuild
         }
       }
       // Robot category
-      IDetailCategoryBuilder& artCat = DetailLayout.EditCategory("Articulation");
-      artCat.AddProperty(
+      IDetailCategoryBuilder& ArtCat = DetailLayout.EditCategory("Articulation");
+      ArtCat.AddProperty(
           DetailLayout.GetProperty(GET_MEMBER_NAME_CHECKED(UMochiArticulation, ArticulationName)));
-      const TSharedPtr<IPropertyHandle> posProp = DetailLayout.GetProperty(
+      const TSharedPtr<IPropertyHandle> PosProp = DetailLayout.GetProperty(
           GET_MEMBER_NAME_CHECKED(UMochiArticulation, DefaultJointPositions));
-      const TSharedRef<FDetailArrayBuilder> builder =
-          MakeShareable(new FDetailArrayBuilder(posProp.ToSharedRef(), true, false, true));
-      builder->OnGenerateArrayElementWidget(
+      const TSharedRef<FDetailArrayBuilder> Builder =
+          MakeShareable(new FDetailArrayBuilder(PosProp.ToSharedRef(), true, false, true));
+      Builder->OnGenerateArrayElementWidget(
           FOnGenerateArrayElementWidget::CreateSP(
               this, &FMochiArticulationDetailsCustomization::GenerateDefaultJointPositionsWidget));
-      artCat.AddCustomBuilder(builder);
-      artCat.AddProperty(
+      ArtCat.AddCustomBuilder(Builder);
+      ArtCat.AddProperty(
           DetailLayout.GetProperty(GET_MEMBER_NAME_CHECKED(UMochiArticulation, Joints)));
-      artCat.AddProperty(
+      ArtCat.AddProperty(
           DetailLayout.GetProperty(GET_MEMBER_NAME_CHECKED(UMochiArticulation, Links)));
-      artCat.AddProperty(
+      ArtCat.AddProperty(
           DetailLayout.GetProperty(GET_MEMBER_NAME_CHECKED(UMochiArticulation, Cycles)));
-      artCat.AddProperty(
+      ArtCat.AddProperty(
           DetailLayout.GetProperty(GET_MEMBER_NAME_CHECKED(UMochiArticulation, Skin)));
-      artCat.AddProperty(
+      ArtCat.AddProperty(
           DetailLayout.GetProperty(GET_MEMBER_NAME_CHECKED(UMochiArticulation, ContactOverrides)));
-      artCat.AddProperty(DetailLayout.GetProperty(
+      ArtCat.AddProperty(DetailLayout.GetProperty(
           GET_MEMBER_NAME_CHECKED(UMochiArticulation, AdditionalConstraints)));
-      artCat.AddProperty(
+      ArtCat.AddProperty(
           DetailLayout.GetProperty(GET_MEMBER_NAME_CHECKED(UMochiArticulation, SoftLinks)));
       // Assets category
-      IDetailCategoryBuilder& assCat = DetailLayout.EditCategory("Assets");
+      IDetailCategoryBuilder& AssCat = DetailLayout.EditCategory("Assets");
       AddFancyAsset(
           DetailLayout,
-          assCat,
+          AssCat,
           GET_MEMBER_NAME_CHECKED(UMochiArticulation, SkeletalMesh),
           [this] {
             return Articulation->bNeedGenerateSkeletalMesh || Articulation->SkeletalMesh == nullptr;
           },
           FSimpleDelegate::CreateLambda(
               [this] { FMochiArticulationAssetUtils::GenerateSkeletalMesh(Articulation); }));
-      MochiSkeletonHeaderExport::AddDetailsRow(DetailLayout, assCat, Articulation);
+      MochiSkeletonHeaderExport::AddDetailsRow(DetailLayout, AssCat, Articulation);
       // Internal category
-      IDetailCategoryBuilder& intCat = DetailLayout.EditCategory("Internal");
-      intCat.SetDisplayName(FText::FromString(TEXT("Internal (Advanced Use Only)")));
-      intCat.InitiallyCollapsed(true);
+      IDetailCategoryBuilder& IntCat = DetailLayout.EditCategory("Internal");
+      IntCat.SetDisplayName(FText::FromString(TEXT("Internal (Advanced Use Only)")));
+      IntCat.InitiallyCollapsed(true);
     }
   }
 }
@@ -347,26 +347,27 @@ TSharedRef<IDetailCustomization> FMochiArticulationComponentDetailsCustomization
 
 void FMochiArticulationComponentDetailsCustomization::CustomizeDetails(
     IDetailLayoutBuilder& DetailLayout) {
-  TArray<TWeakObjectPtr<UObject>> objects;
-  DetailLayout.GetObjectsBeingCustomized(objects);
-  for (int iObj = 0; iObj < objects.Num(); ++iObj) {
-    UMochiArticulationComponent* const component = Cast<UMochiArticulationComponent>(objects[iObj]);
-    Articulation = component->GetArticulationAsset();
+  TArray<TWeakObjectPtr<UObject>> Objects;
+  DetailLayout.GetObjectsBeingCustomized(Objects);
+  for (int ObjIndex = 0; ObjIndex < Objects.Num(); ++ObjIndex) {
+    UMochiArticulationComponent* const Component =
+        Cast<UMochiArticulationComponent>(Objects[ObjIndex]);
+    Articulation = Component->GetArticulationAsset();
     if (Articulation) {
-      IDetailCategoryBuilder& articulationCat = DetailLayout.EditCategory(
+      IDetailCategoryBuilder& ArticulationCat = DetailLayout.EditCategory(
           "Mochi Articulation", FText::GetEmpty(), ECategoryPriority::Important);
-      articulationCat.AddProperty(DetailLayout.GetProperty(
+      ArticulationCat.AddProperty(DetailLayout.GetProperty(
           GET_MEMBER_NAME_CHECKED(UMochiArticulationComponent, Articulation)));
-      const TSharedPtr<IPropertyHandle> posProp = DetailLayout.GetProperty(
+      const TSharedPtr<IPropertyHandle> PosProp = DetailLayout.GetProperty(
           GET_MEMBER_NAME_CHECKED(UMochiArticulationComponent, InitialJointPositions));
-      const TSharedRef<FDetailArrayBuilder> builder =
-          MakeShareable(new FDetailArrayBuilder(posProp.ToSharedRef(), true, false, true));
-      builder->OnGenerateArrayElementWidget(
+      const TSharedRef<FDetailArrayBuilder> Builder =
+          MakeShareable(new FDetailArrayBuilder(PosProp.ToSharedRef(), true, false, true));
+      Builder->OnGenerateArrayElementWidget(
           FOnGenerateArrayElementWidget::CreateSP(
               this,
               &FMochiArticulationComponentDetailsCustomization::
                   GenerateDefaultJointPositionsWidget));
-      articulationCat.AddCustomBuilder(builder);
+      ArticulationCat.AddCustomBuilder(Builder);
     }
   }
 }

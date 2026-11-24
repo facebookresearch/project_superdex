@@ -36,30 +36,30 @@ using mochi::operator""_r;
 //------------------------------------------------------------------------------
 
 template <typename T>
-mochi::Span<T const> ToMochiSpan(TArray<T> const& values) {
-  return {values.GetData(), static_cast<size_t>(values.Num())};
+mochi::Span<T const> ToMochiSpan(TArray<T> const& Values) {
+  return {Values.GetData(), static_cast<size_t>(Values.Num())};
 }
 
 template <typename ContainerT>
-inline MOCHI_ANY auto ToMochiSpan(ContainerT& arr) {
-  auto* ptr = arr.GetData();
-  size_t len = (size_t)arr.Num();
-  return mochi::Span<std::remove_reference_t<decltype(*ptr)>>{ptr, len};
+inline MOCHI_ANY auto ToMochiSpan(ContainerT& Arr) {
+  auto* Ptr = Arr.GetData();
+  size_t Len = (size_t)Arr.Num();
+  return mochi::Span<std::remove_reference_t<decltype(*Ptr)>>{Ptr, Len};
 }
 
-inline mochi::Span<char const> ToMochiBinarySpan(TArray<uint8> const& values) {
-  return {(char*)(values.GetData()), static_cast<size_t>(values.Num())};
+inline mochi::Span<char const> ToMochiBinarySpan(TArray<uint8> const& Values) {
+  return {(char*)(Values.GetData()), static_cast<size_t>(Values.Num())};
 }
 
 template <typename T>
 TArray<T> FromMochiSpan(mochi::Span<T const> Span) {
-  TArray<T> array;
-  array.SetNum(Span.size());
-  const T* srcBegin = Span.data();
-  const T* srcEnd = srcBegin + Span.size();
-  T* dstBegin = array.GetData();
-  std::copy(srcBegin, srcEnd, dstBegin);
-  return array;
+  TArray<T> Array;
+  Array.SetNum(Span.size());
+  const T* SrcBegin = Span.data();
+  const T* SrcEnd = SrcBegin + Span.size();
+  T* DstBegin = Array.GetData();
+  std::copy(SrcBegin, SrcEnd, DstBegin);
+  return Array;
 }
 
 //------------------------------------------------------------------------------
@@ -102,31 +102,31 @@ struct TMochiToUnrealConverter : protected TMochiSpaceConverter<T> {
   }
 
   FORCEINLINE TQuat RotationToUnreal(const mochi::Quaternion& Q) const {
-    const mochi::Real4 v = Q.ToReal4();
-    return this->TMochiSpaceConverter<T>::RotationToOutput(TQuat{v[0], v[1], v[2], v[3]});
+    const mochi::Real4 V = Q.ToReal4();
+    return this->TMochiSpaceConverter<T>::RotationToOutput(TQuat{V[0], V[1], V[2], V[3]});
   }
 
   FORCEINLINE TTransform TransformToUnreal(const mochi::TransformRT& Tt) const {
-    const TQuat r = RotationToUnreal(Tt.GetRotation());
-    const TVector p = TranslationToUnreal(Tt.GetTranslation());
-    return TTransform(r, p);
+    const TQuat R = RotationToUnreal(Tt.GetRotation());
+    const TVector P = TranslationToUnreal(Tt.GetTranslation());
+    return TTransform(R, P);
   }
 
   FORCEINLINE TTransform TransformToUnreal(const mochi::TransformSRT& Tt) const {
-    const TQuat r = RotationToUnreal(Tt.GetRotation());
-    const TVector p = TranslationToUnreal(Tt.GetTranslation());
-    const mochi::real s = Tt.GetScale();
-    return TTransform(r, p, TVector(s));
+    const TQuat R = RotationToUnreal(Tt.GetRotation());
+    const TVector P = TranslationToUnreal(Tt.GetTranslation());
+    const mochi::real S = Tt.GetScale();
+    return TTransform(R, P, TVector(S));
   }
 
   FORCEINLINE FMochiMomentOfInertia InertiaToUnreal(const mochi::Real6& I) const {
-    TMatrix3 i(
+    TMatrix3 InertiaMatrix(
         TVector(I[0], I[1], I[2]), TVector(I[1], I[3], I[4]), TVector(I[2], I[4], I[5]), true);
-    i = TMochiSpaceConverter<T>::InertiaToOutput(i);
-    FMochiMomentOfInertia moi;
-    moi.Ixx = i(0, 0), moi.Ixy = i(0, 1), moi.Ixz = i(0, 2), moi.Iyy = i(1, 1), moi.Iyz = i(1, 2),
-    moi.Izz = i(2, 2);
-    return moi;
+    InertiaMatrix = TMochiSpaceConverter<T>::InertiaToOutput(InertiaMatrix);
+    FMochiMomentOfInertia Moi;
+    Moi.Ixx = InertiaMatrix(0, 0), Moi.Ixy = InertiaMatrix(0, 1), Moi.Ixz = InertiaMatrix(0, 2),
+    Moi.Iyy = InertiaMatrix(1, 1), Moi.Iyz = InertiaMatrix(1, 2), Moi.Izz = InertiaMatrix(2, 2);
+    return Moi;
   }
 };
 
@@ -142,7 +142,7 @@ struct TUnrealToMochiConverter : protected TMochiSpaceConverter<T> {
   using TTransform = typename TMochiSpaceConverter<T>::TTransform;
   using TMatrix3 = typename TMochiSpaceConverter<T>::TMatrix3;
 
-  using mr = mochi::real;
+  using Mr = mochi::real;
 
   FORCEINLINE TUnrealToMochiConverter()
       : TMochiSpaceConverter<T>(
@@ -155,23 +155,32 @@ struct TUnrealToMochiConverter : protected TMochiSpaceConverter<T> {
       : TMochiSpaceConverter<T>(InInputSpace, InOutputSpace) {}
 
   FORCEINLINE mochi::real MeasureToMochi(T S, int N = 1) const {
-    return this->TMochiSpaceConverter<T>::MeasureToOutput(static_cast<mr>(S), N);
+    return this->TMochiSpaceConverter<T>::MeasureToOutput(static_cast<Mr>(S), N);
   }
 
   FORCEINLINE mochi::Real3 TranslationToMochi(const TVector& V) const {
-    const TVector v = TMochiSpaceConverter<T>::TranslationToOutput(V);
-    return mochi::Real3(static_cast<mr>(v.X), static_cast<mr>(v.Y), static_cast<mr>(v.Z));
+    const TVector TranslationVector = TMochiSpaceConverter<T>::TranslationToOutput(V);
+    return mochi::Real3(
+        static_cast<Mr>(TranslationVector.X),
+        static_cast<Mr>(TranslationVector.Y),
+        static_cast<Mr>(TranslationVector.Z));
   }
 
   FORCEINLINE mochi::Real3 DirectionToMochi(const TVector& V) const {
-    const TVector v = TMochiSpaceConverter<T>::DirectionToOutput(V);
-    return mochi::Real3(static_cast<mr>(v.X), static_cast<mr>(v.Y), static_cast<mr>(v.Z));
+    const TVector DirectionVector = TMochiSpaceConverter<T>::DirectionToOutput(V);
+    return mochi::Real3(
+        static_cast<Mr>(DirectionVector.X),
+        static_cast<Mr>(DirectionVector.Y),
+        static_cast<Mr>(DirectionVector.Z));
   }
 
   FORCEINLINE mochi::Quaternion RotationToMochi(const TQuat& Q) const {
-    const TQuat q = TMochiSpaceConverter<T>::RotationToOutput(Q);
+    const TQuat OutputRotation = TMochiSpaceConverter<T>::RotationToOutput(Q);
     return mochi::Quaternion(
-        static_cast<mr>(q.X), static_cast<mr>(q.Y), static_cast<mr>(q.Z), static_cast<mr>(q.W));
+        static_cast<Mr>(OutputRotation.X),
+        static_cast<Mr>(OutputRotation.Y),
+        static_cast<Mr>(OutputRotation.Z),
+        static_cast<Mr>(OutputRotation.W));
   }
 
   FORCEINLINE mochi::TransformRT TransformToMochi_RT(const TTransform& Tt) const {
@@ -180,37 +189,37 @@ struct TUnrealToMochiConverter : protected TMochiSpaceConverter<T> {
   }
 
   FORCEINLINE mochi::TransformSRT TransformToMochi_SRT(const TTransform& Tt) const {
-    const TVector s = Tt.GetScale3D();
+    const TVector S = Tt.GetScale3D();
     // Mochi does not support non-uniform scale
-    ensure(s.X == s.Y && s.X == s.Z);
-    return mochi::TransformSRT(s.X, TransformToMochi_RT(Tt));
+    ensure(S.X == S.Y && S.X == S.Z);
+    return mochi::TransformSRT(S.X, TransformToMochi_RT(Tt));
   }
 
   FORCEINLINE mochi::Real6 InertiaToMochi(const FMochiMomentOfInertia& I) const {
-    TMatrix3 i(
+    TMatrix3 InertiaMatrix(
         TVector(I.Ixx, I.Ixy, I.Ixz),
         TVector(I.Ixy, I.Iyy, I.Iyz),
         TVector(I.Ixz, I.Iyz, I.Izz),
         true);
-    i = TMochiSpaceConverter<T>::InertiaToOutput(i);
+    InertiaMatrix = TMochiSpaceConverter<T>::InertiaToOutput(InertiaMatrix);
     return mochi::Real6{
-        static_cast<mr>(i(0, 0)),
-        static_cast<mr>(i(0, 1)),
-        static_cast<mr>(i(0, 2)),
-        static_cast<mr>(i(1, 1)),
-        static_cast<mr>(i(1, 2)),
-        static_cast<mr>(i(2, 2))};
+        static_cast<Mr>(InertiaMatrix(0, 0)),
+        static_cast<Mr>(InertiaMatrix(0, 1)),
+        static_cast<Mr>(InertiaMatrix(0, 2)),
+        static_cast<Mr>(InertiaMatrix(1, 1)),
+        static_cast<Mr>(InertiaMatrix(1, 2)),
+        static_cast<Mr>(InertiaMatrix(2, 2))};
   }
 
   FORCEINLINE mochi::VMatrix4x4r GetBasisChangeMatrix() const {
     const TMatrix3& M = TMochiSpaceConverter<T>::InputToOutputMatrix;
     return mochi::VMatrix4x4r{
         mochi::Vec4r{
-            static_cast<mr>(M(0, 0)), static_cast<mr>(M(0, 1)), static_cast<mr>(M(0, 2)), 0},
+            static_cast<Mr>(M(0, 0)), static_cast<Mr>(M(0, 1)), static_cast<Mr>(M(0, 2)), 0},
         mochi::Vec4r{
-            static_cast<mr>(M(1, 0)), static_cast<mr>(M(1, 1)), static_cast<mr>(M(1, 2)), 0},
+            static_cast<Mr>(M(1, 0)), static_cast<Mr>(M(1, 1)), static_cast<Mr>(M(1, 2)), 0},
         mochi::Vec4r{
-            static_cast<mr>(M(2, 0)), static_cast<mr>(M(2, 1)), static_cast<mr>(M(2, 2)), 0},
+            static_cast<Mr>(M(2, 0)), static_cast<Mr>(M(2, 1)), static_cast<Mr>(M(2, 2)), 0},
         mochi::Vec4r{0, 0, 0, 1}};
   }
 };
@@ -234,14 +243,14 @@ FORCEINLINE void ContactPointToUnreal(
     FName NestedName,
     const FMochiToUnrealConverter& M2U,
     FMochiContactPoint& OutUnrealContact) {
-  const mochi::Actor* mochiActorA = Scene->GetActor(MochiContact.actorA);
-  const mochi::Actor* mochiActorB = Scene->GetActor(MochiContact.actorB);
-  USceneComponent* mochiCompA = reinterpret_cast<USceneComponent*>(mochiActorA->GetUserData());
-  USceneComponent* mochiCompB = reinterpret_cast<USceneComponent*>(mochiActorB->GetUserData());
-  OutUnrealContact.InternalMochiActor = FName(mochiActorA->GetName());
-  OutUnrealContact.OtherInternalMochiActor = FName(mochiActorB->GetName());
-  OutUnrealContact.MochiComponent = mochiCompA;
-  OutUnrealContact.OtherMochiComponent = mochiCompB;
+  const mochi::Actor* MochiActorA = Scene->GetActor(MochiContact.actorA);
+  const mochi::Actor* MochiActorB = Scene->GetActor(MochiContact.actorB);
+  USceneComponent* MochiCompA = reinterpret_cast<USceneComponent*>(MochiActorA->GetUserData());
+  USceneComponent* MochiCompB = reinterpret_cast<USceneComponent*>(MochiActorB->GetUserData());
+  OutUnrealContact.InternalMochiActor = FName(MochiActorA->GetName());
+  OutUnrealContact.OtherInternalMochiActor = FName(MochiActorB->GetName());
+  OutUnrealContact.MochiComponent = MochiCompA;
+  OutUnrealContact.OtherMochiComponent = MochiCompB;
   OutUnrealContact.NestedName = NestedName;
   OutUnrealContact.Location = M2U.TranslationToUnreal(MochiContact.posA);
   OutUnrealContact.OtherLocation = M2U.TranslationToUnreal(MochiContact.posB);
@@ -254,7 +263,7 @@ FORCEINLINE void ContactPointToUnreal(
   // TODO: When Mochi mirrors a mesh collider (negative scale on an odd number of axes), it
   // reverses the triangle winding order. Reverse the parametric coordinates here too, so they
   // match the triangle as the UE mesh defines it.
-  const mochi::Real3& pc = MochiContact.parametricCoords;
-  OutUnrealContact.ParametricCoords = FVector{pc[0], pc[1], pc[2]};
+  const mochi::Real3& Pc = MochiContact.parametricCoords;
+  OutUnrealContact.ParametricCoords = FVector{Pc[0], Pc[1], Pc[2]};
   OutUnrealContact.Area = M2U.MeasureToUnreal(MochiContact.intWeight, 2);
 }

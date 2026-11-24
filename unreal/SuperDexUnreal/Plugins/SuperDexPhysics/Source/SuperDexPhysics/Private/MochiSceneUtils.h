@@ -29,10 +29,10 @@
 
 inline UMochiSceneObject* GetMochiGameInstanceScene(const UObject* WorldContextObject) {
   MOCHI_PROFILE_SCOPE();
-  const UGameInstance* game = WorldContextObject->GetWorld()->GetGameInstance();
-  const UMochiGameInstanceSubsystem* subsys = game->GetSubsystem<UMochiGameInstanceSubsystem>();
-  if (subsys) {
-    return subsys->GetScene();
+  const UGameInstance* Game = WorldContextObject->GetWorld()->GetGameInstance();
+  const UMochiGameInstanceSubsystem* Subsys = Game->GetSubsystem<UMochiGameInstanceSubsystem>();
+  if (Subsys) {
+    return Subsys->GetScene();
   }
   return nullptr;
 }

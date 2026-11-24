@@ -126,11 +126,11 @@ class SUPERDEXPHYSICS_API UMochiRodConstraintComponent : public USceneComponent 
   TWeakObjectPtr<UMochiSceneObject> MochiSceneObject;
   bool bConstraintsCreated = false;
 
-  struct MochiState {
+  struct FMochiState {
     mochi::ConstraintHandle PositionConstraintHandle;
     mochi::ConstraintHandle RotationConstraintHandle;
   };
 
   // Accessed by the Mochi thread only!
-  std::shared_ptr<MochiState> MochiThreadState = std::make_shared<MochiState>();
+  std::shared_ptr<FMochiState> MochiThreadState = std::make_shared<FMochiState>();
 };

@@ -47,11 +47,11 @@ void UMochiArticulationPreviewComponent::SetJointPositions(
   if (Articulation) {
     ensure(NewJointPositions.Num() == Articulation->GetDefaultJointPositions().Num());
     JointPositions = NewJointPositions;
-    TArray<FTransform> transforms;
-    TArray<FName> names = Articulation->GetLinkNames();
-    if (Articulation->ComputeLinkToParentTransforms(JointPositions, transforms)) {
-      for (int iLink = 0; iLink < transforms.Num(); ++iLink) {
-        SetBoneLocalTransformByName(names[iLink], transforms[iLink]);
+    TArray<FTransform> Transforms;
+    TArray<FName> Names = Articulation->GetLinkNames();
+    if (Articulation->ComputeLinkToParentTransforms(JointPositions, Transforms)) {
+      for (int LinkIndex = 0; LinkIndex < Transforms.Num(); ++LinkIndex) {
+        SetBoneLocalTransformByName(Names[LinkIndex], Transforms[LinkIndex]);
       }
     }
     TickPose(0, true);
@@ -66,9 +66,9 @@ void UMochiArticulationPreviewComponent::SetBoneLocalTransformByName(
   if (!GetSkinnedAsset() || !RequiredBones.IsValid()) {
     return;
   }
-  const int32 boneIndex = GetBoneIndex(BoneName);
-  if (boneIndex >= 0 && boneIndex < BoneSpaceTransforms.Num()) {
-    BoneSpaceTransforms[boneIndex] = InTransform;
+  const int32 BoneIndex = GetBoneIndex(BoneName);
+  if (BoneIndex >= 0 && BoneIndex < BoneSpaceTransforms.Num()) {
+    BoneSpaceTransforms[BoneIndex] = InTransform;
     MarkRefreshTransformDirty();
   }
 }
@@ -78,8 +78,8 @@ void UMochiArticulationPreviewComponent::SetBoneLocalRotations(const TArray<FQua
     return;
   }
   if (InRotations.Num() == GetNumBones()) {
-    for (int boneIndex = 0; boneIndex < GetNumBones(); ++boneIndex) {
-      BoneSpaceTransforms[boneIndex].SetRotation(InRotations[boneIndex]);
+    for (int BoneIndex = 0; BoneIndex < GetNumBones(); ++BoneIndex) {
+      BoneSpaceTransforms[BoneIndex].SetRotation(InRotations[BoneIndex]);
     }
   }
   RefreshBoneTransforms();

@@ -28,17 +28,17 @@ namespace {
 
 // GLB layout: a 12-byte header (magic, version, length), then chunks of an 8-byte header (data
 // length, type) and their data: JSON first, then an optional binary buffer.
-constexpr int64 kGlbHeaderSize = 12;
-constexpr int64 kChunkHeaderSize = 8;
-constexpr int64 kChunkTypeOffset = 4;
-constexpr int64 kJsonDataOffset = kGlbHeaderSize + kChunkHeaderSize;
-constexpr uint32 kGlbMagic = 0x46546C67; // "glTF"
-constexpr uint32 kJsonChunk = 0x4E4F534A; // "JSON"
-constexpr uint32 kBinChunk = 0x004E4942; // "BIN\0"
+constexpr int64 GlbHeaderSize = 12;
+constexpr int64 ChunkHeaderSize = 8;
+constexpr int64 ChunkTypeOffset = 4;
+constexpr int64 JsonDataOffset = GlbHeaderSize + ChunkHeaderSize;
+constexpr uint32 GlbMagic = 0x46546C67; // "glTF"
+constexpr uint32 JsonChunk = 0x4E4F534A; // "JSON"
+constexpr uint32 BinChunk = 0x004E4942; // "BIN\0"
 
 FString Md5(const FString& Text) {
-  const FTCHARToUTF8 utf8(*Text);
-  return FMD5::HashBytes(reinterpret_cast<const uint8*>(utf8.Get()), utf8.Length());
+  const FTCHARToUTF8 Utf8(*Text);
+  return FMD5::HashBytes(reinterpret_cast<const uint8*>(Utf8.Get()), Utf8.Length());
 }
 
 // Key order-independent text of a glTF JSON value, with the index of every texture reference (the
@@ -55,33 +55,33 @@ FString CanonicalJson(
     case EJson::Object: {
       // The fields, sorted by key. FJsonObject's key type differs between engine versions, so the
       // keys are copied out rather than read through it.
-      TArray<TPair<FString, TSharedPtr<FJsonValue>>> fields;
-      for (const auto& field : Value->AsObject()->Values) {
-        fields.Emplace(*field.Key, field.Value);
+      TArray<TPair<FString, TSharedPtr<FJsonValue>>> Fields;
+      for (const auto& Field : Value->AsObject()->Values) {
+        Fields.Emplace(*Field.Key, Field.Value);
       }
-      fields.Sort([](const auto& A, const auto& B) { return A.Key < B.Key; });
-      FString text = TEXT("{");
-      for (const TPair<FString, TSharedPtr<FJsonValue>>& field : fields) {
-        const FString& key = field.Key;
-        const TSharedPtr<FJsonValue>& child = field.Value;
-        FString childText;
-        if (bTextureReference && key == TEXT("index") && child->Type == EJson::Number) {
-          const int32 index = static_cast<int32>(child->AsNumber());
-          childText = TextureDigests.IsValidIndex(index) ? TextureDigests[index] : TEXT("?");
+      Fields.Sort([](const auto& A, const auto& B) { return A.Key < B.Key; });
+      FString Text = TEXT("{");
+      for (const TPair<FString, TSharedPtr<FJsonValue>>& Field : Fields) {
+        const FString& Key = Field.Key;
+        const TSharedPtr<FJsonValue>& Child = Field.Value;
+        FString ChildText;
+        if (bTextureReference && Key == TEXT("index") && Child->Type == EJson::Number) {
+          const int32 Index = static_cast<int32>(Child->AsNumber());
+          ChildText = TextureDigests.IsValidIndex(Index) ? TextureDigests[Index] : TEXT("?");
         } else {
-          childText = CanonicalJson(
-              child, TextureDigests, key.EndsWith(TEXT("Texture"), ESearchCase::IgnoreCase));
+          ChildText = CanonicalJson(
+              Child, TextureDigests, Key.EndsWith(TEXT("Texture"), ESearchCase::IgnoreCase));
         }
-        text += FString::Printf(TEXT("\"%s\":%s,"), *key, *childText);
+        Text += FString::Printf(TEXT("\"%s\":%s,"), *Key, *ChildText);
       }
-      return text + TEXT("}");
+      return Text + TEXT("}");
     }
     case EJson::Array: {
-      FString text = TEXT("[");
-      for (const TSharedPtr<FJsonValue>& child : Value->AsArray()) {
-        text += CanonicalJson(child, TextureDigests) + TEXT(",");
+      FString Text = TEXT("[");
+      for (const TSharedPtr<FJsonValue>& Child : Value->AsArray()) {
+        Text += CanonicalJson(Child, TextureDigests) + TEXT(",");
       }
-      return text + TEXT("]");
+      return Text + TEXT("]");
     }
     case EJson::String:
       return TEXT("\"") + Value->AsString() + TEXT("\"");
@@ -107,86 +107,86 @@ FString AssetObjectPath(const FString& PackagePath, const FString& AssetName) {
 }
 
 bool Read(const FString& GlbPath, TMap<FString, FString>& OutDigests) {
-  TArray<uint8> bytes;
-  if (!FFileHelper::LoadFileToArray(bytes, *GlbPath, FILEREAD_Silent) ||
-      bytes.Num() < kJsonDataOffset) {
+  TArray<uint8> Bytes;
+  if (!FFileHelper::LoadFileToArray(Bytes, *GlbPath, FILEREAD_Silent) ||
+      Bytes.Num() < JsonDataOffset) {
     return false;
   }
-  auto readU32 = [&bytes](int64 Offset) {
-    return static_cast<uint32>(bytes[Offset]) | static_cast<uint32>(bytes[Offset + 1]) << 8 |
-        static_cast<uint32>(bytes[Offset + 2]) << 16 | static_cast<uint32>(bytes[Offset + 3]) << 24;
+  auto ReadU32 = [&Bytes](int64 Offset) {
+    return static_cast<uint32>(Bytes[Offset]) | static_cast<uint32>(Bytes[Offset + 1]) << 8 |
+        static_cast<uint32>(Bytes[Offset + 2]) << 16 | static_cast<uint32>(Bytes[Offset + 3]) << 24;
   };
-  const int64 jsonLength = readU32(kGlbHeaderSize);
-  if (readU32(0) != kGlbMagic || readU32(kGlbHeaderSize + kChunkTypeOffset) != kJsonChunk ||
-      kJsonDataOffset + jsonLength > bytes.Num()) {
+  const int64 JsonLength = ReadU32(GlbHeaderSize);
+  if (ReadU32(0) != GlbMagic || ReadU32(GlbHeaderSize + ChunkTypeOffset) != JsonChunk ||
+      JsonDataOffset + JsonLength > Bytes.Num()) {
     return false;
   }
-  int64 binOffset = -1;
-  int64 binLength = 0;
-  const int64 binHeader = kJsonDataOffset + jsonLength;
-  if (binHeader + kChunkHeaderSize <= bytes.Num() &&
-      readU32(binHeader + kChunkTypeOffset) == kBinChunk) {
-    binOffset = binHeader + kChunkHeaderSize;
-    binLength = FMath::Min<int64>(readU32(binHeader), bytes.Num() - binOffset);
+  int64 BinOffset = -1;
+  int64 BinLength = 0;
+  const int64 BinHeader = JsonDataOffset + JsonLength;
+  if (BinHeader + ChunkHeaderSize <= Bytes.Num() &&
+      ReadU32(BinHeader + ChunkTypeOffset) == BinChunk) {
+    BinOffset = BinHeader + ChunkHeaderSize;
+    BinLength = FMath::Min<int64>(ReadU32(BinHeader), Bytes.Num() - BinOffset);
   }
 
-  const FUTF8ToTCHAR jsonChars(
-      reinterpret_cast<const ANSICHAR*>(bytes.GetData() + kJsonDataOffset),
-      static_cast<int32>(jsonLength));
-  TSharedPtr<FJsonObject> json;
+  const FUTF8ToTCHAR JsonChars(
+      reinterpret_cast<const ANSICHAR*>(Bytes.GetData() + JsonDataOffset),
+      static_cast<int32>(JsonLength));
+  TSharedPtr<FJsonObject> Json;
   if (!FJsonSerializer::Deserialize(
-          TJsonReaderFactory<>::Create(FString(jsonChars.Length(), jsonChars.Get())), json) ||
-      !json.IsValid()) {
+          TJsonReaderFactory<>::Create(FString(JsonChars.Length(), JsonChars.Get())), Json) ||
+      !Json.IsValid()) {
     return false;
   }
-  auto getArray = [](const TSharedPtr<FJsonObject>& Object, const TCHAR* Field) {
-    const TArray<TSharedPtr<FJsonValue>>* array = nullptr;
-    return Object->TryGetArrayField(Field, array) ? *array : TArray<TSharedPtr<FJsonValue>>();
+  auto GetArray = [](const TSharedPtr<FJsonObject>& Object, const TCHAR* Field) {
+    const TArray<TSharedPtr<FJsonValue>>* Array = nullptr;
+    return Object->TryGetArrayField(Field, Array) ? *Array : TArray<TSharedPtr<FJsonValue>>();
   };
-  const TArray<TSharedPtr<FJsonValue>> bufferViews = getArray(json, TEXT("bufferViews"));
+  const TArray<TSharedPtr<FJsonValue>> BufferViews = GetArray(Json, TEXT("bufferViews"));
 
-  TArray<FString> imageDigests;
-  for (const TSharedPtr<FJsonValue>& imageValue : getArray(json, TEXT("images"))) {
-    const TSharedPtr<FJsonObject>& image = imageValue->AsObject();
-    FString digest;
-    int32 bufferView = -1;
-    FString uri;
-    if (image->TryGetNumberField(TEXT("bufferView"), bufferView) &&
-        bufferViews.IsValidIndex(bufferView)) {
-      const TSharedPtr<FJsonObject>& view = bufferViews[bufferView]->AsObject();
-      int64 offset = 0;
-      int64 length = 0;
-      view->TryGetNumberField(TEXT("byteOffset"), offset);
-      view->TryGetNumberField(TEXT("byteLength"), length);
-      if (binOffset >= 0 && offset >= 0 && length >= 0 && offset + length <= binLength) {
-        digest = FMD5::HashBytes(bytes.GetData() + binOffset + offset, length);
+  TArray<FString> ImageDigests;
+  for (const TSharedPtr<FJsonValue>& ImageValue : GetArray(Json, TEXT("images"))) {
+    const TSharedPtr<FJsonObject>& Image = ImageValue->AsObject();
+    FString Digest;
+    int32 BufferView = -1;
+    FString Uri;
+    if (Image->TryGetNumberField(TEXT("bufferView"), BufferView) &&
+        BufferViews.IsValidIndex(BufferView)) {
+      const TSharedPtr<FJsonObject>& View = BufferViews[BufferView]->AsObject();
+      int64 Offset = 0;
+      int64 Length = 0;
+      View->TryGetNumberField(TEXT("byteOffset"), Offset);
+      View->TryGetNumberField(TEXT("byteLength"), Length);
+      if (BinOffset >= 0 && Offset >= 0 && Length >= 0 && Offset + Length <= BinLength) {
+        Digest = FMD5::HashBytes(Bytes.GetData() + BinOffset + Offset, Length);
       }
-    } else if (image->TryGetStringField(TEXT("uri"), uri)) {
-      TArray<uint8> file;
-      const FString path = FPaths::Combine(FPaths::GetPath(GlbPath), uri);
-      digest = !uri.StartsWith(TEXT("data:")) &&
-              FFileHelper::LoadFileToArray(file, *path, FILEREAD_Silent)
-          ? FMD5::HashBytes(file.GetData(), file.Num())
-          : Md5(uri);
+    } else if (Image->TryGetStringField(TEXT("uri"), Uri)) {
+      TArray<uint8> File;
+      const FString Path = FPaths::Combine(FPaths::GetPath(GlbPath), Uri);
+      Digest = !Uri.StartsWith(TEXT("data:")) &&
+              FFileHelper::LoadFileToArray(File, *Path, FILEREAD_Silent)
+          ? FMD5::HashBytes(File.GetData(), File.Num())
+          : Md5(Uri);
     }
-    imageDigests.Add(digest);
-    FString name;
-    if (image->TryGetStringField(TEXT("name"), name) && !name.IsEmpty() && !digest.IsEmpty()) {
-      OutDigests.Add(AssetName(name), digest);
+    ImageDigests.Add(Digest);
+    FString Name;
+    if (Image->TryGetStringField(TEXT("name"), Name) && !Name.IsEmpty() && !Digest.IsEmpty()) {
+      OutDigests.Add(AssetName(Name), Digest);
     }
   }
 
-  TArray<FString> textureDigests;
-  for (const TSharedPtr<FJsonValue>& textureValue : getArray(json, TEXT("textures"))) {
-    int32 source = -1;
-    textureValue->AsObject()->TryGetNumberField(TEXT("source"), source);
-    textureDigests.Add(imageDigests.IsValidIndex(source) ? imageDigests[source] : FString());
+  TArray<FString> TextureDigests;
+  for (const TSharedPtr<FJsonValue>& TextureValue : GetArray(Json, TEXT("textures"))) {
+    int32 Source = -1;
+    TextureValue->AsObject()->TryGetNumberField(TEXT("source"), Source);
+    TextureDigests.Add(ImageDigests.IsValidIndex(Source) ? ImageDigests[Source] : FString());
   }
 
-  for (const TSharedPtr<FJsonValue>& materialValue : getArray(json, TEXT("materials"))) {
-    FString name;
-    if (materialValue->AsObject()->TryGetStringField(TEXT("name"), name) && !name.IsEmpty()) {
-      OutDigests.Add(AssetName(name), Md5(CanonicalJson(materialValue, textureDigests)));
+  for (const TSharedPtr<FJsonValue>& MaterialValue : GetArray(Json, TEXT("materials"))) {
+    FString Name;
+    if (MaterialValue->AsObject()->TryGetStringField(TEXT("name"), Name) && !Name.IsEmpty()) {
+      OutDigests.Add(AssetName(Name), Md5(CanonicalJson(MaterialValue, TextureDigests)));
     }
   }
   return true;

@@ -61,14 +61,14 @@ class SUPERDEXPHYSICS_API UMochiSceneObject : public UObject {
 
   // Queue a command to be executed on the Mochi async scene. Or execute the command immediately if
   // using a synchronous scene. This function is just a wrapper around the Mochi API.
-  void QueueOrExecuteCommand(std::function<void(mochi::Scene*)> callback) const;
+  void QueueOrExecuteCommand(std::function<void(mochi::Scene*)> Callback) const;
 
   // Queue a command to be executed on the Mochi async scene for a specific actor. Or execute the
   // command immediately if using a synchronous scene. This function is just a wrapper around the
   // Mochi API.
   void QueueOrExecuteActorCommand(
-      mochi::ActorHandle actor,
-      std::function<void(mochi::Actor*)> callback) const;
+      mochi::ActorHandle Actor,
+      std::function<void(mochi::Actor*)> Callback) const;
 
   // Waits for all queued commands to be executed. This is a blocking call. On an AsyncScene, this
   // will wait for the mochi thread to process all queued commands. On a synchronous scene, this
@@ -78,20 +78,20 @@ class SUPERDEXPHYSICS_API UMochiSceneObject : public UObject {
   // Register a callback to execute before each simulation step to whatever scene is currently owned
   // by this object. This function is just a wrapper around the Mochi API.
   mochi::CallbackHandle RegisterPreStepCallback(
-      std::string_view debugName,
-      std::function<void(mochi::StepInfo const&)> fn,
-      int priority = mochi::Scene::kDefaultCallbackPriority) const;
+      std::string_view DebugName,
+      std::function<void(mochi::StepInfo const&)> Fn,
+      int Priority = mochi::Scene::kDefaultCallbackPriority) const;
 
   // Register a callback to execute after each simulation step to whatever scene is currently owned
   // by this object. This function is just a wrapper around the Mochi API.
   mochi::CallbackHandle RegisterPostStepCallback(
-      std::string_view debugName,
-      std::function<void(mochi::StepInfo const&)> fn,
-      int priority = mochi::Scene::kDefaultCallbackPriority) const;
+      std::string_view DebugName,
+      std::function<void(mochi::StepInfo const&)> Fn,
+      int Priority = mochi::Scene::kDefaultCallbackPriority) const;
 
   // Cancel a previously registered callback on whatever scene is currently owned by this object.
   // This function is just a wrapper around the Mochi API.
-  void CancelCallback(mochi::CallbackHandle handle) const;
+  void CancelCallback(mochi::CallbackHandle Handle) const;
 
   // Set scene gravity vector [m/s^2].
   void SetGravity(const FVector& GravityVector) const;
@@ -134,7 +134,7 @@ class SUPERDEXPHYSICS_API UMochiSceneObject : public UObject {
   // directly.
   void StepPause() const;
   // Start recording data in tthe scene
-  void StartRecording(const FString& filePath) const;
+  void StartRecording(const FString& FilePath) const;
   // Stop recording
   void StopRecording() const;
 
@@ -184,25 +184,25 @@ class SUPERDEXPHYSICS_API UMochiSceneObject : public UObject {
   FMochiSceneStats Stats;
   mutable FRWLock StatsLock;
 
-  struct DebugDrawLineVerticesBuffer {
-    std::vector<mochi::Real3> positions;
-    std::vector<mochi::Color> colors;
+  struct FDebugDrawLineVerticesBuffer {
+    std::vector<mochi::Real3> Positions;
+    std::vector<mochi::Color> Colors;
   };
 
-  struct DebugDrawSpheresBuffer {
-    std::vector<mochi::Real3> positions;
-    std::vector<mochi::real> radii;
-    std::vector<mochi::Color> colors;
+  struct FDebugDrawSpheresBuffer {
+    std::vector<mochi::Real3> Positions;
+    std::vector<mochi::real> Radii;
+    std::vector<mochi::Color> Colors;
   };
 
-  struct DebugDrawData {
-    DebugDrawLineVerticesBuffer lineVerts;
-    DebugDrawSpheresBuffer spheres;
-    bool hasChanged = false;
+  struct FDebugDrawData {
+    FDebugDrawLineVerticesBuffer LineVerts;
+    FDebugDrawSpheresBuffer Spheres;
+    bool bHasChanged = false;
   };
 
-  FRWLock debugDrawDataMutex;
-  DebugDrawData debugDrawDataMochi;
-  DebugDrawData debugDrawDataPending;
-  DebugDrawData debugDrawDataRender;
+  FRWLock DebugDrawDataMutex;
+  FDebugDrawData DebugDrawDataMochi;
+  FDebugDrawData DebugDrawDataPending;
+  FDebugDrawData DebugDrawDataRender;
 };

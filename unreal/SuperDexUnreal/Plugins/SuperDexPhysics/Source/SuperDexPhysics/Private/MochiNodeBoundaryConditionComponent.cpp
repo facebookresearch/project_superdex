@@ -44,14 +44,14 @@ void UMochiNodeBoundaryConditionComponent::EndPlay(const EEndPlayReason::Type En
 
 void UMochiNodeBoundaryConditionComponent::CreateBoundaryConditions() {
   DestroyBoundaryConditions();
-  FMochiConstraintBody body;
-  if (!ResolveMochiConstraintBody(this, Body, body)) {
+  FMochiConstraintBody ResolvedBody;
+  if (!ResolveMochiConstraintBody(this, Body, ResolvedBody)) {
     return;
   }
-  const USceneComponent* volume = FindComponentRecursive(this, Volume);
-  const UBoxComponent* box = Cast<UBoxComponent>(volume);
-  const USphereComponent* sphere = Cast<USphereComponent>(volume);
-  if (box == nullptr && sphere == nullptr) {
+  const USceneComponent* VolumeComponent = FindComponentRecursive(this, Volume);
+  const UBoxComponent* Box = Cast<UBoxComponent>(VolumeComponent);
+  const USphereComponent* Sphere = Cast<USphereComponent>(VolumeComponent);
+  if (Box == nullptr && Sphere == nullptr) {
     UE_LOG(
         LogMochiPhysics,
         Error,
@@ -61,9 +61,10 @@ void UMochiNodeBoundaryConditionComponent::CreateBoundaryConditions() {
         *Volume.ToString());
     return;
   }
-  UMochiSceneObject* scene = nullptr;
-  mochi::ActorHandle actorHandle;
-  if (body.Articulation || body.GetMochiActor(this, scene, actorHandle) != EMochiBodyState::Ready) {
+  UMochiSceneObject* PhysicsScene = nullptr;
+  mochi::ActorHandle ActorHandle;
+  if (ResolvedBody.Articulation ||
+      ResolvedBody.GetMochiActor(this, PhysicsScene, ActorHandle) != EMochiBodyState::Ready) {
     UE_LOG(
         LogMochiPhysics,
         Error,
@@ -73,58 +74,59 @@ void UMochiNodeBoundaryConditionComponent::CreateBoundaryConditions() {
         *Body);
     return;
   }
-  MochiSceneObject = scene;
+  MochiSceneObject = PhysicsScene;
   bCreated = true;
 
-  const FUnrealToMochiConverter u2m;
-  const mochi::TransformRT volWorldFromLocal =
-      u2m.TransformToMochi_RT(volume->GetComponentTransform());
-  const mochi::Real3 volBoxExtents =
-      box ? u2m.TranslationToMochi(box->GetUnscaledBoxExtent()) : mochi::Real3{};
-  const mochi::real volSphereRadius =
-      sphere ? u2m.MeasureToMochi(sphere->GetUnscaledSphereRadius()) : 0_r;
-  const bool bVolUseBox = box != nullptr;
+  const FUnrealToMochiConverter U2m;
+  const mochi::TransformRT VolWorldFromLocal =
+      U2m.TransformToMochi_RT(VolumeComponent->GetComponentTransform());
+  const mochi::Real3 VolBoxExtents =
+      Box ? U2m.TranslationToMochi(Box->GetUnscaledBoxExtent()) : mochi::Real3{};
+  const mochi::real VolSphereRadius =
+      Sphere ? U2m.MeasureToMochi(Sphere->GetUnscaledSphereRadius()) : 0_r;
+  const bool bVolUseBox = Box != nullptr;
   // Capture by value so we don't have to wait
-  const FString logPrefix = FString::Printf(TEXT("[%s] %s"), *GetNameSafe(GetOwner()), *GetName());
-  scene->QueueOrExecuteCommand([bVolUseBox,
-                                logPrefix,
-                                volWorldFromLocal,
-                                volBoxExtents,
-                                volSphereRadius,
-                                actorHandle,
-                                MochiThreadState = this->MochiThreadState](mochi::Scene* Scene) {
-    mochi::ErrorLog e;
-    mochi::Actor* softActor = Scene->GetActor(actorHandle);
-    if (softActor == nullptr ||
-        (softActor->GetType() != mochi::ActorType::Soft &&
-         softActor->GetType() != mochi::ActorType::Shell)) {
+  const FString LogPrefix = FString::Printf(TEXT("[%s] %s"), *GetNameSafe(GetOwner()), *GetName());
+  PhysicsScene->QueueOrExecuteCommand([bVolUseBox,
+                                       LogPrefix,
+                                       VolWorldFromLocal,
+                                       VolBoxExtents,
+                                       VolSphereRadius,
+                                       ActorHandle,
+                                       MochiThreadState =
+                                           this->MochiThreadState](mochi::Scene* Scene) {
+    mochi::ErrorLog E;
+    mochi::Actor* SoftActor = Scene->GetActor(ActorHandle);
+    if (SoftActor == nullptr ||
+        (SoftActor->GetType() != mochi::ActorType::Soft &&
+         SoftActor->GetType() != mochi::ActorType::Shell)) {
       UE_LOG(
-          LogMochiPhysics, Error, TEXT("%s: the body is not a soft or shell actor."), *logPrefix);
+          LogMochiPhysics, Error, TEXT("%s: the body is not a soft or shell actor."), *LogPrefix);
       return;
     }
-    MochiThreadState->DeformableActorHandle = actorHandle;
-    const mochi::TransformRT softWorldFromLocal = softActor->GetRootTransform();
-    const mochi::TransformRT softLocalFromWorld = Invert(softWorldFromLocal);
-    const mochi::QueryHandle query =
-        softActor->RegisterQueryAndCompute(mochi::QueryType::NodePositions, e);
+    MochiThreadState->DeformableActorHandle = ActorHandle;
+    const mochi::TransformRT SoftWorldFromLocal = SoftActor->GetRootTransform();
+    const mochi::TransformRT SoftLocalFromWorld = Invert(SoftWorldFromLocal);
+    const mochi::QueryHandle Query =
+        SoftActor->RegisterQueryAndCompute(mochi::QueryType::NodePositions, E);
     // pin each node at its current world position
-    auto onEach = [&](int iNode, mochi::Real3 pos) {
-      std::array<int, 1> node = {iNode};
-      pos = softWorldFromLocal.TransformPoint(pos);
-      softActor->AddBoundaryConditionNodesWorld(node, pos, e);
-      MochiThreadState->PinnedNodeIndices.Add(iNode);
+    auto OnEach = [&](int NodeIndex, mochi::Real3 Pos) {
+      std::array<int, 1> Node = {NodeIndex};
+      Pos = SoftWorldFromLocal.TransformPoint(Pos);
+      SoftActor->AddBoundaryConditionNodesWorld(Node, Pos, E);
+      MochiThreadState->PinnedNodeIndices.Add(NodeIndex);
     };
     if (bVolUseBox) {
-      mochi::TransformRT volLocalFromSoft = softLocalFromWorld * volWorldFromLocal;
-      mochi::Obb obb(volLocalFromSoft, volBoxExtents);
-      softActor->QueryNodesInVolumeLocal(obb, false, onEach, e);
+      mochi::TransformRT VolLocalFromSoft = SoftLocalFromWorld * VolWorldFromLocal;
+      mochi::Obb Obb(VolLocalFromSoft, VolBoxExtents);
+      SoftActor->QueryNodesInVolumeLocal(Obb, false, OnEach, E);
     } else {
-      mochi::Sphere sphereWorld = TransformShape(
-          volWorldFromLocal, mochi::Sphere(mochi::Real3{0_r, 0_r, 0_r}, volSphereRadius));
-      mochi::Sphere sphereLocal = TransformShape(softLocalFromWorld, sphereWorld);
-      softActor->QueryNodesInVolumeLocal(sphereLocal, false, onEach, e);
+      mochi::Sphere SphereWorld = TransformShape(
+          VolWorldFromLocal, mochi::Sphere(mochi::Real3{0_r, 0_r, 0_r}, VolSphereRadius));
+      mochi::Sphere SphereLocal = TransformShape(SoftLocalFromWorld, SphereWorld);
+      SoftActor->QueryNodesInVolumeLocal(SphereLocal, false, OnEach, E);
     }
-    softActor->CancelQuery(query);
+    SoftActor->CancelQuery(Query);
     MochiThreadState->bReady.store(true, std::memory_order_release);
   });
 }
@@ -138,9 +140,9 @@ void UMochiNodeBoundaryConditionComponent::DestroyBoundaryConditions() {
     // Pass ownership of MochiThreadState to the lambda so we don't have to wait
     MochiSceneObject->QueueOrExecuteCommand(
         [MochiThreadState = std::move(MochiThreadState)](mochi::Scene* Scene) {
-          if (mochi::Actor* deformableActor =
+          if (mochi::Actor* DeformableActor =
                   Scene->GetActor(MochiThreadState->DeformableActorHandle)) {
-            deformableActor->ClearBoundaryConditions();
+            DeformableActor->ClearBoundaryConditions();
           }
         });
     MochiSceneObject->WaitForQueuedCommands();

@@ -71,10 +71,10 @@ bool UMochiArticulationBase::ComputeVisualBoundsFromJointPositions(
     FBoxSphereBounds& OutBounds,
     double AngleScale,
     double LengthScale) const {
-  thread_local TArray<FTransform> sLinksToRoot;
+  thread_local TArray<FTransform> LinksToRoot;
   if (ComputeLinkToArticulationRootTransforms(
-          JointPositions, sLinksToRoot, AngleScale, LengthScale)) {
-    return ComputeVisualBoundsFromLinkToArticulationRootTransforms(sLinksToRoot, OutBounds);
+          JointPositions, LinksToRoot, AngleScale, LengthScale)) {
+    return ComputeVisualBoundsFromLinkToArticulationRootTransforms(LinksToRoot, OutBounds);
   }
   return false;
 }

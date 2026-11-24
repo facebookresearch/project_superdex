@@ -116,9 +116,9 @@ UMochiArticulatedActorObject* UMochiArticulationComponent::GetMochiArticulatedAc
 
 FTransform UMochiArticulationComponent::GetLinkToWorldTransform(FName LinkName) const {
   if (Articulation) {
-    const int iLink = Articulation->GetLinkIndex(LinkName);
-    if (iLink != INDEX_NONE && iLink < QueriedLinkTransforms.Num()) {
-      return QueriedLinkTransforms[iLink];
+    const int LinkIndex = Articulation->GetLinkIndex(LinkName);
+    if (LinkIndex != INDEX_NONE && LinkIndex < QueriedLinkTransforms.Num()) {
+      return QueriedLinkTransforms[LinkIndex];
     }
   }
   return FTransform();
@@ -193,7 +193,7 @@ void UMochiArticulationComponent::TickComponent(
     }
     // MochiArticulationController tick
     if (ArticulatedActorObject && ArticulationController) {
-      FScopeLock lock(&ArticulationControllerMutex);
+      FScopeLock Lock(&ArticulationControllerMutex);
       ArticulationController->TickController(this, DeltaTime);
     }
   }
@@ -205,8 +205,8 @@ void UMochiArticulationComponent::EndPlay(const EEndPlayReason::Type EndPlayReas
   MOCHI_PROFILE_SCOPE();
   SetArticulationController(nullptr);
   Super::EndPlay(EndPlayReason);
-  for (UMochiSoftMeshComponent* const& dynMesh : SoftLinkDynamicMeshComponents) {
-    dynMesh->GetMochiActor()->DestroyMochiResources();
+  for (UMochiSoftMeshComponent* const& DynMesh : SoftLinkDynamicMeshComponents) {
+    DynMesh->GetMochiActor()->DestroyMochiResources();
   }
   DestroyArticulatedActor();
 }
@@ -221,10 +221,10 @@ void UMochiArticulationComponent::OnRegister() {
 
 FBoxSphereBounds UMochiArticulationComponent::CalcBounds(const FTransform& LocalToWorld) const {
   if (Articulation) {
-    FBoxSphereBounds localBounds;
+    FBoxSphereBounds LocalBounds;
     if (Articulation->ComputeVisualBoundsFromLinkToParentTransforms(
-            BoneSpaceTransforms, localBounds)) {
-      return localBounds.TransformBy(LocalToWorld);
+            BoneSpaceTransforms, LocalBounds)) {
+      return LocalBounds.TransformBy(LocalToWorld);
     }
   }
   return Super::CalcBounds(LocalToWorld);
@@ -254,9 +254,9 @@ void UMochiArticulationComponent::CreateArticulatedActor() {
         *GET_MEMBER_NAME_CHECKED(UMochiArticulationComponent, Articulation).ToString());
     return;
   }
-  TArray<FTransform> rootFromLinks;
+  TArray<FTransform> RootFromLinks;
   if (!Articulation->ComputeLinkToArticulationRootTransforms(
-          InitialJointPositions, rootFromLinks)) {
+          InitialJointPositions, RootFromLinks)) {
     UE_LOG(
         LogMochiPhysics,
         Error,
@@ -271,7 +271,7 @@ void UMochiArticulationComponent::CreateArticulatedActor() {
       GetOwner()->GetName() + "___" + GetName(),
       Articulation,
       GetComponentTransform(),
-      rootFromLinks,
+      RootFromLinks,
       ContactParams,
       Layer,
       bFixedBase,
@@ -351,25 +351,25 @@ bool UMochiArticulationComponent::OnArticulatedActorControl(
   if (!bArticulatedActorReady || !ArticulationController) {
     return false;
   }
-  FScopeLock lock(&ArticulationControllerMutex);
-  mochi::ErrorLog e{};
-  FMochiArticulationState state = ExtractArticulatedActorState(ArticulatedActor);
-  ConvertArticulatedActorDofsToUnreal(ArticulatedActor, state.JointPositions);
-  ConvertArticulatedActorDofsToUnreal(ArticulatedActor, state.JointVelocities);
-  thread_local FMochiArticulationControllerCommands commands;
-  commands.BaseTransformTarget = FTransform::Identity;
-  commands.JointPositionTargets.SetNumZeroed(NumMochiJointDofs);
-  commands.JointEfforts.SetNumZeroed(NumMochiJointDofs);
-  const double mochiDeltaTime = Scene->GetLastTimeStep();
-  if (ArticulationController->Control(this, state, mochiDeltaTime, commands, Scene)) {
-    ensure(commands.JointPositionTargets.Num() == NumMochiJointDofs);
-    ensure(commands.JointEfforts.Num() == NumMochiJointDofs);
-    ConvertArticulatedActorDofsToMochi(ArticulatedActor, commands.JointPositionTargets);
-    ConvertArticulatedActorDofsToMochi(ArticulatedActor, commands.JointEfforts);
-    TArray<mochi::real> poseTarget = BuildPoseControllerTargets(
-        ArticulatedActor, commands.BaseTransformTarget, commands.JointPositionTargets);
-    OutPoseTarget.Set<TArray<mochi::real>>(poseTarget);
-    SetArticulatedActorJointEfforts(ArticulatedActor, commands.JointEfforts);
+  FScopeLock Lock(&ArticulationControllerMutex);
+  mochi::ErrorLog E{};
+  FMochiArticulationState State = ExtractArticulatedActorState(ArticulatedActor);
+  ConvertArticulatedActorDofsToUnreal(ArticulatedActor, State.JointPositions);
+  ConvertArticulatedActorDofsToUnreal(ArticulatedActor, State.JointVelocities);
+  thread_local FMochiArticulationControllerCommands Commands;
+  Commands.BaseTransformTarget = FTransform::Identity;
+  Commands.JointPositionTargets.SetNumZeroed(NumMochiJointDofs);
+  Commands.JointEfforts.SetNumZeroed(NumMochiJointDofs);
+  const double MochiDeltaTime = Scene->GetLastTimeStep();
+  if (ArticulationController->Control(this, State, MochiDeltaTime, Commands, Scene)) {
+    ensure(Commands.JointPositionTargets.Num() == NumMochiJointDofs);
+    ensure(Commands.JointEfforts.Num() == NumMochiJointDofs);
+    ConvertArticulatedActorDofsToMochi(ArticulatedActor, Commands.JointPositionTargets);
+    ConvertArticulatedActorDofsToMochi(ArticulatedActor, Commands.JointEfforts);
+    TArray<mochi::real> PoseTarget = BuildPoseControllerTargets(
+        ArticulatedActor, Commands.BaseTransformTarget, Commands.JointPositionTargets);
+    OutPoseTarget.Set<TArray<mochi::real>>(PoseTarget);
+    SetArticulatedActorJointEfforts(ArticulatedActor, Commands.JointEfforts);
     return true;
   }
   return false;
@@ -377,7 +377,7 @@ bool UMochiArticulationComponent::OnArticulatedActorControl(
 
 bool UMochiArticulationComponent::SetArticulationController(
     TSubclassOf<UMochiArticulationController> NewControllerClass) {
-  FScopeLock lock(&ArticulationControllerMutex);
+  FScopeLock Lock(&ArticulationControllerMutex);
   if (ArticulationController != nullptr) {
     ArticulationController->Shutdown(this);
     ArticulationController = nullptr;
@@ -429,21 +429,21 @@ void UMochiArticulationComponent::HandleArticulationControllerOnArticulationSpaw
 }
 
 bool UMochiArticulationComponent::EnsureArrayProperties() {
-  bool ret = false;
+  bool bRet = false;
   if (Articulation) {
     if (InitialJointPositions.Num() != Articulation->GetDefaultJointPositions().Num()) {
       InitialJointPositions = Articulation->GetDefaultJointPositions();
-      ret = true;
+      bRet = true;
     }
     if (ContactGeneratingLinks.Num() == 0) {
       ContactGeneratingLinks = Articulation->GetLinkNames();
-      for (const FMochiArticulationSoftLink& softLink : Articulation->GetSoftLinks()) {
-        ContactGeneratingLinks.Add(softLink.Name);
+      for (const FMochiArticulationSoftLink& SoftLink : Articulation->GetSoftLinks()) {
+        ContactGeneratingLinks.Add(SoftLink.Name);
       }
-      ret = true;
+      bRet = true;
     }
   }
-  return ret;
+  return bRet;
 }
 
 void UMochiArticulationComponent::PoseMeshFromJointPositions(
@@ -453,12 +453,12 @@ void UMochiArticulationComponent::PoseMeshFromJointPositions(
   }
   if (Articulation) {
     ensure(InJointPositions.Num() == Articulation->GetDefaultJointPositions().Num());
-    TArray<FTransform> transforms;
-    if (Articulation->ComputeLinkToParentTransforms(InJointPositions, transforms)) {
-      for (int iLink = 0; iLink < transforms.Num(); ++iLink) {
-        const int32 boneIndex = GetBoneIndex(Articulation->GetLinks()[iLink].Name);
-        if (boneIndex >= 0 && boneIndex < BoneSpaceTransforms.Num()) {
-          BoneSpaceTransforms[boneIndex] = transforms[iLink];
+    TArray<FTransform> Transforms;
+    if (Articulation->ComputeLinkToParentTransforms(InJointPositions, Transforms)) {
+      for (int LinkIndex = 0; LinkIndex < Transforms.Num(); ++LinkIndex) {
+        const int32 BoneIndex = GetBoneIndex(Articulation->GetLinks()[LinkIndex].Name);
+        if (BoneIndex >= 0 && BoneIndex < BoneSpaceTransforms.Num()) {
+          BoneSpaceTransforms[BoneIndex] = Transforms[LinkIndex];
         }
       }
       MarkRefreshTransformDirty();
@@ -472,45 +472,45 @@ void UMochiArticulationComponent::PoseMeshFromJointPositions(
 
 void UMochiArticulationComponent::PoseMeshFromLinkWorldTransforms(
     const TArray<FTransform>& InLinkWorldTransforms) {
-  const TArray<FMochiArticulatedLink>& links = Articulation->GetLinks();
-  check(links.Num() == InLinkWorldTransforms.Num());
-  for (int iLink = 0; iLink < InLinkWorldTransforms.Num(); iLink++) {
+  const TArray<FMochiArticulatedLink>& Links = Articulation->GetLinks();
+  check(Links.Num() == InLinkWorldTransforms.Num());
+  for (int LinkIndex = 0; LinkIndex < InLinkWorldTransforms.Num(); LinkIndex++) {
     SetBoneTransformByName(
-        links[iLink].Name, InLinkWorldTransforms[iLink], EBoneSpaces::WorldSpace);
+        Links[LinkIndex].Name, InLinkWorldTransforms[LinkIndex], EBoneSpaces::WorldSpace);
   }
   UpdateOverlaps();
 }
 
 void UMochiArticulationComponent::CreateSoftLinksDynamicMeshComponents(
     const TArray<mochi::ActorHandle>& SoftActors) {
-  const TArray<FMochiArticulationSoftLink>& softLinks = Articulation->GetSoftLinks();
-  const int numSoftLinks = softLinks.Num();
-  if (numSoftLinks == 0) {
+  const TArray<FMochiArticulationSoftLink>& SoftLinks = Articulation->GetSoftLinks();
+  const int NumSoftLinks = SoftLinks.Num();
+  if (NumSoftLinks == 0) {
     return;
   }
-  check(SoftActors.Num() == numSoftLinks);
-  AActor* owner = GetOwner();
+  check(SoftActors.Num() == NumSoftLinks);
+  AActor* Owner = GetOwner();
   SoftLinkDynamicMeshComponents.Reset();
-  for (int iLink = 0; iLink < numSoftLinks; ++iLink) {
-    UMochiSoftMeshComponent* dynMesh = Cast<UMochiSoftMeshComponent>(owner->AddComponentByClass(
+  for (int LinkIndex = 0; LinkIndex < NumSoftLinks; ++LinkIndex) {
+    UMochiSoftMeshComponent* DynMesh = Cast<UMochiSoftMeshComponent>(Owner->AddComponentByClass(
         UMochiSoftMeshComponent::StaticClass(), true, FTransform::Identity, true));
-    dynMesh->SetupAttachment(this);
-    FString name = FString::Printf(
+    DynMesh->SetupAttachment(this);
+    FString Name = FString::Printf(
         TEXT("%s_MochiSoftMeshComponent%d_%s"),
         *GetName(),
-        iLink,
-        *softLinks[iLink].Name.ToString());
-    dynMesh->Rename(*name);
-    dynMesh->SetExistingMochiActorHandle(SoftActors[iLink]);
-    dynMesh->SetMochiModel(softLinks[iLink].Model);
-    dynMesh->SetSimulatePhysics(false);
-    dynMesh->SetVisibility(true);
-    dynMesh->SetMaterial(0, softLinks[0].Model->PreviewRenderMaterial);
-    owner->FinishAddComponent(dynMesh, true, FTransform::Identity);
-    dynMesh->SetCollisionProfileName(UCollisionProfile::BlockAllDynamic_ProfileName);
-    dynMesh->SetGenerateOverlapEvents(true);
-    dynMesh->GetMochiActor()->bDestroyMochiActorOnObjectDestruction = false;
-    SoftLinkDynamicMeshComponents.Add(dynMesh);
+        LinkIndex,
+        *SoftLinks[LinkIndex].Name.ToString());
+    DynMesh->Rename(*Name);
+    DynMesh->SetExistingMochiActorHandle(SoftActors[LinkIndex]);
+    DynMesh->SetMochiModel(SoftLinks[LinkIndex].Model);
+    DynMesh->SetSimulatePhysics(false);
+    DynMesh->SetVisibility(true);
+    DynMesh->SetMaterial(0, SoftLinks[0].Model->PreviewRenderMaterial);
+    Owner->FinishAddComponent(DynMesh, true, FTransform::Identity);
+    DynMesh->SetCollisionProfileName(UCollisionProfile::BlockAllDynamic_ProfileName);
+    DynMesh->SetGenerateOverlapEvents(true);
+    DynMesh->GetMochiActor()->bDestroyMochiActorOnObjectDestruction = false;
+    SoftLinkDynamicMeshComponents.Add(DynMesh);
   }
   OnSoftLinksSpawned.Broadcast(this, SoftLinkDynamicMeshComponents);
 }

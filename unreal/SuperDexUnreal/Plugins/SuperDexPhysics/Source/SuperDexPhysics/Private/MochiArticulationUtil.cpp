@@ -34,91 +34,91 @@ void ConvertArticulatedActorDofs(
     const mochi::Actor* ArticulatedActor,
     TArray<mochi::real>& JointDofs,
     bool bToUnreal) {
-  mochi::ErrorLog e{};
-  const mochi::ArticulatedShapeInfo shapeInfo = ArticulatedActor->GetArticulatedShapeInfo(e);
-  TArray<EMochiArticulatedJointType, TInlineAllocator<64>> types;
+  mochi::ErrorLog E{};
+  const mochi::ArticulatedShapeInfo ShapeInfo = ArticulatedActor->GetArticulatedShapeInfo(E);
+  TArray<EMochiArticulatedJointType, TInlineAllocator<64>> Types;
   bool bNeedsConversion = false;
-  for (const mochi::ArticulatedJointType type : shapeInfo.jointTypes) {
-    types.Add(::ToUnreal(type));
-    bNeedsConversion |= type == mochi::ArticulatedJointType::Spherical ||
-        (type == mochi::ArticulatedJointType::Free && types.Num() > 1);
+  for (const mochi::ArticulatedJointType Type : ShapeInfo.jointTypes) {
+    Types.Add(::ToUnreal(Type));
+    bNeedsConversion |= Type == mochi::ArticulatedJointType::Spherical ||
+        (Type == mochi::ArticulatedJointType::Free && Types.Num() > 1);
   }
   if (!bNeedsConversion) {
     return;
   }
-  thread_local TArray<double> dofs;
-  dofs.Reset(JointDofs.Num());
-  for (const mochi::real dof : JointDofs) {
-    dofs.Add(dof);
+  thread_local TArray<double> Dofs;
+  Dofs.Reset(JointDofs.Num());
+  for (const mochi::real Dof : JointDofs) {
+    Dofs.Add(Dof);
   }
   if (bToUnreal) {
-    ConvertArticulatedDofsToUnreal(types, false, dofs, FMochiToUnrealConverter{});
+    ConvertArticulatedDofsToUnreal(Types, false, Dofs, FMochiToUnrealConverter{});
   } else {
-    ConvertArticulatedDofsToMochi(types, false, dofs, FUnrealToMochiConverter{});
+    ConvertArticulatedDofsToMochi(Types, false, Dofs, FUnrealToMochiConverter{});
   }
-  for (int i = 0; i < dofs.Num(); ++i) {
-    JointDofs[i] = static_cast<mochi::real>(dofs[i]);
+  for (int i = 0; i < Dofs.Num(); ++i) {
+    JointDofs[i] = static_cast<mochi::real>(Dofs[i]);
   }
 }
 } // namespace
 
 FMochiArticulationState ExtractArticulatedActorState(const mochi::Actor* ArticulatedActor) {
-  mochi::ErrorLog e{};
-  FMochiToUnrealConverter m2u;
+  mochi::ErrorLog E{};
+  FMochiToUnrealConverter M2u;
   // static storage
-  FMochiArticulationState state;
-  thread_local std::vector<mochi::TransformRT> worldFromLinks;
-  thread_local std::vector<mochi::real> jointPositions;
-  thread_local std::vector<mochi::real> jointVelocities;
+  FMochiArticulationState State;
+  thread_local std::vector<mochi::TransformRT> WorldFromLinks;
+  thread_local std::vector<mochi::real> JointPositions;
+  thread_local std::vector<mochi::real> JointVelocities;
   // count DOFs
-  const mochi::ArticulatedShapeInfo shapeInfo = ArticulatedActor->GetArticulatedShapeInfo(e);
-  const int numMochiDofs = ArticulatedActor->GetNumDofs();
-  const int numMochiBaseDofs = GetNumBaseDofs(shapeInfo);
-  const int numMochiJointDofs = numMochiDofs - numMochiBaseDofs;
+  const mochi::ArticulatedShapeInfo ShapeInfo = ArticulatedActor->GetArticulatedShapeInfo(E);
+  const int NumMochiDofs = ArticulatedActor->GetNumDofs();
+  const int NumMochiBaseDofs = GetNumBaseDofs(ShapeInfo);
+  const int NumMochiJointDofs = NumMochiDofs - NumMochiBaseDofs;
   // get base transform
-  const mochi::Span<mochi::ActorHandle const> linkActors = ArticulatedActor->GetNestedLinkActors(e);
-  const int numLinks = linkActors.size();
-  worldFromLinks.resize(numLinks);
-  ArticulatedActor->GetArticulatedLinkTransforms(worldFromLinks, e);
-  state.BaseTransform = m2u.TransformToUnreal(worldFromLinks[0]);
+  const mochi::Span<mochi::ActorHandle const> LinkActors = ArticulatedActor->GetNestedLinkActors(E);
+  const int NumLinks = LinkActors.size();
+  WorldFromLinks.resize(NumLinks);
+  ArticulatedActor->GetArticulatedLinkTransforms(WorldFromLinks, E);
+  State.BaseTransform = M2u.TransformToUnreal(WorldFromLinks[0]);
   // get joint positions
-  jointPositions.resize(numMochiDofs);
-  ArticulatedActor->GetArticulatedPose(jointPositions, e);
-  state.JointPositions.SetNum(numMochiJointDofs);
-  for (int i = numMochiBaseDofs; i < numMochiDofs; ++i) {
-    state.JointPositions[i - numMochiBaseDofs] = jointPositions[i];
+  JointPositions.resize(NumMochiDofs);
+  ArticulatedActor->GetArticulatedPose(JointPositions, E);
+  State.JointPositions.SetNum(NumMochiJointDofs);
+  for (int i = NumMochiBaseDofs; i < NumMochiDofs; ++i) {
+    State.JointPositions[i - NumMochiBaseDofs] = JointPositions[i];
   }
   // get joint velocities
-  jointVelocities.resize(numMochiDofs);
-  ArticulatedActor->GetArticulatedJointVelocities(jointVelocities, e);
-  state.JointVelocities.SetNum(numMochiJointDofs);
-  for (int i = numMochiBaseDofs; i < numMochiDofs; ++i) {
-    state.JointVelocities[i - numMochiBaseDofs] = jointVelocities[i];
+  JointVelocities.resize(NumMochiDofs);
+  ArticulatedActor->GetArticulatedJointVelocities(JointVelocities, E);
+  State.JointVelocities.SetNum(NumMochiJointDofs);
+  for (int i = NumMochiBaseDofs; i < NumMochiDofs; ++i) {
+    State.JointVelocities[i - NumMochiBaseDofs] = JointVelocities[i];
   }
-  return state;
+  return State;
 }
 
 void SetArticulatedActorJointEfforts(
     mochi::Actor* ArticulatedActor,
     const TArray<mochi::real>& JointEfforts) {
-  mochi::ErrorLog e{};
+  mochi::ErrorLog E{};
   // static storage
-  thread_local std::vector<int> jointDofIndices;
-  thread_local std::vector<mochi::real> jointEfforts;
+  thread_local std::vector<int> JointDofIndices;
+  thread_local std::vector<mochi::real> NativeJointEfforts;
   // count DOFs
-  const mochi::ArticulatedShapeInfo shapeInfo = ArticulatedActor->GetArticulatedShapeInfo(e);
-  const int numMochiDofs = ArticulatedActor->GetNumDofs();
-  const int numMochiBaseDofs = GetNumBaseDofs(shapeInfo);
-  const int numMochiJointDofs = numMochiDofs - numMochiBaseDofs;
-  check(JointEfforts.Num() >= numMochiJointDofs);
+  const mochi::ArticulatedShapeInfo ShapeInfo = ArticulatedActor->GetArticulatedShapeInfo(E);
+  const int NumMochiDofs = ArticulatedActor->GetNumDofs();
+  const int NumMochiBaseDofs = GetNumBaseDofs(ShapeInfo);
+  const int NumMochiJointDofs = NumMochiDofs - NumMochiBaseDofs;
+  check(JointEfforts.Num() >= NumMochiJointDofs);
   // set efforts
-  jointDofIndices.resize(numMochiJointDofs);
-  std::iota(jointDofIndices.begin(), jointDofIndices.end(), numMochiBaseDofs);
-  jointEfforts.resize(numMochiJointDofs);
-  for (int i = 0; i < numMochiJointDofs; ++i) {
-    jointEfforts[i] = JointEfforts[i];
+  JointDofIndices.resize(NumMochiJointDofs);
+  std::iota(JointDofIndices.begin(), JointDofIndices.end(), NumMochiBaseDofs);
+  NativeJointEfforts.resize(NumMochiJointDofs);
+  for (int i = 0; i < NumMochiJointDofs; ++i) {
+    NativeJointEfforts[i] = JointEfforts[i];
   }
-  ArticulatedActor->SetExternalForcesOnDofs(jointDofIndices, jointEfforts, e);
+  ArticulatedActor->SetExternalForcesOnDofs(JointDofIndices, NativeJointEfforts, E);
 }
 
 void TeleportArticulatedActor(
@@ -136,31 +136,31 @@ TArray<mochi::real> BuildPoseControllerTargets(
     const mochi::Actor* ArticulatedActor,
     const FTransform& BaseTransformTarget,
     const TArray<mochi::real>& JointPositionTargets) {
-  mochi::ErrorLog e{};
-  FMochiToUnrealConverter m2u;
+  mochi::ErrorLog E{};
+  FMochiToUnrealConverter M2u;
   // static storage
-  thread_local TArray<mochi::real> targets;
+  thread_local TArray<mochi::real> Targets;
   // count DOFs
-  const mochi::ArticulatedShapeInfo shapeInfo = ArticulatedActor->GetArticulatedShapeInfo(e);
-  const int numMochiDofs = ArticulatedActor->GetNumDofs();
-  const int numMochiBaseDofs = GetNumBaseDofs(shapeInfo);
-  const int numMochiJointDofs = numMochiDofs - numMochiBaseDofs;
-  check(JointPositionTargets.Num() >= numMochiJointDofs);
+  const mochi::ArticulatedShapeInfo ShapeInfo = ArticulatedActor->GetArticulatedShapeInfo(E);
+  const int NumMochiDofs = ArticulatedActor->GetNumDofs();
+  const int NumMochiBaseDofs = GetNumBaseDofs(ShapeInfo);
+  const int NumMochiJointDofs = NumMochiDofs - NumMochiBaseDofs;
+  check(JointPositionTargets.Num() >= NumMochiJointDofs);
   // build pose target
-  targets.SetNum(numMochiJointDofs);
-  for (int i = 0; i < numMochiJointDofs; ++i) {
-    targets[i] = JointPositionTargets[i];
+  Targets.SetNum(NumMochiJointDofs);
+  for (int i = 0; i < NumMochiJointDofs; ++i) {
+    Targets[i] = JointPositionTargets[i];
   }
-  if (numMochiBaseDofs > 0) {
-    FUnrealToMochiConverter u2m;
-    const mochi::TransformRT baseToWorld = u2m.TransformToMochi_RT(BaseTransformTarget);
-    const mochi::TransformRT baseTarget = mochi::Invert(shapeInfo.parentLinkFromJoint[0]) *
-        baseToWorld * mochi::Invert(shapeInfo.jointFromChildLink[0]);
-    const mochi::Real3 pos = baseTarget.GetTranslation();
-    const mochi::Real3 rot = baseTarget.GetRotation().ToRotationVector();
-    targets.Insert({pos[0], pos[1], pos[2], rot[0], rot[1], rot[2]}, 0);
+  if (NumMochiBaseDofs > 0) {
+    FUnrealToMochiConverter U2m;
+    const mochi::TransformRT BaseToWorld = U2m.TransformToMochi_RT(BaseTransformTarget);
+    const mochi::TransformRT BaseTarget = mochi::Invert(ShapeInfo.parentLinkFromJoint[0]) *
+        BaseToWorld * mochi::Invert(ShapeInfo.jointFromChildLink[0]);
+    const mochi::Real3 Pos = BaseTarget.GetTranslation();
+    const mochi::Real3 Rot = BaseTarget.GetRotation().ToRotationVector();
+    Targets.Insert({Pos[0], Pos[1], Pos[2], Rot[0], Rot[1], Rot[2]}, 0);
   }
-  return targets;
+  return Targets;
 }
 
 void ConvertArticulatedActorDofsToUnreal(

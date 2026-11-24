@@ -31,29 +31,29 @@ FindComponentRecursive(UActorComponent* Caller, FName ComponentName, const AActo
     return nullptr;
   }
   // first search this component's owning actor
-  const AActor* const actor = Actor ? Actor : Caller->GetOwner();
-  TArray<USceneComponent*> comps;
-  actor->GetComponents(comps);
-  for (USceneComponent* comp : comps) {
-    if (comp->GetName() == ComponentName) {
-      return comp;
+  const AActor* const SearchActor = Actor ? Actor : Caller->GetOwner();
+  TArray<USceneComponent*> Comps;
+  SearchActor->GetComponents(Comps);
+  for (USceneComponent* Comp : Comps) {
+    if (Comp->GetName() == ComponentName) {
+      return Comp;
     }
   }
 
   // next search any child actor components
-  TArray<AActor*> childActors;
-  actor->GetAllChildActors(childActors, false);
-  for (AActor* const childActor : childActors) {
-    if (USceneComponent* const result = FindComponentRecursive(Caller, ComponentName, childActor)) {
-      return result;
+  TArray<AActor*> ChildActors;
+  SearchActor->GetAllChildActors(ChildActors, false);
+  for (AActor* const ChildActor : ChildActors) {
+    if (USceneComponent* const Result = FindComponentRecursive(Caller, ComponentName, ChildActor)) {
+      return Result;
     }
   }
   // next search actor's parent *IF* it is a ChildActor
   // note: this will cause a redundant search, but will not loop indefinitely
-  if (actor->IsChildActor() && Actor == nullptr) {
-    if (AActor* const parent = actor->GetAttachParentActor()) {
-      if (USceneComponent* const result = FindComponentRecursive(Caller, ComponentName, parent)) {
-        return result;
+  if (SearchActor->IsChildActor() && Actor == nullptr) {
+    if (AActor* const Parent = SearchActor->GetAttachParentActor()) {
+      if (USceneComponent* const Result = FindComponentRecursive(Caller, ComponentName, Parent)) {
+        return Result;
       }
     }
   }
@@ -65,12 +65,12 @@ bool EnsureMochiActor(UActorComponent* Caller, USceneComponent* MochiComponent) 
   if (MochiComponent && MochiComponentTags::AreComponentsDisabled(MochiComponent->GetOwner())) {
     return false;
   }
-  if (IMochiMeshComponentInterface* const mochiMeshComp =
+  if (IMochiMeshComponentInterface* const MochiMeshComp =
           Cast<IMochiMeshComponentInterface>(MochiComponent)) {
-    if (mochiMeshComp->GetMochiActor() == nullptr) {
-      mochiMeshComp->CreateMochiActor();
-      const bool success = mochiMeshComp->GetMochiActor() != nullptr;
-      if (success) {
+    if (MochiMeshComp->GetMochiActor() == nullptr) {
+      MochiMeshComp->CreateMochiActor();
+      const bool bSuccess = MochiMeshComp->GetMochiActor() != nullptr;
+      if (bSuccess) {
         UE_LOG(
             LogMochiPhysics,
             Display,
@@ -78,7 +78,7 @@ bool EnsureMochiActor(UActorComponent* Caller, USceneComponent* MochiComponent) 
             *Caller->GetName(),
             *MochiComponent->GetName());
       }
-      return success;
+      return bSuccess;
     }
     return true;
   }
@@ -95,36 +95,36 @@ EMochiBodyState FMochiConstraintBody::GetMochiActor(
     UMochiSceneObject*& OutScene,
     mochi::ActorHandle& OutActor) const {
   if (Articulation) {
-    const UMochiArticulatedActorObject* actor = Articulation->GetMochiArticulatedActor();
-    if (actor == nullptr) {
+    const UMochiArticulatedActorObject* Actor = Articulation->GetMochiArticulatedActor();
+    if (Actor == nullptr) {
       return EMochiBodyState::Pending;
     }
-    OutScene = actor->GetMochiScene();
+    OutScene = Actor->GetMochiScene();
     if (Link.IsNone()) {
-      OutActor = actor->GetArticulatedActorHandle();
+      OutActor = Actor->GetArticulatedActorHandle();
       return EMochiBodyState::Ready;
     }
-    const int link = actor->GetNestedLinkActorIndex(Link);
-    if (!actor->GetNestedLinkActorHandles().IsValidIndex(link)) {
+    const int LinkIndex = Actor->GetNestedLinkActorIndex(Link);
+    if (!Actor->GetNestedLinkActorHandles().IsValidIndex(LinkIndex)) {
       return EMochiBodyState::Failed;
     }
-    OutActor = actor->GetNestedLinkActorHandles()[link];
+    OutActor = Actor->GetNestedLinkActorHandles()[LinkIndex];
     return EMochiBodyState::Ready;
   }
   if (!EnsureMochiActor(Caller, Component)) {
     return EMochiBodyState::Failed;
   }
-  const UMochiActorObject* actor = Cast<IMochiMeshComponentInterface>(Component)->GetMochiActor();
-  OutScene = actor->GetMochiScene();
-  OutActor = actor->GetMochiActorHandle();
+  const UMochiActorObject* Actor = Cast<IMochiMeshComponentInterface>(Component)->GetMochiActor();
+  OutScene = Actor->GetMochiScene();
+  OutActor = Actor->GetMochiActorHandle();
   return EMochiBodyState::Ready;
 }
 
 mochi::Real3 FMochiConstraintBody::LocalPositionToMochi(const FVector& Position) const {
-  const FUnrealToMochiConverter u2m;
+  const FUnrealToMochiConverter U2m;
   // A Mochi mesh component creates its actor at its unscaled transform and bakes its scale into
   // the shape. Link frames are not scaled.
-  return u2m.TranslationToMochi(
+  return U2m.TranslationToMochi(
       Articulation ? Position : Position * Component->GetComponentTransform().GetScale3D());
 }
 
@@ -136,32 +136,32 @@ bool ResolveInActor(
     const TArray<FString>& Segments,
     int Index,
     FMochiConstraintBody& OutBody) {
-  const FString& name = Segments[Index];
-  const int numAfter = Segments.Num() - Index - 1;
-  TArray<USceneComponent*> components;
-  Actor->GetComponents(components);
-  for (USceneComponent* component : components) {
-    if (component->GetName() != name) {
+  const FString& Name = Segments[Index];
+  const int NumAfter = Segments.Num() - Index - 1;
+  TArray<USceneComponent*> Components;
+  Actor->GetComponents(Components);
+  for (USceneComponent* Component : Components) {
+    if (Component->GetName() != Name) {
       continue;
     }
-    if (const UChildActorComponent* child = Cast<UChildActorComponent>(component)) {
-      return numAfter > 0 && child->GetChildActor() &&
-          ResolveInActor(child->GetChildActor(), Segments, Index + 1, OutBody);
+    if (const UChildActorComponent* Child = Cast<UChildActorComponent>(Component)) {
+      return NumAfter > 0 && Child->GetChildActor() &&
+          ResolveInActor(Child->GetChildActor(), Segments, Index + 1, OutBody);
     }
-    if (UMochiArticulationComponent* articulation = Cast<UMochiArticulationComponent>(component)) {
-      if (numAfter > 1) {
+    if (UMochiArticulationComponent* Articulation = Cast<UMochiArticulationComponent>(Component)) {
+      if (NumAfter > 1) {
         return false;
       }
-      const FName link = numAfter == 1 ? FName(Segments[Index + 1]) : NAME_None;
-      const UMochiArticulation* asset = articulation->GetArticulationAsset();
-      if (!link.IsNone() && (asset == nullptr || asset->GetLinkIndex(link) < 0)) {
+      const FName Link = NumAfter == 1 ? FName(Segments[Index + 1]) : NAME_None;
+      const UMochiArticulation* Asset = Articulation->GetArticulationAsset();
+      if (!Link.IsNone() && (Asset == nullptr || Asset->GetLinkIndex(Link) < 0)) {
         return false;
       }
-      OutBody = {articulation, articulation, link};
+      OutBody = {Articulation, Articulation, Link};
       return true;
     }
-    if (numAfter == 0 && Cast<IMochiMeshComponentInterface>(component)) {
-      OutBody = {component, nullptr, NAME_None};
+    if (NumAfter == 0 && Cast<IMochiMeshComponentInterface>(Component)) {
+      OutBody = {Component, nullptr, NAME_None};
       return true;
     }
   }
@@ -169,28 +169,28 @@ bool ResolveInActor(
 }
 
 bool FindBody(UActorComponent* Caller, TArray<FString> Segments, FMochiConstraintBody& OutBody) {
-  const AActor* owner = Caller->GetOwner();
-  if (owner && ResolveInActor(owner, Segments, 0, OutBody)) {
+  const AActor* Owner = Caller->GetOwner();
+  if (Owner && ResolveInActor(Owner, Segments, 0, OutBody)) {
     return true;
   }
   if (Caller->GetWorld() == nullptr) {
     return false;
   }
-  for (const AActor* actor : TActorRange<AActor>(Caller->GetWorld())) {
-    const USceneComponent* root = actor->GetRootComponent();
-    if (actor == owner || root == nullptr ||
-        (actor->GetActorNameOrLabel() != Segments[0] && root->GetName() != Segments[0])) {
+  for (const AActor* Actor : TActorRange<AActor>(Caller->GetWorld())) {
+    const USceneComponent* Root = Actor->GetRootComponent();
+    if (Actor == Owner || Root == nullptr ||
+        (Actor->GetActorNameOrLabel() != Segments[0] && Root->GetName() != Segments[0])) {
       continue;
     }
     // The first segment names the actor's root component (a body, as a map import spawns one
     // actor per body) or the actor itself (an imported nested prefab).
-    const FString first = Segments[0];
-    Segments[0] = root->GetName();
-    if (ResolveInActor(actor, Segments, 0, OutBody)) {
+    const FString First = Segments[0];
+    Segments[0] = Root->GetName();
+    if (ResolveInActor(Actor, Segments, 0, OutBody)) {
       return true;
     }
-    Segments[0] = first;
-    if (Segments.Num() > 1 && ResolveInActor(actor, Segments, 1, OutBody)) {
+    Segments[0] = First;
+    if (Segments.Num() > 1 && ResolveInActor(Actor, Segments, 1, OutBody)) {
       return true;
     }
   }
@@ -203,9 +203,9 @@ bool ResolveMochiConstraintBody(
     UActorComponent* Caller,
     const FString& Path,
     FMochiConstraintBody& OutBody) {
-  TArray<FString> segments;
-  Path.ParseIntoArray(segments, TEXT("/"));
-  if (segments.IsEmpty() || !FindBody(Caller, MoveTemp(segments), OutBody)) {
+  TArray<FString> Segments;
+  Path.ParseIntoArray(Segments, TEXT("/"));
+  if (Segments.IsEmpty() || !FindBody(Caller, MoveTemp(Segments), OutBody)) {
     UE_LOG(
         LogMochiPhysics,
         Error,

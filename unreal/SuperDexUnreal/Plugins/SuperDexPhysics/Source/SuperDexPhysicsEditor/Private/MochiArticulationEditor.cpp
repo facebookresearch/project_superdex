@@ -48,7 +48,7 @@ const FName FMochiArticulationEditorToolkit::ViewportTabID(
 const FName FMochiArticulationEditorToolkit::DetailsTabID(
     TEXT("MochiArticulationEditorToolkit_Details"));
 
-static constexpr FColor kPurpleColor = FColor(138, 43, 226, 255);
+static constexpr FColor PurpleColor = FColor(138, 43, 226, 255);
 
 FMochiArticulationEditorToolkit::FMochiArticulationEditorToolkit()
     : StandaloneDefaultLayout(
@@ -147,67 +147,67 @@ TSharedRef<SDockTab> FMochiArticulationEditorToolkit::SpawnTab_Viewport(const FS
   TSharedRef<SDockTab> SpawnedTab = SNew(SDockTab).Label(LOCTEXT("ViewportTab_Title", "Viewport"));
   if (EditorViewport.IsValid()) {
     SpawnedTab->SetContent(EditorViewport.ToSharedRef());
-    int numLinks = 0;
-    int numJoints = 0;
-    int numDofs = 0;
-    double mass = 0;
-    numLinks = Articulation->GetLinkNames().Num();
-    numJoints = Articulation->GetJointNames().Num();
-    numDofs = Articulation->GetNumDofs();
-    int numSurfaceFaces = 0;
-    if (UMochiArticulation* asArticulation = Cast<UMochiArticulation>(Articulation)) {
-      for (const FMochiArticulatedLink& l : asArticulation->GetLinks()) {
-        mass += l.bOverrideMass ? l.Mass : 0;
-        numSurfaceFaces += l.Shape ? l.Shape->NumSurfaceFaces : 0;
+    int NumLinks = 0;
+    int NumJoints = 0;
+    int NumDofs = 0;
+    double Mass = 0;
+    NumLinks = Articulation->GetLinkNames().Num();
+    NumJoints = Articulation->GetJointNames().Num();
+    NumDofs = Articulation->GetNumDofs();
+    int NumSurfaceFaces = 0;
+    if (UMochiArticulation* AsArticulation = Cast<UMochiArticulation>(Articulation)) {
+      for (const FMochiArticulatedLink& L : AsArticulation->GetLinks()) {
+        Mass += L.bOverrideMass ? L.Mass : 0;
+        NumSurfaceFaces += L.Shape ? L.Shape->NumSurfaceFaces : 0;
       }
     } else {
-      Articulation->ComputeOverlayStats(mass, numSurfaceFaces);
+      Articulation->ComputeOverlayStats(Mass, NumSurfaceFaces);
     }
-    TArray<FText> overlayItems;
-    overlayItems.Emplace(
-        FText::Format(LOCTEXT("Links_F", "Links:  {0}"), FText::AsNumber(numLinks)));
-    overlayItems.Emplace(
-        FText::Format(LOCTEXT("Joints_F", "Joints:  {0}"), FText::AsNumber(numJoints)));
-    overlayItems.Emplace(FText::Format(LOCTEXT("Dofs_F", "DOF:  {0}"), FText::AsNumber(numDofs)));
-    overlayItems.Emplace(FText::Format(LOCTEXT("Mass_F", "Mass:  {0} kg"), FText::AsNumber(mass)));
-    overlayItems.Emplace(
+    TArray<FText> OverlayItems;
+    OverlayItems.Emplace(
+        FText::Format(LOCTEXT("Links_F", "Links:  {0}"), FText::AsNumber(NumLinks)));
+    OverlayItems.Emplace(
+        FText::Format(LOCTEXT("Joints_F", "Joints:  {0}"), FText::AsNumber(NumJoints)));
+    OverlayItems.Emplace(FText::Format(LOCTEXT("Dofs_F", "DOF:  {0}"), FText::AsNumber(NumDofs)));
+    OverlayItems.Emplace(FText::Format(LOCTEXT("Mass_F", "Mass:  {0} kg"), FText::AsNumber(Mass)));
+    OverlayItems.Emplace(
         FText::Format(
-            LOCTEXT("Faces_F", "Mochi Surface Faces:  {0}"), FText::AsNumber(numSurfaceFaces)));
+            LOCTEXT("Faces_F", "Mochi Surface Faces:  {0}"), FText::AsNumber(NumSurfaceFaces)));
     UMochiArticulationPreviewComponent* PreviewMeshComponent =
         EditorViewport->GetPreviewMeshComponent();
     if (PreviewMeshComponent) {
-      USkinnedAsset* skm = PreviewMeshComponent->GetSkinnedAsset();
-      if (skm) {
-        const FSkeletalMeshRenderData* renderData = skm->GetResourceForRendering();
-        const FSkeletalMeshLODRenderData& lod0 = renderData->LODRenderData[0];
-        int numVerts = lod0.GetNumVertices();
-        int numTris = 0;
-        for (const FSkelMeshRenderSection& section : lod0.RenderSections) {
-          numTris += section.NumTriangles;
+      USkinnedAsset* Skm = PreviewMeshComponent->GetSkinnedAsset();
+      if (Skm) {
+        const FSkeletalMeshRenderData* RenderData = Skm->GetResourceForRendering();
+        const FSkeletalMeshLODRenderData& Lod0 = RenderData->LODRenderData[0];
+        int NumVerts = Lod0.GetNumVertices();
+        int NumTris = 0;
+        for (const FSkelMeshRenderSection& Section : Lod0.RenderSections) {
+          NumTris += Section.NumTriangles;
         }
-        overlayItems.Emplace(
+        OverlayItems.Emplace(
             FText::Format(
-                NSLOCTEXT("UnrealEd", "Triangles_F", "Skeletal Mesh Triangles:  {0}"), numTris));
-        overlayItems.Emplace(
+                NSLOCTEXT("UnrealEd", "Triangles_F", "Skeletal Mesh Triangles:  {0}"), NumTris));
+        OverlayItems.Emplace(
             FText::Format(
-                NSLOCTEXT("UnrealEd", "Vertices_F", "Skeletal Mesh Vertices:  {0}"), numVerts));
+                NSLOCTEXT("UnrealEd", "Vertices_F", "Skeletal Mesh Vertices:  {0}"), NumVerts));
       }
-      FBoxSphereBounds bounds;
+      FBoxSphereBounds Bounds;
       if (!Articulation->ComputeVisualBoundsFromJointPositions(
-              Articulation->GetDefaultJointPositions(), bounds)) {
-        bounds = PreviewMeshComponent->GetLocalBounds();
+              Articulation->GetDefaultJointPositions(), Bounds)) {
+        Bounds = PreviewMeshComponent->GetLocalBounds();
       }
-      FVector box = bounds.BoxExtent * 2.0;
-      FNumberFormattingOptions opt;
-      opt.SetMaximumFractionalDigits(2);
-      overlayItems.Emplace(
+      FVector Box = Bounds.BoxExtent * 2.0;
+      FNumberFormattingOptions Opt;
+      Opt.SetMaximumFractionalDigits(2);
+      OverlayItems.Emplace(
           FText::Format(
               LOCTEXT("ApproxSize_F", "Approx Size:  {0} x {1} x {2} cm"),
-              FText::AsNumber(box.X, &opt),
-              FText::AsNumber(box.Y, &opt),
-              FText::AsNumber(box.Z, &opt)));
+              FText::AsNumber(Box.X, &Opt),
+              FText::AsNumber(Box.Y, &Opt),
+              FText::AsNumber(Box.Z, &Opt)));
     }
-    EditorViewport->PopulateOverlayText(overlayItems);
+    EditorViewport->PopulateOverlayText(OverlayItems);
   }
   return SpawnedTab;
 }
@@ -257,7 +257,7 @@ FMochiArticulationEditorToolkit::CreatePreviewScene() {
 }
 
 void FMochiArticulationEditorToolkit::ExtendToolbars() {
-  struct Local {
+  struct FLocal {
     static void
     FillToolbar(FToolBarBuilder& ToolBarBuilder, bool bShowGenerateSkeletalMesh, bool bShowExport) {
       ToolBarBuilder.BeginSection("ExtendToolbarItem");
@@ -313,7 +313,7 @@ void FMochiArticulationEditorToolkit::ExtendToolbars() {
       EExtensionHook::After,
       GetToolkitCommands(),
       FToolBarExtensionDelegate::CreateStatic(
-          &Local::FillToolbar, CanGenerateSkeletalMesh(), CanExport()));
+          &FLocal::FillToolbar, CanGenerateSkeletalMesh(), CanExport()));
   AddToolbarExtender(ToolBarExtender);
   FMochiPhysicsEditorModule* MochiEditorModule =
       &FModuleManager::LoadModuleChecked<FMochiPhysicsEditorModule>("SuperDexPhysicsEditor");
@@ -349,38 +349,38 @@ void FMochiArticulationEditorToolkit::ToggleScreenPercentage() const {
 void FMochiArticulationEditorToolkit::Export() const {
   // Exports URDF XML via the polymorphic ToUrdfXml()/GetArticulationName() hooks, with no mesh
   // re-export (e.g. USuperDexBot's mesh data is already baked into its own asset).
-  IDesktopPlatform* desktopPlatform = FDesktopPlatformModule::Get();
-  if (desktopPlatform) {
-    const void* windowHandle =
+  IDesktopPlatform* DesktopPlatform = FDesktopPlatformModule::Get();
+  if (DesktopPlatform) {
+    const void* WindowHandle =
         FSlateApplication::Get().FindBestParentWindowHandleForDialogs(nullptr);
-    FString fileTypes = TEXT("URDF (*.urdf)|*.urdf|All files (*.*)|*.*");
-    TArray<FString> savePaths;
-    bool bOpened = desktopPlatform->SaveFileDialog(
-        windowHandle,
+    FString FileTypes = TEXT("URDF (*.urdf)|*.urdf|All files (*.*)|*.*");
+    TArray<FString> SavePaths;
+    bool bOpened = DesktopPlatform->SaveFileDialog(
+        WindowHandle,
         TEXT("URDF Save Location"),
         FPaths::ProjectDir(),
         Articulation->GetArticulationName() + TEXT(".urdf"),
-        fileTypes,
+        FileTypes,
         EFileDialogFlags::None,
-        savePaths);
+        SavePaths);
     if (bOpened) {
-      check(savePaths.Num() == 1);
-      const FString xml = Articulation->ToUrdfXml();
-      if (xml.IsEmpty()) {
+      check(SavePaths.Num() == 1);
+      const FString Xml = Articulation->ToUrdfXml();
+      if (Xml.IsEmpty()) {
         UE_LOG(
             LogMochiPhysicsEditor,
             Error,
             TEXT("URDF export is not supported for this articulation; nothing was written."));
       } else {
-        FFileHelper::SaveStringToFile(xml, *savePaths[0]);
+        FFileHelper::SaveStringToFile(Xml, *SavePaths[0]);
       }
     }
   }
 }
 
 void FMochiArticulationEditorToolkit::GenerateSkeletalMesh() const {
-  if (UMochiArticulation* asArticulation = Cast<UMochiArticulation>(Articulation)) {
-    FMochiArticulationAssetUtils::GenerateSkeletalMesh(asArticulation);
+  if (UMochiArticulation* AsArticulation = Cast<UMochiArticulation>(Articulation)) {
+    FMochiArticulationAssetUtils::GenerateSkeletalMesh(AsArticulation);
   }
 }
 
@@ -406,7 +406,7 @@ void FMochiArticulationEditorToolkit::OnObjectModified(UObject* InObject) {
         EditorViewport->GetPreviewMeshComponent();
     PreviewMeshComponent->SetArticulation(Articulation);
     {
-      FComponentReregisterContext reregister(PreviewMeshComponent);
+      FComponentReregisterContext Reregister(PreviewMeshComponent);
     }
   }
 }
@@ -526,7 +526,7 @@ void FMochiArticulationEditorCommands::RegisterCommands() {
 // VIEWPORT CLIENT
 //------------------------------------------------------------------------------
 
-constexpr FLinearColor kOrange{1.0, 0.5, 0};
+constexpr FLinearColor Orange{1.0, 0.5, 0};
 
 FMochiArticulationEditorViewportClient::FMochiArticulationEditorViewportClient(
     const TSharedRef<SMochiArticulationEditorViewport> InEditorViewport,
@@ -583,10 +583,10 @@ FMochiArticulationEditorViewportClient::FMochiArticulationEditorViewportClient(
       nullptr,
       TEXT("/SuperDexPhysics/Editor/M_MochiTransGizmoMaterial.M_MochiTransGizmoMaterial")));
   Materials->ComMaterial = UMaterialInstanceDynamic::Create(Materials->SolidGizmoMaterial, nullptr);
-  Materials->ComMaterial->SetVectorParameterValue("GizmoColor", kOrange);
+  Materials->ComMaterial->SetVectorParameterValue("GizmoColor", Orange);
   Materials->JointMaterial =
       UMaterialInstanceDynamic::Create(Materials->SolidGizmoMaterial, nullptr);
-  Materials->JointMaterial->SetVectorParameterValue("GizmoColor", kPurpleColor);
+  Materials->JointMaterial->SetVectorParameterValue("GizmoColor", PurpleColor);
 }
 
 void FMochiArticulationEditorViewportClient::SetWidgetMode(UE::Widget::EWidgetMode NewMode) {
@@ -611,8 +611,8 @@ void FMochiArticulationEditorViewportClient::Draw(
   if (!PreviewArticulation || !PreviewMeshComponent) {
     return;
   }
-  if (UMochiArticulation* asArticulation = Cast<UMochiArticulation>(PreviewArticulation)) {
-    DrawArticulation(asArticulation, View, PDI);
+  if (UMochiArticulation* AsArticulation = Cast<UMochiArticulation>(PreviewArticulation)) {
+    DrawArticulation(AsArticulation, View, PDI);
   } else {
     PreviewArticulation->DrawCustom(
         View,
@@ -628,70 +628,70 @@ void FMochiArticulationEditorViewportClient::DrawArticulation(
     UMochiArticulation* Articulation,
     const FSceneView* View,
     FPrimitiveDrawInterface* PDI) {
-  const TArray<FMochiArticulatedLink>& links = Articulation->GetLinks();
-  const TArray<double>& jointPos = Articulation->GetDefaultJointPositions();
-  TArray<FTransform> linkTransforms;
-  if (!Articulation->ComputeLinkToArticulationRootTransforms(jointPos, linkTransforms)) {
+  const TArray<FMochiArticulatedLink>& Links = Articulation->GetLinks();
+  const TArray<double>& JointPos = Articulation->GetDefaultJointPositions();
+  TArray<FTransform> LinkTransforms;
+  if (!Articulation->ComputeLinkToArticulationRootTransforms(JointPos, LinkTransforms)) {
     return;
   }
-  FTransform rootToWorld = PreviewMeshComponent->GetComponentTransform();
-  for (int iLink = 0; iLink < links.Num(); ++iLink) {
-    const FMochiArticulatedLink& link = links[iLink];
-    FTransform& linkToRoot = linkTransforms[iLink];
-    FVector linkLoc = linkToRoot.GetLocation();
+  FTransform RootToWorld = PreviewMeshComponent->GetComponentTransform();
+  for (int LinkIndex = 0; LinkIndex < Links.Num(); ++LinkIndex) {
+    const FMochiArticulatedLink& Link = Links[LinkIndex];
+    FTransform& LinkToRoot = LinkTransforms[LinkIndex];
+    FVector LinkLoc = LinkToRoot.GetLocation();
     if (bShowLinkTransforms) {
-      FRotationMatrix R(linkToRoot.GetRotation().Rotator());
+      FRotationMatrix R(LinkToRoot.GetRotation().Rotator());
       FVector const X = R.GetScaledAxis(EAxis::X);
       FVector const Y = R.GetScaledAxis(EAxis::Y);
       FVector const Z = R.GetScaledAxis(EAxis::Z);
-      float scale = 5.0f;
-      PDI->DrawLine(linkLoc, linkLoc + X * scale, FLinearColor::Red, SDPG_Foreground, 0.1f, 1.0f);
-      PDI->DrawLine(linkLoc, linkLoc + Y * scale, FLinearColor::Green, SDPG_Foreground, 0.1f, 1.0f);
-      PDI->DrawLine(linkLoc, linkLoc + Z * scale, FLinearColor::Blue, SDPG_Foreground, 0.1f, 1.0f);
+      float Scale = 5.0f;
+      PDI->DrawLine(LinkLoc, LinkLoc + X * Scale, FLinearColor::Red, SDPG_Foreground, 0.1f, 1.0f);
+      PDI->DrawLine(LinkLoc, LinkLoc + Y * Scale, FLinearColor::Green, SDPG_Foreground, 0.1f, 1.0f);
+      PDI->DrawLine(LinkLoc, LinkLoc + Z * Scale, FLinearColor::Blue, SDPG_Foreground, 0.1f, 1.0f);
     }
     if (bShowJoints) {
-      FMochiArticulatedJoint joint;
-      if (Articulation->GetLinkJoint(iLink, joint)) {
-        const FTransform jointToRoot = link.ParentJointFromLink.Inverse() * linkToRoot;
-        const FVector jointLoc = jointToRoot.GetLocation();
-        if (joint.Type == EMochiArticulatedJointType::Revolute ||
-            joint.Type == EMochiArticulatedJointType::Prismatic) {
-          const int sides = joint.Type == EMochiArticulatedJointType::Prismatic ? 3 : 16;
-          FVector axis = jointToRoot.TransformVector(joint.Axis).GetSafeNormal();
-          FTransform transform = jointToRoot;
-          transform.SetRotation(FQuat::FindBetweenNormals(FVector(0, 0, 1), axis));
-          FVector X = transform.TransformVector({1.0, 0.0, 0.0});
-          FVector Y = transform.TransformVector({0.0, 1.0, 0.0});
-          FVector Z = transform.TransformVector({0.0, 0.0, 1.0});
+      FMochiArticulatedJoint Joint;
+      if (Articulation->GetLinkJoint(LinkIndex, Joint)) {
+        const FTransform JointToRoot = Link.ParentJointFromLink.Inverse() * LinkToRoot;
+        const FVector JointLoc = JointToRoot.GetLocation();
+        if (Joint.Type == EMochiArticulatedJointType::Revolute ||
+            Joint.Type == EMochiArticulatedJointType::Prismatic) {
+          const int Sides = Joint.Type == EMochiArticulatedJointType::Prismatic ? 3 : 16;
+          FVector Axis = JointToRoot.TransformVector(Joint.Axis).GetSafeNormal();
+          FTransform Transform = JointToRoot;
+          Transform.SetRotation(FQuat::FindBetweenNormals(FVector(0, 0, 1), Axis));
+          FVector X = Transform.TransformVector({1.0, 0.0, 0.0});
+          FVector Y = Transform.TransformVector({0.0, 1.0, 0.0});
+          FVector Z = Transform.TransformVector({0.0, 0.0, 1.0});
           DrawCylinder(
               PDI,
-              jointLoc,
+              JointLoc,
               X,
               Y,
               Z,
               0.4f,
               1.5f,
-              sides,
+              Sides,
               Materials->JointMaterial->GetRenderProxy(),
               SDPG_Foreground);
-        } else if (joint.Type == EMochiArticulatedJointType::Spherical) {
+        } else if (Joint.Type == EMochiArticulatedJointType::Spherical) {
           DrawWireSphere(
-              PDI, jointToRoot, kPurpleColor, 1.5f, 16, SDPG_Foreground, 0.1f, 0.0f, true);
-        } else if (joint.Type == EMochiArticulatedJointType::Hard) {
-          PDI->DrawPoint(jointLoc, kPurpleColor, 4, SDPG_Foreground);
+              PDI, JointToRoot, PurpleColor, 1.5f, 16, SDPG_Foreground, 0.1f, 0.0f, true);
+        } else if (Joint.Type == EMochiArticulatedJointType::Hard) {
+          PDI->DrawPoint(JointLoc, PurpleColor, 4, SDPG_Foreground);
         }
       }
     }
   }
   if (bShowBounds) {
-    FBoxSphereBounds bounds;
-    if (Articulation->ComputeVisualBoundsFromJointPositions(jointPos, bounds)) {
-      DrawWireBox(PDI, bounds.GetBox(), kPurpleColor, SDPG_World);
+    FBoxSphereBounds Bounds;
+    if (Articulation->ComputeVisualBoundsFromJointPositions(JointPos, Bounds)) {
+      DrawWireBox(PDI, Bounds.GetBox(), PurpleColor, SDPG_World);
       // uncomment to render sphere bounds
-      // DrawCircle(PDI, bounds.Origin, {1,0,0}, {0,1,0}, kPurpleColor, bounds.SphereRadius, 32,
-      // SDPG_World); DrawCircle(PDI, bounds.Origin, {0,1,0}, {0,0,1}, kPurpleColor,
-      // bounds.SphereRadius, 32, SDPG_World); DrawCircle(PDI, bounds.Origin, {1,0,0}, {0,0,1},
-      // kPurpleColor, bounds.SphereRadius, 32, SDPG_World);
+      // DrawCircle(PDI, Bounds.Origin, {1,0,0}, {0,1,0}, PurpleColor, Bounds.SphereRadius, 32,
+      // SDPG_World); DrawCircle(PDI, Bounds.Origin, {0,1,0}, {0,0,1}, PurpleColor,
+      // Bounds.SphereRadius, 32, SDPG_World); DrawCircle(PDI, Bounds.Origin, {1,0,0}, {0,0,1},
+      // PurpleColor, Bounds.SphereRadius, 32, SDPG_World);
     }
   }
 }
@@ -704,12 +704,12 @@ inline void DrawWorldText(
     float DPIScale,
     bool bCenter) {
   if (View.ViewFrustum.IntersectPoint(WorldLocation)) {
-    FVector2D screenLoc;
-    if (View.WorldToPixel(WorldLocation, screenLoc)) {
-      screenLoc /= DPIScale;
-      screenLoc = screenLoc.RoundToVector();
+    FVector2D ScreenLoc;
+    if (View.WorldToPixel(WorldLocation, ScreenLoc)) {
+      ScreenLoc /= DPIScale;
+      ScreenLoc = ScreenLoc.RoundToVector();
       FCanvasTextItem TextItem(
-          screenLoc, FText::FromString(Text), GEngine->GetSmallFont(), FLinearColor::White);
+          ScreenLoc, FText::FromString(Text), GEngine->GetSmallFont(), FLinearColor::White);
       TextItem.EnableShadow(FLinearColor::Black);
       TextItem.bCentreX = bCenter;
       TextItem.bCentreY = bCenter;
@@ -719,36 +719,36 @@ inline void DrawWorldText(
 }
 
 // Draws labels on new lines if they have the same screen space loc
-struct StackedLabelDrawer {
-  StackedLabelDrawer(FSceneView& View, FCanvas& Canvas, float DPIScale)
+struct FStackedLabelDrawer {
+  FStackedLabelDrawer(FSceneView& View, FCanvas& Canvas, float DPIScale)
       : View(View), Canvas(Canvas), DPIScale(DPIScale) {}
   void Add(const FString& Text, const FVector& WorldLocation) {
     if (View.ViewFrustum.IntersectPoint(WorldLocation)) {
-      FVector2D screenLoc;
-      if (View.WorldToPixel(WorldLocation, screenLoc)) {
-        screenLoc /= DPIScale;
-        screenLoc = screenLoc.RoundToVector();
-        TPair<int, int> xy = {(int)screenLoc.X, (int)screenLoc.Y};
-        if (Labels.Contains(xy)) {
-          Labels[xy].AddUnique(Text);
+      FVector2D ScreenLoc;
+      if (View.WorldToPixel(WorldLocation, ScreenLoc)) {
+        ScreenLoc /= DPIScale;
+        ScreenLoc = ScreenLoc.RoundToVector();
+        TPair<int, int> Xy = {(int)ScreenLoc.X, (int)ScreenLoc.Y};
+        if (Labels.Contains(Xy)) {
+          Labels[Xy].AddUnique(Text);
         } else {
-          Labels.Add(xy, {Text});
+          Labels.Add(Xy, {Text});
         }
       }
     }
   }
   void Draw() {
     for (TPair<TPair<int, int>, TArray<FString>>& LabelPair : Labels) {
-      TPair<int, int>& loc = LabelPair.Key;
-      TArray<FString>& labels = LabelPair.Value;
-      FString string;
-      for (int i = 0; i < labels.Num(); ++i) {
-        FString eol = i == labels.Num() - 1 ? TEXT("") : TEXT("\n");
-        string += labels[i] + eol;
+      TPair<int, int>& Loc = LabelPair.Key;
+      TArray<FString>& PositionLabels = LabelPair.Value;
+      FString String;
+      for (int i = 0; i < PositionLabels.Num(); ++i) {
+        FString Eol = i == PositionLabels.Num() - 1 ? TEXT("") : TEXT("\n");
+        String += PositionLabels[i] + Eol;
       }
       FCanvasTextItem TextItem(
-          FVector2D(loc.Get<0>(), loc.Get<1>()),
-          FText::FromString(string),
+          FVector2D(Loc.Get<0>(), Loc.Get<1>()),
+          FText::FromString(String),
           GEngine->GetSmallFont(),
           FLinearColor::White);
       TextItem.EnableShadow(FLinearColor::Black);
@@ -771,8 +771,8 @@ void FMochiArticulationEditorViewportClient::DrawCanvas(
   if (!PreviewArticulation || !PreviewMeshComponent) {
     return;
   }
-  if (UMochiArticulation* asArticulation = Cast<UMochiArticulation>(PreviewArticulation)) {
-    DrawCanvasArticulation(asArticulation, InViewport, View, Canvas);
+  if (UMochiArticulation* AsArticulation = Cast<UMochiArticulation>(PreviewArticulation)) {
+    DrawCanvasArticulation(AsArticulation, InViewport, View, Canvas);
   } else {
     PreviewArticulation->DrawCanvasCustom(
         InViewport, View, Canvas, GetDPIScale(), bShowLinkTransforms, bShowJoints);
@@ -784,33 +784,33 @@ void FMochiArticulationEditorViewportClient::DrawCanvasArticulation(
     FViewport& InViewport,
     FSceneView& View,
     FCanvas& Canvas) {
-  StackedLabelDrawer drawer(View, Canvas, GetDPIScale());
-  const TArray<FMochiArticulatedLink>& links = Articulation->GetLinks();
-  const TArray<FMochiArticulatedJoint>& joints = Articulation->GetJoints();
-  const TArray<double>& jointPos = Articulation->GetDefaultJointPositions();
-  TArray<FTransform> transforms;
-  if (!Articulation->ComputeLinkToArticulationRootTransforms(jointPos, transforms)) {
+  FStackedLabelDrawer Drawer(View, Canvas, GetDPIScale());
+  const TArray<FMochiArticulatedLink>& Links = Articulation->GetLinks();
+  const TArray<FMochiArticulatedJoint>& Joints = Articulation->GetJoints();
+  const TArray<double>& JointPos = Articulation->GetDefaultJointPositions();
+  TArray<FTransform> Transforms;
+  if (!Articulation->ComputeLinkToArticulationRootTransforms(JointPos, Transforms)) {
     return;
   }
-  FTransform rootToWorld = PreviewMeshComponent->GetComponentTransform();
-  for (int iLink = 0; iLink < links.Num(); ++iLink) {
-    const FMochiArticulatedLink& link = links[iLink];
-    FTransform& linkToRoot = transforms[iLink];
-    FVector linkLoc = linkToRoot.GetLocation();
+  FTransform RootToWorld = PreviewMeshComponent->GetComponentTransform();
+  for (int LinkIndex = 0; LinkIndex < Links.Num(); ++LinkIndex) {
+    const FMochiArticulatedLink& Link = Links[LinkIndex];
+    FTransform& LinkToRoot = Transforms[LinkIndex];
+    FVector LinkLoc = LinkToRoot.GetLocation();
     if (bShowLinkTransforms) {
-      bool bDummy = link.RenderModel == nullptr || link.Shape == nullptr;
-      FString txt = bDummy ? link.Name.ToString() + TEXT("*") : link.Name.ToString();
-      drawer.Add(txt, linkLoc);
+      bool bDummy = Link.RenderModel == nullptr || Link.Shape == nullptr;
+      FString Txt = bDummy ? Link.Name.ToString() + TEXT("*") : Link.Name.ToString();
+      Drawer.Add(Txt, LinkLoc);
     }
     if (bShowJoints) {
-      FMochiArticulatedJoint joint;
-      if (Articulation->GetLinkJoint(iLink, joint)) {
-        drawer.Add(
-            joint.Name.ToString(), (link.ParentJointFromLink.Inverse() * linkToRoot).GetLocation());
+      FMochiArticulatedJoint Joint;
+      if (Articulation->GetLinkJoint(LinkIndex, Joint)) {
+        Drawer.Add(
+            Joint.Name.ToString(), (Link.ParentJointFromLink.Inverse() * LinkToRoot).GetLocation());
       }
     }
   }
-  drawer.Draw();
+  Drawer.Draw();
 }
 
 void FMochiArticulationEditorViewportClient::AddReferencedObjects(FReferenceCollector& Collector) {
@@ -925,13 +925,13 @@ void SMochiArticulationEditorViewport::Construct(
   PreviewScene = InPreviewScene;
   PreviewMeshComponent =
       NewObject<UMochiArticulationPreviewComponent>(GetTransientPackage(), NAME_None, RF_Transient);
-  const TObjectPtr<UMochiArticulationBase> articulation = EditorToolkit->GetArticulation();
+  const TObjectPtr<UMochiArticulationBase> Articulation = EditorToolkit->GetArticulation();
   PreviewScene->AddComponent(PreviewMeshComponent, FTransform::Identity);
-  PreviewMeshComponent->SetArticulation(articulation);
-  USkinnedAsset* const skelMesh = PreviewMeshComponent->GetSkinnedAsset();
-  if (skelMesh) {
+  PreviewMeshComponent->SetArticulation(Articulation);
+  USkinnedAsset* const SkelMesh = PreviewMeshComponent->GetSkinnedAsset();
+  if (SkelMesh) {
     PreviewScene->SetFloorOffset(
-        static_cast<float>(-skelMesh->GetBounds().Origin.Z + skelMesh->GetBounds().BoxExtent.Z));
+        static_cast<float>(-SkelMesh->GetBounds().Origin.Z + SkelMesh->GetBounds().BoxExtent.Z));
   }
   SEditorViewport::Construct(SEditorViewport::FArguments());
 }
@@ -988,10 +988,10 @@ void SMochiArticulationEditorViewport::OnFloatingButtonClicked() {}
 void SMochiArticulationEditorViewport::OnFocusViewportToSelection() {
   SAssetEditorViewport::OnFocusViewportToSelection();
   if (PreviewScene.IsValid() && EditorToolkit->GetArticulation()) {
-    const TArray<double>& jointPos = EditorToolkit->GetArticulation()->GetDefaultJointPositions();
-    FBoxSphereBounds bounds;
-    if (EditorToolkit->GetArticulation()->ComputeVisualBoundsFromJointPositions(jointPos, bounds)) {
-      MochiViewportFraming::FocusOnBounds(*ViewportClient, bounds, false);
+    const TArray<double>& JointPos = EditorToolkit->GetArticulation()->GetDefaultJointPositions();
+    FBoxSphereBounds Bounds;
+    if (EditorToolkit->GetArticulation()->ComputeVisualBoundsFromJointPositions(JointPos, Bounds)) {
+      MochiViewportFraming::FocusOnBounds(*ViewportClient, Bounds, false);
     } else if (PreviewMeshComponent) {
       MochiViewportFraming::FocusOnBounds(*ViewportClient, PreviewMeshComponent->Bounds, false);
     }
@@ -999,9 +999,9 @@ void SMochiArticulationEditorViewport::OnFocusViewportToSelection() {
 }
 
 TSharedRef<FEditorViewportClient> SMochiArticulationEditorViewport::MakeEditorViewportClient() {
-  UMochiArticulationBase* articulation = EditorToolkit->GetArticulation();
+  UMochiArticulationBase* Articulation = EditorToolkit->GetArticulation();
   ViewportClient = MakeShareable(new FMochiArticulationEditorViewportClient(
-      SharedThis(this), PreviewScene.ToSharedRef(), articulation, PreviewMeshComponent));
+      SharedThis(this), PreviewScene.ToSharedRef(), Articulation, PreviewMeshComponent));
   ViewportClient->SetPreviewingScreenPercentage(!ViewportClient->IsPreviewingScreenPercentage());
   ViewportClient->SetPreviewScreenPercentage(
       FMochiArticulationEditorToolkit::kNominalPreviewScreenPercentage);
@@ -1044,8 +1044,8 @@ FString SMochiArticulationEditorViewport::GetReferencerName() const {
 
 void SMochiArticulationEditorViewport::PopulateOverlayText(const TArray<FText>& TextItems) const {
   FTextBuilder FinalText;
-  for (FText const& item : TextItems) {
-    FinalText.AppendLine(item);
+  for (FText const& Item : TextItems) {
+    FinalText.AppendLine(Item);
   }
   OverlayText->SetText(FinalText.ToText());
 }

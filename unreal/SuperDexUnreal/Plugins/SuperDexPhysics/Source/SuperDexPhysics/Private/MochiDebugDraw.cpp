@@ -31,68 +31,68 @@
 void FMochiDebugDrawFlags::GenerateAndLogMochiDebugDrawFlagsCode(
     const mochi::DebugDraw& DebugDraw) {
   UE_LOG(LogMochiPhysics, Error, TEXT("BEGIN MOCHI DEBUG DRAW FLAGS CODE"));
-  int numFeatures = DebugDraw.GetNumFeatures();
-  TArray<FString> names;
-  TArray<FString> codes;
-  TArray<FString> descs;
-  for (int i = 0; i < numFeatures; i++) {
-    FString name(std::string(DebugDraw.GetFeatureName(i)).c_str());
-    FString code = name;
-    code.ReplaceInline(TEXT(" "), TEXT("_"));
-    code.ReplaceInline(TEXT("("), TEXT(""));
-    code.ReplaceInline(TEXT(")"), TEXT(""));
-    code.InsertAt(0, TEXT("bDebugDraw_"));
-    FString desc(std::string(DebugDraw.GetFeatureDescription(i)).c_str());
-    desc.ReplaceInline(TEXT("\n"), TEXT(" "));
-    names.Add(name);
-    codes.Add(code);
-    descs.Add(desc);
+  int NumFeatures = DebugDraw.GetNumFeatures();
+  TArray<FString> Names;
+  TArray<FString> Codes;
+  TArray<FString> Descs;
+  for (int i = 0; i < NumFeatures; i++) {
+    FString Name(std::string(DebugDraw.GetFeatureName(i)).c_str());
+    FString Code = Name;
+    Code.ReplaceInline(TEXT(" "), TEXT("_"));
+    Code.ReplaceInline(TEXT("("), TEXT(""));
+    Code.ReplaceInline(TEXT(")"), TEXT(""));
+    Code.InsertAt(0, TEXT("bDebugDraw_"));
+    FString Desc(std::string(DebugDraw.GetFeatureDescription(i)).c_str());
+    Desc.ReplaceInline(TEXT("\n"), TEXT(" "));
+    Names.Add(Name);
+    Codes.Add(Code);
+    Descs.Add(Desc);
   }
   UE_LOG(LogMochiPhysics, Warning, TEXT("MochiDebugDraw.h (1/1):"));
-  FString hpp;
-  for (int i = 0; i < numFeatures; i++) {
-    FString line = FString::Printf(
+  FString Hpp;
+  for (int i = 0; i < NumFeatures; i++) {
+    FString Line = FString::Printf(
         TEXT(
             "// %s\n"
             "UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = \"Mochi\")\n"
             "bool %s = false;\n"),
-        *descs[i],
-        *codes[i]);
-    hpp += line;
+        *Descs[i],
+        *Codes[i]);
+    Hpp += Line;
   }
-  UE_LOG(LogMochiPhysics, Display, TEXT("%s"), *hpp);
+  UE_LOG(LogMochiPhysics, Display, TEXT("%s"), *Hpp);
   UE_LOG(LogMochiPhysics, Warning, TEXT("MochiDebugDraw.cpp (1/2):"));
-  FString cpp1;
-  for (int i = 0; i < numFeatures; i++) {
-    FString line =
-        FString::Printf(TEXT("EnableFeature(\"%s\", Flags.%s);\n"), *names[i], *codes[i]);
-    cpp1 += line;
+  FString Cpp1;
+  for (int i = 0; i < NumFeatures; i++) {
+    FString Line =
+        FString::Printf(TEXT("EnableFeature(\"%s\", Flags.%s);\n"), *Names[i], *Codes[i]);
+    Cpp1 += Line;
   }
-  UE_LOG(LogMochiPhysics, Display, TEXT("%s"), *cpp1);
+  UE_LOG(LogMochiPhysics, Display, TEXT("%s"), *Cpp1);
   UE_LOG(LogMochiPhysics, Warning, TEXT("MochiDebugDraw.cpp (2/2):"));
-  FString cpp2;
-  for (int i = 0; i < numFeatures; i++) {
-    FString line = FString::Printf(TEXT("MOCHI_DEBUG_FLAG_COMMAND(%s)\n"), *codes[i]);
-    cpp2 += line;
+  FString Cpp2;
+  for (int i = 0; i < NumFeatures; i++) {
+    FString Line = FString::Printf(TEXT("MOCHI_DEBUG_FLAG_COMMAND(%s)\n"), *Codes[i]);
+    Cpp2 += Line;
   }
-  UE_LOG(LogMochiPhysics, Display, TEXT("%s"), *cpp2);
+  UE_LOG(LogMochiPhysics, Display, TEXT("%s"), *Cpp2);
   UE_LOG(LogMochiPhysics, Error, TEXT("END MOCHI DEBUG DRAW FLAGS CODE"));
 }
 
 void FMochiDebugDrawFlags::SetMochiDebugDrawFlags(
     mochi::DebugDraw& DebugDraw,
     const FMochiDebugDrawFlags& Flags) {
-  auto EnableFeature = [&](char const* name, bool enable) {
-    int index = DebugDraw.FindFeature(name);
-    if (index >= 0) {
-      DebugDraw.EnableFeature(index, enable);
+  auto EnableFeature = [&](char const* Name, bool bEnable) {
+    int Index = DebugDraw.FindFeature(Name);
+    if (Index >= 0) {
+      DebugDraw.EnableFeature(Index, bEnable);
     } else {
       UE_LOG(
           LogMochiPhysics,
           Warning,
           TEXT(
               "[MochiDebugDraw] Attempting to enable unknown debug draw feature: \"%hs\"; MochiDebugDraw.h/cpp needs to be regenerated!"),
-          name);
+          Name);
     }
   };
 
@@ -154,11 +154,11 @@ void FMochiDebugDrawFlags::SetMochiDebugDrawFlags(
 //------------------------------------------------------------------------------
 
 static FMochiDebugDrawFlags GetCurrentDebugDrawFlags(const UWorld* World) {
-  UGameInstance* const game = World->GetGameInstance();
-  UMochiGameInstanceSubsystem* const subsys = game->GetSubsystem<UMochiGameInstanceSubsystem>();
-  if (subsys) {
-    if (UMochiSceneObject* const scene = subsys->GetScene()) {
-      return scene->GetDebugDrawFlags();
+  UGameInstance* const Game = World->GetGameInstance();
+  UMochiGameInstanceSubsystem* const Subsys = Game->GetSubsystem<UMochiGameInstanceSubsystem>();
+  if (Subsys) {
+    if (UMochiSceneObject* const Scene = Subsys->GetScene()) {
+      return Scene->GetDebugDrawFlags();
     }
   }
   UE_LOG(
@@ -169,11 +169,11 @@ static FMochiDebugDrawFlags GetCurrentDebugDrawFlags(const UWorld* World) {
 }
 
 static void UpdateDebugDrawFlags(const UWorld* World, const FMochiDebugDrawFlags& Flags) {
-  UGameInstance* const game = World->GetGameInstance();
-  UMochiGameInstanceSubsystem* const subsys = game->GetSubsystem<UMochiGameInstanceSubsystem>();
-  if (subsys) {
-    if (UMochiSceneObject* const scene = subsys->GetScene()) {
-      scene->ConfigureDebugDraw(true, Flags);
+  UGameInstance* const Game = World->GetGameInstance();
+  UMochiGameInstanceSubsystem* const Subsys = Game->GetSubsystem<UMochiGameInstanceSubsystem>();
+  if (Subsys) {
+    if (UMochiSceneObject* const Scene = Subsys->GetScene()) {
+      Scene->ConfigureDebugDraw(true, Flags);
     }
   }
 }
@@ -182,10 +182,10 @@ static FAutoConsoleCommandWithWorld GMochiEnableDebugDraw(
     TEXT("Mochi.EnableDebugDraw"),
     TEXT("Enable Mochi debug drawing."),
     FConsoleCommandWithWorldDelegate::CreateLambda([](const UWorld* World) {
-      UGameInstance* const game = World->GetGameInstance();
-      UMochiGameInstanceSubsystem* const subsys = game->GetSubsystem<UMochiGameInstanceSubsystem>();
-      if (subsys) {
-        subsys->EnableDebugDraw();
+      UGameInstance* const Game = World->GetGameInstance();
+      UMochiGameInstanceSubsystem* const Subsys = Game->GetSubsystem<UMochiGameInstanceSubsystem>();
+      if (Subsys) {
+        Subsys->EnableDebugDraw();
       }
     }));
 
@@ -193,10 +193,10 @@ static FAutoConsoleCommandWithWorld GMochiDisableDebugDraw(
     TEXT("Mochi.DisableDebugDraw"),
     TEXT("Disable Mochi debug drawing."),
     FConsoleCommandWithWorldDelegate::CreateLambda([](const UWorld* World) {
-      UGameInstance* const game = World->GetGameInstance();
-      UMochiGameInstanceSubsystem* const subsys = game->GetSubsystem<UMochiGameInstanceSubsystem>();
-      if (subsys) {
-        subsys->DisableDebugDraw();
+      UGameInstance* const Game = World->GetGameInstance();
+      UMochiGameInstanceSubsystem* const Subsys = Game->GetSubsystem<UMochiGameInstanceSubsystem>();
+      if (Subsys) {
+        Subsys->DisableDebugDraw();
       }
     }));
 

@@ -306,7 +306,7 @@ class SMochiArticulationEditorViewport : public SAssetEditorViewport,
   TSharedPtr<SRichTextBlock> OverlayText;
   TSharedPtr<FMochiArticulationEditorViewportClient> ViewportClient;
   TObjectPtr<UMochiArticulationPreviewComponent> PreviewMeshComponent;
-  float kPerspectiveFOV = 90.0f;
+  float PerspectiveFOV = 90.0f;
 };
 
 //------------------------------------------------------------------------------

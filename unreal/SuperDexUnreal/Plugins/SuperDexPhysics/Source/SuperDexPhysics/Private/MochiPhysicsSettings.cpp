@@ -124,12 +124,12 @@ FName UMochiPhysicsSettings::GetCategoryName() const {
 
 AMochiSceneSettingsActor::AMochiSceneSettingsActor() {
   // try to get settings from project settings
-  const UMochiPhysicsSettings* const projectSettings = GetDefault<UMochiPhysicsSettings>();
-  if (projectSettings) {
-    SceneSettings = projectSettings->DefaultSceneSettings;
+  const UMochiPhysicsSettings* const ProjectSettings = GetDefault<UMochiPhysicsSettings>();
+  if (ProjectSettings) {
+    SceneSettings = ProjectSettings->DefaultSceneSettings;
     // initialize SimulationSpace from project-level setting so the default value in the details
     // panel matches what the project is currently using
-    SceneSettings.SimulationSpace = projectSettings->SimulationSpace;
+    SceneSettings.SimulationSpace = ProjectSettings->SimulationSpace;
   } else {
     SceneSettings.SolverParams =
         ConstructorHelpers::FObjectFinder<UMochiSolverParams>(
@@ -171,12 +171,12 @@ void AMochiSceneSettingsActor::BeginPlay() {
         TEXT("AMochiSceneSettingsActor: Overriding SimulationSpace from level settings"));
   }
   // else get the subsystem scene and reconfigure settings
-  UGameInstance* const game = GetWorld()->GetGameInstance();
-  UMochiGameInstanceSubsystem* const subsys = game->GetSubsystem<UMochiGameInstanceSubsystem>();
-  if (subsys) {
-    subsys->bStartPaused = SceneSettings.bStartPaused;
-    if (UMochiSceneObject* const scene = subsys->GetScene()) {
-      scene->ConfigureSettings(SceneSettings);
+  UGameInstance* const Game = GetWorld()->GetGameInstance();
+  UMochiGameInstanceSubsystem* const Subsys = Game->GetSubsystem<UMochiGameInstanceSubsystem>();
+  if (Subsys) {
+    Subsys->bStartPaused = SceneSettings.bStartPaused;
+    if (UMochiSceneObject* const Scene = Subsys->GetScene()) {
+      Scene->ConfigureSettings(SceneSettings);
       bApplied = true;
       UE_LOG(
           LogMochiPhysics,

@@ -64,64 +64,64 @@ UMochiSceneObject* UMochiSceneObject::CreateScene(
   // Create new object
   FString NameStr =
       SceneName + ((SceneType == EMochiSceneType::Async) ? "___mochiAsyncScene" : "___mochiScene");
-  UMochiSceneObject* mochiSceneObj = NewObject<UMochiSceneObject>(Outer, FName(*NameStr));
-  check(mochiSceneObj);
+  UMochiSceneObject* MochiSceneObj = NewObject<UMochiSceneObject>(Outer, FName(*NameStr));
+  check(MochiSceneObj);
 
   // Get MochiPhysics world
-  mochi::Context* mochiContext = IMochiPhysicsModule::Get()->GetMochiContext();
-  check(mochiContext != nullptr);
+  mochi::Context* MochiContext = IMochiPhysicsModule::Get()->GetMochiContext();
+  check(MochiContext != nullptr);
 
   // Create MochiScene
   if (SceneType == EMochiSceneType::Async) {
-    mochiSceneObj->MochiAsyncScene =
-        mochiContext->CreateAsyncScene(TCHAR_TO_ANSI(*NameStr), mochi::ErrorAssert{});
-    mochiSceneObj->MochiAsyncScene->Pause(bStartPaused);
+    MochiSceneObj->MochiAsyncScene =
+        MochiContext->CreateAsyncScene(TCHAR_TO_ANSI(*NameStr), mochi::ErrorAssert{});
+    MochiSceneObj->MochiAsyncScene->Pause(bStartPaused);
   } else {
-    mochiSceneObj->MochiScene = mochiContext->CreateScene(TCHAR_TO_ANSI(*NameStr));
+    MochiSceneObj->MochiScene = MochiContext->CreateScene(TCHAR_TO_ANSI(*NameStr));
   }
-  check(mochiSceneObj->IsValid());
+  check(MochiSceneObj->IsValid());
 
   // Init contact layers, configure settings, and register callbacks
-  mochiSceneObj->InitDefaultContactLayers();
-  mochiSceneObj->ConfigureSettings(InSettings);
-  mochiSceneObj->RegisterDebugDrawAndStatsCallbacks();
+  MochiSceneObj->InitDefaultContactLayers();
+  MochiSceneObj->ConfigureSettings(InSettings);
+  MochiSceneObj->RegisterDebugDrawAndStatsCallbacks();
 
-  return mochiSceneObj;
+  return MochiSceneObj;
 }
 
 void UMochiSceneObject::DestroyScene() {
   MOCHI_PROFILE_SCOPE();
   if (!bDestructionOwnedByFriend) {
-    mochi::Context* mochiContext = IMochiPhysicsModule::Get()->GetMochiContext();
-    check(mochiContext);
+    mochi::Context* MochiContext = IMochiPhysicsModule::Get()->GetMochiContext();
+    check(MochiContext);
     if (MochiAsyncScene) {
-      mochiContext->DestroyAsyncScene(MochiAsyncScene);
+      MochiContext->DestroyAsyncScene(MochiAsyncScene);
     }
     if (MochiScene) {
-      mochiContext->DestroyScene(MochiScene);
+      MochiContext->DestroyScene(MochiScene);
     }
   }
   MochiAsyncScene = nullptr;
   MochiScene = nullptr;
 }
 
-void UMochiSceneObject::QueueOrExecuteCommand(std::function<void(mochi::Scene*)> callback) const {
+void UMochiSceneObject::QueueOrExecuteCommand(std::function<void(mochi::Scene*)> Callback) const {
   if (MochiAsyncScene) {
-    MochiAsyncScene->QueueCommand(callback);
+    MochiAsyncScene->QueueCommand(Callback);
   } else if (MochiScene) {
-    callback(MochiScene);
+    Callback(MochiScene);
   }
 }
 
 void UMochiSceneObject::QueueOrExecuteActorCommand(
-    mochi::ActorHandle actor,
-    std::function<void(mochi::Actor*)> callback) const {
+    mochi::ActorHandle Actor,
+    std::function<void(mochi::Actor*)> Callback) const {
   if (MochiAsyncScene) {
-    MochiAsyncScene->QueueActorCommand(actor, callback);
+    MochiAsyncScene->QueueActorCommand(Actor, Callback);
   } else if (MochiScene) {
-    mochi::Actor* actorPtr = MochiScene->GetActor(actor);
-    if (actorPtr) {
-      callback(actorPtr);
+    mochi::Actor* ActorPtr = MochiScene->GetActor(Actor);
+    if (ActorPtr) {
+      Callback(ActorPtr);
     } else {
       UE_LOG(
           LogMochiPhysics,
@@ -139,34 +139,34 @@ void UMochiSceneObject::WaitForQueuedCommands() const {
 }
 
 mochi::CallbackHandle UMochiSceneObject::RegisterPreStepCallback(
-    std::string_view debugName,
-    std::function<void(mochi::StepInfo const&)> fn,
-    int priority) const {
+    std::string_view DebugName,
+    std::function<void(mochi::StepInfo const&)> Fn,
+    int Priority) const {
   if (MochiAsyncScene) {
-    return MochiAsyncScene->RegisterPreStepCallback(debugName, fn, priority);
+    return MochiAsyncScene->RegisterPreStepCallback(DebugName, Fn, Priority);
   } else if (MochiScene) {
-    return MochiScene->RegisterPreStepCallback(debugName, fn, priority);
+    return MochiScene->RegisterPreStepCallback(DebugName, Fn, Priority);
   }
   return mochi::CallbackHandle{};
 }
 
 mochi::CallbackHandle UMochiSceneObject::RegisterPostStepCallback(
-    std::string_view debugName,
-    std::function<void(mochi::StepInfo const&)> fn,
-    int priority) const {
+    std::string_view DebugName,
+    std::function<void(mochi::StepInfo const&)> Fn,
+    int Priority) const {
   if (MochiAsyncScene) {
-    return MochiAsyncScene->RegisterPostStepCallback(debugName, fn, priority);
+    return MochiAsyncScene->RegisterPostStepCallback(DebugName, Fn, Priority);
   } else if (MochiScene) {
-    return MochiScene->RegisterPostStepCallback(debugName, fn, priority);
+    return MochiScene->RegisterPostStepCallback(DebugName, Fn, Priority);
   }
   return mochi::CallbackHandle{};
 }
 
-void UMochiSceneObject::CancelCallback(mochi::CallbackHandle handle) const {
+void UMochiSceneObject::CancelCallback(mochi::CallbackHandle Handle) const {
   if (MochiAsyncScene) {
-    MochiAsyncScene->CancelCallback(handle);
+    MochiAsyncScene->CancelCallback(Handle);
   } else if (MochiScene) {
-    MochiScene->CancelCallback(handle);
+    MochiScene->CancelCallback(Handle);
   }
 }
 
@@ -179,10 +179,10 @@ void UMochiSceneObject::SetGravity(const FVector& GravityVector) const {
         TEXT("UMochiSceneObject::SetGravity: ignored; the scene's settings are externally owned."));
     return;
   }
-  QueueOrExecuteCommand([this, GravityVector](mochi::Scene* scene) {
-    FUnrealToMochiConverter u2m;
+  QueueOrExecuteCommand([this, GravityVector](mochi::Scene* Scene) {
+    FUnrealToMochiConverter U2m;
     // NB: Gravity vector is represented as m/s^2 in UE; apply no scale
-    scene->SetGravity(u2m.DirectionToMochi(GravityVector));
+    Scene->SetGravity(U2m.DirectionToMochi(GravityVector));
   });
 }
 
@@ -196,7 +196,7 @@ void UMochiSceneObject::SetContactMatrixEntry(const FMochiContactMatrixEntry& En
             "UMochiSceneObject::SetContactMatrixEntry: ignored; the scene's settings are externally owned."));
     return;
   }
-  QueueOrExecuteCommand([this, Entry](mochi::Scene* scene) {
+  QueueOrExecuteCommand([this, Entry](mochi::Scene* Scene) {
     if (Entry.LayerA.IsNone() || Entry.LayerB.IsNone()) {
       UE_LOG(
           LogMochiPhysics,
@@ -205,14 +205,14 @@ void UMochiSceneObject::SetContactMatrixEntry(const FMochiContactMatrixEntry& En
               "UMochiSceneObject::SetContactMatrixEntry: Invalid MochiContactMatrix entry with layer value of None!"));
       return;
     }
-    const FString strA = Entry.LayerA.ToString(); // keep in scope
-    const FString strB = Entry.LayerB.ToString(); // keep in scope
-    auto a = StringCast<ANSICHAR>(*strA);
-    auto b = StringCast<ANSICHAR>(*strB);
+    const FString StrA = Entry.LayerA.ToString(); // keep in scope
+    const FString StrB = Entry.LayerB.ToString(); // keep in scope
+    auto A = StringCast<ANSICHAR>(*StrA);
+    auto B = StringCast<ANSICHAR>(*StrB);
     if (Entry.bSymmetric) {
-      scene->EnableLayerContactSymmetric(a.Get(), b.Get(), Entry.bEnabled, mochi::ErrorAssert{});
+      Scene->EnableLayerContactSymmetric(A.Get(), B.Get(), Entry.bEnabled, mochi::ErrorAssert{});
     } else {
-      scene->EnableLayerContactAsymmetric(a.Get(), b.Get(), Entry.bEnabled, mochi::ErrorAssert{});
+      Scene->EnableLayerContactAsymmetric(A.Get(), B.Get(), Entry.bEnabled, mochi::ErrorAssert{});
     }
   });
 }
@@ -249,8 +249,8 @@ void UMochiSceneObject::ConfigureSettings(const FMochiSceneSettings& InSettings)
 
 void UMochiSceneObject::ConfigureSceneContentSettings(const FMochiSceneSettings& InSettings) {
   // get solver params
-  UMochiSolverParams* solverParams = InSettings.GetSolverParams();
-  if (solverParams == nullptr) {
+  UMochiSolverParams* SolverParams = InSettings.GetSolverParams();
+  if (SolverParams == nullptr) {
     UE_LOG(
         LogMochiPhysics,
         Warning,
@@ -261,12 +261,12 @@ void UMochiSceneObject::ConfigureSceneContentSettings(const FMochiSceneSettings&
         LogMochiPhysics,
         Display,
         TEXT("UMochiSceneObject::ConfigureSettings: Using UMochiSolverParms [%s]"),
-        *solverParams->GetFullName())
+        *SolverParams->GetFullName())
   }
 
   // get contact matrix
-  UMochiContactMatrix* const contactMatrix = InSettings.GetContactMatrix();
-  if (contactMatrix == nullptr) {
+  UMochiContactMatrix* const ContactMatrix = InSettings.GetContactMatrix();
+  if (ContactMatrix == nullptr) {
     UE_LOG(
         LogMochiPhysics,
         Warning,
@@ -277,16 +277,16 @@ void UMochiSceneObject::ConfigureSceneContentSettings(const FMochiSceneSettings&
         LogMochiPhysics,
         Display,
         TEXT("UMochiSceneObject::ConfigureSettings: Using UMochiContactMatrix [%s]"),
-        *contactMatrix->GetFullName())
+        *ContactMatrix->GetFullName())
   }
 
   // Initialize Scene
-  QueueOrExecuteCommand([this, InSettings, solverParams, contactMatrix](mochi::Scene* scene) {
+  QueueOrExecuteCommand([this, InSettings, SolverParams, ContactMatrix](mochi::Scene* Scene) {
     // Add user Contact Matrix entries
     // TODO: remove user defined contact matrix entries that were in prior settings?
-    if (contactMatrix) {
-      for (FMochiContactMatrixEntry& entry : contactMatrix->Matrix) {
-        if (entry.LayerA.IsNone() || entry.LayerB.IsNone()) {
+    if (ContactMatrix) {
+      for (FMochiContactMatrixEntry& Entry : ContactMatrix->Matrix) {
+        if (Entry.LayerA.IsNone() || Entry.LayerB.IsNone()) {
           UE_LOG(
               LogMochiPhysics,
               Warning,
@@ -294,24 +294,24 @@ void UMochiSceneObject::ConfigureSceneContentSettings(const FMochiSceneSettings&
                   "UMochiSceneObject::ConfigureSettings: Skipping MochiContactMatrix entry with layer value of None!"));
           continue;
         }
-        const FString strA = entry.LayerA.ToString(); // keep in scope
-        const FString strB = entry.LayerB.ToString(); // keep in scope
-        std::string a = TCHAR_TO_ANSI(*strA);
-        std::string b = TCHAR_TO_ANSI(*strB);
-        if (entry.bSymmetric) {
-          scene->EnableLayerContactSymmetric(a, b, entry.bEnabled, mochi::ErrorAssert{});
+        const FString StrA = Entry.LayerA.ToString(); // keep in scope
+        const FString StrB = Entry.LayerB.ToString(); // keep in scope
+        std::string A = TCHAR_TO_ANSI(*StrA);
+        std::string B = TCHAR_TO_ANSI(*StrB);
+        if (Entry.bSymmetric) {
+          Scene->EnableLayerContactSymmetric(A, B, Entry.bEnabled, mochi::ErrorAssert{});
         } else {
-          scene->EnableLayerContactAsymmetric(a, b, entry.bEnabled, mochi::ErrorAssert{});
+          Scene->EnableLayerContactAsymmetric(A, B, Entry.bEnabled, mochi::ErrorAssert{});
         }
       }
     }
     // Set the Scene's solver parameters. These will be used for all islands in the scene.
-    if (solverParams) {
-      scene->SetSolverParams(solverParams->ToMochi(), mochi::ErrorAssert{});
+    if (SolverParams) {
+      Scene->SetSolverParams(SolverParams->ToMochi(), mochi::ErrorAssert{});
     }
     // Set gravity vector
-    FUnrealToMochiConverter u2m;
-    scene->SetGravity(u2m.DirectionToMochi(InSettings.GravityVector));
+    FUnrealToMochiConverter U2m;
+    Scene->SetGravity(U2m.DirectionToMochi(InSettings.GravityVector));
   });
   WaitForQueuedCommands();
 }
@@ -323,40 +323,40 @@ FMochiSceneSettings UMochiSceneObject::GetSettings() const {
 void UMochiSceneObject::DebugDrawScene(UWorld* World) {
   // Sync data from Mochi thread
   {
-    FReadScopeLock lock(debugDrawDataMutex);
-    debugDrawDataRender.hasChanged = false;
-    if (debugDrawDataPending.hasChanged) {
-      std::swap(debugDrawDataPending, debugDrawDataRender);
+    FReadScopeLock Lock(DebugDrawDataMutex);
+    DebugDrawDataRender.bHasChanged = false;
+    if (DebugDrawDataPending.bHasChanged) {
+      std::swap(DebugDrawDataPending, DebugDrawDataRender);
     }
   }
 
-  const int depth = Settings.DebugDrawFlags.bDebugDrawForeground ? SDPG_Foreground : 0;
-  const FMochiToUnrealConverter m2u;
+  const int Depth = Settings.DebugDrawFlags.bDebugDrawForeground ? SDPG_Foreground : 0;
+  const FMochiToUnrealConverter M2u;
 
   UWorld* UnrealWorld = World ? World : GetWorld();
   if (UnrealWorld) {
     // Draw all lines
-    const DebugDrawLineVerticesBuffer& lineVerts = debugDrawDataRender.lineVerts;
-    for (size_t StartIdx = 0; StartIdx < lineVerts.positions.size(); StartIdx += 2) {
+    const FDebugDrawLineVerticesBuffer& LineVerts = DebugDrawDataRender.LineVerts;
+    for (size_t StartIdx = 0; StartIdx < LineVerts.Positions.size(); StartIdx += 2) {
       size_t EndIdx = StartIdx + 1;
-      FVector StartPos = m2u.TranslationToUnreal(lineVerts.positions[StartIdx]);
-      FVector EndPos = m2u.TranslationToUnreal(lineVerts.positions[EndIdx]);
+      FVector StartPos = M2u.TranslationToUnreal(LineVerts.Positions[StartIdx]);
+      FVector EndPos = M2u.TranslationToUnreal(LineVerts.Positions[EndIdx]);
       // Scale the line length based on the multiplier.
       // NOTE: the multiplier affects all lines. So a smaller number may make contact forces look
       // good but will cause the mochi mesh visualization to be ruined.
       EndPos = (EndPos - StartPos) * Settings.DebugDraw_Line_Length_Multiplier + StartPos;
-      FColor StartColor = ColorToUnreal(lineVerts.colors[StartIdx]);
-      DrawDebugLine(UnrealWorld, StartPos, EndPos, StartColor, false, -1, depth);
+      FColor StartColor = ColorToUnreal(LineVerts.Colors[StartIdx]);
+      DrawDebugLine(UnrealWorld, StartPos, EndPos, StartColor, false, -1, Depth);
     }
 
     // Draw all spheres
-    const DebugDrawSpheresBuffer& spheres = debugDrawDataRender.spheres;
-    for (size_t Idx = 0; Idx < spheres.positions.size(); ++Idx) {
-      FVector Pos = m2u.TranslationToUnreal(spheres.positions[Idx]);
-      float Radius = static_cast<float>(spheres.radii[Idx]);
-      FColor Color = ColorToUnreal(spheres.colors[Idx]);
+    const FDebugDrawSpheresBuffer& Spheres = DebugDrawDataRender.Spheres;
+    for (size_t Idx = 0; Idx < Spheres.Positions.size(); ++Idx) {
+      FVector Pos = M2u.TranslationToUnreal(Spheres.Positions[Idx]);
+      float Radius = static_cast<float>(Spheres.Radii[Idx]);
+      FColor Color = ColorToUnreal(Spheres.Colors[Idx]);
       int32 NumSegments = 32;
-      DrawDebugSphere(UnrealWorld, Pos, Radius, NumSegments, Color, false, -1, depth);
+      DrawDebugSphere(UnrealWorld, Pos, Radius, NumSegments, Color, false, -1, Depth);
     }
   }
 }
@@ -419,7 +419,7 @@ void UMochiSceneObject::StepPause() const {
 
 void UMochiSceneObject::UpdateStatsGroups() {
   MOCHI_PROFILE_SCOPE();
-  FReadScopeLock lock(StatsLock);
+  FReadScopeLock Lock(StatsLock);
 
   SET_DWORD_STAT(
       STAT_NumMochiThreads, IMochiPhysicsModule::Get()->GetMochiContext()->GetNumThreads());
@@ -437,17 +437,17 @@ void UMochiSceneObject::UpdateStatsGroups() {
 }
 
 int UMochiSceneObject::GetNumMochiStepsSinceStart() const {
-  FReadScopeLock lock(StatsLock);
+  FReadScopeLock Lock(StatsLock);
   return Stats.numMochiStepsSinceStart;
 }
 
 double UMochiSceneObject::GetTotalSimulatedTimeSinceStartSec() const {
-  FReadScopeLock lock(StatsLock);
+  FReadScopeLock Lock(StatsLock);
   return Stats.totalSimulatedTimeSinceStartSec;
 }
 
 double UMochiSceneObject::GetTotalStepDuration() const {
-  FReadScopeLock lock(StatsLock);
+  FReadScopeLock Lock(StatsLock);
   return Stats.Performance.totalStepDurationSec;
 }
 
@@ -459,22 +459,22 @@ void UMochiSceneObject::BeginDestroy() {
 
 void UMochiSceneObject::InitDefaultContactLayers() {
   // Initialize scene default contact layers
-  QueueOrExecuteCommand([this](mochi::Scene* scene) {
+  QueueOrExecuteCommand([this](mochi::Scene* Scene) {
     // left hand shouldn't collide with self
-    scene->EnableLayerContactSymmetric(
+    Scene->EnableLayerContactSymmetric(
         FMochiLayer::LeftHand, FMochiLayer::LeftHand, false, mochi::ErrorAssert{});
     // right hand shouldn't collide with self
-    scene->EnableLayerContactSymmetric(
+    Scene->EnableLayerContactSymmetric(
         FMochiLayer::RightHand, FMochiLayer::RightHand, false, mochi::ErrorAssert{});
     // left and right hands shouldn't collide with each other
-    scene->EnableLayerContactSymmetric(
+    Scene->EnableLayerContactSymmetric(
         FMochiLayer::LeftHand, FMochiLayer::RightHand, false, mochi::ErrorAssert{});
 
     // Optionally force all actors to simulate in a single island. This may be useful for debugging,
     // but it will significantly reduce CPU performance.
-    const UMochiPhysicsSettings* const projSettings = GetDefault<UMochiPhysicsSettings>();
-    if (projSettings && projSettings->bForceSingleIsland) {
-      scene->SetForceSingleIsland(true);
+    const UMochiPhysicsSettings* const ProjSettings = GetDefault<UMochiPhysicsSettings>();
+    if (ProjSettings && ProjSettings->bForceSingleIsland) {
+      Scene->SetForceSingleIsland(true);
       UE_LOG(
           LogMochiPhysics,
           Display,
@@ -486,38 +486,38 @@ void UMochiSceneObject::InitDefaultContactLayers() {
 
 void UMochiSceneObject::RegisterDebugDrawAndStatsCallbacks() {
   // Register callback to render debug draw elements to Unreal
-  [[maybe_unused]] const mochi::CallbackHandle debugDrawHandle = RegisterPostStepCallback(
-      "DebugDraw", [this](mochi::StepInfo const& info) { // Update debug draw data
-        const mochi::DebugDrawData& drawData = info.scene->GetDebugDraw().GatherData();
+  [[maybe_unused]] const mochi::CallbackHandle DebugDrawHandle = RegisterPostStepCallback(
+      "DebugDraw", [this](mochi::StepInfo const& Info) { // Update debug draw data
+        const mochi::DebugDrawData& DrawData = Info.scene->GetDebugDraw().GatherData();
 
         // Make a copy
-        debugDrawDataMochi.lineVerts.positions.assign(
-            drawData.lineVertices.positions.begin(), drawData.lineVertices.positions.end());
-        debugDrawDataMochi.lineVerts.colors.assign(
-            drawData.lineVertices.colors.begin(), drawData.lineVertices.colors.end());
-        debugDrawDataMochi.spheres.positions.assign(
-            drawData.spheres.positions.begin(), drawData.spheres.positions.end());
-        debugDrawDataMochi.spheres.radii.assign(
-            drawData.spheres.radii.begin(), drawData.spheres.radii.end());
-        debugDrawDataMochi.spheres.colors.assign(
-            drawData.spheres.colors.begin(), drawData.spheres.colors.end());
-        debugDrawDataMochi.hasChanged = true;
+        DebugDrawDataMochi.LineVerts.Positions.assign(
+            DrawData.lineVertices.positions.begin(), DrawData.lineVertices.positions.end());
+        DebugDrawDataMochi.LineVerts.Colors.assign(
+            DrawData.lineVertices.colors.begin(), DrawData.lineVertices.colors.end());
+        DebugDrawDataMochi.Spheres.Positions.assign(
+            DrawData.spheres.positions.begin(), DrawData.spheres.positions.end());
+        DebugDrawDataMochi.Spheres.Radii.assign(
+            DrawData.spheres.radii.begin(), DrawData.spheres.radii.end());
+        DebugDrawDataMochi.Spheres.Colors.assign(
+            DrawData.spheres.colors.begin(), DrawData.spheres.colors.end());
+        DebugDrawDataMochi.bHasChanged = true;
 
         // Synchronize
-        FWriteScopeLock lock(debugDrawDataMutex);
-        std::swap(debugDrawDataPending, debugDrawDataMochi);
+        FWriteScopeLock Lock(DebugDrawDataMutex);
+        std::swap(DebugDrawDataPending, DebugDrawDataMochi);
       });
 
   // Register callback to get stats
-  [[maybe_unused]] const mochi::CallbackHandle statHandle =
-      RegisterPostStepCallback("Stats", [this](mochi::StepInfo const& info) {
-        FWriteScopeLock lock(StatsLock);
-        Stats.Performance = info.scene->GetPerformanceStats();
-        Stats.NumActors = info.scene->GetNumActors();
-        Stats.NumLayers = info.scene->GetNumContactLayers();
-        Stats.NumConstraints = info.scene->GetNumConstraints();
+  [[maybe_unused]] const mochi::CallbackHandle StatHandle =
+      RegisterPostStepCallback("Stats", [this](mochi::StepInfo const& Info) {
+        FWriteScopeLock Lock(StatsLock);
+        Stats.Performance = Info.scene->GetPerformanceStats();
+        Stats.NumActors = Info.scene->GetNumActors();
+        Stats.NumLayers = Info.scene->GetNumContactLayers();
+        Stats.NumConstraints = Info.scene->GetNumConstraints();
         Stats.numMochiStepsSinceStart++;
-        Stats.LastTimeStepSec = info.scene->GetLastTimeStep();
+        Stats.LastTimeStepSec = Info.scene->GetLastTimeStep();
         Stats.totalSimulatedTimeSinceStartSec += Stats.LastTimeStepSec;
       });
 }
@@ -526,8 +526,8 @@ void UMochiSceneObject::ConfigureDebugDraw(
     bool bEnableDebugDraw,
     const FMochiDebugDrawFlags& DebugDrawFlags) {
   MOCHI_PROFILE_SCOPE();
-  QueueOrExecuteCommand([this, bEnableDebugDraw, DebugDrawFlags](mochi::Scene* scene) {
-    mochi::DebugDraw& MochiDebugDraw = scene->GetDebugDraw();
+  QueueOrExecuteCommand([this, bEnableDebugDraw, DebugDrawFlags](mochi::Scene* Scene) {
+    mochi::DebugDraw& MochiDebugDraw = Scene->GetDebugDraw();
     MochiDebugDraw.Enable(bEnableDebugDraw);
     FMochiDebugDrawFlags::SetMochiDebugDrawFlags(MochiDebugDraw, DebugDrawFlags);
     Settings.bEnableDebugDraw = bEnableDebugDraw;
@@ -543,46 +543,46 @@ void UMochiSceneObject::ConfigureDebugDraw(bool bEnableDebugDraw) {
   ConfigureDebugDraw(bEnableDebugDraw, Settings.DebugDrawFlags);
 }
 
-void UMochiSceneObject::StartRecording(const FString& filePath) const {
+void UMochiSceneObject::StartRecording(const FString& FilePath) const {
   if ((MochiAsyncScene) || (MochiScene)) {
-    std::string recordingPath = TCHAR_TO_ANSI(*filePath);
+    std::string RecordingPath = TCHAR_TO_ANSI(*FilePath);
 
-    if (!std::filesystem::is_directory(recordingPath)) {
-      std::filesystem::create_directory(recordingPath);
+    if (!std::filesystem::is_directory(RecordingPath)) {
+      std::filesystem::create_directory(RecordingPath);
     }
-    constexpr char const* kRecordingName = "unrealrecording";
+    constexpr char const* RecordingName = "unrealrecording";
 
     // Generate a date-time string so that alphabetical sorting is also chronological
-    std::time_t t = std::time(0); // now
-    std::tm* now = std::localtime(&t);
-    std::string timeStamp = mochi::Format(
+    std::time_t T = std::time(0); // now
+    std::tm* Now = std::localtime(&T);
+    std::string TimeStamp = mochi::Format(
         "%.2d%.2d%.2d_%.2d%.2d%.2d",
-        now->tm_year + 1900 - 2000, // 2 digit year (eg 23 for 2023)
-        now->tm_mon,
-        now->tm_mday,
-        now->tm_hour,
-        now->tm_min,
-        now->tm_sec);
+        Now->tm_year + 1900 - 2000, // 2 digit year (eg 23 for 2023)
+        Now->tm_mon,
+        Now->tm_mday,
+        Now->tm_hour,
+        Now->tm_min,
+        Now->tm_sec);
 
     // Put it all together
-    std::string fullFileName = mochi::Format(
-        "%s/%s_%s.recording.h5", recordingPath.c_str(), timeStamp.c_str(), kRecordingName);
-    QueueOrExecuteCommand([fullFileName](mochi::Scene* scene) {
+    std::string FullFileName = mochi::Format(
+        "%s/%s_%s.recording.h5", RecordingPath.c_str(), TimeStamp.c_str(), RecordingName);
+    QueueOrExecuteCommand([FullFileName](mochi::Scene* Scene) {
       // Use default options + enable contact point recording
-      mochi::experimental::RecordingParams recordingParams;
-      // recordingParams.recordContactPoints = true;
+      mochi::experimental::RecordingParams RecordingParams;
+      // RecordingParams.recordContactPoints = true;
 
       // Attempt to open the file for writing and start recording.
-      mochi::Error recordingError;
-      mochi::experimental::StartRecording(scene, fullFileName, recordingParams, recordingError);
-      if (!recordingError.IsOK()) {
+      mochi::Error RecordingError;
+      mochi::experimental::StartRecording(Scene, FullFileName, RecordingParams, RecordingError);
+      if (!RecordingError.IsOK()) {
         UE_LOG(
             LogMochiPhysics,
             Error,
             TEXT(
                 "UMochiSceneObject::StartRecording: Failed to start recording to file \"%hs\"! Reason: %hs"),
-            fullFileName.c_str(),
-            recordingError.ToString().c_str());
+            FullFileName.c_str(),
+            RecordingError.ToString().c_str());
       }
     });
   }
@@ -590,5 +590,5 @@ void UMochiSceneObject::StartRecording(const FString& filePath) const {
 
 void UMochiSceneObject::StopRecording() const {
   QueueOrExecuteCommand(
-      [](mochi::Scene* scene) { mochi::experimental::StopRecording(scene, mochi::ErrorAssert{}); });
+      [](mochi::Scene* Scene) { mochi::experimental::StopRecording(Scene, mochi::ErrorAssert{}); });
 };

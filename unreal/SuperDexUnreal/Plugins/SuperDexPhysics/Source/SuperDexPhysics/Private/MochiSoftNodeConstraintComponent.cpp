@@ -41,20 +41,20 @@ void UMochiSoftNodeConstraintComponent::OnUpdateTransform(
     ETeleportType Teleport) {
   Super::OnUpdateTransform(UpdateTransformFlags, Teleport);
   if (Type == EMochiSoftNodeConstraintType::NodePosition) {
-    const mochi::Real3 position =
+    const mochi::Real3 Position =
         FUnrealToMochiConverter().TranslationToMochi(GetComponentLocation());
     ForEachConstraint(
-        [position](mochi::Constraint& C) { C.SetTargetPosition(position, mochi::ErrorLog{}); });
+        [Position](mochi::Constraint& C) { C.SetTargetPosition(Position, mochi::ErrorLog{}); });
   }
 }
 
 EMochiBodyState UMochiSoftNodeConstraintComponent::BuildConstraints(
     FConstraintRequest& OutRequest) {
-  FMochiConstraintBody body;
-  mochi::ActorHandle actor;
-  const EMochiBodyState state = ResolveBody(Body, body, OutRequest.Scene, actor);
-  if (state != EMochiBodyState::Ready) {
-    return state;
+  FMochiConstraintBody ResolvedBody;
+  mochi::ActorHandle Actor;
+  const EMochiBodyState State = ResolveBody(Body, ResolvedBody, OutRequest.Scene, Actor);
+  if (State != EMochiBodyState::Ready) {
+    return State;
   }
   // Mochi chooses the nodes for Closest, and InsideRigidBounds finds them on the Mochi thread.
   Nodes = std::make_shared<FNodes>();
@@ -64,31 +64,32 @@ EMochiBodyState UMochiSoftNodeConstraintComponent::BuildConstraints(
     Nodes->Indices = {NodeIndex};
     Nodes->bReady = true;
   }
-  const FUnrealToMochiConverter u2m;
+  const FUnrealToMochiConverter U2m;
 
   if (Type == EMochiSoftNodeConstraintType::NodePosition) {
-    mochi::DeformableNodePositionConstraintParams params;
-    FillCommonParams(params);
-    params.actor = actor;
-    params.nodeIndex = NodeIndex;
-    params.position = u2m.TranslationToMochi(GetComponentLocation());
-    OutRequest.CreateOne(params, &mochi::Scene::CreateDeformableNodePositionConstraint);
+    mochi::DeformableNodePositionConstraintParams Params;
+    FillCommonParams(Params);
+    Params.actor = Actor;
+    Params.nodeIndex = NodeIndex;
+    Params.position = U2m.TranslationToMochi(GetComponentLocation());
+    OutRequest.CreateOne(Params, &mochi::Scene::CreateDeformableNodePositionConstraint);
     return EMochiBodyState::Ready;
   }
 
-  FMochiConstraintBody otherBody;
-  mochi::ActorHandle otherActor;
-  UMochiSceneObject* otherScene = nullptr;
-  const EMochiBodyState otherState = ResolveBody(OtherBody, otherBody, otherScene, otherActor);
-  if (otherState != EMochiBodyState::Ready) {
-    return otherState;
+  FMochiConstraintBody ResolvedOtherBody;
+  mochi::ActorHandle OtherActor;
+  UMochiSceneObject* OtherScene = nullptr;
+  const EMochiBodyState OtherState =
+      ResolveBody(OtherBody, ResolvedOtherBody, OtherScene, OtherActor);
+  if (OtherState != EMochiBodyState::Ready) {
+    return OtherState;
   }
-  if (otherScene != OutRequest.Scene) {
+  if (OtherScene != OutRequest.Scene) {
     LogError(TEXT("the bodies are not in the same Mochi scene."));
     return EMochiBodyState::Failed;
   }
   if (!bAllowContact) {
-    OutRequest.NoContactPairs.emplace_back(actor, otherActor);
+    OutRequest.NoContactPairs.emplace_back(Actor, OtherActor);
   }
 
   if (Type == EMochiSoftNodeConstraintType::NodeToNode) {
@@ -96,61 +97,61 @@ EMochiBodyState UMochiSoftNodeConstraintComponent::BuildConstraints(
       LogError(TEXT("Inside Rigid Bounds only applies to Node to Rigid."));
       return EMochiBodyState::Failed;
     }
-    mochi::DeformableNodeToDeformableNodeConstraintParams params;
-    FillCommonParams(params);
-    params.actorA = actor;
-    params.actorB = otherActor;
-    params.nodeIndexA = NodeIndex;
-    params.nodeIndexB = OtherNodeIndex;
-    params.findClosest = NodeSelection == EMochiSoftNodeSelection::Closest;
-    OutRequest.CreateOne(params, &mochi::Scene::CreateDeformableNodeToDeformableNodeConstraint);
+    mochi::DeformableNodeToDeformableNodeConstraintParams Params;
+    FillCommonParams(Params);
+    Params.actorA = Actor;
+    Params.actorB = OtherActor;
+    Params.nodeIndexA = NodeIndex;
+    Params.nodeIndexB = OtherNodeIndex;
+    Params.findClosest = NodeSelection == EMochiSoftNodeSelection::Closest;
+    OutRequest.CreateOne(Params, &mochi::Scene::CreateDeformableNodeToDeformableNodeConstraint);
     return EMochiBodyState::Ready;
   }
 
-  mochi::DeformableNodeToRigidConstraintParams params;
-  FillCommonParams(params);
-  params.deformableActor = actor;
-  params.rigidActor = otherActor;
-  params.deformableNodeIndex = NodeIndex;
-  params.findClosest = NodeSelection == EMochiSoftNodeSelection::Closest;
-  params.fixToDeformablePos = bFixToDeformablePosition;
-  params.rigidLocalPos = otherBody.LocalPositionToMochi(RigidLocalPosition);
+  mochi::DeformableNodeToRigidConstraintParams Params;
+  FillCommonParams(Params);
+  Params.deformableActor = Actor;
+  Params.rigidActor = OtherActor;
+  Params.deformableNodeIndex = NodeIndex;
+  Params.findClosest = NodeSelection == EMochiSoftNodeSelection::Closest;
+  Params.fixToDeformablePos = bFixToDeformablePosition;
+  Params.rigidLocalPos = ResolvedOtherBody.LocalPositionToMochi(RigidLocalPosition);
   if (NodeSelection != EMochiSoftNodeSelection::InsideRigidBounds) {
-    OutRequest.CreateOne(params, &mochi::Scene::CreateDeformableNodeToRigidConstraint);
+    OutRequest.CreateOne(Params, &mochi::Scene::CreateDeformableNodeToRigidConstraint);
     return EMochiBodyState::Ready;
   }
-  OutRequest.Create = [params, nodes = Nodes](mochi::Scene* Scene) {
-    mochi::ErrorLog e;
-    std::vector<mochi::ConstraintHandle> constraints;
-    mochi::Actor* deformable = Scene->GetActor(params.deformableActor);
-    const mochi::Actor* rigid = Scene->GetActor(params.rigidActor);
-    if (deformable == nullptr || rigid == nullptr) {
-      return constraints;
+  OutRequest.Create = [Params, NodeIndices = Nodes](mochi::Scene* Scene) {
+    mochi::ErrorLog E;
+    std::vector<mochi::ConstraintHandle> Constraints;
+    mochi::Actor* Deformable = Scene->GetActor(Params.deformableActor);
+    const mochi::Actor* Rigid = Scene->GetActor(Params.rigidActor);
+    if (Deformable == nullptr || Rigid == nullptr) {
+      return Constraints;
     }
     // The nodes inside the rigid body's world bounding box, in the deformable body's frame.
-    const mochi::Obb rigidBoundsLocal = mochi::TransformShape(
-        Invert(deformable->GetRootTransform()), mochi::GetObb(rigid->GetAabbWorld(e)));
-    const mochi::QueryHandle query =
-        deformable->RegisterQueryAndCompute(mochi::QueryType::NodePositions, e);
-    deformable->QueryNodesInVolumeLocal(
-        rigidBoundsLocal,
+    const mochi::Obb RigidBoundsLocal = mochi::TransformShape(
+        Invert(Deformable->GetRootTransform()), mochi::GetObb(Rigid->GetAabbWorld(E)));
+    const mochi::QueryHandle Query =
+        Deformable->RegisterQueryAndCompute(mochi::QueryType::NodePositions, E);
+    Deformable->QueryNodesInVolumeLocal(
+        RigidBoundsLocal,
         false,
         [&](int Node, mochi::Real3 /*Position*/) {
-          mochi::DeformableNodeToRigidConstraintParams nodeParams = params;
-          nodeParams.deformableNodeIndex = Node;
-          nodeParams.findClosest = false;
+          mochi::DeformableNodeToRigidConstraintParams NodeParams = Params;
+          NodeParams.deformableNodeIndex = Node;
+          NodeParams.findClosest = false;
           // Each node ties where it is; one shared rigid point would collapse the region.
-          nodeParams.fixToDeformablePos = true;
-          if (const mochi::Constraint* constraint =
-                  Scene->CreateDeformableNodeToRigidConstraint(nodeParams, e)) {
-            constraints.push_back(constraint->GetHandle());
-            nodes->Indices.Add(Node);
+          NodeParams.fixToDeformablePos = true;
+          if (const mochi::Constraint* Constraint =
+                  Scene->CreateDeformableNodeToRigidConstraint(NodeParams, E)) {
+            Constraints.push_back(Constraint->GetHandle());
+            NodeIndices->Indices.Add(Node);
           }
         },
-        e);
-    deformable->CancelQuery(query);
-    nodes->bReady.store(true, std::memory_order_release);
-    return constraints;
+        E);
+    Deformable->CancelQuery(Query);
+    NodeIndices->bReady.store(true, std::memory_order_release);
+    return Constraints;
   };
   return EMochiBodyState::Ready;
 }

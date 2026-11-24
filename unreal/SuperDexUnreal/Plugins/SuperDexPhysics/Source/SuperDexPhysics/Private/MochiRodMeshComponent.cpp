@@ -53,19 +53,19 @@ void UMochiRodMeshComponent::CreateMochiActor() {
     return;
   }
 
-  const mochi::ShapeHandle shape =
+  const mochi::ShapeHandle Shape =
       Model->GetMochiShape(GetComponentTransform().GetScale3D(), FTransform::Identity);
-  if (!shape.IsValid()) {
+  if (!Shape.IsValid()) {
     UE_LOG(LogMochiPhysics, Error, TEXT("[%hs] Failed: shape handle is invalid."), __FUNCTION__);
     return;
   }
 
-  mochi::PointCloudColliderParams pointCloudParams;
-  pointCloudParams.radius = mochi::real(PointCloudRadius);
-  pointCloudParams.selfContact = bPointCloudSelfContact;
-  pointCloudParams.selfContactExclusionRatio = mochi::real(PointCloudSelfContactExclusionRatio);
+  mochi::PointCloudColliderParams PointCloudParams;
+  PointCloudParams.radius = mochi::real(PointCloudRadius);
+  PointCloudParams.selfContact = bPointCloudSelfContact;
+  PointCloudParams.selfContactExclusionRatio = mochi::real(PointCloudSelfContactExclusionRatio);
   if (PointCloudColliderSegmentElementType.IsSet()) {
-    pointCloudParams.colliderSegmentElementType =
+    PointCloudParams.colliderSegmentElementType =
         ToMochi(PointCloudColliderSegmentElementType.GetValue());
   }
 
@@ -73,13 +73,13 @@ void UMochiRodMeshComponent::CreateMochiActor() {
       this,
       GetName(),
       GetComponentTransform(),
-      shape,
+      Shape,
       RodMaterialParams,
       ContactParams,
       ColliderType,
       Layer,
       bHasGravity,
-      &pointCloudParams,
+      &PointCloudParams,
       bUseContactSkin,
       ContactElementType,
       ContactSkinElementType,

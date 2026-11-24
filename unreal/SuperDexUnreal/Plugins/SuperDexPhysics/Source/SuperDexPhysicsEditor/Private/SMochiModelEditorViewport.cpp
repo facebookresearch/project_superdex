@@ -207,8 +207,8 @@ void SMochiModelEditorViewport::PopulateViewportOverlays(TSharedRef<SOverlay> Ov
 
 void SMochiModelEditorViewport::PopulateOverlayText(const TArray<FText>& TextItems) {
   FTextBuilder FinalText;
-  for (FText const& item : TextItems) {
-    FinalText.AppendLine(item);
+  for (FText const& Item : TextItems) {
+    FinalText.AppendLine(Item);
   }
   OverlayText->SetText(FinalText.ToText());
 }
@@ -241,10 +241,10 @@ void SMochiModelEditorViewport::SetUseOrthographicView(bool bOrthographic) {
   }
 
   if (bOrthographic) {
-    ViewportClient->ViewFOV = kOrthographicFOV;
+    ViewportClient->ViewFOV = OrthographicFOV;
     ModelPreviewScene->SetEnvironmentVisibility(false);
   } else {
-    ViewportClient->ViewFOV = kPerspectiveFOV;
+    ViewportClient->ViewFOV = PerspectiveFOV;
     ModelPreviewScene->SetEnvironmentVisibility(true);
   }
 

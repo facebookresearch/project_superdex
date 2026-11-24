@@ -27,23 +27,23 @@
 
 static void PopulateMeshFromMochiMeshData(
     UE::Geometry::FDynamicMesh3* OutMesh,
-    mochi::MeshDataView const& meshData) {
+    mochi::MeshDataView const& MeshData) {
   MOCHI_PROFILE_SCOPE();
-  FMochiToUnrealConverter m2u;
-  int const numNodes = meshData.GetNumNodes();
-  for (int NodeIdx = 0; NodeIdx < numNodes; ++NodeIdx) {
-    mochi::Real3 vertex = mochi::Real3{
-        meshData.coordinates[NodeIdx * 3],
-        meshData.coordinates[NodeIdx * 3 + 1],
-        meshData.coordinates[NodeIdx * 3 + 2],
+  FMochiToUnrealConverter M2u;
+  int const NumNodes = MeshData.GetNumNodes();
+  for (int NodeIdx = 0; NodeIdx < NumNodes; ++NodeIdx) {
+    mochi::Real3 Vertex = mochi::Real3{
+        MeshData.coordinates[NodeIdx * 3],
+        MeshData.coordinates[NodeIdx * 3 + 1],
+        MeshData.coordinates[NodeIdx * 3 + 2],
     };
     // NOTE: Assumes Mochi position data is stored in Mochi units (meters)
-    OutMesh->AppendVertex(m2u.TranslationToUnreal(vertex));
+    OutMesh->AppendVertex(M2u.TranslationToUnreal(Vertex));
   }
 
   // Initialize faces
-  const mochi::Span<int const>& TriIndices = meshData.connectivity;
-  if (m2u.FlipsHandedness()) {
+  const mochi::Span<int const>& TriIndices = MeshData.connectivity;
+  if (M2u.FlipsHandedness()) {
     for (int i = 0; i < TriIndices.size(); i += 3) {
       UE::Geometry::FIndex3i Tri{
           TriIndices[i + 0],
@@ -68,44 +68,44 @@ static void PopulateMeshFromMochiMeshData(
 }
 
 static mochi::MeshDataView GetMeshDataForDynamicMesh(
-    mochi::Context const& mochiContext,
-    mochi::ShapeHandle shape,
+    mochi::Context const& MochiContext,
+    mochi::ShapeHandle Shape,
     bool bUseVisualMeshIfPresent,
     bool bUseContactSkinIfPresent,
-    mochi::Error& error) {
-  MOCHI_ERROR_RETURN(error, {});
+    mochi::Error& Error) {
+  MOCHI_ERROR_RETURN(Error, {});
 
-  mochi::MeshDataView meshData{};
+  mochi::MeshDataView MeshData{};
   if (bUseVisualMeshIfPresent) {
-    meshData = mochiContext.GetShapeVisualMesh(shape, error);
-    MOCHI_ERROR_RETURN(error, {});
+    MeshData = MochiContext.GetShapeVisualMesh(Shape, Error);
+    MOCHI_ERROR_RETURN(Error, {});
   }
-  if (bUseContactSkinIfPresent && meshData.IsEmpty()) {
-    mochi::MeshDataView const contactSkin = mochiContext.GetShapeContactSkinMesh(shape, error);
-    MOCHI_ERROR_RETURN(error, {});
-    if (contactSkin.skinning.has_value()) {
-      meshData = contactSkin;
+  if (bUseContactSkinIfPresent && MeshData.IsEmpty()) {
+    mochi::MeshDataView const ContactSkin = MochiContext.GetShapeContactSkinMesh(Shape, Error);
+    MOCHI_ERROR_RETURN(Error, {});
+    if (ContactSkin.skinning.has_value()) {
+      MeshData = ContactSkin;
     }
   }
-  if (meshData.IsEmpty()) {
-    meshData = mochiContext.GetShapeSurfaceMesh(shape, error);
-    MOCHI_ERROR_RETURN(error, {});
-    if (meshData.IsEmpty()) {
-      const mochi::MeshDataView mesh = mochiContext.GetShapeMesh(shape, error);
-      MOCHI_ERROR_RETURN(error, {});
-      if (mesh.nodesPerElement == 2) {
+  if (MeshData.IsEmpty()) {
+    MeshData = MochiContext.GetShapeSurfaceMesh(Shape, Error);
+    MOCHI_ERROR_RETURN(Error, {});
+    if (MeshData.IsEmpty()) {
+      const mochi::MeshDataView Mesh = MochiContext.GetShapeMesh(Shape, Error);
+      MOCHI_ERROR_RETURN(Error, {});
+      if (Mesh.nodesPerElement == 2) {
         return {};
       }
     }
   }
   MOCHI_ERROR_IF(
-      meshData.IsEmpty(),
-      error,
+      MeshData.IsEmpty(),
+      Error,
       "Cannot populate mesh: shape has no surface mesh data, and no requested visual mesh or "
       "contact skin.");
-  MOCHI_ERROR_RETURN(error, {});
+  MOCHI_ERROR_RETURN(Error, {});
 
-  return meshData;
+  return MeshData;
 }
 
 void PopulateMeshFromMochiModel(
@@ -118,35 +118,35 @@ void PopulateMeshFromMochiModel(
   if (!MochiModel || !MochiModel->IsValid()) {
     return;
   }
-  mochi::Context* mochiContext = IMochiPhysicsModule::Get()->GetMochiContext();
-  if (mochiContext) {
-    mochi::ErrorLog e{};
-    mochi::ShapeHandle shape = MochiModel->GetMochiShape(FVector::OneVector, ShapeTransform);
-    MOCHI_ERROR_RETURN(e);
+  mochi::Context* MochiContext = IMochiPhysicsModule::Get()->GetMochiContext();
+  if (MochiContext) {
+    mochi::ErrorLog E{};
+    mochi::ShapeHandle Shape = MochiModel->GetMochiShape(FVector::OneVector, ShapeTransform);
+    MOCHI_ERROR_RETURN(E);
 
-    mochi::MeshDataView meshData = GetMeshDataForDynamicMesh(
-        *mochiContext, shape, bUseVisualMeshIfPresent, bUseContactSkinIfPresent, e);
-    MOCHI_ERROR_RETURN(e);
-    PopulateMeshFromMochiMeshData(OutMesh, meshData);
+    mochi::MeshDataView MeshData = GetMeshDataForDynamicMesh(
+        *MochiContext, Shape, bUseVisualMeshIfPresent, bUseContactSkinIfPresent, E);
+    MOCHI_ERROR_RETURN(E);
+    PopulateMeshFromMochiMeshData(OutMesh, MeshData);
   }
 }
 
 void PopulateMeshFromMochiShape(
     UE::Geometry::FDynamicMesh3* OutMesh,
-    mochi::ShapeHandle shape,
+    mochi::ShapeHandle Shape,
     bool bUseVisualMeshIfPresent,
     bool bUseContactSkinIfPresent) {
   MOCHI_PROFILE_SCOPE();
-  if (!shape.IsValid()) {
+  if (!Shape.IsValid()) {
     return;
   }
-  mochi::Context* mochiContext = IMochiPhysicsModule::Get()->GetMochiContext();
-  if (mochiContext) {
-    mochi::ErrorLog e{};
-    mochi::MeshDataView meshData = GetMeshDataForDynamicMesh(
-        *mochiContext, shape, bUseVisualMeshIfPresent, bUseContactSkinIfPresent, e);
-    MOCHI_ERROR_RETURN(e);
-    PopulateMeshFromMochiMeshData(OutMesh, meshData);
+  mochi::Context* MochiContext = IMochiPhysicsModule::Get()->GetMochiContext();
+  if (MochiContext) {
+    mochi::ErrorLog E{};
+    mochi::MeshDataView MeshData = GetMeshDataForDynamicMesh(
+        *MochiContext, Shape, bUseVisualMeshIfPresent, bUseContactSkinIfPresent, E);
+    MOCHI_ERROR_RETURN(E);
+    PopulateMeshFromMochiMeshData(OutMesh, MeshData);
   }
 }
 
@@ -160,20 +160,20 @@ void SUPERDEXPHYSICS_API PopulateMeshFromMochiActor(
   if (!MochiActor.IsValid() || !MochiScene->IsValid()) {
     return;
   }
-  mochi::Context* mochiContext = IMochiPhysicsModule::Get()->GetMochiContext();
-  if (mochiContext) {
-    mochi::ShapeHandle shape;
-    MochiScene->QueueOrExecuteActorCommand(MochiActor, [&shape](mochi::Actor* actor) {
-      mochi::ErrorLog e{};
-      shape = actor->GetReferenceShape(e);
+  mochi::Context* MochiContext = IMochiPhysicsModule::Get()->GetMochiContext();
+  if (MochiContext) {
+    mochi::ShapeHandle Shape;
+    MochiScene->QueueOrExecuteActorCommand(MochiActor, [&Shape](mochi::Actor* Actor) {
+      mochi::ErrorLog E{};
+      Shape = Actor->GetReferenceShape(E);
     });
     MochiScene->WaitForQueuedCommands();
 
-    mochi::ErrorLog e{};
-    mochi::MeshDataView meshData = GetMeshDataForDynamicMesh(
-        *mochiContext, shape, bUseVisualMeshIfPresent, bUseContactSkinIfPresent, e);
-    MOCHI_ERROR_RETURN(e);
-    PopulateMeshFromMochiMeshData(OutMesh, meshData);
+    mochi::ErrorLog E{};
+    mochi::MeshDataView MeshData = GetMeshDataForDynamicMesh(
+        *MochiContext, Shape, bUseVisualMeshIfPresent, bUseContactSkinIfPresent, E);
+    MOCHI_ERROR_RETURN(E);
+    PopulateMeshFromMochiMeshData(OutMesh, MeshData);
   }
 }
 
@@ -182,10 +182,10 @@ void ConvertNodePositionsToUnreal(
     TArray<FVector>& OutUnreal,
     FVector Scale3D) {
   check(InMochi.size() % 3 == 0) OutUnreal.SetNum(InMochi.size() / 3);
-  FMochiToUnrealConverter m2u;
+  FMochiToUnrealConverter M2u;
   for (int i = 0; i < InMochi.size(); i += 3) {
     OutUnreal[i / 3] =
-        m2u.TranslationToUnreal({InMochi[i], InMochi[i + 1], InMochi[i + 2]}) / Scale3D;
+        M2u.TranslationToUnreal({InMochi[i], InMochi[i + 1], InMochi[i + 2]}) / Scale3D;
   }
 }
 
@@ -194,10 +194,10 @@ void ConvertNodePositionsToUnreal(
     TArray<FVector>& OutUnreal,
     FVector Scale3D) {
   check(InMochi.Num() % 3 == 0) OutUnreal.SetNum(InMochi.Num() / 3);
-  FMochiToUnrealConverter m2u;
+  FMochiToUnrealConverter M2u;
   for (int i = 0; i < InMochi.Num(); i += 3) {
     OutUnreal[i / 3] =
-        m2u.TranslationToUnreal({InMochi[i], InMochi[i + 1], InMochi[i + 2]}) / Scale3D;
+        M2u.TranslationToUnreal({InMochi[i], InMochi[i + 1], InMochi[i + 2]}) / Scale3D;
   }
 }
 
@@ -205,11 +205,11 @@ void ConvertVolumeNodeReferencePositions(
     const UMochiModel* MochiModel,
     FVector Scale3D,
     TArray<FVector>& OutReferencePositionsUnreal) {
-  mochi::ErrorLog e{};
-  mochi::Context* mochiContext = IMochiPhysicsModule::Get()->GetMochiContext();
-  const mochi::ShapeHandle shape = MochiModel->GetMochiShape(Scale3D, FTransform::Identity);
-  const mochi::MeshDataView& mesh = mochiContext->GetShapeMesh(shape, e);
-  ConvertNodePositionsToUnreal(mesh.coordinates, OutReferencePositionsUnreal, Scale3D);
+  mochi::ErrorLog E{};
+  mochi::Context* MochiContext = IMochiPhysicsModule::Get()->GetMochiContext();
+  const mochi::ShapeHandle Shape = MochiModel->GetMochiShape(Scale3D, FTransform::Identity);
+  const mochi::MeshDataView& Mesh = MochiContext->GetShapeMesh(Shape, E);
+  ConvertNodePositionsToUnreal(Mesh.coordinates, OutReferencePositionsUnreal, Scale3D);
 }
 
 void ConvertElementBarycenterReferencePositions(
@@ -217,13 +217,13 @@ void ConvertElementBarycenterReferencePositions(
     FVector Scale3D,
     TArray<FVector>& OutReferencePositionsUnreal) {
   if (MochiModel) {
-    mochi::ErrorLog e{};
-    mochi::Context* mochiContext = IMochiPhysicsModule::Get()->GetMochiContext();
-    const mochi::ShapeHandle shape = MochiModel->GetMochiShape(Scale3D, FTransform::Identity);
-    const mochi::MeshDataView mesh = mochiContext->GetShapeMesh(shape, e);
-    mochi::DynamicArray<mochi::real> barycenters = mochi::ComputeElementBarycenters(mesh);
+    mochi::ErrorLog E{};
+    mochi::Context* MochiContext = IMochiPhysicsModule::Get()->GetMochiContext();
+    const mochi::ShapeHandle Shape = MochiModel->GetMochiShape(Scale3D, FTransform::Identity);
+    const mochi::MeshDataView Mesh = MochiContext->GetShapeMesh(Shape, E);
+    mochi::DynamicArray<mochi::real> Barycenters = mochi::ComputeElementBarycenters(Mesh);
     ConvertNodePositionsToUnreal(
-        mochi::MakeConstSpan(barycenters), OutReferencePositionsUnreal, Scale3D);
+        mochi::MakeConstSpan(Barycenters), OutReferencePositionsUnreal, Scale3D);
   }
 }
 
@@ -232,40 +232,40 @@ void EnableRenderModelAttributes(
     TConstArrayView<FVector2f> UVs,
     TConstArrayView<FLinearColor> Colors) {
   MOCHI_PROFILE_SCOPE();
-  const int32 vertexCount = Mesh.MaxVertexID();
+  const int32 VertexCount = Mesh.MaxVertexID();
   // Element IDs must start at 0 to match vertex IDs.
   check(!Mesh.HasAttributes());
-  check(UVs.IsEmpty() || UVs.Num() == vertexCount);
-  check(Colors.IsEmpty() || Colors.Num() == vertexCount);
+  check(UVs.IsEmpty() || UVs.Num() == VertexCount);
+  check(Colors.IsEmpty() || Colors.Num() == VertexCount);
   // Enabling attributes creates one UV layer and one normal layer. Without UVs, the UV layer's
   // triangles stay unset, as in a mesh with no UVs.
   Mesh.EnableAttributes();
-  UE::Geometry::FDynamicMeshAttributeSet* attributes = Mesh.Attributes();
-  UE::Geometry::FDynamicMeshNormalOverlay* normalOverlay = attributes->PrimaryNormals();
-  UE::Geometry::FDynamicMeshUVOverlay* uvOverlay =
-      UVs.IsEmpty() ? nullptr : attributes->PrimaryUV();
-  UE::Geometry::FDynamicMeshColorOverlay* colorOverlay = nullptr;
+  UE::Geometry::FDynamicMeshAttributeSet* Attributes = Mesh.Attributes();
+  UE::Geometry::FDynamicMeshNormalOverlay* NormalOverlay = Attributes->PrimaryNormals();
+  UE::Geometry::FDynamicMeshUVOverlay* UvOverlay =
+      UVs.IsEmpty() ? nullptr : Attributes->PrimaryUV();
+  UE::Geometry::FDynamicMeshColorOverlay* ColorOverlay = nullptr;
   if (!Colors.IsEmpty()) {
-    attributes->EnablePrimaryColors();
-    colorOverlay = attributes->PrimaryColors();
+    Attributes->EnablePrimaryColors();
+    ColorOverlay = Attributes->PrimaryColors();
   }
-  for (int vertIdx = 0; vertIdx < vertexCount; ++vertIdx) {
-    normalOverlay->AppendElement(Mesh.GetVertexNormal(vertIdx));
-    if (uvOverlay) {
-      uvOverlay->AppendElement(UVs[vertIdx]);
+  for (int VertIdx = 0; VertIdx < VertexCount; ++VertIdx) {
+    NormalOverlay->AppendElement(Mesh.GetVertexNormal(VertIdx));
+    if (UvOverlay) {
+      UvOverlay->AppendElement(UVs[VertIdx]);
     }
-    if (colorOverlay) {
-      colorOverlay->AppendElement(FVector4f(Colors[vertIdx]));
+    if (ColorOverlay) {
+      ColorOverlay->AppendElement(FVector4f(Colors[VertIdx]));
     }
   }
-  for (const int triIdx : Mesh.TriangleIndicesItr()) {
-    const UE::Geometry::FIndex3i tri = Mesh.GetTriangle(triIdx);
-    normalOverlay->SetTriangle(triIdx, tri);
-    if (uvOverlay) {
-      uvOverlay->SetTriangle(triIdx, tri);
+  for (const int TriIdx : Mesh.TriangleIndicesItr()) {
+    const UE::Geometry::FIndex3i Tri = Mesh.GetTriangle(TriIdx);
+    NormalOverlay->SetTriangle(TriIdx, Tri);
+    if (UvOverlay) {
+      UvOverlay->SetTriangle(TriIdx, Tri);
     }
-    if (colorOverlay) {
-      colorOverlay->SetTriangle(triIdx, tri);
+    if (ColorOverlay) {
+      ColorOverlay->SetTriangle(TriIdx, Tri);
     }
   }
 }
@@ -278,24 +278,24 @@ void UpdateDynamicMeshFromMochiQuery(
     FVector InvScale3D,
     UE::Geometry::FDynamicMesh3& Mesh) {
   MOCHI_PROFILE_SCOPE();
-  const FVector3f invScale3d = static_cast<FVector3f>(InvScale3D);
-  UE::Geometry::FDynamicMeshNormalOverlay* normalOverlay =
+  const FVector3f InvScale3d = static_cast<FVector3f>(InvScale3D);
+  UE::Geometry::FDynamicMeshNormalOverlay* NormalOverlay =
       bUseMochiNodeNormals && bUpdateRenderModelNormalOverlay ? Mesh.Attributes()->PrimaryNormals()
                                                               : nullptr;
-  check(!normalOverlay || normalOverlay->ElementCount() == Mesh.MaxVertexID());
+  check(!NormalOverlay || NormalOverlay->ElementCount() == Mesh.MaxVertexID());
   // single precision converter for speed
-  FMochiToUnrealConverter_float m2uf;
+  FMochiToUnrealConverter_float M2uf;
   for (int i = 0; i < NodePositions.Num(); i += 3) {
     const int VertIdx = i / 3;
     FVector3f VertPos =
-        m2uf.TranslationToUnreal({NodePositions[i], NodePositions[i + 1], NodePositions[i + 2]});
-    Mesh.SetVertex(VertIdx, static_cast<FVector>(VertPos * invScale3d));
+        M2uf.TranslationToUnreal({NodePositions[i], NodePositions[i + 1], NodePositions[i + 2]});
+    Mesh.SetVertex(VertIdx, static_cast<FVector>(VertPos * InvScale3d));
     if (bUseMochiNodeNormals) {
       FVector3f VertNormal =
-          m2uf.DirectionToUnreal({NodeNormals[i], NodeNormals[i + 1], NodeNormals[i + 2]});
+          M2uf.DirectionToUnreal({NodeNormals[i], NodeNormals[i + 1], NodeNormals[i + 2]});
       Mesh.SetVertexNormal(VertIdx, VertNormal);
-      if (normalOverlay) {
-        normalOverlay->SetElement(VertIdx, VertNormal);
+      if (NormalOverlay) {
+        NormalOverlay->SetElement(VertIdx, VertNormal);
       }
     }
   }
@@ -313,8 +313,8 @@ void PrepareDynamicMeshForRuntime(FVector Scale3D, UE::Geometry::FDynamicMesh3& 
   // Bake the component's inverse scale into the mesh vertex data.
   if (Scale3D != FVector::OneVector) {
     for (int i = 0; i < Mesh.VertexCount(); ++i) {
-      FVector pos = Mesh.GetVertex(i) / Scale3D;
-      Mesh.SetVertex(i, pos);
+      FVector Pos = Mesh.GetVertex(i) / Scale3D;
+      Mesh.SetVertex(i, Pos);
     }
   }
 }
@@ -324,9 +324,9 @@ void ComputeOrDiscardVertexNormals(UE::Geometry::FDynamicMesh3& Mesh, bool bComp
     // NOTE: If the mesh has its attribute set enabled, and it has a NormalOverlay, those will
     // take precedence over these non-attribute vertex normals.
     Mesh.EnableVertexNormals(FVector3f{0, 0, 1});
-    UE::Geometry::FMeshNormals meshNormals(&Mesh);
-    meshNormals.ComputeVertexNormals();
-    meshNormals.CopyToVertexNormals(&Mesh);
+    UE::Geometry::FMeshNormals MeshNormals(&Mesh);
+    MeshNormals.ComputeVertexNormals();
+    MeshNormals.CopyToVertexNormals(&Mesh);
   } else {
     Mesh.DiscardVertexNormals();
   }

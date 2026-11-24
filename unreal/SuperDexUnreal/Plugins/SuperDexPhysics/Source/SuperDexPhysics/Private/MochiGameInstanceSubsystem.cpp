@@ -40,14 +40,14 @@
 namespace {
 template <typename T>
 T* FindAsset(const TCHAR* AssetToFind) {
-  ConstructorHelpers::FObjectFinder<T> result = ConstructorHelpers::FObjectFinder<T>(AssetToFind);
-  if (result.Succeeded()) {
+  ConstructorHelpers::FObjectFinder<T> Result = ConstructorHelpers::FObjectFinder<T>(AssetToFind);
+  if (Result.Succeeded()) {
     UE_LOG(
         LogMochiPhysics,
         Display,
         TEXT("UMochiGameInstanceSubsystem: Found asset [%s]"),
         AssetToFind);
-    return result.Object;
+    return Result.Object;
   }
   UE_LOG(
       LogMochiPhysics,
@@ -65,18 +65,18 @@ UMochiGameInstanceSubsystem::UMochiGameInstanceSubsystem() {
   // be called from a UObject constructor. Eventually, I imagine we'll have a
   // more sophisticated database mapping static meshes to mochi meshes.
   // find default UE mesh references
-  UStaticMesh* const defaultUnrealMesh_Plane =
+  UStaticMesh* const DefaultUnrealMesh_Plane =
       FindAsset<UStaticMesh>(TEXT("StaticMesh'/Engine/BasicShapes/Plane.Plane'"));
-  UStaticMesh* const defaultUnrealMesh_Cube =
+  UStaticMesh* const DefaultUnrealMesh_Cube =
       FindAsset<UStaticMesh>(TEXT("StaticMesh'/Engine/BasicShapes/Cube.Cube'"));
-  UStaticMesh* const defaultUnrealMesh_Sphere =
+  UStaticMesh* const DefaultUnrealMesh_Sphere =
       FindAsset<UStaticMesh>(TEXT("StaticMesh'/Engine/BasicShapes/Sphere.Sphere'"));
   // find default Mochi mesh references
-  UMochiModel* const defaultMochiMesh_Plane =
+  UMochiModel* const DefaultMochiMesh_Plane =
       FindAsset<UMochiModel>(TEXT("MochiModel'/SuperDexPhysics/Models/MM_Plane.MM_Plane'"));
-  UMochiModel* const defaultMochiMesh_Cube =
+  UMochiModel* const DefaultMochiMesh_Cube =
       FindAsset<UMochiModel>(TEXT("MochiModel'/SuperDexPhysics/Models/MM_Cube.MM_Cube'"));
-  UMochiModel* const defaultMochiMesh_Sphere =
+  UMochiModel* const DefaultMochiMesh_Sphere =
       FindAsset<UMochiModel>(TEXT("MochiModel'/SuperDexPhysics/Models/MM_Sphere.MM_Sphere'"));
 #endif
 }
@@ -96,8 +96,8 @@ UMochiSceneObject* UMochiGameInstanceSubsystem::GetScene() const {
 }
 
 void UMochiGameInstanceSubsystem::EnableDebugDraw() const {
-  if (UMochiSceneObject* const scene = GetScene()) {
-    scene->ConfigureDebugDraw(true);
+  if (UMochiSceneObject* const PhysicsScene = GetScene()) {
+    PhysicsScene->ConfigureDebugDraw(true);
   } else {
     UE_LOG(
         LogMochiPhysics,
@@ -107,8 +107,8 @@ void UMochiGameInstanceSubsystem::EnableDebugDraw() const {
 }
 
 void UMochiGameInstanceSubsystem::DisableDebugDraw() const {
-  if (UMochiSceneObject* const scene = GetScene()) {
-    scene->ConfigureDebugDraw(false);
+  if (UMochiSceneObject* const PhysicsScene = GetScene()) {
+    PhysicsScene->ConfigureDebugDraw(false);
   } else {
     UE_LOG(
         LogMochiPhysics,
@@ -118,9 +118,9 @@ void UMochiGameInstanceSubsystem::DisableDebugDraw() const {
 }
 
 bool UMochiGameInstanceSubsystem::IsDebugDrawEnabled() const {
-  UMochiSceneObject* const scene = GetScene();
-  if (scene) {
-    return scene->IsDebugDrawEnabled();
+  UMochiSceneObject* const PhysicsScene = GetScene();
+  if (PhysicsScene) {
+    return PhysicsScene->IsDebugDrawEnabled();
   }
   UE_LOG(
       LogMochiPhysics,
@@ -222,17 +222,17 @@ void UMochiGameInstanceSubsystem::CreateScene() {
   // have been initialized yet (UE is inconsistent in this regard). However, this
   // does not mean that settings applied through AMochiSceneSettingsActor won't be
   // used since that actor configures the scene settings in its BeginPlay function.
-  FMochiSceneSettings settings = RetrieveMochiSceneSettings();
+  FMochiSceneSettings Settings = RetrieveMochiSceneSettings();
 
   // Create game instance scene. Create the scene paused so that all UE actors/components can issue
   // commands in BeginPlay before simulation begins. The scene will be unpaused on the next call to
   // Tick.
   Scene = UMochiSceneObject::CreateScene(
-      this, EMochiSceneType::Async, "MochiGameInstaceScene", settings, /*bStartPaused*/ true);
+      this, EMochiSceneType::Async, "MochiGameInstaceScene", Settings, /*bStartPaused*/ true);
   if (Scene) {
     bSceneRunning = false;
-    bStartPaused = settings.bStartPaused;
-    Scene->ConfigureDebugDraw(settings.bEnableDebugDraw, settings.DebugDrawFlags);
+    bStartPaused = Settings.bStartPaused;
+    Scene->ConfigureDebugDraw(Settings.bEnableDebugDraw, Settings.DebugDrawFlags);
     UE_LOG(
         LogMochiPhysics,
         Display,
@@ -288,16 +288,16 @@ FMochiSceneSettings UMochiGameInstanceSubsystem::RetrieveMochiSceneSettings() co
   // first try to find settings from level instanced MochiSceneSettingsActor
   // NB: This path is not guaranteed to be executed if this function is called during
   // subsystem initialization, since persistent actors may have not been initialized yet
-  // (put a break point here and note that settingsActors.Num is sometimes zero). Subsequent calls
+  // (put a break point here and note that SettingsActors.Num is sometimes zero). Subsequent calls
   // in Tick or elsewhere *will* however return the AMochiSceneSettingsActor.
-  TArray<AActor*> settingsActors;
-  FMochiSceneSettings outSettings;
+  TArray<AActor*> SettingsActors;
+  FMochiSceneSettings OutSettings;
   UGameplayStatics::GetAllActorsOfClass(
-      GetWorld(), AMochiSceneSettingsActor::StaticClass(), settingsActors);
-  if (settingsActors.Num() > 0) {
-    outSettings = Cast<AMochiSceneSettingsActor>(settingsActors[0])->SceneSettings;
+      GetWorld(), AMochiSceneSettingsActor::StaticClass(), SettingsActors);
+  if (SettingsActors.Num() > 0) {
+    OutSettings = Cast<AMochiSceneSettingsActor>(SettingsActors[0])->SceneSettings;
     // throw a warning about multiple instances
-    if (settingsActors.Num() > 1) {
+    if (SettingsActors.Num() > 1) {
       UE_LOG(
           LogMochiPhysics,
           Warning,
@@ -305,8 +305,8 @@ FMochiSceneSettings UMochiGameInstanceSubsystem::RetrieveMochiSceneSettings() co
               "UMochiGameInstanceSubsystem: Found multiple AMochiSceneSettingsActors! Using first instance."))
     }
     // apply simulation space override so all converters pick it up
-    if (outSettings.bOverrideSimulationSpace) {
-      UMochiPhysicsSettings::SetActiveSimulationSpaceOverride(outSettings.SimulationSpace);
+    if (OutSettings.bOverrideSimulationSpace) {
+      UMochiPhysicsSettings::SetActiveSimulationSpaceOverride(OutSettings.SimulationSpace);
       UE_LOG(
           LogMochiPhysics,
           Display,
@@ -318,27 +318,27 @@ FMochiSceneSettings UMochiGameInstanceSubsystem::RetrieveMochiSceneSettings() co
         Display,
         TEXT("UMochiGameInstanceSubsystem: Obtained scene settings from AMochiSceneSettingsActor."))
     // mark all instances as applied
-    for (AActor* const settingsActor : settingsActors) {
-      Cast<AMochiSceneSettingsActor>(settingsActor)->bApplied = true;
+    for (AActor* const SettingsActor : SettingsActors) {
+      Cast<AMochiSceneSettingsActor>(SettingsActor)->bApplied = true;
     }
   }
   // otherwise fallback to project settings
   else {
-    const UMochiPhysicsSettings* const projectSettings = GetDefault<UMochiPhysicsSettings>();
-    if (projectSettings == nullptr) {
+    const UMochiPhysicsSettings* const ProjectSettings = GetDefault<UMochiPhysicsSettings>();
+    if (ProjectSettings == nullptr) {
       UE_LOG(
           LogMochiPhysics,
           Error,
           TEXT("UMochiGameInstanceSubsystem: Failed to load UMochiPhysicsSettings!"));
-      return outSettings;
+      return OutSettings;
     }
-    outSettings = projectSettings->DefaultSceneSettings;
+    OutSettings = ProjectSettings->DefaultSceneSettings;
     UE_LOG(
         LogMochiPhysics,
         Display,
         TEXT("UMochiGameInstanceSubsystem: Obtained scene settings from UMochiPhysicsSettings."))
   }
-  return outSettings;
+  return OutSettings;
 }
 
 #ifdef _MSC_VER
