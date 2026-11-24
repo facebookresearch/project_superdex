@@ -165,7 +165,7 @@ Coulomb friction is modeled using a viscous regularization of the static regime,
 $$
 R=\widehat\lambda_n\left(\mu\rho_{V_f}(V_t)+\frac{c_t}{2}V_t^2+\frac{c_n}{2}V_n^2\right)~,
 $$
-where $\widehat\lambda_n=a\lambda_n$ is the effective dissipative normal-load coefficient, $\mu$ is the Coulomb friction coefficient, $c_t$ is the viscous friction coefficient, $c_n$ is the normal viscous damping coefficient, and $\rho_\ell$ is a regularized ramp function with regularization scale $\ell$.  The default choice of regularization, `frictionModel = C1Regularized` in `ExperimentalEvalParams` ([C++](pathname:///generated/api/latest/cpp/structsuperdex_1_1ExperimentalEvalParams.html), [Python](pathname:///generated/api/latest/python/api/physics.html#superdex.physics.ExperimentalEvalParams)), is the ramp of width $\ell$
+where $\widehat\lambda_n=a\lambda_n$ is the effective dissipative normal-load coefficient, $\mu$ is the Coulomb friction coefficient, $c_t$ is the viscous friction coefficient, $c_n$ is the normal viscous damping coefficient, and $\rho_\ell$ is the regularized ramp of width $\ell$
 $$
 \rho_\ell(s)=
 \begin{cases}
@@ -173,7 +173,7 @@ $$
 \displaystyle s-\frac{\ell}{3}, & s\geq \ell~,
 \end{cases}
 $$
-in which the falloff velocity $V_f > 0$ is the maximum slipping speed allowed within the nominally static friction regime, at which friction reaches the Coulomb limit. The alternative `frictionModel = CinfRegularized` uses a $C^\infty$ ramp without compact support, which approaches the Coulomb limit asymptotically, with $V_f$ as its regularization scale. `frictionModel` only applies to the viscous regularization.
+in which the falloff velocity $V_f > 0$ is the maximum slipping speed allowed within the nominally static friction regime, at which friction reaches the Coulomb limit.
 With $\mathbf{T}_{\mathrm{diss}}=-\partial R/\partial\mathbf{V}_{\mathrm{rel}}$, the collider-reference contributions are
 $$
 \mathbf{T}_{v,n} = -c_n \widehat\lambda_n V_n \mathbf{N}_B~,
@@ -220,7 +220,7 @@ The Coulomb term derives from the stored energy density
 $$
 \psi=\mu\widehat\lambda_n\,\rho_{\ell_p}(u)~,
 $$
-where $\rho_{\ell_p}$ is the `C1Regularized` ramp above, whatever `frictionModel`, with the presliding displacement $\ell_p>0$ as its width in displacement. With the normal load and the friction plane held fixed, the Coulomb traction is
+where $\rho_{\ell_p}$ is the ramp above, with the presliding displacement $\ell_p>0$ as its width in displacement. With the normal load and the friction plane held fixed, the Coulomb traction is
 $$
 \mathbf{T}_C=-\frac{\partial\psi}{\partial\mathbf{Y}_{AB}}=
 \begin{cases}
@@ -236,7 +236,7 @@ $$
 \displaystyle \max\!\left(0,\mathbf{V}_t\cdot\frac{\mathbf{u}}{u}\right)\frac{\mathbf{u}}{u}, & u=\ell_p~.
 \end{cases}
 $$
-Within the presliding displacement, the Coulomb traction is an elastic restoring traction. It reaches the Coulomb limit $\mu\widehat\lambda_n$ at $u=\ell_p$, where the compact support of `C1Regularized` saturates the ramp, so the contact slips with the full Coulomb traction. Unlike with the viscous regularization, the Coulomb term is therefore not purely dissipative: it stores the elastic energy $\psi$, released when the load is removed, so a held object can spring back toward its anchors, and it dissipates the power $\mu\widehat\lambda_n\Vert\dot{\mathbf{Y}}_a\Vert_2$ only during slip. Within the presliding displacement it adds no damping: a held contact is damped tangentially only by viscous friction, zero by default, and by the time integration. Normal damping acts along the normal. Viscous friction and normal damping are unchanged: $R$ keeps their terms and drops $\mu\rho_{V_f}(V_t)$. The time discretization of the anchor is described under [stage-discrete dissipation](#stage-discrete-dissipation).
+Within the presliding displacement, the Coulomb traction is an elastic restoring traction. It reaches the Coulomb limit $\mu\widehat\lambda_n$ at $u=\ell_p$, where the ramp saturates, so the contact slips with the full Coulomb traction. Unlike with the viscous regularization, the Coulomb term is therefore not purely dissipative: it stores the elastic energy $\psi$, released when the load is removed, so a held object can spring back toward its anchors, and it dissipates the power $\mu\widehat\lambda_n\Vert\dot{\mathbf{Y}}_a\Vert_2$ only during slip. Within the presliding displacement it adds no damping: a held contact is damped tangentially only by viscous friction, zero by default, and by the time integration. Normal damping acts along the normal. Viscous friction and normal damping are unchanged: $R$ keeps their terms and drops $\mu\rho_{V_f}(V_t)$. The time discretization of the anchor is described under [stage-discrete dissipation](#stage-discrete-dissipation).
 
 Smaller presliding displacements reduce presliding motion and spring-back, but stiffen the tangential response, which may cost nonlinear solver iterations.
 
