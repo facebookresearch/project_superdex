@@ -30,8 +30,9 @@ bool ASuperDexPoseableActor::GetPose(FSuperDexPose& OutPose) {
 
   // don't bother getting pose if this is being called before BeginPlay
   // this usually happens when the Mochi thread asks for pose too early
-  if (!HasActorBegunPlay())
+  if (!HasActorBegunPlay()) {
     return false;
+  }
 
   // if hand pose source override is set, use that
   if (PoseSourceOverride) {

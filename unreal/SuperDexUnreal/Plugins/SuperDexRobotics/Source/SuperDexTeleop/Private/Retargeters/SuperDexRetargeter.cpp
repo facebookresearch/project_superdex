@@ -61,8 +61,9 @@ bool USuperDexRetargeter::GetPose(FSuperDexPose& OutPose) {
 
   // don't update pose unless we're in a game world
   check(IsValid(GetWorld()));
-  if (!GetWorld()->IsGameWorld())
+  if (!GetWorld()->IsGameWorld()) {
     return false;
+  }
 
   uint32 ThreadId = FPlatformTLS::GetCurrentThreadId();
   USuperDexPoseSubsystem* Hpss = GetWorld()->GetSubsystem<USuperDexPoseSubsystem>();

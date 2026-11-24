@@ -90,8 +90,9 @@ bool ASuperDexPlayerController::NextPoseSource(
   }
 
   // early return if no change to hand pose source
-  if (!bChanged)
+  if (!bChanged) {
     return false;
+  }
 
   // grab new current hand pose source, use it to broadcast some OnPoseSourceChanged events
   // Sources could be nullptr if they were set to none in the list

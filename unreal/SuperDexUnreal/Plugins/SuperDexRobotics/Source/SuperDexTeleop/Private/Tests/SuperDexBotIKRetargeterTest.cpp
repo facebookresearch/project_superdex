@@ -180,8 +180,9 @@ bool FGenericBotIKNativeChainTest::RunTest(const FString&) {
     TStrongObjectPtr<USuperDexBotIKConfig> Config(GenericConfig(Input.Get(), Output.Get()));
     TStrongObjectPtr<USuperDexBotIKRetargeter> Ret(NewObject<USuperDexBotIKRetargeter>());
     Ret->Config = Config.Get();
-    if (!TestTrue(TEXT("Real mixed-family input initializes"), Ret->InitializeRetargeter()))
+    if (!TestTrue(TEXT("Real mixed-family input initializes"), Ret->InitializeRetargeter())) {
       return false;
+    }
     const TArray<double> Q{0.3, 0.025, 0.1, -0.2, 0.05};
     auto Pose = GenericNativePose(Input.Get(), Q);
     Pose.SkeletonRootToVrRoot =
@@ -189,8 +190,9 @@ bool FGenericBotIKNativeChainTest::RunTest(const FString&) {
     FSuperDexPose First;
     if (!TestTrue(
             TEXT("Native full pose with default nontracking flags retargets"),
-            Ret->GetTransformedPose_Implementation(Pose, true, First)))
+            Ret->GetTransformedPose_Implementation(Pose, true, First))) {
       return false;
+    }
     MatchGenericQ(*this, Ret.Get(), Q);
     TestTrue(TEXT("Output pose is on the output bot"), First.Bot.Get() == Output.Get());
     TestTrue(
@@ -363,8 +365,9 @@ bool FGenericBotIKGoalsAndMetadataTest::RunTest(const FString&) {
   FGenericNativeIK InputFK(
       USuperDexIKSolverObject::CreateBotIKSolver(
           GetTransientPackage(), Input.Get(), Config->CreateParams.ToNative()));
-  if (!TestNotNull(TEXT("Independent physical input FK"), InputFK.Get()))
+  if (!TestNotNull(TEXT("Independent physical input FK"), InputFK.Get())) {
     return false;
+  }
   mochi::DynamicArray<mochi::TransformRT> NativeLinks;
   TestTrue(
       TEXT("Actual physical input FK generated"),
@@ -377,8 +380,9 @@ bool FGenericBotIKGoalsAndMetadataTest::RunTest(const FString&) {
     FGenericNativeIK Direct(
         USuperDexIKSolverObject::CreateBotIKSolver(
             GetTransientPackage(), Output.Get(), NativeConfig));
-    if (!TestNotNull(TEXT("Independent native output solver"), Direct.Get()))
+    if (!TestNotNull(TEXT("Independent native output solver"), Direct.Get())) {
       return false;
+    }
     for (const auto& Goal : NativeConfig.goals) {
       mochi::TransformRT Frame = Goal.baseOrInputLinkFrameFromConstraintFrame;
       if (!Goal.inputBotLink.empty()) {
