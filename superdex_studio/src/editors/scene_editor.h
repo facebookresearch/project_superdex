@@ -65,6 +65,9 @@ class SceneEditor : public AssetEditor {
   Viewport* GetViewport() override {
     return _viewport.get();
   }
+  MochiAsyncScene* GetSimulation() override {
+    return &_mochiScene;
+  }
 
   // Loads @p path as the previewed task, as "Load Task..." does, and brings up the Task Preview
   // window. Refused while simulating, when that button is disabled too.

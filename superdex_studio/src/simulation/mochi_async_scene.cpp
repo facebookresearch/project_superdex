@@ -286,6 +286,28 @@ void MochiAsyncScene::RequestStepThenPause() {
   }
 }
 
+bool MochiAsyncScene::RunStepsThenPause(int steps) {
+  if (!IsSimulating()) {
+    CreateScene(_sceneName, /*startPaused=*/true);
+  }
+  if (!IsSimulating()) {
+    return false;
+  }
+  Pause(true);
+  for (int i = 0; i < steps; ++i) {
+    // A request made before the previous step ran would be dropped, so each waits for its step.
+    // The simulation runs queued commands before it steps, so the second wait returns after it.
+    _asyncScene->RequestStepThenPause();
+    _asyncScene->WaitForQueuedCommands();
+    _asyncScene->WaitForQueuedCommands();
+  }
+  return true;
+}
+
+int MochiAsyncScene::GetStepCount() const {
+  return _mochiSteps.load();
+}
+
 bool MochiAsyncScene::IsPaused() const {
   if (_asyncScene) {
     return _asyncScene->IsPaused();

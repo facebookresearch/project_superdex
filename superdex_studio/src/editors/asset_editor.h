@@ -22,6 +22,8 @@
 
 namespace superdex::studio {
 
+class MochiAsyncScene;
+
 class AssetEditor : public IAssetReferencer {
  public:
   //------------------------------------------------------------------------------------------------
@@ -166,6 +168,11 @@ class AssetEditor : public IAssetReferencer {
   // The editor's primary viewport, if it has one (default: none). Lets app-level UI (e.g. the View
   // Settings window) reach per-viewport state such as the highlight overlay opacity.
   virtual Viewport* GetViewport() {
+    return nullptr;
+  }
+
+  // The editor's simulation, if it has one (default: none).
+  virtual MochiAsyncScene* GetSimulation() {
     return nullptr;
   }
 

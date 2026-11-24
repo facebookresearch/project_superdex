@@ -63,6 +63,9 @@ class PrefabEditor : public AssetEditor {
   Viewport* GetViewport() override {
     return _viewport.get();
   }
+  MochiAsyncScene* GetSimulation() override {
+    return &_mochiScene;
+  }
 
  private:
   // Identifies the currently selected hierarchy item.

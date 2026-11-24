@@ -66,6 +66,9 @@ class TunerEditor : public AssetEditor {
   Viewport* GetViewport() override {
     return _viewport.get();
   }
+  MochiAsyncScene* GetSimulation() override {
+    return &_mochiScene;
+  }
   void ForEachReferencedPath(
       std::function<void(mochi::Path const&)> const& callback) const override;
 

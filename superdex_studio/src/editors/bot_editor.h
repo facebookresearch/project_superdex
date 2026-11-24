@@ -69,6 +69,9 @@ class BotEditor : public AssetEditor {
   Viewport* GetViewport() override {
     return _viewport.get();
   }
+  MochiAsyncScene* GetSimulation() override {
+    return &_mochiScene;
+  }
 
  private:
   //------------------------------------------------------------------------------------------------

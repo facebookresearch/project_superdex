@@ -27,6 +27,7 @@
 #include <mochi_physics/utils/mochi_prefab.h>
 #include <mochi_renderer/buffer.h>
 
+#include <atomic>
 #include <chrono>
 #include <memory>
 #include <string>
@@ -147,6 +148,11 @@ class MochiAsyncScene {
   mochi::AsyncScene* GetAsyncScene() const;
   void Pause(bool pause);
   void RequestStepThenPause();
+  // Pauses, then runs @p steps steps and waits for them, starting the scene paused if it is
+  // stopped. Returns false if the scene could not start.
+  bool RunStepsThenPause(int steps);
+  // Steps run since the scene started.
+  int GetStepCount() const;
   bool IsPaused() const;
   void CreateScene(std::string_view name, bool startPaused);
   void DestroyMochiScene();
@@ -208,7 +214,8 @@ class MochiAsyncScene {
   mochi::CallbackHandle _preStepCb = {};
   mochi::CallbackHandle _postStepCb = {};
   float _mochiSPS = 0.0f;
-  int _mochiSteps = 0;
+  // Written on the simulation thread.
+  std::atomic<int> _mochiSteps = 0;
   int _previousMochiSteps = 0;
   // Wall-clock time of the last stats sample, used to derive the actual (throttled) step rate.
   std::chrono::steady_clock::time_point _lastStatsTime = {};
