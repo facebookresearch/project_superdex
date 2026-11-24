@@ -398,7 +398,6 @@ void TaskScheduler::BindThisThread() {
     // Set up the static thread-local state.
     s_currentScheduler = this;
     s_currentSchedulerRefCount = 1;
-    s_localSingleThreadedCount = 0;
     s_marlAlreadyBound = (_marl->get() != nullptr);
     if (s_marlAlreadyBound) {
       // Marl was already bound even though s_currentScheduler was not set. This can happen when
@@ -415,7 +414,6 @@ void TaskScheduler::UnbindThisThread() {
   if (s_currentScheduler == this) {
     --s_currentSchedulerRefCount;
     if (s_currentSchedulerRefCount == 0) {
-      s_localSingleThreadedCount = 0;
       s_currentScheduler = nullptr;
       if (!s_marlAlreadyBound) {
         _marl->unbind();

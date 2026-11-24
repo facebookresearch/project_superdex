@@ -882,18 +882,20 @@ TEST(TaskScheduler, GetNumOtherThreads) {
     EXPECT_EQ(0, scheduler.GetNumOtherThreads());
   }
 
-  // Local single threaded
+  // Local single threaded, enabled before binding this thread and kept after unbinding it
+  TaskScheduler::PushLocalSingleThreadedMode();
   {
     TaskScheduler scheduler(1);
-    EXPECT_EQ(1, scheduler.GetNumThreads());
-    EXPECT_EQ(1, scheduler.GetNumOtherThreads());
-    scheduler.PushLocalSingleThreadedMode();
+    ASSERT_TRUE(TaskScheduler::IsLocalSingleThreaded());
     EXPECT_EQ(0, scheduler.GetNumThreads());
     EXPECT_EQ(0, scheduler.GetNumOtherThreads());
-    scheduler.PopLocalSingleThreadedMode();
+    TaskScheduler::PopLocalSingleThreadedMode();
     EXPECT_EQ(1, scheduler.GetNumThreads());
     EXPECT_EQ(1, scheduler.GetNumOtherThreads());
+    TaskScheduler::PushLocalSingleThreadedMode();
   }
+  ASSERT_TRUE(TaskScheduler::IsLocalSingleThreaded());
+  TaskScheduler::PopLocalSingleThreadedMode();
 
   // Multi-threaded
   for (int numThreads : {1, 2, 3}) {

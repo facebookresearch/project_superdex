@@ -178,7 +178,8 @@ class TaskScheduler final {
   /**
     In local single-threaded mode, the calling thread runs each NEW task it schedules before the
     scheduling call returns. Use it to disable nested parallelism, e.g. in tasks that own the
-    parallelization strategy.
+    parallelization strategy. Binding and unbinding a TaskScheduler don't change the mode, so it
+    may be enabled before the thread is bound.
 
     WARNING: The mode is thread-local, but Marl's unit of execution is a fiber. While a fiber in
     this mode is blocked, e.g. waiting for an incomplete TaskSemaphore or a TaskConditionVariable,
@@ -286,8 +287,7 @@ class TaskScheduler final {
 
 /**************************************************************************************************
   Enables local single-threaded mode (see TaskScheduler::PushLocalSingleThreadedMode) for the
-  lifetime of this object, if 'enabled'. The thread's first bind to a TaskScheduler and its last
-  unbind reset the mode, so neither may happen during the lifetime of an enabled guard.
+  lifetime of this object, if 'enabled'.
 
   Example:
     ScopedLocalSingleThreadedMode const singleThreaded;

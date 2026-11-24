@@ -189,16 +189,12 @@ TEST_F(SceneSettingsTest, ForceSingleThreaded) {
   EXPECT_EQ(_numThreads, StepAndWaitForProfile(scene).numWorkerThreads);
 }
 
-// The step thread stays bound across steps, so a leaked push or a lost application push would be
-// visible here.
 TEST_F(SceneSettingsTest, ForceSingleThreadedPreservesApplicationLocalMode) {
   Scene* scene = CreateSceneWithSeparateIslands("Threads");
   SetClientSettings({.forceSingleThreaded = true});
   StartServer();
   ConnectClient();
   SendSettingsRequest(scene);
-  _context->BindThisThread();
-  MOCHI_DEFER(_context->UnbindThisThread());
 
   EXPECT_EQ(0, StepAndGetNumThreads(scene));
   EXPECT_FALSE(TaskScheduler::IsLocalSingleThreaded());
