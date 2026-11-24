@@ -16,25 +16,40 @@
 
 #pragma once
 
+#include <mochi_core/async/executor.h>
+#include <mochi_core/async/root_task.h>
 #include <mochi_core/linear_algebra/block_sparse_matrix.h>
 #include <mochi_core/linear_algebra/matrix.h>
 #include <mochi_core/linear_algebra/multi_frontal/assembly_helper.h>
 #include <mochi_core/linear_algebra/multi_frontal/elim_tree.h>
+#include <mochi_core/linear_algebra/multi_frontal/factor_branch.h>
 #include <mochi_core/linear_algebra/multi_frontal/factor_subtree.h>
 #include <mochi_core/linear_algebra/multi_frontal/l_matrix.h>
 #include <mochi_core/linear_algebra/multi_frontal/organizer.h>
 #include <mochi_core/linear_algebra/sparse_matrix.h>
 #include <mochi_core/linear_algebra/utils/matrix_conversions.h>
+#include <mochi_core/numbering/amd.h>
 #include <mochi_core/utils/array_utils.h>
 #include <mochi_core/utils/basic_utils.h>
 #include <mochi_core/utils/graph.h>
 #include <mochi_core/utils/graph_views.h>
+#include <mochi_core/utils/task_scheduler.h>
 
 #include <memory>
 #include <numeric>
 #include <type_traits>
+#include <utility>
 
 namespace mochi::krylov {
+
+namespace details {
+
+template <typename Exec, int kDofsPerNode, typename Scalar, size_t kBlockSize>
+RootTask FactorTree(Exec& dispatch, FactorData<kDofsPerNode, Scalar, kBlockSize>& data, int root) {
+  co_await FactorBranch(dispatch, data, root);
+}
+
+} // namespace details
 
 /// @brief LDL^T factorization of sparse and block sparse symmetric matrices using multi-frontal
 /// algorithm.
@@ -44,7 +59,11 @@ namespace mochi::krylov {
 /// @tparam Index The index type for sparse matrix indices (default: int).
 ///
 /// @note Only supported for sparse and block sparse matrices.
-/// @note The matrix is assumed to be symmetric. Only the lower triangular part is used.
+/// @note The matrix must be symmetric, and so must its stored pattern, explicit zeros included.
+/// Entries at the same position are summed.
+/// @note If a @ref TaskScheduler with at least two workers is available and in multi-threaded mode
+/// (both global and thread-local), both at construction and at each factorization,
+/// elimination-tree roots with enough work and more than one supernode are factorized in parallel.
 /// @note Performance for kBlockSize_ == 1 (e.g. @ref SparseMatrix) has not been optimized.
 template <typename Scalar_, int kBlockSize_, typename Index = int>
 class SparseLDLt {
@@ -64,11 +83,12 @@ class SparseLDLt {
 
   /// @brief Constructor for block sparse matrices. It performs the factorization.
   ///
-  /// @param[in] A Input block sparse matrix (symmetric, only lower triangular part used).
-  /// @param[out] info Output status flag: 0 = success, non-zero = failure.
+  /// @param[in] A Input symmetric block sparse matrix.
+  /// @param[out] info Output status flag: 0 = success, otherwise the number of pivots whose inverse
+  /// is zero or not finite, e.g. zero, infinite or NaN pivots.
   ///
-  /// @warning The multi-frontal solver does not currently detect factorization failure (e.g., zero
-  /// pivots). @p info is always set to 0. Do not rely on @p info to detect singular matrices.
+  /// @warning The factorization does not pivot, so a nonsingular indefinite matrix can have a zero
+  /// pivot. No tolerance flags small pivots.
   template <
       typename ScalarA,
       typename CRIdx,
@@ -78,11 +98,12 @@ class SparseLDLt {
 
   /// @brief Constructor for sparse matrices. It performs the factorization.
   ///
-  /// @param[in] A Input sparse matrix (symmetric, only lower triangular part used).
-  /// @param[out] info Output status flag: 0 = success, non-zero = failure.
+  /// @param[in] A Input symmetric sparse matrix.
+  /// @param[out] info Output status flag: 0 = success, otherwise the number of pivots whose inverse
+  /// is zero or not finite, e.g. zero, infinite or NaN pivots.
   ///
-  /// @warning The multi-frontal solver does not currently detect factorization failure (e.g., zero
-  /// pivots). @p info is always set to 0. Do not rely on @p info to detect singular matrices.
+  /// @warning The factorization does not pivot, so a nonsingular indefinite matrix can have a zero
+  /// pivot. No tolerance flags small pivots.
   ///
   /// @note Only available when kBlockSize == 1.
   template <
@@ -118,12 +139,14 @@ class SparseLDLt {
   /// @brief Refactorize with new values but same sparsity pattern.
   ///
   /// @param[in] A Input block sparse matrix with same sparsity pattern as the original.
-  /// @param[out] info Output status flag: 0 = success, non-zero = failure.
+  /// @param[out] info Output status flag: 0 = success, otherwise the number of pivots whose inverse
+  /// is zero or not finite, e.g. zero, infinite or NaN pivots.
   ///
-  /// @warning The multi-frontal solver does not currently detect factorization failure (e.g., zero
-  /// pivots). @p info is always set to 0. Do not rely on @p info to detect singular matrices.
+  /// @warning The factorization does not pivot, so a nonsingular indefinite matrix can have a zero
+  /// pivot. No tolerance flags small pivots.
   ///
-  /// @note The sparsity pattern must match the original matrix used in construction.
+  /// @note The row pointers and column indices, repeated indices included, must equal those of the
+  /// matrix used in construction.
   template <
       typename ScalarA,
       typename CRIdx,
@@ -134,13 +157,15 @@ class SparseLDLt {
   /// @brief Refactorize with new values but same sparsity pattern.
   ///
   /// @param[in] A Input sparse matrix with same sparsity pattern as the original.
-  /// @param[out] info Output status flag: 0 = success, non-zero = failure.
+  /// @param[out] info Output status flag: 0 = success, otherwise the number of pivots whose inverse
+  /// is zero or not finite, e.g. zero, infinite or NaN pivots.
   ///
-  /// @warning The multi-frontal solver does not currently detect factorization failure (e.g., zero
-  /// pivots). @p info is always set to 0. Do not rely on @p info to detect singular matrices.
+  /// @warning The factorization does not pivot, so a nonsingular indefinite matrix can have a zero
+  /// pivot. No tolerance flags small pivots.
   ///
   /// @note Only available when kBlockSize == 1.
-  /// @note The sparsity pattern must match the original matrix used in construction.
+  /// @note The row pointers and column indices, repeated indices included, must equal those of the
+  /// matrix used in construction.
   template <
       typename ScalarA,
       typename CRIdx,
@@ -152,6 +177,17 @@ class SparseLDLt {
   }
 
  private:
+  // Picks of {root} factorize the root directly. Otherwise, the picks run as branch tasks and trunk
+  // panels use up to numThreads participants.
+  struct RootFactorizationPlan {
+    int root = 0;
+    int numThreads = 0;
+    DynamicArray<int> pickedBranches;
+  };
+
+  // Scalar-equivalent work below which task scheduling does not amortize its overhead.
+  static constexpr double kMinParallelTaskWork = 1'000'000.0;
+
   /// @brief Initialize the multi-frontal structures.
   template <
       typename ScalarA,
@@ -163,14 +199,16 @@ class SparseLDLt {
   /// @brief Factorize with new values but same sparsity pattern.
   ///
   /// @param[in] A Input block sparse matrix with same sparsity pattern as the original.
+  /// @return The number of pivots whose inverse is zero or not finite.
   ///
-  /// @note The sparsity pattern must match the original matrix used in construction.
+  /// @note The row pointers and column indices, repeated indices included, must equal those of the
+  /// matrix used in construction.
   template <
       typename ScalarA,
       typename CRIdx,
       typename Ptr,
       template <typename, typename...> typename Storage>
-  void Factorize(BlockSparseMatrix<ScalarA, kBlockSize, CRIdx, Ptr, Storage> const& A);
+  [[nodiscard]] int Factorize(BlockSparseMatrix<ScalarA, kBlockSize, CRIdx, Ptr, Storage> const& A);
 
   /// @brief Matrix size (number of scalar rows/cols).
   Index _size = 0;
@@ -183,6 +221,7 @@ class SparseLDLt {
   // Multi-frontal state.
   std::unique_ptr<SymbolicEliminationTree> _elimData;
   std::unique_ptr<FrontalOrganizer> _organizer;
+  DynamicArray<RootFactorizationPlan> _rootFactorizationPlans;
   std::unique_ptr<LMatrix<Scalar, kLDLtBlockSize>> _lMatrix;
   std::unique_ptr<AssemblyHelper> _assemblyHelper;
   DynamicArray<int> _order;
@@ -212,10 +251,7 @@ SparseLDLt<Scalar_, kBlockSize_, Index>::SparseLDLt(
   MOCHI_ASSERT_VERBOSE(A.Rows() == A.Cols(), "Input matrix must be square.");
 
   Initialize(A);
-  Factorize(A);
-
-  // TODO: Multi-frontal doesn't currently check for factorization failure.
-  info = 0;
+  info = Factorize(A);
 }
 
 template <typename Scalar_, int kBlockSize_, typename Index>
@@ -239,10 +275,7 @@ SparseLDLt<Scalar_, kBlockSize_, Index>::SparseLDLt(
 
   auto blockView = AsBlockSparseMatrixConstView(A);
   Initialize(blockView);
-  Factorize(blockView);
-
-  // TODO: Multi-frontal doesn't currently check for factorization failure.
-  info = 0;
+  info = Factorize(blockView);
 }
 
 template <typename Scalar_, int kBlockSize_, typename Index>
@@ -256,10 +289,10 @@ void SparseLDLt<Scalar_, kBlockSize_, Index>::Initialize(
   // Get the graph from the matrix.
   auto graphView = AsGraphView(A);
 
-  // Create identity ordering for now.
-  // TODO: Implement fill-reducing ordering.
-  _order.resize_noinit(A.BlockRows());
-  std::iota(_order.begin(), _order.end(), 0);
+  // Use AMD reordering. AMD is faster end to end than nested dissection for problems with more than
+  // ~500 DoFs. Nested dissection's factorization is occasionally faster but does not offset its
+  // substantially higher ordering cost.
+  _order = RenumberByAMD(graphView);
   _position = InversePermutation(_order);
 
   // Build elimination tree.
@@ -267,6 +300,35 @@ void SparseLDLt<Scalar_, kBlockSize_, Index>::Initialize(
 
   // Build frontal organizer.
   _organizer = std::make_unique<FrontalOrganizer>(*_elimData, kLDLtBlockSize, kBlockSize);
+
+  // Precompute root plans using the thread budget available during initialization. Only workers
+  // run the tasks of planned roots, so plans need at least two workers. A solver initialized
+  // without them remains sequential if workers are enabled later. Plans computed with workers
+  // remain valid if single-threaded mode is enabled later.
+  auto* scheduler = TaskScheduler::TryGet();
+  if (scheduler && scheduler->GetNumThreads() > 1) {
+    auto const& eTree = *_elimData;
+    auto const& organizer = *_organizer;
+    int const numWorkers = Max(1, scheduler->GetNumThreads());
+    double constexpr kMinRootWork = FrontalOrganizer::kBranchesPerThread * kMinParallelTaskWork;
+    auto const roots = eTree.Roots();
+    _rootFactorizationPlans.reserve(roots.size());
+    for (int root : roots) {
+      double const rootWork = organizer.GetCosts(root).time * kBlockSize * kBlockSize * kBlockSize;
+      if (rootWork < kMinRootWork) {
+        _rootFactorizationPlans.push_back(
+            {.root = root, .numThreads = 1, .pickedBranches = {root}});
+        continue;
+      }
+
+      auto const numThreads = static_cast<int>(
+          Clamp(Floor(rootWork / kMinRootWork), 1.0, static_cast<double>(numWorkers)));
+      _rootFactorizationPlans.push_back(
+          {.root = root,
+           .numThreads = numThreads,
+           .pickedBranches = organizer.PickBranches(eTree, root, numThreads).first});
+    }
+  }
 
   // Build L matrix storage.
   _lMatrix = std::make_unique<LMatrix<Scalar, kLDLtBlockSize>>(*_elimData, kBlockSize);
@@ -287,16 +349,62 @@ template <
     typename CRIdx,
     typename Ptr,
     template <typename, typename...> typename Storage>
-void SparseLDLt<Scalar_, kBlockSize_, Index>::Factorize(
+int SparseLDLt<Scalar_, kBlockSize_, Index>::Factorize(
     BlockSparseMatrix<ScalarA, kBlockSize, CRIdx, Ptr, Storage> const& A) {
   // Zero out L and perform factorization.
   _lMatrix->SetZero();
 
-  // Factor all roots. Handles disconnected sparsity graphs.
-  for (int root : _elimData->Roots()) {
-    FactorSubtree<kBlockSize, Scalar, kLDLtBlockSize>(
-        *_elimData, *_organizer, *_lMatrix, A, *_assemblyHelper, root);
+  auto* scheduler = TaskScheduler::TryGet();
+  if (_rootFactorizationPlans.empty() || !scheduler || scheduler->GetNumOtherThreads() == 0) {
+    // Factor all roots. Handles disconnected sparsity graphs.
+    for (int root : _elimData->Roots()) {
+      FactorSubtree<kBlockSize, Scalar, kLDLtBlockSize>(
+          *_elimData, *_organizer, *_lMatrix, A, *_assemblyHelper, root);
+    }
+  } else {
+    MOCHI_ASSERT_VERBOSE(
+        _rootFactorizationPlans.size() == _elimData->Roots().size(),
+        "Factorization plans must match elimination-tree roots.");
+
+    Executor executor(*scheduler);
+    auto dispatch = [executor]<typename F>(F&& f) { executor.schedule(std::forward<F>(f)); };
+
+    // Concurrent roots may improve utilization, but increase peak frontal-buffer memory and cache
+    // contention. Process roots sequentially for now. TODO: benchmark this trade-off.
+    for (auto const& plan : _rootFactorizationPlans) {
+      // A single proper subtree still leaves a trunk to factor; only {root} covers the whole tree.
+      if (plan.pickedBranches.size() == 1 && plan.pickedBranches[0] == plan.root) {
+        FactorSubtree<kBlockSize, Scalar, kLDLtBlockSize>(
+            *_elimData, *_organizer, *_lMatrix, A, *_assemblyHelper, plan.root);
+        continue;
+      }
+
+      FactorData<kBlockSize, Scalar, kLDLtBlockSize> data(
+          *_elimData,
+          *_organizer,
+          *_assemblyHelper,
+          A,
+          *_lMatrix,
+          plan.pickedBranches,
+          plan.numThreads);
+      details::FactorTree(dispatch, data, plan.root).RunAndWait(*scheduler, "Factor tree");
+    }
   }
+
+  // The diagonal of L stores inverse pivots: zero and NaN pivots leave non-finite values, and
+  // infinite pivots leave zeros.
+  int numFailedPivots = 0;
+  for (int sn = 0; sn < _elimData->NumSuperNodes(); ++sn) {
+    auto const lForSN = _lMatrix->LforSN(sn);
+    for (size_t iBlock = 0; iBlock < lForSN.NumBlocks(); ++iBlock) {
+      auto const block = lForSN.Block(iBlock);
+      for (int c = 0; c < block.Cols(); ++c) {
+        Scalar const inversePivot = block(c, c);
+        numFailedPivots += (IsFinite(inversePivot) && inversePivot != Scalar{0}) ? 0 : 1;
+      }
+    }
+  }
+  return numFailedPivots;
 }
 
 template <typename Scalar_, int kBlockSize_, typename Index>
@@ -326,10 +434,7 @@ void SparseLDLt<Scalar_, kBlockSize_, Index>::Refactorize(
       "Sparsity pattern indices do not match the original.");
 #endif
 
-  Factorize(A);
-
-  // TODO: Multi-frontal doesn't currently check for factorization failure.
-  info = 0;
+  info = Factorize(A);
 }
 
 template <typename Scalar_, int kBlockSize_, typename Index>

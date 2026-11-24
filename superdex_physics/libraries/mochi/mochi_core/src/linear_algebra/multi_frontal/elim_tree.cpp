@@ -540,6 +540,10 @@ static auto SymbolicFactorization(
   DynamicArray<int> lastNode(numSuper, kMinusOne<int>);
   for (int nd = 0; nd < N; ++nd) {
     auto superNode = assignedSuper[nd];
+    // A node belongs to its own super-node's indices even if its diagonal entry isn't stored.
+    superIndices[idxInsertPointers[superNode]++] = nd;
+    lastNode[superNode] = nd;
+
     for (auto o : graph[order[nd]]) {
       auto u = position[o];
       if (u <= nd) {

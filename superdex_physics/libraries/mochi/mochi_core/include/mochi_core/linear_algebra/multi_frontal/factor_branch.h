@@ -40,7 +40,7 @@ struct FactorData {
   SymbolicEliminationTree const& eTree;
   FrontalOrganizer const& organizer;
   AssemblyHelper& helper;
-  BlockSparseMatrix<Scalar, kDofsPerNode> const& A;
+  BlockSparseMatrixView<Scalar const, kDofsPerNode> A;
   LMatrix<Scalar, kBlockSize>& L;
   DynamicArray<int> branchRoots;
   int numThreads;
@@ -49,7 +49,7 @@ struct FactorData {
       SymbolicEliminationTree const& eTree,
       FrontalOrganizer const& organizer,
       AssemblyHelper& helper,
-      BlockSparseMatrix<Scalar, kDofsPerNode> const& A,
+      BlockSparseMatrixView<Scalar const, kDofsPerNode> const& A,
       LMatrix<Scalar, kBlockSize>& L,
       Span<int const> branchRoots,
       int nThreads)

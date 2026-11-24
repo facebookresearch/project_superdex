@@ -135,20 +135,17 @@ FrontalOrganizer::FrontalOrganizer(
 std::pair<DynamicArray<int>, int> FrontalOrganizer::PickBranches(
     SymbolicEliminationTree const& tree,
     int rootNode,
-    int nBranches) const {
+    int numThreads) const {
   DynamicArray<int> pickedBranches;
-  if (nBranches <= 0) {
+  if (numThreads <= 0) {
     return {pickedBranches, 0};
   }
-  pickedBranches.reserve(2 * nBranches);
-  auto numSuperNodes = tree.NumSuperNodes();
-  double totalTime = _costs[numSuperNodes].time;
-  // Use half the per-branch budget as threshold so the algorithm produces
-  // ~2x branches, giving the scheduler room to load-balance.
-  double threshold = totalTime / (2.0 * nBranches);
+  pickedBranches.reserve(kBranchesPerThread * numThreads);
+  double const rootTime = _costs[rootNode].time;
+  double const threshold = rootTime / (kBranchesPerThread * numThreads);
 
   DynamicArray<int> stack;
-  stack.reserve(nBranches);
+  stack.reserve(numThreads);
   stack.push_back(rootNode);
 
   auto treeGraph = tree.TreeGraph();
@@ -159,6 +156,8 @@ std::pair<DynamicArray<int>, int> FrontalOrganizer::PickBranches(
 
     // Pick a node if its cost is at or below the threshold, or if it is a leaf
     // (a leaf above threshold is unlikely but must still be picked — it cannot be split further).
+    // TODO: A large leaf selected here is later factorized sequentially because it cannot be
+    // divided into independent branches. Consider parallelizing the work inside the leaf instead.
     if (_costs[sn].time <= threshold || tree.IsLeaf(sn)) {
       pickedBranches.push_back(sn);
     } else {

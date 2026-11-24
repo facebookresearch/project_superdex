@@ -133,6 +133,8 @@ inline void RootTask::RunAndWait(TaskScheduler& taskScheduler, std::string_view 
   // If AddTask throws, the coroutine never ran.
   auto const handle = std::exchange(_handle, {});
   handle.promise()._completion = &completion;
+  // TODO: Let the calling thread help execute the task. With one worker, an external caller
+  // currently waits while that worker does all the work, so execution is still serial.
   try {
     taskScheduler.AddTask(name, handle);
   } catch (...) {

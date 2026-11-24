@@ -445,8 +445,17 @@ BENCHMARK_TEMPLATE(SparseMatMatProduct, float, 3, int, int)
 
 template <typename Scalar, int kMatBlockSize>
 static void SparseLDLtConstructionFromSparseMatrix(benchmark::State& state) {
-  int nx = state.range(0), ny = state.range(1), nz = state.range(2);
-  auto A = mochi::test::MakeSparseMatrixWithBlockStructure<Scalar, kMatBlockSize>(nx, ny, nz);
+  auto nx = static_cast<int>(state.range(0));
+  auto ny = static_cast<int>(state.range(1));
+  auto nz = static_cast<int>(state.range(2));
+  auto numThreads = static_cast<int>(state.range(3));
+  MOCHI_ASSERT(numThreads > 0, "Invalid number of threads.");
+  if (numThreads > TaskScheduler::GetNumSupportedLogicalProcessors()) {
+    MOCHI_SKIP_BENCHMARK(state);
+    return;
+  }
+  auto A = test::MakeSparseMatrixWithBlockStructure<Scalar, kMatBlockSize>(nx, ny, nz);
+  TaskScheduler scheduler(numThreads - 1); // Caller not included in TaskScheduler's pool
   for (auto x : state) {
     int info = 0;
     krylov::SparseLDLt P(A, info);
@@ -456,8 +465,9 @@ static void SparseLDLtConstructionFromSparseMatrix(benchmark::State& state) {
 
 BENCHMARK_TEMPLATE(SparseLDLtConstructionFromSparseMatrix, float, 3)
     ->Name("SparseLA/SparseLDLt/Construction/SparseMatrix")
-    ->ArgNames({"nx", "ny", "nz"})
-    ->Args({13, 17, 19});
+    ->ArgNames({"nx", "ny", "nz", "threads"})
+    ->ArgsProduct({{13}, {17}, {19}, {1, 2, 4, 8}})
+    ->UseRealTime();
 
 /****************************************************************************************
   Resolution from sparse LDLt factorization
@@ -467,7 +477,7 @@ template <typename Scalar>
 static void SparseLDLtSolveFromSparseMatrix(benchmark::State& state) {
   int nx = int(state.range(0)), ny = int(state.range(1)), nz = int(state.range(2));
   constexpr int kBlockSize = 3; // used to represent elasticity-like problem
-  auto A = mochi::test::MakeSparseMatrixWithBlockStructure<Scalar, kBlockSize>(nx, ny, nz);
+  auto A = test::MakeSparseMatrixWithBlockStructure<Scalar, kBlockSize>(nx, ny, nz);
   mochi::ColumnVector<Scalar> b(A.Rows()), c(A.Rows());
   c.SetRandom(1);
   int info = 0;
@@ -491,8 +501,17 @@ BENCHMARK_TEMPLATE(SparseLDLtSolveFromSparseMatrix, float)
 
 template <typename Scalar, int kMatBlockSize>
 static void SparseLDLtConstructionFromBlockSparseMatrix(benchmark::State& state) {
-  int nx = state.range(0), ny = state.range(1), nz = state.range(2);
-  auto A = mochi::test::MakeBlockSparseMatrix<Scalar, kMatBlockSize>(nx, ny, nz);
+  auto nx = static_cast<int>(state.range(0));
+  auto ny = static_cast<int>(state.range(1));
+  auto nz = static_cast<int>(state.range(2));
+  auto numThreads = static_cast<int>(state.range(3));
+  MOCHI_ASSERT(numThreads > 0, "Invalid number of threads.");
+  if (numThreads > TaskScheduler::GetNumSupportedLogicalProcessors()) {
+    MOCHI_SKIP_BENCHMARK(state);
+    return;
+  }
+  auto A = test::MakeBlockSparseMatrix<Scalar, kMatBlockSize>(nx, ny, nz);
+  TaskScheduler scheduler(numThreads - 1); // Caller not included in TaskScheduler's pool
   for (auto x : state) {
     int info = 0;
     krylov::SparseLDLt P(A, info);
@@ -502,8 +521,40 @@ static void SparseLDLtConstructionFromBlockSparseMatrix(benchmark::State& state)
 
 BENCHMARK_TEMPLATE(SparseLDLtConstructionFromBlockSparseMatrix, float, 3)
     ->Name("SparseLA/SparseLDLt/Construction/BlockSparseMatrix")
-    ->ArgNames({"nx", "ny", "nz"})
-    ->Args({13, 17, 19});
+    ->ArgNames({"nx", "ny", "nz", "threads"})
+    ->ArgsProduct({{13}, {17}, {19}, {1, 2, 4, 8}})
+    ->UseRealTime();
+
+/****************************************************************************************
+  Refactorization of sparse LDLt factorization from a block sparse matrix
+*/
+
+template <typename Scalar, int kMatBlockSize>
+static void SparseLDLtRefactorizationFromBlockSparseMatrix(benchmark::State& state) {
+  auto nx = static_cast<int>(state.range(0));
+  auto ny = static_cast<int>(state.range(1));
+  auto nz = static_cast<int>(state.range(2));
+  auto numThreads = static_cast<int>(state.range(3));
+  MOCHI_ASSERT(numThreads > 0, "Invalid number of threads.");
+  if (numThreads > TaskScheduler::GetNumSupportedLogicalProcessors()) {
+    MOCHI_SKIP_BENCHMARK(state);
+    return;
+  }
+  auto A = test::MakeBlockSparseMatrix<Scalar, kMatBlockSize>(nx, ny, nz);
+  TaskScheduler scheduler(numThreads - 1); // Caller not included in TaskScheduler's pool
+  int info = 0;
+  krylov::SparseLDLt P(A, info);
+  for (auto x : state) {
+    P.Refactorize(A, info);
+    MOCHI_NO_DISCARD_IN_LOOP(P);
+  }
+}
+
+BENCHMARK_TEMPLATE(SparseLDLtRefactorizationFromBlockSparseMatrix, float, 3)
+    ->Name("SparseLA/SparseLDLt/Refactorization/BlockSparseMatrix")
+    ->ArgNames({"nx", "ny", "nz", "threads"})
+    ->ArgsProduct({{13}, {17}, {19}, {1, 2, 4, 8}})
+    ->UseRealTime();
 
 /****************************************************************************************
   Resolution from sparse LDLt factorization for a block sparse matrix
@@ -513,7 +564,7 @@ template <typename Scalar>
 static void SparseLDLtSolveFromBlockSparseMatrix(benchmark::State& state) {
   int nx = int(state.range(0)), ny = int(state.range(1)), nz = int(state.range(2));
   constexpr int kBlockSize = 3; // used to represent elasticity-like problem
-  auto A = mochi::test::MakeBlockSparseMatrix<Scalar, kBlockSize>(nx, ny, nz);
+  auto A = test::MakeBlockSparseMatrix<Scalar, kBlockSize>(nx, ny, nz);
   mochi::ColumnVector<Scalar> b(A.Rows()), c(A.Rows());
   c.SetRandom(1);
   int info = 0;

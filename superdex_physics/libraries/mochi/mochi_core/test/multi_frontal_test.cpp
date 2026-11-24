@@ -855,50 +855,66 @@ TEST(MultifrontalStructure, Sizes) {
   TestMultifrontal(6);
 }
 
-void TestPickBranches(int elemsPerSide, int nBranches) {
-  auto [graph, order, position, eTree] = MakeMFStructure(elemsPerSide);
-  FrontalOrganizer organizer(eTree, 24, 3);
-  auto [picked, trunkCount] = organizer.PickBranches(eTree, eTree.Roots()[0], nBranches);
+} // namespace
+
+static void TestPickBranches(
+    SymbolicEliminationTree const& eTree,
+    FrontalOrganizer const& organizer,
+    int root,
+    int numThreads) {
+  auto [picked, trunkCount] = organizer.PickBranches(eTree, root, numThreads);
 
   EXPECT_GE(trunkCount, 1);
-  EXPECT_LE(trunkCount + isize(picked), eTree.NumSuperNodes());
   EXPECT_FALSE(picked.empty());
 
-  auto const& costs = organizer.GetCosts();
-  double totalTime = 0.0;
-  for (auto r : eTree.Roots()) {
-    totalTime += costs[r].time;
+  // The branches and the trunk tile the root's tree.
+  auto const rootTree = eTree.SubtreeRange(root);
+  int numInBranches = 0;
+  for (int sn : picked) {
+    EXPECT_TRUE(rootTree.Within(sn));
+    numInBranches += eTree.SubtreeRange(sn).Size();
   }
-  double threshold = totalTime / (2.0 * nBranches);
+  EXPECT_EQ(trunkCount + numInBranches, rootTree.Size());
 
-  for (auto sn : picked) {
-    // 1. Threshold check if not a leaf.
+  auto const& costs = organizer.GetCosts();
+  double const threshold = costs[root].time / (FrontalOrganizer::kBranchesPerThread * numThreads);
+
+  for (int sn : picked) {
+    // Non-leaf picks stop exactly where branch cost first falls at or below the threshold.
     if (!eTree.IsLeaf(sn)) {
       EXPECT_LE(costs[sn].time, threshold);
     }
 
-    // 2. Parent check (the parent should be above threshold)
+    // A picked node's parent remains above threshold, so the branch was not split prematurely.
     auto parent = eTree.SuperParent(sn);
     if (parent != -1) {
       EXPECT_GT(costs[parent].time, threshold);
     }
   }
 
-  // 3. No picked node is an ancestor of another picked node.
+  // Picks form an antichain, so independent branch tasks never overlap.
   std::vector<bool> isPicked(eTree.NumSuperNodes(), false);
-  for (auto sn : picked) {
+  for (int sn : picked) {
     isPicked[sn] = true;
   }
+  EXPECT_FALSE(isPicked[root]);
 
-  for (auto sn : picked) {
+  for (int sn : picked) {
     auto parent = eTree.SuperParent(sn);
     while (parent != -1) {
-      EXPECT_FALSE(isPicked[parent])
-          << "Node " << parent << " is an ancestor of picked node " << sn << " and is also picked.";
+      EXPECT_FALSE(isPicked[parent]);
       parent = eTree.SuperParent(parent);
     }
   }
 }
+
+static void TestPickBranches(int elemsPerSide, int numThreads) {
+  auto [graph, order, position, eTree] = MakeMFStructure(elemsPerSide);
+  FrontalOrganizer organizer(eTree, 24, 3);
+  TestPickBranches(eTree, organizer, eTree.Roots()[0], numThreads);
+}
+
+namespace {
 
 TEST(MultifrontalStructure, PickBranches) {
   auto [graph, order, position, eTree] = MakeMFStructure(6);
@@ -906,10 +922,41 @@ TEST(MultifrontalStructure, PickBranches) {
   EXPECT_TRUE(organizer.PickBranches(eTree, eTree.Roots()[0], 0).first.empty());
   EXPECT_TRUE(organizer.PickBranches(eTree, eTree.Roots()[0], -1).first.empty());
 
+  {
+    // The cheap Y and costlier clique form separate trees. A forest-wide threshold would select
+    // the Y root, while the root-local threshold must split the Y into smaller branches.
+    GraphBuilder<int, int> builder(6, 16);
+    builder.append(std::array{0, 2});
+    builder.append(std::array{1, 2});
+    builder.append(std::array{0, 1, 2});
+    builder.append(std::array{3, 4, 5});
+    builder.append(std::array{3, 4, 5});
+    builder.append(std::array{3, 4, 5});
+    auto disconnectedGraph = builder.Build();
+    DynamicArray<int> disconnectedOrder{0, 1, 2, 3, 4, 5};
+    auto disconnectedPosition = InversePermutation(disconnectedOrder);
+    SymbolicEliminationTree disconnectedTree(
+        disconnectedGraph, disconnectedOrder, disconnectedPosition);
+    FrontalOrganizer disconnectedOrganizer(disconnectedTree, 24, 3);
+
+    auto const roots = disconnectedTree.Roots();
+    ASSERT_EQ(roots.size(), 2);
+    // Only the Y's root has children.
+    ASSERT_NE(disconnectedTree.IsLeaf(roots[0]), disconnectedTree.IsLeaf(roots[1]));
+    int const nonLeafRoot = disconnectedTree.IsLeaf(roots[0]) ? roots[1] : roots[0];
+
+    int constexpr kNumThreads = 1;
+    auto const& costs = disconnectedOrganizer.GetCosts();
+    double const forestTime = costs[roots[0]].time + costs[roots[1]].time;
+    ASSERT_LE(
+        costs[nonLeafRoot].time, forestTime / (FrontalOrganizer::kBranchesPerThread * kNumThreads));
+    TestPickBranches(disconnectedTree, disconnectedOrganizer, nonLeafRoot, kNumThreads);
+  }
+
   TestPickBranches(6, 4);
   TestPickBranches(14, 1);
   TestPickBranches(14, 8);
-  // High nBranches exercises the leaf-above-threshold branch in PickBranches.
+  // A high thread count exercises the leaf-above-threshold branch in PickBranches.
   TestPickBranches(14, 100);
 }
 

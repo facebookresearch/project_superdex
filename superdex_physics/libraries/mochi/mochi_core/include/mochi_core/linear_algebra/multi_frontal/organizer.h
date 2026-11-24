@@ -89,24 +89,28 @@ class FrontalOrganizer {
     return std::pair{_blockSize, _dofsPerNode};
   }
 
+  /// @brief Number of branches @ref PickBranches targets per thread, so uneven branches still
+  /// balance.
+  static constexpr int kBranchesPerThread = 2;
+
   /**
    * @brief Picks a set of super-nodes from the elimination tree for parallel factorization.
    *
    * @details Each picked super-node is a root of a branch in the elimination tree.
    * Each of these branches can be factorized in parallel by a single thread without
    * any communication or synchronization with other threads.
-   * Traverses the tree from the roots down. A super-node is picked if its estimated
-   * time for factorization is less than or equal to a threshold based on the total
-   * time and the desired number of branches.
+   * Traverses the tree from the root down. A super-node is picked if it is a leaf or its estimated
+   * factorization time is at most the root's estimated time divided by
+   * @ref kBranchesPerThread * @p numThreads.
    *
    * @param tree The elimination tree.
    * @param rootNode The root node for which to pick branches.
-   * @param nBranches The desired number of branches (parallel tasks).
+   * @param numThreads Number of threads to balance the branches across.
    * @return std::pair<DynamicArray<int>, int> Picked supernode indices and the number of nodes in
    * the truncated tree
    */
   [[nodiscard]] std::pair<DynamicArray<int>, int>
-  PickBranches(SymbolicEliminationTree const& tree, int rootNode, int nBranches) const;
+  PickBranches(SymbolicEliminationTree const& tree, int rootNode, int numThreads) const;
 
  private:
   size_t _blockSize;
