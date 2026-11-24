@@ -81,45 +81,76 @@ BotPrefab MakeBot() {
 // Arm, hand, finger, slider, then the ball's three.
 std::vector<real> const kNow = {0.1_r, 0.2_r, 0.3_r, 0.05_r, 0_r, 0_r, 0_r};
 
-TEST(KeyPoseTest, KeyedJointsTakeTheKeyAndMoveTheirLinksAndTheLinksBelow) {
+TEST(KeyPoseTest, SetJointPositionsSetsTheNamedJoints) {
   BotPrefab const bot = MakeBot();
-  std::vector<std::string_view> const joints = {"hand_joint"};
-  std::vector<real> const values = {1_r};
+  std::vector<std::string_view> const joints = {"finger_joint", "hand_joint"};
+  std::vector<real> const values = {2_r, 1_r};
+  std::vector<real> pose = kNow;
 
-  KeyPose shown;
-  ASSERT_TRUE(ComputeKeyPose(
-      bot,
-      mochi::MakeConstSpan(kNow),
-      mochi::MakeConstSpan(joints),
-      mochi::MakeConstSpan(values),
-      shown));
+  ASSERT_TRUE(
+      SetJointPositions(bot, mochi::MakeConstSpan(joints), mochi::MakeConstSpan(values), pose));
 
-  KeyPose const expected{
-      .pose = {0.1_r, 1_r, 0.3_r, 0.05_r, 0_r, 0_r, 0_r},
-      .movedLinks = {false, false, true, true, false, false}};
-  EXPECT_EQ(shown, expected);
+  std::vector<real> const expected = {0.1_r, 1_r, 2_r, 0.05_r, 0_r, 0_r, 0_r};
+  EXPECT_EQ(pose, expected);
 }
 
-TEST(KeyPoseTest, RefusesJointsItCannotKey) {
+TEST(KeyPoseTest, SetJointPositionsRefusesJointsItCannotSet) {
   BotPrefab const bot = MakeBot();
   std::vector<real> const one = {1_r};
-  auto const computes = [&](std::vector<std::string_view> const& joints,
-                            std::vector<real> const& values,
-                            std::vector<real> const& now) {
-    KeyPose shown;
-    return ComputeKeyPose(
-        bot,
-        mochi::MakeConstSpan(now),
-        mochi::MakeConstSpan(joints),
-        mochi::MakeConstSpan(values),
-        shown);
+  auto const sets = [&](std::vector<std::string_view> const& joints,
+                        std::vector<real> const& values,
+                        std::vector<real> pose) {
+    std::vector<real> const before = pose;
+    bool const set =
+        SetJointPositions(bot, mochi::MakeConstSpan(joints), mochi::MakeConstSpan(values), pose);
+    EXPECT_EQ(pose, before) << "left as it was";
+    return set;
   };
 
-  EXPECT_FALSE(computes({"no_such_joint"}, one, kNow));
-  EXPECT_FALSE(computes({"ball_joint"}, one, kNow)) << "three DOFs";
-  EXPECT_FALSE(computes({"root_joint"}, one, kNow)) << "no DOF";
-  EXPECT_FALSE(computes({"arm_joint", "hand_joint"}, one, kNow)) << "one value for two joints";
-  EXPECT_FALSE(computes({"arm_joint"}, one, {0.1_r, 0.2_r})) << "a pose of the wrong size";
+  EXPECT_FALSE(sets({"no_such_joint"}, one, kNow));
+  EXPECT_FALSE(sets({"ball_joint"}, one, kNow)) << "three DOFs";
+  EXPECT_FALSE(sets({"root_joint"}, one, kNow)) << "no DOF";
+  EXPECT_FALSE(sets({"hand_joint", "no_such_joint"}, {1_r, 2_r}, kNow)) << "one bad name";
+  EXPECT_FALSE(sets({"arm_joint", "hand_joint"}, one, kNow)) << "one value for two joints";
+  EXPECT_FALSE(sets({"arm_joint"}, one, {0.1_r, 0.2_r})) << "a pose of the wrong size";
+}
+
+TEST(KeyPoseTest, MovedLinksAreThoseBelowAJointThatChanged) {
+  BotPrefab const bot = MakeBot();
+  std::vector<real> hand = kNow;
+  hand[1] += 0.5_r;
+  std::vector<real> arm = kNow;
+  arm[0] += 0.5_r;
+  std::vector<real> barely = kNow;
+  barely[0] += 1e-6_r;
+
+  // Root, arm, hand, finger, slider, ball.
+  std::vector<bool> const handMoves = {false, false, true, true, false, false};
+  std::vector<bool> const armMoves = {false, true, true, true, true, false};
+  std::vector<bool> const none(6, false);
+  EXPECT_EQ(
+      ComputeMovedLinks(bot, mochi::MakeConstSpan(kNow), mochi::MakeConstSpan(hand), 1e-4_r),
+      handMoves);
+  EXPECT_EQ(
+      ComputeMovedLinks(bot, mochi::MakeConstSpan(kNow), mochi::MakeConstSpan(arm), 1e-4_r),
+      armMoves);
+  EXPECT_EQ(
+      ComputeMovedLinks(bot, mochi::MakeConstSpan(kNow), mochi::MakeConstSpan(barely), 1e-4_r),
+      none);
+}
+
+TEST(KeyPoseTest, TheToolLinkIsTheLinkTheToolIsNearest) {
+  BotPrefab const bot = MakeBot();
+  std::vector<TransformRT> links;
+  ComputeLinkWorldTransforms(bot, TransformRT{}, mochi::MakeConstSpan(kNow), links, ExpectOK{});
+  // 2 cm past the finger's tip frame, turned a little.
+  TransformRT const fingerFromTool{Quaternion::RotationX(0.2_r), Real3{0.02_r, 0_r, 0_r}};
+
+  ToolLink const tool =
+      FindToolLink(bot, mochi::MakeConstSpan(kNow), links[3] * fingerFromTool, ExpectOK{});
+
+  EXPECT_EQ(tool.link, 3);
+  EXPECT_TRUE(NearEqual(tool.linkFromTool, fingerFromTool, 1e-5_r));
 }
 
 TEST(KeyPoseTest, LinkWorldTransformsPlaceTheBotAtTheRootGivenAndItsScale) {

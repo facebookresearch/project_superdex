@@ -22,14 +22,12 @@
 
 namespace superdex::studio {
 
-bool ComputeKeyPose(
-    superdex::robotics::BotPrefab const& bot,
-    mochi::Span<mochi::real const> now,
-    mochi::Span<std::string_view const> joints,
-    mochi::Span<mochi::real const> values,
-    KeyPose& out) {
-  if (joints.size() != values.size() || mochi::isize(now) != bot._numDofs ||
-      mochi::isize(bot._dofIndices) != bot._numDofs || bot.joints.size() != bot.links.size()) {
+namespace {
+
+// Whether the bot's derived data (RebuildBotData) fits it, and `pose` too if given.
+bool Fits(superdex::robotics::BotPrefab const& bot, mochi::Span<mochi::real const> pose) {
+  if (mochi::isize(pose) != bot._numDofs || mochi::isize(bot._dofIndices) != bot._numDofs ||
+      bot.joints.size() != bot.links.size()) {
     return false;
   }
   for (int const joint : bot._dofIndices) {
@@ -42,8 +40,20 @@ bool ComputeKeyPose(
       return false;
     }
   }
-  out.pose.assign(now.begin(), now.end());
-  out.movedLinks.assign(bot.links.size(), false);
+  return true;
+}
+
+} // namespace
+
+bool SetJointPositions(
+    superdex::robotics::BotPrefab const& bot,
+    mochi::Span<std::string_view const> joints,
+    mochi::Span<mochi::real const> values,
+    std::vector<mochi::real>& pose) {
+  if (joints.size() != values.size() || !Fits(bot, mochi::MakeConstSpan(pose))) {
+    return false;
+  }
+  std::vector<mochi::real> set = pose;
   for (size_t k = 0; k < joints.size(); ++k) {
     // A spherical joint's DOFs all name it, so a name must match exactly one DOF.
     int dof = -1;
@@ -58,18 +68,65 @@ bool ComputeKeyPose(
     if (dof < 0) {
       return false;
     }
-    out.pose[static_cast<size_t>(dof)] = values[k];
-    // Joint i connects link i to its parent.
-    out.movedLinks[static_cast<size_t>(bot._dofIndices[dof])] = true;
+    set[static_cast<size_t>(dof)] = values[k];
+  }
+  pose = std::move(set);
+  return true;
+}
+
+std::vector<bool> ComputeMovedLinks(
+    superdex::robotics::BotPrefab const& bot,
+    mochi::Span<mochi::real const> from,
+    mochi::Span<mochi::real const> to,
+    mochi::real tolerance) {
+  if (from.size() != to.size() || !Fits(bot, from)) {
+    return {};
+  }
+  std::vector<bool> moved(bot.links.size(), false);
+  for (int d = 0; d < bot._numDofs; ++d) {
+    if (mochi::Abs(from[d] - to[d]) > tolerance) {
+      // Joint i connects link i to its parent.
+      moved[static_cast<size_t>(bot._dofIndices[d])] = true;
+    }
   }
   // Parents come first.
   for (size_t i = 0; i < bot.links.size(); ++i) {
     int const parent = bot.links[i].parentLink;
-    if (parent >= 0 && out.movedLinks[static_cast<size_t>(parent)]) {
-      out.movedLinks[i] = true;
+    if (parent >= 0 && moved[static_cast<size_t>(parent)]) {
+      moved[i] = true;
     }
   }
-  return true;
+  return moved;
+}
+
+ToolLink FindToolLink(
+    superdex::robotics::BotPrefab const& bot,
+    mochi::Span<mochi::real const> pose,
+    mochi::TransformRT const& rootFromTool,
+    superdex::Error& error) {
+  std::vector<mochi::TransformRT> rootFromLinks;
+  ComputeLinkWorldTransforms(bot, mochi::TransformRT{}, pose, rootFromLinks, error);
+  MOCHI_ERROR_RETURN(error, {});
+  // Nearest first; among links at one spot (a flange and the tool link on it), the one turned least
+  // from the tool.
+  ToolLink found;
+  mochi::real bestDistance = 0;
+  mochi::real bestAngle = 0;
+  constexpr mochi::real kSameSpot = 1e-6f; // [m]
+  for (int i = 0; i < mochi::isize(rootFromLinks); ++i) {
+    mochi::TransformRT const linkFromTool =
+        mochi::Invert(rootFromLinks[static_cast<size_t>(i)]) * rootFromTool;
+    mochi::real const distance = mochi::Norm(linkFromTool.GetTranslation());
+    mochi::real const angle = mochi::Norm(linkFromTool.GetRotation().ToRotationVector());
+    bool const better = found.link < 0 || distance < bestDistance - kSameSpot ||
+        (distance < bestDistance + kSameSpot && angle < bestAngle);
+    if (better) {
+      found = ToolLink{.link = i, .linkFromTool = linkFromTool};
+      bestDistance = distance;
+      bestAngle = angle;
+    }
+  }
+  return found;
 }
 
 void ComputeLinkWorldTransforms(

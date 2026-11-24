@@ -42,6 +42,10 @@
 #include <string>
 #include <vector>
 
+namespace superdex::robotics {
+class BotIK;
+} // namespace superdex::robotics
+
 namespace superdex::studio {
 
 class TunerAsset;
@@ -130,12 +134,61 @@ class TunerEditor : public AssetEditor {
   // The joint key the selected Controller Input card shows (the selected key, else the first) as a
   // pose of the controller's bot: the keyed joints at the key, the others where the bot is now
   // (where it starts while stopped).
-  struct ShownKey {
-    superdex::robotics::BotEntry const* entry = nullptr;
-    BotAsset const* asset = nullptr;
+  // A bot at the playhead: what every Controller Input of it asks then, the joints they leave where
+  // the bot is now (where it starts while stopped).
+  struct ShownPose {
     // Where the bot's root is now.
     mochi::TransformRT worldFromRoot = {};
     KeyPose key;
+    // Whether IK reached every tool pose.
+    bool reached = true;
+    // Where its label goes: a point on a link (the first tool, else the last link moved).
+    int labelLink = -1;
+    mochi::Real3 labelPoint = {0.0f, 0.0f, 0.0f};
+
+    bool operator==(ShownPose const&) const = default;
+  };
+  // A tool pose the shadow's IK reaches: the tool link, the tool in it, and its target in the bot's
+  // root frame.
+  struct ToolGoal {
+    int link = -1;
+    mochi::TransformRT linkFromTool = {};
+    mochi::TransformRT rootFromTool = {};
+
+    bool operator==(ToolGoal const&) const = default;
+  };
+  struct BotIKDeleter {
+    void operator()(superdex::robotics::BotIK* ik) const;
+  };
+  // The playhead shadow of one bot: a see-through copy of it, staged once and posed by forward
+  // kinematics, and the IK that reaches its tool poses.
+  struct BotShadow {
+    explicit BotShadow(SuperDexStudio* studio);
+    // Takes its objects out of the viewport.
+    ~BotShadow();
+    BotShadow(BotShadow const&) = delete;
+    BotShadow& operator=(BotShadow const&) = delete;
+
+    SceneStage stage;
+    // The bot it is staged for: "entry|bot file".
+    std::string bot;
+    // The staged names of its links and skin, its skin's bone links (ComputeSkinBoneLinkRemap), and
+    // the root it was staged at.
+    std::vector<std::string> linkNames;
+    std::string skinName;
+    mochi::DynamicArray<int> skinBones;
+    mochi::TransformRT stagedRoot = {};
+    // What it shows and where its label is in the world; empty while hidden.
+    std::optional<ShownPose> shown;
+    mochi::Real3 labelWorld = {0.0f, 0.0f, 0.0f};
+    // IK for its tool poses (null until a tool pose needs it), and its last solve: seed and goals
+    // in, pose out.
+    std::unique_ptr<superdex::robotics::BotIK, BotIKDeleter> ik;
+    bool ikFailed = false;
+    std::vector<mochi::real> ikSeed;
+    std::vector<ToolGoal> ikGoals;
+    std::vector<mochi::real> ikPose;
+    bool ikReached = true;
   };
 
   // Staging and simulation
@@ -200,11 +253,49 @@ class TunerEditor : public AssetEditor {
   void ShowTaskBanner();
   // Opens the bot scene in its editor with the tuner's task loaded, where its criteria are edited.
   void OpenTaskInSceneEditor();
-  // Empty without a shown key, or with Show > Key Poses off.
-  [[nodiscard]] std::optional<ShownKey> FindShownKey() const;
-  // Shows a translucent shadow of the links the shown key moves, posed at the key: staged once per
-  // bot, then posed by forward kinematics when the pose changes.
-  void UpdateKeyPoseShadow();
+  // Bot `entry` at the playhead, `shadow`'s IK reaching its tool poses. Empty if it cannot be
+  // shown.
+  [[nodiscard]] std::optional<ShownPose> FindShownPose(
+      superdex::robotics::BotEntry const& entry,
+      superdex::robotics::BotPrefab const& bot,
+      BotShadow& shadow);
+  // `bot` (placed by `entry`) with each tool at its goal, by `shadow`'s IK from `seed`, into
+  // `pose`, and whether every goal was reached. False if IK cannot run.
+  bool SolveToolGoals(
+      BotShadow& shadow,
+      superdex::robotics::BotPrefab const& bot,
+      superdex::robotics::BotEntry const& entry,
+      std::vector<ToolGoal> const& goals,
+      std::vector<mochi::real> const& seed,
+      std::vector<mochi::real>& pose,
+      bool& reached);
+  // Shows a translucent shadow of each bot a Controller Input drives, at the playhead: only the
+  // links that differ from the bot as it is now.
+  void UpdateShadows();
+  // Stages `shadow` as `bot`, placed by `entry`, see-through and hidden.
+  void StageShadow(
+      BotShadow& shadow,
+      superdex::robotics::BotPrefab const& bot,
+      superdex::robotics::BotEntry const& entry);
+  // Poses `shadow` (of `bot`) at `shown`, or hides it without.
+  void PoseShadow(
+      BotShadow& shadow,
+      superdex::robotics::BotPrefab const& bot,
+      std::optional<ShownPose> shown);
+  // A run that advances (Play or Step) moves the playhead. So do the user's scrubbing, clicking a
+  // key and editing one (SelectTimelineKey and the key editors); selecting a card does not.
+  void UpdatePlayhead();
+  // Whether there is a robot to show at the playhead: a bot scene.
+  [[nodiscard]] bool HasPlayhead() const;
+  // The selected load's selected key or waypoint, as the timelines index them, or -1.
+  [[nodiscard]] int SelectedTimelineKey(size_t index) const;
+  // Selects load `index` and its key or waypoint `key`, as the timelines index them, and moves the
+  // playhead to it.
+  void SelectTimelineKey(size_t index, int key);
+  // Re-sorts load `index`'s keys after `key` was retimed; returns where it ended up.
+  int SortTimelineKeys(size_t index, int key);
+  // Every keyed load's keys on one strip over the run, with the playhead.
+  void ShowTimeline(bool& changed);
   void OnScenePressed(mochi_renderer::SceneObject* object, filament::math::float3 worldHit);
   // Index of the load whose card is selected (the transform gizmo edits it), or -1.
   [[nodiscard]] int SelectedLoadIndex() const;
@@ -300,17 +391,8 @@ class TunerEditor : public AssetEditor {
   SceneStage _stage;
   // The stage's render and collision stats, taken after each staging at the rest pose.
   StageStats _stageStats;
-  // Shadow of the shown joint key (Show > Key Poses): the bot it is staged for ("entry|bot file"),
-  // the staged names of its links and skin, its skin's bone links (ComputeSkinBoneLinkRemap), the
-  // root it was staged at, and the pose and root it shows.
-  SceneStage _keyPoseStage;
-  std::string _keyPoseBot;
-  std::vector<std::string> _keyPoseLinkNames;
-  std::string _keyPoseSkinName;
-  mochi::DynamicArray<int> _keyPoseSkinBones;
-  mochi::TransformRT _keyPoseStagedRoot = {};
-  std::optional<KeyPose> _keyPose;
-  mochi::TransformRT _keyPoseRoot = {};
+  // Shadows of the bots Controller Inputs drive (Show > Playhead Pose), in the bot scene's order.
+  std::vector<std::unique_ptr<BotShadow>> _shadows;
   bool _showKeyPoses = true;
   PrefabHierarchy _hierarchy;
   MochiAsyncScene _mochiScene;
@@ -398,8 +480,26 @@ class TunerEditor : public AssetEditor {
   uint64_t _selectedLoadCard = 0;
   // Waypoint of the selected pose path the gizmo edits (-1 = none).
   int _selectedWaypoint = -1;
-  // Waypoint whose timeline marker is being dragged (-1 = none); sorted by time on release.
+  // Key of the selected load whose card timeline marker, or Timeline marker, is being dragged (-1 =
+  // none); sorted by time on release.
   int _timelineDragWaypoint = -1;
+  int _overviewDragKey = -1;
+  // The time the shadow shows [s], and the selected key it was last moved to (load, key, time).
+  double _playheadTime = 0.0;
+  // The run's time the playhead last followed [s].
+  double _playheadSimTime = 0.0;
+  // Dragging the playhead along the Timeline's background.
+  bool _scrubbing = false;
+  // The span of run time the Timeline shows, which the cards' strips follow [s]; empty (max <= min)
+  // for the whole run. Reset to it on the next frame when set.
+  double _timelineViewMin = 0.0;
+  double _timelineViewMax = 0.0;
+  // The view's end to show on the next frame, as when double-clicked or the run's length changed
+  // [s]; 0: none. The run's length (or the last key) the view was made for [s].
+  double _timelineResetTo = 0.0;
+  double _timelineEnd = 0.0;
+  // Whether the playhead was put on the first key, as the Timeline first shows.
+  bool _playheadPlaced = false;
   // Keyframe of the selected load's profile (-1 = none), and the one whose preview marker is being
   // dragged (-1 = none; sorted by time on release).
   int _selectedKey = -1;

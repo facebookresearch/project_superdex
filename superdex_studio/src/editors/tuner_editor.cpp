@@ -39,6 +39,8 @@
 #include <mochi_renderer/debug.h>
 #include <mochi_renderer/material.h>
 #include <mochi_renderer/type_conversions.h>
+#include <superdex_robotics/ik/bot_ik.h>
+#include <superdex_robotics/ik/bot_ik_config.h>
 #include <superdex_robotics/scene/bot_scene.h>
 #include <superdex_robotics/superdex_robotics.h>
 #include <superdex_robotics/utils/bot_utils.h>
@@ -330,6 +332,116 @@ int SortByTimeTracking(mochi::DynamicArray<T>& items, size_t tracked) {
   return sortedIndex;
 }
 
+// The controller's input at `t` as a run sets it (TunerSession::DriveControllerInput): its
+// starting input, moved by `load`, whose first waypoint or key after 0 is approached from the
+// start. Empty if `load` does not fit the controller.
+std::optional<mochi::DynamicArray<real>>
+InputAt(tuner::LoadSpec const& load, tuner::ControllerTarget const& controller, double t) {
+  mochi::DynamicArray<real> input = controller.input;
+  if (TakesPose(controller)) {
+    if (load.waypoints.empty() || input.size() != 7) {
+      return std::nullopt;
+    }
+    std::vector<tuner::PoseWaypoint> path = SortedByTime(load.waypoints);
+    if (path.front().time > 0) {
+      tuner::PoseWaypoint start = path.front();
+      mochi::TransformRT const startPose = InputPose(controller.input);
+      start.time = 0;
+      start.position = startPose.GetTranslation();
+      start.rotation = startPose.GetRotation().ToRotationVector();
+      path.insert(path.begin(), start);
+    }
+    mochi::TransformRT const pose = tuner::EvaluatePosePath(path, t);
+    for (int i = 0; i < 3; ++i) {
+      input[static_cast<size_t>(i)] = pose.GetTranslation()[i];
+    }
+    for (int i = 0; i < 4; ++i) {
+      input[static_cast<size_t>(i) + 3] = pose.GetRotation().data[i];
+    }
+    return input;
+  }
+  // The input entries the keys set: the load's joints, else the whole input.
+  std::vector<size_t> entries;
+  for (size_t e = 0; load.joints.empty() && e < input.size(); ++e) {
+    entries.push_back(e);
+  }
+  auto const& joints = controller.inputJoints;
+  for (DynamicString const& name : load.joints) {
+    auto const it = std::find_if(joints.begin(), joints.end(), [&](tuner::InputJoint const& joint) {
+      return joint.name == name;
+    });
+    if (it == joints.end() || static_cast<size_t>(it - joints.begin()) >= input.size()) {
+      return std::nullopt;
+    }
+    entries.push_back(static_cast<size_t>(it - joints.begin()));
+  }
+  if (load.inputKeys.empty()) {
+    return std::nullopt;
+  }
+  std::vector<tuner::InputKey> keys = SortedByTime(load.inputKeys);
+  for (tuner::InputKey const& key : keys) {
+    if (key.values.size() != entries.size()) {
+      return std::nullopt;
+    }
+  }
+  if (keys.front().time > 0) {
+    tuner::InputKey start = keys.front();
+    start.time = 0;
+    for (size_t k = 0; k < entries.size(); ++k) {
+      start.values[k] = input[entries[k]];
+    }
+    keys.insert(keys.begin(), start);
+  }
+  std::vector<real> values(entries.size());
+  tuner::EvaluateInputKeys(mochi::MakeConstSpan(keys), t, mochi::MakeSpan(values));
+  for (size_t k = 0; k < entries.size(); ++k) {
+    input[entries[k]] = values[k];
+  }
+  return input;
+}
+
+// Whether the timelines show `load`'s waypoints (a pose path, a tool pose) rather than its keys.
+bool KeysAreWaypoints(tuner::LoadSpec const& load) {
+  return load.type == tuner::LoadType::PosePath ||
+      (load.type == tuner::LoadType::ControllerInput && !load.waypoints.empty());
+}
+
+// A time the user puts the playhead at, on the 0.01 s grid its tag shows, within the run.
+double SnapPlayhead(double time, double end) {
+  return mochi::Clamp(std::round(time * 100.0) / 100.0, 0.0, end);
+}
+
+// How many keys the timelines show for `load` (see KeyTimes).
+int KeyCount(tuner::LoadSpec const& load) {
+  if (KeysAreWaypoints(load)) {
+    return mochi::isize(load.waypoints);
+  }
+  if (load.type == tuner::LoadType::ControllerInput) {
+    return mochi::isize(load.inputKeys);
+  }
+  return load.profile.kind == tuner::ProfileKind::Keyframes ? mochi::isize(load.profile.keys) : 0;
+}
+
+// The times of the keys the timelines show for `load`: its waypoints, its joint keys or its
+// profile's keyframes. Empty for a load without keys.
+std::vector<double*> KeyTimes(tuner::LoadSpec& load) {
+  std::vector<double*> times;
+  if (KeysAreWaypoints(load)) {
+    for (tuner::PoseWaypoint& waypoint : load.waypoints) {
+      times.push_back(&waypoint.time);
+    }
+  } else if (load.type == tuner::LoadType::ControllerInput) {
+    for (tuner::InputKey& key : load.inputKeys) {
+      times.push_back(&key.time);
+    }
+  } else if (load.profile.kind == tuner::ProfileKind::Keyframes) {
+    for (tuner::ProfileKey& key : load.profile.keys) {
+      times.push_back(&key.time);
+    }
+  }
+  return times;
+}
+
 std::string_view ChannelGroup(std::string_view channel) {
   size_t const dot = channel.rfind('.');
   return dot == std::string_view::npos ? channel : channel.substr(0, dot);
@@ -378,6 +490,9 @@ ImU32 CardColor(ImVec4 const& accent, bool enabled, bool selected = false, bool 
   return ImGui::GetColorU32(
       ImVec4(mix(neutral.x, accent.x), mix(neutral.y, accent.y), mix(neutral.z, accent.z), 1.0f));
 }
+
+// The playhead: the time the shadow shows.
+constexpr ImVec4 kPlayheadColor{1.0f, 1.0f, 1.0f, 0.9f};
 
 ImVec4 LoadAccent(tuner::LoadType type) {
   auto const& c = kLoadColors[static_cast<size_t>(type)];
@@ -531,7 +646,6 @@ TunerEditor::TunerEditor(SuperDexStudio* studio, TunerAsset* asset)
     : AssetEditor(studio, asset),
       _tunerAsset(asset),
       _stage(studio, "TunerEditorStage"),
-      _keyPoseStage(studio, "TunerKeyPoseStage"),
       _simSync(studio->GetEditorToRendererSpaceConverter()),
       _outputDir((asset->GetPath().GetParentPath().AsFilesystemPath() / "tuner_runs").string()) {}
 
@@ -672,7 +786,7 @@ void TunerEditor::Initialize() {
   registerStageType(
       "Render (Collision Fallback)", StageType::RenderModelFallbackToMochiModel, ImGuiKey_3);
   _viewport->RegisterShowCommand(
-      {.name = "Key Poses",
+      {.name = "Playhead Shadow",
        .onToggle = [this] { _showKeyPoses = !_showKeyPoses; },
        .getState = [this] { return _showKeyPoses; }});
 
@@ -709,7 +823,6 @@ void TunerEditor::Initialize() {
   _mochiScene.onStopPhysics = [this]() { OnStopPhysics(); };
   BindSceneObjectDragHooks(*_viewport, _dragController);
   _stage.BindRenderScene(_viewport->GetRenderScene());
-  _keyPoseStage.BindRenderScene(_viewport->GetRenderScene());
   _viewport->SetSceneStage(&_stage);
   BindSceneStageMeasureTargets(
       *_viewport,
@@ -748,7 +861,7 @@ void TunerEditor::OnRender(Renderer const* renderer) {
   }
   DrawLoadArrows();
   DrawStopBoxes();
-  UpdateKeyPoseShadow();
+  UpdateShadows();
   _viewport->RenderScene(renderer);
 }
 
@@ -757,7 +870,7 @@ void TunerEditor::Shutdown() {
     _mochiScene.DestroyMochiScene();
   }
   _stage.Clear();
-  _keyPoseStage.Clear();
+  _shadows.clear();
   _viewport.reset();
 }
 
@@ -953,10 +1066,8 @@ bool TunerEditor::IsSceneLoaded() const {
 
 void TunerEditor::Restage() {
   _describedTargetsStale = true;
-  // Restaged with the new stage type next frame.
-  _keyPoseStage.Clear();
-  _keyPoseBot.clear();
-  _keyPose.reset();
+  // Restaged next frame, with the new stage type and their IK remade for the bots as they are now.
+  _shadows.clear();
   MochiPrefabAsset* prefabAsset = _tunerAsset->GetPrefabAsset();
   SceneAsset const* sceneAsset = _tunerAsset->GetSceneAsset();
   _taskSpawns.clear();
@@ -1978,42 +2089,25 @@ std::optional<mochi::DynamicArray<real>> TunerEditor::CurrentInput(size_t index)
   return controller == nullptr ? std::nullopt : std::optional(controller->input);
 }
 
-std::optional<TunerEditor::ShownKey> TunerEditor::FindShownKey() const {
-  int const index = SelectedLoadIndex();
-  SceneAsset const* const scene = _tunerAsset->GetSceneAsset();
-  if (!_showKeyPoses || index < 0 || scene == nullptr) {
-    return std::nullopt;
-  }
-  tuner::LoadSpec const& load = _tunerAsset->GetSpec().loads[static_cast<size_t>(index)];
-  tuner::ControllerTarget const* const controller =
-      load.type == tuner::LoadType::ControllerInput ? FindController(load.target) : nullptr;
-  if (controller == nullptr || controller->inputJoints.empty() || load.inputKeys.empty()) {
-    return std::nullopt;
-  }
-  int const selected = SelectedInputKeyIndex();
-  tuner::InputKey const& key = load.inputKeys[selected >= 0 ? static_cast<size_t>(selected) : 0];
-  std::vector<std::string_view> joints;
-  for (DynamicString const& joint : load.joints) {
-    joints.emplace_back(joint);
-  }
-  if (joints.empty()) {
-    for (tuner::InputJoint const& joint : controller->inputJoints) {
-      joints.emplace_back(joint.name);
-    }
-  }
-  ShownKey shown;
-  shown.entry = FindControllerBot(*scene, std::string_view(load.target));
-  shown.asset = shown.entry == nullptr ? nullptr
-                                       : _studio->GetAssetManager().FindAssetByPath<BotAsset>(
-                                             mochi::Path{std::string(shown.entry->path)});
-  // A bot being edited may not build; its derived data then does not fit it.
-  if (shown.asset == nullptr || !shown.asset->IsBuildOk()) {
-    return std::nullopt;
-  }
-  superdex::robotics::BotPrefab const& bot = shown.asset->GetBotPrefab();
-  auto const& start = shown.entry->initialPose.empty() ? bot.defaultPose : shown.entry->initialPose;
+void TunerEditor::BotIKDeleter::operator()(superdex::robotics::BotIK* ik) const {
+  superdex::robotics::BotIK::Destroy(ik);
+}
+
+TunerEditor::BotShadow::BotShadow(SuperDexStudio* studio) : stage(studio, "TunerShadowStage") {}
+
+TunerEditor::BotShadow::~BotShadow() {
+  stage.Clear();
+}
+
+std::optional<TunerEditor::ShownPose> TunerEditor::FindShownPose(
+    superdex::robotics::BotEntry const& entry,
+    superdex::robotics::BotPrefab const& bot,
+    BotShadow& shadow) {
+  SceneAsset const& scene = *_tunerAsset->GetSceneAsset();
+  auto const& start = entry.initialPose.empty() ? bot.defaultPose : entry.initialPose;
   std::vector<real> now(start.begin(), start.end());
-  shown.worldFromRoot = shown.entry->parentFromBot;
+  ShownPose shown;
+  shown.worldFromRoot = entry.parentFromBot;
   // While simulating, the bot where its staged links are now.
   if (_mochiScene.IsSimulating()) {
     std::vector<mochi::TransformRT> worldFromLinks;
@@ -2036,111 +2130,343 @@ std::optional<TunerEditor::ShownKey> TunerEditor::FindShownKey() const {
       shown.worldFromRoot = worldFromLinks.front();
     }
   }
-  if (!ComputeKeyPose(
-          bot,
-          mochi::MakeConstSpan(now),
-          mochi::MakeConstSpan(joints),
-          mochi::MakeConstSpan(key.values),
-          shown.key)) {
+  // Every input of this bot at the playhead: tool poses, then joint positions.
+  std::vector<ToolGoal> goals;
+  std::vector<std::string_view> joints;
+  std::vector<real> values;
+  for (tuner::LoadSpec const& load : _tunerAsset->GetSpec().loads) {
+    bool const drives = load.enabled && load.type == tuner::LoadType::ControllerInput &&
+        FindControllerBot(scene, std::string_view(load.target)) == &entry;
+    tuner::ControllerTarget const* const controller =
+        drives ? FindController(load.target) : nullptr;
+    std::optional<mochi::DynamicArray<real>> const input =
+        controller == nullptr ? std::nullopt : InputAt(load, *controller, _playheadTime);
+    if (!input) {
+      continue;
+    }
+    if (TakesPose(*controller)) {
+      // The tool rides on the link nearest it where the run starts.
+      superdex::Error error;
+      ToolLink const tool =
+          FindToolLink(bot, mochi::MakeConstSpan(start), InputPose(controller->input), error);
+      if (error.IsOK() && tool.link >= 0) {
+        goals.push_back(
+            {.link = tool.link,
+             .linkFromTool = tool.linkFromTool,
+             .rootFromTool = InputPose(*input)});
+      }
+      continue;
+    }
+    // Only the joints the load keys: a controller's other entries do not move the shadow.
+    auto const& inputJoints = controller->inputJoints;
+    for (size_t e = 0; e < input->size() && e < inputJoints.size(); ++e) {
+      bool const keyed = load.joints.empty() ||
+          std::find(load.joints.begin(), load.joints.end(), inputJoints[e].name) !=
+              load.joints.end();
+      if (keyed && !inputJoints[e].name.empty()) {
+        joints.emplace_back(inputJoints[e].name);
+        values.push_back((*input)[e]);
+      }
+    }
+  }
+  std::vector<real> pose = now;
+  if (!goals.empty() && !SolveToolGoals(shadow, bot, entry, goals, now, pose, shown.reached)) {
     return std::nullopt;
+  }
+  if (!joints.empty() &&
+      !SetJointPositions(bot, mochi::MakeConstSpan(joints), mochi::MakeConstSpan(values), pose)) {
+    return std::nullopt;
+  }
+  // Smaller differences would only tint the robot.
+  constexpr real kMoved = 5e-3f; // [rad or m]
+  shown.key.movedLinks =
+      ComputeMovedLinks(bot, mochi::MakeConstSpan(now), mochi::MakeConstSpan(pose), kMoved);
+  shown.key.pose = std::move(pose);
+  if (shown.key.movedLinks.empty()) {
+    return std::nullopt;
+  }
+  if (!goals.empty()) {
+    shown.labelLink = goals.front().link;
+    shown.labelPoint = goals.front().linkFromTool.GetTranslation();
+  } else {
+    auto const last = std::find(shown.key.movedLinks.rbegin(), shown.key.movedLinks.rend(), true);
+    shown.labelLink = last == shown.key.movedLinks.rend()
+        ? -1
+        : static_cast<int>(shown.key.movedLinks.rend() - last) - 1;
   }
   return shown;
 }
 
-void TunerEditor::UpdateKeyPoseShadow() {
-  std::optional<ShownKey> shown = FindShownKey();
-  if (!shown) {
-    if (!_keyPoseBot.empty()) {
-      _keyPoseStage.Clear();
-      _keyPoseBot.clear();
-      _keyPose.reset();
+bool TunerEditor::SolveToolGoals(
+    BotShadow& shadow,
+    superdex::robotics::BotPrefab const& bot,
+    superdex::robotics::BotEntry const& entry,
+    std::vector<ToolGoal> const& goals,
+    std::vector<real> const& seed,
+    std::vector<real>& pose,
+    bool& reached) {
+  if (shadow.ik == nullptr && !shadow.ikFailed) {
+    superdex::robotics::BotPrefab placed = bot;
+    placed.worldFromRoot = entry.parentFromBot;
+    superdex::robotics::BotIKCreateParams params;
+    params.fixedBase = true;
+    mochi::Error error;
+    shadow.ik.reset(
+        superdex::robotics::BotIK::Create(
+            _studio->GetMochiContext(), placed, params, _studio->GetBotLoader(), error));
+    shadow.ikFailed = shadow.ik == nullptr;
+    if (shadow.ikFailed) {
+      MOCHI_LOG_ERROR(
+          "Asset Tuner: no tool-pose shadow for bot '%s': %s",
+          entry.name.c_str(),
+          error.GetDescription());
     }
-    return;
   }
-  superdex::robotics::BotPrefab const& bot = shown->asset->GetBotPrefab();
-  std::string const botKey =
-      std::string(std::string_view(shown->entry->name)) + "|" + shown->asset->GetPath().ToString();
-  if (_keyPoseBot != botKey) {
-    superdex::robotics::BotPrefab staged = bot;
-    staged.worldFromRoot = shown->entry->parentFromBot;
-    _keyPoseStage.StageBot(staged, _stageType, /*hideSkinCoveredLinks=*/true);
-    // See-through like the IK editor's input bot, drawn behind the bot where the two coincide, and
-    // not picked, framed or counted in the ground height.
-    auto const material =
-        _studio->GetResourceManager().CreateLitSeeThroughMaterial({0.25f, 0.65f, 0.95f}, 0.35f);
-    material->Get()->setPolygonOffset(1.0f, 4.0f);
-    _keyPoseLinkNames.clear();
-    _keyPoseSkinName.clear();
-    for (StagedActor const& actor : _keyPoseStage.GetActors()) {
-      if (IsSkinStagedName(actor.name)) {
-        _keyPoseSkinName = actor.name;
-      } else {
-        _keyPoseLinkNames.push_back(actor.name);
-      }
-      // Wireframes keep their own material.
-      bool const wireframe =
-          actor.skinnedCollisionMesh != nullptr || actor.dynamicWireframeMesh != nullptr;
-      for (StagedActor::Instance const* instance : {&actor.render, &actor.shape, &actor.sdf}) {
-        if (instance->sceneObject == nullptr) {
-          continue;
-        }
-        if (!(wireframe && instance == &actor.shape)) {
-          instance->sceneObject->SetMaterial(material);
-        }
-        instance->sceneObject->SetShadows(false, false);
-        instance->sceneObject->_internal = true;
-      }
+  if (shadow.ik == nullptr) {
+    return false;
+  }
+  // One solve per seed and goals, so a time shows the same pose however the playhead got there.
+  if (!shadow.ikPose.empty() && seed == shadow.ikSeed && goals == shadow.ikGoals) {
+    pose = shadow.ikPose;
+    reached = shadow.ikReached;
+    return true;
+  }
+  mochi::Error error;
+  shadow.ik->ClearAllGoals(error);
+  shadow.ik->SetJointPositions(mochi::MakeConstSpan(seed), error);
+  for (ToolGoal const& goal : goals) {
+    // The IK bot's base sits where the bot's root starts.
+    mochi::TransformRT const worldFromTool = entry.parentFromBot * goal.rootFromTool;
+    shadow.ik->SetPositionGoal(
+        goal.link,
+        goal.linkFromTool.GetTranslation(),
+        worldFromTool.GetTranslation(),
+        superdex::robotics::kIKInitialPositionStiffness,
+        error);
+    shadow.ik->SetRotationGoal(
+        goal.link,
+        goal.linkFromTool.GetRotation(),
+        worldFromTool.GetRotation(),
+        superdex::robotics::kIKInitialRotationStiffness,
+        error);
+  }
+  // A goal out of reach still gives the nearest pose.
+  reached = shadow.ik->SolveIK(error);
+  if (!error.IsOK()) {
+    MOCHI_LOG_ERROR_ONCE(
+        "Asset Tuner: the tool-pose shadow's IK failed: %s", error.GetDescription());
+    return false;
+  }
+  auto const solved = shadow.ik->GetJointPositions();
+  pose.assign(solved.begin(), solved.end());
+  shadow.ikSeed = seed;
+  shadow.ikGoals = goals;
+  shadow.ikPose = pose;
+  shadow.ikReached = reached;
+  return true;
+}
+
+void TunerEditor::UpdatePlayhead() {
+  // A run that advances (Play or Step) takes the playhead along.
+  if (_hasSample && _lastSample.time != _playheadSimTime) {
+    _playheadTime = _lastSample.time;
+    _playheadSimTime = _lastSample.time;
+  }
+}
+
+bool TunerEditor::HasPlayhead() const {
+  return _tunerAsset->GetSceneAsset() != nullptr;
+}
+
+int TunerEditor::SelectedTimelineKey(size_t index) const {
+  if (SelectedLoadIndex() != static_cast<int>(index)) {
+    return -1;
+  }
+  tuner::LoadSpec const& load = _tunerAsset->GetSpec().loads[index];
+  int const key = KeysAreWaypoints(load) ? _selectedWaypoint : _selectedKey;
+  return key >= 0 && key < KeyCount(load) ? key : -1;
+}
+
+void TunerEditor::SelectTimelineKey(size_t index, int key) {
+  SelectLoad(static_cast<int>(index));
+  tuner::LoadSpec& load = _tunerAsset->GetSpec().loads[index];
+  if (KeysAreWaypoints(load)) {
+    _selectedWaypoint = key;
+  } else {
+    _selectedKey = key;
+  }
+  std::vector<double*> const times = KeyTimes(load);
+  if (key >= 0 && key < mochi::isize(times)) {
+    _playheadTime = *times[static_cast<size_t>(key)];
+  }
+}
+
+int TunerEditor::SortTimelineKeys(size_t index, int key) {
+  tuner::LoadSpec& load = _tunerAsset->GetSpec().loads[index];
+  auto const tracked = static_cast<size_t>(key);
+  if (KeysAreWaypoints(load)) {
+    return SortByTimeTracking(load.waypoints, tracked);
+  }
+  return load.type == tuner::LoadType::ControllerInput
+      ? SortByTimeTracking(load.inputKeys, tracked)
+      : SortByTimeTracking(load.profile.keys, tracked);
+}
+
+void TunerEditor::UpdateShadows() {
+  UpdatePlayhead();
+  SceneAsset const* const scene = _tunerAsset->GetSceneAsset();
+  std::vector<std::unique_ptr<BotShadow>> shadows;
+  auto const& loads = _tunerAsset->GetSpec().loads;
+  for (superdex::robotics::BotEntry const& entry : _showKeyPoses&& scene != nullptr
+           ? mochi::MakeConstSpan(scene->GetPrefab().bots)
+           : mochi::Span<superdex::robotics::BotEntry const>{}) {
+    bool const driven = std::any_of(loads.begin(), loads.end(), [&](tuner::LoadSpec const& load) {
+      return load.enabled && load.type == tuner::LoadType::ControllerInput &&
+          FindControllerBot(*scene, std::string_view(load.target)) == &entry;
+    });
+    BotAsset const* const asset = driven
+        ? _studio->GetAssetManager().FindAssetByPath<BotAsset>(mochi::Path{std::string(entry.path)})
+        : nullptr;
+    // A bot being edited may not build; its derived data then does not fit it.
+    if (asset == nullptr || !asset->IsBuildOk()) {
+      continue;
     }
-    _keyPoseSkinBones = ComputeSkinBoneLinkRemap(bot);
-    _keyPoseStagedRoot = staged.worldFromRoot;
-    _keyPoseBot = botKey;
-    _keyPose.reset();
+    superdex::robotics::BotPrefab const& bot = asset->GetBotPrefab();
+    std::string const key =
+        std::string(std::string_view(entry.name)) + "|" + asset->GetPath().ToString();
+    auto const existing = std::find_if(
+        _shadows.begin(), _shadows.end(), [&](std::unique_ptr<BotShadow> const& shadow) {
+          return shadow != nullptr && shadow->bot == key;
+        });
+    std::unique_ptr<BotShadow> shadow;
+    if (existing != _shadows.end()) {
+      shadow = std::move(*existing);
+    } else {
+      shadow = std::make_unique<BotShadow>(_studio);
+      shadow->bot = key;
+      StageShadow(*shadow, bot, entry);
+    }
+    PoseShadow(*shadow, bot, FindShownPose(entry, bot, *shadow));
+    shadows.push_back(std::move(shadow));
   }
-  if (_keyPose == shown->key && _keyPoseRoot == shown->worldFromRoot) {
+  // The bots no longer driven lose theirs.
+  _shadows = std::move(shadows);
+  // Each says what it is, at its tool: the time it shows, or that IK cannot reach it.
+  auto const& converter = _studio->GetEditorToRendererSpaceConverter();
+  for (std::unique_ptr<BotShadow> const& shadow : _shadows) {
+    if (!shadow->shown || shadow->shown->labelLink < 0 || shadow->stage.GetNumActors() == 0) {
+      continue;
+    }
+    bool const reached = shadow->shown->reached;
+    char label[64];
+    std::snprintf(
+        label,
+        sizeof(label),
+        reached ? "target at %.2f s" : "out of reach at %.2f s",
+        _playheadTime);
+    _viewport->GetDebugText()->Draw(
+        mochi_renderer::ToFilament<float>(converter.TranslationToOutput(shadow->labelWorld)),
+        label,
+        reached ? filament::math::float4{0.55f, 0.8f, 1.0f, 1.0f}
+                : filament::math::float4{1.0f, 0.6f, 0.2f, 1.0f},
+        ImVec2{0.0f, 18.0f});
+  }
+}
+
+void TunerEditor::StageShadow(
+    BotShadow& shadow,
+    superdex::robotics::BotPrefab const& bot,
+    superdex::robotics::BotEntry const& entry) {
+  superdex::robotics::BotPrefab staged = bot;
+  staged.worldFromRoot = entry.parentFromBot;
+  shadow.stage.BindRenderScene(_viewport->GetRenderScene());
+  shadow.stage.StageBot(staged, _stageType, /*hideSkinCoveredLinks=*/true);
+  // See-through like the IK editor's input bot, drawn behind the bot where the two coincide, and
+  // not picked, framed or counted in the ground height.
+  auto const material =
+      _studio->GetResourceManager().CreateLitSeeThroughMaterial({0.25f, 0.65f, 0.95f}, 0.35f);
+  material->Get()->setPolygonOffset(1.0f, 4.0f);
+  for (StagedActor const& actor : shadow.stage.GetActors()) {
+    if (IsSkinStagedName(actor.name)) {
+      shadow.skinName = actor.name;
+    } else {
+      shadow.linkNames.push_back(actor.name);
+    }
+    // Wireframes keep their own material.
+    bool const wireframe =
+        actor.skinnedCollisionMesh != nullptr || actor.dynamicWireframeMesh != nullptr;
+    for (StagedActor::Instance const* instance : {&actor.render, &actor.shape, &actor.sdf}) {
+      if (instance->sceneObject == nullptr) {
+        continue;
+      }
+      if (!(wireframe && instance == &actor.shape)) {
+        instance->sceneObject->SetMaterial(material);
+      }
+      instance->sceneObject->SetShadows(false, false);
+      instance->sceneObject->_internal = true;
+    }
+  }
+  shadow.skinBones = ComputeSkinBoneLinkRemap(bot);
+  shadow.stagedRoot = staged.worldFromRoot;
+  shadow.stage.HideAllActors();
+}
+
+void TunerEditor::PoseShadow(
+    BotShadow& shadow,
+    superdex::robotics::BotPrefab const& bot,
+    std::optional<ShownPose> shown) {
+  if (shown == shadow.shown) {
     return;
   }
   std::vector<mochi::TransformRT> worldFromLinks;
   superdex::Error error;
-  ComputeLinkWorldTransforms(
-      bot, shown->worldFromRoot, mochi::MakeConstSpan(shown->key.pose), worldFromLinks, error);
-  if (!error.IsOK() || worldFromLinks.size() != _keyPoseLinkNames.size()) {
+  if (shown) {
+    ComputeLinkWorldTransforms(
+        bot, shown->worldFromRoot, mochi::MakeConstSpan(shown->key.pose), worldFromLinks, error);
+  }
+  if (!shown || !error.IsOK() || worldFromLinks.size() != shadow.linkNames.size()) {
     // Better no shadow than one at the wrong pose; tried again next frame.
-    _keyPoseStage.HideAllActors();
-    _keyPose.reset();
+    shadow.stage.HideAllActors();
+    shadow.shown.reset();
     return;
   }
-  // Only the links the key moves, and the skin over them; the others coincide with the bot's.
+  // Only the links that differ from the bot, and the skin over them; the others coincide with it.
   std::vector<bool> const& moved = shown->key.movedLinks;
-  if (!_keyPose || _keyPose->movedLinks != moved) {
+  if (!shadow.shown || shadow.shown->key.movedLinks != moved) {
     bool const anyMoved = std::find(moved.begin(), moved.end(), true) != moved.end();
-    for (int i = 0; i < _keyPoseStage.GetNumActors(); ++i) {
-      _keyPoseStage.SetActorHidden(
+    for (int i = 0; i < shadow.stage.GetNumActors(); ++i) {
+      shadow.stage.SetActorHidden(
           i, !(i < mochi::isize(moved) ? moved[static_cast<size_t>(i)] : anyMoved));
     }
   }
-  _keyPose = std::move(shown->key);
-  _keyPoseRoot = shown->worldFromRoot;
+  shadow.shown = std::move(shown);
+  int const labelLink = shadow.shown->labelLink;
+  if (labelLink >= 0 && labelLink < mochi::isize(worldFromLinks)) {
+    shadow.labelWorld =
+        worldFromLinks[static_cast<size_t>(labelLink)].TransformPoint(shadow.shown->labelPoint);
+  }
   auto const& converter = _studio->GetEditorToRendererSpaceConverter();
-  _keyPoseStage.ApplyWorldTransforms(
-      mochi::MakeConstSpan(_keyPoseLinkNames), mochi::MakeConstSpan(worldFromLinks), converter);
-  int const skin = _keyPoseStage.FindIndexByName(_keyPoseSkinName);
+  shadow.stage.ApplyWorldTransforms(
+      mochi::MakeConstSpan(shadow.linkNames), mochi::MakeConstSpan(worldFromLinks), converter);
+  int const skin = shadow.stage.FindIndexByName(shadow.skinName);
   if (skin < 0) {
     return;
   }
   // The skin moves with the root (it is staged at its rest frame there) and bends with its bones.
-  StagedActor const& skinActor = _keyPoseStage.GetActors()[static_cast<size_t>(skin)];
-  _keyPoseStage.ApplyWorldTransform(
-      _keyPoseSkinName,
-      _keyPoseRoot * mochi::Invert(_keyPoseStagedRoot) * skinActor.defaultWorldTransform,
+  StagedActor const& skinActor = shadow.stage.GetActors()[static_cast<size_t>(skin)];
+  shadow.stage.ApplyWorldTransform(
+      shadow.skinName,
+      shadow.shown->worldFromRoot * mochi::Invert(shadow.stagedRoot) *
+          skinActor.defaultWorldTransform,
       converter);
   SkinnedPoseUpdate update;
-  update.name = _keyPoseSkinName;
+  update.name = shadow.skinName;
   ComputeSkinBoneTransforms(
       mochi::MakeConstSpan(worldFromLinks),
-      mochi::MakeConstSpan(_keyPoseSkinBones),
+      mochi::MakeConstSpan(shadow.skinBones),
       update.linkWorldTransforms);
   std::array<SkinnedPoseUpdate, 1> const updates{std::move(update)};
-  _keyPoseStage.ApplySkinnedPose(mochi::MakeConstSpan(updates), converter);
+  shadow.stage.ApplySkinnedPose(mochi::MakeConstSpan(updates), converter);
 }
 
 int TunerEditor::SelectedStopBoxIndex() const {
@@ -2378,6 +2704,7 @@ void TunerEditor::OnLoadGizmoDelta(mochi::TransformRT const& delta) {
     mochi::TransformRT const moved = mochi::Invert(root) * delta * root * WaypointPose(waypoint);
     waypoint.position = moved.GetTranslation();
     waypoint.rotation = moved.GetRotation().ToRotationVector();
+    _playheadTime = waypoint.time;
     OnSpecEdited(false);
     return;
   }
@@ -3498,13 +3825,11 @@ void TunerEditor::ShowWaypointList(
   auto& waypoints = load.waypoints;
   bool const isSelectedLoad = SelectedLoadIndex() == static_cast<int>(index);
   int const current = isSelectedLoad ? SelectedWaypointIndex() : -1;
-  auto const select = [&](int waypoint) {
-    SelectLoad(static_cast<int>(index));
-    _selectedWaypoint = waypoint;
-  };
+  // A controller's waypoints are on the Timeline; a pose path's strip also shows its drive modes.
+  auto const select = [&](int waypoint) { SelectTimelineKey(index, waypoint); };
   if (waypoints.empty()) {
     ImGui::TextUnformatted("No waypoints yet. Add one below.");
-  } else {
+  } else if (isPath) {
     ShowWaypointTimeline(index, false, changed);
   }
 
@@ -3548,8 +3873,11 @@ void TunerEditor::ShowWaypointList(
 
       ImGui::TableNextColumn();
       ImGui::SetNextItemWidth(-FLT_MIN);
-      changed |= ImGui::DragScalar(
-          "##time", ImGuiDataType_Double, &waypoint.time, 0.01f, &minTime, nullptr, "%.3f s");
+      if (ImGui::DragScalar(
+              "##time", ImGuiDataType_Double, &waypoint.time, 0.01f, &minTime, nullptr, "%.3f s")) {
+        _playheadTime = waypoint.time;
+        changed = true;
+      }
       selectOnActivate();
       if (ImGui::IsItemDeactivatedAfterEdit()) {
         sortAfterEdit = id;
@@ -3635,6 +3963,7 @@ void TunerEditor::ShowWaypointList(
   ImGui::BeginDisabled(selected < 0 || !currentPose);
   if (ImGui::Button(ICON_FA_CROSSHAIRS " Set to Current Pose")) {
     setToCurrent(waypoints[static_cast<size_t>(selected)]);
+    _playheadTime = waypoints[static_cast<size_t>(selected)].time;
     changed = true;
   }
   ImGui::EndDisabled();
@@ -3643,6 +3972,24 @@ void TunerEditor::ShowWaypointList(
           ? "Set the selected waypoint to the body's current pose. Will use live pose while "
             "simulating."
           : "Set the selected waypoint to the tool's pose. Will use live pose while simulating.");
+  if (!isPath) {
+    tuner::ControllerTarget const* const controller = FindController(load.target);
+    std::optional<mochi::DynamicArray<real>> const atPlayhead =
+        controller == nullptr ? std::nullopt : InputAt(load, *controller, _playheadTime);
+    ImGui::BeginDisabled(!atPlayhead);
+    if (ImGui::Button(ICON_FA_PLUS " At Playhead")) {
+      tuner::PoseWaypoint waypoint = waypoints.empty() ? tuner::PoseWaypoint{} : waypoints.back();
+      mochi::TransformRT const pose = InputPose(*atPlayhead);
+      waypoint.time = _playheadTime;
+      waypoint.position = pose.GetTranslation();
+      waypoint.rotation = pose.GetRotation().ToRotationVector();
+      waypoints.push_back(waypoint);
+      SelectTimelineKey(index, SortByTimeTracking(waypoints, waypoints.size() - 1));
+      changed = true;
+    }
+    ImGui::EndDisabled();
+    Tooltip("Add a waypoint at the playhead, at the tool pose the path asks for then.");
+  }
 
   if (selected >= 0) {
     tuner::PoseWaypoint& waypoint = waypoints[static_cast<size_t>(selected)];
@@ -3650,7 +3997,10 @@ void TunerEditor::ShowWaypointList(
     ImGui::Text("Waypoint %d", selected);
     ImGui::SameLine();
     ImGui::Text("at %.3f s", waypoint.time);
-    changed |= ImGui::DragRealXYZ("Position", waypoint.position, 0.001f, 0.0f, 0.0f, "%.4f m");
+    if (ImGui::DragRealXYZ("Position", waypoint.position, 0.001f, 0.0f, 0.0f, "%.4f m")) {
+      _playheadTime = waypoint.time;
+      changed = true;
+    }
     Tooltip(
         isPath
             ? "Where the Grab Point should be, in world space."
@@ -3659,6 +4009,7 @@ void TunerEditor::ShowWaypointList(
     mochi::Quaternion rotation = mochi::Quaternion::FromRotationVector(waypoint.rotation);
     if (ImGui::DragQuaternion("Rotation", rotation)) {
       waypoint.rotation = rotation.ToRotationVector();
+      _playheadTime = waypoint.time;
       changed = true;
     }
     Tooltip(
@@ -3697,7 +4048,13 @@ void TunerEditor::ShowWaypointTimeline(size_t index, bool compact, bool& changed
       ImPlotAxisFlags_Lock | ImPlotAxisFlags_NoMenus |
           (compact ? ImPlotAxisFlags_NoDecorations : ImPlotAxisFlags_None),
       ImPlotAxisFlags_Lock | ImPlotAxisFlags_NoDecorations);
-  ImPlot::SetupAxisLimits(ImAxis_X1, 0.0, end, ImPlotCond_Always);
+  // Follows the Timeline's zoom.
+  bool const zoomed = _timelineViewMax > _timelineViewMin;
+  ImPlot::SetupAxisLimits(
+      ImAxis_X1,
+      zoomed ? _timelineViewMin : 0.0,
+      zoomed ? _timelineViewMax : end,
+      ImPlotCond_Always);
   ImPlot::SetupAxisLimits(ImAxis_Y1, 0.0, 1.0, ImPlotCond_Always);
 
   // Each waypoint's drive mode holds until the next; the first's also covers the time before it.
@@ -3713,6 +4070,10 @@ void TunerEditor::ShowWaypointTimeline(size_t index, bool compact, bool& changed
   }
   ImPlot::PopPlotClipRect();
 
+  if (HasPlayhead()) {
+    double playhead = _playheadTime;
+    ImPlot::DragLineX(1, &playhead, kPlayheadColor, 1, ImPlotDragToolFlags_NoInputs);
+  }
   if (_hasSample) {
     double now = _lastSample.time;
     ImPlot::DragLineX(0, &now, ImVec4(1, 1, 0, 1), 1, ImPlotDragToolFlags_NoInputs);
@@ -3774,6 +4135,220 @@ void TunerEditor::ShowWaypointTimeline(size_t index, bool compact, bool& changed
       _selectedWaypoint = SortByTimeTracking(waypoints, static_cast<size_t>(_timelineDragWaypoint));
     }
     _timelineDragWaypoint = -1;
+  }
+}
+
+void TunerEditor::ShowTimeline(bool& changed) {
+  auto& loads = _tunerAsset->GetSpec().loads;
+  std::vector<size_t> rows;
+  std::vector<double> keyTimes;
+  double end = std::max(_tunerAsset->GetSpec().run.duration, kTimeEpsilon);
+  for (size_t i = 0; i < loads.size(); ++i) {
+    std::vector<double*> const times = KeyTimes(loads[i]);
+    if (!times.empty()) {
+      rows.push_back(i);
+    }
+    for (double const* time : times) {
+      end = std::max(end, *time);
+      keyTimes.push_back(*time);
+    }
+  }
+  if (rows.empty()) {
+    return;
+  }
+  // Opens on the keys, without a long hold after the last but one; the playhead on the first.
+  std::sort(keyTimes.begin(), keyTimes.end());
+  keyTimes.erase(std::unique(keyTimes.begin(), keyTimes.end()), keyTimes.end());
+  double const lastButOne = keyTimes.size() >= 2 ? keyTimes[keyTimes.size() - 2] : 0.0;
+  double const fitted =
+      lastButOne > 0 && keyTimes.back() > 3 * lastButOne ? std::min(end, 1.25 * lastButOne) : end;
+  if (!_playheadPlaced) {
+    _playheadTime = keyTimes.front();
+    _playheadPlaced = true;
+  }
+  // Refits when the timeline's end changes, once an edit that moves it (a key dragged past the
+  // run's end) is done.
+  if (end != _timelineEnd && !ImGui::IsAnyItemActive()) {
+    _timelineResetTo = _timelineEnd > 0 ? fitted : 0.0;
+    _timelineEnd = end;
+  }
+  bool const playhead = HasPlayhead();
+
+  ImGui::AlignTextToFramePadding();
+  ImGui::TextUnformatted("Timeline");
+  ImGui::SameLine();
+  ImGui::TextDisabled("(?)");
+  Tooltip(
+      playhead
+          ? "Every keyed load's keys over the run, and the playhead (white): the blue shadow in "
+            "the viewport is each robot at the playhead, where all its Controller Inputs ask it to "
+            "be then (the target they give its controllers, not where it will get).\n"
+            "Click or drag the strip to move the playhead. Click a key to select it and move the "
+            "playhead to it; edit a key to see it; drag a key to retime it. A run that advances "
+            "(Play or Step) moves the playhead.\n"
+            "Scroll to zoom in time, drag with the right button to pan, double-click to see the "
+            "whole run."
+          : "Every keyed load's keys over the run. Click a key to select it; drag it to retime "
+            "it.\n"
+            "Scroll to zoom in time, drag with the right button to pan, double-click to see the "
+            "whole run.");
+  if (_timelineViewMax > _timelineViewMin) {
+    ImGui::SameLine();
+    ImGui::TextDisabled("%.1f to %.1f s of %.0f s", _timelineViewMin, _timelineViewMax, end);
+  }
+  float const rowHeight = ImGui::GetFrameHeight();
+  // One view per tuner. Left: scrub and pick keys; right: pan; wheel: zoom.
+  ImGui::PushID(_tunerAsset->GetPath().ToString().c_str());
+  ImPlotInputMap& inputs = ImPlot::GetInputMap();
+  ImPlotInputMap const defaultInputs = inputs;
+  inputs.Pan = ImGuiMouseButton_Right;
+  inputs.Fit = ImGuiMouseButton_Middle;
+  if (!ImPlot::BeginPlot(
+          "##timeline",
+          ImVec2(-1, rowHeight * static_cast<float>(rows.size()) + 2.5f * rowHeight),
+          ImPlotFlags_NoLegend | ImPlotFlags_NoMenus | ImPlotFlags_NoBoxSelect |
+              ImPlotFlags_NoMouseText)) {
+    inputs = defaultInputs;
+    ImGui::PopID();
+    return;
+  }
+  // A row per keyed load, the first at the top, named on the left.
+  std::vector<double> ticks;
+  std::vector<std::string> names;
+  for (size_t r = 0; r < rows.size(); ++r) {
+    ticks.push_back(static_cast<double>(rows.size() - 1 - r));
+    names.emplace_back(std::string_view(loads[rows[r]].name));
+  }
+  std::vector<char const*> labels;
+  for (std::string const& name : names) {
+    labels.push_back(name.c_str());
+  }
+  ImPlot::SetupAxes(
+      nullptr,
+      nullptr,
+      ImPlotAxisFlags_NoMenus,
+      ImPlotAxisFlags_Lock | ImPlotAxisFlags_NoMenus | ImPlotAxisFlags_NoGridLines);
+  ImPlot::SetupAxisLimits(
+      ImAxis_X1,
+      0.0,
+      _timelineResetTo > 0 ? _timelineResetTo : fitted,
+      _timelineResetTo > 0 ? ImPlotCond_Always : ImPlotCond_Once);
+  ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, 0.0, end);
+  ImPlot::SetupAxisZoomConstraints(ImAxis_X1, std::min(0.25, end), end);
+  ImPlot::SetupAxisLimits(
+      ImAxis_Y1, -0.5, static_cast<double>(rows.size()) - 0.5, ImPlotCond_Always);
+  ImPlot::SetupAxisTicks(ImAxis_Y1, ticks.data(), static_cast<int>(ticks.size()), labels.data());
+  _timelineResetTo = 0.0;
+  ImPlotRect const view = ImPlot::GetPlotLimits();
+  bool const whole = view.X.Min <= 0.0 && view.X.Max >= end;
+  _timelineViewMin = whole ? 0.0 : view.X.Min;
+  _timelineViewMax = whole ? 0.0 : view.X.Max;
+
+  ImDrawList* drawList = ImPlot::GetPlotDrawList();
+  ImVec4 const selectedColor{
+      kSelectedLoadColor.x, kSelectedLoadColor.y, kSelectedLoadColor.z, kSelectedLoadColor.w};
+  int const selectedLoad = SelectedLoadIndex();
+  bool anyHeld = false;
+  bool anyHovered = false;
+  int id = 0;
+  for (size_t r = 0; r < rows.size(); ++r) {
+    size_t const i = rows[r];
+    tuner::LoadSpec const& load = loads[i];
+    std::vector<double*> const times = KeyTimes(loads[i]);
+    double const row = ticks[r];
+    ImVec4 color = LoadAccent(load.type);
+    if (!load.enabled) {
+      color.w = 0.35f;
+    }
+    // The load's span over the run: to its last key, then dimmer where its last key holds.
+    double last = 0.0;
+    for (double const* time : times) {
+      last = std::max(last, *time);
+    }
+    ImVec4 span = color;
+    span.w *= 0.35f;
+    ImVec4 hold = color;
+    hold.w *= 0.15f;
+    ImPlot::PushPlotClipRect();
+    drawList->AddLine(
+        ImPlot::PlotToPixels(0.0, row),
+        ImPlot::PlotToPixels(last, row),
+        ImGui::GetColorU32(span),
+        3.0f);
+    drawList->AddLine(
+        ImPlot::PlotToPixels(last, row),
+        ImPlot::PlotToPixels(end, row),
+        ImGui::GetColorU32(hold),
+        3.0f);
+    ImPlot::PopPlotClipRect();
+    int const current = SelectedTimelineKey(i);
+    for (size_t k = 0; k < times.size(); ++k) {
+      bool const isSelected = static_cast<int>(i) == selectedLoad && static_cast<int>(k) == current;
+      double x = *times[k];
+      double y = row;
+      bool clicked = false;
+      bool hovered = false;
+      bool held = false;
+      if (ImPlot::DragPoint(
+              id++,
+              &x,
+              &y,
+              isSelected ? selectedColor : color,
+              isSelected ? 6.0f : 4.5f,
+              ImPlotDragToolFlags_Delayed,
+              &clicked,
+              &hovered,
+              &held)) {
+        *times[k] = mochi::Clamp(x, 0.0, end);
+        _playheadTime = *times[k];
+        changed = true;
+      }
+      if (clicked || held) {
+        SelectTimelineKey(i, static_cast<int>(k));
+        _loadCards.cards[i].collapsed = false;
+      }
+      if (held) {
+        _overviewDragKey = static_cast<int>(k);
+        anyHeld = true;
+      }
+      anyHovered |= hovered;
+    }
+  }
+  if (!anyHovered && ImPlot::IsPlotHovered() && ImGui::IsMouseDoubleClicked(0)) {
+    _timelineResetTo = end;
+  }
+  // The playhead: drag it, or click or drag the strip. A playing run moves it.
+  bool const playing = _mochiScene.IsSimulating() && !_mochiScene.IsPaused();
+  if (playhead) {
+    if (ImPlot::DragLineX(
+            id++,
+            &_playheadTime,
+            kPlayheadColor,
+            2,
+            playing ? ImPlotDragToolFlags_NoInputs : ImPlotDragToolFlags_None)) {
+      _playheadTime = SnapPlayhead(_playheadTime, end);
+    }
+    ImPlot::TagX(_playheadTime, kPlayheadColor, "%.2f s", _playheadTime);
+    if (!playing && !anyHovered && ImPlot::IsPlotHovered() && ImGui::IsMouseClicked(0)) {
+      _scrubbing = true;
+    }
+  }
+  _scrubbing = _scrubbing && playhead && !playing && ImGui::IsMouseDown(0);
+  if (_scrubbing) {
+    _playheadTime = SnapPlayhead(ImPlot::GetPlotMousePos().x, end);
+  }
+  ImPlot::EndPlot();
+  // ImPlot reads the input map until the plot ends.
+  inputs = defaultInputs;
+  ImGui::PopID();
+  // After a drag, the dragged key's load is the selected one.
+  if (_overviewDragKey >= 0 && !anyHeld) {
+    if (selectedLoad >= 0 &&
+        _overviewDragKey < mochi::isize(KeyTimes(loads[static_cast<size_t>(selectedLoad)]))) {
+      size_t const i = static_cast<size_t>(selectedLoad);
+      SelectTimelineKey(i, SortTimelineKeys(i, _overviewDragKey));
+    }
+    _overviewDragKey = -1;
   }
 }
 
@@ -3841,13 +4416,11 @@ void TunerEditor::ShowInputKeyEditor(
     }
   }
 
+  // The keys are on the Timeline.
   ImGui::SeparatorText("Keys");
   bool const isSelectedLoad = SelectedLoadIndex() == static_cast<int>(index);
   int const current = isSelectedLoad ? SelectedInputKeyIndex() : -1;
-  auto const select = [&](int key) {
-    SelectLoad(static_cast<int>(index));
-    _selectedKey = key;
-  };
+  auto const select = [&](int key) { SelectTimelineKey(index, key); };
   if (keys.empty()) {
     ImGui::TextUnformatted("No keys yet. Add one below.");
   }
@@ -3882,8 +4455,11 @@ void TunerEditor::ShowInputKeyEditor(
       }
       ImGui::TableNextColumn();
       ImGui::SetNextItemWidth(-FLT_MIN);
-      changed |= ImGui::DragScalar(
-          "##time", ImGuiDataType_Double, &key.time, 0.01f, &minTime, nullptr, "%.3f s");
+      if (ImGui::DragScalar(
+              "##time", ImGuiDataType_Double, &key.time, 0.01f, &minTime, nullptr, "%.3f s")) {
+        _playheadTime = key.time;
+        changed = true;
+      }
       selectOnActivate();
       if (ImGui::IsItemDeactivatedAfterEdit()) {
         sortAfterEdit = id;
@@ -3961,6 +4537,26 @@ void TunerEditor::ShowInputKeyEditor(
   Tooltip(
       "Set the shown key to the joints' positions: live while simulating, else where they "
       "start.");
+  std::optional<mochi::DynamicArray<real>> const atPlayhead =
+      InputAt(load, controller, _playheadTime);
+  bool const fits = atPlayhead && std::all_of(entries.begin(), entries.end(), [&](int e) {
+                      return e >= 0 && e < mochi::isize(*atPlayhead);
+                    });
+  ImGui::SameLine();
+  ImGui::BeginDisabled(!fits);
+  if (ImGui::Button(ICON_FA_PLUS " At Playhead")) {
+    tuner::InputKey key = keys.back();
+    key.time = _playheadTime;
+    key.values.clear();
+    for (int const e : entries) {
+      key.values.push_back((*atPlayhead)[static_cast<size_t>(e)]);
+    }
+    keys.push_back(std::move(key));
+    select(SortByTimeTracking(keys, keys.size() - 1));
+    changed = true;
+  }
+  ImGui::EndDisabled();
+  Tooltip("Add a key at the playhead, with the joint positions the keys ask for then.");
   tuner::InputKey& key = keys[shown];
   ImGui::Text("Key %d at %.3f s", static_cast<int>(shown), key.time);
   if (key.values.size() != entries.size()) {
@@ -4032,7 +4628,9 @@ void TunerEditor::ShowLoadsWindow(bool* open) {
           "apply on the next run.");
     }
   }
+  ShowTimeline(changed);
   ImGui::Separator();
+  ImGui::BeginChild("##loadCards");
   if (loads.empty()) {
     ImGui::TextDisabled("No loads yet. Add one below.");
   }
@@ -4093,24 +4691,14 @@ void TunerEditor::ShowLoadsWindow(bool* open) {
       Tooltip("Add a copy of this load right below it.");
       ImGui::EndDisabled();
     } else {
-      // Collapsed: a short read-only preview of what the load does over the run.
+      // Collapsed: a short read-only preview of what the load does over the run. A controller
+      // input's keys show on the Timeline.
       ImGui::BeginDisabled(!load.enabled);
-      if (load.type == tuner::LoadType::ControllerInput) {
-        bool unused = false;
-        if (!load.waypoints.empty()) {
-          ShowWaypointTimeline(i, true, unused);
-        } else if (!load.inputKeys.empty()) {
-          ImGui::Text(
-              "%d keys, to %.2f s",
-              static_cast<int>(load.inputKeys.size()),
-              load.inputKeys.back().time);
-        }
-      } else if (load.type != tuner::LoadType::PosePath) {
-        bool unused = false;
-        ShowProfilePreview(i, true, unused);
-      } else if (!load.waypoints.empty()) {
-        bool unused = false;
+      bool unused = false;
+      if (load.type == tuner::LoadType::PosePath) {
         ShowWaypointTimeline(i, true, unused);
+      } else if (load.type != tuner::LoadType::ControllerInput) {
+        ShowProfilePreview(i, true, unused);
       }
       ImGui::EndDisabled();
     }
@@ -4201,6 +4789,7 @@ void TunerEditor::ShowLoadsWindow(bool* open) {
   Tooltip(
       "Adds a load, targets the highlighted body if applicable. A Controller Input drives a "
       "controller of the scene.");
+  ImGui::EndChild();
 
   if (changed || structural) {
     OnSpecEdited(structural);
