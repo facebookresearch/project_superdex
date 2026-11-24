@@ -23,10 +23,6 @@
 
 namespace mochi {
 
-// Forward declarations
-template <typename Bv>
-class BvhTree;
-
 /*
 Base class for maps from deformed to reference space
 */
@@ -46,16 +42,14 @@ class BaseMap {
   // This function receives a vector of dofs, and updates the mapping.
   virtual void UpdateMap(Span<real const> dofs) = 0;
 
-  // This function receives a vector of query points in deformed space (originalPoints) and their
-  // indices (originalInds) and maps them to reference space. Some points may lie outside the
+  // This function receives a vector of query points in deformed space (points) and their
+  // indices (inds) and maps them to reference space. Some points may lie outside the
   // definition of the map, and they may be discarded. The function returns the mapped positions
   // (outMappedPoints), the indices of the mapped points (outInds), and (optional) the mapping
-  // Jacobians outMapJac and outDofsJac. The method may receive an acceleration data structure for
-  // the points (pointBvh).
+  // Jacobians outMapJac and outDofsJac.
   virtual void MapPoints(
-      Span<Real3 const> originalPoints,
-      Span<int const> originalInds,
-      BvhTree<Aabb> const* pointBvh,
+      Span<Real3 const> points,
+      Span<int const> inds,
       DynamicArray<Real3>& outMappedPoints,
       DynamicArray<int>& outInds,
       DynamicArray<VMatrix3x3r>* outMapJac,

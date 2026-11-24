@@ -136,9 +136,8 @@ class DeepFlowMap : public BaseMap {
   }
 
   void MapPoints(
-      Span<Real3 const> originalPoints,
-      Span<int const> originalInds,
-      BvhTree<Aabb> const* pointBvh,
+      Span<Real3 const> points,
+      Span<int const> inds,
       DynamicArray<Real3>& outMappedPoints,
       DynamicArray<int>& outInds,
       DynamicArray<VMatrix3x3r>* outMapJac,

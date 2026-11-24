@@ -244,9 +244,8 @@ void DeepFlowMap::UpdateMap(Span<real const> dofs) {
 }
 
 void DeepFlowMap::MapPoints(
-    Span<Real3 const> originalPoints,
-    Span<int const> originalInds,
-    BvhTree<Aabb> const* /*pointBvh*/,
+    Span<Real3 const> points,
+    Span<int const> inds,
     DynamicArray<Real3>& outMappedPoints,
     DynamicArray<int>& outInds,
     DynamicArray<VMatrix3x3r>* outMapJac,
@@ -254,7 +253,7 @@ void DeepFlowMap::MapPoints(
   MOCHI_PROFILE_SCOPE();
 
   // If no points are passed, return empty outputs
-  if (originalPoints.empty()) {
+  if (points.empty()) {
     outMappedPoints.clear();
     outInds.clear();
     if (outMapJac) {
@@ -267,22 +266,21 @@ void DeepFlowMap::MapPoints(
   }
 
   // Transform the input to fill the unit sphere that was used to train the network
-  DynamicArray<Real3> points;
-  points.resize_noinit(originalPoints.size());
+  DynamicArray<Real3> pointsLocal;
+  pointsLocal.resize_noinit(points.size());
   real totalScale = _scale * flow->objFromLocalScale;
   Real3 totalShift = _scale * flow->objFromLocalShift;
-  std::ranges::transform(originalPoints, points.begin(), [&](auto& point) {
-    return (point - totalShift) / totalScale;
-  });
+  std::ranges::transform(
+      points, pointsLocal.begin(), [&](auto& point) { return (point - totalShift) / totalScale; });
 
-  DynamicArray<int> inds(originalInds.begin(), originalInds.end());
-  DynamicArray<Real3> originalPointsCopy(originalPoints.begin(), originalPoints.end());
-  outInds = inds;
+  DynamicArray<int> indsCopy(inds.begin(), inds.end());
+  DynamicArray<Real3> pointsWorld(points.begin(), points.end());
+  outInds = indsCopy;
   DynamicArray<real> result;
   flow->RunQuery(
-      std::move(points),
-      std::move(originalPointsCopy),
-      std::move(inds),
+      std::move(pointsLocal),
+      std::move(pointsWorld),
+      std::move(indsCopy),
       _deformationDescriptor,
       result);
   TransformResult(result, outMappedPoints, outMapJac, outDofsJac);

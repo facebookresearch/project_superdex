@@ -1671,7 +1671,6 @@ void mochi::FindPointContactsMapped(
   collider->mapping->MapPoints(
       Span{pointsCulled.data(), numPointsCulled},
       Span{indsCulled.data(), numPointsCulled},
-      nullptr,
       outSdf ? pointsMapped : outContacts,
       outSdf ? indsMapped : outIndices,
       outMapJac,

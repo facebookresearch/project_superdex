@@ -68,9 +68,8 @@ class TetrahedralMap : public BaseMap {
   // Functions of BaseMap
   void UpdateMap(Span<real const> dofs) override;
   void MapPoints(
-      Span<Real3 const> originalPoints,
-      Span<int const> originalInds,
-      BvhTree<Aabb> const* pointBvh,
+      Span<Real3 const> points,
+      Span<int const> inds,
       DynamicArray<Real3>& outMappedPoints,
       DynamicArray<int>& outInds,
       DynamicArray<VMatrix3x3r>* outMapJac,

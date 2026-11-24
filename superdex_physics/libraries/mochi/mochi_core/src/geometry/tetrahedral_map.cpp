@@ -78,54 +78,14 @@ void TetrahedralMap::UpdateMap(Span<real const> dofs) {
 }
 
 void TetrahedralMap::MapPoints(
-    Span<Real3 const> originalPoints,
-    Span<int const> originalInds,
-    BvhTree<Aabb> const* pointBvh,
+    Span<Real3 const> points,
+    Span<int const> inds,
     DynamicArray<Real3>& outMappedPoints,
     DynamicArray<int>& outInds,
     DynamicArray<VMatrix3x3r>* outMapJac,
     DynamicArray<ColliderJacDofs>* outDofsJac) const {
   static_assert(
       ColliderJacDofs::kMaxDoFs >= 12, "ColliderJacDofs::kMaxDoFs is not sufficiently large");
-
-  // Points and indices to be mapped (in case we do local early culling)
-  DynamicArray<Real3> pointsCulled;
-  DynamicArray<int> indsCulled;
-  Span<Real3 const> points;
-  Span<int const> inds;
-
-  // If no acceleration data structure is provided, build one
-  std::unique_ptr<PointSetAabbObject> aabbTreeObjectPoints;
-  std::unique_ptr<AabbTree> aabbTreePoints;
-  AabbTree const* bvh = pointBvh;
-  if (pointBvh == nullptr) {
-    // First run early culling of points using the root of the AABB tree
-    pointsCulled.reserve(originalPoints.size());
-    indsCulled.reserve(originalPoints.size());
-    auto const& rootBv = _aabbTree->GetRootBv();
-    for (int i = 0; i < isize(originalPoints); i++) {
-      if (ContainsPoint(rootBv, originalPoints[i])) {
-        pointsCulled.push_back(originalPoints[i]);
-        indsCulled.push_back(originalInds[i]);
-      }
-    }
-
-    // Now build the BVH if there are points left
-    if (!pointsCulled.empty()) {
-      aabbTreeObjectPoints = std::make_unique<PointSetAabbObject>(pointsCulled);
-      BvhTreeParams bvhParams;
-      bvhParams.splittingAlgorithm = BvhSplittingAlgorithm::TopDown_Mean;
-      aabbTreePoints = std::make_unique<AabbTree>(aabbTreeObjectPoints.get(), bvhParams);
-      bvh = aabbTreePoints.get();
-    }
-
-    points = pointsCulled;
-    inds = indsCulled;
-  } else {
-    // Use external acceleration data structure, so do not run early culling.
-    points = originalPoints;
-    inds = originalInds;
-  }
 
   DynamicArray<std::tuple<int, int, int, Real3, Vec4r>> result;
   result.reserve(points.size());
@@ -144,20 +104,18 @@ void TetrahedralMap::MapPoints(
       result.emplace_back(pointIndex, inds[pointIndex], tetIndex, pos, b);
     }
   };
-  if (bvh != nullptr) {
-    _aabbTree->Intersect(*bvh, IntersectionCallback);
+  // Map each point through the first tet found that contains it.
+  int pointIndex = 0;
+  int numResults = 0;
+  BvhQueryFn const mapThroughFirstTet = [&](int tetIndex) {
+    if (isize(result) == numResults) {
+      IntersectionCallback(tetIndex, pointIndex);
+    }
+  };
+  for (; pointIndex < isize(points); ++pointIndex) {
+    numResults = isize(result);
+    _aabbTree->Query(Aabb(points[pointIndex], points[pointIndex]), mapThroughFirstTet);
   }
-
-  // Boundary points can be reported by multiple adjacent tetrahedra. Sort by point index so
-  // std::unique keeps one mapping per input point.
-  std::ranges::sort(
-      result, [](auto const& a, auto const& b) { return std::get<0>(a) < std::get<0>(b); });
-  result.erase(
-      std::unique(
-          result.begin(),
-          result.end(),
-          [](auto const& a, auto const& b) { return std::get<0>(a) == std::get<0>(b); }),
-      result.end());
 
   // Reserve output vectors
   outInds.resize_noinit(result.size());

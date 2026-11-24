@@ -272,7 +272,7 @@ class DeepFlowMapTest : public testing::Test {
   }
 
   void RunQuery() {
-    _flowMap->MapPoints(points, inds, nullptr, _outPoints, _outInds, &_outDDefDDef, &_outDDefDDofs);
+    _flowMap->MapPoints(points, inds, _outPoints, _outInds, &_outDDefDDef, &_outDDefDDofs);
   }
 
   void CompareWithPython(
@@ -368,7 +368,7 @@ TEST_IF_F(MOCHI_CAN_TEST_DEEP_FLOW_MAP, DeepFlowMapTest, DeepFlowMap) {
   CompareWithPython(pyMap_Def, pyDrefDdef_Def, pyDdefDdofs_Def, 4e-4_r, 7e-4_r, 3e-4_r);
 
   // Mapping no points clears the outputs of the previous query
-  _flowMap->MapPoints({}, {}, nullptr, _outPoints, _outInds, &_outDDefDDef, &_outDDefDDofs);
+  _flowMap->MapPoints({}, {}, _outPoints, _outInds, &_outDDefDDef, &_outDDefDDofs);
   EXPECT_TRUE(_outPoints.empty());
   EXPECT_TRUE(_outInds.empty());
   EXPECT_TRUE(_outDDefDDef.empty());

@@ -91,32 +91,17 @@ TEST(TetrahedralMap, TetrahedralMap) {
       collResult.sdfInfo,
       collResult.isSdfGradUnitary);
 
-  // Map points with and without input BVH
+  // Map points
   ContactDetectionResult mappedResult;
   DynamicArray<int> indsPoints;
   DynamicArray<Real3> pointsMapped;
-  DynamicArray<Real3> pointsMappedTest;
   tetMap.MapPoints(
       points,
       inds,
-      nullptr,
       pointsMapped,
       indsPoints,
       &mappedResult.jacColliderFromWorld,
       &mappedResult.jacWorldFromDofs);
-  PointSetAabbObject bvhObject(points);
-  BvhTreeParams bvhParams;
-  bvhParams.splittingAlgorithm = BvhSplittingAlgorithm::TopDown_Mean;
-  AabbTree bvh(&bvhObject, bvhParams);
-  tetMap.MapPoints(
-      points,
-      inds,
-      &bvh,
-      pointsMappedTest,
-      indsPoints,
-      &mappedResult.jacColliderFromWorld,
-      &mappedResult.jacWorldFromDofs);
-  EXPECT_TRUE(test::EqualSpan(pointsMapped, pointsMappedTest));
 
   // Query collision against the mapped collider
   FindPointContactsT(
@@ -184,7 +169,6 @@ TEST(TetrahedralMap, TetrahedralMap) {
   tetMap.MapPoints(
       points,
       inds,
-      nullptr,
       pointsMapped,
       indsPoints,
       &mappedResult.jacColliderFromWorld,
@@ -235,7 +219,7 @@ TEST(TetrahedralMap, MapPointsDeduplicatesSharedFaceHits) {
   DynamicArray<int> mappedInds;
   DynamicArray<VMatrix3x3r> mapJac;
   DynamicArray<ColliderJacDofs> dofsJac;
-  tetMap.MapPoints(points, inds, nullptr, mappedPoints, mappedInds, &mapJac, &dofsJac);
+  tetMap.MapPoints(points, inds, mappedPoints, mappedInds, &mapJac, &dofsJac);
 
   EXPECT_EQ(1, mapJac.size());
   EXPECT_EQ(1, dofsJac.size());
