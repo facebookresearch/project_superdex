@@ -83,7 +83,7 @@ void FSuperDexRoboticsEditorModule::StartupModule() {
 
   // register actor factory
   if (GEditor) {
-    auto BotActorFactory = NewObject<USuperDexBotActorFactory>();
+    USuperDexBotActorFactory* BotActorFactory = NewObject<USuperDexBotActorFactory>();
     GEditor->ActorFactories.Add(BotActorFactory);
     if (UPlacementSubsystem* PlacementSubsystem =
             GEditor->GetEditorSubsystem<UPlacementSubsystem>()) {
@@ -120,7 +120,7 @@ void FSuperDexRoboticsEditorModule::ShutdownModule() {
       FModuleManager::GetModulePtr<FAssetToolsModule>("AssetTools");
   if (AssetToolsModule != nullptr) {
     IAssetTools& AssetTools = AssetToolsModule->Get();
-    for (auto Action : RegisteredAssetTypeActions) {
+    for (TSharedRef<IAssetTypeActions> Action : RegisteredAssetTypeActions) {
       AssetTools.UnregisterAssetTypeActions(Action);
     }
   }

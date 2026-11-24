@@ -37,7 +37,8 @@ bool IsSceneExternallyOwned(const UWorld* World) {
     return false;
   }
   if (const UGameInstance* GI = World->GetGameInstance()) {
-    if (const auto* Subsys = GI->GetSubsystem<UMochiGameInstanceSubsystem>()) {
+    if (const UMochiGameInstanceSubsystem* Subsys =
+            GI->GetSubsystem<UMochiGameInstanceSubsystem>()) {
       return Subsys->IsSceneExternallyOwned();
     }
   }
@@ -225,7 +226,7 @@ void USuperDexBotComponent::BeginPlay() {
   }
   // TODO: superdex_robotics does not yet support loading a bot into coordinate spaces
   // other than RH, Z up. Until it does, throw an error and ensure.
-  const auto& activeSpace = UMochiPhysicsSettings::GetActiveSimulationSpace();
+  const FMochiSpaceDefinition& activeSpace = UMochiPhysicsSettings::GetActiveSimulationSpace();
   if (activeSpace != SuperDexSpace) {
     UE_LOG(
         LogMochiPhysics,
@@ -415,7 +416,8 @@ void USuperDexBotComponent::CreateBotAndArticulatedActor() {
   // create articulated actor on the Mochi thread via AddToScene
   mochi::ActorHandle ActorHandle;
   SceneObject->QueueOrExecuteCommand([&](mochi::Scene* SyncScene) {
-    auto* botsCtx = ISuperDexRoboticsModule::Get()->GetRoboticsContext();
+    superdex::robotics::RoboticsContext* botsCtx =
+        ISuperDexRoboticsModule::Get()->GetRoboticsContext();
     BotPtr = botsCtx->CreateBot(SyncScene, BotPrefab, Loader, e);
     mochi::Actor* Actor = BotPtr ? BotPtr->GetArticulatedActor() : nullptr;
     if (Actor) {
@@ -457,8 +459,8 @@ void USuperDexBotComponent::CreateBotAndArticulatedActor() {
           std::string_view(ErrorDescription).find("Failed to load params from file") !=
           std::string_view::npos;
       if (bParamsLoadFailure) {
-        for (const auto& Link : BotPrefab.links) {
-          for (const auto& Sensor : Link.sensors) {
+        for (const superdex::robotics::BotLinkPrefab& Link : BotPrefab.links) {
+          for (const superdex::robotics::BotSensorPrefab& Sensor : Link.sensors) {
             const std::string_view Params(Sensor.params.c_str(), Sensor.params.size());
             const ESuperDexBotComponentParamsKind ParamsKind = ClassifyBotComponentParams(Params);
             if (ParamsKind == ESuperDexBotComponentParamsKind::Empty ||
@@ -592,13 +594,13 @@ bool USuperDexBotComponent::BindToExistingBot(superdex::robotics::Bot* SceneBot)
       return;
     }
     ActorHandle = Actor->GetHandle();
-    for (auto const& Link : SceneBot->GetBotPrefab().links) {
+    for (superdex::robotics::BotLinkPrefab const& Link : SceneBot->GetBotPrefab().links) {
       PrefabLinkNames.Add(FName(UTF8_TO_TCHAR(Link.name.c_str())));
     }
     BorrowedScale = static_cast<float>(SceneBot->GetBotPrefab().scale);
     BorrowedActorUserData.Add({ActorHandle, Actor->GetUserData()});
     mochi::ErrorLog e{};
-    auto SaveNestedUserData = [&](auto const& Handles) {
+    auto SaveNestedUserData = [&](mochi::Span<mochi::ActorHandle const> const& Handles) {
       for (mochi::ActorHandle const Handle : Handles) {
         if (mochi::Actor* Nested = Scene->GetActor(Handle)) {
           BorrowedActorUserData.Add({Handle, Nested->GetUserData()});
@@ -689,7 +691,7 @@ void USuperDexBotComponent::RestoreBorrowedActorUserData() {
   UMochiSceneObject* SceneObject = Subsystem ? Subsystem->GetScene() : nullptr;
   if (SceneObject && SceneObject->IsValid()) {
     SceneObject->QueueOrExecuteCommand([this](mochi::Scene* Scene) {
-      for (auto const& Saved : BorrowedActorUserData) {
+      for (TPair<mochi::ActorHandle, void*> const& Saved : BorrowedActorUserData) {
         if (mochi::Actor* Actor = Scene->GetActor(Saved.Key)) {
           Actor->SetUserData(Saved.Value);
         }
@@ -735,7 +737,7 @@ void USuperDexBotComponent::DestroyBotAndArticulatedActor() {
 }
 
 void USuperDexBotComponent::ApplyPrefabOverrides(superdex::robotics::BotPrefab& InOutPrefab) const {
-  for (auto& link : InOutPrefab.links) {
+  for (superdex::robotics::BotLinkPrefab& link : InOutPrefab.links) {
     link.hasGravity = bHasGravity;
   }
   if (LayerOverride.IsEmpty()) {
@@ -744,8 +746,8 @@ void USuperDexBotComponent::ApplyPrefabOverrides(superdex::robotics::BotPrefab& 
   // The layer override must reach every collidable the prefab spawns, not just the links:
   // the scene's contact matrix filters per layer, so a skin left on the layer baked into
   // the asset would keep colliding with whatever the overridden links were moved away from.
-  const auto layer = mochi::DynamicString(TCHAR_TO_UTF8(*LayerOverride));
-  for (auto& link : InOutPrefab.links) {
+  const mochi::DynamicString layer = mochi::DynamicString(TCHAR_TO_UTF8(*LayerOverride));
+  for (superdex::robotics::BotLinkPrefab& link : InOutPrefab.links) {
     link.layer = layer;
   }
   if (InOutPrefab.skin.has_value()) {
@@ -762,14 +764,14 @@ bool USuperDexBotComponent::OnArticulatedActorControl(
   if (!bArticulatedActorReady || !BotController) {
     return false;
   }
-  auto state = ExtractArticulatedActorState(ArticulatedActor);
+  FMochiArticulationState state = ExtractArticulatedActorState(ArticulatedActor);
   return BotController->StepController(this, state, TimeStepSec, ArticulatedActor, Scene);
 }
 
 bool USuperDexBotComponent::EnsureArrayProperties() {
   bool ret = false;
   if (Bot) {
-    auto& params = Bot->GetBotPrefab();
+    const superdex::robotics::BotPrefab& params = Bot->GetBotPrefab();
     if (InitialPose.Num() != params._numDofs) {
       InitialPose.SetNum(params._numDofs);
       for (int i = 0; i < params._numDofs; ++i) {
@@ -778,7 +780,7 @@ bool USuperDexBotComponent::EnsureArrayProperties() {
       ret = true;
     }
     if (ContactGeneratingLinks.Num() == 0) {
-      for (auto const& link : params.links) {
+      for (superdex::robotics::BotLinkPrefab const& link : params.links) {
         ContactGeneratingLinks.Add(FName(UTF8_TO_TCHAR(link.name.c_str())));
       }
       ret = true;
@@ -794,7 +796,7 @@ void USuperDexBotComponent::PoseMeshFromJointPositions(const TArray<double>& InJ
   if (Bot) {
     ensure(InJointPositions.Num() == Bot->GetDefaultJointPositions().Num());
     TArray<FTransform> transforms;
-    auto linkNames = Bot->GetLinkNames();
+    TArray<FName> linkNames = Bot->GetLinkNames();
     if (Bot->ComputeLinkToParentTransforms(InJointPositions, transforms)) {
       for (int iLink = 0; iLink < transforms.Num(); ++iLink) {
         const int32 boneIndex = GetBoneIndex(linkNames[iLink]);
@@ -816,7 +818,7 @@ void USuperDexBotComponent::PoseMeshFromLinkWorldTransforms(
   if (!ArticulatedActorObject) {
     return;
   }
-  const auto& LinkNames = ArticulatedActorObject->GetNestedLinkActorNames();
+  const TArray<FName>& LinkNames = ArticulatedActorObject->GetNestedLinkActorNames();
   check(LinkNames.Num() == InLinkWorldTransforms.Num());
   // Mochi link transforms carry no scale. Give the bones the bot's scale so the mesh renders at the
   // size of the simulated bot whatever the component's scale.

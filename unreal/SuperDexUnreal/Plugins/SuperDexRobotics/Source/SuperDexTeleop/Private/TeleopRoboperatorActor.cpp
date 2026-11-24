@@ -109,7 +109,8 @@ bool ATeleopRoboperatorActor::UpdatePendingBotSpawn(FPendingBotSpawn& Pending, f
   }
   if (!Pending.Source.IsValid()) {
     USuperDexPoseableComponent* Source = nullptr;
-    if (const auto* PoseController = Cast<UController_MochiArticulatedPose>(Bot->GetController())) {
+    if (const UController_MochiArticulatedPose* PoseController =
+            Cast<UController_MochiArticulatedPose>(Bot->GetController())) {
       Source = PoseController->FindChildSourcePoseable(Bot);
     }
     if (Source == nullptr) {

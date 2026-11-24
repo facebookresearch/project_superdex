@@ -36,14 +36,14 @@ mochi::DynamicArray<superdex::robotics::BotIKJointCouplingParams> ConvertLegacyB
   // FName matching is case-insensitive in the legacy API. Canonicalize only that representation;
   // native validation and transmission creation are shared with every BotIK client.
   auto CanonicalName = [&Prefab](FName Name) -> mochi::DynamicString {
-    for (auto const& Joint : Prefab.joints) {
+    for (superdex::robotics::BotJointPrefab const& Joint : Prefab.joints) {
       if (Name == FName(UTF8_TO_TCHAR(Joint.name.c_str()))) {
         return Joint.name;
       }
     }
     return TCHAR_TO_UTF8(*Name.ToString());
   };
-  for (const auto& Coupling : JointCouplings) {
+  for (const FMochiJointCoupling& Coupling : JointCouplings) {
     if (!Coupling.bEnabled) {
       continue;
     }
@@ -95,7 +95,7 @@ USuperDexIKSolverObject* USuperDexIKSolverObject::CreateBotIKSolver(
   if (!IsInGameThread() || !Outer || !OutputBot) {
     return nullptr;
   }
-  auto Prefab = OutputBot->GetBotPrefab();
+  superdex::robotics::BotPrefab Prefab = OutputBot->GetBotPrefab();
   Prefab.worldFromRoot = mochi::TransformRT{};
   return CreatePreparedBotIKSolver(Outer, Prefab, Params, JointCouplings);
 }
@@ -112,12 +112,12 @@ USuperDexIKSolverObject* USuperDexIKSolverObject::CreateBotIKSolver(
     UE_LOG(LogMochiPhysics, Warning, TEXT("OutputBot IK config invalid: %hs"), Diagnostic.c_str());
     return nullptr;
   }
-  auto Prefab = OutputBot->GetBotPrefab();
+  superdex::robotics::BotPrefab Prefab = OutputBot->GetBotPrefab();
   Prefab.worldFromRoot = mochi::TransformRT{};
   if (!Config.outputBotConfiguration.empty()) {
     Prefab.defaultPose = Config.outputBotConfiguration;
   }
-  for (auto const& Goal : Config.goals) {
+  for (superdex::robotics::BotIKGoalConfig const& Goal : Config.goals) {
     if (superdex::robotics::FindLinkIndexByName(Prefab, Goal.outputBotLink) == INDEX_NONE) {
       UE_LOG(
           LogMochiPhysics,
@@ -141,10 +141,11 @@ USuperDexIKSolverObject* USuperDexIKSolverObject::CreatePreparedBotIKSolver(
         LogMochiPhysics, Warning, TEXT("Bot IK joint couplings invalid: %hs"), Diagnostic.c_str());
     return nullptr;
   }
-  auto NativeCouplings = superdex::robotics::ToBotIKJointCouplingParams(JointCouplings);
+  mochi::DynamicArray<superdex::robotics::BotIKJointCouplingParams> NativeCouplings =
+      superdex::robotics::ToBotIKJointCouplingParams(JointCouplings);
   FSuperDexBotLoader Loader;
   mochi::Error Error;
-  auto* Native = superdex::robotics::BotIK::Create(
+  superdex::robotics::BotIK* Native = superdex::robotics::BotIK::Create(
       IMochiPhysicsModule::Get()->GetMochiContext(),
       Prefab,
       Params,
@@ -156,7 +157,7 @@ USuperDexIKSolverObject* USuperDexIKSolverObject::CreatePreparedBotIKSolver(
     superdex::robotics::BotIK::Destroy(Native);
     return nullptr;
   }
-  auto* Object = NewObject<USuperDexIKSolverObject>(Outer);
+  USuperDexIKSolverObject* Object = NewObject<USuperDexIKSolverObject>(Outer);
   Object->NativeIK = Native;
   Object->bNativeJointLayout = true;
   Object->bIsInitialized = true;
@@ -284,7 +285,7 @@ bool USuperDexIKSolverObject::CopyOutputBotFKAtJointConfiguration(
     return false;
   }
   mochi::DynamicArray<mochi::real> Before, Display;
-  for (const auto Q : NativeIK->GetJointPositions()) {
+  for (const mochi::real Q : NativeIK->GetJointPositions()) {
     Before.push_back(Q);
   }
   for (const double Q : Positions) {
@@ -299,7 +300,7 @@ bool USuperDexIKSolverObject::CopyOutputBotFKAtJointConfiguration(
     return false;
   }
   mochi::DynamicArray<mochi::TransformRT> Snapshot;
-  for (const auto& Link : NativeIK->GetWorldFromLinks()) {
+  for (const mochi::TransformRT& Link : NativeIK->GetWorldFromLinks()) {
     Snapshot.push_back(Link);
   }
   NativeIK->SetJointPositions(Before, Error);
@@ -343,7 +344,8 @@ USuperDexIKSolverObject* USuperDexIKSolverObject::CreateIKSolver(
     superdex::robotics::BotPrefab Prefab = BotAsset->GetBotPrefab();
     FUnrealToMochiConverter u2m;
     Prefab.worldFromRoot = u2m.TransformToMochi_RT(WorldFromRoot);
-    auto NativeCouplings = ConvertLegacyBotCouplings(Prefab, JointCouplings, SolverName);
+    mochi::DynamicArray<superdex::robotics::BotIKJointCouplingParams> NativeCouplings =
+        ConvertLegacyBotCouplings(Prefab, JointCouplings, SolverName);
 
     superdex::robotics::BotIKCreateParams Params;
     Params.fixedBase = bFixedBase;
@@ -462,7 +464,8 @@ USuperDexIKSolverObject* USuperDexIKSolverObject::CreateIKSolver(
     mochi::Actor* articulatedActor =
         SyncScene->GetActor(ikSolverObj->ArticulatedActorObject->GetArticulatedActorHandle());
     if (articulatedActor) {
-      const auto shapeInfo = articulatedActor->GetArticulatedShapeInfo(shapeErr);
+      const mochi::ArticulatedShapeInfo shapeInfo =
+          articulatedActor->GetArticulatedShapeInfo(shapeErr);
       // parents and jointTypes are both per-link, but take the smaller extent so a malformed
       // articulation cannot make the parent walk below read out of bounds.
       const int numLinks = shapeErr.IsOK()
@@ -867,13 +870,13 @@ bool USuperDexIKSolverObject::SolveIK() {
 void USuperDexIKSolverObject::UpdateBotResults() {
   FMochiToUnrealConverter m2u(
       bNativeJointLayout ? SuperDexSpace : UMochiPhysicsSettings::GetActiveSimulationSpace());
-  const auto WorldFromLinks = NativeIK->GetWorldFromLinks();
+  const mochi::Span<mochi::TransformRT const> WorldFromLinks = NativeIK->GetWorldFromLinks();
   SolvedLinkToWorld.SetNum(static_cast<int>(WorldFromLinks.size()));
   for (int iLink = 0; iLink < SolvedLinkToWorld.Num(); ++iLink) {
     SolvedLinkToWorld[iLink] = m2u.TransformToUnreal(WorldFromLinks[iLink]);
   }
 
-  const auto JointPositions = NativeIK->GetJointPositions();
+  const mochi::Span<mochi::real const> JointPositions = NativeIK->GetJointPositions();
   // Keep the historical requested-free/actually-welded slice local to UE. BotIK itself always
   // returns the correct bot-space joint layout.
   const int ExtraDofsToStrip = FMath::Max(0, NumMochiBaseDofs - NumBotBaseDofs);

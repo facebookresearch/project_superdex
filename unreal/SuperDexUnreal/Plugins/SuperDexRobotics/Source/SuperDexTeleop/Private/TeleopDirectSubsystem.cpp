@@ -480,7 +480,7 @@ void UTeleopDirectSubsystem::PumpSubscribers() {
 
   {
     FWriteScopeLock Lock(TopicLock);
-    for (auto& Pair : Topics) {
+    for (TPair<FString, FTeleopTopicData>& Pair : Topics) {
       FTeleopTopicData& TopicData = Pair.Value;
       if (TopicData.bDirty) {
         FTopicDelivery Delivery;

@@ -109,8 +109,8 @@ bool ValidInputTree(const superdex::robotics::BotPrefab& Bot, FString& Diagnosti
   TSet<FName> Names;
   int32 Dof = 0;
   for (int32 I = 0; I < Count; ++I) {
-    const auto& Link = Bot.links[I];
-    const auto& Joint = Bot.joints[I];
+    const superdex::robotics::BotLinkPrefab& Link = Bot.links[I];
+    const superdex::robotics::BotJointPrefab& Joint = Bot.joints[I];
     const FName Name(UTF8_TO_TCHAR(Link.name.c_str()));
     if (Link.name.empty() || Name.IsNone() || Names.Contains(Name) ||
         (I > 0 && (Link.parentLink < 0 || Link.parentLink >= I))) {
@@ -119,7 +119,7 @@ bool ValidInputTree(const superdex::robotics::BotPrefab& Bot, FString& Diagnosti
       return false;
     }
     Names.Add(Name);
-    for (const auto& Frame : {Joint.parentLinkFromJoint, Link.parentJointFromLink}) {
+    for (const mochi::TransformRT& Frame : {Joint.parentLinkFromJoint, Link.parentJointFromLink}) {
       if (!mochi::IsFinite(Frame) ||
           !mochi::NearEqual(mochi::Norm(Frame.GetRotation()), mochi::real(1), mochi::real(1e-4))) {
         Diagnostic = TEXT("InputBot joint/link rest frames must be finite and normalized.");
@@ -166,13 +166,13 @@ bool ValidInputTree(const superdex::robotics::BotPrefab& Bot, FString& Diagnosti
 }
 
 bool MatchingOutputMesh(const USuperDexBot* Bot, FString& Diagnostic) {
-  const auto* Mesh = Bot->GetSkeletalMesh();
-  const auto& Prefab = Bot->GetBotPrefab();
+  const USkeletalMesh* Mesh = Bot->GetSkeletalMesh();
+  const superdex::robotics::BotPrefab& Prefab = Bot->GetBotPrefab();
   if (!Mesh || Mesh->GetRefSkeleton().GetNum() != static_cast<int32>(Prefab.links.size())) {
     Diagnostic = TEXT("Config.OutputBot requires an imported mesh in its prefab link order.");
     return false;
   }
-  const auto& Ref = Mesh->GetRefSkeleton();
+  const FReferenceSkeleton& Ref = Mesh->GetRefSkeleton();
   for (int32 I = 0; I < Ref.GetNum(); ++I) {
     if (Ref.GetBoneName(I) != FName(UTF8_TO_TCHAR(Prefab.links[I].name.c_str())) ||
         Ref.GetParentIndex(I) != Prefab.links[I].parentLink) {
@@ -221,8 +221,8 @@ bool USuperDexBotIKRetargeter::ValidateConfiguration(FString& Diagnostic) const 
       !MatchingOutputMesh(Config->OutputBot, Diagnostic)) {
     return false;
   }
-  const auto Spec = Config->ToNative();
-  const auto& Robot = Config->OutputBot->GetBotPrefab();
+  const superdex::robotics::BotIKConfig Spec = Config->ToNative();
+  const superdex::robotics::BotPrefab& Robot = Config->OutputBot->GetBotPrefab();
   if (!Spec.outputBotConfiguration.empty() &&
       static_cast<int32>(Spec.outputBotConfiguration.size()) != Robot._numDofs) {
     Diagnostic = TEXT(
@@ -235,12 +235,13 @@ bool USuperDexBotIKRetargeter::ValidateConfiguration(FString& Diagnostic) const 
     return false;
   }
   bool Active = false;
-  const auto& InputBot = Config->InputBot->GetBotPrefab();
-  for (const auto& Goal : Spec.goals) {
+  const superdex::robotics::BotPrefab& InputBot = Config->InputBot->GetBotPrefab();
+  for (const superdex::robotics::BotIKGoalConfig& Goal : Spec.goals) {
     const auto HasLink = [](const superdex::robotics::BotPrefab& Model, std::string_view Name) {
-      return std::any_of(Model.links.begin(), Model.links.end(), [&](const auto& Link) {
-        return Link.name == Name;
-      });
+      return std::any_of(
+          Model.links.begin(),
+          Model.links.end(),
+          [&](const superdex::robotics::BotLinkPrefab& Link) { return Link.name == Name; });
     };
     if (!HasLink(Robot, Goal.outputBotLink) ||
         (!Goal.inputBotLink.empty() && !HasLink(InputBot, Goal.inputBotLink))) {
@@ -260,7 +261,7 @@ bool USuperDexBotIKRetargeter::ValidateConfiguration(FString& Diagnostic) const 
     return false;
   }
   if (bPublishTeleopHandJointTargets || bSubscribeToTeleopHandJointPositions) {
-    const auto* Node =
+    const UTeleopNodeOperatorComponent* Node =
         GetOwner() ? GetOwner()->GetComponentByClass<UTeleopNodeOperatorComponent>() : nullptr;
     if (GetOwner() && (!Node || Node->NumHandJoints != Robot._numDofs)) {
       Diagnostic =
@@ -283,7 +284,8 @@ void USuperDexBotIKRetargeter::SetStatus(
     LastDiagnostic = Diagnostic;
   }
   if (!bValid && bPublishTeleopHandJointTargets && IsInGameThread() && GetOwner()) {
-    if (auto* Node = GetOwner()->GetComponentByClass<UTeleopNodeOperatorComponent>()) {
+    if (UTeleopNodeOperatorComponent* Node =
+            GetOwner()->GetComponentByClass<UTeleopNodeOperatorComponent>()) {
       Node->InvalidateHandJointTargets();
     }
   }
@@ -339,8 +341,10 @@ bool USuperDexBotIKRetargeter::InitializeRetargeter() {
     SetStatus(false, TEXT("Output/source root calibration must be finite and rigid."), true);
     return false;
   }
-  bInputBotHasPrismatic =
-      std::any_of(InputModel.joints.begin(), InputModel.joints.end(), [](const auto& Joint) {
+  bInputBotHasPrismatic = std::any_of(
+      InputModel.joints.begin(),
+      InputModel.joints.end(),
+      [](const superdex::robotics::BotJointPrefab& Joint) {
         return Joint.type == mochi::ArticulatedJointType::Prismatic;
       });
   SetStatus(false, kAwaitingInputPose, false);
@@ -452,7 +456,8 @@ bool USuperDexBotIKRetargeter::GetTransformedPose_Implementation(
   }
   TArray<double> DisplayPositions = Positions;
   if (bSubscribeToTeleopHandJointPositions && GetOwner()) {
-    auto* Node = GetOwner()->GetComponentByClass<UTeleopNodeOperatorComponent>();
+    UTeleopNodeOperatorComponent* Node =
+        GetOwner()->GetComponentByClass<UTeleopNodeOperatorComponent>();
     TArray<double> Feedback;
     if (Node && Node->GetHandJointStates(Feedback)) {
       if (Feedback.Num() != Positions.Num() ||
@@ -553,7 +558,7 @@ void USuperDexBotIKRetargeter::PrepareBiasedCommandLimits() {
     const int32 JointIndex = OutputModel._dofIndices[I];
     Component = JointIndex == PreviousJoint ? Component + 1 : 0;
     PreviousJoint = JointIndex;
-    const auto& Joint = OutputModel.joints[JointIndex];
+    const superdex::robotics::BotJointPrefab& Joint = OutputModel.joints[JointIndex];
     const bool bScalar = Joint.type == mochi::ArticulatedJointType::Revolute ||
         Joint.type == mochi::ArticulatedJointType::Prismatic;
     if (!bScalar && Joint.type != mochi::ArticulatedJointType::Spherical) {
@@ -563,7 +568,7 @@ void USuperDexBotIKRetargeter::PrepareBiasedCommandLimits() {
     // Native prismatic commands/FK use instantiated metres, unlike nominal prefab seeds.
     const mochi::real Scale =
         Joint.type == mochi::ArticulatedJointType::Prismatic ? OutputModel.scale : mochi::real(1);
-    auto& Limit = BiasedCommandLimits[I];
+    FBiasedCommandLimit& Limit = BiasedCommandLimits[I];
     if (Joint.minLimit.has_value() && mochi::IsFinite(*Joint.minLimit)) {
       Limit.bHasMinimum = true;
       Limit.Minimum = static_cast<double>(
@@ -591,7 +596,7 @@ bool USuperDexBotIKRetargeter::ApplyJointBiasAndLimits(TArray<double>& Positions
       return false;
     }
     for (int32 I = 0; I < Positions.Num(); ++I) {
-      const auto& Limit = BiasedCommandLimits[I];
+      const FBiasedCommandLimit& Limit = BiasedCommandLimits[I];
       if (Limit.bHasMinimum) {
         Positions[I] = FMath::Max(Positions[I], Limit.Minimum);
       }
@@ -608,7 +613,8 @@ bool USuperDexBotIKRetargeter::ApplyJointBiasAndLimits(TArray<double>& Positions
 
 void USuperDexBotIKRetargeter::ReleaseSolver() {
   if (bPublishTeleopHandJointTargets && GetOwner()) {
-    if (auto* Node = GetOwner()->GetComponentByClass<UTeleopNodeOperatorComponent>()) {
+    if (UTeleopNodeOperatorComponent* Node =
+            GetOwner()->GetComponentByClass<UTeleopNodeOperatorComponent>()) {
       Node->InvalidateHandJointTargets();
     }
   }
@@ -980,7 +986,7 @@ void USuperDexBotIKRetargeter::PostEditChangeProperty(FPropertyChangedEvent& Eve
   PlaceSourceAtConfigInputBaseFrame();
 }
 EDataValidationResult USuperDexBotIKRetargeter::IsDataValid(FDataValidationContext& Context) const {
-  const auto Base = Super::IsDataValid(Context);
+  const EDataValidationResult Base = Super::IsDataValid(Context);
   FString Diagnostic;
   if (!ValidateConfiguration(Diagnostic)) {
     Context.AddError(FText::FromString(Diagnostic));

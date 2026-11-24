@@ -174,7 +174,7 @@ bool USuperDexBotSceneSubsystem::EnsureLoaded(
 
 void USuperDexBotSceneSubsystem::SetFailed(const FString& InError) {
   // A failed runtime request must still suppress level-authored actors and settings.
-  if (auto* MochiSubsystem = GetGameInstance()
+  if (UMochiGameInstanceSubsystem* MochiSubsystem = GetGameInstance()
           ? GetGameInstance()->GetSubsystem<UMochiGameInstanceSubsystem>()
           : nullptr) {
     MochiSubsystem->SetSceneExternallyOwned(true);
@@ -195,7 +195,8 @@ void USuperDexBotSceneSubsystem::SetFailed(const FString& InError) {
 bool USuperDexBotSceneSubsystem::ParseTaskFile(const FString& InTaskPath, FString& OutError) {
   superdex::Error TaskError;
   std::string StdTaskPath(TCHAR_TO_UTF8(*InTaskPath));
-  auto Task = superdex::robotics::LoadBotTaskPrefabFromFile(StdTaskPath, TaskError);
+  superdex::robotics::BotTaskPrefab Task =
+      superdex::robotics::LoadBotTaskPrefabFromFile(StdTaskPath, TaskError);
   if (!TaskError.IsOK()) {
     OutError = FString::Printf(
         TEXT("Bot task '%s': %s"), *InTaskPath, UTF8_TO_TCHAR(TaskError.ToString().c_str()));
@@ -351,12 +352,12 @@ bool USuperDexBotSceneSubsystem::LoadScene(const FString& InScenePath, const FSt
   const std::string StdScenePath(TCHAR_TO_UTF8(*ScenePath));
   std::string LoadErrorString;
   bool bLoadSucceeded = false;
-  auto* PimplPtr = Pimpl;
+  Impl* PimplPtr = Pimpl;
   SceneObject->QueueOrExecuteCommand(
       [PimplPtr, StdScenePath, MochiContext, RoboticsContext, &LoadErrorString, &bLoadSucceeded](
           mochi::Scene* Scene) {
         superdex::Error LocalError;
-        auto Loaded = superdex::robotics::LoadBotScene(
+        superdex::robotics::BotScene Loaded = superdex::robotics::LoadBotScene(
             Scene,
             StdScenePath,
             /*botsToInitialize=*/{},
@@ -391,9 +392,9 @@ bool USuperDexBotSceneSubsystem::LoadScene(const FString& InScenePath, const FSt
       [&NumActors](mochi::Scene* Scene) { NumActors = Scene ? Scene->GetNumActors() : 0; });
   SceneObject->WaitForQueuedCommands();
 
-  auto const& Prefab = Pimpl->BotScene->GetBotScenePrefab();
+  superdex::robotics::BotScenePrefab const& Prefab = Pimpl->BotScene->GetBotScenePrefab();
   int32 NumControllers = 0;
-  for (auto const& Bot : Prefab.bots) {
+  for (superdex::robotics::BotEntry const& Bot : Prefab.bots) {
     NumControllers += static_cast<int32>(Bot.controllers.size());
   }
   UE_LOG(
@@ -432,19 +433,19 @@ bool USuperDexBotSceneSubsystem::SpawnTaskInstance(
   const std::string StdPrefabName(TCHAR_TO_UTF8(*PrefabName));
   std::string SpawnErrorString;
   TArray<mochi::ActorHandle> Actors;
-  auto* PimplPtr = Pimpl;
+  Impl* PimplPtr = Pimpl;
   SceneObject->QueueOrExecuteCommand(
       [PimplPtr, StdInstanceName, StdPrefabName, WorldFromInstance, &Actors, &SpawnErrorString](
           mochi::Scene*) {
         superdex::Error LocalError;
-        auto Handles = PimplPtr->BotScene->SpawnPrefabInstance(
+        mochi::Span<mochi::ActorHandle const> Handles = PimplPtr->BotScene->SpawnPrefabInstance(
             StdInstanceName, StdPrefabName, WorldFromInstance, LocalError);
         if (!LocalError.IsOK()) {
           SpawnErrorString = LocalError.ToString();
           return;
         }
         Actors.Reserve(static_cast<int32>(Handles.size()));
-        for (auto Handle : Handles) {
+        for (mochi::ActorHandle Handle : Handles) {
           Actors.Add(Handle);
         }
       });
@@ -470,7 +471,7 @@ void USuperDexBotSceneSubsystem::DestroyAllTaskInstances() {
   if (!SceneObject) {
     return;
   }
-  auto* PimplPtr = Pimpl;
+  Impl* PimplPtr = Pimpl;
   SceneObject->QueueOrExecuteCommand(
       [PimplPtr](mochi::Scene*) { PimplPtr->BotScene->DestroyAllPrefabInstances(); });
   SceneObject->WaitForQueuedCommands();
@@ -481,7 +482,7 @@ void USuperDexBotSceneSubsystem::Deinitialize() {
   SceneLoadedDelegate.Clear();
   SceneContentsChangedDelegate.Clear();
 
-  if (auto* MochiSubsystem = GetGameInstance()
+  if (UMochiGameInstanceSubsystem* MochiSubsystem = GetGameInstance()
           ? GetGameInstance()->GetSubsystem<UMochiGameInstanceSubsystem>()
           : nullptr) {
     MochiSubsystem->SetSceneExternallyOwned(false);

@@ -62,7 +62,7 @@ bool AddFileReference(
   }
 
   mochi::Error Error;
-  const auto Hash = superdex::robotics::HashGenericFile(ToUtf8(FullPath), Error);
+  const mochi::DynamicString Hash = superdex::robotics::HashGenericFile(ToUtf8(FullPath), Error);
   if (!Error.IsOK()) {
     OutError = FString::Printf(
         TEXT("Failed to hash %s: %s"), *PropertyPrefix, UTF8_TO_TCHAR(Error.ToString().c_str()));
@@ -118,7 +118,8 @@ bool FSuperDexSceneRecorder::BeginEpisode(
 
   UMochiSceneObject* NewSceneObject = Config.Scene.Get();
   if (Config.Scene.IsExplicitlyNull()) {
-    auto* Subsystem = UMochiPhysicsFunctionLibrary::GetMochiGameInstanceSubsystem(WorldContext);
+    UMochiGameInstanceSubsystem* Subsystem =
+        UMochiPhysicsFunctionLibrary::GetMochiGameInstanceSubsystem(WorldContext);
     NewSceneObject = Subsystem != nullptr ? Subsystem->GetScene() : nullptr;
   }
   if (NewSceneObject == nullptr || !NewSceneObject->IsValid()) {
@@ -127,7 +128,7 @@ bool FSuperDexSceneRecorder::BeginEpisode(
   }
 
   std::map<std::string, std::string> Properties;
-  for (const auto& Property : Config.Properties) {
+  for (const TPair<FString, FString>& Property : Config.Properties) {
     Properties[ToUtf8(Property.Key)] = ToUtf8(Property.Value);
   }
   FString MetadataError;
@@ -187,7 +188,7 @@ bool FSuperDexSceneRecorder::BeginEpisode(
       if (Component == nullptr) {
         continue;
       }
-      auto* const Articulation = Component->GetMochiArticulatedActor();
+      UMochiArticulatedActorObject* const Articulation = Component->GetMochiArticulatedActor();
       if (Articulation == nullptr || !Articulation->IsValid()) {
         if (Component->GetBotAsset() != nullptr) {
           UE_LOG(
@@ -211,8 +212,11 @@ bool FSuperDexSceneRecorder::BeginEpisode(
       RobotActorHandles.Add(Handle);
       RobotControllers.Add(Component->GetController());
       RobotComponents.Add(Component);
-      const auto* const Source = Config.RecordingTargetSources.FindByPredicate(
-          [Handle](const auto& Entry) { return Entry.Key.value == Handle.value; });
+      const TPair<mochi::ActorHandle, FSuperDexRecordingTargetSourcePtr>* const Source =
+          Config.RecordingTargetSources.FindByPredicate(
+              [Handle](const TPair<mochi::ActorHandle, FSuperDexRecordingTargetSourcePtr>& Entry) {
+                return Entry.Key.value == Handle.value;
+              });
       RobotTargetSources.Add(Source != nullptr ? Source->Value : nullptr);
     }
   }
@@ -277,7 +281,8 @@ bool FSuperDexSceneRecorder::BeginEpisode(
   }
 
   bCaptureActive = true;
-  for (const auto& Other : CapturingRecorders()) {
+  for (const TPair<TWeakObjectPtr<UMochiSceneObject>, const FSuperDexSceneRecorder*>& Other :
+       CapturingRecorders()) {
     if (Other.Key.Get() == NewSceneObject) {
       UE_LOG(
           LogSuperDexRecorder,
@@ -368,7 +373,7 @@ void FSuperDexSceneRecorder::InitializeRoboticsRecorders(mochi::Scene& Scene, mo
       MOCHI_ERROR_SET(Error, "Failed to resolve a recorded SuperDex robot.");
       return;
     }
-    auto BotRecorder =
+    std::unique_ptr<superdex::recorder::RoboticsRecorder> BotRecorder =
         std::make_unique<superdex::recorder::RoboticsRecorder>(*Episode, *Robot, Error);
     MOCHI_ERROR_RETURN(Error);
     RoboticsRecorders.push_back(std::move(BotRecorder));
@@ -608,7 +613,10 @@ void FSuperDexSceneRecorder::EndCapture() {
   }
   PostStepCallback = {};
   bCaptureActive = false;
-  CapturingRecorders().RemoveAll([this](const auto& Entry) { return Entry.Value == this; });
+  CapturingRecorders().RemoveAll(
+      [this](const TPair<TWeakObjectPtr<UMochiSceneObject>, const FSuperDexSceneRecorder*>& Entry) {
+        return Entry.Value == this;
+      });
 }
 
 bool FSuperDexSceneRecorder::CommitEpisodeSync() {

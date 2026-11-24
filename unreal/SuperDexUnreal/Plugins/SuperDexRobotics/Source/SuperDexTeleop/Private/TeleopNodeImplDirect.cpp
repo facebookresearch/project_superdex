@@ -81,7 +81,7 @@ void UTeleopNodeImplDirect::Deinitialize() {
 
   UTeleopDirectSubsystem* Sub = GetSubsystem();
   if (Sub) {
-    for (const auto& Pair : PublisherTopics) {
+    for (const TPair<int32, FString>& Pair : PublisherTopics) {
       const int32 LocalHandle = Pair.Key;
       const FString& TopicName = Pair.Value;
       if (LocalToSubsystemPublisherHandle.Contains(LocalHandle)) {
@@ -90,7 +90,7 @@ void UTeleopNodeImplDirect::Deinitialize() {
       }
     }
 
-    for (const auto& Pair : SubscriberTopics) {
+    for (const TPair<int32, FString>& Pair : SubscriberTopics) {
       const int32 LocalHandle = Pair.Key;
       const FString& TopicName = Pair.Value;
       if (LocalToSubsystemSubscriberHandle.Contains(LocalHandle)) {

@@ -61,7 +61,7 @@ T* GetFirstChildComponentByType(USceneComponent const* Root, bool bIncludeAllDes
     TArray<USceneComponent*> Children;
     Root->GetChildrenComponents(bIncludeAllDescendents, Children);
     for (USceneComponent* Child : Children) {
-      if (auto MaybeResult = Cast<T>(Child)) {
+      if (T* MaybeResult = Cast<T>(Child)) {
         return MaybeResult;
       }
     }
@@ -81,7 +81,7 @@ T* GetFirstChildComponentByTypeAndNameStartsWith(
     TArray<USceneComponent*> Children;
     Root->GetChildrenComponents(bIncludeAllDescendents, Children);
     for (USceneComponent* Child : Children) {
-      if (auto MaybeResult = Cast<T>(Child)) {
+      if (T* MaybeResult = Cast<T>(Child)) {
         FString name = MaybeResult->GetName();
         if (name.StartsWith(Prefix, ESearchCase::IgnoreCase)) {
           return MaybeResult;
@@ -104,7 +104,7 @@ T* GetFirstChildComponentByTypeAndNameContains(
     TArray<USceneComponent*> Children;
     Root->GetChildrenComponents(bIncludeAllDescendents, Children);
     for (USceneComponent* Child : Children) {
-      if (auto MaybeResult = Cast<T>(Child)) {
+      if (T* MaybeResult = Cast<T>(Child)) {
         FString name = MaybeResult->GetName();
         if (name.Contains(substr, ESearchCase::CaseSensitive)) {
           return MaybeResult;
@@ -119,7 +119,7 @@ inline void SetSelfAndChildrenVisible(USceneComponent* root, bool visible) {
   TArray<USceneComponent*> children;
   root->SetVisibility(visible);
   root->GetChildrenComponents(true, children);
-  for (auto child : children) {
+  for (USceneComponent* child : children) {
     child->SetVisibility(visible);
   }
 }

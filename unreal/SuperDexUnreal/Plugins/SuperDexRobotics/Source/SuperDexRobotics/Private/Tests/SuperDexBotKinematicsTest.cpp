@@ -116,9 +116,9 @@ superdex::robotics::BotPrefab MakeChainPrefab(mochi::Error& Error) {
 }
 
 USuperDexBot* MakeBot(const superdex::robotics::BotPrefab& Prefab) {
-  auto* bot = NewObject<USuperDexBot>(GetTransientPackage());
+  USuperDexBot* bot = NewObject<USuperDexBot>(GetTransientPackage());
   mochi::Error error;
-  const auto json = superdex::robotics::WriteToJsonString(Prefab, error);
+  const mochi::DynamicString json = superdex::robotics::WriteToJsonString(Prefab, error);
   check(error.IsOK());
   FindFProperty<FStrProperty>(USuperDexBot::StaticClass(), TEXT("BotPrefabJson"))
       ->SetPropertyValue_InContainer(bot, FString(UTF8_TO_TCHAR(json.c_str())));
@@ -146,7 +146,7 @@ UMochiArticulation* MakeArticulation() {
     link.parentJointFromLink = ChainParentJointFromLink(i);
     links[i].FromMochi(link, m2u);
   }
-  auto* articulation = NewObject<UMochiArticulation>(GetTransientPackage());
+  UMochiArticulation* articulation = NewObject<UMochiArticulation>(GetTransientPackage());
   articulation->SetDefinition(TEXT("kinematics_test"), joints, links);
   return articulation;
 }
@@ -304,12 +304,12 @@ struct FKinematicsChecker {
   }
 
   void Run() const {
-    const auto parentSpace = false;
-    const auto rootSpace = true;
+    const bool parentSpace = false;
+    const bool rootSpace = true;
     std::mt19937 rng(17);
 
     // Transforms from joint positions round-trip.
-    for (const auto space : {parentSpace, rootSpace}) {
+    for (const bool space : {parentSpace, rootSpace}) {
       const TArray<double> jointPositions = RandomJointPositions(rng);
       ExpectSameJointPositions(
           Inverse(Forward(jointPositions, space), space), jointPositions, TEXT("Round trip"));
@@ -446,7 +446,7 @@ bool FSuperDexBotKinematicsTest::RunTest(const FString& Parameters) {
   // USuperDexBot and UMochiArticulation agree, in both directions, on and off axis.
   std::mt19937 rng(23);
   const FKinematicsChecker botChecker{*this, *bot};
-  for (const auto space : {false, true}) {
+  for (const bool space : {false, true}) {
     const TArray<double> jointPositions = botChecker.RandomJointPositions(rng);
     const TArray<FTransform> botLinks = botChecker.Forward(jointPositions, space);
     const TArray<FTransform> articulationLinks = articulationChecker.Forward(jointPositions, space);

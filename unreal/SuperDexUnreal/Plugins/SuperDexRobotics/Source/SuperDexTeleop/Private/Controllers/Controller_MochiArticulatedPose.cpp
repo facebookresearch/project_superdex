@@ -196,7 +196,7 @@ void UController_MochiArticulatedPose::OnBotSpawned(USuperDexBotComponent* Compo
     return;
   }
 
-  auto* ArticulatedActor = Component->GetMochiArticulatedActor();
+  UMochiArticulatedActorObject* ArticulatedActor = Component->GetMochiArticulatedActor();
   if (ArticulatedActor == nullptr) {
     UE_LOG(
         LogSuperDexTeleop,
@@ -220,7 +220,8 @@ void UController_MochiArticulatedPose::OnBotSpawned(USuperDexBotComponent* Compo
   mochi::Error err;
   mochiScene->QueueOrExecuteCommand([this, &err](mochi::Scene* scene) {
     mochi::Actor* robot = scene->GetActor(RobotActorHandle);
-    auto* botsCtx = ISuperDexRoboticsModule::Get()->GetRoboticsContext();
+    superdex::robotics::RoboticsContext* botsCtx =
+        ISuperDexRoboticsModule::Get()->GetRoboticsContext();
     PoseControllerHandle = botsCtx->CreateController(
         "MOCHI_ARTICULATED_POSE", /*prefab*/ nullptr, robot, /*name*/ "", err);
     if (!err.IsOK()) {
@@ -255,12 +256,13 @@ void UController_MochiArticulatedPose::Shutdown(const USuperDexBotComponent* Com
     // The articulated actor (and its scene) may already be torn down by the time Shutdown runs; the
     // PoseController guard above does not protect against that. If the scene is gone the controller
     // went with it, so just drop our pointer. Otherwise queue the explicit destroy.
-    auto* ArticulatedActor = Component->GetMochiArticulatedActor();
+    UMochiArticulatedActorObject* ArticulatedActor = Component->GetMochiArticulatedActor();
     UMochiSceneObject* mochiScene =
         (ArticulatedActor != nullptr) ? ArticulatedActor->GetMochiScene() : nullptr;
     if (mochiScene != nullptr) {
       mochiScene->QueueOrExecuteCommand([this](mochi::Scene* scene) {
-        auto* botsCtx = ISuperDexRoboticsModule::Get()->GetRoboticsContext();
+        superdex::robotics::RoboticsContext* botsCtx =
+            ISuperDexRoboticsModule::Get()->GetRoboticsContext();
         botsCtx->DestroyController(PoseControllerHandle);
       });
       mochiScene->WaitForQueuedCommands();
@@ -428,7 +430,8 @@ TArray<superdex::robotics::ControllerEntry>
 UController_MochiArticulatedPose::ExportControllerEntries(const FString& OutputDir) const {
   TArray<superdex::robotics::ControllerEntry> Entries;
   mochi::Error Error;
-  auto Params = ConvertToMochiPoseParams(PoseControllerDetailsParams);
+  superdex::robotics::ControllerMochiArticulatedPose::Params Params =
+      ConvertToMochiPoseParams(PoseControllerDetailsParams);
   FString ParamsPath = FPaths::Combine(OutputDir, TEXT("pose.superdex_controller"));
   Params.SaveToFile(TCHAR_TO_UTF8(*ParamsPath), Error);
   if (Error.IsOK()) {

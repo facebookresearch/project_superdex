@@ -72,9 +72,9 @@ BotPrefab MakeBridgeRobot() {
 }
 
 USuperDexBot* MakeBridgeAsset(BotPrefab const& Prefab) {
-  auto* Asset = NewObject<USuperDexBot>();
+  USuperDexBot* Asset = NewObject<USuperDexBot>();
   mochi::Error Error;
-  auto Json = WriteToJsonString(Prefab, Error);
+  mochi::DynamicString Json = WriteToJsonString(Prefab, Error);
   check(Error.IsOK());
   FindFProperty<FStrProperty>(USuperDexBot::StaticClass(), TEXT("BotPrefabJson"))
       ->SetPropertyValue_InContainer(Asset, FString(UTF8_TO_TCHAR(Json.c_str())));
@@ -119,7 +119,8 @@ FNativeIK CreateDirect(BotPrefab Prefab, BotIKConfig const& Config, mochi::Error
   if (!Config.outputBotConfiguration.empty()) {
     Prefab.defaultPose = Config.outputBotConfiguration;
   }
-  auto Couplings = ToBotIKJointCouplingParams(Config.jointCouplings);
+  mochi::DynamicArray<BotIKJointCouplingParams> Couplings =
+      ToBotIKJointCouplingParams(Config.jointCouplings);
   FSuperDexBotLoader Loader;
   return FNativeIK(
       BotIK::Create(
@@ -136,8 +137,8 @@ bool CompareBridge(
     FAutomationTestBase& Test,
     USuperDexIKSolverObject* Solver,
     BotIK const& Direct) {
-  auto const NativeDofs = Direct.GetJointPositions();
-  auto const& Dofs = Solver->GetSolvedDofs();
+  mochi::Span<mochi::real const> const NativeDofs = Direct.GetJointPositions();
+  TArray<double> const& Dofs = Solver->GetSolvedDofs();
   if (!Test.TestEqual(
           TEXT("Joint-only snapshot width"), Dofs.Num(), static_cast<int32>(NativeDofs.size()))) {
     return false;
@@ -148,8 +149,8 @@ bool CompareBridge(
         FMath::IsNearlyEqual(Dofs[Index], static_cast<double>(NativeDofs[Index]), 1e-5));
   }
   FMochiToUnrealConverter Converter(SuperDexSpace);
-  auto const Links = Direct.GetWorldFromLinks();
-  auto const RawLinks = Solver->GetOutputBotWorldFromLinks();
+  mochi::Span<mochi::TransformRT const> const Links = Direct.GetWorldFromLinks();
+  mochi::Span<mochi::TransformRT const> const RawLinks = Solver->GetOutputBotWorldFromLinks();
   if (!Test.TestEqual(
           TEXT("Native borrowed link snapshot width"),
           static_cast<int32>(RawLinks.size()),
@@ -161,7 +162,7 @@ bool CompareBridge(
         TEXT("Native borrowed snapshot preserves exact rest frames and scale"),
         mochi::NearEqual(RawLinks[Index], Links[Index], 1e-5_r));
   }
-  auto const& UE = Solver->GetSolvedLinkToWorldTransforms();
+  TArray<FTransform> const& UE = Solver->GetSolvedLinkToWorldTransforms();
   if (!Test.TestEqual(TEXT("Link snapshot width"), UE.Num(), static_cast<int32>(Links.size()))) {
     return false;
   }
@@ -180,14 +181,14 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
 bool FSuperDexBotIKRetargetBridgeTest::RunTest(const FString&) {
-  auto const Prefab = MakeBridgeRobot();
+  BotPrefab const Prefab = MakeBridgeRobot();
   TStrongObjectPtr<USuperDexBot> Asset(MakeBridgeAsset(Prefab));
-  auto const Before = Asset->GetBotPrefabJson();
-  auto Config = MakeBridgeConfig();
+  FString const Before = Asset->GetBotPrefabJson();
+  BotIKConfig Config = MakeBridgeConfig();
   TStrongObjectPtr<USuperDexIKSolverObject> Solver(
       USuperDexIKSolverObject::CreateBotIKSolver(GetTransientPackage(), Asset.Get(), Config));
   mochi::Error Error;
-  auto Direct = CreateDirect(Prefab, Config, Error);
+  FNativeIK Direct = CreateDirect(Prefab, Config, Error);
   if (!TestNotNull(TEXT("Full config creates the bridge"), Solver.Get()) ||
       !TestTrue(TEXT("Direct native solver created"), Error.IsOK() && Direct != nullptr)) {
     return false;
@@ -198,7 +199,7 @@ bool FSuperDexBotIKRetargetBridgeTest::RunTest(const FString&) {
   TestTrue(
       TEXT("Source world pose is private identity"),
       Solver->GetSolvedLinkToWorldTransforms()[0].Equals(FTransform::Identity));
-  auto InputBot = Prefab;
+  BotPrefab InputBot = Prefab;
   InputBot.scale = 0.8_r;
   for (int Sample = 0; Sample < 3; ++Sample) {
     mochi::DynamicArray<mochi::real> ReferenceQ{0.4_r + 0.1_r * Sample, 0.2_r - 0.05_r * Sample};
@@ -225,14 +226,14 @@ bool FSuperDexBotIKRetargetBridgeTest::RunTest(const FString&) {
     TestTrue(TEXT("Direct native solve remains error-free"), Error.IsOK());
     TestEqual(TEXT("Goals-reached status is forwarded separately"), Reached, DirectReached);
     CompareBridge(*this, Solver.Get(), *Direct);
-    const auto Cached = Solver->GetSolvedDofs();
+    const TArray<double> Cached = Solver->GetSolvedDofs();
     TestTrue(
         TEXT("Repeated cache reads do not re-solve or reset source seed"),
         Cached == Solver->GetSolvedDofs());
   }
-  auto UncoupledConfig = Config;
+  BotIKConfig UncoupledConfig = Config;
   UncoupledConfig.jointCouplings.clear();
-  auto Uncoupled = CreateDirect(Prefab, UncoupledConfig, Error);
+  FNativeIK Uncoupled = CreateDirect(Prefab, UncoupledConfig, Error);
   mochi::DynamicArray<mochi::real> LastQ{0.6_r, 0.1_r};
   Uncoupled->SetInputBotConfiguration(
       InputBot,
@@ -253,7 +254,7 @@ bool FSuperDexBotIKRetargetBridgeTest::RunTest(const FString&) {
   // The unbound component API must retain the same nonidentity local attachment.
   Direct->ClearAllGoals(Error);
   Solver->ClearAllTargets();
-  auto const& Goal = Config.goals[0];
+  BotIKGoalConfig const& Goal = Config.goals[0];
   TestTrue(
       TEXT("Full local attachment update accepted"),
       Solver->SetBotGoal(
@@ -290,19 +291,19 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
 bool FSuperDexBotIKRetargetBridgeValidationTest::RunTest(const FString&) {
-  auto const Prefab = MakeBridgeRobot();
+  BotPrefab const Prefab = MakeBridgeRobot();
   TStrongObjectPtr<USuperDexBot> Asset(MakeBridgeAsset(Prefab));
-  auto const Before = Asset->GetBotPrefabJson();
-  auto const Config = MakeBridgeConfig();
+  FString const Before = Asset->GetBotPrefabJson();
+  BotIKConfig const Config = MakeBridgeConfig();
   auto Reject = [&](BotIKConfig const& Invalid) {
-    auto* Rejected =
+    USuperDexIKSolverObject* Rejected =
         USuperDexIKSolverObject::CreateBotIKSolver(GetTransientPackage(), Asset.Get(), Invalid);
     TestNull(TEXT("Invalid complete config rejects creation"), Rejected);
     if (Rejected) {
       Rejected->DestroyMochiResources();
     }
   };
-  auto Invalid = Config;
+  BotIKConfig Invalid = Config;
   Invalid.outputBotConfiguration = {0.1_r};
   Reject(Invalid);
   Invalid = Config;
@@ -326,7 +327,7 @@ bool FSuperDexBotIKRetargetBridgeValidationTest::RunTest(const FString&) {
             : Mode == 1 ? USuperDexIKSolverObject::CreateBotIKSolver(
                               GetTransientPackage(), Asset.Get(), Config.createParams, {})
                         : [&]() {
-                            auto Empty = Config;
+                            BotIKConfig Empty = Config;
                             Empty.outputBotConfiguration.clear();
                             return USuperDexIKSolverObject::CreateBotIKSolver(
                                 GetTransientPackage(), Asset.Get(), Empty);
@@ -338,7 +339,7 @@ bool FSuperDexBotIKRetargetBridgeValidationTest::RunTest(const FString&) {
         TEXT("Empty seed retains authored default"),
         Solver->GetSolvedDofs()[0],
         static_cast<double>(Prefab.defaultPose[0]));
-    auto const Cached = Solver->GetSolvedDofs();
+    TArray<double> const Cached = Solver->GetSolvedDofs();
     TestTrue(
         TEXT("Valid goal batch accepted"),
         Solver->SetBotInputConfiguration(
@@ -347,7 +348,7 @@ bool FSuperDexBotIKRetargetBridgeValidationTest::RunTest(const FString&) {
             Config.outputBaseFrameFromInputBaseFrame,
             Config.inputBotScale,
             Config.goals));
-    auto BadGoals = Config.goals;
+    mochi::DynamicArray<BotIKGoalConfig> BadGoals = Config.goals;
     BadGoals[0].inputBotLink = "missing";
     TestFalse(
         TEXT("Invalid goal binding rejected"),
@@ -383,7 +384,7 @@ bool FSuperDexBotIKRetargetBridgeValidationTest::RunTest(const FString&) {
             Config.goals[0].baseOrInputLinkFrameFromConstraintFrame,
             -1_r,
             75_r));
-    auto NonunitGoal = Config.goals[0].baseOrInputLinkFrameFromConstraintFrame;
+    mochi::TransformRT NonunitGoal = Config.goals[0].baseOrInputLinkFrameFromConstraintFrame;
     NonunitGoal.SetRotation(mochi::Quaternion(0_r, 0_r, 0_r, 2_r));
     TestFalse(
         TEXT("Nonunit attachment goal rejected before touching either goal component"),
@@ -428,9 +429,9 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
 bool FSuperDexBotIKSingleFrameGoalValidationTest::RunTest(const FString&) {
-  auto const Prefab = MakeBridgeRobot();
+  BotPrefab const Prefab = MakeBridgeRobot();
   TStrongObjectPtr<USuperDexBot> Asset(MakeBridgeAsset(Prefab));
-  auto const Config = MakeBridgeConfig();
+  BotIKConfig const Config = MakeBridgeConfig();
   const mochi::TransformRT Goal{
       mochi::Quaternion::RotationZ(0.45_r), mochi::Real3{0.5_r, 0.4_r, 0_r}};
   const mochi::TransformRT ChangedGoal{
@@ -442,7 +443,7 @@ bool FSuperDexBotIKSingleFrameGoalValidationTest::RunTest(const FString&) {
     TStrongObjectPtr<USuperDexIKSolverObject> Solver(
         USuperDexIKSolverObject::CreateBotIKSolver(GetTransientPackage(), Asset.Get(), Config));
     mochi::Error Error;
-    auto Direct = CreateDirect(Prefab, Config, Error);
+    FNativeIK Direct = CreateDirect(Prefab, Config, Error);
     if (!TestNotNull(TEXT("Single-frame fixture creates"), Solver.Get()) ||
         !TestTrue(TEXT("Direct fixture creates"), Error.IsOK() && Direct != nullptr)) {
       return;
@@ -477,7 +478,7 @@ bool FSuperDexBotIKSingleFrameGoalValidationTest::RunTest(const FString&) {
     Reject(3, ChangedGoal, InvalidStiffness, 75_r);
     Reject(3, ChangedGoal, 100_r, InvalidStiffness);
   }
-  auto NonunitGoal = ChangedGoal;
+  mochi::TransformRT NonunitGoal = ChangedGoal;
   NonunitGoal.SetRotation(mochi::Quaternion(0_r, 0_r, 0_r, 2_r));
   Reject(3, NonunitGoal, 100_r, 75_r);
   return true;

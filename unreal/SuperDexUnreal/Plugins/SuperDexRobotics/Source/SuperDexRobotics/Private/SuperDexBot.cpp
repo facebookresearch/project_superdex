@@ -59,7 +59,8 @@ void USuperDexBot::PostLoad() {
   // Upgrade: replace plain UAssetImportData with USuperDexBotImportData.
   if (AssetImportData && !AssetImportData->IsA<USuperDexBotImportData>()) {
     UAssetImportData* OldData = AssetImportData;
-    auto* NewData = NewObject<USuperDexBotImportData>(this, NAME_None, RF_NoFlags, nullptr);
+    USuperDexBotImportData* NewData =
+        NewObject<USuperDexBotImportData>(this, NAME_None, RF_NoFlags, nullptr);
     // Migrate source file info from the old subobject.
     TArray<FAssetImportInfo::FSourceFile> files = OldData->GetSourceData().SourceFiles;
     NewData->SetSourceFiles(MoveTemp(files));
@@ -96,7 +97,7 @@ FString USuperDexBot::ComputeSourceHash() const {
     return FString();
   }
   mochi::ErrorLog Error;
-  auto Hash = superdex::robotics::HashBotFile(TCHAR_TO_UTF8(*SourcePath), Error);
+  mochi::DynamicString Hash = superdex::robotics::HashBotFile(TCHAR_TO_UTF8(*SourcePath), Error);
   if (!Error.IsOK()) {
     UE_LOG(
         LogMochiPhysics,
@@ -210,9 +211,9 @@ int32 USuperDexBot::GetDofIndex(FName JointName) const {
   if (!EnsureBotPrefabCached()) {
     return INDEX_NONE;
   }
-  const auto& DofJoints = CachedBotPrefab._dofIndices;
+  const mochi::DynamicArray<int>& DofJoints = CachedBotPrefab._dofIndices;
   for (int32 Dof = 0; Dof < static_cast<int32>(DofJoints.size()); ++Dof) {
-    const auto& Joint = CachedBotPrefab.joints[DofJoints[Dof]];
+    const superdex::robotics::BotJointPrefab& Joint = CachedBotPrefab.joints[DofJoints[Dof]];
     if (FName(UTF8_TO_TCHAR(std::string(Joint.name).c_str())) == JointName) {
       return Dof;
     }
@@ -224,7 +225,7 @@ FName USuperDexBot::GetDofLinkName(int32 DofIndex) const {
   if (!EnsureBotPrefabCached()) {
     return NAME_None;
   }
-  const auto& DofJoints = CachedBotPrefab._dofIndices;
+  const mochi::DynamicArray<int>& DofJoints = CachedBotPrefab._dofIndices;
   if (DofIndex < 0 || DofIndex >= static_cast<int32>(DofJoints.size())) {
     return NAME_None;
   }
@@ -239,7 +240,8 @@ FName USuperDexBot::GetDofLinkName(int32 DofIndex) const {
 FString USuperDexBot::ToUrdfXml(const FString& VisualRelPath, const FString& CollisionRelPath)
     const {
   if (EnsureBotPrefabCached()) {
-    auto str = superdex::robotics::SaveToUrdfString(CachedBotPrefab, mochi::ErrorLog{});
+    mochi::DynamicString str =
+        superdex::robotics::SaveToUrdfString(CachedBotPrefab, mochi::ErrorLog{});
     return ANSI_TO_TCHAR(str.c_str());
   }
   UE_LOG(
@@ -250,7 +252,8 @@ FString USuperDexBot::ToUrdfXml(const FString& VisualRelPath, const FString& Col
 }
 
 bool USuperDexBot::MaterializeSensorParamFiles(superdex::robotics::BotPrefab& Prefab) const {
-  const auto GetCapturedKey = [](const auto& Sensor, FString& OutKey) -> bool {
+  const auto GetCapturedKey = [](const superdex::robotics::BotSensorPrefab& Sensor,
+                                 FString& OutKey) -> bool {
     const std::string_view Params(Sensor.params.c_str(), Sensor.params.size());
     if (!Params.starts_with(kSuperDexBotDataPrefix)) {
       return false;
@@ -262,8 +265,8 @@ bool USuperDexBot::MaterializeSensorParamFiles(superdex::robotics::BotPrefab& Pr
 
   TArray<FString> ReferencedParamsKeys;
   TArray<FString> MissingParamsKeys;
-  for (const auto& Link : Prefab.links) {
-    for (const auto& Sensor : Link.sensors) {
+  for (const superdex::robotics::BotLinkPrefab& Link : Prefab.links) {
+    for (const superdex::robotics::BotSensorPrefab& Sensor : Link.sensors) {
       FString Key;
       if (!GetCapturedKey(Sensor, Key)) {
         continue;
@@ -428,8 +431,8 @@ bool USuperDexBot::MaterializeSensorParamFiles(superdex::robotics::BotPrefab& Pr
     bOk = false;
   }
 
-  for (auto& Link : Prefab.links) {
-    for (auto& Sensor : Link.sensors) {
+  for (superdex::robotics::BotLinkPrefab& Link : Prefab.links) {
+    for (superdex::robotics::BotSensorPrefab& Sensor : Link.sensors) {
       FString Key;
       if (!GetCapturedKey(Sensor, Key)) {
         continue;
@@ -704,7 +707,7 @@ bool USuperDexBot::ComputeVisualBoundsInternal(
     }
     FTransform MeshToRoot = LinkToRootTransforms[i];
     if (!CachedBotPrefab.links[i].renderModelFile.empty()) {
-      auto const& link = CachedBotPrefab.links[i];
+      superdex::robotics::BotLinkPrefab const& link = CachedBotPrefab.links[i];
       mochi::TransformRT RT(link.renderModelRotation, link.renderModelTranslation);
       FTransform VisualMeshTransform = Converter.TransformToUnreal(RT);
       VisualMeshTransform.SetScale3D(
@@ -725,13 +728,13 @@ bool USuperDexBot::ComputeVisualBoundsInternal(
 void USuperDexBot::ComputeOverlayStats(double& OutMass, int& OutNumSurfaceFaces) const {
   OutMass = 0.0;
   OutNumSurfaceFaces = 0;
-  auto const& params = GetBotPrefab();
-  for (auto const& l : params.links) {
+  superdex::robotics::BotPrefab const& params = GetBotPrefab();
+  for (superdex::robotics::BotLinkPrefab const& l : params.links) {
     if (l.mass.has_value()) {
       OutMass += *l.mass;
     }
   }
-  for (auto const& m : GetMochiModels()) {
+  for (UMochiModel* const& m : GetMochiModels()) {
     if (m) {
       OutNumSurfaceFaces += m->NumSurfaceFaces;
     }
@@ -747,7 +750,7 @@ void USuperDexBot::DrawCustom(
     FMaterialRenderProxy* JointMaterialRenderProxy) const {
   static constexpr FColor kPurpleColor = FColor(138, 43, 226, 255);
   TMochiToUnrealConverter<double> Conv(SuperDexSpace, UnrealCentimetersSpace);
-  auto const& P = GetBotPrefab();
+  superdex::robotics::BotPrefab const& P = GetBotPrefab();
   mochi::DynamicArray<mochi::real> Pose(P.defaultPose.begin(), P.defaultPose.end());
   mochi::DynamicArray<mochi::TransformRT> RT;
   mochi::ErrorLog Err;
@@ -775,7 +778,7 @@ void USuperDexBot::DrawCustom(
           loc, loc + R.GetScaledAxis(EAxis::Z) * s, FLinearColor::Blue, SDPG_Foreground, 0.1f, 1.f);
     }
     if (bShowJoints && i > 0) {
-      auto const& jt = P.joints[i];
+      superdex::robotics::BotJointPrefab const& jt = P.joints[i];
       if (jt.type == mochi::ArticulatedJointType::Revolute ||
           jt.type == mochi::ArticulatedJointType::Prismatic) {
         int sides = jt.type == mochi::ArticulatedJointType::Prismatic ? 3 : 16;
@@ -814,7 +817,7 @@ void USuperDexBot::DrawCanvasCustom(
     bool bShowLinkTransforms,
     bool bShowJoints) const {
   TMochiToUnrealConverter<double> Conv(SuperDexSpace, UnrealCentimetersSpace);
-  auto const& P = GetBotPrefab();
+  superdex::robotics::BotPrefab const& P = GetBotPrefab();
   mochi::DynamicArray<mochi::real> Pose(P.defaultPose.begin(), P.defaultPose.end());
   mochi::DynamicArray<mochi::TransformRT> RT;
   mochi::ErrorLog Err;
@@ -853,7 +856,7 @@ void USuperDexBot::DrawCanvasCustom(
       AddLabel(UTF8_TO_TCHAR(std::string(P.joints[i].name).c_str()), loc);
     }
   }
-  for (auto& Pair : LabelsByScreenPos) {
+  for (TPair<TPair<int32, int32>, TArray<FString>>& Pair : LabelsByScreenPos) {
     FString Text;
     for (int32 i = 0; i < Pair.Value.Num(); ++i) {
       Text += Pair.Value[i] + (i == Pair.Value.Num() - 1 ? TEXT("") : TEXT("\n"));

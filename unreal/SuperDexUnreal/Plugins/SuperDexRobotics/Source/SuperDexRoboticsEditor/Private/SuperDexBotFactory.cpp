@@ -71,7 +71,7 @@ static void ComputeSkinLinkMapping(
     TArray<int32>& OutSkinBoneToLink,
     TArray<bool>& OutHiddenLinks) {
   mochi::DynamicArray<mochi::DynamicString> LinkNames;
-  for (const auto& Link : BotPrefab.links) {
+  for (const superdex::robotics::BotLinkPrefab& Link : BotPrefab.links) {
     LinkNames.push_back(Link.name);
   }
   const mochi::DynamicArray<int> BoneLinks =
@@ -102,7 +102,7 @@ static bool MakeSkinnedPart(
     const TArray<FMochiArticulationSkeletonLink>& Links,
     const UStaticMesh* SkinStaticMesh,
     FMochiArticulationSkinnedPart& OutPart) {
-  const auto& Skin = *BotPrefab.skin;
+  const mochi::prefab::ArticulatedSkinPrefab& Skin = *BotPrefab.skin;
   TArray<FString> MaterialNames;
   if (Links.IsEmpty() ||
       !SuperDexRuntimeRender::ReadSkinnedGlb(
@@ -313,11 +313,11 @@ static bool CaptureBotSensorParamsFiles(
   TMap<FString, FString> CapturedParamsKeys;
   TSet<FString> UnavailableParamsPaths;
   for (int32 i = 0; i < static_cast<int32>(BotPrefab.links.size()); ++i) {
-    auto& Link = BotPrefab.links[i];
+    superdex::robotics::BotLinkPrefab& Link = BotPrefab.links[i];
     const FString LinkKey =
         SuperDexImportUtils::SanitizeForFileName(UTF8_TO_TCHAR(std::string(Link.name).c_str()));
     for (int32 s = 0; s < static_cast<int32>(Link.sensors.size()); ++s) {
-      auto& Sensor = Link.sensors[s];
+      superdex::robotics::BotSensorPrefab& Sensor = Link.sensors[s];
       const std::string_view Params(Sensor.params.c_str(), Sensor.params.size());
       const ESuperDexBotComponentParamsKind ParamsKind = ClassifyBotComponentParams(Params);
       if (ParamsKind == ESuperDexBotComponentParamsKind::Empty ||
@@ -434,7 +434,7 @@ USuperDexBot* USuperDexBotFactory::ImportBot(
 
   // We need the bot name to check for re-drag and create the asset.
   mochi::ErrorLog MochiError;
-  auto ResolvedParams =
+  superdex::robotics::BotPrefab ResolvedParams =
       superdex::robotics::LoadBotPrefabFromFile(TCHAR_TO_UTF8(*Filename), MochiError);
   if (!MochiError.IsOK()) {
     UE_LOG(LogSuperDexBotFactory, Error, TEXT("Failed to load BotPrefab from %s"), *Filename);
@@ -498,7 +498,7 @@ bool USuperDexBotFactory::ImportBotFromFile(
   CleanUp();
 
   mochi::ErrorLog MochiError;
-  auto BotPrefab =
+  superdex::robotics::BotPrefab BotPrefab =
       superdex::robotics::LoadBotPrefabFromFile(TCHAR_TO_UTF8(*SourcePath), MochiError);
   if (!MochiError.IsOK()) {
     UE_LOG(LogSuperDexBotFactory, Error, TEXT("Failed to load BotPrefab from %s"), *SourcePath);
@@ -543,7 +543,7 @@ bool USuperDexBotFactory::ImportBotFromFile(
   SlowTask.MakeDialog();
 
   for (int32 i = 0; i < NumLinks; ++i) {
-    auto const& Link = BotPrefab.links[i];
+    superdex::robotics::BotLinkPrefab const& Link = BotPrefab.links[i];
     FString LinkName =
         SuperDexImportUtils::SanitizeForPackagePath(UTF8_TO_TCHAR(std::string(Link.name).c_str()));
 
@@ -794,7 +794,7 @@ bool USuperDexBotFactory::ImportBotFromFile(
   // Remap model paths in the resolved params from absolute disk paths to UE asset paths
   // so that FUnrealBotLoader can resolve them to UE assets at runtime.
   for (int32 i = 0; i < NumLinks; ++i) {
-    auto& Link = BotPrefab.links[i];
+    superdex::robotics::BotLinkPrefab& Link = BotPrefab.links[i];
     if (!Link.shapeFile.empty() && ImportedMochiModels[i]) {
       FString UEPath = ImportedMochiModels[i]->GetPathName();
       Link.shapeFile = mochi::DynamicString(TCHAR_TO_UTF8(*UEPath));
@@ -823,7 +823,7 @@ bool USuperDexBotFactory::ImportBotFromFile(
   // Serialize the resolved params with remapped UE asset paths.
   {
     mochi::ErrorLog JsonErr;
-    auto Json = superdex::robotics::WriteToJsonString(BotPrefab, JsonErr);
+    mochi::DynamicString Json = superdex::robotics::WriteToJsonString(BotPrefab, JsonErr);
     Bot->BotPrefabJson = UTF8_TO_TCHAR(Json.c_str());
   }
 
@@ -876,13 +876,13 @@ void USuperDexBotFactory::ConvertBotPrefabToLinks(
     const superdex::robotics::BotPrefab& Params,
     const TArray<UStaticMesh*>& ImportedRenderMeshes,
     TArray<FMochiArticulationSkeletonLink>& OutLinks) {
-  auto Converter = GetRosToUnrealConverter();
+  TMochiToUnrealConverter<double> Converter = GetRosToUnrealConverter();
 
   int32 const NumLinks = static_cast<int32>(Params.links.size());
   OutLinks.SetNum(NumLinks);
 
   for (int32 i = 0; i < NumLinks; ++i) {
-    auto const& BotLink = Params.links[i];
+    superdex::robotics::BotLinkPrefab const& BotLink = Params.links[i];
     FMochiArticulationSkeletonLink& Link = OutLinks[i];
 
     Link.Name = FName(UTF8_TO_TCHAR(std::string(BotLink.name).c_str()));
@@ -946,7 +946,7 @@ bool UReimportSuperDexBotFactory::AreImportedAssetsPresent(const USuperDexBot* B
   // prefab defines collider shapes yet no models are present, a prior import likely
   // failed partway -- force a reimport instead of treating the bot as fully present.
   if (Bot->GetMochiModels().IsEmpty()) {
-    for (const auto& Link : Bot->GetBotPrefab().links) {
+    for (const superdex::robotics::BotLinkPrefab& Link : Bot->GetBotPrefab().links) {
       if (!Link.shapeFile.empty()) {
         return false;
       }
@@ -998,7 +998,8 @@ static bool NeedsSensorParamsCapture(const USuperDexBot* Bot) {
   // `botdata:` markers rewritten to absolute scratch paths by MaterializeSensorParamFiles, so a
   // captured sensor would be indistinguishable from an uncaptured one there.
   mochi::ErrorLog JsonErr;
-  const auto Prefab = superdex::robotics::ReadFromJsonString(TCHAR_TO_UTF8(*Json), JsonErr);
+  const superdex::robotics::BotPrefab Prefab =
+      superdex::robotics::ReadFromJsonString(TCHAR_TO_UTF8(*Json), JsonErr);
   if (!JsonErr.IsOK()) {
     const char* ErrorDescription = JsonErr._error.GetDescription();
     if (ErrorDescription == nullptr) {
@@ -1012,8 +1013,8 @@ static bool NeedsSensorParamsCapture(const USuperDexBot* Bot) {
         ErrorDescription);
     return true;
   }
-  for (const auto& Link : Prefab.links) {
-    for (const auto& Sensor : Link.sensors) {
+  for (const superdex::robotics::BotLinkPrefab& Link : Prefab.links) {
+    for (const superdex::robotics::BotSensorPrefab& Sensor : Link.sensors) {
       const std::string_view Params(Sensor.params.c_str(), Sensor.params.size());
       const ESuperDexBotComponentParamsKind ParamsKind = ClassifyBotComponentParams(Params);
       if (ParamsKind == ESuperDexBotComponentParamsKind::FilePath ||

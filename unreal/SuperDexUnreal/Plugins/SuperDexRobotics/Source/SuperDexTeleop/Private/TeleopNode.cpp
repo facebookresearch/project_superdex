@@ -39,7 +39,7 @@ bool SetPubDataWithSizeCheck(
   if (!PubSub.Pub.IsValid()) {
     return false;
   }
-  auto& SafeDest = PubSub.PubData;
+  TSafeLatentArray<T>& SafeDest = PubSub.PubData;
   const int32 Count = FMath::Min(SafeDest.Num(), Source.Num());
   if (SafeDest.Num() != Source.Num()) {
     UE_LOG(
@@ -52,7 +52,7 @@ bool SetPubDataWithSizeCheck(
         SafeDest.Num(),
         Count);
   }
-  SafeDest.Mutate([&](auto& Data) {
+  SafeDest.Mutate([&](TArray<T>& Data) {
     for (int32 i = 0; i < Count; ++i) {
       Data[i] = Source[i];
     }
@@ -102,7 +102,7 @@ void CreateSubscriber<FTransform>(
     TTeleopPubSub<FTransform>& PubSub) {
   PubSub.Sub = Comm->CreateSubscriber_TransformArray(
       BuildTeleopTopic(RobotName, Topic), [&PubSub](const TArray<FTransform>& Data) {
-        PubSub.SubData.Mutate([&](auto& Arr) { Arr = Data; });
+        PubSub.SubData.Mutate([&](TArray<FTransform>& Arr) { Arr = Data; });
       });
 }
 
@@ -114,7 +114,7 @@ void CreateSubscriber<double>(
     TTeleopPubSub<double>& PubSub) {
   PubSub.Sub = Comm->CreateSubscriber_DoubleArray(
       BuildTeleopTopic(RobotName, Topic), [&PubSub](const TArray<double>& Data) {
-        PubSub.SubData.Mutate([&](auto& Arr) { Arr = Data; });
+        PubSub.SubData.Mutate([&](TArray<double>& Arr) { Arr = Data; });
       });
 }
 

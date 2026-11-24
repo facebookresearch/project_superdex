@@ -41,7 +41,8 @@ void UZeroOrderHoldRetargeter::BeginPlay() {
   // Find an attached UMochiArticulationComponent that holds the articulation asset describing our
   // kinematics
   if (!Articulation) {
-    auto const* robot = GetOwner()->FindComponentByClass<UMochiArticulationComponent>();
+    UMochiArticulationComponent const* robot =
+        GetOwner()->FindComponentByClass<UMochiArticulationComponent>();
     if (robot) {
       Articulation = robot->GetArticulationAsset();
     } else {

@@ -44,7 +44,7 @@ uint32 USuperDexRetargeter::GetHighestPriorityLastCalledWithin(
     double CurrentTime,
     double WithinDeltaSecondsAgo) {
   uint32 HighestPriority = 0;
-  for (auto kv : CachePriorityToLastRequestTimeMap) {
+  for (TPair<uint32, double> kv : CachePriorityToLastRequestTimeMap) {
     if (kv.Key > HighestPriority) {
       if (CurrentTime - kv.Value < WithinDeltaSecondsAgo) {
         HighestPriority = kv.Key;

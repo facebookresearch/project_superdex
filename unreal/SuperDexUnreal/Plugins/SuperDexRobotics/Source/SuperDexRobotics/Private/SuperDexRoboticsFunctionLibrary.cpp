@@ -113,7 +113,7 @@ FString GetStringPropertyValue(UObject* Owner, FName PropertyName, const TCHAR* 
 FString DescribeRoboperatorClassKeys(const FRoboperatorExportBindings& Bindings) {
   TArray<FString> Entries;
   Entries.Reserve(Bindings.KeyByRoboperatorClass.Num());
-  for (auto const& Pair : Bindings.KeyByRoboperatorClass) {
+  for (TPair<const UClass*, FString> const& Pair : Bindings.KeyByRoboperatorClass) {
     Entries.Add(FString::Printf(TEXT("'%s' -> %s"), *Pair.Value, *Pair.Key->GetName()));
   }
   return Entries.IsEmpty() ? FString(TEXT("<none>")) : FString::Join(Entries, TEXT(", "));
@@ -127,12 +127,12 @@ void CollectRoboperatorSlots(UObject* Session, FRoboperatorExportBindings& OutBi
   }
   // The slot a side drives is the level's to name, so export whatever this session calls it
   // rather than baking "left"/"right" into the exporter.
-  if (auto* Left =
+  if (AActor* Left =
           Cast<AActor>(GetObjectPropertyValue(SessionMode, TEXT("LeftRoboperatorActor")))) {
     OutBindings.SlotByRoboperator.Add(
         Left, GetStringPropertyValue(Session, TEXT("LeftSlotName"), TEXT("left")));
   }
-  if (auto* Right =
+  if (AActor* Right =
           Cast<AActor>(GetObjectPropertyValue(SessionMode, TEXT("RightRoboperatorActor")))) {
     OutBindings.SlotByRoboperator.Add(
         Right, GetStringPropertyValue(Session, TEXT("RightSlotName"), TEXT("right")));
@@ -167,7 +167,7 @@ void CollectRoboperatorClassKeys(UObject* Session, FRoboperatorExportBindings& O
         *MapProperty->ValueProp->GetClass()->GetName());
     return;
   }
-  const auto& Map =
+  const TMap<FString, TSubclassOf<AActor>>& Map =
       *MapProperty->ContainerPtrToValuePtr<TMap<FString, TSubclassOf<AActor>>>(Session);
   if (Map.IsEmpty()) {
     UE_LOG(
@@ -180,7 +180,7 @@ void CollectRoboperatorClassKeys(UObject* Session, FRoboperatorExportBindings& O
     return;
   }
 
-  for (auto const& Pair : Map) {
+  for (TPair<FString, TSubclassOf<AActor>> const& Pair : Map) {
     const FString& Key = Pair.Key;
     const UClass* Class = Pair.Value.Get();
     if (Key.IsEmpty() || !Class) {
@@ -346,7 +346,8 @@ TArray<FSuperDexSpawnablePrefabExportData> CollectSpawnablePrefabs(UWorld* World
     for (int32 Index = 0; Index < ArrayHelper.Num(); ++Index) {
       const uint8* EntryPtr = ArrayHelper.GetRawPtr(Index);
       const FName PrefabName = PrefabNameProp->GetPropertyValue_InContainer(EntryPtr);
-      auto* ActorClass = Cast<UClass>(ActorClassProp->GetObjectPropertyValue_InContainer(EntryPtr));
+      UClass* ActorClass =
+          Cast<UClass>(ActorClassProp->GetObjectPropertyValue_InContainer(EntryPtr));
       if (PrefabName.IsNone() || !ActorClass) {
         UE_LOG(
             LogMochiPhysics,
@@ -387,7 +388,8 @@ bool USuperDexRoboticsFunctionLibrary::ExportSuperDexBotScene(
     const FString& ExportName,
     const FString& OutputDir,
     bool bCaptureLiveScene) {
-  const auto subsys = UMochiPhysicsFunctionLibrary::GetMochiGameInstanceSubsystem(WorldContext);
+  UMochiGameInstanceSubsystem* const subsys =
+      UMochiPhysicsFunctionLibrary::GetMochiGameInstanceSubsystem(WorldContext);
   if (!subsys || !subsys->GetScene()) {
     UE_LOG(LogMochiPhysics, Warning, TEXT("ExportSuperDexBotScene: No active Mochi scene."));
     return false;
@@ -450,7 +452,7 @@ bool USuperDexRoboticsFunctionLibrary::ExportSuperDexBotScene(
   for (TActorIterator<AActor> It(World); It; ++It) {
     AActor* Actor = *It;
 
-    auto* BotComp = Actor->FindComponentByClass<USuperDexBotComponent>();
+    USuperDexBotComponent* BotComp = Actor->FindComponentByClass<USuperDexBotComponent>();
     if (!BotComp || !BotComp->GetBotAsset()) {
       continue;
     }
@@ -480,12 +482,12 @@ bool USuperDexRoboticsFunctionLibrary::ExportSuperDexBotScene(
       }
     }
 
-    if (auto* MochiActor = BotComp->GetMochiArticulatedActor()) {
+    if (UMochiArticulatedActorObject* MochiActor = BotComp->GetMochiArticulatedActor()) {
       Data.ActorHandle = MochiActor->GetArticulatedActorHandle();
       ExcludeHandles.Add(Data.ActorHandle);
     }
 
-    if (auto* Controller = BotComp->GetController()) {
+    if (USuperDexBotController* Controller = BotComp->GetController()) {
       Data.ControllerEntries = Controller->ExportControllerEntries(ControllersDir);
     }
 
@@ -540,7 +542,7 @@ bool USuperDexRoboticsFunctionLibrary::ExportSuperDexBotScene(
   // --- Game thread: spawn spawnable prefab actors now that the base scene is captured. ---
 
   TArray<AActor*> SpawnedExportPrefabActors;
-  for (auto const& SpawnablePrefab : SpawnablePrefabs) {
+  for (FSuperDexSpawnablePrefabExportData const& SpawnablePrefab : SpawnablePrefabs) {
     if (!SpawnablePrefab.ActorClass || SpawnablePrefab.PrefabName.IsNone()) {
       continue;
     }
@@ -558,7 +560,8 @@ bool USuperDexRoboticsFunctionLibrary::ExportSuperDexBotScene(
     SpawnedExportPrefabActors.Add(SpawnedActor);
     SpawnedActor->Tags.AddUnique(FName(TEXT("SuperDexBotSceneExportSpawnableActor")));
 
-    if (auto* BotComp = SpawnedActor->FindComponentByClass<USuperDexBotComponent>()) {
+    if (USuperDexBotComponent* BotComp =
+            SpawnedActor->FindComponentByClass<USuperDexBotComponent>()) {
       if (BotComp->GetBotAsset()) {
         SpawnableExportData Data;
         Data.PrefabName = SpawnablePrefab.PrefabName.ToString();
@@ -571,12 +574,12 @@ bool USuperDexRoboticsFunctionLibrary::ExportSuperDexBotScene(
     TArray<mochi::ActorHandle> SpawnableActorHandles;
     TArray<UActorComponent*> ActorComponents;
     SpawnedActor->GetComponents(ActorComponents);
-    for (auto* Component : ActorComponents) {
-      auto* MochiMeshComp = Cast<IMochiMeshComponentInterface>(Component);
+    for (UActorComponent* Component : ActorComponents) {
+      IMochiMeshComponentInterface* MochiMeshComp = Cast<IMochiMeshComponentInterface>(Component);
       if (!MochiMeshComp) {
         continue;
       }
-      auto* MochiActor = MochiMeshComp->GetMochiActor();
+      UMochiActorObject* MochiActor = MochiMeshComp->GetMochiActor();
       if (MochiActor && MochiActor->IsValid()) {
         SpawnableActorHandles.Add(MochiActor->GetMochiActorHandle());
       }
@@ -610,14 +613,14 @@ bool USuperDexRoboticsFunctionLibrary::ExportSuperDexBotScene(
     // 1. Resolve exportable spawnables. The base scene was already exported in phase 1, so no
     // exclusion is needed here.
     TArray<SpawnableExportData> ExportableSpawnables;
-    for (auto const& SpawnableData : CollectedSpawnables) {
+    for (SpawnableExportData const& SpawnableData : CollectedSpawnables) {
       if (!SpawnableData.SuperDexBotSourcePath.IsEmpty()) {
         ExportableSpawnables.Add(SpawnableData);
         continue;
       }
 
       bool bAllActorsFound = true;
-      for (auto const& Handle : SpawnableData.ActorHandles) {
+      for (mochi::ActorHandle const& Handle : SpawnableData.ActorHandles) {
         if (!Scene->GetActor(Handle)) {
           bAllActorsFound = false;
           break;
@@ -649,7 +652,7 @@ bool USuperDexRoboticsFunctionLibrary::ExportSuperDexBotScene(
     Prefab.metadata.author = mochi::DynamicString("Unreal Export");
     Prefab.scene.baseScene = mochi::DynamicString("//base_scene/base_scene.mochi_scene");
 
-    for (auto const& SpawnableData : ExportableSpawnables) {
+    for (SpawnableExportData const& SpawnableData : ExportableSpawnables) {
       superdex::robotics::PrefabEntry PrefabEntry;
       PrefabEntry.name = mochi::DynamicString(TCHAR_TO_UTF8(*SpawnableData.PrefabName));
 
@@ -694,9 +697,9 @@ bool USuperDexRoboticsFunctionLibrary::ExportSuperDexBotScene(
           if (SceneActor->IsNestedLinkActor() || SceneActor->IsNestedSoftActor()) {
             return;
           }
-          auto Handle = SceneActor->GetHandle();
+          mochi::ActorHandle Handle = SceneActor->GetHandle();
           bool bKeep = false;
-          for (auto const& SpawnableHandle : SpawnableData.ActorHandles) {
+          for (mochi::ActorHandle const& SpawnableHandle : SpawnableData.ActorHandles) {
             if (Handle == SpawnableHandle) {
               bKeep = true;
               break;
@@ -730,9 +733,9 @@ bool USuperDexRoboticsFunctionLibrary::ExportSuperDexBotScene(
       Prefab.scene.spawnablePrefabs.push_back(std::move(PrefabEntry));
     }
 
-    for (auto const& BotData : CollectedBots) {
+    for (BotExportData const& BotData : CollectedBots) {
       // Get bot transform from the live Mochi scene.
-      auto* Actor = Scene->GetActor(BotData.ActorHandle);
+      mochi::Actor* Actor = Scene->GetActor(BotData.ActorHandle);
 
       superdex::robotics::BotEntry BotEntry;
       BotEntry.name = mochi::DynamicString(TCHAR_TO_UTF8(*BotData.BotName));
@@ -750,12 +753,12 @@ bool USuperDexRoboticsFunctionLibrary::ExportSuperDexBotScene(
       }
 
       if (Actor) {
-        auto Transform = Actor->GetRootTransform();
+        mochi::TransformRT Transform = Actor->GetRootTransform();
         BotEntry.parentFromBot =
             mochi::TransformRT(Transform.GetRotation(), Transform.GetTranslation());
       }
 
-      for (auto const& Pos : BotData.InitialJointPositions) {
+      for (double const& Pos : BotData.InitialJointPositions) {
         BotEntry.initialPose.push_back(Pos);
       }
 
@@ -793,7 +796,7 @@ bool USuperDexRoboticsFunctionLibrary::ExportSuperDexBotScene(
       BotEntry.path =
           mochi::DynamicString(TCHAR_TO_UTF8(*FString::Printf(TEXT("//bots/%s"), *BotArchiveName)));
 
-      for (auto const& CtrlEntry : BotData.ControllerEntries) {
+      for (superdex::robotics::ControllerEntry const& CtrlEntry : BotData.ControllerEntries) {
         superdex::robotics::ControllerEntry Ctrl;
         Ctrl = CtrlEntry;
         FString ParamsFilename = FPaths::GetCleanFilename(CtrlEntry.params.c_str());

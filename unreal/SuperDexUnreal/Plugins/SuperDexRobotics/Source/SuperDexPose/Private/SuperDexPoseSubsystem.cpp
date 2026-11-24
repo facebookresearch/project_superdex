@@ -60,7 +60,7 @@ uint32 USuperDexPoseSubsystem::GetHighestPriorityLastCalledWithin(
     double CurrentTime,
     double WithinDeltaSecondsAgo) {
   uint32 HighestPriority = 0;
-  for (auto kv : SourceAndCache->PriorityToLastRequestTimeMap) {
+  for (TPair<uint32, double> kv : SourceAndCache->PriorityToLastRequestTimeMap) {
     if (kv.Key > HighestPriority) {
       if (CurrentTime - kv.Value < WithinDeltaSecondsAgo) {
         HighestPriority = kv.Key;

@@ -86,7 +86,8 @@ superdex::robotics::BotPrefab FSuperDexBotLoader::LoadBotPrefab(
     return {};
   }
 
-  auto Params = superdex::robotics::ReadFromJsonString(TCHAR_TO_UTF8(*Json), error);
+  superdex::robotics::BotPrefab Params =
+      superdex::robotics::ReadFromJsonString(TCHAR_TO_UTF8(*Json), error);
   MOCHI_ERROR_RETURN(error, {});
 
   // Sensor params are read straight off the filesystem by superdex_robotics, so the files the

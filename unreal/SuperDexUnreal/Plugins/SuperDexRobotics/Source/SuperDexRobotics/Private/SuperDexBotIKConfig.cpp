@@ -39,8 +39,8 @@ bool NativeTranslationRepresentable(double Centimetres) {
 }
 
 bool ValidRigidFrame(const FTransform& Frame) {
-  const auto& Translation = Frame.GetTranslation();
-  const auto& Rotation = Frame.GetRotation();
+  const FVector& Translation = Frame.GetTranslation();
+  const FQuat& Rotation = Frame.GetRotation();
   return !Translation.ContainsNaN() && !Rotation.ContainsNaN() &&
       !Frame.GetScale3D().ContainsNaN() && Rotation.IsNormalized() &&
       NativeTranslationRepresentable(Translation.X) &&
@@ -61,7 +61,7 @@ mochi::TransformRT ToNativeRigidFrame(const FTransform& Frame) {
 }
 
 FTransform FromNativeRigidFrame(const mochi::TransformRT& Frame) {
-  auto Result = FMochiToUnrealConverter(SuperDexSpace).TransformToUnreal(Frame);
+  FTransform Result = FMochiToUnrealConverter(SuperDexSpace).TransformToUnreal(Frame);
   // Native validation allows 1e-4 norm roundoff; use unit UE quaternions at the API boundary.
   if (!Result.GetRotation().ContainsNaN() &&
       FMath::IsNearlyEqual(Result.GetRotation().SizeSquared(), 1.0, 2.1e-4)) {
@@ -188,10 +188,10 @@ superdex::robotics::BotIKConfig USuperDexBotIKConfig::ToNative() const {
     Config.inputBotConfiguration.push_back(static_cast<mochi::real>(Position));
   }
   Config.createParams = CreateParams.ToNative();
-  for (const auto& Goal : Goals) {
+  for (const FSuperDexBotIKGoalConfig& Goal : Goals) {
     Config.goals.push_back(Goal.ToNative());
   }
-  for (const auto& Coupling : JointCouplings) {
+  for (const FSuperDexBotIKJointCouplingConfig& Coupling : JointCouplings) {
     Config.jointCouplings.push_back(Coupling.ToNative());
   }
   return Config;
@@ -236,7 +236,7 @@ bool USuperDexBotIKConfig::Validate(FString& OutDiagnostic) const {
         TEXT("InputBotScale must be positive, finite and representable in native precision.");
     return false;
   }
-  for (const auto* Positions : {&OutputBotConfiguration, &InputBotConfiguration}) {
+  for (const TArray<double>* Positions : {&OutputBotConfiguration, &InputBotConfiguration}) {
     for (double Position : *Positions) {
       if (!NativeRealRepresentable(Position)) {
         OutDiagnostic = TEXT(
@@ -245,7 +245,7 @@ bool USuperDexBotIKConfig::Validate(FString& OutDiagnostic) const {
       }
     }
   }
-  const auto& Params = CreateParams.SolverParams;
+  const FSuperDexBotIKSolverParams& Params = CreateParams.SolverParams;
   for (double Value :
        {Params.AbsTol,
         Params.RelTol,
@@ -262,7 +262,7 @@ bool USuperDexBotIKConfig::Validate(FString& OutDiagnostic) const {
     return false;
   }
   for (int32 Index = 0; Index < Goals.Num(); ++Index) {
-    const auto& Goal = Goals[Index];
+    const FSuperDexBotIKGoalConfig& Goal = Goals[Index];
     if (!ValidRigidFrame(Goal.BaseOrInputLinkFrameFromConstraintFrame) ||
         !ValidRigidFrame(Goal.LinkFrameFromConstraintFrame)) {
       OutDiagnostic = FString::Printf(
@@ -280,7 +280,7 @@ bool USuperDexBotIKConfig::Validate(FString& OutDiagnostic) const {
       return false;
     }
   }
-  for (const auto& Coupling : JointCouplings) {
+  for (const FSuperDexBotIKJointCouplingConfig& Coupling : JointCouplings) {
     if (!NativeRealRepresentable(Coupling.Ratio) || Coupling.Ratio == 0 ||
         !NativeRealRepresentable(Coupling.Stiffness) || Coupling.Stiffness < 0) {
       OutDiagnostic = TEXT(

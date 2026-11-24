@@ -232,9 +232,9 @@ void USuperDexBotSceneVisualizationComponent::DestroyVisuals() {
   CancelPostStepCallback();
   if (QueryScene && QueryScene->IsValid() && DeformableQueries.Num() > 0) {
     QueryScene->QueueOrExecuteCommand([Queries = DeformableQueries](mochi::Scene* Scene) {
-      for (auto const& [Handle, Query] : Queries) {
-        if (mochi::Actor* Actor = Scene ? Scene->GetActor(mochi::ActorHandle(Handle)) : nullptr) {
-          Actor->CancelQuery(Query);
+      for (TPair<uint64, mochi::QueryHandle> const& Pair : Queries) {
+        if (mochi::Actor* Actor = Scene ? Scene->GetActor(mochi::ActorHandle(Pair.Key)) : nullptr) {
+          Actor->CancelQuery(Pair.Value);
         }
       }
     });
@@ -246,11 +246,11 @@ void USuperDexBotSceneVisualizationComponent::DestroyVisuals() {
     LatestTransforms.Reset();
     LatestDeformedNodes.Reset();
   }
-  for (auto& V : Visuals) {
+  for (FVisualEntry& V : Visuals) {
     DestroyVisualMeshComponent(V.MeshComp);
   }
   Visuals.Reset();
-  for (auto& Skin : Skins) {
+  for (FSkinVisual& Skin : Skins) {
     DestroyVisualMeshComponent(Skin.MeshComp);
   }
   Skins.Reset();
@@ -351,7 +351,7 @@ bool USuperDexBotSceneVisualizationComponent::TrySnapshotLinkTransforms(
       ArticulatedActors.Add(Actor->GetHandle());
 
       mochi::Error LinkErr;
-      auto LinkHandles = Actor->GetNestedLinkActors(LinkErr);
+      mochi::Span<mochi::ActorHandle const> LinkHandles = Actor->GetNestedLinkActors(LinkErr);
       if (!LinkErr.IsOK()) {
         // Warn once, like a shapeless actor: without its links the whole articulation goes undrawn.
         static std::atomic<bool> bLoggedUnreadableLinks{false};
@@ -403,7 +403,7 @@ bool USuperDexBotSceneVisualizationComponent::TrySnapshotLinkTransforms(
 
     // 2) Spawnable-prefab instances (placed via BotScene::SpawnPrefabInstance). Keyed by instance
     //    name, so several instances of one prefab each get their own visuals.
-    for (auto const& InstanceName : BotScene->GetPrefabInstanceNames()) {
+    for (mochi::DynamicString const& InstanceName : BotScene->GetPrefabInstanceNames()) {
       for (mochi::ActorHandle H : BotScene->GetPrefabInstanceActors(
                std::string_view(InstanceName.c_str(), InstanceName.size()))) {
         AppendActor(Scene ? Scene->GetActor(H) : nullptr);
@@ -411,7 +411,7 @@ bool USuperDexBotSceneVisualizationComponent::TrySnapshotLinkTransforms(
     }
 
     // 3) Bots.
-    for (auto const& BotEntry : BotScene->GetBotScenePrefab().bots) {
+    for (superdex::robotics::BotEntry const& BotEntry : BotScene->GetBotScenePrefab().bots) {
       std::string NameStr(BotEntry.name.c_str(), BotEntry.name.size());
       superdex::robotics::Bot* Bot = BotScene->GetBot(NameStr);
       if (!Bot) {
@@ -465,7 +465,7 @@ void USuperDexBotSceneVisualizationComponent::EnsureVisualsForSnapshot(
   // so everything built under a previous scale has to go when the owner is rescaled.
   const FVector Scale3D = GetComponentTransform().GetScale3D();
   if (GeometryCache.Num() > 0 && !Scale3D.Equals(BakedGeometryScale)) {
-    for (auto& V : Visuals) {
+    for (FVisualEntry& V : Visuals) {
       DestroyVisualMeshComponent(V.MeshComp);
     }
     Visuals.Reset();
@@ -483,7 +483,7 @@ void USuperDexBotSceneVisualizationComponent::EnsureVisualsForSnapshot(
   SeenThisFrame.Reserve(Snapshot.Num());
   FMochiToUnrealConverter M2U;
 
-  for (auto const& Entry : Snapshot) {
+  for (FBotSceneVizSnapshotEntry const& Entry : Snapshot) {
     const uint64 HandleKey = Entry.LinkHandle.value;
     if (SeenThisFrame.Contains(HandleKey)) {
       continue;
@@ -724,7 +724,7 @@ UMeshComponent* USuperDexBotSceneVisualizationComponent::CreateShapeMeshComponen
 
   TSharedPtr<UE::Geometry::FDynamicMesh3>* CachedMesh = GeometryCache.Find(ShapeKey);
   if (!CachedMesh) {
-    auto NewMesh = MakeShared<UE::Geometry::FDynamicMesh3>();
+    TSharedRef<UE::Geometry::FDynamicMesh3> NewMesh = MakeShared<UE::Geometry::FDynamicMesh3>();
     // Build once via the MochiPhysics utility path: visual mesh preferred,
     // fallback to actor handle (handles Acquire from AsyncScene if needed).
     {
@@ -948,10 +948,10 @@ void USuperDexBotSceneVisualizationComponent::RebuildIfNeeded() {
   {
     TArray<uint64> Handles;
     Handles.Reserve(Visuals.Num());
-    for (auto const& V : Visuals) {
+    for (FVisualEntry const& V : Visuals) {
       Handles.Add(V.HandleValue);
     }
-    for (auto const& Skin : Skins) {
+    for (FSkinVisual const& Skin : Skins) {
       for (uint64 Link : Skin.BoneLinks) {
         if (Link != kNoLink) {
           Handles.AddUnique(Link);
@@ -959,7 +959,7 @@ void USuperDexBotSceneVisualizationComponent::RebuildIfNeeded() {
       }
     }
     TArray<uint64> DeformableHandles;
-    for (auto const& V : Visuals) {
+    for (FVisualEntry const& V : Visuals) {
       if (V.bDeformable) {
         DeformableHandles.Add(V.HandleValue);
       }
@@ -971,7 +971,7 @@ void USuperDexBotSceneVisualizationComponent::RebuildIfNeeded() {
     VizPostStepHandle = SceneObject->RegisterPostStepCallback(
         "BotSceneViz::PublishTransforms",
         [WeakThis, Handles, ArticulatedActors, DeformableHandles](mochi::StepInfo const& Info) {
-          auto* Self = WeakThis.Get();
+          USuperDexBotSceneVisualizationComponent* Self = WeakThis.Get();
           if (!Self || !Info.scene) {
             return;
           }
@@ -984,7 +984,7 @@ void USuperDexBotSceneVisualizationComponent::RebuildIfNeeded() {
               continue;
             }
             mochi::Error E1;
-            auto LinkHandles = ArtActor->GetNestedLinkActors(E1);
+            mochi::Span<mochi::ActorHandle const> LinkHandles = ArtActor->GetNestedLinkActors(E1);
             if (!E1.IsOK() || LinkHandles.size() == 0) {
               continue;
             }
@@ -1028,11 +1028,11 @@ void USuperDexBotSceneVisualizationComponent::RebuildIfNeeded() {
           FScopeLock Lock(&Self->LatestTransformsLock);
           // Work around TMap cross-allocator move-assignment deduction on UBT
           Self->LatestTransforms.Reset();
-          for (auto& Pair : Published) {
+          for (TPair<uint64, mochi::TransformRT>& Pair : Published) {
             Self->LatestTransforms.Add(Pair.Key, Pair.Value);
           }
           Self->LatestDeformedNodes.Reset();
-          for (auto& Pair : Deformed) {
+          for (TPair<uint64, TArray<mochi::real>>& Pair : Deformed) {
             Self->LatestDeformedNodes.Add(Pair.Key, MoveTemp(Pair.Value));
           }
         });
@@ -1055,10 +1055,10 @@ void USuperDexBotSceneVisualizationComponent::TickComponent(
   {
     FScopeLock Lock(&LatestTransformsLock);
     Snapshot.Reserve(LatestTransforms.Num());
-    for (auto const& Pair : LatestTransforms) {
+    for (TPair<uint64, mochi::TransformRT> const& Pair : LatestTransforms) {
       Snapshot.Add(Pair.Key, Pair.Value);
     }
-    for (auto const& Pair : LatestDeformedNodes) {
+    for (TPair<uint64, TArray<mochi::real>> const& Pair : LatestDeformedNodes) {
       DeformedNodes.Add(Pair.Key, Pair.Value);
     }
   }
@@ -1066,10 +1066,10 @@ void USuperDexBotSceneVisualizationComponent::TickComponent(
     return;
   }
   FMochiToUnrealConverter M2U;
-  for (auto const& Pair : Snapshot) {
+  for (TPair<uint64, mochi::TransformRT> const& Pair : Snapshot) {
     LinkToWorldByHandle.Add(Pair.Key, M2U.TransformToUnreal(Pair.Value));
   }
-  for (auto& V : Visuals) {
+  for (FVisualEntry& V : Visuals) {
     if (const FTransform* LinkToWorld = LinkToWorldByHandle.Find(V.HandleValue)) {
       V.LinkToWorld = *LinkToWorld;
       if (IsValid(V.MeshComp)) {
@@ -1084,7 +1084,7 @@ void USuperDexBotSceneVisualizationComponent::TickComponent(
 void USuperDexBotSceneVisualizationComponent::RefreshDeformableQueries(
     UMochiSceneObject* SceneObject) {
   TArray<uint64> Handles;
-  for (auto const& V : Visuals) {
+  for (FVisualEntry const& V : Visuals) {
     if (V.bDeformable) {
       Handles.Add(V.HandleValue);
     }
@@ -1101,9 +1101,9 @@ void USuperDexBotSceneVisualizationComponent::RefreshDeformableQueries(
         if (!Scene) {
           return;
         }
-        for (auto const& [Handle, Query] : Old) {
-          if (mochi::Actor* Actor = Scene->GetActor(mochi::ActorHandle(Handle))) {
-            Actor->CancelQuery(Query);
+        for (TPair<uint64, mochi::QueryHandle> const& Pair : Old) {
+          if (mochi::Actor* Actor = Scene->GetActor(mochi::ActorHandle(Pair.Key))) {
+            Actor->CancelQuery(Pair.Value);
           }
         }
         for (uint64 Handle : Handles) {
@@ -1127,7 +1127,7 @@ void USuperDexBotSceneVisualizationComponent::UpdateDeformableMeshes(
     const TMap<uint64, TArray<mochi::real>>& Nodes) {
   const FVector InvScale = FVector::OneVector / BakedGeometryScale;
   const TArray<mochi::real> NoNormals;
-  for (auto& V : Visuals) {
+  for (FVisualEntry& V : Visuals) {
     const TArray<mochi::real>* Positions = V.bDeformable ? Nodes.Find(V.HandleValue) : nullptr;
     UDynamicMeshComponent* DynComp = Cast<UDynamicMeshComponent>(V.MeshComp);
     if (!Positions || !DynComp) {

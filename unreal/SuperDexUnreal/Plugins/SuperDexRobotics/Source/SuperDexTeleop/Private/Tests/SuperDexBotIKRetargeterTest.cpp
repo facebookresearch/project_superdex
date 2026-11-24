@@ -85,20 +85,20 @@ superdex::robotics::BotPrefab GenericModel(bool FreeRoot, bool Prismatic, mochi:
 }
 
 USuperDexBot* GenericAsset(const superdex::robotics::BotPrefab& Model, const TCHAR* Name) {
-  auto* Package = CreatePackage(*(TEXT("/Game/__GenericBotIK/") + FGuid::NewGuid().ToString()));
-  auto* Asset = NewObject<USuperDexBot>(Package, FName(Name));
+  UPackage* Package = CreatePackage(*(TEXT("/Game/__GenericBotIK/") + FGuid::NewGuid().ToString()));
+  USuperDexBot* Asset = NewObject<USuperDexBot>(Package, FName(Name));
   mochi::Error Error;
-  const auto Json = superdex::robotics::WriteToJsonString(Model, Error);
+  const mochi::DynamicString Json = superdex::robotics::WriteToJsonString(Model, Error);
   check(Error.IsOK());
   FindFProperty<FStrProperty>(USuperDexBot::StaticClass(), TEXT("BotPrefabJson"))
       ->SetPropertyValue_InContainer(Asset, FString(UTF8_TO_TCHAR(Json.c_str())));
-  auto* Mesh = NewObject<USkeletalMesh>(Asset);
+  USkeletalMesh* Mesh = NewObject<USkeletalMesh>(Asset);
   {
     FReferenceSkeletonModifier Modify(Mesh->GetRefSkeleton(), nullptr);
     FMochiToUnrealConverter Converter(SuperDexSpace);
     for (int I = 0; I < static_cast<int>(Model.links.size()); ++I) {
-      auto A = Model.joints[I].parentLinkFromJoint;
-      auto B = Model.links[I].parentJointFromLink;
+      mochi::TransformRT A = Model.joints[I].parentLinkFromJoint;
+      mochi::TransformRT B = Model.links[I].parentJointFromLink;
       A.SetTranslation(A.GetTranslation() * Model.scale);
       B.SetTranslation(B.GetTranslation() * Model.scale);
       const FName Bone(UTF8_TO_TCHAR(Model.links[I].name.c_str()));
@@ -113,7 +113,7 @@ USuperDexBot* GenericAsset(const superdex::robotics::BotPrefab& Model, const TCH
 }
 
 USuperDexBotIKConfig* GenericConfig(USuperDexBot* Input, USuperDexBot* Output) {
-  auto* Config = NewObject<USuperDexBotIKConfig>();
+  USuperDexBotIKConfig* Config = NewObject<USuperDexBotIKConfig>();
   Config->InputBot = Input;
   Config->OutputBot = Output;
   Config->CreateParams.SolverParams.MaxIter = 200;
@@ -174,7 +174,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 bool FGenericBotIKNativeChainTest::RunTest(const FString&) {
   for (bool Free : {false, true}) {
-    const auto Model = GenericModel(Free, true, 2_r);
+    const superdex::robotics::BotPrefab Model = GenericModel(Free, true, 2_r);
     TStrongObjectPtr<USuperDexBot> Input(GenericAsset(Model, TEXT("GenericInput")));
     TStrongObjectPtr<USuperDexBot> Output(GenericAsset(Model, TEXT("GenericOutput")));
     TStrongObjectPtr<USuperDexBotIKConfig> Config(GenericConfig(Input.Get(), Output.Get()));
@@ -184,7 +184,7 @@ bool FGenericBotIKNativeChainTest::RunTest(const FString&) {
       return false;
     }
     const TArray<double> Q{0.3, 0.025, 0.1, -0.2, 0.05};
-    auto Pose = GenericNativePose(Input.Get(), Q);
+    FSuperDexPose Pose = GenericNativePose(Input.Get(), Q);
     Pose.SkeletonRootToVrRoot =
         FTransform(FQuat(FVector::UpVector, 0.4), FVector(30, -20, 5), FVector(0.74));
     FSuperDexPose First;
@@ -215,7 +215,7 @@ bool FGenericBotIKNativeChainTest::RunTest(const FString&) {
         TEXT("Chain root placement remains separate and composed once"),
         Second.SkeletonRootToVrRoot.Equals(First.SkeletonRootToVrRoot, 1e-5));
     for (double Angle : {3.13, -3.13}) {
-      const auto NearPi = GenericNativePose(Input.Get(), {Angle, 0.025, Angle, 0.0, 0.0});
+      const FSuperDexPose NearPi = GenericNativePose(Input.Get(), {Angle, 0.025, Angle, 0.0, 0.0});
       TestTrue(
           TEXT("Near-pi full pose remains projectable"),
           Ret->GetTransformedPose_Implementation(NearPi, true, First));
@@ -236,7 +236,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     "Teleop.SuperDexBotIKRetargeter.GenericIdentityAndInvalidInputs",
     EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 bool FGenericBotIKInvalidInputTest::RunTest(const FString&) {
-  const auto Model = GenericModel(false, true, 2_r);
+  const superdex::robotics::BotPrefab Model = GenericModel(false, true, 2_r);
   TStrongObjectPtr<USuperDexBot> Input(GenericAsset(Model, TEXT("CollisionName")));
   TStrongObjectPtr<USuperDexBot> Other(GenericAsset(Model, TEXT("CollisionName")));
   TStrongObjectPtr<USuperDexBot> Output(GenericAsset(Model, TEXT("GenericOutput")));
@@ -244,7 +244,7 @@ bool FGenericBotIKInvalidInputTest::RunTest(const FString&) {
   TStrongObjectPtr<USuperDexBotIKRetargeter> Ret(NewObject<USuperDexBotIKRetargeter>());
   Ret->Config = Config.Get();
   TestTrue(TEXT("Generic configuration initializes"), Ret->InitializeRetargeter());
-  const auto Good = GenericNativePose(Input.Get(), {0.3, 0.025, 0.1, -0.2, 0.05});
+  const FSuperDexPose Good = GenericNativePose(Input.Get(), {0.3, 0.025, 0.1, -0.2, 0.05});
   auto Reject = [&](FSuperDexPose Bad, const TCHAR* Message, bool SourceValid = true) {
     FSuperDexPose Recovery;
     TestTrue(
@@ -259,7 +259,7 @@ bool FGenericBotIKInvalidInputTest::RunTest(const FString&) {
     TestEqual(
         TEXT("Rejected input preserves output"), Out.SourceName, FName(TEXT("UnchangedOutput")));
   };
-  auto Bad = Good;
+  FSuperDexPose Bad = Good;
   Bad.DofPositions.Pop();
   Reject(Bad, TEXT("must hold joint positions of a bot"));
   Bad = Good;
@@ -284,7 +284,7 @@ bool FGenericBotIKInvalidInputTest::RunTest(const FString&) {
   TestFalse(
       TEXT("False provider validity rejects held native pose"),
       Ret->GetTransformedPose_Implementation(Good, false, Out));
-  auto Tracking = Good;
+  FSuperDexPose Tracking = Good;
   Tracking.bIsTrackingEnabled = true;
   Tracking.bIsTrackingConfident = false;
   TestFalse(
@@ -300,7 +300,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     "Teleop.SuperDexBotIKRetargeter.GenericRotationVectorProjection",
     EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 bool FGenericBotIKRotationProjectionTest::RunTest(const FString&) {
-  const auto Model = GenericModel(false, false, 2_r);
+  const superdex::robotics::BotPrefab Model = GenericModel(false, false, 2_r);
   TStrongObjectPtr<USuperDexBot> Input(GenericAsset(Model, TEXT("GenericRotations")));
   TStrongObjectPtr<USuperDexBot> Output(GenericAsset(Model, TEXT("GenericOutput")));
   TStrongObjectPtr<USuperDexBotIKConfig> Config(GenericConfig(Input.Get(), Output.Get()));
@@ -318,7 +318,7 @@ bool FGenericBotIKRotationProjectionTest::RunTest(const FString&) {
   TestTrue(TEXT("Swung bot rebuilds"), Error.IsOK());
   TStrongObjectPtr<USuperDexBot> SwungBot(GenericAsset(Swung, TEXT("GenericSwungRotations")));
   const TArray<double> Q{0.2, 0.1, -0.2, 0.05};
-  const auto Pose = GenericNativePose(SwungBot.Get(), Q);
+  const FSuperDexPose Pose = GenericNativePose(SwungBot.Get(), Q);
   // The discarded swing is logged on the first such frame, then every 200th: 3 times in 401.
   AddExpectedMessagePlain(
       TEXT("the input pose doesn't fit the InputBot's joints"),
@@ -341,7 +341,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     "Teleop.SuperDexBotIKRetargeter.GenericConstraintScaleAndMetadata",
     EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 bool FGenericBotIKGoalsAndMetadataTest::RunTest(const FString&) {
-  const auto Model = GenericModel(true, true, 2_r);
+  const superdex::robotics::BotPrefab Model = GenericModel(true, true, 2_r);
   TStrongObjectPtr<USuperDexBot> Input(GenericAsset(Model, TEXT("ScaleInput")));
   TStrongObjectPtr<USuperDexBot> Output(GenericAsset(Model, TEXT("ScaleOutput")));
   TStrongObjectPtr<USuperDexBotIKConfig> Config(GenericConfig(Input.Get(), Output.Get()));
@@ -361,7 +361,7 @@ bool FGenericBotIKGoalsAndMetadataTest::RunTest(const FString&) {
   TStrongObjectPtr<USuperDexBotIKRetargeter> Ret(NewObject<USuperDexBotIKRetargeter>());
   Ret->Config = Config.Get();
   const TArray<double> Q{0.3, 0.025, 0.1, -0.2, 0.05};
-  const auto Pose = GenericNativePose(Input.Get(), Q);
+  const FSuperDexPose Pose = GenericNativePose(Input.Get(), Q);
   FGenericNativeIK InputFK(
       USuperDexIKSolverObject::CreateBotIKSolver(
           GetTransientPackage(), Input.Get(), Config->CreateParams.ToNative()));
@@ -376,18 +376,18 @@ bool FGenericBotIKGoalsAndMetadataTest::RunTest(const FString&) {
   for (double Scale : {0.5, 1.25, 2.0}) {
     Config->InputBotScale = Scale;
     TestTrue(TEXT("Scaled generic goals initialize"), Ret->InitializeRetargeter());
-    const auto NativeConfig = Config->ToNative();
+    const superdex::robotics::BotIKConfig NativeConfig = Config->ToNative();
     FGenericNativeIK Direct(
         USuperDexIKSolverObject::CreateBotIKSolver(
             GetTransientPackage(), Output.Get(), NativeConfig));
     if (!TestNotNull(TEXT("Independent native output solver"), Direct.Get())) {
       return false;
     }
-    for (const auto& Goal : NativeConfig.goals) {
+    for (const superdex::robotics::BotIKGoalConfig& Goal : NativeConfig.goals) {
       mochi::TransformRT Frame = Goal.baseOrInputLinkFrameFromConstraintFrame;
       if (!Goal.inputBotLink.empty()) {
         const int Index = superdex::robotics::FindLinkIndexByName(Model, Goal.inputBotLink);
-        auto Link = NativeLinks[Index];
+        mochi::TransformRT Link = NativeLinks[Index];
         Link.SetTranslation(Link.GetTranslation() * NativeConfig.inputBotScale);
         Frame.SetTranslation(Frame.GetTranslation() * NativeConfig.inputBotScale);
         Frame = NativeConfig.outputBaseFrameFromInputBaseFrame * Link * Frame;
@@ -420,19 +420,20 @@ bool FGenericBotIKGoalsAndMetadataTest::RunTest(const FString&) {
     Direct->DestroyMochiResources();
   }
   FString Diagnostic;
-  auto& Cached = const_cast<superdex::robotics::BotPrefab&>(Input->GetBotPrefab());
-  const auto Axis = Cached.joints[2].axis;
+  superdex::robotics::BotPrefab& Cached =
+      const_cast<superdex::robotics::BotPrefab&>(Input->GetBotPrefab());
+  const mochi::Real3 Axis = Cached.joints[2].axis;
   Cached.joints[2].axis = {};
   TestFalse(TEXT("Malformed native input axis rejects"), Ret->ValidateConfiguration(Diagnostic));
   Cached.joints[2].axis = Axis;
   Cached._dofIndices[0] = 3;
   TestFalse(TEXT("Wrong prepared DOF ordering rejects"), Ret->ValidateConfiguration(Diagnostic));
   Cached._dofIndices[0] = 2;
-  const auto Name = Cached.links[2].name;
+  const mochi::DynamicString Name = Cached.links[2].name;
   Cached.links[2].name = Cached.links[1].name;
   TestFalse(TEXT("Colliding link/bone names reject"), Ret->ValidateConfiguration(Diagnostic));
   Cached.links[2].name = Name;
-  const auto Type = Cached.joints[2].type;
+  const mochi::ArticulatedJointType Type = Cached.joints[2].type;
   Cached.joints[2].type = mochi::ArticulatedJointType::Free;
   TestFalse(
       TEXT("Unsupported non-root free joint rejects"), Ret->ValidateConfiguration(Diagnostic));

@@ -86,7 +86,7 @@ struct FIKFixture {
   }
 
   ~FIKFixture() {
-    for (auto& Bot : Bots) {
+    for (TStrongObjectPtr<USuperDexBot>& Bot : Bots) {
       FAssetRegistryModule::AssetDeleted(Bot.Get());
       Bot->MarkAsGarbage();
     }
@@ -94,20 +94,21 @@ struct FIKFixture {
   }
 
   USuperDexBot* MakeBot(const FString& Name, const FString& SourcePath, bool bFreeRoot = false) {
-    auto* Bot = NewObject<USuperDexBot>(
+    USuperDexBot* Bot = NewObject<USuperDexBot>(
         CreatePackage(*(PackagePath + TEXT("/") + Name)), *Name, RF_Public | RF_Standalone);
-    auto* JsonProperty =
+    FStrProperty* JsonProperty =
         FindFProperty<FStrProperty>(USuperDexBot::StaticClass(), TEXT("BotPrefabJson"));
     mochi::Error Error;
-    const auto Json = superdex::robotics::WriteToJsonString(MakeRobot(bFreeRoot), Error);
+    const mochi::DynamicString Json =
+        superdex::robotics::WriteToJsonString(MakeRobot(bFreeRoot), Error);
     check(Error.IsOK());
     if (!SourcePath.IsEmpty()) {
       check(FFileHelper::SaveStringToFile(UTF8_TO_TCHAR(Json.c_str()), *SourcePath));
     }
     JsonProperty->SetPropertyValue_InContainer(Bot, FString(UTF8_TO_TCHAR(Json.c_str())));
-    auto* ImportProperty =
+    FObjectPropertyBase* ImportProperty =
         FindFProperty<FObjectPropertyBase>(USuperDexBot::StaticClass(), TEXT("AssetImportData"));
-    auto* ImportData =
+    UAssetImportData* ImportData =
         CastChecked<UAssetImportData>(ImportProperty->GetObjectPropertyValue_InContainer(Bot));
     ImportData->UpdateFilenameOnly(SourcePath);
     Bots.Emplace(Bot);
@@ -153,7 +154,7 @@ struct FIKFixture {
     Coupling.enabled = false;
     Config.jointCouplings.push_back(Coupling);
     FString Path = FPaths::Combine(Directory, TEXT("goals.superdex_ik"));
-    const auto Json = superdex::robotics::SerializeIKConfig(Config);
+    const mochi::DynamicString Json = superdex::robotics::SerializeIKConfig(Config);
     check(FFileHelper::SaveStringToFile(UTF8_TO_TCHAR(Json.c_str()), *Path));
     return Path;
   }
@@ -205,7 +206,7 @@ bool VerifyLegacyV8Fixture(FAutomationTestBase& Test) {
           superdex::robotics::SerializeIKConfig(Expected));
   TStrongObjectPtr<USuperDexBotIKConfig> Asset(NewObject<USuperDexBotIKConfig>());
   Asset->FromNative(Migrated);
-  auto RoundTrip = Asset->ToNative();
+  superdex::robotics::BotIKConfig RoundTrip = Asset->ToNative();
   Test.TestTrue(
       TEXT("Legacy v8 output/input base frame retains direction"),
       mochi::NearEqual(
@@ -263,7 +264,7 @@ bool RecordColdLoadedConfigs(FAutomationTestBase& Test) {
     return false;
   }
   TArray<TSharedPtr<FJsonValue>> Snapshots;
-  for (const auto& Entry : *Entries) {
+  for (const TSharedPtr<FJsonValue>& Entry : *Entries) {
     const FString AssetPath = Entry->AsObject()->GetStringField(TEXT("asset"));
     TStrongObjectPtr<USuperDexBotIKConfig> Asset(
         LoadObject<USuperDexBotIKConfig>(nullptr, *AssetPath));
@@ -277,12 +278,12 @@ bool RecordColdLoadedConfigs(FAutomationTestBase& Test) {
             TEXT("Cold-loaded import provenance survives"), Asset->AssetImportData.Get())) {
       return false;
     }
-    const auto Native = Asset->ToNative();
+    const superdex::robotics::BotIKConfig Native = Asset->ToNative();
     if (!Native.inputBot.empty() &&
         !Test.TestNotNull(TEXT("Cold-loaded InputBot survives"), Asset->InputBot.Get())) {
       return false;
     }
-    const auto Json = superdex::robotics::SerializeIKConfig(Native);
+    const mochi::DynamicString Json = superdex::robotics::SerializeIKConfig(Native);
     TSharedPtr<FJsonObject> NativeJson;
     if (!Test.TestTrue(
             TEXT("Cold-loaded native snapshot is canonical JSON"),
@@ -291,7 +292,7 @@ bool RecordColdLoadedConfigs(FAutomationTestBase& Test) {
       return false;
     }
     Test.TestEqual(TEXT("Cold-loaded native schema is v9"), Native.version, 9);
-    auto Snapshot = MakeShared<FJsonObject>();
+    TSharedRef<FJsonObject> Snapshot = MakeShared<FJsonObject>();
     Snapshot->SetStringField(TEXT("asset"), Asset->GetPathName());
     Snapshot->SetObjectField(TEXT("native"), NativeJson);
     Snapshot->SetStringField(TEXT("sourceBotPath"), Asset->SourceOutputBotPath);
@@ -299,7 +300,7 @@ bool RecordColdLoadedConfigs(FAutomationTestBase& Test) {
     Snapshot->SetStringField(TEXT("importFilename"), Asset->AssetImportData->GetFirstFilename());
     Snapshots.Add(MakeShared<FJsonValueObject>(Snapshot));
   }
-  auto Report = MakeShared<FJsonObject>();
+  TSharedRef<FJsonObject> Report = MakeShared<FJsonObject>();
   Report->SetArrayField(TEXT("configs"), Snapshots);
   Report->SetBoolField(TEXT("complete"), !Test.HasAnyErrors());
   FString ReportText;
@@ -752,7 +753,7 @@ bool FSuperDexBotIKConversionTest::RunTest(const FString& Parameters) {
   }
   Native.createParams.fixedBase = false;
   Native.createParams.excludeCollisionShapes = false;
-  auto& Params = Native.createParams.solverParams;
+  mochi::experimental::IKSolverParams& Params = Native.createParams.solverParams;
   Params.maxIter = 37;
   Params.verbosity = mochi::VerbosityLevel::Verbose;
   Params.absTol = 0.003_r;
@@ -786,7 +787,7 @@ bool FSuperDexBotIKConversionTest::RunTest(const FString& Parameters) {
   }
   TStrongObjectPtr<USuperDexBotIKConfig> Asset(NewObject<USuperDexBotIKConfig>());
   Asset->FromNative(Native);
-  auto RoundTrip = Asset->ToNative();
+  superdex::robotics::BotIKConfig RoundTrip = Asset->ToNative();
   if (!TestEqual(TEXT("Five goals round trip"), static_cast<int32>(RoundTrip.goals.size()), 5)) {
     return false;
   }
@@ -930,7 +931,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FSuperDexBotIKImportTest::RunTest(const FString& Parameters) {
   FIKFixture Fixture;
   const FString RobotPath = FPaths::Combine(Fixture.Directory, TEXT("robot.superdex_bot"));
-  auto* Bot = Fixture.MakeBot(TEXT("Bot"), RobotPath);
+  USuperDexBot* Bot = Fixture.MakeBot(TEXT("Bot"), RobotPath);
   TStrongObjectPtr<USuperDexBotIKConfigFactory> Factory(NewObject<USuperDexBotIKConfigFactory>());
   bool bCanceled = true;
   const FString ConfigPath = Fixture.WriteConfig(TEXT("./sub/../robot.superdex_bot"));
@@ -973,7 +974,7 @@ bool FSuperDexBotIKImportTest::RunTest(const FString& Parameters) {
           Asset->Goals[0].ToNative().baseOrInputLinkFrameFromConstraintFrame,
           ExpectedFrame,
           1e-5_r));
-  auto* ManualBot = Fixture.MakeBot(
+  USuperDexBot* ManualBot = Fixture.MakeBot(
       TEXT("Manual"), FPaths::Combine(Fixture.Directory, TEXT("manual.superdex_bot")));
   Asset->OutputBot = ManualBot;
   Fixture.WriteConfig(TEXT("robot.superdex_bot"), 321.0);
@@ -989,7 +990,8 @@ bool FSuperDexBotIKImportTest::RunTest(const FString& Parameters) {
           Asset->Goals[0].ToNative().baseOrInputLinkFrameFromConstraintFrame,
           ExpectedFrame,
           1e-5_r));
-  const auto BeforeFailedReimport = superdex::robotics::SerializeIKConfig(Asset->ToNative());
+  const mochi::DynamicString BeforeFailedReimport =
+      superdex::robotics::SerializeIKConfig(Asset->ToNative());
   FFileHelper::SaveStringToFile(TEXT("{broken"), *ConfigPath);
   TestEqual(
       TEXT("Malformed reimport fails"), Reimport->Reimport(Asset.Get()), EReimportResult::Failed);
@@ -1024,8 +1026,8 @@ bool FSuperDexBotIKFullImportTest::RunTest(const FString&) {
   FIKFixture Fixture;
   const FString RobotPath = FPaths::Combine(Fixture.Directory, TEXT("robot.superdex_bot"));
   const FString InputBotPath = FPaths::Combine(Fixture.Directory, TEXT("reference.superdex_bot"));
-  auto* Bot = Fixture.MakeBot(TEXT("Source"), RobotPath);
-  auto* InputBot = Fixture.MakeBot(TEXT("InputBot"), InputBotPath);
+  USuperDexBot* Bot = Fixture.MakeBot(TEXT("Source"), RobotPath);
+  USuperDexBot* InputBot = Fixture.MakeBot(TEXT("InputBot"), InputBotPath);
   TStrongObjectPtr<USuperDexBotIKConfigFactory> Factory(NewObject<USuperDexBotIKConfigFactory>());
   TStrongObjectPtr<USuperDexBotIKConfig> Asset(NewObject<USuperDexBotIKConfig>());
   const FString ConfigPath = Fixture.WriteConfig(
@@ -1070,7 +1072,7 @@ bool FSuperDexBotIKFullImportTest::RunTest(const FString&) {
   TestFalse(
       TEXT("Root alignment retained"),
       Asset->OutputBaseFrameFromInputBaseFrame.Equals(FTransform::Identity));
-  auto ImportedNative = Asset->ToNative();
+  superdex::robotics::BotIKConfig ImportedNative = Asset->ToNative();
   FString SourceText;
   FFileHelper::LoadFileToString(SourceText, *ConfigPath);
   superdex::robotics::BotIKConfig Expected;
@@ -1111,9 +1113,9 @@ bool FSuperDexBotIKFullImportTest::RunTest(const FString&) {
       superdex::robotics::SerializeIKConfig(ImportedNative) ==
           superdex::robotics::SerializeIKConfig(Expected));
 
-  auto* ManualSource = Fixture.MakeBot(
+  USuperDexBot* ManualSource = Fixture.MakeBot(
       TEXT("ManualSource"), FPaths::Combine(Fixture.Directory, TEXT("manual_source.superdex_bot")));
-  auto* ManualReferenceBot = Fixture.MakeBot(
+  USuperDexBot* ManualReferenceBot = Fixture.MakeBot(
       TEXT("ManualReferenceBot"),
       FPaths::Combine(Fixture.Directory, TEXT("manual_reference.superdex_bot")));
   Asset->OutputBot = ManualSource;
@@ -1140,7 +1142,8 @@ bool FSuperDexBotIKFullImportTest::RunTest(const FString&) {
       TEXT("Changed source resolves without clobbering goal"),
       Asset->OutputBot == ManualSource && Asset->InputBot == ManualReferenceBot);
 
-  const auto BeforeFailure = superdex::robotics::SerializeIKConfig(Asset->ToNative());
+  const mochi::DynamicString BeforeFailure =
+      superdex::robotics::SerializeIKConfig(Asset->ToNative());
   const FString OldSourcePath = Asset->SourceOutputBotPath;
   const FString OldReferenceBotPath = Asset->SourceInputBotPath;
   const FString OldImportData = Asset->AssetImportData->GetSourceData().ToJson();
@@ -1209,10 +1212,10 @@ bool FSuperDexBotIKFullImportTest::RunTest(const FString&) {
   TestTrue(
       TEXT("Missing references remain structurally valid without filesystem/runtime resolution"),
       Asset->Validate(Diagnostic));
-  auto* RecoveredSource = Fixture.MakeBot(
+  USuperDexBot* RecoveredSource = Fixture.MakeBot(
       TEXT("RecoveredSource"),
       FPaths::Combine(Fixture.Directory, TEXT("missing_source.superdex_bot")));
-  auto* RecoveredReferenceBot = Fixture.MakeBot(
+  USuperDexBot* RecoveredReferenceBot = Fixture.MakeBot(
       TEXT("RecoveredReferenceBot"),
       FPaths::Combine(Fixture.Directory, TEXT("missing_reference.superdex_bot")));
   TestTrue(
@@ -1330,7 +1333,8 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FSuperDexBotIKComponentTest::RunTest(const FString& Parameters) {
   FIKFixture Fixture;
   for (bool bFreeRoot : {false, true}) {
-    auto* Bot = Fixture.MakeBot(bFreeRoot ? TEXT("Free") : TEXT("Welded"), TEXT(""), bFreeRoot);
+    USuperDexBot* Bot =
+        Fixture.MakeBot(bFreeRoot ? TEXT("Free") : TEXT("Welded"), TEXT(""), bFreeRoot);
     for (bool bFixedBase : {false, true}) {
       TStrongObjectPtr<USuperDexBotIKConfig> Config(NewObject<USuperDexBotIKConfig>());
       Config->OutputBot = Bot;
@@ -1363,7 +1367,7 @@ bool FSuperDexBotIKComponentTest::RunTest(const FString& Parameters) {
           static_cast<double>(0.25_r));
       bool bReached = false;
       TestTrue(TEXT("Component-space solve succeeds"), Component->SolveIK(bReached));
-      const auto LocalResult = Component->GetSolvedLinkTransforms();
+      const TArray<FTransform> LocalResult = Component->GetSolvedLinkTransforms();
       TestEqual(TEXT("All links are returned"), LocalResult.Num(), 3);
       TestTrue(
           TEXT("Result ignores scale"), LocalResult[0].GetScale3D().Equals(FVector::OneVector));
@@ -1391,7 +1395,7 @@ bool FSuperDexBotIKComponentTest::RunTest(const FString& Parameters) {
               FTransform(FVector(std::numeric_limits<double>::infinity(), 0, 0)),
               ESuperDexBotIKGoalSpace::World));
       TestTrue(TEXT("Disable update accepted"), Component->SetGoalEnabled(TEXT("Goal"), false));
-      const auto Previous = Component->GetSolvedJointPositions();
+      const TArray<double> Previous = Component->GetSolvedJointPositions();
       TestFalse(TEXT("No active goals rejects the solve"), Component->SolveIK(bReached));
       TestTrue(
           TEXT("Rejected solve preserves results"),
@@ -1440,7 +1444,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FSuperDexBotIKAttachmentTest::RunTest(const FString&) {
   FIKFixture Fixture;
-  auto* Bot = Fixture.MakeBot(TEXT("Attached"), TEXT(""));
+  USuperDexBot* Bot = Fixture.MakeBot(TEXT("Attached"), TEXT(""));
   TStrongObjectPtr<USuperDexBotIKConfig> Config(NewObject<USuperDexBotIKConfig>());
   Config->OutputBot = Bot;
   Config->OutputBotConfiguration = {0.1};
@@ -1448,7 +1452,7 @@ bool FSuperDexBotIKAttachmentTest::RunTest(const FString&) {
   Config->CreateParams.SolverParams.MaxElapsedTimeSeconds = 0;
   const mochi::TransformRT Attachment{
       mochi::Quaternion::RotationZ(0.2_r), mochi::Real3{0.2_r, 0.1_r, 0_r}};
-  const auto Prefab = MakeRobot(false);
+  const superdex::robotics::BotPrefab Prefab = MakeRobot(false);
   const mochi::DynamicArray<mochi::real> ExpectedPositions{0.7_r};
   mochi::DynamicArray<mochi::TransformRT> ExpectedLinks;
   mochi::Error Error;
@@ -1532,13 +1536,13 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FSuperDexBotIKJointCouplingTest::RunTest(const FString&) {
   FIKFixture Fixture;
-  auto* Bot = Fixture.MakeBot(TEXT("Finger"), TEXT(""));
-  auto Prefab = MakeRobot(false);
+  USuperDexBot* Bot = Fixture.MakeBot(TEXT("Finger"), TEXT(""));
+  superdex::robotics::BotPrefab Prefab = MakeRobot(false);
   Prefab.joints[2].type = mochi::ArticulatedJointType::Revolute;
   Prefab.defaultPose = {0.2_r, -0.1_r};
   mochi::Error Error;
   superdex::robotics::RebuildBotData(Prefab, Error);
-  const auto Json = superdex::robotics::WriteToJsonString(Prefab, Error);
+  const mochi::DynamicString Json = superdex::robotics::WriteToJsonString(Prefab, Error);
   if (!TestTrue(TEXT("Prepare two-joint finger"), Error.IsOK())) {
     return false;
   }
@@ -1575,7 +1579,7 @@ bool FSuperDexBotIKJointCouplingTest::RunTest(const FString&) {
           Component->SolveIK(bReached))) {
     return false;
   }
-  auto Positions = Component->GetSolvedJointPositions();
+  TArray<double> Positions = Component->GetSolvedJointPositions();
   if (!TestEqual(TEXT("Finger result has two joint coordinates"), Positions.Num(), 2)) {
     return false;
   }
@@ -1594,7 +1598,7 @@ bool FSuperDexBotIKJointCouplingTest::RunTest(const FString&) {
   Legacy.Ratio = 0.7;
   Legacy.Offset = 0.1;
   Legacy.Stiffness = 100;
-  auto Bad = Legacy;
+  FMochiJointCoupling Bad = Legacy;
   Bad.JointAName = TEXT("missing_joint");
   FMochiIKSolverParams SolverParams;
   SolverParams = ::ToUnreal(Config->CreateParams.ToNative().solverParams);
@@ -1616,7 +1620,7 @@ bool FSuperDexBotIKJointCouplingTest::RunTest(const FString&) {
   LegacySolver->CreateRotationTargetForLink(
       2, FQuat::Identity, Goal.BaseOrInputLinkFrameFromConstraintFrame.GetRotation(), 100);
   LegacySolver->SolveIK();
-  const auto LegacyPositions = LegacySolver->GetSolvedDofs();
+  const TArray<double> LegacyPositions = LegacySolver->GetSolvedDofs();
   if (TestEqual(TEXT("Legacy coupling has two joint coordinates"), LegacyPositions.Num(), 2)) {
     TestTrue(
         TEXT("Legacy signed offset convention remains intact"),

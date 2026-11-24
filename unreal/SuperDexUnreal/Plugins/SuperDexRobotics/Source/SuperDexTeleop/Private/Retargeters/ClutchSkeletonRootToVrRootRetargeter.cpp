@@ -319,7 +319,7 @@ bool UClutchSkeletonRootToVrRootRetargeter::InitializeClutchBasedOnLeafBoneInter
     return false;
   }
 
-  auto const* const PoseableAsset = RobotArmPosablePtr->GetSkinnedAsset();
+  USkinnedAsset const* const PoseableAsset = RobotArmPosablePtr->GetSkinnedAsset();
   if (PoseableAsset == nullptr) {
     UE_LOG(
         LogSuperDexTeleop,

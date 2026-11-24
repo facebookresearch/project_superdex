@@ -61,7 +61,7 @@ bool USuperDexBotIKComponent::InitializeSolver() {
     UE_LOG(LogMochiPhysics, Warning, TEXT("Bot IK initialization failed: %s"), *Diagnostic);
     return false;
   }
-  const auto& Prefab = Config->OutputBot->GetBotPrefab();
+  const superdex::robotics::BotPrefab& Prefab = Config->OutputBot->GetBotPrefab();
   TMap<FString, int32> Links;
   for (int32 Index = 0; Index < static_cast<int32>(Prefab.links.size()); ++Index) {
     FString Name = UTF8_TO_TCHAR(Prefab.links[Index].name.c_str());
@@ -78,7 +78,7 @@ bool USuperDexBotIKComponent::InitializeSolver() {
     Links.Add(Name, Index);
   }
   TArray<int32> Indices;
-  for (const auto& Goal : Config->Goals) {
+  for (const FSuperDexBotIKGoalConfig& Goal : Config->Goals) {
     if (!Goal.InputBotLink.IsEmpty()) {
       UE_LOG(
           LogMochiPhysics,
@@ -97,7 +97,7 @@ bool USuperDexBotIKComponent::InitializeSolver() {
     }
     Indices.Add(*Index);
   }
-  const auto NativeConfig = Config->ToNative();
+  const superdex::robotics::BotIKConfig NativeConfig = Config->ToNative();
   mochi::DynamicString CouplingDiagnostic;
   if (!superdex::robotics::ValidateIKJointCouplings(
           Prefab, NativeConfig.jointCouplings, CouplingDiagnostic)) {
@@ -124,8 +124,9 @@ int32 USuperDexBotIKComponent::FindGoal(const FString& Name) const {
   if (!IsInGameThread() || !Solver) {
     return INDEX_NONE;
   }
-  return RuntimeGoals.IndexOfByPredicate(
-      [&Name](const auto& Goal) { return Goal.Name.Equals(Name, ESearchCase::CaseSensitive); });
+  return RuntimeGoals.IndexOfByPredicate([&Name](const FSuperDexBotIKGoalConfig& Goal) {
+    return Goal.Name.Equals(Name, ESearchCase::CaseSensitive);
+  });
 }
 
 bool USuperDexBotIKComponent::ResetGoalsToConfig() {
@@ -186,7 +187,7 @@ bool USuperDexBotIKComponent::SolveIK(bool& OutGoalsReached) {
   const FTransform WorldFromComponent = RigidTransform(GetComponentTransform());
   FUnrealToMochiConverter Converter(SuperDexSpace);
   for (int32 Index = 0; Index < RuntimeGoals.Num(); ++Index) {
-    const auto& Goal = RuntimeGoals[Index];
+    const FSuperDexBotIKGoalConfig& Goal = RuntimeGoals[Index];
     FTransform LocalGoal = RigidTransform(Goal.BaseOrInputLinkFrameFromConstraintFrame);
     if (GoalSpaces[Index] == ESuperDexBotIKGoalSpace::World) {
       LocalGoal = LocalGoal.GetRelativeTransform(WorldFromComponent);
@@ -195,9 +196,11 @@ bool USuperDexBotIKComponent::SolveIK(bool& OutGoalsReached) {
     if (!mochi::IsFinite(NativeTransform)) {
       return false;
     }
-    const auto Position = static_cast<mochi::real>(Goal.bEnabled ? Goal.PositionStiffness : 0.0);
-    const auto Rotation = static_cast<mochi::real>(Goal.bEnabled ? Goal.RotationStiffness : 0.0);
-    const auto AttachmentFrame = Goal.ToNative().linkFrameFromConstraintFrame;
+    const mochi::real Position =
+        static_cast<mochi::real>(Goal.bEnabled ? Goal.PositionStiffness : 0.0);
+    const mochi::real Rotation =
+        static_cast<mochi::real>(Goal.bEnabled ? Goal.RotationStiffness : 0.0);
+    const mochi::TransformRT AttachmentFrame = Goal.ToNative().linkFrameFromConstraintFrame;
     if (!Solver->SetBotGoal(
             GoalLinks[Index], AttachmentFrame, NativeTransform, Position, Rotation)) {
       return false;
@@ -215,7 +218,7 @@ void USuperDexBotIKComponent::UpdateResults() {
   JointPositions = Solver->GetSolvedDofs();
   const FTransform WorldFromComponent = RigidTransform(GetComponentTransform());
   WorldFromLinks = Solver->GetSolvedLinkToWorldTransforms();
-  for (auto& Transform : WorldFromLinks) {
+  for (FTransform& Transform : WorldFromLinks) {
     Transform = Transform * WorldFromComponent;
   }
 }

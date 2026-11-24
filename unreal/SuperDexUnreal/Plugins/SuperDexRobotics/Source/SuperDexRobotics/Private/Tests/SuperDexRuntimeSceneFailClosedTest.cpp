@@ -147,8 +147,9 @@ bool FSuperDexRuntimeSceneFailClosedTest::RunTest(const FString& Parameters) {
       }
       GameInstance->RemoveFromRoot();
     };
-    auto* Runtime = GameInstance->GetSubsystem<USuperDexBotSceneSubsystem>();
-    auto* Physics = GameInstance->GetSubsystem<UMochiGameInstanceSubsystem>();
+    USuperDexBotSceneSubsystem* Runtime = GameInstance->GetSubsystem<USuperDexBotSceneSubsystem>();
+    UMochiGameInstanceSubsystem* Physics =
+        GameInstance->GetSubsystem<UMochiGameInstanceSubsystem>();
     if (!TestNotNull(TEXT("Runtime scene subsystem"), Runtime) ||
         !TestNotNull(TEXT("Physics subsystem"), Physics) || !TestNotNull(TEXT("World"), World)) {
       return false;

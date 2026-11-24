@@ -68,13 +68,15 @@ const USuperDexBotComponent* FindBotComponent(const UActorComponent* Component) 
        Class = Cast<UBlueprintGeneratedClass>(Class->GetSuperClass())) {
     if (const USimpleConstructionScript* Construction = Class->SimpleConstructionScript) {
       for (const USCS_Node* Node : Construction->GetAllNodes()) {
-        if (const auto* Bot = Cast<USuperDexBotComponent>(Node->ComponentTemplate)) {
+        if (const USuperDexBotComponent* Bot =
+                Cast<USuperDexBotComponent>(Node->ComponentTemplate)) {
           return Bot;
         }
       }
     }
     if (const AActor* Defaults = Cast<AActor>(Class->GetDefaultObject())) {
-      if (const auto* Bot = Defaults->FindComponentByClass<USuperDexBotComponent>()) {
+      if (const USuperDexBotComponent* Bot =
+              Defaults->FindComponentByClass<USuperDexBotComponent>()) {
         return Bot;
       }
     }
@@ -138,7 +140,7 @@ void USuperDexBotAudioComponent::SetUpAudio() {
   EstimatedJointVelocities.SetNumZeroed(numDofs);
   OneEuroFilters.Init(TSuperDexOneEuroFilter<double>(3.0, 1.0, 1.0), numDofs);
   // spawn audio instances at the links the joints move
-  for (const auto& params : BotAudioParams) {
+  for (const FSuperDexBotAudioParams& params : BotAudioParams) {
     if (!params.AudioLoop || !params.VelocityVolumeCurve || !params.VelocityPitchCurve) {
       UE_LOG(
           LogMochiPhysics,
@@ -152,7 +154,7 @@ void USuperDexBotAudioComponent::SetUpAudio() {
     audioInstance.VelocityPitchCurve = params.VelocityPitchCurve;
     audioInstance.JointAggregateMode = params.JointAggregateMode;
     audioInstance.bEstimateVelocity = params.bEstimateVelocity;
-    for (const auto& jName : params.Joints) {
+    for (const FName& jName : params.Joints) {
       const int iDof = Bot->GetDofIndex(jName);
       if (iDof == INDEX_NONE) {
         UE_LOG(
@@ -208,7 +210,7 @@ void USuperDexBotAudioComponent::TickComponent(
     EstimatedJointVelocities[i] = (JointPositions[i] - JointPositionsPrevious[i]) / DeltaTime;
   }
   JointPositionsPrevious = JointPositions;
-  for (auto& instance : JointAudioInstances) {
+  for (FSuperDexBotAudioInstance& instance : JointAudioInstances) {
     if (instance.AudioComponent == nullptr) {
       continue;
     }
