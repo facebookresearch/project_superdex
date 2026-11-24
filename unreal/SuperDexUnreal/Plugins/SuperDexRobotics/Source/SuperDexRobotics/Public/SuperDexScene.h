@@ -35,9 +35,11 @@ struct SUPERDEXROBOTICS_API FSuperDexSceneSpawnable {
   /** Name the scene gives the spawnable. */
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Spawnable")
   FString Name;
+
   /** The imported prefab, if the spawnable is a SuperDex prefab or scene. */
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Spawnable")
   TObjectPtr<USuperDexPrefab> Prefab;
+
   /** The imported bot, if the spawnable is a bot. */
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Spawnable")
   TObjectPtr<USuperDexBot> Bot;
@@ -55,21 +57,27 @@ class SUPERDEXROBOTICS_API USuperDexScene : public UObject {
   /** Name of the scene, derived from its file name. */
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, AssetRegistrySearchable, Category = "Scene")
   FString SceneName;
+
   /** What the scene was imported as. */
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Scene")
   ESuperDexPrefabImportMode ImportMode = ESuperDexPrefabImportMode::Map;
+
   /** The generated Blueprint (Blueprint import mode). */
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Scene")
   TSoftObjectPtr<UBlueprint> GeneratedBlueprint;
+
   /** The generated level (Map import mode). */
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Scene")
   TSoftObjectPtr<UWorld> GeneratedMap;
+
   /** The base scene, imported as a prefab Blueprint, or null if the scene has none. */
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Scene")
   TObjectPtr<USuperDexPrefab> BaseScene;
+
   /** The bots, in scene order. Null where a bot failed to import. */
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Scene")
   TArray<TObjectPtr<USuperDexBot>> Bots;
+
   /** The prefabs and bots the scene can spawn at runtime. They are imported but not placed. */
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Scene")
   TArray<FSuperDexSceneSpawnable> SpawnablePrefabs;
@@ -83,6 +91,7 @@ class SUPERDEXROBOTICS_API USuperDexScene : public UObject {
 #if WITH_EDITOR
   virtual void PostInitProperties() override;
   virtual void GetAssetRegistryTags(FAssetRegistryTagsContext Context) const override;
+
   /** Absolute path of the source scene file. */
   FString GetSourceFilePath() const;
 #endif

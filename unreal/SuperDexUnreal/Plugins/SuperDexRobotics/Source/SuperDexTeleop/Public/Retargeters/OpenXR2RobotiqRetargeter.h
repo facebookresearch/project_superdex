@@ -42,6 +42,7 @@ class SUPERDEXTELEOP_API UOpenXR2RobotiqRetargeter : public USuperDexRetargeter 
    */
   UPROPERTY(EditAnywhere, BlueprintREADONLY, Category = "Teleop")
   bool bOverrideRobotiqRootToSourceSkeletonRoot = false;
+
   /**
    * Transform between the Robotiq root and your source hand root.
    * TransformedPose.SkeletonRootToVrRoot = RobotiqRootToSourceSkeletonRoot *
@@ -54,18 +55,21 @@ class SUPERDEXTELEOP_API UOpenXR2RobotiqRetargeter : public USuperDexRetargeter 
       meta = (EditCondition = "bOverrideRobotiqRootToSourceSkeletonRoot"),
       Category = "Teleop")
   FTransform RobotiqRootToSourceSkeletonRoot = FTransform::Identity;
+
   /**
    * The thumb tip link of the source pose's bot; its distance to the index tip at the source pose's
    * joint positions drives the gripper. The default is the OpenXR hand's (xr_05_thumb_tip).
    */
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Teleop")
   FName ThumbTipName = SuperDexBoneNames_OXR[static_cast<int32>(ESuperDexBone_OXR::ThumbTip)];
+
   /**
    * The index finger tip link of the source pose's bot. The default is the OpenXR hand's
    * (xr_10_index_tip).
    */
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Teleop")
   FName IndexTipName = SuperDexBoneNames_OXR[static_cast<int32>(ESuperDexBone_OXR::IndexTip)];
+
   /**
    * Default behavior is to directly map
    * finger distance to pincher distance; setting
@@ -73,6 +77,7 @@ class SUPERDEXTELEOP_API UOpenXR2RobotiqRetargeter : public USuperDexRetargeter 
    */
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleop")
   bool bUseCustomPinchRange = false;
+
   /** Pinch is "1.0" at or below this index-to-thumb-tip distance. */
   UPROPERTY(
       EditAnywhere,
@@ -80,6 +85,7 @@ class SUPERDEXTELEOP_API UOpenXR2RobotiqRetargeter : public USuperDexRetargeter 
       meta = (EditCondition = "bUseCustomPinchRange"),
       Category = "Teleop")
   double MinPinchDistance = 1.0;
+
   /** Pinch is "0.0" at or above this index-to-thumb-tip distance. */
   UPROPERTY(
       EditAnywhere,
@@ -87,12 +93,14 @@ class SUPERDEXTELEOP_API UOpenXR2RobotiqRetargeter : public USuperDexRetargeter 
       meta = (EditCondition = "bUseCustomPinchRange"),
       Category = "Teleop")
   double MaxPinchDistance = 10.0;
+
   /**
    * If true, the TransformedPose will be based on received ros poses. If false, the TransformedPose
    * will be based on the solved IK poses.
    */
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Teleop")
   bool bReceiveRosPoses = false;
+
   /**
    * If true, will send the IK computed pose to the Ros interface. If false and bReceiveRosPoses is
    * true, the system will not compute or need any of the IK solvers.

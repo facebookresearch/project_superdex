@@ -53,6 +53,7 @@ class SUPERDEXROBOTICS_API USuperDexIKSolverObject : public UObject {
       UObject* Outer,
       const class USuperDexBot* OutputBot,
       const superdex::robotics::BotIKCreateParams& Params);
+
   /** Document couplings are validated as a complete batch; invalid input creates no solver. */
   static USuperDexIKSolverObject* CreateBotIKSolver(
       UObject* Outer,
@@ -75,6 +76,7 @@ class SUPERDEXROBOTICS_API USuperDexIKSolverObject : public UObject {
       const mochi::TransformRT& WorldFrameFromConstraintFrame,
       mochi::real PositionStiffness,
       mochi::real RotationStiffness);
+
   /** Full native-unit local attachment and world goal; zero stiffness clears that component. */
   bool SetBotGoal(
       int32 OutputBotLinkIndex,
@@ -82,6 +84,7 @@ class SUPERDEXROBOTICS_API USuperDexIKSolverObject : public UObject {
       const mochi::TransformRT& WorldFrameFromConstraintFrame,
       mochi::real PositionStiffness,
       mochi::real RotationStiffness);
+
   /**
    * Synchronous borrowed inputs. Preserves all reference-link bindings, attachment frames and
    * independent retarget scale through BotIK; invalid input leaves the native goals unchanged.
@@ -92,11 +95,13 @@ class SUPERDEXROBOTICS_API USuperDexIKSolverObject : public UObject {
       mochi::TransformRT const& WorldFrameFromInputBaseFrame,
       mochi::real InputBotScale,
       mochi::Span<superdex::robotics::BotIKGoalConfig const> Goals);
+
   /**
    * Solves on the game thread. Returns false if the solver is not ready or the solve fails;
    * bOutGoalsReached is false whenever it returns false.
    */
   bool SolveBotIK(bool& bOutGoalsReached);
+
   /**
    * Native link-frame snapshots in metres/FLU, including geometry scale. Game-thread-only;
    * borrowed until the next mutation or destruction. Does not trigger a solve or expose the actor.
@@ -157,6 +162,7 @@ class SUPERDEXROBOTICS_API USuperDexIKSolverObject : public UObject {
       FVector LocalPositionToLink,
       FVector TargetPositionToWorld,
       float Weight);
+
   /** Removes the position target associated with a link */
   void ClearPositionTargetForLink(int LinkIndex);
 
@@ -181,6 +187,7 @@ class SUPERDEXROBOTICS_API USuperDexIKSolverObject : public UObject {
       FQuat LocalRotationToLink,
       FQuat TargetRotationToWorld,
       float Weight);
+
   /** Removes the rotation target associated with a link */
   void ClearRotationTargetForLink(int LinkIndex);
 
@@ -194,6 +201,7 @@ class SUPERDEXROBOTICS_API USuperDexIKSolverObject : public UObject {
    * Get the link transforms from the previous solve. These represent each link's world transform.
    */
   const TArray<FTransform>& GetSolvedLinkToWorldTransforms() const;
+
   /**
    * Get the dofs from the previous solve. These represent the dofs of the articulated actor joints.
    * The additional 6 dofs provided when bFixedBase == false are removed. Simply get
@@ -207,14 +215,17 @@ class SUPERDEXROBOTICS_API USuperDexIKSolverObject : public UObject {
    * handle.
    */
   bool IsValid() const;
+
   /** Returns the number of degrees of freedom in the articulated actor. */
   int GetNumDofs() const;
+
   /**
    * True if LinkIndex is connected to the root link through Hard (weld) joints only, meaning no
    * dof can move it relative to the root. When the base is fixed such a link is immovable, so any
    * IK target on it is unsatisfiable. Returns false for an out of range LinkIndex.
    */
   bool IsLinkRigidlyAttachedToRootLink(int32 LinkIndex) const;
+
   /**
    * Force destroy the underlying Mochi actor and cancel the registered query callback.
    * This will also happen in BeginDestroy when GC'd.

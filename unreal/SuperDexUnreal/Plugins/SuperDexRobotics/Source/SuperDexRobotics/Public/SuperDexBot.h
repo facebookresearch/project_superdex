@@ -111,30 +111,35 @@ class SUPERDEXROBOTICS_API USuperDexBotImportData : public UAssetImportData {
    */
   UPROPERTY(VisibleAnywhere)
   FString SourceFileHash;
+
   /**
    * Per-link content hash of the render model (.glb), used to skip reimporting an unchanged render
    * mesh.
    */
   UPROPERTY(VisibleAnywhere)
   TArray<FString> RenderModelHashes;
+
   /**
    * Per-link content hash of the collision model (.mochi.h5), used to skip reimporting an unchanged
    * MochiModel.
    */
   UPROPERTY(VisibleAnywhere)
   TArray<FString> MochiModelHashes;
+
   /**
    * Content hash of the skin collision model (skin.shape .mochi.h5), used to skip
    * reimporting an unchanged skin collision mesh. Empty if the bot has no skin.
    */
   UPROPERTY(VisibleAnywhere)
   FString SkinMochiModelHash;
+
   /**
    * Content hash of the skin render model (skin.renderModel .glb), used to skip reimporting an
    * unchanged skin render mesh. Empty if the bot's skin has no render model.
    */
   UPROPERTY(VisibleAnywhere)
   FString SkinRenderModelHash;
+
   /**
    * Object paths (relative to this bot's package folder) of every asset generated
    * by the last import -- render/collision meshes, the skeleton and skeletal mesh,
@@ -166,20 +171,26 @@ class SUPERDEXROBOTICS_API USuperDexBot : public UMochiArticulationBase {
 #if WITH_EDITOR
   /** Creates the UAssetImportData subobject for source file tracking. */
   virtual void PostInitProperties() override;
+
   /** Upgrades AssetImportData to USuperDexBotImportData if necessary. */
   virtual void PostLoad() override;
+
   /** Exposes the source file path to the Asset Registry for reimport discovery. */
   virtual void GetAssetRegistryTags(FAssetRegistryTagsContext Context) const override;
+
   /** Triggers reimport of this asset from its source .superdex_bot file via FReimportManager. */
   void Reimport();
+
   /** Returns the absolute path to the source .superdex_bot file on disk. */
   FString GetSourceFilePath() const;
+
   /**
    * Computes a SHA1 hash of the source .superdex_bot file and all referenced asset
    * files (.glb, .mochi.h5). If the bot was a ModBotPrefab, the hash is
    * computed on the resolved (built)
    */
   FString ComputeSourceHash() const;
+
   /**
    * Returns true if the source .superdex_bot on disk has changed since the last import
    * (i.e. ComputeSourceHash() differs from the stored hash).
@@ -202,8 +213,10 @@ class SUPERDEXROBOTICS_API USuperDexBot : public UMochiArticulationBase {
    */
   UFUNCTION(BlueprintPure, Category = "SuperDex Bot")
   const FString& GetBotName() const;
+
   /** Returns the generated skeletal mesh, or nullptr if generation failed. */
   virtual USkeletalMesh* GetSkeletalMesh() const override;
+
   /**
    * Returns the imported MochiModel assets (one per link that has a mochiModel entry).
    *
@@ -211,6 +224,7 @@ class SUPERDEXROBOTICS_API USuperDexBot : public UMochiArticulationBase {
    */
   UFUNCTION(BlueprintPure, Category = "SuperDex Bot")
   const TArray<UMochiModel*>& GetMochiModels() const;
+
   /**
    * Returns the fully-resolved BotPrefab JSON.
    *
@@ -218,6 +232,7 @@ class SUPERDEXROBOTICS_API USuperDexBot : public UMochiArticulationBase {
    */
   UFUNCTION(BlueprintPure, Category = "SuperDex Bot")
   const FString& GetBotPrefabJson() const;
+
   /** Returns the BotPrefab */
   const superdex::robotics::BotPrefab& GetBotPrefab() const;
 
@@ -226,6 +241,7 @@ class SUPERDEXROBOTICS_API USuperDexBot : public UMochiArticulationBase {
   virtual const TArray<double>& GetDefaultJointPositions() const override;
   virtual TArray<FName> GetLinkNames() const override;
   virtual TArray<FName> GetJointNames() const override;
+
   /**
    * Returns the index of a joint's first DOF among the bot's DOFs (the order of joint positions,
    * e.g. USuperDexBotComponent::GetCurrentJointPositions), or INDEX_NONE if the joint doesn't
@@ -236,6 +252,7 @@ class SUPERDEXROBOTICS_API USuperDexBot : public UMochiArticulationBase {
    */
   UFUNCTION(BlueprintPure, Category = "SuperDex Bot")
   int32 GetDofIndex(FName JointName) const;
+
   /**
    * Returns the name of the link a DOF moves, or NAME_None for an invalid DOF index.
    *
@@ -313,9 +330,11 @@ class SUPERDEXROBOTICS_API USuperDexBot : public UMochiArticulationBase {
   /** Fully-resolved BotPrefab JSON. */
   UPROPERTY()
   FString BotPrefabJson;
+
   /** Generated skeletal mesh with per-link bones and render geometry baked in. */
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, AssetRegistrySearchable, Category = "Assets")
   TObjectPtr<USkeletalMesh> SkeletalMesh;
+
   /**
    * Imported MochiModel (.mochi.h5) assets: one per link that defines a mochiModel entry,
    * plus the optional skin collision model (skin.shape) when the bot has a skin. Held here
@@ -323,6 +342,7 @@ class SUPERDEXROBOTICS_API USuperDexBot : public UMochiArticulationBase {
    */
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Assets")
   TArray<TObjectPtr<UMochiModel>> MochiModels;
+
   /** Per-link local bounding boxes for visual bounds computation. */
   UPROPERTY()
   TArray<FBoxSphereBounds> LinkBounds;

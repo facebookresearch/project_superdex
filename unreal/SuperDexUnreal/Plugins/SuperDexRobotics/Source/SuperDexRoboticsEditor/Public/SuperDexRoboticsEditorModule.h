@@ -36,6 +36,7 @@ class FSuperDexRoboticsEditorModule : public IModuleInterface {
     return FModuleManager::LoadModuleChecked<FSuperDexRoboticsEditorModule>(
         "SuperDexRoboticsEditor");
   }
+
   /** Whether the SuperDexRoboticsEditor module is loaded. */
   static inline bool IsLoaded() {
     return FModuleManager::Get().IsModuleLoaded("SuperDexRoboticsEditor");

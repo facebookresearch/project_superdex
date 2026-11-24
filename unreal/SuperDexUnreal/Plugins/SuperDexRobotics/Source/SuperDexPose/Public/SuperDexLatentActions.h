@@ -314,8 +314,10 @@ class FSuperDexFireAndForgetCurveAction : public FSuperDexFireAndForgetSecondsAc
  public:
   /** The sampled curve. */
   UCurveFloat* Curve;
+
   /** The Blueprint output, set to the curve value on each update. */
   float& Value;
+
   /** The curve's time range. */
   float MinTime;
   float MaxTime;

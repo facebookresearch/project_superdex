@@ -41,15 +41,19 @@ class SUPERDEXROBOTICS_API USuperDexBotController : public UObject {
 
  protected:
   friend class USuperDexBotComponent;
+
   /**
    * Initialize the controller. Called on the game thread in BeginPlay.
    * Return true on success, false to cancel controller deployment.
    */
   virtual bool Initialize(const USuperDexBotComponent* Component);
+
   /** Called when the bot has been spawned. Game thread. */
   virtual void OnBotSpawned(USuperDexBotComponent* Component);
+
   /** Shutdown the controller. Called on the game thread in EndPlay or when swapped. */
   virtual void Shutdown(const USuperDexBotComponent* Component);
+
   /**
    * Step the controller on the Mochi simulation thread in a pre-step callback.
    * MochiDeltaTime is the duration of the step about to be taken.
@@ -60,6 +64,7 @@ class SUPERDEXROBOTICS_API USuperDexBotController : public UObject {
       double MochiDeltaTime,
       mochi::Actor* ArticulatedActor,
       mochi::Scene* Scene);
+
   /**
    * Tick the controller on the game thread. Called in TickComponent and is thread safe with
    * StepController.

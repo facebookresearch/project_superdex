@@ -32,8 +32,10 @@ class SUPERDEXRECORDER_API FSuperDexRecordingCachedTransform {
  public:
   /** Stores the latest world transform and marks the source tracked. */
   void Set(const FTransform& WorldTransform);
+
   /** Marks the source untracked until the next Set. */
   void Clear();
+
   /**
    * Copies the latest world transform into OutWorldTransform and returns true, or returns false
    * while untracked.
@@ -69,6 +71,7 @@ class SUPERDEXRECORDER_API USuperDexRecordingSourceComponent : public UActorComp
 
   /** Called on the game thread when an episode begins, to add this source's streams. */
   virtual void ConfigureRecording(FSuperDexSceneRecorderConfig& Config) {}
+
   /** Called on the game thread once the episode has ended (committed, aborted or failed). */
   virtual void OnRecordingEnded() {}
 

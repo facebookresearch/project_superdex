@@ -49,22 +49,28 @@ struct FSuperDexSkeletonSource {
    * under "world/sources/<Id>".
    */
   TWeakObjectPtr<const USuperDexBotComponent> Robot;
+
   /**
    * Identifies this shadow among the robot's shadows (the recorder already uses "command"), or,
    * without a Robot, this source among the episode's sources.
    */
   FString Id;
+
   /** Labels the skeleton in the viewer; empty uses Id. */
   FString Label;
+
   /** Names each keypoint, in the order SampleWorldKeypoints writes them. */
   TArray<FString> KeypointNames;
+
   /** Each keypoint's parent keypoint index, which must be lower than its own, or -1 for none. */
   TArray<int32> ParentIndices;
+
   /** Draws the skeleton in the viewer. */
   FColor Color = [] {
     const auto Rgba = superdex::recorder::SkeletonShadowConfig{}.colorRgba;
     return FColor(Rgba[0], Rgba[1], Rgba[2], Rgba[3]);
   }();
+
   /**
    * Called on the Mochi thread after every step until EndCapture returns. Writes one finite Mochi
    * world position per keypoint and returns true, or returns false while the skeleton is untracked,
@@ -80,6 +86,7 @@ struct FSuperDexSkeletonSource {
 struct FSuperDexTransformSource {
   /** Identifies this source among the episode's sources. */
   FString Id;
+
   /**
    * Called on the Mochi thread after every step until EndCapture returns. Writes the Mochi world
    * transform and returns true, or returns false while the source is untracked, which records
@@ -123,30 +130,40 @@ struct FSuperDexSceneRecorderConfig {
    * recorder, and so one episode, per scene.
    */
   TWeakObjectPtr<UMochiSceneObject> Scene;
+
   /** Where the episode is written; see ResolveOutputDirectory. */
   FString OutputDirectory;
+
   /**
    * The scene archive whose filename and hash the episode stores, so the scene can be rebuilt
    * offline. Required unless bRequireSceneArchive is false.
    */
   FString SceneArchivePath;
+
   /** Refuse to record without SceneArchivePath. */
   bool bRequireSceneArchive = true;
+
   /** The scene task the episode records, stored with it. */
   FString TaskPath;
+
   /** Stored with the episode, e.g. the participant, condition or task. */
   TMap<FString, FString> Properties;
+
   /** Records Mochi's contact forces directly, at a cost per contact point in every step. */
   bool bRecordContactForces = superdex::recorder::PhysicsRecorderConfig{}.recordContactForces;
+
   /** The task spawn name of each Mochi actor that a scene task spawned. */
   TArray<TPair<mochi::ActorHandle, FString>> SpawnNames;
+
   /**
    * Skeletons recorded as shadows of recorded robots, or on their own when they have no robot.
    * Sources of robots that aren't recorded are ignored.
    */
   TArray<FSuperDexSkeletonSource> SkeletonSources;
+
   /** World transforms recorded as sources. */
   TArray<FSuperDexTransformSource> TransformSources;
+
   /** The command-target source of each robot that no USuperDexBotController drives. */
   TArray<TPair<mochi::ActorHandle, FSuperDexRecordingTargetSourcePtr>> RecordingTargetSources;
 };
@@ -155,6 +172,7 @@ struct FSuperDexSceneRecorderConfig {
 class SUPERDEXRECORDER_API FSuperDexSceneRecorder final {
  public:
   FSuperDexSceneRecorder();
+
   /**
    * Aborts an episode that has not been committed.
    * Waits for an earlier asynchronous commit to finish.
@@ -163,11 +181,13 @@ class SUPERDEXRECORDER_API FSuperDexSceneRecorder final {
 
   /** Begins an episode of Config. Returns false if one is already active or it cannot start. */
   bool BeginEpisode(UObject* WorldContext, const FSuperDexSceneRecorderConfig& Config);
+
   /**
    * Stops capturing Mochi steps. Queued events and scalars are written at the last recorded step
    * while the scene and capture are still valid, and are dropped otherwise.
    */
   void EndCapture();
+
   /**
    * Waits for an earlier CommitEpisodeAsync, then writes this episode's file before returning.
    * Ends capture and writes the episode. Returns false if no episode is active, capture failed or
@@ -176,6 +196,7 @@ class SUPERDEXRECORDER_API FSuperDexSceneRecorder final {
    * @return True if this episode was committed; false otherwise.
    */
   bool CommitEpisodeSync();
+
   /**
    * Writes the file in the background; the next commit and the recorder's destruction wait for
    * it.
@@ -186,6 +207,7 @@ class SUPERDEXRECORDER_API FSuperDexSceneRecorder final {
    * native commit reported an error before returning.
    */
   bool CommitEpisodeAsync();
+
   /** Ends capture and discards the episode, recording Reason. */
   void AbortEpisode(FStringView Reason);
 
@@ -206,12 +228,14 @@ class SUPERDEXRECORDER_API FSuperDexSceneRecorder final {
    * sample. Texts and scalars still queued when capture ends are written at the last recorded step.
    */
   void RecordEvent(FStringView Stream, FStringView Text);
+
   /**
    * Records Value under "data/scalars/<Name>" at the next Mochi step. Callable from any thread
    * while capturing; ignored otherwise. When a name is queued more than once in one step, the last
    * call wins.
    */
   void RecordScalar(FStringView Name, double Value);
+
   /**
    * Records Values as one sample of "data/scalars/<Name>", like RecordScalar. The recording doesn't
    * fix the list's length: keep it consistent per name and interpret the values when reading.

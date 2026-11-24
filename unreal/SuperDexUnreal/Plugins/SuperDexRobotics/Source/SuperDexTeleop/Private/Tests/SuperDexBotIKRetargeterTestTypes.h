@@ -29,6 +29,7 @@ class USuperDexBotIKTestPoseSource : public USuperDexPoseableComponent {
   /** The pose GetPose returns. */
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Transient, Category = "Test")
   FSuperDexPose TestPose;
+
   /** The value GetPose returns. */
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Transient, Category = "Test")
   bool bTestValid = true;

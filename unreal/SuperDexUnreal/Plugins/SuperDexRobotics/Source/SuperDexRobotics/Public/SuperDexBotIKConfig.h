@@ -33,8 +33,10 @@ struct SUPERDEXROBOTICS_API FSuperDexBotIKSolverParams {
 
   /** Initializes the parameters to those of a new native bot IK config. */
   FSuperDexBotIKSolverParams();
+
   /** Converts to the native solver parameters. */
   mochi::experimental::IKSolverParams ToNative() const;
+
   /** Sets these parameters from native ones. */
   void FromNative(const mochi::experimental::IKSolverParams& Params);
 
@@ -92,6 +94,7 @@ struct SUPERDEXROBOTICS_API FSuperDexBotIKCreateParams {
 
   /** Converts to the native creation options. */
   superdex::robotics::BotIKCreateParams ToNative() const;
+
   /** Sets these options from native ones. */
   void FromNative(const superdex::robotics::BotIKCreateParams& Params);
 };
@@ -146,6 +149,7 @@ struct SUPERDEXROBOTICS_API FSuperDexBotIKGoalConfig {
 
   /** Converts to the native goal, converting its frames from Unreal to SuperDex space. */
   superdex::robotics::BotIKGoalConfig ToNative() const;
+
   /** Sets this goal from a native one. */
   void FromNative(const superdex::robotics::BotIKGoalConfig& Goal);
 };
@@ -183,6 +187,7 @@ struct SUPERDEXROBOTICS_API FSuperDexBotIKJointCouplingConfig {
 
   /** Converts to the native coupling. */
   superdex::robotics::BotIKJointCouplingConfig ToNative() const;
+
   /** Sets this coupling from a native one. */
   void FromNative(const superdex::robotics::BotIKJointCouplingConfig& Coupling);
 };
@@ -253,11 +258,13 @@ class SUPERDEXROBOTICS_API USuperDexBotIKConfig : public UObject {
    * OutputBotReference and InputBotReference.
    */
   superdex::robotics::BotIKConfig ToNative() const;
+
   /**
    * Sets this config from a native one. Bots are not resolved: the document's bot references are
    * stored in OutputBotReference and InputBotReference.
    */
   void FromNative(const superdex::robotics::BotIKConfig& Config);
+
   /**
    * Checks that the config's values are finite, representable in native precision and in range,
    * then validates the native config.

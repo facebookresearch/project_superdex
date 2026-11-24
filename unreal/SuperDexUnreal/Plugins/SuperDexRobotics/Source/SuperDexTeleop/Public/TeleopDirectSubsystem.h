@@ -98,6 +98,7 @@ class SUPERDEXTELEOP_API UTeleopDirectSubsystem : public UGameInstanceSubsystem 
 
   /** Registers a publisher on TopicName, creating the topic if needed, and returns its ID. */
   int32 RegisterPublisher(const FString& TopicName, ETeleopMessageType Type);
+
   /** Unregisters a publisher; its topic is kept. */
   void UnregisterPublisher(int32 PublisherId, const FString& TopicName);
 

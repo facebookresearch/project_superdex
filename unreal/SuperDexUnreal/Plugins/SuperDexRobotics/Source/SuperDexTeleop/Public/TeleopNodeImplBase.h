@@ -47,8 +47,10 @@ class SUPERDEXTELEOP_API UTeleopNodeImplBase : public UObject {
   // Lifecycle
   /** Sets the node name used in log messages. */
   virtual void SetName(const FString& Name);
+
   /** Starts the backend; returns false if it cannot start. */
   virtual bool Initialize();
+
   /** Stops the backend. */
   virtual void Deinitialize();
 

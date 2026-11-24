@@ -49,8 +49,10 @@ class SUPERDEXROBOTICSEDITOR_API USuperDexBotIKConfigFactory : public UFactory {
    * selection.
    */
   bool ImportConfig(USuperDexBotIKConfig* Asset, const FString& Filename, bool bReimport);
+
   /** Resolve either bot by its imported source-file tag, not by basename or package proximity. */
   static USuperDexBot* ResolveBotAsset(const FString& SourcePath);
+
   /** Returns Path as a normalized absolute path, or empty if Path is empty. */
   static FString NormalizeSourcePath(const FString& Path);
 };

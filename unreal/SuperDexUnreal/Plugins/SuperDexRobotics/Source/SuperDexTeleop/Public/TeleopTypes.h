@@ -114,14 +114,19 @@ struct FTeleopSubscriberHandle {
 template <typename T>
 struct TSafeLatentArray {
   TSafeLatentArray() : Data({}) { }
+
   /** Resizes to N zeros and marks the array unset. */
   void Init(int N) { FWriteScopeLock Lock(Mutex); Data.SetNumZeroed(N); bIsSet = false; }
+
   /** Edits the array under the lock and marks it set. */
   void Mutate(const TFunction<void(TArray<T>&)> Func) { FWriteScopeLock Lock(Mutex); Func(Data); bIsSet = true; }
+
   /** Copies the array into Out and returns true once it is set. */
   bool TryGet(TArray<T>& Out) const { FReadScopeLock Lock(Mutex); if (bIsSet) { Out = Data; } return bIsSet; }
+
   /** Copies the first element into Out and returns true once the array is set and not empty. */
   bool TryGetFirst(T& Out) const { FReadScopeLock Lock(Mutex); bool bResult = bIsSet && !Data.IsEmpty(); if (bResult) { Out = Data[0]; } return bResult; }
+
   /** Whether the array has been set since the last Init, and its size. */
   bool IsSet() const { return bIsSet; }
   int Num() const { return Data.Num(); }
@@ -143,12 +148,15 @@ struct TTeleopPubSub {
     PubData.Init(N);
     SubData.Init(N);
   }
+
   /** The publisher and the data it publishes. */
   FTeleopPublisherHandle Pub;
   TSafeLatentArray<T> PubData = {};
+
   /** The subscriber and the data it last received. */
   FTeleopSubscriberHandle Sub;
   TSafeLatentArray<T> SubData = {};
+
   /** The size of the published data. */
   int Num() const {
     return PubData.Num();

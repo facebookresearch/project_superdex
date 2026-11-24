@@ -37,11 +37,13 @@ class USuperDexRecorderWorldSubsystem : public UWorldSubsystem {
    * isn't.
    */
   bool Register(ASuperDexRecorder* Recorder);
+
   /**
    * Removes Recorder, and any destroyed recorders, from the world's recorders; clears the active
    * recorder if it was Recorder.
    */
   void Unregister(const ASuperDexRecorder* Recorder);
+
   /** Returns the world's recording SuperDex Recorder, or null. */
   ASuperDexRecorder* GetActiveRecorder() const;
 

@@ -46,15 +46,19 @@ class FSuperDexSceneImporter {
 
   /** Name of the scene at SourcePath, derived from its file name. */
   static FString GetSceneName(const FString& SourcePath);
+
   /** Find the USuperDexScene asset of a scene in its destination folder, or nullptr. */
   static USuperDexScene* FindSceneAsset(const FString& DestFolder, const FString& SceneName);
+
   /** Create the USuperDexScene asset of a scene in its destination folder. */
   static USuperDexScene* CreateSceneAsset(const FString& DestFolder, const FString& SceneName);
+
   /**
    * Hash of the scene file at SourcePath. The prefabs and bots it references are checked by
    * their own assets.
    */
   static FString ComputeSourceHash(const FString& SourcePath);
+
   /** Whether the scene, its prefabs and bots are up to date and its generated assets exist. */
   static bool IsUpToDate(const USuperDexScene* Scene);
 
