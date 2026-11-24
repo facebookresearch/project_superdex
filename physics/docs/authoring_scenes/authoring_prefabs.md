@@ -168,7 +168,7 @@ Generated mesh references use `./generated_assets/...`, so the export directory 
 
 Export reconstructs selected scene and creation data; it is not a lossless snapshot or authoring round trip.
 
-C++ `ExportScene` and Python [`sdp.prefab.export_scene()`](pathname:///generated/api/latest/python/api/prefab.html#superdex.physics.prefab.export_scene) support rigid, soft, articulated, soft-skinned, and rod actors, write the current gravity and solver settings, and record the effective disabled actor/layer contact state and contact-pair parameter overrides. They write current actor root transforms and reference geometry. By default they omit the current pose. With [`ExportParams`](pathname:///generated/api/latest/cpp/structsuperdex_1_1prefab_1_1ExportParams.html) `exportCurrentPose` (Python `export_current_pose`), they also write soft displacements, articulated joint poses, and rod poses (node displacements and element frame axes) for actors not exactly at rest.
+C++ `ExportScene` and Python [`sdp.prefab.export_scene()`](pathname:///generated/api/latest/python/api/prefab.html#superdex.physics.prefab.export_scene) support rigid, soft, articulated, soft-skinned, and rod actors, write the current gravity and solver settings, and record the actor and layer contact filters and contact-pair parameter overrides. They write current actor root transforms and reference geometry. By default they omit the current pose. With [`ExportParams`](pathname:///generated/api/latest/cpp/structsuperdex_1_1prefab_1_1ExportParams.html) `exportCurrentPose` (Python `export_current_pose`), they also write soft displacements, articulated joint poses, and rod poses (node displacements and element frame axes) for actors not exactly at rest.
 
 They do not export:
 
@@ -181,7 +181,7 @@ They do not export:
 
 Generated HDF5 files contain serializable runtime model data, but do not make specialized shape configurations losslessly round-trippable. Duplicate actor names may be made unique, and export may canonicalize the contact-filter JSON rather than reproduce the original entries.
 
-Scene export records effective disabled contact pairs, not explicit entries that enable contact. If an explicit entry enabled contact between adjacent articulation links, reloading the export applies automatic adjacent-link filtering and disables that pair again. Add the equivalent `enable: true` entry to the exported prefab or re-enable the pair after loading.
+Scene export omits the actor pairs whose contact is disabled when an articulated or soft-skinned actor is created, such as adjacent links, because loading the export disables them again. If contact for such a pair was enabled after creation, the export writes an `enable: true` entry for it.
 
 C++ `ExportActor` and Python [`sdp.prefab.export_actor()`](pathname:///generated/api/latest/python/api/prefab.html#superdex.physics.prefab.export_actor) are narrower than their scene counterparts: they support standalone rigid, soft, articulated, and rod actors, but not soft-skinned parents or nested actors. They do not export scene contact filters or contact-pair parameter overrides.
 
