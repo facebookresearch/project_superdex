@@ -15520,10 +15520,13 @@ class Scene:
             disabled with
             :meth:`~superdex.physics.Scene.enable_actor_contact_asymmetric` or
             :meth:`~superdex.physics.Scene.enable_actor_contact_symmetric`.
+            :meth:`~superdex.physics.Scene.is_contact_enabled` checks both filters for a
+            pair of actors.
 
         See Also:
             :meth:`~superdex.physics.Scene.enable_layer_contact_asymmetric`,
-            :meth:`~superdex.physics.Scene.enable_layer_contact_symmetric`
+            :meth:`~superdex.physics.Scene.enable_layer_contact_symmetric`,
+            :meth:`~superdex.physics.Scene.is_contact_enabled`
         """
     def get_num_contact_layers(self) -> int:
         """Get the number of unique contact layer names in the scene.
@@ -15637,6 +15640,36 @@ class Scene:
         See Also:
             :meth:`~superdex.physics.Scene.enable_actor_contact_asymmetric`,
             :meth:`~superdex.physics.Scene.enable_layer_contact_symmetric`
+        """
+    def is_contact_enabled(self, colliding: ActorHandle, collider: ActorHandle) -> bool:
+        """Check if the contact filters allow collision detection for an ordered pair of
+        actors. Order matters: refers only to the specified direction (colliding actor
+        checking against collider actor).
+
+        Args:
+            colliding (ActorHandle): Handle of the colliding actor.
+            collider (ActorHandle): Handle of the collider actor.
+
+        Returns:
+            True if both the layer-to-layer filter (for the contact layers of the two
+            actors) and the actor-to-actor filter allow contact for this ordered pair.
+
+        Raises:
+            :class:`~superdex.physics.Error`: If an error occurs.
+
+        Note:
+            This only checks the contact filters. It does not tell whether the actors
+            can collide otherwise, e.g., whether the collider has a
+            :class:`~superdex.physics.ColliderType`.
+
+        Note:
+            Pass nested actors (links, nested soft actors) directly. A parent actor's
+            result does not describe its nested actors.
+
+        See Also:
+            :meth:`~superdex.physics.Scene.is_layer_contact_enabled`,
+            :meth:`~superdex.physics.Scene.enable_actor_contact_asymmetric`,
+            :meth:`~superdex.physics.Scene.enable_layer_contact_asymmetric`
         """
     def set_contact_pair_params_override(
         self,

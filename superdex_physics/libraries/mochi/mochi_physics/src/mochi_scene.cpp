@@ -1372,6 +1372,20 @@ void SceneImpl::RestoreStatePair(StateHandle curr, StateHandle prev, Error& err)
   MOCHI_ERROR_RETURN(err);
 }
 
+bool SceneImpl::IsContactEnabled(ActorHandle colliding, ActorHandle collider, Error& error) const {
+  auto const eColliding = GetEntity(_registry, colliding, error);
+  auto const eCollider = GetEntity(_registry, collider, error);
+  MOCHI_ERROR_RETURN(error, false);
+
+  // Actors without contact layer (e.g. links without a shape) are in the empty layer
+  auto getLayer = [&](entt::entity e) {
+    auto const* layer = _registry.try_get<CContactLayer const>(e);
+    return layer ? layer->id : ContactLayerId::None;
+  };
+  auto const& table = _registry.ctx<CContactFilterTable const>();
+  return table.IsContactEnabled(eColliding, eCollider, getLayer(eColliding), getLayer(eCollider));
+}
+
 bool SceneImpl::IsActorContactEnabled(ActorHandle colliding, ActorHandle collider, Error& error)
     const {
   auto eColliding = GetEntity(_registry, colliding, error);

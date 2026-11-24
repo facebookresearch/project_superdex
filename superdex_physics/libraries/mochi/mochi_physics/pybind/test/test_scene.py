@@ -634,6 +634,30 @@ class TestScene(MochiTestBase):
 
         mochi.destroy_scene(scene)
 
+    def test_scene_contact_filters(self):
+        scene = mochi.create_scene("Contact Filter Scene")
+        actor_a = self._create_rigid_box_actor(scene)
+        actor_b = self._create_rigid_box_actor(scene)
+        actor_a.set_contact_layer("a")
+        actor_b.set_contact_layer("b")
+        handle_a, handle_b = actor_a.get_handle(), actor_b.get_handle()
+        self.assertTrue(scene.is_contact_enabled(handle_a, handle_b))  # default
+
+        scene.enable_layer_contact_asymmetric("a", "b", False)
+        self.assertFalse(scene.is_contact_enabled(handle_a, handle_b))
+        self.assertTrue(scene.is_contact_enabled(handle_b, handle_a))
+
+        scene.enable_layer_contact_asymmetric("a", "b", True)
+        scene.enable_actor_contact_symmetric(
+            handle_a, handle_b, False, mochi.IncludeNestedActors.NO
+        )
+        self.assertFalse(
+            scene.is_contact_enabled(colliding=handle_a, collider=handle_b)
+        )
+        self.assertFalse(scene.is_contact_enabled(handle_b, handle_a))
+
+        mochi.destroy_scene(scene)
+
     def test_scene_contact_pair_params_override(self):
         scene = mochi.create_scene("Contact Pair Override Scene")
         handle_a = self._create_rigid_box_actor(scene).get_handle()
@@ -912,4 +936,4 @@ class TestScene(MochiTestBase):
 # - capture_state_to_file()
 # - get_debug_draw() and debug draw functionality
 # - for_each_constraint()
-# - enable_actor_contact_asymmetric(), enable_actor_contact_symmetric(), is_actor_contact_enabled()
+# - enable_actor_contact_asymmetric()

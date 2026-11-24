@@ -198,6 +198,43 @@ TEST_F(MochiContactFilter, EnumerateContactLayerNames) {
   EXPECT_EQ("C", names[2]);
 }
 
+TEST_F(MochiContactFilter, IsContactEnabledCombinesLayerAndActorFilters) {
+  ActorHandle const actorA = CreateActor("LayerA")->GetHandle();
+  ActorHandle const actorB = CreateActor("LayerB")->GetHandle();
+  for (bool const layerEnabled : {true, false}) {
+    for (bool const actorEnabled : {true, false}) {
+      _scene->EnableLayerContactAsymmetric("LayerA", "LayerB", layerEnabled, test::ExpectOK{});
+      _scene->EnableActorContactAsymmetric(
+          actorA, actorB, actorEnabled, IncludeNestedActors::No, test::ExpectOK{});
+      EXPECT_EQ(
+          layerEnabled && actorEnabled, _scene->IsContactEnabled(actorA, actorB, test::ExpectOK{}));
+      // Order matters
+      EXPECT_TRUE(_scene->IsContactEnabled(actorB, actorA, test::ExpectOK{}));
+    }
+  }
+
+  // Adjacent links are disabled by default. A link without a shape has no contact layer and is
+  // filtered by actor only.
+  Actor* articulated = CreateContactFilterArticulatedActor({-1, 0});
+  auto const links = articulated->GetNestedLinkActors(test::ExpectOK{});
+  EXPECT_FALSE(_scene->IsContactEnabled(links[0], links[1], test::ExpectOK{}));
+  EXPECT_TRUE(_scene->IsContactEnabled(links[0], actorA, test::ExpectOK{}));
+  ArticulatedActorParams shapelessParams;
+  shapelessParams.joints.push_back({.type = ArticulatedJointType::Free});
+  shapelessParams.links.push_back({.parentLink = -1});
+  ActorHandle const shapelessLink =
+      _scene->CreateArticulatedActor(shapelessParams, test::ExpectOK{})
+          ->GetNestedLinkActors(test::ExpectOK{})[0];
+  EXPECT_TRUE(_scene->IsContactEnabled(shapelessLink, actorA, test::ExpectOK{}));
+  _scene->EnableActorContactAsymmetric(
+      shapelessLink, actorA, /*enable*/ false, IncludeNestedActors::No, test::ExpectOK{});
+  EXPECT_FALSE(_scene->IsContactEnabled(shapelessLink, actorA, test::ExpectOK{}));
+
+  // Invalid handles
+  EXPECT_FALSE(_scene->IsContactEnabled(actorA, ActorHandle{}, test::ExpectNotOK{}));
+  EXPECT_FALSE(_scene->IsContactEnabled(ActorHandle{}, actorA, test::ExpectNotOK{}));
+}
+
 TEST_F(MochiContactFilter, ActorVsActor) {
   auto* sceneImpl = assert_cast<SceneImpl*>(_scene);
 

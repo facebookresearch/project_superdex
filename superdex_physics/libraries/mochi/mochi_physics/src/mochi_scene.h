@@ -185,6 +185,8 @@ class SceneImpl final : public Scene {
       bool enable,
       IncludeNestedActors includeNestedActors,
       Error& error) override;
+  [[nodiscard]] bool IsContactEnabled(ActorHandle colliding, ActorHandle collider, Error& error)
+      const override;
   void SetContactPairParamsOverride(
       ActorHandle actorA,
       ActorHandle actorB,
@@ -266,8 +268,7 @@ class SceneImpl final : public Scene {
    * @warning This does NOT consider the layer-vs-layer contact filter.
    * @warning Order matters, as with @ref EnableActorContactAsymmetric.
    *
-   * @note This method could be in the public API, but we are keeping it internal for now because of
-   * the fear that people might mistake the meaning.
+   * @note The public @ref IsContactEnabled also considers the layer-vs-layer contact filter.
    *
    * @note Actor-vs-actor contact is enabled by default.
    *

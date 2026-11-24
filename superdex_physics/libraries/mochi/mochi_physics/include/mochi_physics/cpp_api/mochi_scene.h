@@ -248,6 +248,9 @@ class Scene {
       IncludeNestedActors includeNestedActors,
       Error& error) = 0;
 
+  [[nodiscard]] virtual bool
+  IsContactEnabled(ActorHandle colliding, ActorHandle collider, Error& error) const = 0;
+
   virtual void SetContactPairParamsOverride(
       ActorHandle actorA,
       ActorHandle actorB,

@@ -784,9 +784,10 @@ class Scene [no_init, no_destruct] {
   // @note Contact is enabled by default, so you will get true for any pair of layers unless
   // overridden via @ref EnableLayerContactAsymmetric or @ref EnableLayerContactSymmetric.
   // @note This only checks the layer filter. Actor-to-actor contact can still be disabled with
-  // @ref EnableActorContactAsymmetric or @ref EnableActorContactSymmetric.
+  // @ref EnableActorContactAsymmetric or @ref EnableActorContactSymmetric. @ref IsContactEnabled
+  // checks both filters for a pair of actors.
   //
-  // @see EnableLayerContactAsymmetric, EnableLayerContactSymmetric
+  // @see EnableLayerContactAsymmetric, EnableLayerContactSymmetric, IsContactEnabled
   fn IsLayerContactEnabled(StringView layerA, StringView layerB) -> bool [pure, virtual, const, nodiscard];
 
   // @brief Get the number of unique contact layer names in the scene.
@@ -850,6 +851,24 @@ class Scene [no_init, no_destruct] {
   //
   // @see EnableActorContactAsymmetric, EnableLayerContactSymmetric
   fn EnableActorContactSymmetric(ActorHandle actorA, ActorHandle actorB, bool enable, IncludeNestedActors includeNestedActors) -> void [pure, virtual, mochi_error];
+
+  // @brief Check if the contact filters allow collision detection for an ordered pair of actors.
+  // Order matters: refers only to the specified direction (colliding actor checking against
+  // collider actor).
+  //
+  // @param[in] colliding Handle of the colliding actor.
+  // @param[in] collider Handle of the collider actor.
+  //
+  // @return True if both the layer-to-layer filter (for the contact layers of the two actors) and
+  // the actor-to-actor filter allow contact for this ordered pair.
+  //
+  // @note This only checks the contact filters. It does not tell whether the actors can collide
+  // otherwise, e.g., whether the collider has a @ref ColliderType.
+  // @note Pass nested actors (links, nested soft actors) directly. A parent actor's result does not
+  // describe its nested actors.
+  //
+  // @see IsLayerContactEnabled, EnableActorContactAsymmetric, EnableLayerContactAsymmetric
+  fn IsContactEnabled(ActorHandle colliding, ActorHandle collider) -> bool [pure, virtual, const, mochi_error, nodiscard];
 
   // @brief Set contact parameter overrides for an unordered actor pair.
   //

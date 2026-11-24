@@ -8071,9 +8071,9 @@
 /// @return True if layer-to-layer contact is enabled, false if layer-to-layer contact is disabled.
 ///
 /// @note Contact is enabled by default, so you will get true for any pair of layers unless overridden via @ref mochi::Scene::EnableLayerContactAsymmetric "EnableLayerContactAsymmetric" or @ref mochi::Scene::EnableLayerContactSymmetric "EnableLayerContactSymmetric".
-/// @note This only checks the layer filter. Actor-to-actor contact can still be disabled with @ref mochi::Scene::EnableActorContactAsymmetric "EnableActorContactAsymmetric" or @ref mochi::Scene::EnableActorContactSymmetric "EnableActorContactSymmetric".
+/// @note This only checks the layer filter. Actor-to-actor contact can still be disabled with @ref mochi::Scene::EnableActorContactAsymmetric "EnableActorContactAsymmetric" or @ref mochi::Scene::EnableActorContactSymmetric "EnableActorContactSymmetric". @ref mochi::Scene::IsContactEnabled "IsContactEnabled" checks both filters for a pair of actors.
 ///
-/// @see @ref mochi::Scene::EnableLayerContactAsymmetric "EnableLayerContactAsymmetric", @ref mochi::Scene::EnableLayerContactSymmetric "EnableLayerContactSymmetric"
+/// @see @ref mochi::Scene::EnableLayerContactAsymmetric "EnableLayerContactAsymmetric", @ref mochi::Scene::EnableLayerContactSymmetric "EnableLayerContactSymmetric", @ref mochi::Scene::IsContactEnabled "IsContactEnabled"
 ///
 
 /// @fn int mochi::Scene::GetNumContactLayers() const
@@ -8130,6 +8130,21 @@
 /// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
 ///
 /// @see @ref mochi::Scene::EnableActorContactAsymmetric "EnableActorContactAsymmetric", @ref mochi::Scene::EnableLayerContactSymmetric "EnableLayerContactSymmetric"
+///
+
+/// @fn bool mochi::Scene::IsContactEnabled(ActorHandle colliding, ActorHandle collider, Error& error) const
+///
+/// @brief Check if the contact filters allow collision detection for an ordered pair of actors. Order matters: refers only to the specified direction (colliding actor checking against collider actor).
+///
+/// @param[in] colliding Handle of the colliding actor.
+/// @param[in] collider Handle of the collider actor.
+/// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
+/// @return True if both the layer-to-layer filter (for the contact layers of the two actors) and the actor-to-actor filter allow contact for this ordered pair.
+///
+/// @note This only checks the contact filters. It does not tell whether the actors can collide otherwise, e.g., whether the collider has a @ref mochi::ColliderType "ColliderType".
+/// @note Pass nested actors (links, nested soft actors) directly. A parent actor's result does not describe its nested actors.
+///
+/// @see @ref mochi::Scene::IsLayerContactEnabled "IsLayerContactEnabled", @ref mochi::Scene::EnableActorContactAsymmetric "EnableActorContactAsymmetric", @ref mochi::Scene::EnableLayerContactAsymmetric "EnableLayerContactAsymmetric"
 ///
 
 /// @fn void mochi::Scene::SetContactPairParamsOverride(ActorHandle actorA, ActorHandle actorB, ContactPairParamsOverride const& paramsOverride, Error& error)
