@@ -22,7 +22,7 @@
 
 #include "TeleopNodeZenohSettings.generated.h"
 
-// Stored in Config/DefaultGameUserSettings.ini
+/** Stored in Config/DefaultGameUserSettings.ini */
 UCLASS(Config = GameUserSettings, DefaultConfig, meta = (DisplayName = "Teleop Node Zenoh"))
 class TELEOPNODEZENOH_API UTeleopNodeZenohSettings : public UDeveloperSettings {
   GENERATED_BODY()
@@ -35,52 +35,68 @@ class TELEOPNODEZENOH_API UTeleopNodeZenohSettings : public UDeveloperSettings {
    * Peer: no router. Fully local (e.g. operator and robot in the same executable): set Listen
    * Endpoint to tcp/127.0.0.1:7447 and leave Connect Endpoints empty.
    */
-  UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Session")
+  UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Teleop Node Zenoh|Session")
   EZenohSessionMode Mode = EZenohSessionMode::Client;
 
-  // Client: the router, e.g. tcp/192.168.1.20:7447 (empty = find one via multicast scouting).
-  // Peer: other peers to connect to directly.
-  UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Session")
+  /**
+   * Client: the router, e.g. tcp/192.168.1.20:7447 (empty = find one via multicast scouting).
+   * Peer: other peers to connect to directly.
+   */
+  UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Teleop Node Zenoh|Session")
   TArray<FString> ConnectEndpoints;
 
-  // Peer only: e.g. tcp/127.0.0.1:7447 for this device only, tcp/0.0.0.0:7447 to accept other
-  // machines.
+  /**
+   * Peer only: e.g. tcp/127.0.0.1:7447 for this device only, tcp/0.0.0.0:7447 to accept other
+   * machines.
+   */
   UPROPERTY(
       Config,
       EditAnywhere,
       BlueprintReadOnly,
-      Category = "Session",
+      Category = "Teleop Node Zenoh|Session",
       meta = (EditCondition = "Mode == EZenohSessionMode::Peer", EditConditionHides))
   FString ListenEndpoint;
 
-  // Look for routers/peers via UDP multicast. Prefer explicit endpoints; scouting can pick the
-  // wrong network adapter on machines with virtual adapters (WSL, Hyper-V).
-  UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Session")
+  /**
+   * Look for routers/peers via UDP multicast. Prefer explicit endpoints; scouting can pick the
+   * wrong network adapter on machines with virtual adapters (WSL, Hyper-V).
+   */
+  UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Teleop Node Zenoh|Session")
   bool bMulticastScouting = true;
 
-  UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Publishers")
+  /** The zenoh priority used for outgoing messages. */
+  UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Teleop Node Zenoh|Publishers")
   EZenohPriority Priority = EZenohPriority::InteractiveHigh;
 
-  // Drop keeps the game thread from waiting on a congested link
-  UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Publishers")
+  /** Drop keeps the game thread from waiting on a congested link */
+  UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Teleop Node Zenoh|Publishers")
   EZenohCongestionControl CongestionControl = EZenohCongestionControl::Drop;
 
-  // Send each message right away instead of batching it with others
-  UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Publishers")
+  /** Send each message right away instead of batching it with others */
+  UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Teleop Node Zenoh|Publishers")
   bool bExpress = true;
 
-  // Samples kept per subscriber between TeleopNode pumps
+  /** Samples kept per subscriber between TeleopNode pumps */
   UPROPERTY(
       Config,
       EditAnywhere,
       BlueprintReadOnly,
-      Category = "Subscribers",
+      Category = "Teleop Node Zenoh|Subscribers",
       meta = (ClampMin = 1))
   int32 SubscriberQueueDepth = 1;
 
-  // The Session settings with any command-line overrides applied.
+  /**
+   * The Session settings with any command-line overrides applied.
+   *
+   * @return The configured mode, endpoints and scouting settings after command-line overrides.
+   */
   FZenohSessionConfig GetSessionConfig() const;
 
+  /**
+   * Returns the configured publisher quality-of-service settings.
+   *
+   * @return The priority, congestion control and express settings used by publishers.
+   */
   FZenohPublisherQos GetPublisherQos() const {
     return {Priority, CongestionControl, bExpress};
   }

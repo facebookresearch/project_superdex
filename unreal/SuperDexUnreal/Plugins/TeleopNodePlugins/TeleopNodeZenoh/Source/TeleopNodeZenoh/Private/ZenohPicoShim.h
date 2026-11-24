@@ -27,7 +27,8 @@ extern "C" {
 typedef struct ZenohPicoShim_Session ZenohPicoShim_Session;
 typedef struct ZenohPicoShim_Publisher ZenohPicoShim_Publisher;
 typedef struct ZenohPicoShim_Subscriber ZenohPicoShim_Subscriber;
-// A received sample, valid only during the sample callback.
+
+/** A received sample, valid only during the sample callback. */
 typedef struct ZenohPicoShim_Sample ZenohPicoShim_Sample;
 
 typedef enum ZenohPicoShim_Mode {
@@ -54,13 +55,14 @@ typedef struct ZenohPicoShim_SessionConfig {
   ZenohPicoShim_Mode mode;
   const char* const* connectEndpoints;
   size_t numConnectEndpoints;
-  // NULL or "" to not listen.
+
+  /** NULL or "" to not listen. */
   const char* listenEndpoint;
   bool multicastScouting;
 } ZenohPicoShim_SessionConfig;
 
 typedef struct ZenohPicoShim_PublisherOptions {
-  // NULL or "" for none.
+  /** NULL or "" for none. */
   const char* encoding;
   ZenohPicoShim_Priority priority;
   ZenohPicoShim_CongestionControl congestionControl;
@@ -69,15 +71,18 @@ typedef struct ZenohPicoShim_PublisherOptions {
 
 const char* ZenohPicoShim_ErrorDescription(int result);
 
-// On failure *outSession is NULL.
+/** On failure *outSession is NULL. */
 int ZenohPicoShim_OpenSession(
     const ZenohPicoShim_SessionConfig* config,
     ZenohPicoShim_Session** outSession);
-// Every publisher and subscriber of the session must be undeclared first.
+
+/** Every publisher and subscriber of the session must be undeclared first. */
 void ZenohPicoShim_CloseSession(ZenohPicoShim_Session* session);
 
-// keyExpr has no leading '/', e.g. "teleop/left/arm_joint_states".
-// On failure *outPublisher is NULL.
+/**
+ * keyExpr has no leading '/', e.g. "teleop/left/arm_joint_states".
+ * On failure *outPublisher is NULL.
+ */
 int ZenohPicoShim_DeclarePublisher(
     ZenohPicoShim_Session* session,
     const char* keyExpr,
@@ -87,16 +92,20 @@ void ZenohPicoShim_UndeclarePublisher(ZenohPicoShim_Publisher* publisher);
 int ZenohPicoShim_Put(ZenohPicoShim_Publisher* publisher, const uint8_t* data, size_t numBytes);
 
 size_t ZenohPicoShim_SamplePayloadSize(const ZenohPicoShim_Sample* sample);
-// Copies the payload into dst, which must hold ZenohPicoShim_SamplePayloadSize bytes.
+
+/** Copies the payload into dst, which must hold ZenohPicoShim_SamplePayloadSize bytes. */
 void ZenohPicoShim_SampleReadPayload(const ZenohPicoShim_Sample* sample, uint8_t* dst);
 
-// Called on zenoh-pico's read thread.
+/** Called on zenoh-pico's read thread. */
 typedef void (*ZenohPicoShim_SampleCallback)(const ZenohPicoShim_Sample* sample, void* context);
-// Called exactly once when context is no longer used: after undeclaring, or right away if
-// declaring fails.
+
+/**
+ * Called exactly once when context is no longer used: after undeclaring, or right away if
+ * declaring fails.
+ */
 typedef void (*ZenohPicoShim_DropCallback)(void* context);
 
-// On failure *outSubscriber is NULL.
+/** On failure *outSubscriber is NULL. */
 int ZenohPicoShim_DeclareSubscriber(
     ZenohPicoShim_Session* session,
     const char* keyExpr,

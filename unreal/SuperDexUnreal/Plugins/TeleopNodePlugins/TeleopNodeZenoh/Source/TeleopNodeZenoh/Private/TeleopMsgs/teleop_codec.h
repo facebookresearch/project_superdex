@@ -34,123 +34,165 @@ namespace teleop_msgs {
 using Header = superdex_teleop_v1_Header;
 using Pose = superdex_teleop_v1_Pose;
 
-// Full protobuf type names, for sample encodings such as "application/protobuf;<name>".
-inline constexpr const char* kDoubleArrayTypeName = "superdex.teleop.v1.DoubleArray";
-inline constexpr const char* kPoseArrayTypeName = "superdex.teleop.v1.PoseArray";
+/** Full protobuf type names, for sample encodings such as "application/protobuf;<name>". */
+inline constexpr const char* DoubleArrayTypeName = "superdex.teleop.v1.DoubleArray";
+inline constexpr const char* PoseArrayTypeName = "superdex.teleop.v1.PoseArray";
 
 namespace detail {
 
 template <typename T>
 struct Span {
-  const T* data;
-  size_t count;
+  const T* Data;
+  size_t Count;
 };
 
-inline bool EncodeDoubles(pb_ostream_t* stream, const pb_field_t* field, void* const* arg) {
-  const auto& values = *static_cast<const Span<double>*>(*arg);
-  if (values.count == 0) {
+inline bool EncodeDoubles(pb_ostream_t* Stream, const pb_field_t* Field, void* const* Arg) {
+  const Span<double>& Values = *static_cast<const Span<double>*>(*Arg);
+  if (Values.Count == 0) {
     return true;
   }
   // Packed, as proto3 encoders write repeated scalars.
-  if (!pb_encode_tag(stream, PB_WT_STRING, field->tag) ||
-      !pb_encode_varint(stream, values.count * sizeof(double))) {
+  if (!pb_encode_tag(Stream, PB_WT_STRING, Field->tag) ||
+      !pb_encode_varint(Stream, Values.Count * sizeof(double))) {
     return false;
   }
-  for (size_t i = 0; i < values.count; ++i) {
-    if (!pb_encode_fixed64(stream, &values.data[i])) {
+  for (size_t i = 0; i < Values.Count; ++i) {
+    if (!pb_encode_fixed64(Stream, &Values.Data[i])) {
       return false;
     }
   }
   return true;
 }
 
-inline bool EncodePoses(pb_ostream_t* stream, const pb_field_t* field, void* const* arg) {
-  const auto& poses = *static_cast<const Span<Pose>*>(*arg);
-  for (size_t i = 0; i < poses.count; ++i) {
-    if (!pb_encode_tag_for_field(stream, field) ||
-        !pb_encode_submessage(stream, superdex_teleop_v1_Pose_fields, &poses.data[i])) {
+inline bool EncodePoses(pb_ostream_t* Stream, const pb_field_t* Field, void* const* Arg) {
+  const Span<Pose>& Poses = *static_cast<const Span<Pose>*>(*Arg);
+  for (size_t i = 0; i < Poses.Count; ++i) {
+    if (!pb_encode_tag_for_field(Stream, Field) ||
+        !pb_encode_submessage(Stream, superdex_teleop_v1_Pose_fields, &Poses.Data[i])) {
       return false;
     }
   }
   return true;
 }
 
-// nanopb calls this once per value, for packed and unpacked encodings alike.
+/** nanopb calls this once per value, for packed and unpacked encodings alike. */
 template <typename TSink>
-bool DecodeDouble(pb_istream_t* stream, const pb_field_t* /*field*/, void** arg) {
-  double value = 0;
-  if (!pb_decode_fixed64(stream, &value)) {
+bool DecodeDouble(pb_istream_t* Stream, const pb_field_t* /*field*/, void** Arg) {
+  double Value = 0;
+  if (!pb_decode_fixed64(Stream, &Value)) {
     return false;
   }
-  (*static_cast<TSink*>(*arg))(value);
+  (*static_cast<TSink*>(*Arg))(Value);
   return true;
 }
 
 template <typename TSink>
-bool DecodePose(pb_istream_t* stream, const pb_field_t* /*field*/, void** arg) {
-  Pose pose = superdex_teleop_v1_Pose_init_zero;
-  if (!pb_decode(stream, superdex_teleop_v1_Pose_fields, &pose)) {
+bool DecodePose(pb_istream_t* Stream, const pb_field_t* /*field*/, void** Arg) {
+  Pose DecodedPose = superdex_teleop_v1_Pose_init_zero;
+  if (!pb_decode(Stream, superdex_teleop_v1_Pose_fields, &DecodedPose)) {
     return false;
   }
-  (*static_cast<TSink*>(*arg))(pose);
+  (*static_cast<TSink*>(*Arg))(DecodedPose);
   return true;
 }
 
 } // namespace detail
 
-// Writes one DoubleArray to stream. Pass a PB_OSTREAM_SIZING stream to get the encoded size.
-inline bool
-EncodeDoubleArray(pb_ostream_t* stream, const Header& header, const double* values, size_t count) {
-  detail::Span<double> span{values, count};
-  superdex_teleop_v1_DoubleArray msg = superdex_teleop_v1_DoubleArray_init_zero;
-  msg.has_header = true;
-  msg.header = header;
-  msg.data.funcs.encode = &detail::EncodeDoubles;
-  msg.data.arg = &span;
-  return pb_encode(stream, superdex_teleop_v1_DoubleArray_fields, &msg);
+/**
+ * Writes one DoubleArray to Stream. Pass a PB_OSTREAM_SIZING stream to get the encoded size.
+ *
+ * @param Stream The output stream to write, or a sizing stream.
+ * @param HeaderValue The header copied into the message.
+ * @param Values The values to encode.
+ * @param Count The number of values available at Values.
+ * @return True if the message was encoded successfully.
+ */
+inline bool EncodeDoubleArray(
+    pb_ostream_t* Stream,
+    const Header& HeaderValue,
+    const double* Values,
+    size_t Count) {
+  detail::Span<double> Span{Values, Count};
+  superdex_teleop_v1_DoubleArray Msg = superdex_teleop_v1_DoubleArray_init_zero;
+  Msg.has_header = true;
+  Msg.header = HeaderValue;
+  Msg.data.funcs.encode = &detail::EncodeDoubles;
+  Msg.data.arg = &Span;
+  return pb_encode(Stream, superdex_teleop_v1_DoubleArray_fields, &Msg);
 }
 
+/**
+ * Writes one PoseArray to the output or sizing stream.
+ *
+ * @param Stream The output stream to write, or a sizing stream.
+ * @param HeaderValue The header copied into the message.
+ * @param Poses The poses to encode without coordinate conversion.
+ * @param Count The number of poses available at Poses.
+ * @return True if the message was encoded successfully.
+ */
 inline bool
-EncodePoseArray(pb_ostream_t* stream, const Header& header, const Pose* poses, size_t count) {
-  detail::Span<Pose> span{poses, count};
-  superdex_teleop_v1_PoseArray msg = superdex_teleop_v1_PoseArray_init_zero;
-  msg.has_header = true;
-  msg.header = header;
-  msg.poses.funcs.encode = &detail::EncodePoses;
-  msg.poses.arg = &span;
-  return pb_encode(stream, superdex_teleop_v1_PoseArray_fields, &msg);
+EncodePoseArray(pb_ostream_t* Stream, const Header& HeaderValue, const Pose* Poses, size_t Count) {
+  detail::Span<Pose> Span{Poses, Count};
+  superdex_teleop_v1_PoseArray Msg = superdex_teleop_v1_PoseArray_init_zero;
+  Msg.has_header = true;
+  Msg.header = HeaderValue;
+  Msg.poses.funcs.encode = &detail::EncodePoses;
+  Msg.poses.arg = &Span;
+  return pb_encode(Stream, superdex_teleop_v1_PoseArray_fields, &Msg);
 }
 
-// Calls onValue(double) for each value in order. header may be null.
+/**
+ * Calls OnValue(double) for each value in order. HeaderValue may be null.
+ *
+ * @param Bytes The encoded message bytes.
+ * @param NumBytes The number of bytes available at Bytes.
+ * @param HeaderValue Receives the decoded header on success; this decoder does not assign it on
+ * failure.
+ * @param OnValue The callback invoked as values are decoded, including before a later failure.
+ * @return True if the whole message decoded successfully.
+ */
 template <typename TSink>
-bool DecodeDoubleArray(const uint8_t* bytes, size_t numBytes, Header* header, TSink&& onValue) {
+bool DecodeDoubleArray(
+    const uint8_t* Bytes,
+    size_t NumBytes,
+    Header* HeaderValue,
+    TSink&& OnValue) {
   using TSinkValue = typename std::remove_reference<TSink>::type;
-  superdex_teleop_v1_DoubleArray msg = superdex_teleop_v1_DoubleArray_init_zero;
-  msg.data.funcs.decode = &detail::DecodeDouble<TSinkValue>;
-  msg.data.arg = &onValue;
-  pb_istream_t stream = pb_istream_from_buffer(bytes, numBytes);
-  if (!pb_decode(&stream, superdex_teleop_v1_DoubleArray_fields, &msg)) {
+  superdex_teleop_v1_DoubleArray Msg = superdex_teleop_v1_DoubleArray_init_zero;
+  Msg.data.funcs.decode = &detail::DecodeDouble<TSinkValue>;
+  Msg.data.arg = &OnValue;
+  pb_istream_t Stream = pb_istream_from_buffer(Bytes, NumBytes);
+  if (!pb_decode(&Stream, superdex_teleop_v1_DoubleArray_fields, &Msg)) {
     return false;
   }
-  if (header != nullptr) {
-    *header = msg.header;
+  if (HeaderValue != nullptr) {
+    *HeaderValue = Msg.header;
   }
   return true;
 }
 
-// Calls onPose(const Pose&) for each pose in order. header may be null.
+/**
+ * Calls OnPose(const Pose&) for each pose in order. HeaderValue may be null.
+ *
+ * @param Bytes The encoded message bytes.
+ * @param NumBytes The number of bytes available at Bytes.
+ * @param HeaderValue Receives the decoded header on success; this decoder does not assign it on
+ * failure.
+ * @param OnPose The callback invoked as poses are decoded, including before a later failure.
+ * @return True if the whole message decoded successfully.
+ */
 template <typename TSink>
-bool DecodePoseArray(const uint8_t* bytes, size_t numBytes, Header* header, TSink&& onPose) {
+bool DecodePoseArray(const uint8_t* Bytes, size_t NumBytes, Header* HeaderValue, TSink&& OnPose) {
   using TSinkValue = typename std::remove_reference<TSink>::type;
-  superdex_teleop_v1_PoseArray msg = superdex_teleop_v1_PoseArray_init_zero;
-  msg.poses.funcs.decode = &detail::DecodePose<TSinkValue>;
-  msg.poses.arg = &onPose;
-  pb_istream_t stream = pb_istream_from_buffer(bytes, numBytes);
-  if (!pb_decode(&stream, superdex_teleop_v1_PoseArray_fields, &msg)) {
+  superdex_teleop_v1_PoseArray Msg = superdex_teleop_v1_PoseArray_init_zero;
+  Msg.poses.funcs.decode = &detail::DecodePose<TSinkValue>;
+  Msg.poses.arg = &OnPose;
+  pb_istream_t Stream = pb_istream_from_buffer(Bytes, NumBytes);
+  if (!pb_decode(&Stream, superdex_teleop_v1_PoseArray_fields, &Msg)) {
     return false;
   }
-  if (header != nullptr) {
-    *header = msg.header;
+  if (HeaderValue != nullptr) {
+    *HeaderValue = Msg.header;
   }
   return true;
 }

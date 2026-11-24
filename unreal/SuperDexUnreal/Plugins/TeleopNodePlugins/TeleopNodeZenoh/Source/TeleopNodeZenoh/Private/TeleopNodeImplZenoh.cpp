@@ -29,11 +29,11 @@ DEFINE_LOG_CATEGORY_STATIC(LogTeleopZenoh, Log, All);
 
 namespace {
 
-constexpr double kCentiToUnit = 0.01; // cm to m
-constexpr double kUnitToCenti = 100.0; // m to cm
+constexpr double CentiToUnit = 0.01; // cm to m
+constexpr double UnitToCenti = 100.0; // m to cm
 
-const TCHAR* const kStringEncoding = TEXT("text/plain;charset=utf-8");
-const TCHAR* const kBytesEncoding = TEXT("application/octet-stream");
+const TCHAR* const StringEncoding = TEXT("text/plain;charset=utf-8");
+const TCHAR* const BytesEncoding = TEXT("application/octet-stream");
 
 FString ProtobufEncoding(const char* TypeName) {
   return FString(TEXT("application/protobuf;")) + UTF8_TO_TCHAR(TypeName);
@@ -52,17 +52,11 @@ teleop_msgs::Pose ToPose(const FTransform& In) {
   const FVector Loc = In.GetLocation();
   const FQuat Rot = In.GetRotation();
   return {
-      Loc.X * kCentiToUnit,
-      -Loc.Y * kCentiToUnit,
-      Loc.Z * kCentiToUnit,
-      Rot.X,
-      -Rot.Y,
-      Rot.Z,
-      -Rot.W};
+      Loc.X * CentiToUnit, -Loc.Y * CentiToUnit, Loc.Z * CentiToUnit, Rot.X, -Rot.Y, Rot.Z, -Rot.W};
 }
 
 FTransform FromPose(const teleop_msgs::Pose& In) {
-  const FVector Position(In.px * kUnitToCenti, -In.py * kUnitToCenti, In.pz * kUnitToCenti);
+  const FVector Position(In.px * UnitToCenti, -In.py * UnitToCenti, In.pz * UnitToCenti);
   // The peer's quaternion may be non-unit; GetNormalized() falls back to identity for a zero one.
   const FQuat Orientation = FQuat(In.qx, -In.qy, In.qz, -In.qw).GetNormalized();
   return FTransform(Orientation, Position);
@@ -152,20 +146,20 @@ FTeleopPublisherHandle UTeleopNodeImplZenoh::AddPublisher(
 }
 
 FTeleopPublisherHandle UTeleopNodeImplZenoh::CreatePublisher_DoubleArray(const FString& TopicName) {
-  return AddPublisher(TopicName, ProtobufEncoding(teleop_msgs::kDoubleArrayTypeName));
+  return AddPublisher(TopicName, ProtobufEncoding(teleop_msgs::DoubleArrayTypeName));
 }
 
 FTeleopPublisherHandle UTeleopNodeImplZenoh::CreatePublisher_TransformArray(
     const FString& TopicName) {
-  return AddPublisher(TopicName, ProtobufEncoding(teleop_msgs::kPoseArrayTypeName));
+  return AddPublisher(TopicName, ProtobufEncoding(teleop_msgs::PoseArrayTypeName));
 }
 
 FTeleopPublisherHandle UTeleopNodeImplZenoh::CreatePublisher_String(const FString& TopicName) {
-  return AddPublisher(TopicName, kStringEncoding);
+  return AddPublisher(TopicName, StringEncoding);
 }
 
 FTeleopPublisherHandle UTeleopNodeImplZenoh::CreatePublisher_ByteArray(const FString& TopicName) {
-  return AddPublisher(TopicName, kBytesEncoding);
+  return AddPublisher(TopicName, BytesEncoding);
 }
 
 UTeleopNodeImplZenoh::FPublisher* UTeleopNodeImplZenoh::FindPublisher(
@@ -192,7 +186,7 @@ void UTeleopNodeImplZenoh::Publish_DoubleArray(
     return;
   }
   const teleop_msgs::Header Header = MakeHeader(Pub->Seq);
-  if (EncodeInto(EncodeBuffer, [&](pb_ostream_t* Stream) {
+  if (EncodeInto(EncodeBuffer, [&](pb_ostream_t* Stream) -> bool {
         return teleop_msgs::EncodeDoubleArray(Stream, Header, Data.GetData(), Data.Num());
       })) {
     Pub->Publisher->Put(EncodeBuffer);
@@ -211,7 +205,7 @@ void UTeleopNodeImplZenoh::Publish_TransformArray(
     Poses.Add(ToPose(Transform));
   }
   const teleop_msgs::Header Header = MakeHeader(Pub->Seq);
-  if (EncodeInto(EncodeBuffer, [&](pb_ostream_t* Stream) {
+  if (EncodeInto(EncodeBuffer, [&](pb_ostream_t* Stream) -> bool {
         return teleop_msgs::EncodePoseArray(Stream, Header, Poses.GetData(), Poses.Num());
       })) {
     Pub->Publisher->Put(EncodeBuffer);

@@ -75,7 +75,7 @@ class TELEOPNODEZENOH_API UTeleopNodeImplZenoh : public UTeleopNodeImplBase {
     uint32 Seq = 0;
   };
 
-  // Decodes one payload and calls the user callback; false if the payload didn't decode.
+  /** Decodes one payload and calls the user callback; false if the payload didn't decode. */
   using FDispatch = TFunction<bool(TConstArrayView<uint8>)>;
 
   struct FSubscriber {

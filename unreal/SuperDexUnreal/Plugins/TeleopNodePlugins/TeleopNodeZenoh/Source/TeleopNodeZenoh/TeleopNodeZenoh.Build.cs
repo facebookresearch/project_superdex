@@ -26,21 +26,21 @@ public class TeleopNodeZenoh : ModuleRules
         PublicDependencyModuleNames.AddRange(
             new string[] { "Core", "CoreUObject", "DeveloperSettings", "SuperDexTeleop" });
 
-        string privatePath = Path.Combine(ModuleDirectory, "Private");
+        string PrivatePath = Path.Combine(ModuleDirectory, "Private");
 
         // zenoh-pico, compiled from source as part of this module
-        string zenohPicoPath = Path.Combine(privatePath, "ZenohPico");
-        PrivateIncludePaths.Add(Path.Combine(zenohPicoPath, "include"));
+        string ZenohPicoPath = Path.Combine(PrivatePath, "ZenohPico");
+        PrivateIncludePaths.Add(Path.Combine(ZenohPicoPath, "include"));
         // For atomic.c.inl, included by ZenohPicoAtomic.cpp.
-        PrivateIncludePaths.Add(Path.Combine(zenohPicoPath, "src"));
+        PrivateIncludePaths.Add(Path.Combine(ZenohPicoPath, "src"));
         PrivateDefinitions.AddRange(new string[] { "ZENOH_C_STANDARD=11", "Z_BUILD_LOG=0" });
 
         // The teleop messages (teleop.proto, its nanopb output and teleop_codec.h), compiled against
         // nanopb's C runtime in Private/Nanopb.
-        string teleopMsgsPath = Path.Combine(privatePath, "TeleopMsgs");
-        PrivateIncludePaths.Add(teleopMsgsPath);
-        PrivateIncludePaths.Add(Path.Combine(teleopMsgsPath, "generated"));
-        PrivateIncludePaths.Add(Path.Combine(privatePath, "Nanopb"));
+        string TeleopMsgsPath = Path.Combine(PrivatePath, "TeleopMsgs");
+        PrivateIncludePaths.Add(TeleopMsgsPath);
+        PrivateIncludePaths.Add(Path.Combine(TeleopMsgsPath, "generated"));
+        PrivateIncludePaths.Add(Path.Combine(PrivatePath, "Nanopb"));
 
         // zenoh-pico's and nanopb's .c files share static helper names, so they must not be merged
         // into unity files.

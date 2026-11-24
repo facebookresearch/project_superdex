@@ -22,15 +22,25 @@ class FZenohSession;
 
 TELEOPNODEZENOH_API DECLARE_LOG_CATEGORY_EXTERN(LogZenoh, Log, All);
 
+/** Stores the process-wide session used by communication backends. */
 class TELEOPNODEZENOH_API FTeleopNodeZenohModule : public IModuleInterface {
  public:
+  /**
+   * Loads and returns the communication module.
+   *
+   * @return The checked module instance.
+   */
   static FTeleopNodeZenohModule& Get() {
     return FModuleManager::LoadModuleChecked<FTeleopNodeZenohModule>("TeleopNodeZenoh");
   }
 
-  // The process-wide session. Opened on first use from UTeleopNodeZenohSettings and command-line
-  // overrides, and is closed when the last holder lets go. Null if it could not open; the next call
-  // tries again. Game thread only.
+  /**
+   * The process-wide session. Opened on first use from UTeleopNodeZenohSettings and command-line
+   * overrides, and is closed when the last holder lets go. Null if it could not open; the next call
+   * tries again. Game thread only.
+   *
+   * @return The shared session, or null if opening failed.
+   */
   TSharedPtr<FZenohSession> AcquireSession();
 
   virtual void ShutdownModule() override;
