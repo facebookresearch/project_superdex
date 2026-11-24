@@ -30,6 +30,7 @@
 #include <mochi_core/linear_algebra/multi_frontal/stair_matrix.h>
 #include <mochi_core/linear_algebra/multi_frontal/truncated_tree.h>
 #include <mochi_core/test/mochi_test_helpers.h>
+#include <mochi_core/utils/array_utils.h>
 #include <mochi_core/utils/graph_utils.h>
 
 #include <gtest/gtest.h>
@@ -108,7 +109,7 @@ auto MakeMFStructure(int elemsPerSide) {
   auto graph = MakeSquareMeshGraph(elemsPerSide);
   std::vector<int> order;
   OrderNodes(elemsPerSide + 1, 0, 0, elemsPerSide + 1, elemsPerSide + 1, order);
-  auto position = ReverseMap(order);
+  auto position = InversePermutation(order);
   SymbolicEliminationTree eTree(graph, order, position);
   return std::tuple{std::move(graph), std::move(order), std::move(position), std::move(eTree)};
 }
@@ -136,7 +137,7 @@ void TestMultifrontal(int elemsPerSide) {
   // Test EliminationTree structural properties & pre-symbolic metrics
   std::vector<int> orderCopy;
   OrderNodes(elemsPerSide + 1, 0, 0, elemsPerSide + 1, elemsPerSide + 1, orderCopy);
-  auto positionCopy = ReverseMap(orderCopy);
+  auto positionCopy = InversePermutation(orderCopy);
   EliminationTree structTree(graph, orderCopy, positionCopy);
   EXPECT_EQ(structTree.NumSuperNodes(), 30);
   EXPECT_EQ(structTree.NumNodes(), numNodes);

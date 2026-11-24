@@ -707,6 +707,21 @@ template <typename IndexType, typename T>
   return indices;
 }
 
+[[nodiscard]] inline DynamicArray<int> InversePermutation(Span<int const> perm) {
+  DynamicArray<int> inverse;
+  inverse.resize_noinit(perm.size());
+#if MOCHI_ASSERT_VERBOSE_ENABLED
+  std::ranges::fill(inverse, -1);
+#endif
+  for (int i = 0; i < isize(perm); ++i) {
+    MOCHI_ASSERT_VERBOSE(
+        perm[i] >= 0 && perm[i] < isize(perm) && inverse[perm[i]] == -1,
+        "perm must be a permutation of [0, perm.size()).");
+    inverse[perm[i]] = i;
+  }
+  return inverse;
+}
+
 template <class T, typename SizeT>
 [[nodiscard]] bool IsFinite(Span<T, SizeT> const& a) {
   SizeT i = 0;

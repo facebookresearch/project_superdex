@@ -887,6 +887,12 @@ TEST(ArrayUtils, ArgSort) {
   }
 }
 
+TEST(ArrayUtils, InversePermutation) {
+  std::vector<int> const perm = {2, 0, 3, 1};
+  EXPECT_SPAN_EQ(InversePermutation(perm), (std::vector<int>{1, 3, 0, 2}));
+  EXPECT_TRUE(InversePermutation({}).empty());
+}
+
 TEST(ArrayUtils, SortAndRemoveDuplicates) {
   {
     DynamicArray<int> v{1, 2, 3, 4};

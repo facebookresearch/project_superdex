@@ -17,6 +17,7 @@
 #include <mochi_core/geometry/tetrahedral_mesh.h>
 #include <mochi_core/geometry/triangular_mesh.h>
 #include <mochi_core/linear_algebra/utils/assembly.h>
+#include <mochi_core/utils/array_utils.h>
 #include <mochi_core/utils/basic_utils.h>
 #include <mochi_core/utils/dynamic_array.h>
 #include <mochi_core/utils/graph_alg.h>
@@ -231,7 +232,6 @@ void NodalBasedStructure::CreateDepMasks() {
  */
 static auto CreateDependencyGraph(Graph<int, int> const& coloring, Graph<int, int> const& vToV) {
   auto vtxNumbering = coloring.GetTargets();
-  auto subMap = ReverseMap(vtxNumbering);
   auto numSubs = vtxNumbering.size();
   DynamicArray<int> vtxColor(coloring.NumTargets(), -1);
   for (auto [color, subs] : coloring) {
@@ -239,7 +239,7 @@ static auto CreateDependencyGraph(Graph<int, int> const& coloring, Graph<int, in
       vtxColor[s] = color;
     }
   }
-  GraphBuilder<int, int> colorDepBuilder(isize(subMap), vToV.NumTargets());
+  GraphBuilder<int, int> colorDepBuilder(isize(vtxNumbering), vToV.NumTargets());
   DynamicArray<int> deps;
   DynamicArray<int> activeDeps;
   DynamicArray<int> visitList; // Array of starting vertices for a given color.
@@ -305,14 +305,9 @@ static auto CreateDependencyGraph(Graph<int, int> const& coloring, Graph<int, in
   auto byColorDependencies = colorDepBuilder.Build();
   // We need to reorder the sources of this graph by vertex number. The current graph
   // is for vertices in the coloring order.
-  auto const& graphSrcOrder = coloring.GetTargets();
-  DynamicArray<int> invOrder(graphSrcOrder.size());
-  for (int i = 0; i < graphSrcOrder.size(); ++i) {
-    invOrder[graphSrcOrder[i]] = i;
-  }
   GraphBuilder<int, int> finalGraph(
       byColorDependencies.size() + 1, byColorDependencies.NumTargets());
-  for (auto io : invOrder) {
+  for (auto io : InversePermutation(vtxNumbering)) {
     finalGraph.append(byColorDependencies[io]);
   }
   return finalGraph.Build();

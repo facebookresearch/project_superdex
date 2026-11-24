@@ -15,6 +15,7 @@
  */
 
 #include <mochi_core/linear_algebra/multi_frontal/elim_tree.h>
+#include <mochi_core/utils/array_utils.h>
 #include <mochi_core/utils/constants.h>
 #include <mochi_core/utils/graph_utils.h>
 #include <mochi_core/utils/interval.h>
@@ -54,7 +55,7 @@ auto NodalPositionsFromSuperNodePermutation(
   auto N = superBounds.back();
 
   // Build super-node order: newSN → oldSN
-  auto snOrder = ReverseMap(snPosition);
+  auto snOrder = InversePermutation(snPosition);
 
   // Compute new super-node starting positions
   DynamicArray<int> newStart;

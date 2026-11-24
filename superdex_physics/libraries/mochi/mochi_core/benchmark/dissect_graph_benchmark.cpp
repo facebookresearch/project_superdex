@@ -19,6 +19,7 @@
 #include <mochi_core/linear_algebra/multi_frontal/elim_tree.h>
 #include <mochi_core/numbering/dissect_graph.h>
 #include <mochi_core/numbering/weighted_graph.h>
+#include <mochi_core/utils/array_utils.h>
 #include <mochi_core/utils/dynamic_array.h>
 #include <mochi_core/utils/graph.h>
 #include <mochi_core/utils/graph_utils.h>
@@ -120,7 +121,7 @@ static Graph<int, int> ConnectivityGraph(WeightedGraph const& w) {
 static double
 FactorOpsForOrdering(Graph<int, int> const& graph, Span<int const> orderIn, int dofsPerNode) {
   DynamicArray<int> order(orderIn.begin(), orderIn.end());
-  DynamicArray<int> position = ReverseMap(MakeConstSpan(order));
+  DynamicArray<int> position = InversePermutation(MakeConstSpan(order));
   Graph<int const, int const, Span> const view{graph.GetPointers(), graph.GetTargets()};
   EliminationTree const tree(view, MakeSpan(order), MakeSpan(position));
   return tree.ComputeFactorMetrics(dofsPerNode).opCount;

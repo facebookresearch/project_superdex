@@ -123,17 +123,6 @@ template <typename Idx, typename Ptr, template <typename, typename...> class Sto
   return Graph<NonConstIdx, NonConstPtr>{std::move(pointer), std::move(targets)};
 }
 
-[[nodiscard]] inline auto ReverseMap(Span<int const> map, int size = -1, int defVal = -1) {
-  if (size == -1) {
-    size = isize(map);
-  }
-  DynamicArray<int> rMap(size, defVal);
-  for (int i = 0; i < map.size(); ++i) {
-    rMap[map[i]] = i;
-  }
-  return rMap;
-}
-
 class ImplicitGraph {
  public:
   using VertexType = int;

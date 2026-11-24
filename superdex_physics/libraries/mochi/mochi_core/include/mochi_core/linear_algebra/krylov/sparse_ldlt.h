@@ -25,9 +25,9 @@
 #include <mochi_core/linear_algebra/multi_frontal/organizer.h>
 #include <mochi_core/linear_algebra/sparse_matrix.h>
 #include <mochi_core/linear_algebra/utils/matrix_conversions.h>
+#include <mochi_core/utils/array_utils.h>
 #include <mochi_core/utils/basic_utils.h>
 #include <mochi_core/utils/graph.h>
-#include <mochi_core/utils/graph_utils.h>
 #include <mochi_core/utils/graph_views.h>
 
 #include <memory>
@@ -260,7 +260,7 @@ void SparseLDLt<Scalar_, kBlockSize_, Index>::Initialize(
   // TODO: Implement fill-reducing ordering.
   _order.resize_noinit(A.BlockRows());
   std::iota(_order.begin(), _order.end(), 0);
-  _position = ReverseMap(_order);
+  _position = InversePermutation(_order);
 
   // Build elimination tree.
   _elimData = std::make_unique<SymbolicEliminationTree>(graphView, _order, _position);

@@ -279,6 +279,10 @@ template <typename T, typename SZ>
 template <typename IndexType = size_t, typename T>
 [[nodiscard]] DynamicArray<IndexType> ArgSort(Span<T const> v);
 
+// Return the inverse of a permutation of [0, perm.size()): result[perm[i]] = i.
+// Debug builds check that perm is a permutation.
+[[nodiscard]] inline DynamicArray<int> InversePermutation(Span<int const> perm);
+
 // Return true if all elements are finite.
 template <class T, typename SizeT>
 [[nodiscard]] bool IsFinite(Span<T, SizeT> const& a);
