@@ -23,9 +23,12 @@
 #include <mochi_core/utils/basic_utils.h>
 #include <mochi_core/utils/task_scheduler.h>
 
-#include <optional>
+#include <coroutine>
+#include <exception>
+#include <memory>
 #include <stdexcept>
 #include <string>
+#include <thread>
 #include <vector>
 
 using namespace mochi;
@@ -40,12 +43,22 @@ int MultiplyAdd(int factor, int n, int increment) {
   return factor * n + increment;
 }
 
-RootTask DestroyOwner(TaskSemaphore, std::optional<RootTask>& owner) {
+RootTask DestroyOwner(std::unique_ptr<RootTask>& owner, bool& resumedAfterReset) {
   owner.reset();
+  resumedAfterReset = true;
   co_return;
 }
 
-RootTask VectorTest(TaskSemaphore, int n) {
+struct MemberCoroutineObject {
+  bool completed = false;
+
+  RootTask Complete() {
+    completed = true;
+    co_return;
+  }
+};
+
+RootTask VectorTest(int n) {
   Executor executor;
   std::vector<int> v;
   v.reserve(n);
@@ -72,10 +85,7 @@ void TestExecutor(bool localSingleThreaded) {
   TaskScheduler ts(Min(TaskScheduler::GetNumSupportedLogicalProcessors(), 8));
   ScopedLocalSingleThreadedMode const singleThreaded(localSingleThreaded);
   for (int n = 0; n < 300; n += 25) {
-    TaskSemaphore sem{1};
-    auto task = VectorTest(sem, n);
-    task.Schedule(ts, "MainCoroutine");
-    sem.Wait();
+    VectorTest(n).RunAndWait(ts, "MainCoroutine");
   }
 }
 
@@ -110,7 +120,7 @@ void throwingPlainVoid(int n) {
   }
 }
 
-RootTask exceptionTest(TaskSemaphore, int which) {
+RootTask exceptionTest(int which) {
   Executor executor;
   std::vector<int> v = {1, 2, 3, 4}; // Exactly one element triggers the throw.
   char const* expected = nullptr;
@@ -148,17 +158,14 @@ RootTask exceptionTest(TaskSemaphore, int which) {
 void TestExecutorExceptions() {
   TaskScheduler ts(Min(TaskScheduler::GetNumSupportedLogicalProcessors(), 8));
   for (int i = 0; i < 4; ++i) {
-    TaskSemaphore sem{1};
-    auto task = exceptionTest(sem, i);
-    task.Schedule(ts, "MainCoroutine");
-    sem.Wait();
+    exceptionTest(i).RunAndWait(ts, "MainCoroutine");
   }
 }
 
 // Every worker throws. This is the case the final_suspend-based death-count decrement
 // is meant to make safe: even when no worker completes normally, each still reaches
 // final_suspend(), so the count reaches zero and Execute() resumes instead of hanging.
-RootTask allThrowTest(TaskSemaphore, bool& finished) {
+RootTask allThrowTest(bool& finished) {
   Executor executor;
   std::vector<int> v(8, 2); // 2 triggers the throw in throwingTaskInt for every element.
   std::string caughtMsg;
@@ -175,11 +182,8 @@ RootTask allThrowTest(TaskSemaphore, bool& finished) {
 
 void TestExecutorAllThrow() {
   TaskScheduler ts(Min(TaskScheduler::GetNumSupportedLogicalProcessors(), 8));
-  TaskSemaphore sem{1};
   bool finished = false;
-  auto task = allThrowTest(sem, finished);
-  task.Schedule(ts, "MainCoroutine");
-  sem.Wait(); // Would block forever if the death count never reached zero.
+  allThrowTest(finished).RunAndWait(ts, "MainCoroutine");
   EXPECT_TRUE(finished);
 }
 
@@ -228,7 +232,15 @@ Task<void> ThrowingVoidTask() {
   co_return;
 }
 
-RootTask awaitThrowingTask(TaskSemaphore, bool& caughtException) {
+RootTask HoldResource(std::shared_ptr<int>, bool shouldThrow, std::thread::id& bodyThread) {
+  bodyThread = std::this_thread::get_id();
+  if (shouldThrow) {
+    DoThrow();
+  }
+  co_return;
+}
+
+RootTask awaitThrowingTask(bool& caughtException) {
   try {
     [[maybe_unused]] int result = co_await ThrowingTask();
   } catch (TestException const&) {
@@ -258,10 +270,7 @@ void TestTaskExceptionHandling() {
   // Test exception propagation via co_await
   {
     bool caughtException = false;
-    TaskSemaphore sem{1};
-    auto task = awaitThrowingTask(sem, caughtException);
-    task.Schedule(ts, "AwaitThrowingTask");
-    sem.Wait();
+    awaitThrowingTask(caughtException).RunAndWait(ts, "AwaitThrowingTask");
     EXPECT_TRUE(caughtException);
   }
 }
@@ -352,20 +361,64 @@ void TestGenerator() {
 
 } // namespace
 
-// In local single-threaded mode, the coroutine runs before Schedule returns.
+// In local single-threaded mode, the coroutine runs before RunAndWait's dispatch returns.
 TEST(Coroutines, ScheduledCoroutineCanDestroyItsRootTask) {
-  TaskSemaphore sem{1};
-  std::optional<RootTask> owner;
-  owner.emplace(DestroyOwner(sem, owner));
+  bool resumedAfterReset = false;
+  std::unique_ptr<RootTask> owner;
+  owner = std::make_unique<RootTask>(DestroyOwner(owner, resumedAfterReset));
   TaskScheduler scheduler(1);
 
   {
     ScopedLocalSingleThreadedMode const singleThreaded;
-    owner->Schedule(scheduler);
+    owner->RunAndWait(scheduler);
   }
 
-  EXPECT_FALSE(owner.has_value());
-  EXPECT_TRUE(sem.IsDone());
+  EXPECT_EQ(owner, nullptr);
+  EXPECT_TRUE(resumedAfterReset);
+}
+
+// RunAndWait destroys the frame on the thread that completes the coroutine, before it returns or
+// rethrows, in every scheduler mode.
+TEST(Coroutines, RootTaskRunAndWaitDestroysFrameOnCompletingThread) {
+  for (int mode = 0; mode < 3; ++mode) {
+    for (bool const shouldThrow : {false, true}) {
+      TaskScheduler scheduler(1);
+      scheduler.SetGlobalSingleThreadedMode(mode == 1);
+      ScopedLocalSingleThreadedMode const singleThreaded(mode == 2);
+      std::thread::id bodyThread;
+      std::thread::id destroyThread;
+      auto resource = std::shared_ptr<int>(new int(0), [&destroyThread](int const* value) {
+        destroyThread = std::this_thread::get_id();
+        delete value;
+      });
+      auto task = HoldResource(std::move(resource), shouldThrow, bodyThread);
+
+      if (shouldThrow) {
+        EXPECT_THROW(task.RunAndWait(scheduler), TestException);
+      } else {
+        task.RunAndWait(scheduler);
+      }
+
+      EXPECT_NE(destroyThread, std::thread::id{});
+      EXPECT_EQ(destroyThread, bodyThread);
+    }
+  }
+}
+
+TEST(Coroutines, RootTaskRunAndWaitSupportsMemberAndCapturelessLambdaCoroutines) {
+  TaskScheduler scheduler(1);
+  MemberCoroutineObject object;
+  bool lambdaCompleted = false;
+  auto const completeLambda = [](bool& completed) -> RootTask {
+    completed = true;
+    co_return;
+  };
+
+  object.Complete().RunAndWait(scheduler);
+  completeLambda(lambdaCompleted).RunAndWait(scheduler);
+
+  EXPECT_TRUE(object.completed);
+  EXPECT_TRUE(lambdaCompleted);
 }
 
 TEST(Coroutines, Execute) {

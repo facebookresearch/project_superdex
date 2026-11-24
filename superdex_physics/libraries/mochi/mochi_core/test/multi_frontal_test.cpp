@@ -680,11 +680,7 @@ void TestPanelBasedWork(
 }
 
 template <typename Exec, int kDofsPerNode, typename Scalar, size_t kBlockSize>
-RootTask Factor(
-    TaskSemaphore,
-    Exec executor,
-    FactorData<kDofsPerNode, Scalar, kBlockSize>& data,
-    int treeRoot) {
+RootTask Factor(Exec executor, FactorData<kDofsPerNode, Scalar, kBlockSize>& data, int treeRoot) {
   auto fData = co_await FactorBranch(executor, data, treeRoot);
   EXPECT_EQ(fData.size(), 0);
   co_return;
@@ -708,12 +704,9 @@ void TestFullCoroutineSystem(
     auto [picked, trunkCount] = organizer.PickBranches(eTree, root, nBranches);
     FactorData<kDofsPerNode, Scalar, kBlockSize> data(
         eTree, organizer, helper, A, L, picked, numThreads);
-    TaskSemaphore sem{1};
     Executor executor(scheduler);
     auto dispatch = [executor]<typename F>(F&& f) { executor.schedule(std::forward<F>(f)); };
-    auto task = Factor(sem, dispatch, data, root);
-    task.Schedule(scheduler, "Factor tree");
-    sem.Wait();
+    Factor(dispatch, data, root).RunAndWait(scheduler, "Factor tree");
   }
   // Compare L data with reference
   Scalar diffSqNrm = 0;

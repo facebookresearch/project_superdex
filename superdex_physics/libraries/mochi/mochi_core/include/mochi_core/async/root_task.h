@@ -16,26 +16,29 @@
 
 #pragma once
 
+#include <mochi_core/mochi_platform.h>
+#include <mochi_core/utils/debug.h>
 #include <mochi_core/utils/task_scheduler.h>
 
 #include <coroutine>
+#include <exception>
+#include <string_view>
 #include <utility>
 
 namespace mochi {
 
-/** @brief Coroutine type that can be scheduled onto TaskScheduler.
- *  @details The task is lazy but it is self-destructive:
- *   - lazy: creating a RootTask does not start the coroutine. It needs to be scheduled
- *     by use of Schedule(ts, "name");
- *   - self-destructive: when it is finished, its destroy() method is automatically called
- *     by the coroutine system.
- *   If the task is never scheduled, the RootTask object will destroy the coroutine frame.
- *   If the first argument is a TaskSemaphore, the semaphore's `Done()` method will automatically
- *   be called at the completion of the coroutine, even in case of an unexpected exception
- *   being thrown. The `Done()` method should not be manually called on the first argument
- *   semaphore.
+/**
+ * @brief Lazy coroutine root that runs on @ref TaskScheduler until completion.
+ *
+ * @details A RootTask owns its coroutine frame until @ref RunAndWait starts it. The coroutine then
+ * destroys its frame on completion.
+ *
+ * @warning RootTask does not own objects referenced by pointer or reference parameters, a member
+ * coroutine's object, or a coroutine lambda's closure. They must outlive @ref RunAndWait. Calling
+ * RunAndWait in the full-expression that creates the task, e.g. `Coro(args).RunAndWait(scheduler)`,
+ * keeps that expression's temporaries alive until it returns.
  */
-class RootTask {
+class [[nodiscard]] RootTask {
  public:
   struct promise_type;
 
@@ -53,60 +56,100 @@ class RootTask {
   }
 
   ~RootTask() {
-    if (_handle) { // If the coroutine was never scheduled, the handle will be non-null.
+    if (_handle) { // If the coroutine was never started, the handle will be non-null.
       _handle.destroy();
     }
   }
 
-  /// @brief Schedule the coroutine onto the given TaskScheduler.
-  /// @details The coroutine will destroy its frame automatically when it completes. Once it
-  /// starts, it may also destroy this RootTask. In local single-threaded mode, it starts before
-  /// Schedule returns.
-  void Schedule(TaskScheduler& ts, std::string_view name = "RootCoroutine") {
-    // Release ownership first, since the coroutine may destroy this RootTask. If AddTask throws,
-    // the coroutine never ran.
-    auto const handle = std::exchange(_handle, {});
-    try {
-      ts.AddTask(name, handle);
-    } catch (...) {
-      _handle = handle;
-      throw;
-    }
-  }
+  /// @brief Dispatch the coroutine and synchronously wait for completion.
+  ///
+  /// @details Dispatching consumes the task. The coroutine destroys its frame on the thread that
+  /// completes it, then RunAndWait rethrows any escaping exception. Once the coroutine starts, it
+  /// may destroy this RootTask. In local single-threaded mode, dispatch starts the coroutine
+  /// inline, and the coroutine must complete before dispatch returns.
+  ///
+  /// @param[in] taskScheduler Scheduler used to dispatch the coroutine.
+  /// @param[in] name Name used to identify the scheduled task.
+  void RunAndWait(TaskScheduler& taskScheduler, std::string_view name = "RootCoroutine");
 
  private:
+  /// @brief State of a @ref RunAndWait call, which outlives the coroutine frame.
+  struct Completion {
+    TaskSemaphore finished{1};
+    std::exception_ptr exception;
+  };
+
   std::coroutine_handle<promise_type> _handle;
 };
 
 struct RootTask::promise_type {
-  promise_type(TaskSemaphore const& sem, [[maybe_unused]] auto&&... args) : _sem(sem) {}
-  /// @brief The coroutine system will call handle.resume() when the coroutine
-  /// is resumed.
-  /// @param handle The coroutine handle.
-  /// @return The coroutine's return value.
-  /// @note The coroutine system will call handle.destroy() as a result of the
-  /// suspend_never return type.
+  /// @brief Return the lazy root task for this coroutine.
   RootTask get_return_object() {
     return RootTask{std::coroutine_handle<promise_type>::from_promise(*this)};
   }
+
   /// @brief RootTask is lazy and does not start at creation.
   std::suspend_always initial_suspend() noexcept {
     return {};
   }
-  /// @brief RootTasks are self-destructive, i.e. the coroutine system will call
-  /// handle.destroy() as a result of the suspend_never return type.
-  std::suspend_never final_suspend() noexcept {
-    _sem.Done();
+
+  /// @brief Destroy the frame on the completing thread, then signal @ref RootTask::RunAndWait.
+  struct FinalAwaiter : std::suspend_always {
+    // Not inlining keeps `finished` below off the frame it destroys, working around
+    // https://github.com/llvm/llvm-project/issues/56301.
+#if MOCHI_CLANG_AWAIT_SUSPEND_BUG
+    MOCHI_NO_INLINE
+#endif
+    void await_suspend(std::coroutine_handle<promise_type> handle) const noexcept {
+      // Signal through a copy, since RunAndWait may return, destroying its Completion, as soon as
+      // it is signaled.
+      auto const finished = handle.promise()._completion->finished;
+      handle.destroy();
+      finished.Done();
+    }
+  };
+
+  FinalAwaiter final_suspend() noexcept {
     return {};
   }
-  // TODO Figure out desired handling of any exception.
+
   void unhandled_exception() noexcept {
-    _exception = std::current_exception();
+    _completion->exception = std::current_exception();
   }
+
   void return_void() {}
 
  private:
-  std::exception_ptr _exception{};
-  TaskSemaphore _sem;
+  friend class RootTask;
+
+  Completion* _completion = nullptr;
 };
+
+inline void RootTask::RunAndWait(TaskScheduler& taskScheduler, std::string_view name) {
+  MOCHI_ASSERT_VERBOSE(_handle != nullptr, "RootTask has already been started.");
+
+  Completion completion;
+  // Release ownership first, since the coroutine destroys its frame and may destroy this RootTask.
+  // If AddTask throws, the coroutine never ran.
+  auto const handle = std::exchange(_handle, {});
+  handle.promise()._completion = &completion;
+  try {
+    taskScheduler.AddTask(name, handle);
+  } catch (...) {
+    _handle = handle;
+    throw;
+  }
+
+  // In local single-threaded mode, waiting for an unfinished coroutine can suspend this thread's
+  // fiber, letting unrelated tasks run on the thread in that mode.
+  MOCHI_ASSERT_VERBOSE(
+      !TaskScheduler::IsLocalSingleThreaded() || completion.finished.IsDone(),
+      "In local single-threaded mode, a RootTask must complete before dispatch returns.");
+  completion.finished.Wait();
+
+  if (completion.exception) {
+    std::rethrow_exception(completion.exception);
+  }
+}
+
 } // namespace mochi
