@@ -31,10 +31,13 @@
 struct FMochiModelMapping {
   /** Model asset associated with the native shape mapping. */
   const UMochiModel* MochiModel = nullptr;
+
   /** Collider representation used for uniform model scale. */
   EMochiColliderType ColliderUniformScale = EMochiColliderType::None;
+
   /** Collider representation used for non-uniform model scale. */
   EMochiColliderType ColliderNonUniformScale = EMochiColliderType::None;
+
   /**
    * Get whether the model mapping contains a model-asset pointer.
    *
@@ -43,6 +46,7 @@ struct FMochiModelMapping {
   bool IsValid() const {
     return MochiModel != nullptr;
   }
+
   /**
    * Choose the collider representation compatible with the requested model scale.
    *
@@ -79,8 +83,10 @@ class SUPERDEXPHYSICS_API UMochiGameInstanceSubsystem final : public UGameInstan
 
   /** Enable Mochi debug draw for the managed scene. */
   void EnableDebugDraw() const;
+
   /** Disable Mochi debug draw for the managed scene. */
   void DisableDebugDraw() const;
+
   /**
    * Returns true if Mochi debug draw is enabled for the manged scene.
    *
@@ -133,6 +139,7 @@ class SUPERDEXPHYSICS_API UMochiGameInstanceSubsystem final : public UGameInstan
   bool IsSceneExternallyOwned() const {
     return Scene && Scene->IsContentsExternallyOwned();
   }
+
   /**
    * Set whether scene contents/settings are managed by an external owner.
    *

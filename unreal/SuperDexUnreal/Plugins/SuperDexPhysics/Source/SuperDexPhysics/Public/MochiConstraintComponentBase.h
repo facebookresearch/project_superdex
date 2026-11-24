@@ -43,9 +43,11 @@ class SUPERDEXPHYSICS_API UMochiConstraintComponentBase : public USceneComponent
   /** Stiffness [N/m for a distance, N*m/rad for an angle]. */
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mochi Constraint", meta = (ClampMin = "0"))
   float Stiffness = mochi::ConstraintParams{}.stiffness;
+
   /** Damping [N*s/m for a distance, N*m*s/rad for an angle]. */
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mochi Constraint", meta = (ClampMin = "0"))
   float Damping = mochi::ConstraintParams{}.damping;
+
   /**
    * Deviation beyond which the constraint force stops growing, in the unit of what the constraint
    * drives (see the subclass). Negative disables saturation.
@@ -60,6 +62,7 @@ class SUPERDEXPHYSICS_API UMochiConstraintComponentBase : public USceneComponent
    */
   UFUNCTION(BlueprintCallable, Category = "Mochi Constraint")
   void SetStiffness(float NewStiffness);
+
   /**
    * Set the damping used by this constraint component.
    *
@@ -67,6 +70,7 @@ class SUPERDEXPHYSICS_API UMochiConstraintComponentBase : public USceneComponent
    */
   UFUNCTION(BlueprintCallable, Category = "Mochi Constraint")
   void SetDamping(float NewDamping);
+
   /**
    * Set the saturation used by this constraint component.
    *
@@ -81,9 +85,11 @@ class SUPERDEXPHYSICS_API UMochiConstraintComponentBase : public USceneComponent
    */
   UFUNCTION(BlueprintCallable, Category = "Mochi Constraint")
   void CreateConstraints();
+
   /** Destroy the constraints. */
   UFUNCTION(BlueprintCallable, Category = "Mochi Constraint")
   void DestroyConstraints();
+
   /**
    * Whether the constraints have been queued for creation.
    *

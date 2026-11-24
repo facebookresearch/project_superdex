@@ -31,13 +31,16 @@ class SUPERDEXPHYSICS_API UMochiShellMeshComponent : public UMochiDeformableMesh
   /** Parameters controlling shell material properties. */
   UPROPERTY(EditAnywhere, Category = "Mochi")
   UMochiShellMaterialParams* ShellMaterialParams = nullptr;
+
   /** Collider representation used by the shell actor. */
   UPROPERTY(EditAnywhere, Category = "Mochi", meta = (ValidEnumValues = "None, Auto, PointCloud"))
   EMochiColliderType ColliderType =
       ::ToUnreal(mochi::experimental::ShellActorParams{}.colliderType);
+
   /** Use the shell's authored contact skin for contact sampling instead of the physics mesh. */
   UPROPERTY(EditAnywhere, Category = "Mochi")
   bool bUseContactSkin = mochi::experimental::ShellActorParams{}.useContactSkin;
+
   /** Boundary elements used for shell contact sampling. */
   UPROPERTY(
       EditAnywhere,
@@ -52,9 +55,11 @@ class SUPERDEXPHYSICS_API UMochiShellMeshComponent : public UMochiDeformableMesh
    */
   UPROPERTY(EditAnywhere, Category = "Mochi|Point Cloud Collider", meta = (Units = "m"))
   float PointCloudRadius = mochi::PointCloudColliderParams{}.radius;
+
   /** Enable self-contact for the shell. Experimental - may degrade performance. */
   UPROPERTY(EditAnywhere, Category = "Mochi|Point Cloud Collider")
   bool bPointCloudSelfContact = mochi::PointCloudColliderParams{}.selfContact;
+
   /**
    * Self-contact exclusion ratio. Contact samples within (radius * ratio) of a node are excluded
    * from self-contact. Should be > 1.
@@ -65,6 +70,7 @@ class SUPERDEXPHYSICS_API UMochiShellMeshComponent : public UMochiDeformableMesh
       meta = (EditCondition = "bPointCloudSelfContact"))
   float PointCloudSelfContactExclusionRatio =
       mochi::PointCloudColliderParams{}.selfContactExclusionRatio;
+
   /** Unset uses one collider point per node; a value selects quadrature-based placement. */
   UPROPERTY(EditAnywhere, Category = "Mochi|Point Cloud Collider")
   TOptional<EMochiActorBoundaryElementType> PointCloudColliderTriangleElementType;

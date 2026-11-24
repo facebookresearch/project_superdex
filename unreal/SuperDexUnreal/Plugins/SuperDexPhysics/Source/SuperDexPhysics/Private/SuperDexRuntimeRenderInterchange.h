@@ -62,6 +62,7 @@ class USuperDexInterchangeGameUtilities : public UInterchangeEditorUtilitiesBase
   virtual bool IsRuntimeOrPIE() {
     return true;
   }
+
   /**
    * Mark these runtime mesh imports as runtime or play-in-editor imports.
    *

@@ -37,21 +37,27 @@ class SUPERDEXPHYSICS_API UMochiDeformableMeshComponent : public UDynamicMeshCom
   /** The Mochi Model to use. */
   UPROPERTY(EditAnywhere, Category = "Mochi")
   UMochiModel* Model = nullptr;
+
   /** Should this mesh be influenced by scene gravity? */
   UPROPERTY(EditAnywhere, Category = "Mochi")
   bool bHasGravity = mochi::SoftActorParams{}.hasGravity;
+
   /** The layer this object is simulated on. */
   UPROPERTY(EditAnywhere, Category = "Mochi")
   FName Layer = FMochiLayer::GenericObject;
+
   /** Parameters controlling contacts. */
   UPROPERTY(EditAnywhere, Category = "Mochi")
   UMochiContactParams* ContactParams = nullptr;
+
   /** Use Mochi computed node normals to set the dynamic mesh normals. */
   UPROPERTY(EditAnywhere, Category = "Mochi")
   bool bUseMochiNodeNormals = true;
+
   /** Enable contact queries and events. */
   UPROPERTY(EditAnywhere, Category = "Mochi")
   bool bEnableContacts = false;
+
   /**
    * Hide self-contacts (where the other component is this same component, e.g.
    * shell point-cloud self-contacts) from the contact event delegates and
@@ -74,12 +80,14 @@ class SUPERDEXPHYSICS_API UMochiDeformableMeshComponent : public UDynamicMeshCom
    */
   UPROPERTY(BlueprintAssignable, Category = "Mochi")
   FOnMochiComponentBeginContact OnMochiComponentBeginContact;
+
   /**
    * Emitted when this component ends contact with another Mochi component.
    * bEnableContacts must be enabled.
    */
   UPROPERTY(BlueprintAssignable, Category = "Mochi")
   FOnMochiComponentEndContact OnMochiComponentEndContact;
+
   /**
    * Emitted when this component is contacting any other Mochi components.
    * bEnableContacts must be enabled.
@@ -106,6 +114,7 @@ class SUPERDEXPHYSICS_API UMochiDeformableMeshComponent : public UDynamicMeshCom
   virtual UMochiContactParams* GetContactParams() const override {
     return ContactParams;
   }
+
   /**
    * Default null for subclasses whose material isn't a `UMochiMaterialParams` (e.g., shell).
    * Override otherwise.

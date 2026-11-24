@@ -216,6 +216,7 @@ struct FMochiDebugDrawFlags {
       mochi::DebugDraw& DebugDraw,
       const FMochiDebugDrawFlags& Flags);
   static constexpr bool bGenerateAndLogMochiDebugDrawFlagsCode = false;
+
   /**
    * Log source declarations for the native debug-draw flags.
    *

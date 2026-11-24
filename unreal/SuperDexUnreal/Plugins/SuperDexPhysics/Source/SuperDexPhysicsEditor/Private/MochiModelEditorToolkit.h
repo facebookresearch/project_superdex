@@ -36,6 +36,7 @@ class FMochiModelEditorToolkit : public FAssetEditorToolkit, public FNotifyHook 
  public:
   /** Initialize the model asset editor toolkit. */
   FMochiModelEditorToolkit();
+
   /** Release the model asset editor toolkit. */
   virtual ~FMochiModelEditorToolkit();
 
@@ -59,14 +60,19 @@ class FMochiModelEditorToolkit : public FAssetEditorToolkit, public FNotifyHook 
 
   /** Bind model-editor actions to commands. */
   void BindCommands();
+
   /** Add model-editor toolbar extensions. */
   void ExtendToolBars();
+
   /** Focus the model preview viewport. */
   void FocusViewport() const;
+
   /** Add material modifiers for the selected model elements. */
   void AddMaterialModifiers();
+
   /** Remove material modifiers for the selected model elements. */
   void RemoveMaterialModifiers();
+
   /**
    * Create the model editor's preview scene.
    *
@@ -76,6 +82,7 @@ class FMochiModelEditorToolkit : public FAssetEditorToolkit, public FNotifyHook 
 
   virtual void RegisterTabSpawners(const TSharedRef<class FTabManager>& InTabManager) override;
   virtual void UnregisterTabSpawners(const TSharedRef<class FTabManager>& InTabManager) override;
+
   /**
    * Get the model editor's tab layout.
    *

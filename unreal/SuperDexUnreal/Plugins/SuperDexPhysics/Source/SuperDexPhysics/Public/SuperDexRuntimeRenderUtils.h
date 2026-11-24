@@ -78,18 +78,22 @@ SUPERDEXPHYSICS_API UMaterialInterface* FindMaterialForSlot(
 struct FSuperDexSkinnedMeshRequest {
   /** Absolute .glb path. */
   FString FilePath;
+
   /**
    * Per joint of the glTF skin: the bone (index into the built skeleton, where bone 0 is the root
    * and bone i + 1 is BoneNames[i]) it binds to, or INDEX_NONE to drop its influence.
    */
   TArray<int32> JointToBone;
+
   /** The name of skeleton bone i + 1. */
   TArray<FName> BoneNames;
+
   /**
    * The reference pose of skeleton bone i + 1 in component space [cm], one per BoneNames entry.
    * Scale is ignored.
    */
   TArray<FTransform> RestBoneToComponent;
+
   /**
    * The placement of the .glb's vertices in component space, scale (including mirroring) applied.
    */

@@ -38,6 +38,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationComponent : public UPoseableMeshComp
   /** The MochiArticulation asset from which the articulation will be generated. */
   UPROPERTY(EditAnywhere, Category = "Mochi Articulation")
   UMochiArticulation* Articulation = nullptr;
+
   /** The initial joint positions with which the articulation will be spawned. */
   UPROPERTY(
       EditAnywhere,
@@ -46,27 +47,34 @@ class SUPERDEXPHYSICS_API UMochiArticulationComponent : public UPoseableMeshComp
       EditFixedSize,
       meta = (EditFixedOrder))
   TArray<double> InitialJointPositions;
+
   /** Optional initial joint velocities [rad/s or m/s], laid out like InitialJointPositions. */
   UPROPERTY(EditAnywhere, Category = "Mochi Articulation", BlueprintReadOnly, AdvancedDisplay)
   TArray<double> InitialJointVelocities;
+
   /**
    * If true, the articulation will be spawned with a fixed root joint, making the articulation
    * fixed in space at the location it is spawned. Only overrides Free and Hard root joints.
    */
   UPROPERTY(EditAnywhere, Category = "Mochi Articulation", BlueprintReadOnly)
   bool bFixedBase = false;
+
   /** The layer the articulation will be simulated on. */
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mochi Articulation")
   FName Layer = FMochiLayer::GenericObject;
+
   /** Parameters controlling contacts of the links. */
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mochi Articulation")
   UMochiContactParams* ContactParams = nullptr;
+
   /** Whether the articulation should be simulated under the influence of gravity. */
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mochi Articulation")
   bool bGravityEnabled = mochi::ArticulatedLinkParams{}.hasGravity;
+
   /** Enable contact queries and events. */
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mochi Articulation")
   bool bEnableContacts = false;
+
   /**
    * The links that will be included in contact queries and events. Defaults to all links;
    * can be pruned of uninteresting links for performance gains. Note that fixed base links
@@ -78,6 +86,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationComponent : public UPoseableMeshComp
       Category = "Mochi Articulation",
       meta = (EditCondition = "bEnableContacts"))
   TArray<FName> ContactGeneratingLinks;
+
   /** Filter contacts against self. */
   UPROPERTY(
       EditAnywhere,
@@ -85,6 +94,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationComponent : public UPoseableMeshComp
       Category = "Mochi Articulation",
       meta = (EditCondition = "bEnableContacts"))
   bool bFilterSelfContacts = true;
+
   /** The MochiArticulationController class to use. */
   UPROPERTY(EditAnywhere, Category = "Mochi Articulation", BlueprintReadOnly)
   TSubclassOf<UMochiArticulationController> ArticulationControllerClass;
@@ -104,6 +114,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationComponent : public UPoseableMeshComp
   /** Emitted when the articulation has been spawned. */
   UPROPERTY(BlueprintAssignable, Category = "Mochi Articulation")
   FOnArticulationSpawned OnArticulationSpawned;
+
   /** Emitted when the articulation soft links have been spawned. */
   UPROPERTY(BlueprintAssignable, Category = "Mochi Articulation")
   FOnSoftLinksSpawned OnSoftLinksSpawned;
@@ -114,30 +125,35 @@ class SUPERDEXPHYSICS_API UMochiArticulationComponent : public UPoseableMeshComp
    */
   UPROPERTY(BlueprintAssignable, Category = "Mochi Articulation")
   FOnMochiComponentBeginNestedContact OnMochiComponentBeginNestedContact;
+
   /**
    * Emitted when this component begins contact with another Mochi component.
    * bEnableContacts must be enabled. Occurs after the nested equivalent.
    */
   UPROPERTY(BlueprintAssignable, Category = "Mochi Articulation")
   FOnMochiComponentBeginContact OnMochiComponentBeginContact;
+
   /**
    * Emitted when a nested element in this component ends contact with another Mochi component.
    * bEnableContacts must be enabled. Occurs before the non-nested equivalent.
    */
   UPROPERTY(BlueprintAssignable, Category = "Mochi Articulation")
   FOnMochiComponentEndNestedContact OnMochiComponentEndNestedContact;
+
   /**
    * Emitted when this component ends contact with another Mochi component.
    * bEnableContacts must be enabled. Occurs after the nested equivalent.
    */
   UPROPERTY(BlueprintAssignable, Category = "Mochi Articulation")
   FOnMochiComponentEndContact OnMochiComponentEndContact;
+
   /**
    * Emitted when a nested element in this component is contacting any other Mochi components.
    * bEnableContacts must be enabled. Occurs before the non-nested equivalent.
    */
   UPROPERTY(BlueprintAssignable, Category = "Mochi Articulation")
   FOnMochiComponentNestedContact OnMochiComponentNestedContact;
+
   /**
    * Emitted when this component is contacting any other Mochi components.
    * bEnableContacts must be enabled. Occurs after the nested equivalent.
@@ -148,6 +164,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationComponent : public UPoseableMeshComp
   /** Emitted before any contact events are invoked. */
   UPROPERTY(BlueprintAssignable, Category = "Mochi Articulation")
   FOnMochiComponentContactProcessing OnMochiComponentBeginContactProcessing;
+
   /** Emitted after all contact events have been invoked, even if none actually were. */
   UPROPERTY(BlueprintAssignable, Category = "Mochi Articulation")
   FOnMochiComponentContactProcessing OnMochiComponentEndContactProcessing;
@@ -160,6 +177,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationComponent : public UPoseableMeshComp
    */
   UFUNCTION(BlueprintCallable, Category = "Mochi Articulation")
   void SetArticulationAsset(UMochiArticulation* InArticulation);
+
   /**
    * Get the articulation asset.
    *
@@ -167,6 +185,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationComponent : public UPoseableMeshComp
    */
   UFUNCTION(BlueprintPure, Category = "Mochi Articulation")
   UMochiArticulation* GetArticulationAsset() const;
+
   /**
    * Set the initial pose (configuration) of the articulation as an array of joint positions [rad or
    * m]. Typically used from BP constructors since setting after BeginPlay has no effect. Fails if
@@ -178,6 +197,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationComponent : public UPoseableMeshComp
    */
   UFUNCTION(BlueprintCallable, Category = "Mochi Articulation")
   bool SetInitialJointPositions(const TArray<double>& NewInitialJointPositions);
+
   /**
    * Get the initial pose (configuration) of the articulation as an array of joint positions [rad or
    * m].
@@ -186,6 +206,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationComponent : public UPoseableMeshComp
    */
   UFUNCTION(BlueprintPure, Category = "Mochi Articulation")
   const TArray<double>& GetInitialJointPositions() const;
+
   /**
    * Returns true if the articulation is spawned with a fixed base.
    *
@@ -193,6 +214,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationComponent : public UPoseableMeshComp
    */
   UFUNCTION(BlueprintPure, Category = "Mochi Articulation")
   bool IsFixedBase() const;
+
   /**
    * Returns true if gravity is enabled on this articulation.
    *
@@ -200,6 +222,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationComponent : public UPoseableMeshComp
    */
   UFUNCTION(BlueprintPure, Category = "Mochi Articulation")
   bool GetMochiGravityEnabled() const;
+
   /**
    * Get the UMochiSoftMeshComponent associated with a soft link.
    *
@@ -208,6 +231,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationComponent : public UPoseableMeshComp
    */
   UFUNCTION(BlueprintPure, Category = "Mochi Articulation")
   const UMochiSoftMeshComponent* GetSoftLink(int SoftLinIndex);
+
   // TODO: This function is untested with robots that do not have a fixed base. It is possible
   // that it does not work as intended in this case. Intent would be to leave the base link in
   // place, but move all other links.
@@ -219,6 +243,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationComponent : public UPoseableMeshComp
    */
   UFUNCTION(BlueprintCallable, Category = "Mochi Articulation")
   void SetArticulationWorldTransform(const FTransform& WorldTransform);
+
   /**
    * Teleport the articulation to a new pose defined by joint positions
    *
@@ -226,6 +251,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationComponent : public UPoseableMeshComp
    */
   UFUNCTION(BlueprintCallable, Category = "Mochi Articulation")
   void SetArticulatedPoseFromJoints(TArray<double> const& JointPositions);
+
   // Note: does not reflect runtime changes made via SetLinkContactParams.
   /**
    * Get the contact params configured on this articulation (editor/initial value).
@@ -236,6 +262,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationComponent : public UPoseableMeshComp
   UMochiContactParams* GetContactParams() const {
     return ContactParams;
   }
+
   /**
    * Get the underlying Mochi articulated actor object.
    *
@@ -265,6 +292,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationComponent : public UPoseableMeshComp
    */
   UFUNCTION(BlueprintCallable, Category = "Mochi Articulation")
   bool SetArticulationController(TSubclassOf<UMochiArticulationController> NewControllerClass);
+
   /**
    * Get the MochiArticulationController if it exists.
    *

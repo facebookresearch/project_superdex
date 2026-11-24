@@ -28,18 +28,21 @@ class FMochiArticulationThumbnailScene : public FMochiThumbnailSceneBase {
  public:
   /** Initialize the articulation thumbnail scene. */
   FMochiArticulationThumbnailScene();
+
   /**
    * The articulation the next CreateView shows, or null to clear it.
    *
    * @param Articulation Articulation asset supplied to the operation.
    */
   void SetArticulation(class UMochiArticulationBase* Articulation) const;
+
   /**
    * Set the joint pose shown in the articulation thumbnail.
    *
    * @param JointPositions Joint-position values supplied to this operation.
    */
   void SetJointPositions(const TArray<double>& JointPositions) const;
+
   /**
    * Configure skeleton drawing in the articulation thumbnail.
    *

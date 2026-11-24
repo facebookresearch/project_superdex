@@ -35,18 +35,25 @@ class UMochiRodMaterialParams;
 struct FMochiActorQueryData {
   /** The root transform of the Mochi actor, in Unreal units (always available). */
   FTransform RootTransform;
+
   /** Linear world velocity (always available). */
   FVector LinearVelocity;
+
   /** Angular world velocity (always available). */
   FVector AngularVelocity;
+
   /** The node positions of the Mochi actor (available if bQueryVolumeNodePositions true). */
   TArray<mochi::real> VolumeNodePositions;
+
   /** The node positions of the Mochi actor (available if bQuerySurfaceNodePositions true). */
   TArray<mochi::real> SurfaceNodePositions;
+
   /** The node normals of the Mochi actor (available if bQueryNodeNormals true). */
   TArray<mochi::real> NodeNormals;
+
   /** Elastic energy of a soft body relative to rest (available if bQueryElasticEnergy true). */
   float ElasticEnergy = 0.0f;
+
   /** The contact points of the Mochi actor (available if bQueryContactPoints true). */
   TArray<FMochiContactPoint> ContactPoints;
 };
@@ -410,24 +417,28 @@ class SUPERDEXPHYSICS_API UMochiActorObject : public UObject {
    * @return Whether a native scene is assigned and the actor handle is non-invalid.
    */
   bool IsValid() const;
+
   /**
    * Get the Scene this Mochi actor is associated with.
    *
    * @return The scene wrapper associated with the actor.
    */
   UMochiSceneObject* GetMochiScene() const;
+
   /**
    * Get the Mochi actor handle.
    *
    * @return The native actor handle associated with the wrapper.
    */
   mochi::ActorHandle GetMochiActorHandle() const;
+
   /**
    * Try to get the latest query data if available.
    *
    * @param Callback Callback supplied to the query or command.
    */
   void TryGetQueryData(TFunctionRef<void(const FMochiActorQueryData& QueryData)> Callback);
+
   /**
    * Set the root transform of the Mochi actor.
    *
@@ -435,6 +446,7 @@ class SUPERDEXPHYSICS_API UMochiActorObject : public UObject {
    * @param bBlocking Whether to wait for queued commands after submitting this operation.
    */
   void SetRootTransform(const FTransform& WorldFromLocal, bool bBlocking = false) const;
+
   /**
    * Set the contact params of the Mochi actor.
    *
@@ -442,6 +454,7 @@ class SUPERDEXPHYSICS_API UMochiActorObject : public UObject {
    * @param bBlocking Whether to wait for queued commands after submitting this operation.
    */
   void SetContactParams(const UMochiContactParams* ContactParams, bool bBlocking = false) const;
+
   /**
    * Set the material params of the Mochi actor.
    *
@@ -449,6 +462,7 @@ class SUPERDEXPHYSICS_API UMochiActorObject : public UObject {
    * @param bBlocking Whether to wait for queued commands after submitting this operation.
    */
   void SetMaterialParams(const UMochiMaterialParams* MaterialParams, bool bBlocking = false);
+
   /**
    * Set the material params of individual element(s) in the Mochi actor
    * by default is additive, but can be reset to original first.
@@ -461,12 +475,14 @@ class SUPERDEXPHYSICS_API UMochiActorObject : public UObject {
       const TMap<int, FMochiMaterialModifier>& Modifiers,
       bool bResetExisting = false,
       bool bBlocking = false);
+
   /**
    * Retrieve cached pointer to last set material parameters.
    *
    * @return The material params.
    */
   const UMochiMaterialParams* GetMaterialParams() const;
+
   /**
    * Set linear and angular velocity of the Mochi actor
    *
@@ -474,6 +490,7 @@ class SUPERDEXPHYSICS_API UMochiActorObject : public UObject {
    * @param AngularVelocity Angular velocity to apply.
    */
   void SetVelocity(FVector LinearVelocity, FVector AngularVelocity) const;
+
   /**
    * Get inertial properties of the actor (mass [kg], COM [cm], MOI [kg*cm^2])
    *
@@ -485,6 +502,7 @@ class SUPERDEXPHYSICS_API UMochiActorObject : public UObject {
       double& Mass,
       FVector& CenterOfMass,
       FMochiMomentOfInertia& MomentOfInertia) const;
+
   /**
    * Force destroy the underlying Mochi actor and cancel the registered query callback.
    * This will also happen in BeginDestroy when GC'd. If bDestroyMochiActorOnObjectDestruction

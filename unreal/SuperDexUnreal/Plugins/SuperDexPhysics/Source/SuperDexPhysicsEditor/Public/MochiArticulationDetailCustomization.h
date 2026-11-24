@@ -32,6 +32,7 @@ class FMochiArticulationDetailsCustomization : public IDetailCustomization {
    */
   static TSharedRef<IDetailCustomization> MakeInstance();
   virtual void CustomizeDetails(IDetailLayoutBuilder& DetailLayout) override;
+
   /**
    * Build a joint-position editor for a details-array entry.
    *
@@ -59,6 +60,7 @@ class FMochiArticulationComponentDetailsCustomization : public IDetailCustomizat
    */
   static TSharedRef<IDetailCustomization> MakeInstance();
   virtual void CustomizeDetails(IDetailLayoutBuilder& DetailLayout) override;
+
   /**
    * Build a joint-position editor for a component details-array entry.
    *

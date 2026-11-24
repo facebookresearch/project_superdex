@@ -43,6 +43,7 @@ class FMochiPhysicsEditorModule : public IModuleInterface {
   static inline FMochiPhysicsEditorModule& Get() {
     return FModuleManager::LoadModuleChecked<FMochiPhysicsEditorModule>("SuperDexPhysicsEditor");
   }
+
   /**
    * Get whether the physics editor module is already loaded.
    *

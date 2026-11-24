@@ -30,8 +30,10 @@
 struct FMochiPoseControllerGains {
   /** Native gains for positional pose tracking. */
   TArray<mochi::PoseTrackingParams> PositionTrackingGains;
+
   /** Native gains for rotational pose tracking. */
   TArray<mochi::PoseTrackingParams> RotationTrackingGains;
+
   /** Native gains for joint pose tracking. */
   TArray<mochi::PoseTrackingParams> JointTrackingGains;
 };
@@ -82,15 +84,19 @@ struct FMochiArticulatedActorQueryData {
    * Use LinksToWorld[0] to get the effective transform of the articulated actor.
    */
   FTransform RootToWorld;
+
   /** The linkToWorld transforms of the Mochi actor, in Unreal units (always available). */
   TArray<FTransform> LinksToWorld;
+
   /**
    * The joint positions [rad or m] and velocities [rad/s or m/s], excluding base DOFs, in Unreal's
    * DOF convention (always available).
    */
   TArray<double> JointPositions;
+
   /** Joint velocities collected by the articulation query. */
   TArray<double> JointVelocities;
+
   /**
    * The contact points of every actor that was registered for contact queries: the nested link
    * and soft actors named in LinksThatQueryContactPoints, plus the skin when
@@ -181,24 +187,28 @@ class SUPERDEXPHYSICS_API UMochiArticulatedActorObject : public UObject {
    * @return Whether a native scene is assigned and the actor handle is non-invalid.
    */
   bool IsValid() const;
+
   /**
    * Get the Scene this Mochi actor is associated with.
    *
    * @return The scene wrapper associated with the actor.
    */
   UMochiSceneObject* GetMochiScene() const;
+
   /**
    * Returns the number of degrees of freedom in the articulated actor.
    *
    * @return Number of degrees of freedom in the articulation or joint.
    */
   int GetNumDofs() const;
+
   /**
    * Returns true if the articulated actor has a pose controller.
    *
    * @return The has pose controller state.
    */
   bool HasPoseController() const;
+
   /**
    * Add a pose controller. If one already exists, it will be removed.
    *
@@ -208,30 +218,35 @@ class SUPERDEXPHYSICS_API UMochiArticulatedActorObject : public UObject {
   void AddPoseController(
       const FMochiPoseControllerGains& PoseControllerGains,
       bool bBlocking = false);
+
   /**
    * Remove pose controller if it exists.
    *
    * @param bBlocking Whether to wait for queued commands after submitting this operation.
    */
   void RemovePoseController(bool bBlocking = false);
+
   /**
    * Get the articulated actor handle.
    *
    * @return The native articulated-actor handle associated with the wrapper.
    */
   mochi::ActorHandle GetArticulatedActorHandle() const;
+
   /**
    * Get the link actor handles.
    *
    * @return The nested link actor handles.
    */
   const TArray<mochi::ActorHandle>& GetNestedLinkActorHandles() const;
+
   /**
    * Get the link actor names.
    *
    * @return The nested link actor names.
    */
   const TArray<FName>& GetNestedLinkActorNames() const;
+
   /**
    * Get the index of a link actor by name; -1 if the Name is invalid.
    *
@@ -239,18 +254,21 @@ class SUPERDEXPHYSICS_API UMochiArticulatedActorObject : public UObject {
    * @return The nested link actor index.
    */
   int GetNestedLinkActorIndex(FName Name) const;
+
   /**
    * Get the soft actor handles (if there are any.)
    *
    * @return The nested soft actor handles.
    */
   const TArray<mochi::ActorHandle>& GetNestedSoftActorHandles() const;
+
   /**
    * Get the soft actor names (if there are any.)
    *
    * @return The nested soft actor names.
    */
   const TArray<FName>& GetNestedSoftActorNames() const;
+
   /**
    * Get the index of a soft actor by name; -1 if the Name is invalid.
    *
@@ -258,6 +276,7 @@ class SUPERDEXPHYSICS_API UMochiArticulatedActorObject : public UObject {
    * @return The nested soft actor index.
    */
   int GetNestedSoftActorIndex(FName Name) const;
+
   /**
    * Try to get the latest query data if available.
    *
@@ -265,6 +284,7 @@ class SUPERDEXPHYSICS_API UMochiArticulatedActorObject : public UObject {
    */
   void TryGetQueryData(
       TFunctionRef<void(const FMochiArticulatedActorQueryData& QueryData)> Callback);
+
   /**
    * Teleport the articulation to a new root transform.
    *
@@ -272,6 +292,7 @@ class SUPERDEXPHYSICS_API UMochiArticulatedActorObject : public UObject {
    * @param bBlocking Whether to wait for queued commands after submitting this operation.
    */
   void SetRootTransform(const FTransform& WorldFromLocal, bool bBlocking = false) const;
+
   /**
    * Teleport the articulation to the given pose based on joint positions.
    *
@@ -280,6 +301,7 @@ class SUPERDEXPHYSICS_API UMochiArticulatedActorObject : public UObject {
    */
   void SetArticulatedPoseFromJoints(TArray<double> const& JointPositions, bool bBlocking = false)
       const;
+
   /**
    * Get the contact params of each rigid link actor. Returns an array of size NumLinks.
    * Returns nullptr for links without contact params (e.g., dummy links, static actors).
@@ -288,6 +310,7 @@ class SUPERDEXPHYSICS_API UMochiArticulatedActorObject : public UObject {
    * @return The link contact params.
    */
   TArray<UMochiContactParams*> GetLinkContactParams() const;
+
   /**
    * Set the contact params of a single rigid link actor by index.
    *
@@ -299,6 +322,7 @@ class SUPERDEXPHYSICS_API UMochiArticulatedActorObject : public UObject {
       int LinkIndex,
       const UMochiContactParams* ContactParams,
       bool bBlocking = false) const;
+
   /**
    * Get the density of each rigid link actor. Returns an array of size NumLinks.
    * This is a synchronous query that blocks until the Mochi thread has processed the request.
@@ -306,6 +330,7 @@ class SUPERDEXPHYSICS_API UMochiArticulatedActorObject : public UObject {
    * @return The link densities.
    */
   TArray<float> GetLinkDensities() const;
+
   /**
    * Set the density of a single rigid link actor by index.
    *
@@ -314,6 +339,7 @@ class SUPERDEXPHYSICS_API UMochiArticulatedActorObject : public UObject {
    * @param bBlocking Whether to wait for queued commands after submitting this operation.
    */
   void SetLinkDensity(int LinkIndex, float Density, bool bBlocking = false) const;
+
   /**
    * Force destroy the underlying Mochi actor and cancel the registered query callback.
    * This will also happen in BeginDestroy when GC'd.

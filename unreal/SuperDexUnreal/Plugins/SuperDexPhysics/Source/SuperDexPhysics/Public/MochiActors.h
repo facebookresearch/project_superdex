@@ -174,6 +174,7 @@ class SUPERDEXPHYSICS_API AMochiArticulationPreviewActor : public AActor {
    */
   UFUNCTION(BlueprintCallable, Category = "MochiArticulationPreviewActor")
   void SetArticulation(UMochiArticulationBase* NewArticulation);
+
   /**
    * Get the articulation being previewed.
    *
@@ -181,6 +182,7 @@ class SUPERDEXPHYSICS_API AMochiArticulationPreviewActor : public AActor {
    */
   UFUNCTION(BlueprintPure, Category = "MochiArticulationPreviewActor")
   UMochiArticulationBase* GetArticulation() const;
+
   /**
    * Set the joint positions to pose the articulation preview.
    *
@@ -188,6 +190,7 @@ class SUPERDEXPHYSICS_API AMochiArticulationPreviewActor : public AActor {
    */
   UFUNCTION(BlueprintCallable, Category = "MochiArticulationPreviewActor")
   void SetJointPositions(const TArray<double>& NewJointPositions);
+
   /**
    * Get the poseable mesh component used for previewing the articulation.
    *

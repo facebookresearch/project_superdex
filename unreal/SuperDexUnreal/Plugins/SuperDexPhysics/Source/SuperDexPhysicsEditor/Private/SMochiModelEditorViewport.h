@@ -57,6 +57,7 @@ class SMochiModelEditorViewport : public SAssetEditorViewport,
   virtual void BindCommands() override;
   virtual TSharedRef<SEditorViewport> GetViewportWidget() override;
   virtual TSharedPtr<FExtender> GetExtenders() const override;
+
   /**
    * Called when the Viewport's hamburger menu or "Perspective" menu are clicked
    * Currently a no-op.
@@ -73,6 +74,7 @@ class SMochiModelEditorViewport : public SAssetEditorViewport,
    * @param Overlay Viewport overlay container to populate.
    */
   virtual void PopulateViewportOverlays(TSharedRef<SOverlay> Overlay) override;
+
   /**
    * Makes the viewport toolbar. SEditorViewport adds it through MakeViewportToolbar() before
    * UE 5.7; from 5.7 that is deprecated and final, so PopulateViewportOverlays() adds it.
@@ -117,12 +119,14 @@ class SMochiModelEditorViewport : public SAssetEditorViewport,
    * @return The is using lasso selection state.
    */
   bool IsUsingLassoSelection() const;
+
   /**
    * Get whether box selection is active.
    *
    * @return The is using box selection state.
    */
   bool IsUsingBoxSelection() const;
+
   /**
    * Select lasso or box selection.
    *
@@ -136,30 +140,35 @@ class SMochiModelEditorViewport : public SAssetEditorViewport,
    * @param TextItems Text entries displayed in the viewport overlay.
    */
   void PopulateOverlayText(const TArray<FText>& TextItems);
+
   /**
    * Get the element-selection mode.
    *
    * @return The selection mode.
    */
   EMochiModelEditorSelectionMode GetSelectionMode() const;
+
   /**
    * Set the element-selection mode.
    *
    * @param NewSelectionMode Element selection behavior to use.
    */
   void SetSelectionMode(EMochiModelEditorSelectionMode NewSelectionMode);
+
   /**
    * Get whether selection replaces the current selection.
    *
    * @return The is using one shot selection state.
    */
   bool IsUsingOneShotSelection() const;
+
   /**
    * Get whether selection adds to the current selection.
    *
    * @return The is using additive selection state.
    */
   bool IsUsingAdditiveSelection() const;
+
   /**
    * Get whether selection removes from the current selection.
    *
@@ -173,12 +182,14 @@ class SMochiModelEditorViewport : public SAssetEditorViewport,
    * @param bOrthographic Whether to select an orthographic view.
    */
   void SetUseOrthographicView(bool bOrthographic);
+
   /**
    * Get whether the view is orthographic.
    *
    * @return The is using orthographic view state.
    */
   bool IsUsingOrthographicView();
+
   /**
    * Get whether the view is perspective.
    *

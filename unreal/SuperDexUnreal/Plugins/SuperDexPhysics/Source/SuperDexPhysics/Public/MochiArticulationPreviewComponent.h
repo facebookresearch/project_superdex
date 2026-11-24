@@ -31,6 +31,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationPreviewComponent : public UPoseableM
   /** The articulation to preview. */
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Articulation Poseable Mesh Component")
   TObjectPtr<UMochiArticulationBase> Articulation = nullptr;
+
   /** The joint positions to pose the articulation preview. */
   UPROPERTY(
       EditAnywhere,
@@ -43,6 +44,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationPreviewComponent : public UPoseableM
  public:
   /** Initialize the poseable articulation preview component. */
   UMochiArticulationPreviewComponent();
+
   /**
    * Set the articulation to preview.
    *
@@ -50,6 +52,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationPreviewComponent : public UPoseableM
    */
   UFUNCTION(BlueprintCallable, Category = "Articulation Poseable Mesh Component")
   void SetArticulation(UMochiArticulationBase* NewArticulation);
+
   /**
    * Get the articulation being previewed.
    *
@@ -57,6 +60,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationPreviewComponent : public UPoseableM
    */
   UFUNCTION(BlueprintPure, Category = "Articulation Poseable Mesh Component")
   UMochiArticulationBase* GetArticulation() const;
+
   /**
    * Set the joint positions to pose the articulation preview.
    *
@@ -73,6 +77,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationPreviewComponent : public UPoseableM
    */
   UFUNCTION(BlueprintCallable, Category = "Articulation Poseable Mesh Component")
   void SetBoneLocalTransformByName(FName BoneName, const FTransform& InTransform);
+
   /**
    * Set the local bone rotations in the articulation preview.
    *

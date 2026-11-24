@@ -40,12 +40,14 @@ class SUPERDEXPHYSICS_API IMochiMeshComponentInterface {
    */
   UFUNCTION(BlueprintCallable, Category = "Mochi")
   virtual void CreateMochiActor() = 0;
+
   /**
    * Destroy the underlying MochiActorObject controlling this mesh component. This stops
    * the simulation but keeps the component alive. For advanced use only.
    */
   UFUNCTION(BlueprintCallable, Category = "Mochi")
   virtual void DestroyMochiActor() = 0;
+
   /**
    * Get the underlying MochiActorObject controller this mesh component.
    *
@@ -61,6 +63,7 @@ class SUPERDEXPHYSICS_API IMochiMeshComponentInterface {
    */
   UFUNCTION(BlueprintCallable, Category = "Mochi")
   virtual void SetWorldTransformMochi(const FTransform& NewTransform);
+
   /**
    * Set the world location and rotation of the Mochi mesh component.
    *
@@ -78,6 +81,7 @@ class SUPERDEXPHYSICS_API IMochiMeshComponentInterface {
    */
   UFUNCTION(BlueprintCallable, Category = "Mochi")
   virtual UMochiContactParams* GetContactParams() const = 0;
+
   // Note: does not reflect runtime changes made via SetMaterialParams.
   /**
    * Get the material params configured on this component (editor/initial value).
@@ -94,6 +98,7 @@ class SUPERDEXPHYSICS_API IMochiMeshComponentInterface {
    */
   UFUNCTION(BlueprintCallable, Category = "Mochi")
   virtual void SetContactParams(const UMochiContactParams* ContactParams);
+
   /**
    * Set the material params of the Mochi mesh component.
    *
@@ -109,6 +114,7 @@ class SUPERDEXPHYSICS_API IMochiMeshComponentInterface {
    */
   UFUNCTION(Blueprintable, Category = "Mochi")
   virtual UMochiModel* GetMochiModel() const = 0;
+
   /**
    * Returns true if the mesh has enabled contact queries.
    *
@@ -120,9 +126,11 @@ class SUPERDEXPHYSICS_API IMochiMeshComponentInterface {
   /** Clear boundary conditions */
   UFUNCTION(BlueprintCallable, Category = "Mochi")
   virtual void ClearBoundaryConditions();
+
   /** Resets the local deformation to zero */
   UFUNCTION(BlueprintCallable, Category = "Mochi")
   virtual void SetZeroDeformation() const;
+
   /**
    * Set the linear and angular velocities
    *
@@ -131,9 +139,11 @@ class SUPERDEXPHYSICS_API IMochiMeshComponentInterface {
    */
   UFUNCTION(BlueprintCallable, Category = "Mochi")
   virtual void SetVelocities(FVector LinearVelocity, FVector AngularVelocity) const;
+
   /** Resets the linear and angular velocities to zero */
   UFUNCTION(BlueprintCallable, Category = "Mochi")
   virtual void SetZeroVelocities();
+
   /**
    * Get inertial properties of the actor (mass [kg], COM [cm], MOI [kg*cm^2])
    *
@@ -164,6 +174,7 @@ class SUPERDEXPHYSICS_API IMochiSoftMeshComponentInterface {
    */
   UFUNCTION(BlueprintCallable, Category = "Mochi")
   virtual const TArray<FVector>& GetVolumeNodeReferencePositions() const = 0;
+
   /**
    * Get the mesh volume node current positions in local space.
    *
@@ -171,6 +182,7 @@ class SUPERDEXPHYSICS_API IMochiSoftMeshComponentInterface {
    */
   UFUNCTION(BlueprintCallable, Category = "Mochi")
   virtual const TArray<FVector>& GetVolumeNodePositions() const = 0;
+
   /**
    * Sets the MochiModel's elements using the given MaterialModifiers
    *

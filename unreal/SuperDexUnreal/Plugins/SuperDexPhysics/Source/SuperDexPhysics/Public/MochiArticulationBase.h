@@ -45,6 +45,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationBase : public UObject {
   UFUNCTION(BlueprintPure, Category = "Mochi|Articulation")
   virtual const FString& GetArticulationName() const PURE_VIRTUAL(
       UMochiArticulationBase::GetArticulationName, static FString Empty; return Empty;);
+
   /**
    * Get the number of revolute/prismatic DOFs.
    *
@@ -52,6 +53,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationBase : public UObject {
    */
   UFUNCTION(BlueprintPure, Category = "Mochi|Articulation")
   virtual int GetNumDofs() const PURE_VIRTUAL(UMochiArticulationBase::GetNumDofs, return 0;);
+
   /**
    * Get the default or home pose joint positions [rad or m].
    *
@@ -60,6 +62,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationBase : public UObject {
   UFUNCTION(BlueprintPure, Category = "Mochi|Articulation")
   virtual const TArray<double>& GetDefaultJointPositions() const PURE_VIRTUAL(
       UMochiArticulationBase::GetDefaultJointPositions, static TArray<double> Empty; return Empty;);
+
   /**
    * Compute each link relative to its parent. The root entry retains the asset's root
    * convention: UMochiArticulation includes its root-joint transform; USuperDexBot uses identity.
@@ -150,6 +153,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationBase : public UObject {
   UFUNCTION(BlueprintPure, Category = "Mochi|Articulation")
   virtual USkeletalMesh* GetSkeletalMesh() const
       PURE_VIRTUAL(UMochiArticulationBase::GetSkeletalMesh, return nullptr;);
+
   /**
    * Get the ordered array of link names.
    *
@@ -158,6 +162,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationBase : public UObject {
   UFUNCTION(BlueprintPure, Category = "Mochi|Articulation")
   virtual TArray<FName> GetLinkNames() const
       PURE_VIRTUAL(UMochiArticulationBase::GetLinkNames, return {};);
+
   /**
    * Get the ordered array of joint names
    *
@@ -166,6 +171,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationBase : public UObject {
   UFUNCTION(BlueprintPure, Category = "Mochi|Articulation")
   virtual TArray<FName> GetJointNames() const
       PURE_VIRTUAL(UMochiArticulationBase::GetJointNames, return {};);
+
   /**
    * Compute pose-dependent visual bounds by accumulating link-to-parent transforms.
    * OutBounds uses the asset's articulation root frame, as in
@@ -202,6 +208,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationBase : public UObject {
   virtual bool SupportsUrdfExport() const {
     return false;
   }
+
   /**
    * Generate the URDF XML string, or an empty string if the articulation can't be exported. Visual
    * and collision geometry entries are optionally encoded when VisualRelPath and/or
@@ -278,6 +285,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationBase : public UObject {
       bool bShowJoints,
       bool bShowBounds,
       FMaterialRenderProxy* JointMaterialRenderProxy) const {}
+
   /**
    * Draw asset-specific articulation annotations on the viewport canvas.
    *

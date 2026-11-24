@@ -23,16 +23,22 @@
 struct FMochiArticulationSkeletonLink {
   /** Name of the skeleton link. */
   FName Name = NAME_None;
+
   /** Index of the parent skeleton link. */
   int32 ParentIndex = INDEX_NONE;
+
   /** Rest transform of the link relative to its parent (or the articulation root for the root). */
   FTransform LinkToParent = FTransform::Identity;
+
   /** Rest transform of the link relative to the articulation root. */
   FTransform LinkToRoot = FTransform::Identity;
+
   /** Render geometry associated with the skeleton link. */
   UStaticMesh* RenderModel = nullptr;
+
   /** Transform from render-model coordinates to the link frame. */
   FTransform RenderModelToLink = FTransform::Identity;
+
   /** Material slots of the render model that are not merged with others. */
   TArray<int32> UniqueMaterialSlots;
 };
@@ -46,8 +52,10 @@ struct FMochiArticulationSkinnedPart {
    * Static mesh attributes plus vertex skin weights, whose bone indices index the skeleton links.
    */
   FMeshDescription Mesh;
+
   /** Rest transform of the mesh relative to the articulation root. */
   FTransform MeshToRoot = FTransform::Identity;
+
   /**
    * Material of each polygon group of Mesh, indexed by polygon group ID. A missing or null entry
    * renders with the default material. Not visible to the garbage collector: the caller keeps the
@@ -73,6 +81,7 @@ class SUPERDEXPHYSICSEDITOR_API FMochiArticulationAssetUtils {
       const FString& ArticulationName,
       const FString& AssetName,
       const FString& Postfix);
+
   /**
    * Get the skeleton links of an articulation in its rest pose.
    *
@@ -81,6 +90,7 @@ class SUPERDEXPHYSICSEDITOR_API FMochiArticulationAssetUtils {
    */
   static TArray<FMochiArticulationSkeletonLink> GetSkeletonLinks(
       const UMochiArticulation* Articulation);
+
   /**
    * Generate a joint-control gains table for the supplied joints.
    *
@@ -95,6 +105,7 @@ class SUPERDEXPHYSICSEDITOR_API FMochiArticulationAssetUtils {
       const FString& PackagePath,
       const FString& TableAssetName,
       EObjectFlags Flags);
+
   /**
    * Generate a joint-control gains table for the articulation asset.
    *
@@ -102,6 +113,7 @@ class SUPERDEXPHYSICSEDITOR_API FMochiArticulationAssetUtils {
    * @return The result of asset generation.
    */
   static UDataTable* GenerateJointControlGainsTable(UMochiArticulation* Articulation);
+
   /**
    * Generate a skeleton for the supplied articulation links.
    *
@@ -116,6 +128,7 @@ class SUPERDEXPHYSICSEDITOR_API FMochiArticulationAssetUtils {
       const FString& PackagePath,
       const FString& SkeletonName,
       EObjectFlags Flags);
+
   /**
    * Generate a skeletal mesh binding each link's render model rigidly to its bone, plus any
    * SkinnedParts with their own weights.
@@ -135,6 +148,7 @@ class SUPERDEXPHYSICSEDITOR_API FMochiArticulationAssetUtils {
       const FString& SkeletalMeshAssetName,
       EObjectFlags Flags,
       const TArray<FMochiArticulationSkinnedPart>& SkinnedParts = {});
+
   /**
    * Generate the skeleton and skeletal mesh of an articulation in the folder of its current
    * skeletal mesh, or next to the articulation if it has none or it is in a legacy "Generated"
@@ -143,6 +157,7 @@ class SUPERDEXPHYSICSEDITOR_API FMochiArticulationAssetUtils {
    * @param Articulation Articulation asset supplied to the operation.
    */
   static void GenerateSkeletalMesh(UMochiArticulation* Articulation);
+
   /**
    * Generate the skeleton and skeletal mesh of an articulation in PackagePath. Returns false on
    * failure.

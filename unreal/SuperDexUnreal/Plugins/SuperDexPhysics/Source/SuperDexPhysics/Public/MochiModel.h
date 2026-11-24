@@ -49,9 +49,11 @@ class SUPERDEXPHYSICS_API UMochiModel : public UObject {
   /** Number of nodes (vertices) in the volume mesh */
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Volume Mesh", AssetRegistrySearchable)
   int NumNodes = 0;
+
   /** Number of unique edges (line segments) on the polyhedrons */
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Volume Mesh", AssetRegistrySearchable)
   int NumEdges = 0;
+
   /** Number of polyhedrons within the volume (e.g. tetrahedrons) */
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Volume Mesh", AssetRegistrySearchable)
   int NumPolyhedrons = 0;
@@ -59,9 +61,11 @@ class SUPERDEXPHYSICS_API UMochiModel : public UObject {
   /** Number of unique nodes (vertices) in the surface mesh */
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Surface Mesh", AssetRegistrySearchable)
   int NumSurfaceNodes = 0;
+
   /** Number of unique edges (line segments) in the surface mesh */
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Surface Mesh", AssetRegistrySearchable)
   int NumSurfaceEdges = 0;
+
   /** Number of unique faces (e.g. triangles) on the surface mesh */
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Surface Mesh", AssetRegistrySearchable)
   int NumSurfaceFaces = 0;
@@ -90,6 +94,7 @@ class SUPERDEXPHYSICS_API UMochiModel : public UObject {
  public:
   virtual void Serialize(FArchive& Ar) override;
   virtual void PostLoad() override;
+
   /**
    * Get whether model data contains a supported geometry member.
    *
@@ -114,6 +119,7 @@ class SUPERDEXPHYSICS_API UMochiModel : public UObject {
   virtual mochi::ShapeHandle GetMochiShape(
       const FVector& BakeScale,
       const FTransform& BakeTransformRT) const;
+
   /**
    * [Internal] Same as above, with BakeTransformRT as a mochi::VMatrix4x4r.
    *
@@ -124,6 +130,7 @@ class SUPERDEXPHYSICS_API UMochiModel : public UObject {
   virtual mochi::ShapeHandle GetMochiShape(
       const FVector& BakeScale,
       const mochi::VMatrix4x4r& BakeTransformRT) const;
+
   /**
    * [Internal] Load the Mochi shape WITHOUT implicit ImportTransform or space conversion.
    *
@@ -160,6 +167,7 @@ class SUPERDEXPHYSICS_API UMochiModel : public UObject {
 #if WITH_EDITOR
   virtual void PostInitProperties() override;
   virtual void GetAssetRegistryTags(FAssetRegistryTagsContext Context) const override;
+
   /**
    * Absolute path of the file this model was last imported from, or empty.
    *
@@ -170,9 +178,11 @@ class SUPERDEXPHYSICS_API UMochiModel : public UObject {
   /** Prompts for a Mochi model file and replaces this asset's contents with it. */
   UFUNCTION(Category = "Import", CallInEditor)
   void Import();
+
   /** Repeats the last import from the recorded source file. */
   UFUNCTION(Category = "Import", CallInEditor)
   void Reimport();
+
   /**
    * Replaces this asset's contents with the Mochi model file at InFilename. On success, records
    * it as the model's source file.
@@ -181,6 +191,7 @@ class SUPERDEXPHYSICS_API UMochiModel : public UObject {
    * @return The result of importing the source asset.
    */
   bool ImportFromFilename(const FString& InFilename);
+
   /**
    * Writes this asset out as a Mochi model file.
    *
@@ -188,6 +199,7 @@ class SUPERDEXPHYSICS_API UMochiModel : public UObject {
    * @return The result of exporting the asset.
    */
   bool ExportToFilename(const FString& InFilename) const;
+
   /**
    * Replaces the mesh with the surface extracted from it.
    * Returns true on success. Fails if the mesh is not tetrahedral.
@@ -195,6 +207,7 @@ class SUPERDEXPHYSICS_API UMochiModel : public UObject {
    * @return Whether the model geometry was converted to a surface mesh.
    */
   bool ConvertTetMeshToSurfaceMesh();
+
   /**
    * Bakes an SDF into the model data using the provided parameters.
    * If no parameters are provided, uses default GridSdfParams.
@@ -203,6 +216,7 @@ class SUPERDEXPHYSICS_API UMochiModel : public UObject {
    * @return Whether signed-distance-field baking completed.
    */
   bool BakeSdf(const FMochiGridSdfParams* SdfParams = nullptr);
+
   /**
    * Set the transform applied when producing imported model and shape data.
    *

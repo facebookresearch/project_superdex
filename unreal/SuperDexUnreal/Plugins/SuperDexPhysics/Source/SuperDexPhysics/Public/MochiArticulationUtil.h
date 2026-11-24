@@ -43,6 +43,7 @@ struct SUPERDEXPHYSICS_API FMochiArticulationState {
  */
 SUPERDEXPHYSICS_API FMochiArticulationState
 ExtractArticulatedActorState(const mochi::Actor* ArticulatedActor);
+
 /**
  * Command joint efforts on a native articulation.
  *
@@ -75,6 +76,7 @@ SUPERDEXPHYSICS_API TArray<mochi::real> BuildPoseControllerTargets(
     const mochi::Actor* ArticulatedActor,
     const FTransform& BaseTransformTarget,
     const TArray<mochi::real>& JointPositionTargets);
+
 /**
  * Convert joint DOF values (excluding base DOFs) of an articulated actor from the simulation space
  * convention to Unreal's, or back. Only Spherical and non-root Free joints are affected; see
@@ -86,6 +88,7 @@ SUPERDEXPHYSICS_API TArray<mochi::real> BuildPoseControllerTargets(
 SUPERDEXPHYSICS_API void ConvertArticulatedActorDofsToUnreal(
     const mochi::Actor* ArticulatedActor,
     TArray<mochi::real>& JointDofs);
+
 /**
  * Convert an articulation's motion values to native conventions in place.
  *

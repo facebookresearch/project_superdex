@@ -33,10 +33,12 @@ class SUPERDEXPHYSICS_API UMochiSoftMeshComponent : public UMochiDeformableMeshC
   /** Parameters controlling physical material properties. */
   UPROPERTY(EditAnywhere, Category = "Mochi")
   UMochiMaterialParams* MaterialParams = nullptr;
+
   /** Collider representation used by the soft actor. */
   UPROPERTY(EditAnywhere, Category = "Mochi", meta = (ValidEnumValues = "None, Auto, Sdf"))
   EMochiColliderType ColliderType =
       ::ToUnreal(mochi::experimental::ExperimentalSoftActorParams{}.colliderType);
+
   /** The boundary element type used for the soft actor's surface discretization. */
   UPROPERTY(
       EditAnywhere,
@@ -44,21 +46,26 @@ class SUPERDEXPHYSICS_API UMochiSoftMeshComponent : public UMochiDeformableMeshC
       meta = (ValidEnumValues = "P1Q1, P1Q3, P1Q6, Default"))
   EMochiActorBoundaryElementType BoundaryElementType =
       ::ToUnreal(mochi::SoftActorParams{}.boundaryElementType);
+
   /**
    * Use the model's embedded contact skin for contact. Rendering does not depend on this setting:
    * without a visual mesh, the model's contact skin is rendered whenever it has skinning data.
    */
   UPROPERTY(EditAnywhere, Category = "Mochi", meta = (EditCondition = "!bEnableRom"))
   bool bUseContactSkin = mochi::SoftActorParams{}.useContactSkin;
+
   /** Modifiers for individual elements that get applied during initialization */
   UPROPERTY(EditAnywhere, Category = "Mochi")
   UMochiModelMaterialModifiers* MaterialModifiers = nullptr;
+
   /** Recomputes local soft actor frame for more optimal performance. */
   UPROPERTY(EditAnywhere, Category = "Mochi")
   bool bUseRecentering = mochi::experimental::ExperimentalSoftActorParams{}.useRecentering;
+
   /** Enable volume node positions query. */
   UPROPERTY(EditAnywhere, Category = "Mochi")
   bool bEnableVolumeNodePositionsQuery = false;
+
   /** Enable elastic energy query. */
   UPROPERTY(EditAnywhere, Category = "Mochi")
   bool bEnableElasticEnergyQuery = false;
@@ -82,6 +89,7 @@ class SUPERDEXPHYSICS_API UMochiSoftMeshComponent : public UMochiDeformableMeshC
    */
   UPROPERTY(EditAnywhere, Category = "MochiSoftMeshComponent|Experimental")
   bool bEnableRom = false;
+
   /** Reduced-order-model source and sampling settings. */
   UPROPERTY(
       EditAnywhere,
@@ -106,6 +114,7 @@ class SUPERDEXPHYSICS_API UMochiSoftMeshComponent : public UMochiDeformableMeshC
   virtual UMochiMaterialParams* GetMaterialParams() const override {
     return MaterialParams;
   }
+
   /**
    * IMochiSoftMeshComponentInterface
    *

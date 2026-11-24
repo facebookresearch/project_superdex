@@ -55,6 +55,7 @@ class FMochiModelEditorViewportClient : public FEditorViewportClient {
    * @param NewMode Requested editor viewport widget mode.
    */
   virtual void SetWidgetMode(UE::Widget::EWidgetMode NewMode) override;
+
   /**
    * returning anything other than WM_None will display the camera controls
    *
@@ -62,6 +63,7 @@ class FMochiModelEditorViewportClient : public FEditorViewportClient {
    */
   virtual UE::Widget::EWidgetMode GetWidgetMode() const override;
   virtual bool CanSetWidgetMode(UE::Widget::EWidgetMode NewMode) const override;
+
   /**
    * Draw gives us the PDI interface for easy rendering for tools
    * 2D drawing can be done at the Canvas level, see: MochiModelEditorDragTool.cpp
@@ -94,48 +96,58 @@ class FMochiModelEditorViewportClient : public FEditorViewportClient {
    * @param bShowOn Requested visualization enable state.
    */
   void SetShowVolumeVertices(bool bShowOn);
+
   /** Toggle display of volume-mesh vertices. */
   void ToggleShowVolumeVertices();
+
   /**
    * Get whether volume-mesh vertices are shown.
    *
    * @return The is show volume vertices checked state.
    */
   bool IsShowVolumeVerticesChecked() const;
+
   /**
    * Set display of element barycenters.
    *
    * @param bShowOn Requested visualization enable state.
    */
   void SetShowElementBarycenters(bool bShowOn);
+
   /** Toggle display of element barycenters. */
   void ToggleShowElementBarycenters();
+
   /**
    * Get whether element barycenters are shown.
    *
    * @return The is show element barycenters checked state.
    */
   bool IsShowElementBarycentersChecked() const;
+
   /**
    * Set display of selected-element barycenters.
    *
    * @param bShowOn Requested visualization enable state.
    */
   void SetShowSelectedElementBarycenters(bool bShowOn);
+
   /** Toggle display of selected-element barycenters. */
   void ToggleShowSelectedElementBarycenters();
+
   /**
    * Get whether selected-element barycenters are shown.
    *
    * @return The is show selected element barycenters checked state.
    */
   bool IsShowSelectedElementBarycentersChecked() const;
+
   /**
    * Select the element visualization mode.
    *
    * @param NewMode Element visualization mode to select.
    */
   void SetElementViewMode(EMochiModelEditorElementViewMode NewMode);
+
   /**
    * Get the element visualization mode.
    *
@@ -151,6 +163,7 @@ class FMochiModelEditorViewportClient : public FEditorViewportClient {
   bool IsUsingLassoSelection() {
     return bUseLassoSelection;
   }
+
   /**
    * Select lasso or box selection.
    *
@@ -166,8 +179,10 @@ class FMochiModelEditorViewportClient : public FEditorViewportClient {
    * @return The viewport's mutable model-element selection.
    */
   TSet<int>& GetSelectedElements();
+
   /** Add material modifiers for the current element selection. */
   void AddSelectionToMaterialModifiers();
+
   /** Remove material modifiers for the current element selection. */
   void RemoveSelectionFromMaterialModifiers();
 

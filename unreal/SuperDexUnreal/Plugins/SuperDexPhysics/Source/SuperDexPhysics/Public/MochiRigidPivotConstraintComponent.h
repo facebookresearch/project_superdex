@@ -51,9 +51,11 @@ class SUPERDEXPHYSICS_API UMochiRigidPivotConstraintComponent
   /** Constraint mode to create at the pivot. */
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mochi Constraint")
   EMochiRigidPivotConstraintType Type = EMochiRigidPivotConstraintType::Position;
+
   /** The body, by name: "lid", "arm/elbow" for a link, or "inner/lid" inside a child actor. */
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mochi Constraint")
   FString Body;
+
   /** The pivot point [cm], in the body's local frame. */
   UPROPERTY(
       EditAnywhere,
@@ -62,6 +64,7 @@ class SUPERDEXPHYSICS_API UMochiRigidPivotConstraintComponent
       meta =
           (EditCondition = "Type != EMochiRigidPivotConstraintType::Rotation", EditConditionHides))
   FVector LocalPosition = FVector::ZeroVector;
+
   /** The pivot frame, in the body's local frame. */
   UPROPERTY(
       EditAnywhere,

@@ -55,12 +55,15 @@ class SUPERDEXPHYSICS_API UMochiArticulationJointConstraintComponent
   /** Constraint mode to create for the selected joint. */
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mochi Constraint")
   EMochiArticulationJointConstraintType Type = EMochiArticulationJointConstraintType::Target;
+
   /** The articulation component, by name: "arm", or "inner/arm" inside a child actor. */
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mochi Constraint")
   FString Articulation;
+
   /** The joint, by name. */
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mochi Constraint")
   FName Joint = NAME_None;
+
   /**
    * The DOF of the joint: 0 for revolute and prismatic joints, or the translation axis of a free
    * joint (Mochi has no single-DOF constraints on the rotations of spherical and free joints).
@@ -76,6 +79,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationJointConstraintComponent
                "Type == EMochiArticulationJointConstraintType::Target || Type == EMochiArticulationJointConstraintType::Range",
            EditConditionHides))
   int32 Dof = mochi::ArticulatedSingleDofTargetConstraintParams{}.dofIndex;
+
   /** Target value of the DOF [m or rad]. */
   UPROPERTY(
       EditAnywhere,
@@ -85,6 +89,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationJointConstraintComponent
           (EditCondition = "Type == EMochiArticulationJointConstraintType::Target",
            EditConditionHides))
   double TargetValue = mochi::ArticulatedSingleDofTargetConstraintParams{}.targetValue;
+
   /** Range of the DOF [m or rad]. */
   UPROPERTY(
       EditAnywhere,
@@ -94,6 +99,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationJointConstraintComponent
           (EditCondition = "Type == EMochiArticulationJointConstraintType::Range",
            EditConditionHides))
   double MinValue = mochi::ArticulatedSingleDofRangeConstraintParams{}.minValue;
+
   /** Upper bound of the joint DOF range. */
   UPROPERTY(
       EditAnywhere,
@@ -103,6 +109,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationJointConstraintComponent
           (EditCondition = "Type == EMochiArticulationJointConstraintType::Range",
            EditConditionHides))
   double MaxValue = mochi::ArticulatedSingleDofRangeConstraintParams{}.maxValue;
+
   /** Target rotation of the joint relative to its rest orientation, in the joint frame. */
   UPROPERTY(
       EditAnywhere,
@@ -112,6 +119,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationJointConstraintComponent
           (EditCondition = "Type == EMochiArticulationJointConstraintType::RotationTarget",
            EditConditionHides))
   FRotator TargetRotation = FRotator::ZeroRotator;
+
   /** Range of each component of the joint's rotation vector [rad], in the joint frame. */
   UPROPERTY(
       EditAnywhere,
@@ -121,6 +129,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationJointConstraintComponent
           (EditCondition = "Type == EMochiArticulationJointConstraintType::RotationRange",
            EditConditionHides))
   FVector MinRotation = FVector::ZeroVector;
+
   /** Upper bounds of the joint rotation-vector components. */
   UPROPERTY(
       EditAnywhere,
@@ -138,6 +147,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationJointConstraintComponent
    */
   UFUNCTION(BlueprintCallable, Category = "Mochi Constraint")
   void SetTargetValue(double NewTargetValue);
+
   /**
    * Set the target rotation of a Joint Rotation Target.
    *

@@ -156,12 +156,14 @@ class SUPERDEXPHYSICS_API UMochiMaterialParams : public UObject {
  public:
   /** Initialize soft-material values from native defaults. */
   UMochiMaterialParams();
+
   /**
    * Convert to native Mochi type.
    *
    * @return Native parameter values converted from this object.
    */
   mochi::SoftMaterialParams ToMochi() const;
+
   /**
    * Convert from native Mochi type.
    *
@@ -264,12 +266,14 @@ class SUPERDEXPHYSICS_API UMochiShellMaterialParams : public UObject {
  public:
   /** Initialize shell-material values from native defaults. */
   UMochiShellMaterialParams();
+
   /**
    * Convert to native Mochi type.
    *
    * @return Native parameter values converted from this object.
    */
   mochi::experimental::ShellMaterialParams ToMochi() const;
+
   /**
    * Convert from native Mochi type.
    *
@@ -348,12 +352,14 @@ class SUPERDEXPHYSICS_API UMochiRodMaterialParams : public UObject {
  public:
   /** Initialize rod-material values from native defaults. */
   UMochiRodMaterialParams();
+
   /**
    * Convert to native Mochi type.
    *
    * @return Native parameter values converted from this object.
    */
   mochi::RodMaterialParams ToMochi() const;
+
   /**
    * Convert from native Mochi type.
    *
@@ -500,12 +506,14 @@ class SUPERDEXPHYSICS_API UMochiContactParams : public UObject {
  public:
   /** Initialize contact-parameter values from native defaults. */
   UMochiContactParams();
+
   /**
    * Convert to native Mochi type.
    *
    * @return Native parameter values converted from this object.
    */
   mochi::ContactParams ToMochi() const;
+
   /**
    * Convert from native Mochi type.
    *
@@ -526,12 +534,15 @@ class SUPERDEXPHYSICS_API UMochiSolverParams : public UObject {
   /** Settings for the nonlinear solver. */
   UPROPERTY(EditAnywhere, Category = "Mochi")
   FMochiNonLinearSolverParams NonLinearSolverParams;
+
   /** Settings for the linear solver. */
   UPROPERTY(EditAnywhere, Category = "Mochi")
   FMochiLinearSolverParams LinearSolverParams;
+
   /** Integration method used to advance the scene. */
   UPROPERTY(EditAnywhere, Category = "Mochi")
   EMochiIntegrationMethod IntegrationMethod;
+
   /** Experimental settings for native evaluation. */
   UPROPERTY(EditAnywhere, Category = "Mochi")
   FMochiExperimentalEvalParams ExperimentalEvalParams;
@@ -539,12 +550,14 @@ class SUPERDEXPHYSICS_API UMochiSolverParams : public UObject {
  public:
   /** Initialize solver-parameter values from native defaults. */
   UMochiSolverParams();
+
   /**
    * Convert to native Mochi type.
    *
    * @return Native parameter values converted from this object.
    */
   mochi::SolverParams ToMochi() const;
+
   /**
    * Convert from native Mochi type.
    *

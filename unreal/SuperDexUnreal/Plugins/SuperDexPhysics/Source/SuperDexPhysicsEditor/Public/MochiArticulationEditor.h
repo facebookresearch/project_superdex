@@ -65,6 +65,7 @@ class SUPERDEXPHYSICSEDITOR_API FMochiArticulationEditorToolkit : public FAssetE
   virtual FLinearColor GetWorldCentricTabColorScale() const override;
   virtual void RegisterTabSpawners(const TSharedRef<class FTabManager>& InTabManager) override;
   virtual void UnregisterTabSpawners(const TSharedRef<class FTabManager>& InTabManager) override;
+
   /**
    * Get the articulation editor's tab layout.
    *
@@ -89,6 +90,7 @@ class SUPERDEXPHYSICSEDITOR_API FMochiArticulationEditorToolkit : public FAssetE
    * @return The articulation.
    */
   TObjectPtr<UMochiArticulationBase> GetArticulation();
+
   /**
    * Create the articulation-details tab.
    *
@@ -96,6 +98,7 @@ class SUPERDEXPHYSICSEDITOR_API FMochiArticulationEditorToolkit : public FAssetE
    * @return The tab containing articulation details.
    */
   TSharedRef<SDockTab> SpawnTab_Details(const FSpawnTabArgs& Args);
+
   /**
    * Create the articulation-preview tab.
    *
@@ -103,50 +106,63 @@ class SUPERDEXPHYSICSEDITOR_API FMochiArticulationEditorToolkit : public FAssetE
    * @return The tab containing the articulation preview.
    */
   TSharedRef<SDockTab> SpawnTab_Viewport(const FSpawnTabArgs& Args);
+
   /** Bind articulation-editor actions to commands. */
   void BindCommands();
+
   /**
    * Create the articulation editor's preview scene.
    *
    * @return The object returned by creation.
    */
   TSharedPtr<FMochiArticulationEditorPreviewScene> CreatePreviewScene();
+
   /** Add articulation-editor toolbar extensions. */
   void ExtendToolbars();
+
   /** Focus the articulation preview viewport. */
   void FocusViewport();
+
   /** Toggle the preview screen-percentage setting. */
   void ToggleScreenPercentage() const;
+
   /** Export the articulation as URDF. */
   void Export() const;
+
   /**
    * Get whether the articulation can be exported as URDF.
    *
    * @return Whether the articulation supports URDF export.
    */
   bool CanExport() const;
+
   /** Generate the articulation's skeletal mesh. */
   void GenerateSkeletalMesh() const;
+
   /**
    * Get whether skeletal-mesh generation is available.
    *
    * @return Whether the editor holds an asset of type UMochiArticulation.
    */
   bool CanGenerateSkeletalMesh() const;
+
   /** Generate a source header describing the articulation skeleton. */
   void GenerateSkeletonHeader() const;
+
   /**
    * Get whether skeleton-header generation is available.
    *
    * @return Whether skeleton-header generation is available for the articulation.
    */
   bool CanGenerateSkeletonHeader() const;
+
   /**
    * Handle modifications to objects used by the editor.
    *
    * @param InObject Object whose modification is being handled.
    */
   void OnObjectModified(UObject* InObject);
+
   /**
    * Open the articulation asset in the requested editor mode and host.
    *
@@ -176,10 +192,13 @@ class SUPERDEXPHYSICSEDITOR_API FMochiArticulationEditorToolkit : public FAssetE
  public:
   /** Identifier used to register the articulation viewport tab. */
   static const FName ViewportTabID;
+
   /** Identifier used to register the articulation details tab. */
   static const FName DetailsTabID;
+
   /** High preview-render resolution percentage. */
   static constexpr int HighPreviewScreenPercentage = 200;
+
   /** Nominal preview-render resolution percentage. */
   static constexpr int NominalPreviewScreenPercentage = 100;
 
@@ -222,8 +241,10 @@ class FMochiArticulationEditorCommands : public TCommands<FMochiArticulationEdit
   TSharedPtr<FUICommandInfo> GenerateSkeletonHeader;
   // Articulation "Show" menu
   TSharedPtr<FUICommandInfo> SetShowLinkTransforms;
+
   /** Command controlling joint annotations in the viewport. */
   TSharedPtr<FUICommandInfo> SetShowJoints;
+
   /** Command controlling visual-bounds annotations in the viewport. */
   TSharedPtr<FUICommandInfo> SetShowBounds;
 
@@ -302,6 +323,7 @@ class FMochiArticulationEditorViewportClient : public FEditorViewportClient {
       UMochiArticulation* Articulation,
       const FSceneView* View,
       FPrimitiveDrawInterface* PDI);
+
   /**
    * Draw articulation annotations on the viewport canvas.
    *
@@ -341,6 +363,7 @@ class FMochiArticulationEditorViewportClient : public FEditorViewportClient {
  public:
   /** Viewport widget associated with this client. */
   TWeakPtr<SMochiArticulationEditorViewport> ViewportPtr;
+
   /** Manipulation mode stored by this viewport client. */
   UE::Widget::EWidgetMode WidgetMode;
 
@@ -418,6 +441,7 @@ class SMochiArticulationEditorViewport : public SAssetEditorViewport,
   virtual TSharedPtr<SWidget> MakeViewportToolbar() override;
 #endif
   virtual void PopulateViewportOverlays(TSharedRef<SOverlay> Overlay) override;
+
   /**
    * Makes the viewport toolbar. SEditorViewport adds it through MakeViewportToolbar() before
    * UE 5.7; from 5.7 that is deprecated and final, so PopulateViewportOverlays() adds it.
@@ -441,12 +465,14 @@ class SMochiArticulationEditorViewport : public SAssetEditorViewport,
    * @param TextItems Text entries displayed in the viewport overlay.
    */
   void PopulateOverlayText(const TArray<FText>& TextItems) const;
+
   /**
    * Get the client controlling this preview viewport.
    *
    * @return The viewport client.
    */
   TSharedPtr<class FMochiArticulationEditorViewportClient> GetViewportClient();
+
   /**
    * Get the mesh component displayed in the preview.
    *
@@ -484,6 +510,7 @@ class FMochiArticulationEditorPreviewScene : public FAdvancedPreviewScene {
       const TSharedRef<FMochiArticulationEditorToolkit>& EditorToolkit);
   virtual ~FMochiArticulationEditorPreviewScene() override;
   virtual void Tick(float DeltaTime) override;
+
   /**
    * Get the toolkit owning this preview scene.
    *

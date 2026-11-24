@@ -49,12 +49,14 @@ class FMochiModelEditorDragTool : public FDragTool {
   virtual void AddDelta(const FVector& InDelta) override;
   virtual void EndDrag() override;
   virtual void Render(const FSceneView* View, FCanvas* Canvas) override;
+
   /**
    * Select lasso or box dragging.
    *
    * @param bUseLasso Whether selection uses a lasso rather than a box.
    */
   void SetSelectLasso(bool bUseLasso);
+
   /**
    * Get whether lasso dragging is selected.
    *

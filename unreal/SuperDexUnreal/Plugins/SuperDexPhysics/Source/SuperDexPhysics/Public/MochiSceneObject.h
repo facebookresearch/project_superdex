@@ -28,16 +28,22 @@
 struct FMochiSceneStats {
   /** Performance statistics collected from the native scene. */
   mochi::PerformanceStats Performance;
+
   /** Most recently reported native simulation time step. */
   double LastTimeStepSec = 0;
+
   /** Actor count reported by the native scene. */
   int NumActors;
+
   /** Contact-layer count reported by the native scene. */
   int NumLayers;
+
   /** Constraint count reported by the native scene. */
   int NumConstraints;
+
   /** Native steps accumulated since scene startup. */
   int NumMochiStepsSinceStart = 0;
+
   /** Simulated time accumulated since scene startup. */
   double TotalSimulatedTimeSinceStartSec = 0;
 };
@@ -154,12 +160,14 @@ class SUPERDEXPHYSICS_API UMochiSceneObject : public UObject {
    * @param GravityVector Gravity vector to apply to the scene.
    */
   void SetGravity(const FVector& GravityVector) const;
+
   /**
    * Set or change an entry in the scene's contact matrix.
    *
    * @param Entry Layer-to-layer contact rule.
    */
   void SetContactMatrixEntry(const FMochiContactMatrixEntry& Entry) const;
+
   /**
    * (Re)configure settings after the AsyncScene has been created. While the contents are externally
    * owned, only step params and debug draw are applied; gravity, solver params and contact layers
@@ -178,6 +186,7 @@ class SUPERDEXPHYSICS_API UMochiSceneObject : public UObject {
   bool IsContentsExternallyOwned() const {
     return bContentsExternallyOwned;
   }
+
   /**
    * Set whether native scene contents are managed by an external owner.
    *
@@ -186,18 +195,21 @@ class SUPERDEXPHYSICS_API UMochiSceneObject : public UObject {
   void SetContentsExternallyOwned(bool bExternallyOwned) {
     bContentsExternallyOwned = bExternallyOwned;
   }
+
   /**
    * Get the last configured settings.
    *
    * @return The settings.
    */
   FMochiSceneSettings GetSettings() const;
+
   /**
    * Configure debug drawing for the current Mochi async scene.
    *
    * @param bEnableDebugDraw Requested debug-draw enable state.
    */
   void ConfigureDebugDraw(bool bEnableDebugDraw);
+
   /**
    * Configure debug drawing and its entity flags.
    *
@@ -205,18 +217,21 @@ class SUPERDEXPHYSICS_API UMochiSceneObject : public UObject {
    * @param DebugDrawFlags Native debug-draw entities to select.
    */
   void ConfigureDebugDraw(bool bEnableDebugDraw, const FMochiDebugDrawFlags& DebugDrawFlags);
+
   /**
    * Returns true if debug draw is enabled
    *
    * @return The is debug draw enabled state.
    */
   bool IsDebugDrawEnabled() const;
+
   /**
    * Get the last configured debug draw flags.
    *
    * @return The debug draw flags.
    */
   FMochiDebugDrawFlags GetDebugDrawFlags() const;
+
   /**
    * Debug draw the current Mochi scene. Optionally pass a world other than the one this UMochiScene
    * belongs to.
@@ -224,6 +239,7 @@ class SUPERDEXPHYSICS_API UMochiSceneObject : public UObject {
    * @param World World in which debug geometry is drawn.
    */
   void DebugDrawScene(UWorld* World = nullptr);
+
   /**
    * Pause or unpause the simulation. When paused, the simulation will not be stepped, but queued
    * commands will still be executed. This will report an error if the scene is not an AsyncScene.
@@ -231,6 +247,7 @@ class SUPERDEXPHYSICS_API UMochiSceneObject : public UObject {
    * @param bPaused Requested pause state.
    */
   void SetPaused(bool bPaused) const;
+
   /**
    * Returns true if the scene is paused or invalid. This will report an error if the scene is not
    * an AsyncScene.
@@ -238,6 +255,7 @@ class SUPERDEXPHYSICS_API UMochiSceneObject : public UObject {
    * @return Pause state of the native scene.
    */
   bool IsPaused() const;
+
   /**
    * Step the simulation by exactly one step. Then if an AsyncScene pause (or re-pause). This steps
    * by the scene's FMochiSceneSettings.StepParams.FixedTimeStepSeconds regardless of dynamic time
@@ -245,12 +263,14 @@ class SUPERDEXPHYSICS_API UMochiSceneObject : public UObject {
    * directly.
    */
   void StepPause() const;
+
   /**
    * Start recording data in tthe scene
    *
    * @param FilePath Directory in which to store the recording or exported scene.
    */
   void StartRecording(const FString& FilePath) const;
+
   /** Stop recording */
   void StopRecording() const;
 

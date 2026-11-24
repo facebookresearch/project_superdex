@@ -99,6 +99,7 @@ struct FMochiSceneSettings {
    * @return The solver asset resolved from the configured path.
    */
   UMochiSolverParams* GetSolverParams() const;
+
   /**
    * Resolve the configured contact-matrix asset.
    *

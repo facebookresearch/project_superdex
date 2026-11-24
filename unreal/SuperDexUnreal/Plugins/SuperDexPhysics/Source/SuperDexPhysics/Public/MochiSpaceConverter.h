@@ -203,12 +203,16 @@ struct TMochiSpaceConverter {
  public:
   /** Coordinate-space definition supplying the input convention. */
   FMochiSpaceDefinition InputSpace;
+
   /** Coordinate-space definition supplying the output convention. */
   FMochiSpaceDefinition OutputSpace;
+
   /** Axis transformation from the input basis to the output basis. */
   TMatrix3 InputToOutputMatrix;
+
   /** Length-scale factor from input units to output units. */
   T InputToOutputScale = 0.0f;
+
   /** Whether the input and output conventions have different handedness. */
   bool bFlipsHandedness = false;
 };

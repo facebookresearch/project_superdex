@@ -55,20 +55,24 @@ class SUPERDEXPHYSICS_API UMochiRigidJointConstraintComponent
   /** Constraint mode to create between the selected bodies. */
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mochi Constraint")
   EMochiRigidJointConstraintType Type = EMochiRigidJointConstraintType::SphericalJoint;
+
   /**
    * The first body, by name: "lid", "arm/elbow" for a link, or "inner/lid" inside a child actor.
    */
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mochi Constraint")
   FString BodyA;
+
   /** The second body. */
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mochi Constraint")
   FString BodyB;
+
   /**
    * Whether the two bodies can touch once constrained. If true, make sure they don't overlap in
    * their constrained configuration. Contact stays disabled after the constraint is destroyed.
    */
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mochi Constraint")
   bool bAllowContact = false;
+
   /** The joint point on body A [cm], in its local frame. */
   UPROPERTY(
       EditAnywhere,
@@ -78,6 +82,7 @@ class SUPERDEXPHYSICS_API UMochiRigidJointConstraintComponent
           (EditCondition = "Type == EMochiRigidJointConstraintType::SphericalJoint",
            EditConditionHides))
   FVector LocalPositionA = FVector::ZeroVector;
+
   /** The joint point on body B [cm], in its local frame. */
   UPROPERTY(
       EditAnywhere,
@@ -87,6 +92,7 @@ class SUPERDEXPHYSICS_API UMochiRigidJointConstraintComponent
           (EditCondition = "Type == EMochiRigidJointConstraintType::SphericalJoint",
            EditConditionHides))
   FVector LocalPositionB = FVector::ZeroVector;
+
   /** Whether the slide has a lower limit. */
   UPROPERTY(
       EditAnywhere,
@@ -96,6 +102,7 @@ class SUPERDEXPHYSICS_API UMochiRigidJointConstraintComponent
           (EditCondition = "Type == EMochiRigidJointConstraintType::PrismaticJoint",
            EditConditionHides))
   bool bHasMinLimit = false;
+
   /** Lower limit of the slide from the rest position [cm]. */
   UPROPERTY(
       EditAnywhere,
@@ -105,6 +112,7 @@ class SUPERDEXPHYSICS_API UMochiRigidJointConstraintComponent
           (EditCondition = "Type == EMochiRigidJointConstraintType::PrismaticJoint && bHasMinLimit",
            EditConditionHides))
   double MinLimit = 0.0;
+
   /** Whether the slide has an upper limit. */
   UPROPERTY(
       EditAnywhere,
@@ -114,6 +122,7 @@ class SUPERDEXPHYSICS_API UMochiRigidJointConstraintComponent
           (EditCondition = "Type == EMochiRigidJointConstraintType::PrismaticJoint",
            EditConditionHides))
   bool bHasMaxLimit = false;
+
   /** Upper limit of the slide from the rest position [cm]. */
   UPROPERTY(
       EditAnywhere,
@@ -123,6 +132,7 @@ class SUPERDEXPHYSICS_API UMochiRigidJointConstraintComponent
           (EditCondition = "Type == EMochiRigidJointConstraintType::PrismaticJoint && bHasMaxLimit",
            EditConditionHides))
   double MaxLimit = 0.0;
+
   /** Range of each component of the relative rotation vector about this component's axes [deg]. */
   UPROPERTY(
       EditAnywhere,
@@ -135,6 +145,7 @@ class SUPERDEXPHYSICS_API UMochiRigidJointConstraintComponent
       FMath::RadiansToDegrees(mochi::JointRotationRangeConstraintParams{}.angleRangeX[0]),
       FMath::RadiansToDegrees(mochi::JointRotationRangeConstraintParams{}.angleRangeY[0]),
       FMath::RadiansToDegrees(mochi::JointRotationRangeConstraintParams{}.angleRangeZ[0]));
+
   /** Upper bounds of the relative rotation-vector components. */
   UPROPERTY(
       EditAnywhere,
@@ -147,6 +158,7 @@ class SUPERDEXPHYSICS_API UMochiRigidJointConstraintComponent
       FMath::RadiansToDegrees(mochi::JointRotationRangeConstraintParams{}.angleRangeX[1]),
       FMath::RadiansToDegrees(mochi::JointRotationRangeConstraintParams{}.angleRangeY[1]),
       FMath::RadiansToDegrees(mochi::JointRotationRangeConstraintParams{}.angleRangeZ[1]));
+
   /**
    * Whether the ranges are relative to the bodies' relative rotation when the constraint is
    * created, rather than to this component's frame.
