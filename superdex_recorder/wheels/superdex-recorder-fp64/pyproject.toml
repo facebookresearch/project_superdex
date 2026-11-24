@@ -87,7 +87,7 @@ environment-pass = ["http_proxy", "https_proxy", "no_proxy"]
 before-all = "yum install -y clang"
 repair-wheel-command = """auditwheel repair -w {dest_dir} {wheel} \
   --exclude libmochi_physics_double.so --exclude libmochi_pybind_core_double.so --exclude 'libmarl.so*' \
-  --exclude libsuperdex_robotics.so"""
+  --exclude libsuperdex_robotics_double.so"""
 
 [tool.cibuildwheel.linux.environment]
 CC = "clang"
@@ -97,9 +97,9 @@ CXX = "clang++"
 repair-wheel-command = """delocate-wheel --require-archs {delocate_archs} -w {dest_dir} -v {wheel} \
   --ignore-missing-dependencies \
   --exclude libmochi_physics_double.dylib --exclude libmochi_pybind_core_double.dylib --exclude libmarl. \
-  --exclude libsuperdex_robotics.dylib"""
+  --exclude libsuperdex_robotics_double.dylib"""
 
 [tool.cibuildwheel.windows]
 repair-wheel-command = """delvewheel repair -w {dest_dir} -v {wheel} --ignore-existing \
   --exclude mochi_physics_double.dll --exclude mochi_pybind_core_double.dll --exclude marl.dll \
-  --exclude superdex_robotics.dll"""
+  --exclude superdex_robotics_double.dll"""
