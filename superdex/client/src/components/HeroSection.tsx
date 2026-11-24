@@ -19,18 +19,32 @@
  * Layout: Left text block + right full-bleed image
  * Background: Warm off-white
  */
-import { motion } from "framer-motion";
-import { ArrowRight } from "lucide-react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { ArrowRight, ChevronDown } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 
 const HERO_IMAGE = `${import.meta.env.BASE_URL}img/hero_hand_v21.webp`;
 
+// Matches the Navbar's solid-background threshold.
+const SCROLL_CUE_HIDE_OFFSET = 40;
+
 export default function HeroSection() {
   const [, setLocation] = useLocation();
+  const reduceMotion = useReducedMotion();
+  const [showScrollCue, setShowScrollCue] = useState(true);
+
+  useEffect(() => {
+    const onScroll = () =>
+      setShowScrollCue(window.scrollY <= SCROLL_CUE_HIDE_OFFSET);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   const handleScrollDown = () => {
     const el = document.querySelector("#overview");
-    if (el) el.scrollIntoView({ behavior: "smooth" });
+    if (el) el.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth" });
   };
 
   const handleGetStarted = () => {
@@ -145,6 +159,61 @@ export default function HeroSection() {
           />
         </motion.div>
       </div>
+
+      {/* Scroll cue: the desktop hero is taller than the viewport, so pin the
+          cue to the viewport bottom until the visitor starts scrolling. Phones
+          already show the next section, so the cue is desktop-only. It is
+          mouse-only because "Learn More" does the same thing for keyboard and
+          screen-reader users. */}
+      <AnimatePresence>
+        {showScrollCue && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{
+              opacity: 1,
+              transition: {
+                duration: reduceMotion ? 0 : 0.5,
+                delay: reduceMotion ? 0 : 1.1,
+              },
+            }}
+            exit={{
+              opacity: 0,
+              transition: { duration: reduceMotion ? 0 : 0.2 },
+            }}
+            className="pointer-events-none fixed inset-x-0 bottom-6 z-30 hidden justify-center lg:flex"
+          >
+            <button
+              type="button"
+              onClick={handleScrollDown}
+              tabIndex={-1}
+              aria-hidden="true"
+              className="pointer-events-auto flex flex-col items-center gap-1 rounded px-3 py-1 text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <span
+                className="text-[0.7rem] font-medium uppercase"
+                style={{
+                  fontFamily: "'DM Sans', sans-serif",
+                  letterSpacing: "0.14em",
+                }}
+              >
+                Scroll
+              </span>
+              <motion.span
+                aria-hidden="true"
+                animate={reduceMotion ? undefined : { y: [0, 5, 0] }}
+                transition={
+                  reduceMotion
+                    ? undefined
+                    : { duration: 1.6, repeat: Infinity, ease: "easeInOut" }
+                }
+                className="flex"
+              >
+                <ChevronDown size={18} />
+              </motion.span>
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </section>
   );
 }
