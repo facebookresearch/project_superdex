@@ -37,10 +37,13 @@
 
 #include <mochi_core/utils/math_utils.h>
 #include <mochi_renderer/debug.h>
+#include <mochi_renderer/material.h>
 #include <mochi_renderer/type_conversions.h>
 #include <superdex_robotics/scene/bot_scene.h>
 #include <superdex_robotics/superdex_robotics.h>
+#include <superdex_robotics/utils/bot_utils.h>
 
+#include <filament/MaterialInstance.h>
 #include <imguios/fonts/icons_font_awesome5.h>
 #include <implot.h>
 
@@ -53,6 +56,7 @@
 #include <limits>
 #include <numbers>
 #include <optional>
+#include <string_view>
 
 namespace superdex::studio {
 
@@ -263,6 +267,20 @@ bool TakesPose(tuner::ControllerTarget const& controller) {
 // Whether a run builds `bot` (TunerSpec::bots; empty: every bot).
 bool BuildsBot(tuner::TunerSpec const& spec, DynamicString const& bot) {
   return spec.bots.empty() || std::find(spec.bots.begin(), spec.bots.end(), bot) != spec.bots.end();
+}
+
+// The scene's bot whose controller `target` ("bot/controller") names, or null.
+superdex::robotics::BotEntry const* FindControllerBot(
+    SceneAsset const& scene,
+    std::string_view target) {
+  auto const& bots = scene.GetPrefab().bots;
+  auto const it =
+      std::find_if(bots.begin(), bots.end(), [&](superdex::robotics::BotEntry const& bot) {
+        std::string_view const name(bot.name);
+        return target.size() > name.size() && target.substr(0, name.size()) == name &&
+            target[name.size()] == '/';
+      });
+  return it == bots.end() ? nullptr : &*it;
 }
 
 // Holds `controller` where it starts, from 1 s: one waypoint at its tool's pose, or one key at its
@@ -513,6 +531,7 @@ TunerEditor::TunerEditor(SuperDexStudio* studio, TunerAsset* asset)
     : AssetEditor(studio, asset),
       _tunerAsset(asset),
       _stage(studio, "TunerEditorStage"),
+      _keyPoseStage(studio, "TunerKeyPoseStage"),
       _simSync(studio->GetEditorToRendererSpaceConverter()),
       _outputDir((asset->GetPath().GetParentPath().AsFilesystemPath() / "tuner_runs").string()) {}
 
@@ -652,6 +671,10 @@ void TunerEditor::Initialize() {
   registerStageType("Collision Only", StageType::MochiModelOnly, ImGuiKey_2);
   registerStageType(
       "Render (Collision Fallback)", StageType::RenderModelFallbackToMochiModel, ImGuiKey_3);
+  _viewport->RegisterShowCommand(
+      {.name = "Key Poses",
+       .onToggle = [this] { _showKeyPoses = !_showKeyPoses; },
+       .getState = [this] { return _showKeyPoses; }});
 
   _mochiScene.Initialize(_studio->GetMochiContext(), "TunerEditor");
   ApplyRunSettings();
@@ -686,6 +709,7 @@ void TunerEditor::Initialize() {
   _mochiScene.onStopPhysics = [this]() { OnStopPhysics(); };
   BindSceneObjectDragHooks(*_viewport, _dragController);
   _stage.BindRenderScene(_viewport->GetRenderScene());
+  _keyPoseStage.BindRenderScene(_viewport->GetRenderScene());
   _viewport->SetSceneStage(&_stage);
   BindSceneStageMeasureTargets(
       *_viewport,
@@ -724,6 +748,7 @@ void TunerEditor::OnRender(Renderer const* renderer) {
   }
   DrawLoadArrows();
   DrawStopBoxes();
+  UpdateKeyPoseShadow();
   _viewport->RenderScene(renderer);
 }
 
@@ -732,6 +757,7 @@ void TunerEditor::Shutdown() {
     _mochiScene.DestroyMochiScene();
   }
   _stage.Clear();
+  _keyPoseStage.Clear();
   _viewport.reset();
 }
 
@@ -927,6 +953,10 @@ bool TunerEditor::IsSceneLoaded() const {
 
 void TunerEditor::Restage() {
   _describedTargetsStale = true;
+  // Restaged with the new stage type next frame.
+  _keyPoseStage.Clear();
+  _keyPoseBot.clear();
+  _keyPose.reset();
   MochiPrefabAsset* prefabAsset = _tunerAsset->GetPrefabAsset();
   SceneAsset const* sceneAsset = _tunerAsset->GetSceneAsset();
   _taskSpawns.clear();
@@ -1946,6 +1976,171 @@ std::optional<mochi::DynamicArray<real>> TunerEditor::CurrentInput(size_t index)
   tuner::ControllerTarget const* const controller =
       FindController(_tunerAsset->GetSpec().loads[index].target);
   return controller == nullptr ? std::nullopt : std::optional(controller->input);
+}
+
+std::optional<TunerEditor::ShownKey> TunerEditor::FindShownKey() const {
+  int const index = SelectedLoadIndex();
+  SceneAsset const* const scene = _tunerAsset->GetSceneAsset();
+  if (!_showKeyPoses || index < 0 || scene == nullptr) {
+    return std::nullopt;
+  }
+  tuner::LoadSpec const& load = _tunerAsset->GetSpec().loads[static_cast<size_t>(index)];
+  tuner::ControllerTarget const* const controller =
+      load.type == tuner::LoadType::ControllerInput ? FindController(load.target) : nullptr;
+  if (controller == nullptr || controller->inputJoints.empty() || load.inputKeys.empty()) {
+    return std::nullopt;
+  }
+  int const selected = SelectedInputKeyIndex();
+  tuner::InputKey const& key = load.inputKeys[selected >= 0 ? static_cast<size_t>(selected) : 0];
+  std::vector<std::string_view> joints;
+  for (DynamicString const& joint : load.joints) {
+    joints.emplace_back(joint);
+  }
+  if (joints.empty()) {
+    for (tuner::InputJoint const& joint : controller->inputJoints) {
+      joints.emplace_back(joint.name);
+    }
+  }
+  ShownKey shown;
+  shown.entry = FindControllerBot(*scene, std::string_view(load.target));
+  shown.asset = shown.entry == nullptr ? nullptr
+                                       : _studio->GetAssetManager().FindAssetByPath<BotAsset>(
+                                             mochi::Path{std::string(shown.entry->path)});
+  // A bot being edited may not build; its derived data then does not fit it.
+  if (shown.asset == nullptr || !shown.asset->IsBuildOk()) {
+    return std::nullopt;
+  }
+  superdex::robotics::BotPrefab const& bot = shown.asset->GetBotPrefab();
+  auto const& start = shown.entry->initialPose.empty() ? bot.defaultPose : shown.entry->initialPose;
+  std::vector<real> now(start.begin(), start.end());
+  shown.worldFromRoot = shown.entry->parentFromBot;
+  // While simulating, the bot where its staged links are now.
+  if (_mochiScene.IsSimulating()) {
+    std::vector<mochi::TransformRT> worldFromLinks;
+    for (auto const& link : bot.links) {
+      StagedActor const* const staged = _stage.FindActorByName(
+          std::string(std::string_view(bot.name)) + "/" + std::string(std::string_view(link.name)));
+      if (staged == nullptr) {
+        break;
+      }
+      worldFromLinks.push_back(staged->worldTransform);
+    }
+    std::vector<real> simulated;
+    superdex::Error error;
+    if (worldFromLinks.size() == bot.links.size()) {
+      ComputePoseFromLinkWorldTransforms(
+          bot, mochi::MakeConstSpan(worldFromLinks), mochi::MakeConstSpan(start), simulated, error);
+    }
+    if (error.IsOK() && !worldFromLinks.empty() && simulated.size() == now.size()) {
+      now = std::move(simulated);
+      shown.worldFromRoot = worldFromLinks.front();
+    }
+  }
+  if (!ComputeKeyPose(
+          bot,
+          mochi::MakeConstSpan(now),
+          mochi::MakeConstSpan(joints),
+          mochi::MakeConstSpan(key.values),
+          shown.key)) {
+    return std::nullopt;
+  }
+  return shown;
+}
+
+void TunerEditor::UpdateKeyPoseShadow() {
+  std::optional<ShownKey> shown = FindShownKey();
+  if (!shown) {
+    if (!_keyPoseBot.empty()) {
+      _keyPoseStage.Clear();
+      _keyPoseBot.clear();
+      _keyPose.reset();
+    }
+    return;
+  }
+  superdex::robotics::BotPrefab const& bot = shown->asset->GetBotPrefab();
+  std::string const botKey =
+      std::string(std::string_view(shown->entry->name)) + "|" + shown->asset->GetPath().ToString();
+  if (_keyPoseBot != botKey) {
+    superdex::robotics::BotPrefab staged = bot;
+    staged.worldFromRoot = shown->entry->parentFromBot;
+    _keyPoseStage.StageBot(staged, _stageType, /*hideSkinCoveredLinks=*/true);
+    // See-through like the IK editor's input bot, drawn behind the bot where the two coincide, and
+    // not picked, framed or counted in the ground height.
+    auto const material =
+        _studio->GetResourceManager().CreateLitSeeThroughMaterial({0.25f, 0.65f, 0.95f}, 0.35f);
+    material->Get()->setPolygonOffset(1.0f, 4.0f);
+    _keyPoseLinkNames.clear();
+    _keyPoseSkinName.clear();
+    for (StagedActor const& actor : _keyPoseStage.GetActors()) {
+      if (IsSkinStagedName(actor.name)) {
+        _keyPoseSkinName = actor.name;
+      } else {
+        _keyPoseLinkNames.push_back(actor.name);
+      }
+      // Wireframes keep their own material.
+      bool const wireframe =
+          actor.skinnedCollisionMesh != nullptr || actor.dynamicWireframeMesh != nullptr;
+      for (StagedActor::Instance const* instance : {&actor.render, &actor.shape, &actor.sdf}) {
+        if (instance->sceneObject == nullptr) {
+          continue;
+        }
+        if (!(wireframe && instance == &actor.shape)) {
+          instance->sceneObject->SetMaterial(material);
+        }
+        instance->sceneObject->SetShadows(false, false);
+        instance->sceneObject->_internal = true;
+      }
+    }
+    _keyPoseSkinBones = ComputeSkinBoneLinkRemap(bot);
+    _keyPoseStagedRoot = staged.worldFromRoot;
+    _keyPoseBot = botKey;
+    _keyPose.reset();
+  }
+  if (_keyPose == shown->key && _keyPoseRoot == shown->worldFromRoot) {
+    return;
+  }
+  std::vector<mochi::TransformRT> worldFromLinks;
+  superdex::Error error;
+  ComputeLinkWorldTransforms(
+      bot, shown->worldFromRoot, mochi::MakeConstSpan(shown->key.pose), worldFromLinks, error);
+  if (!error.IsOK() || worldFromLinks.size() != _keyPoseLinkNames.size()) {
+    // Better no shadow than one at the wrong pose; tried again next frame.
+    _keyPoseStage.HideAllActors();
+    _keyPose.reset();
+    return;
+  }
+  // Only the links the key moves, and the skin over them; the others coincide with the bot's.
+  std::vector<bool> const& moved = shown->key.movedLinks;
+  if (!_keyPose || _keyPose->movedLinks != moved) {
+    bool const anyMoved = std::find(moved.begin(), moved.end(), true) != moved.end();
+    for (int i = 0; i < _keyPoseStage.GetNumActors(); ++i) {
+      _keyPoseStage.SetActorHidden(
+          i, !(i < mochi::isize(moved) ? moved[static_cast<size_t>(i)] : anyMoved));
+    }
+  }
+  _keyPose = std::move(shown->key);
+  _keyPoseRoot = shown->worldFromRoot;
+  auto const& converter = _studio->GetEditorToRendererSpaceConverter();
+  _keyPoseStage.ApplyWorldTransforms(
+      mochi::MakeConstSpan(_keyPoseLinkNames), mochi::MakeConstSpan(worldFromLinks), converter);
+  int const skin = _keyPoseStage.FindIndexByName(_keyPoseSkinName);
+  if (skin < 0) {
+    return;
+  }
+  // The skin moves with the root (it is staged at its rest frame there) and bends with its bones.
+  StagedActor const& skinActor = _keyPoseStage.GetActors()[static_cast<size_t>(skin)];
+  _keyPoseStage.ApplyWorldTransform(
+      _keyPoseSkinName,
+      _keyPoseRoot * mochi::Invert(_keyPoseStagedRoot) * skinActor.defaultWorldTransform,
+      converter);
+  SkinnedPoseUpdate update;
+  update.name = _keyPoseSkinName;
+  ComputeSkinBoneTransforms(
+      mochi::MakeConstSpan(worldFromLinks),
+      mochi::MakeConstSpan(_keyPoseSkinBones),
+      update.linkWorldTransforms);
+  std::array<SkinnedPoseUpdate, 1> const updates{std::move(update)};
+  _keyPoseStage.ApplySkinnedPose(mochi::MakeConstSpan(updates), converter);
 }
 
 int TunerEditor::SelectedStopBoxIndex() const {

@@ -17,6 +17,7 @@
 #pragma once
 
 #include "editors/asset_editor.h"
+#include "editors/key_pose.h"
 #include "editors/prefab_hierarchy.h"
 #include "rendering/scene_stage.h"
 #include "rendering/stats.h"
@@ -126,6 +127,16 @@ class TunerEditor : public AssetEditor {
     // Appends an expanded card for an item the user just added.
     void AddExpanded();
   };
+  // The joint key the selected Controller Input card shows (the selected key, else the first) as a
+  // pose of the controller's bot: the keyed joints at the key, the others where the bot is now
+  // (where it starts while stopped).
+  struct ShownKey {
+    superdex::robotics::BotEntry const* entry = nullptr;
+    BotAsset const* asset = nullptr;
+    // Where the bot's root is now.
+    mochi::TransformRT worldFromRoot = {};
+    KeyPose key;
+  };
 
   // Staging and simulation
   void Restage();
@@ -189,6 +200,11 @@ class TunerEditor : public AssetEditor {
   void ShowTaskBanner();
   // Opens the bot scene in its editor with the tuner's task loaded, where its criteria are edited.
   void OpenTaskInSceneEditor();
+  // Empty without a shown key, or with Show > Key Poses off.
+  [[nodiscard]] std::optional<ShownKey> FindShownKey() const;
+  // Shows a translucent shadow of the links the shown key moves, posed at the key: staged once per
+  // bot, then posed by forward kinematics when the pose changes.
+  void UpdateKeyPoseShadow();
   void OnScenePressed(mochi_renderer::SceneObject* object, filament::math::float3 worldHit);
   // Index of the load whose card is selected (the transform gizmo edits it), or -1.
   [[nodiscard]] int SelectedLoadIndex() const;
@@ -284,6 +300,18 @@ class TunerEditor : public AssetEditor {
   SceneStage _stage;
   // The stage's render and collision stats, taken after each staging at the rest pose.
   StageStats _stageStats;
+  // Shadow of the shown joint key (Show > Key Poses): the bot it is staged for ("entry|bot file"),
+  // the staged names of its links and skin, its skin's bone links (ComputeSkinBoneLinkRemap), the
+  // root it was staged at, and the pose and root it shows.
+  SceneStage _keyPoseStage;
+  std::string _keyPoseBot;
+  std::vector<std::string> _keyPoseLinkNames;
+  std::string _keyPoseSkinName;
+  mochi::DynamicArray<int> _keyPoseSkinBones;
+  mochi::TransformRT _keyPoseStagedRoot = {};
+  std::optional<KeyPose> _keyPose;
+  mochi::TransformRT _keyPoseRoot = {};
+  bool _showKeyPoses = true;
   PrefabHierarchy _hierarchy;
   MochiAsyncScene _mochiScene;
   PrefabSimSync _simSync;
