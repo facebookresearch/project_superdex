@@ -71,18 +71,18 @@ class SUPERDEXPHYSICS_API UMochiSoftNodeConstraintComponent : public UMochiConst
 
  public:
   /** Constraint mode to create for the selected nodes. */
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mochi Constraint")
+  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SuperDex Physics|Constraint")
   EMochiSoftNodeConstraintType Type = EMochiSoftNodeConstraintType::NodeToRigid;
 
   /** The deformable body, by name: "cloth", or "inner/cloth" inside a child actor. */
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mochi Constraint")
+  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SuperDex Physics|Constraint")
   FString Body;
 
   /** The rigid body (Node to Rigid) or the other deformable body (Node to Node). */
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
-      Category = "Mochi Constraint",
+      Category = "SuperDex Physics|Constraint",
       meta =
           (EditCondition = "Type != EMochiSoftNodeConstraintType::NodePosition",
            EditConditionHides))
@@ -95,7 +95,7 @@ class SUPERDEXPHYSICS_API UMochiSoftNodeConstraintComponent : public UMochiConst
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
-      Category = "Mochi Constraint",
+      Category = "SuperDex Physics|Constraint",
       meta =
           (EditCondition = "Type != EMochiSoftNodeConstraintType::NodePosition",
            EditConditionHides))
@@ -105,7 +105,7 @@ class SUPERDEXPHYSICS_API UMochiSoftNodeConstraintComponent : public UMochiConst
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
-      Category = "Mochi Constraint",
+      Category = "SuperDex Physics|Constraint",
       meta =
           (EditCondition = "Type != EMochiSoftNodeConstraintType::NodePosition",
            EditConditionHides))
@@ -114,14 +114,18 @@ class SUPERDEXPHYSICS_API UMochiSoftNodeConstraintComponent : public UMochiConst
       : EMochiSoftNodeSelection::Index;
 
   /** The node of Body. */
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mochi Constraint", meta = (ClampMin = "0"))
+  UPROPERTY(
+      EditAnywhere,
+      BlueprintReadOnly,
+      Category = "SuperDex Physics|Constraint",
+      meta = (ClampMin = "0"))
   int32 NodeIndex = 0;
 
   /** The node of OtherBody (Node to Node). */
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
-      Category = "Mochi Constraint",
+      Category = "SuperDex Physics|Constraint",
       meta =
           (ClampMin = "0",
            EditCondition = "Type == EMochiSoftNodeConstraintType::NodeToNode",
@@ -135,7 +139,7 @@ class SUPERDEXPHYSICS_API UMochiSoftNodeConstraintComponent : public UMochiConst
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
-      Category = "Mochi Constraint",
+      Category = "SuperDex Physics|Constraint",
       meta =
           (EditCondition =
                "Type == EMochiSoftNodeConstraintType::NodeToRigid && NodeSelection != EMochiSoftNodeSelection::InsideRigidBounds",
@@ -149,7 +153,7 @@ class SUPERDEXPHYSICS_API UMochiSoftNodeConstraintComponent : public UMochiConst
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
-      Category = "Mochi Constraint",
+      Category = "SuperDex Physics|Constraint",
       meta =
           (EditCondition =
                "Type == EMochiSoftNodeConstraintType::NodeToRigid && NodeSelection != EMochiSoftNodeSelection::InsideRigidBounds",
@@ -163,7 +167,7 @@ class SUPERDEXPHYSICS_API UMochiSoftNodeConstraintComponent : public UMochiConst
    * @param OutNodeIndices Storage for the queried node indices.
    * @return Whether the constrained node indices are known.
    */
-  UFUNCTION(BlueprintCallable, Category = "Mochi Constraint")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Physics|Constraint")
   bool GetConstrainedNodeIndices(TArray<int>& OutNodeIndices) const;
 
   /** Initialize the deformable-node constraint component. */

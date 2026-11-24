@@ -29,21 +29,24 @@ class SUPERDEXPHYSICS_API UMochiRodMeshComponent : public UMochiDeformableMeshCo
 
  public:
   /** Parameters controlling rod material properties. */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   UMochiRodMaterialParams* RodMaterialParams = nullptr;
 
   /** Collider representation used by the rod actor. */
-  UPROPERTY(EditAnywhere, Category = "Mochi", meta = (ValidEnumValues = "None, Auto, PointCloud"))
+  UPROPERTY(
+      EditAnywhere,
+      Category = "SuperDex Physics",
+      meta = (ValidEnumValues = "None, Auto, PointCloud"))
   EMochiColliderType ColliderType = ::ToUnreal(mochi::RodActorParams{}.colliderType);
 
   /** Use the rod's contact skin for contact sampling instead of the centerline. */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   bool bUseContactSkin = mochi::RodActorParams{}.useContactSkin;
 
   /** Segment elements used for rod contact sampling. */
   UPROPERTY(
       EditAnywhere,
-      Category = "Mochi",
+      Category = "SuperDex Physics",
       meta = (ValidEnumValues = "P1Q1, P1Q2, P1Q3, Default", EditCondition = "!bUseContactSkin"))
   EMochiActorSegmentElementType ContactElementType =
       ::ToUnreal(mochi::RodActorParams{}.contactElementType);
@@ -51,29 +54,29 @@ class SUPERDEXPHYSICS_API UMochiRodMeshComponent : public UMochiDeformableMeshCo
   /** Boundary elements used for contact-skin sampling. */
   UPROPERTY(
       EditAnywhere,
-      Category = "Mochi",
+      Category = "SuperDex Physics",
       meta = (ValidEnumValues = "P1Q1, P1Q3, P1Q6, Default", EditCondition = "bUseContactSkin"))
   EMochiActorBoundaryElementType ContactSkinElementType =
       ::ToUnreal(mochi::RodActorParams{}.contactSkinElementType);
 
   /** Point-cloud collider interaction radius [m]. */
-  UPROPERTY(EditAnywhere, Category = "Mochi|Point Cloud Collider", meta = (Units = "m"))
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics|Point Cloud Collider", meta = (Units = "m"))
   float PointCloudRadius = mochi::PointCloudColliderParams{}.radius;
 
   /** Enable self-contact for the rod. */
-  UPROPERTY(EditAnywhere, Category = "Mochi|Point Cloud Collider")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics|Point Cloud Collider")
   bool bPointCloudSelfContact = mochi::PointCloudColliderParams{}.selfContact;
 
   /** Self-contact exclusion ratio. Should be > 1. */
   UPROPERTY(
       EditAnywhere,
-      Category = "Mochi|Point Cloud Collider",
+      Category = "SuperDex Physics|Point Cloud Collider",
       meta = (EditCondition = "bPointCloudSelfContact"))
   float PointCloudSelfContactExclusionRatio =
       mochi::PointCloudColliderParams{}.selfContactExclusionRatio;
 
   /** Unset uses one collider point per node; a value selects quadrature-based placement. */
-  UPROPERTY(EditAnywhere, Category = "Mochi|Point Cloud Collider")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics|Point Cloud Collider")
   TOptional<EMochiActorSegmentElementType> PointCloudColliderSegmentElementType;
 
  public:

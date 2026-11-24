@@ -47,47 +47,71 @@ class SUPERDEXPHYSICS_API UMochiModel : public UObject {
   GENERATED_BODY()
  public:
   /** Number of nodes (vertices) in the volume mesh */
-  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Volume Mesh", AssetRegistrySearchable)
+  UPROPERTY(
+      VisibleAnywhere,
+      BlueprintReadOnly,
+      Category = "SuperDex Physics|Volume Mesh",
+      AssetRegistrySearchable)
   int NumNodes = 0;
 
   /** Number of unique edges (line segments) on the polyhedrons */
-  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Volume Mesh", AssetRegistrySearchable)
+  UPROPERTY(
+      VisibleAnywhere,
+      BlueprintReadOnly,
+      Category = "SuperDex Physics|Volume Mesh",
+      AssetRegistrySearchable)
   int NumEdges = 0;
 
   /** Number of polyhedrons within the volume (e.g. tetrahedrons) */
-  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Volume Mesh", AssetRegistrySearchable)
+  UPROPERTY(
+      VisibleAnywhere,
+      BlueprintReadOnly,
+      Category = "SuperDex Physics|Volume Mesh",
+      AssetRegistrySearchable)
   int NumPolyhedrons = 0;
 
   /** Number of unique nodes (vertices) in the surface mesh */
-  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Surface Mesh", AssetRegistrySearchable)
+  UPROPERTY(
+      VisibleAnywhere,
+      BlueprintReadOnly,
+      Category = "SuperDex Physics|Surface Mesh",
+      AssetRegistrySearchable)
   int NumSurfaceNodes = 0;
 
   /** Number of unique edges (line segments) in the surface mesh */
-  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Surface Mesh", AssetRegistrySearchable)
+  UPROPERTY(
+      VisibleAnywhere,
+      BlueprintReadOnly,
+      Category = "SuperDex Physics|Surface Mesh",
+      AssetRegistrySearchable)
   int NumSurfaceEdges = 0;
 
   /** Number of unique faces (e.g. triangles) on the surface mesh */
-  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Surface Mesh", AssetRegistrySearchable)
+  UPROPERTY(
+      VisibleAnywhere,
+      BlueprintReadOnly,
+      Category = "SuperDex Physics|Surface Mesh",
+      AssetRegistrySearchable)
   int NumSurfaceFaces = 0;
 
   // TODO: "link" this similarly to SKEL<->SKM<->PHYS assets
   /** Thumbnail and asset editor preview will be rendered using this material if set */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   TObjectPtr<UMaterialInterface> PreviewRenderMaterial;
 
   // TODO: "link" this similarly to SKEL<->SKM<->PHYS assets
   /** Material modifier to edit using this model */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   UMochiModelMaterialModifiers* MaterialModifiersAsset;
 
   /** The model's geometry. */
-  UPROPERTY(VisibleAnywhere, Category = "Model Data")
+  UPROPERTY(VisibleAnywhere, Category = "SuperDex Physics|Model Data")
   FMochiModelData ModelData;
 
 #if WITH_EDITORONLY_DATA
   // TODO: Give this a nice interface to live outside of the details panel
   /** Values to assign to selected material modifiers */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   FMochiMaterialModifier MaterialModifierTemplate;
 #endif
 
@@ -176,11 +200,11 @@ class SUPERDEXPHYSICS_API UMochiModel : public UObject {
   FString GetSourceFilePath() const;
 
   /** Prompts for a Mochi model file and replaces this asset's contents with it. */
-  UFUNCTION(Category = "Import", CallInEditor)
+  UFUNCTION(Category = "SuperDex Physics|Import", CallInEditor)
   void Import();
 
   /** Repeats the last import from the recorded source file. */
-  UFUNCTION(Category = "Import", CallInEditor)
+  UFUNCTION(Category = "SuperDex Physics|Import", CallInEditor)
   void Reimport();
 
   /**
@@ -247,7 +271,7 @@ class SUPERDEXPHYSICS_API UMochiModel : public UObject {
   void SerializeSdfValues(FArchive& Ar);
 
   /** Transform applied to imported geometry when producing native model or shape data. */
-  UPROPERTY(EditAnywhere, Category = "Import")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics|Import")
   FTransform ImportTransform = FTransform::Identity;
 
 #if WITH_EDITORONLY_DATA
@@ -256,7 +280,7 @@ class SUPERDEXPHYSICS_API UMochiModel : public UObject {
    * The source file this model was imported from, for reimport. Like other imported assets, a
    * file under the project's Data Source Folder is stored relative to that folder.
    */
-  UPROPERTY(VisibleAnywhere, Category = "Model Data")
+  UPROPERTY(VisibleAnywhere, Category = "SuperDex Physics|Model Data")
   TObjectPtr<UAssetImportData> AssetImportData;
 
  private:

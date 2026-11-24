@@ -32,19 +32,19 @@ class SUPERDEXPHYSICS_API UMochiRodConstraintComponent : public USceneComponent 
   GENERATED_BODY()
 
   /** Name of the UMochiRodMeshComponent to constrain. */
-  UPROPERTY(EditAnywhere, Category = "Mochi Rod Constraint")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics|Rod Constraint")
   FName RodComponentName = NAME_None;
 
   /** Name of the rigid Mochi mesh component to constrain to. */
-  UPROPERTY(EditAnywhere, Category = "Mochi Rod Constraint")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics|Rod Constraint")
   FName RigidComponentName = NAME_None;
 
   /** Which rod endpoint to attach. */
-  UPROPERTY(EditAnywhere, Category = "Mochi Rod Constraint")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics|Rod Constraint")
   EMochiRodAttachmentEnd AttachmentEnd = EMochiRodAttachmentEnd::Last;
 
   /** Whether to allow contact between the constrained pair. */
-  UPROPERTY(EditAnywhere, Category = "Mochi Rod Constraint")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics|Rod Constraint")
   bool bAllowContact = false;
 
   //----------------------------------------------------------------------------
@@ -52,20 +52,20 @@ class SUPERDEXPHYSICS_API UMochiRodConstraintComponent : public USceneComponent 
   //----------------------------------------------------------------------------
 
   /** Create a DeformableNodeToRigid constraint for position. */
-  UPROPERTY(EditAnywhere, Category = "Mochi Rod Constraint|Position Constraint")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics|Rod Constraint|Position Constraint")
   bool bConstrainPosition = true;
 
   /** Stiffness for position constraint. */
   UPROPERTY(
       EditAnywhere,
-      Category = "Mochi Rod Constraint|Position Constraint",
+      Category = "SuperDex Physics|Rod Constraint|Position Constraint",
       meta = (EditCondition = "bConstrainPosition"))
   float PositionStiffness = mochi::DeformableNodeToRigidConstraintParams{}.stiffness;
 
   /** Damping for position constraint. */
   UPROPERTY(
       EditAnywhere,
-      Category = "Mochi Rod Constraint|Position Constraint",
+      Category = "SuperDex Physics|Rod Constraint|Position Constraint",
       meta = (EditCondition = "bConstrainPosition"))
   float PositionDamping = mochi::DeformableNodeToRigidConstraintParams{}.damping;
 
@@ -74,20 +74,20 @@ class SUPERDEXPHYSICS_API UMochiRodConstraintComponent : public USceneComponent 
   //----------------------------------------------------------------------------
 
   /** Create a RodElementRotationToRigid constraint for rotation. */
-  UPROPERTY(EditAnywhere, Category = "Mochi Rod Constraint|Rotation Constraint")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics|Rod Constraint|Rotation Constraint")
   bool bConstrainRotation = true;
 
   /** Stiffness for rotation constraint. */
   UPROPERTY(
       EditAnywhere,
-      Category = "Mochi Rod Constraint|Rotation Constraint",
+      Category = "SuperDex Physics|Rod Constraint|Rotation Constraint",
       meta = (EditCondition = "bConstrainRotation"))
   float RotationStiffness = mochi::RodElementRotationToRigidConstraintParams{}.stiffness;
 
   /** Damping for rotation constraint. */
   UPROPERTY(
       EditAnywhere,
-      Category = "Mochi Rod Constraint|Rotation Constraint",
+      Category = "SuperDex Physics|Rod Constraint|Rotation Constraint",
       meta = (EditCondition = "bConstrainRotation"))
   float RotationDamping = mochi::RodElementRotationToRigidConstraintParams{}.damping;
 
@@ -97,7 +97,7 @@ class SUPERDEXPHYSICS_API UMochiRodConstraintComponent : public USceneComponent 
    *
    * @param NewStiffness Constraint stiffness to configure.
    */
-  UFUNCTION(BlueprintCallable, Category = "Mochi")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Physics")
   void SetPositionStiffness(float NewStiffness);
 
   /**
@@ -105,7 +105,7 @@ class SUPERDEXPHYSICS_API UMochiRodConstraintComponent : public USceneComponent 
    *
    * @param NewDamping Constraint damping to configure.
    */
-  UFUNCTION(BlueprintCallable, Category = "Mochi")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Physics")
   void SetPositionDamping(float NewDamping);
 
   /**
@@ -113,7 +113,7 @@ class SUPERDEXPHYSICS_API UMochiRodConstraintComponent : public USceneComponent 
    *
    * @param NewStiffness Constraint stiffness to configure.
    */
-  UFUNCTION(BlueprintCallable, Category = "Mochi")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Physics")
   void SetRotationStiffness(float NewStiffness);
 
   /**
@@ -121,15 +121,15 @@ class SUPERDEXPHYSICS_API UMochiRodConstraintComponent : public USceneComponent 
    *
    * @param NewDamping Constraint damping to configure.
    */
-  UFUNCTION(BlueprintCallable, Category = "Mochi")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Physics")
   void SetRotationDamping(float NewDamping);
 
   /** (Re)create constraints created by this component. */
-  UFUNCTION(BlueprintCallable, Category = "Mochi")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Physics")
   void CreateConstraints();
 
   /** Destroy constraints created by this component. */
-  UFUNCTION(BlueprintCallable, Category = "Mochi")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Physics")
   void DestroyConstraints();
 
  public:

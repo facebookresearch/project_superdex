@@ -35,7 +35,7 @@ class USuperDexGlbAssetNamesPipeline : public UInterchangePipelineBase {
    * New asset names, keyed by the asset name the generic pipeline gave. A property, so it survives
    * Interchange duplicating the pipeline and storing it with the imported assets for reimports.
    */
-  UPROPERTY(VisibleAnywhere, Category = "SuperDex")
+  UPROPERTY(VisibleAnywhere, Category = "SuperDex Physics")
   TMap<FString, FString> AssetRenames;
 
  protected:

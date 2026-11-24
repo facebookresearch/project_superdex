@@ -54,25 +54,33 @@ struct SUPERDEXPHYSICS_API FMochiArticulatedJointFriction {
     FromMochi(mochi::ArticulatedJointFrictionParams{});
   }
   /** Viscous friction coefficient [N*s/m or N*m*s/rad]. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Friction")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics|Friction")
   double Viscous;
 
   /** Coulomb friction coefficient [N or N*m]. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Friction")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics|Friction")
   double Coulomb;
 
   /**
    * Displacement from the friction anchor at which dry friction reaches its static peak [m or rad].
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Friction")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics|Friction")
   double PreslidingDisplacement;
 
   /** [Experimental] Extra stiction force/torque [N or N*m]. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Friction", AdvancedDisplay)
+  UPROPERTY(
+      EditAnywhere,
+      BlueprintReadWrite,
+      Category = "SuperDex Physics|Friction",
+      AdvancedDisplay)
   double StictionExtra;
 
   /** [Experimental] Stribeck velocity [m/s or rad/s]. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Friction", AdvancedDisplay)
+  UPROPERTY(
+      EditAnywhere,
+      BlueprintReadWrite,
+      Category = "SuperDex Physics|Friction",
+      AdvancedDisplay)
   double StribeckVel;
 
   /**
@@ -95,19 +103,19 @@ USTRUCT(BlueprintType)
 struct SUPERDEXPHYSICS_API FMochiArticulatedJoint {
   GENERATED_BODY()
   /** Joint name. Must be unique among the joints of the articulation. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Joint")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics|Joint")
   FName Name = NAME_None;
 
   /** Joint type. Free joints are only supported on the root link. */
   UPROPERTY(
       EditAnywhere,
       BlueprintReadWrite,
-      Category = "Joint",
+      Category = "SuperDex Physics|Joint",
       meta = (ValidEnumValues = "Free, Prismatic, Revolute, Spherical, Hard"))
   EMochiArticulatedJointType Type = EMochiArticulatedJointType::Hard;
 
   /** Rotation and translation of the joint with respect to the parent link [cm]. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Joint")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics|Joint")
   FTransform ParentLinkFromJoint = FTransform::Identity;
 
   /**
@@ -117,7 +125,7 @@ struct SUPERDEXPHYSICS_API FMochiArticulatedJoint {
   UPROPERTY(
       EditAnywhere,
       BlueprintReadWrite,
-      Category = "Joint",
+      Category = "SuperDex Physics|Joint",
       meta =
           (EditCondition =
                "Type==EMochiArticulatedJointType::Prismatic || Type==EMochiArticulatedJointType::Revolute",
@@ -125,14 +133,14 @@ struct SUPERDEXPHYSICS_API FMochiArticulatedJoint {
   FVector Axis = FVector::ZAxisVector;
 
   /** Joint friction. Ignored for Free and Hard joints. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dynamics")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics|Dynamics")
   FMochiArticulatedJointFriction Friction;
 
   /** Whether to use the configured joint inertia. */
   UPROPERTY(
       EditAnywhere,
       BlueprintReadWrite,
-      Category = "Dynamics",
+      Category = "SuperDex Physics|Dynamics",
       meta = (InlineEditConditionToggle))
   bool bOverrideInertia = false;
 
@@ -140,7 +148,7 @@ struct SUPERDEXPHYSICS_API FMochiArticulatedJoint {
   UPROPERTY(
       EditAnywhere,
       BlueprintReadWrite,
-      Category = "Dynamics",
+      Category = "SuperDex Physics|Dynamics",
       meta = (EditCondition = "bOverrideInertia"))
   double Inertia = 0;
 
@@ -148,7 +156,7 @@ struct SUPERDEXPHYSICS_API FMochiArticulatedJoint {
   UPROPERTY(
       EditAnywhere,
       BlueprintReadWrite,
-      Category = "Limits",
+      Category = "SuperDex Physics|Limits",
       meta = (InlineEditConditionToggle))
   bool bHasMinLimit = false;
 
@@ -159,7 +167,7 @@ struct SUPERDEXPHYSICS_API FMochiArticulatedJoint {
   UPROPERTY(
       EditAnywhere,
       BlueprintReadWrite,
-      Category = "Limits",
+      Category = "SuperDex Physics|Limits",
       meta = (EditCondition = "bHasMinLimit"))
   FVector MinLimit = FVector::ZeroVector;
 
@@ -167,7 +175,7 @@ struct SUPERDEXPHYSICS_API FMochiArticulatedJoint {
   UPROPERTY(
       EditAnywhere,
       BlueprintReadWrite,
-      Category = "Limits",
+      Category = "SuperDex Physics|Limits",
       meta = (InlineEditConditionToggle))
   bool bHasMaxLimit = false;
 
@@ -175,16 +183,16 @@ struct SUPERDEXPHYSICS_API FMochiArticulatedJoint {
   UPROPERTY(
       EditAnywhere,
       BlueprintReadWrite,
-      Category = "Limits",
+      Category = "SuperDex Physics|Limits",
       meta = (EditCondition = "bHasMaxLimit"))
   FVector MaxLimit = FVector::ZeroVector;
 
   /** Stiffness of the joint limit constraints [N/m or N*m/rad]. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Limits")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics|Limits")
   double LimitStiffness = mochi::ArticulatedJointParams{}.limitStiffness;
 
   /** Damping of the joint limit constraints [N*s/m or N*m*s/rad]. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Limits")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics|Limits")
   double LimitDamping = mochi::ArticulatedJointParams{}.limitDamping;
 
  public:
@@ -230,77 +238,81 @@ USTRUCT(BlueprintType)
 struct SUPERDEXPHYSICS_API FMochiArticulatedLink {
   GENERATED_BODY()
   /** Link name. Must be unique among the links of the articulation. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Link")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics|Link")
   FName Name = NAME_None;
 
   /** Index of the parent link, or -1 for the root link. Must be less than this link's index. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Link")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics|Link")
   int32 ParentLink = INDEX_NONE;
 
   /** Rotation and translation of the link with respect to its parent joint [cm]. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Link")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics|Link")
   FTransform ParentJointFromLink = FTransform::Identity;
 
   /** Collision shape of the link. Links without a shape are massless dummies. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Shape")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics|Shape")
   TObjectPtr<UMochiModel> Shape = nullptr;
 
   /** Scale baked into the shape. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Shape")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics|Shape")
   FVector ShapeScale = FVector::OneVector;
 
   /** Rotation of the shape in the link frame, applied after ShapeScale. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Shape")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics|Shape")
   FQuat ShapeRotation = FQuat::Identity;
 
   /** Translation of the shape in the link frame [cm], applied after ShapeRotation. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Shape")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics|Shape")
   FVector ShapeTranslation = FVector::ZeroVector;
 
   /** Render model of the link. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Render Model")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics|Render Model")
   TObjectPtr<UStaticMesh> RenderModel = nullptr;
 
   /** Scale of the render model. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Render Model")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics|Render Model")
   FVector RenderModelScale = FVector::OneVector;
 
   /** Rotation of the render model in the link frame, applied after RenderModelScale. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Render Model")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics|Render Model")
   FQuat RenderModelRotation = FQuat::Identity;
 
   /** Translation of the render model in the link frame [cm], applied after RenderModelRotation. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Render Model")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics|Render Model")
   FVector RenderModelTranslation = FVector::ZeroVector;
 
   /**
    * Material slots of the render model that are not merged with others when generating the
    * skeletal mesh (e.g. to keep fingertip materials separate).
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Render Model", AdvancedDisplay)
+  UPROPERTY(
+      EditAnywhere,
+      BlueprintReadWrite,
+      Category = "SuperDex Physics|Render Model",
+      AdvancedDisplay)
   TArray<int32> UniqueMaterialSlots;
 
   /** Contact layer of the link. Defaults to the layer of the articulation component when None. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Contact")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics|Contact")
   FName Layer = NAME_None;
 
   /** Collider type of the link. */
   UPROPERTY(
       EditAnywhere,
       BlueprintReadWrite,
-      Category = "Contact",
+      Category = "SuperDex Physics|Contact",
       meta = (ValidEnumValues = "None, Auto, Sphere, Box, Mesh, Plane, Sdf"))
   EMochiColliderType ColliderType = ::ToUnreal(mochi::ArticulatedLinkParams{}.colliderType);
 
   /** Contact params of the link. Defaults to those of the articulation component when null. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Contact")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics|Contact")
   TObjectPtr<UMochiContactParams> ContactParams = nullptr;
 
   /** Boundary element type used for the link's surface discretization. */
   UPROPERTY(
       EditAnywhere,
       BlueprintReadWrite,
-      Category = "Contact",
+      Category = "SuperDex Physics|Contact",
       meta = (ValidEnumValues = "P1Q1, P1Q3, P1Q6, Default"))
   EMochiActorBoundaryElementType BoundaryElementType =
       ::ToUnreal(mochi::ArticulatedLinkParams{}.boundaryElementType);
@@ -309,7 +321,7 @@ struct SUPERDEXPHYSICS_API FMochiArticulatedLink {
   UPROPERTY(
       EditAnywhere,
       BlueprintReadWrite,
-      Category = "Contact",
+      Category = "SuperDex Physics|Contact",
       meta = (InlineEditConditionToggle))
   bool bEnableBoundarySubsampling = false;
 
@@ -317,19 +329,19 @@ struct SUPERDEXPHYSICS_API FMochiArticulatedLink {
   UPROPERTY(
       EditAnywhere,
       BlueprintReadWrite,
-      Category = "Contact",
+      Category = "SuperDex Physics|Contact",
       meta = (EditCondition = "bEnableBoundarySubsampling"))
   FMochiBoundarySubsamplingParams BoundarySubsampling;
 
   /** Whether the link is affected by gravity. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inertial")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics|Inertial")
   bool bHasGravity = mochi::ArticulatedLinkParams{}.hasGravity;
 
   /** Whether to use the configured link density. */
   UPROPERTY(
       EditAnywhere,
       BlueprintReadWrite,
-      Category = "Inertial",
+      Category = "SuperDex Physics|Inertial",
       meta = (InlineEditConditionToggle))
   bool bOverrideDensity = false;
 
@@ -337,7 +349,7 @@ struct SUPERDEXPHYSICS_API FMochiArticulatedLink {
   UPROPERTY(
       EditAnywhere,
       BlueprintReadWrite,
-      Category = "Inertial",
+      Category = "SuperDex Physics|Inertial",
       meta = (EditCondition = "bOverrideDensity"))
   double Density = 0;
 
@@ -345,7 +357,7 @@ struct SUPERDEXPHYSICS_API FMochiArticulatedLink {
   UPROPERTY(
       EditAnywhere,
       BlueprintReadWrite,
-      Category = "Inertial",
+      Category = "SuperDex Physics|Inertial",
       meta = (InlineEditConditionToggle))
   bool bOverrideMass = false;
 
@@ -353,7 +365,7 @@ struct SUPERDEXPHYSICS_API FMochiArticulatedLink {
   UPROPERTY(
       EditAnywhere,
       BlueprintReadWrite,
-      Category = "Inertial",
+      Category = "SuperDex Physics|Inertial",
       meta = (EditCondition = "bOverrideMass", Units = "Kilograms"))
   double Mass = 0;
 
@@ -361,7 +373,7 @@ struct SUPERDEXPHYSICS_API FMochiArticulatedLink {
   UPROPERTY(
       EditAnywhere,
       BlueprintReadWrite,
-      Category = "Inertial",
+      Category = "SuperDex Physics|Inertial",
       meta = (InlineEditConditionToggle))
   bool bOverrideCenterOfMass = false;
 
@@ -369,7 +381,7 @@ struct SUPERDEXPHYSICS_API FMochiArticulatedLink {
   UPROPERTY(
       EditAnywhere,
       BlueprintReadWrite,
-      Category = "Inertial",
+      Category = "SuperDex Physics|Inertial",
       meta = (EditCondition = "bOverrideCenterOfMass"))
   FVector CenterOfMass = FVector::ZeroVector;
 
@@ -377,7 +389,7 @@ struct SUPERDEXPHYSICS_API FMochiArticulatedLink {
   UPROPERTY(
       EditAnywhere,
       BlueprintReadWrite,
-      Category = "Inertial",
+      Category = "SuperDex Physics|Inertial",
       meta = (InlineEditConditionToggle))
   bool bOverrideMomentOfInertia = false;
 
@@ -385,7 +397,7 @@ struct SUPERDEXPHYSICS_API FMochiArticulatedLink {
   UPROPERTY(
       EditAnywhere,
       BlueprintReadWrite,
-      Category = "Inertial",
+      Category = "SuperDex Physics|Inertial",
       meta = (EditCondition = "bOverrideMomentOfInertia"))
   FMochiMomentOfInertia MomentOfInertia;
 
@@ -440,47 +452,55 @@ USTRUCT(BlueprintType)
 struct SUPERDEXPHYSICS_API FMochiArticulatedSkin {
   GENERATED_BODY()
   /** Collision shape of the skin, expressed in the articulation root frame. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Skin")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics|Skin")
   TObjectPtr<UMochiModel> Shape = nullptr;
 
   /** Contact layer of the skin. Defaults to the layer of the articulation component when None. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Skin")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics|Skin")
   FName Layer = NAME_None;
 
   /** Contact params of the skin. Defaults to those of the articulation component when null. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Skin")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics|Skin")
   TObjectPtr<UMochiContactParams> ContactParams = nullptr;
 
   /** Boundary element type used for the skin's surface discretization. */
   UPROPERTY(
       EditAnywhere,
       BlueprintReadWrite,
-      Category = "Skin",
+      Category = "SuperDex Physics|Skin",
       meta = (ValidEnumValues = "P1Q1, P1Q3, P1Q6, Default"))
   EMochiActorBoundaryElementType BoundaryElementType =
       ::ToUnreal(mochi::ArticulatedSkinParams{}.boundaryElementType);
 
   /** Whether to use boundary subsampling for the skin. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Skin", meta = (InlineEditConditionToggle))
+  UPROPERTY(
+      EditAnywhere,
+      BlueprintReadWrite,
+      Category = "SuperDex Physics|Skin",
+      meta = (InlineEditConditionToggle))
   bool bEnableBoundarySubsampling = false;
 
   /** Boundary subsampling parameters. */
   UPROPERTY(
       EditAnywhere,
       BlueprintReadWrite,
-      Category = "Skin",
+      Category = "SuperDex Physics|Skin",
       meta = (EditCondition = "bEnableBoundarySubsampling"))
   FMochiBoundarySubsamplingParams BoundarySubsampling;
 
   /** Whether to use the configured non-colliding link list. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Skin", meta = (InlineEditConditionToggle))
+  UPROPERTY(
+      EditAnywhere,
+      BlueprintReadWrite,
+      Category = "SuperDex Physics|Skin",
+      meta = (InlineEditConditionToggle))
   bool bOverrideNonCollidingLinks = false;
 
   /** Links the skin does not collide with. */
   UPROPERTY(
       EditAnywhere,
       BlueprintReadWrite,
-      Category = "Skin",
+      Category = "SuperDex Physics|Skin",
       meta = (EditCondition = "bOverrideNonCollidingLinks"))
   TArray<FName> NonCollidingLinks;
 
@@ -511,22 +531,22 @@ USTRUCT(BlueprintType)
 struct SUPERDEXPHYSICS_API FMochiArticulatedCycleJoint {
   GENERATED_BODY()
   /** Index of the parent link. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cycle")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics|Cycle")
   int32 ParentLink = INDEX_NONE;
 
   /** Index of the child link. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cycle")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics|Cycle")
   int32 ChildLink = INDEX_NONE;
 
   /**
    * Pose of the cycle joint in the child link's frame [cm]. The translation is the pivot of the
    * spherical constraint that closes the cycle; the rotation is currently unused.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cycle")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics|Cycle")
   FTransform JointFromChildLink = FTransform::Identity;
 
   /** Stiffness of the cycle-closing constraint [N/m]. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cycle")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics|Cycle")
   double Stiffness = mochi::ArticulatedCycleJointParams{}.stiffness;
 
   /**
@@ -553,23 +573,23 @@ USTRUCT(BlueprintType)
 struct SUPERDEXPHYSICS_API FMochiJointControlGains : public FTableRowBase {
   GENERATED_USTRUCT_BODY()
   /** Joint name should match that specified in the articulation asset */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MochiJointControlGains")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics|Joint Control Gains")
   FName JointName = NAME_None;
 
   /** Control gain on error, stiffness value in N/m (P) or Nm/rad (R) */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MochiJointControlGains")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics|Joint Control Gains")
   float Stiffness = 0.0f;
 
   /** Control damping, in Ns/m (P) or Nms/rad (R) */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MochiJointControlGains")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics|Joint Control Gains")
   float Damping = 0.0f;
 
   /** Maximum force in N (P) or torque in Nm (R) effort the joint can exert, -1 for "unspecified" */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MochiJointControlGains")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics|Joint Control Gains")
   float LimitEffort = -1.0f;
 
   /** Maximum velocity in m/s (P) or rad/s (R) the joint can safely move at, -1 for "unspecified" */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MochiJointControlGains")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics|Joint Control Gains")
   float LimitVelocity = -1.0f;
 
  public:

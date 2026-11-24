@@ -35,7 +35,7 @@ struct FMochiDebugDrawFlags {
   //----------------------------------------------------------------------------
 
   /** Debug draw all enabled entities in the foreground. */
-  UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Mochi")
+  UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "SuperDex Physics")
   bool bDebugDrawForeground = false;
 
   //----------------------------------------------------------------------------

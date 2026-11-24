@@ -42,7 +42,7 @@ class SUPERDEXPHYSICS_API AMochiSoftMeshActor : public AActor {
  private:
   /** Soft mesh component simulated by this actor. */
   UPROPERTY(
-      Category = MochiSoftMeshActor,
+      Category = "SuperDex Physics|Soft Mesh Actor",
       VisibleAnywhere,
       BlueprintReadOnly,
       meta =
@@ -89,7 +89,7 @@ class SUPERDEXPHYSICS_API AMochiArticulationActor : public AActor {
  private:
   /** Component that creates and controls the articulation. */
   UPROPERTY(
-      Category = MochiArticulationPreviewActor,
+      Category = "SuperDex Physics|Articulation Preview Actor",
       VisibleAnywhere,
       BlueprintReadOnly,
       meta =
@@ -103,7 +103,7 @@ class SUPERDEXPHYSICS_API AMochiArticulationActor : public AActor {
    *
    * @param NewArticulation Articulation asset to assign.
    */
-  UFUNCTION(BlueprintCallable, Category = "MochiArticulationActor")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Physics|Articulation Actor")
   void SetArticulationAsset(UMochiArticulation* NewArticulation);
 
   /**
@@ -111,7 +111,7 @@ class SUPERDEXPHYSICS_API AMochiArticulationActor : public AActor {
    *
    * @return The articulation asset.
    */
-  UFUNCTION(BlueprintPure, Category = "MochiArticulationActor")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Physics|Articulation Actor")
   UMochiArticulation* GetArticulationAsset() const;
 
   /**
@@ -119,7 +119,7 @@ class SUPERDEXPHYSICS_API AMochiArticulationActor : public AActor {
    *
    * @return The articulation component.
    */
-  UFUNCTION(BlueprintPure, Category = "MochiArticulationActor")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Physics|Articulation Actor")
   UMochiArticulationComponent* GetArticulationComponent() const;
 
  public:
@@ -157,7 +157,7 @@ class SUPERDEXPHYSICS_API AMochiArticulationPreviewActor : public AActor {
  private:
   /** Poseable component used to display the articulation preview. */
   UPROPERTY(
-      Category = MochiArticulationPreviewActor,
+      Category = "SuperDex Physics|Articulation Preview Actor",
       VisibleAnywhere,
       BlueprintReadOnly,
       meta =
@@ -172,7 +172,7 @@ class SUPERDEXPHYSICS_API AMochiArticulationPreviewActor : public AActor {
    *
    * @param NewArticulation Articulation asset to assign.
    */
-  UFUNCTION(BlueprintCallable, Category = "MochiArticulationPreviewActor")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Physics|Articulation Preview Actor")
   void SetArticulation(UMochiArticulationBase* NewArticulation);
 
   /**
@@ -180,7 +180,7 @@ class SUPERDEXPHYSICS_API AMochiArticulationPreviewActor : public AActor {
    *
    * @return The articulation.
    */
-  UFUNCTION(BlueprintPure, Category = "MochiArticulationPreviewActor")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Physics|Articulation Preview Actor")
   UMochiArticulationBase* GetArticulation() const;
 
   /**
@@ -188,7 +188,7 @@ class SUPERDEXPHYSICS_API AMochiArticulationPreviewActor : public AActor {
    *
    * @param NewJointPositions Joint positions to apply.
    */
-  UFUNCTION(BlueprintCallable, Category = "MochiArticulationPreviewActor")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Physics|Articulation Preview Actor")
   void SetJointPositions(const TArray<double>& NewJointPositions);
 
   /**
@@ -196,7 +196,7 @@ class SUPERDEXPHYSICS_API AMochiArticulationPreviewActor : public AActor {
    *
    * @return The poseable mesh component.
    */
-  UFUNCTION(BlueprintPure, Category = "MochiArticulationPreviewActor")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Physics|Articulation Preview Actor")
   UMochiArticulationPreviewComponent* GetPoseableMeshComponent() const;
 
  public:

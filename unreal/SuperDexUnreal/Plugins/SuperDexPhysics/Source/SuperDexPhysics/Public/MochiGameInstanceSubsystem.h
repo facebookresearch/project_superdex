@@ -78,7 +78,7 @@ class SUPERDEXPHYSICS_API UMochiGameInstanceSubsystem final : public UGameInstan
    *
    * @return The scene.
    */
-  UFUNCTION(BlueprintPure, Category = "Mochi")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Physics")
   UMochiSceneObject* GetScene() const;
 
   /** Enable Mochi debug draw for the managed scene. */

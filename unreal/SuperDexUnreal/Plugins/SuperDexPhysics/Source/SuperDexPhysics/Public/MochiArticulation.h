@@ -42,19 +42,24 @@ UCLASS(
     BlueprintType,
     HideCategories = Object,
     DisplayName = "Mochi Articulation",
-    PrioritizeCategories = ("Articulation", "Assets", "Internal"),
-    AutoCollapseCategories = ("Internal"))
+    PrioritizeCategories =
+        ("SuperDex Physics|Articulation", "SuperDex Physics|Assets", "SuperDex Physics|Internal"),
+    AutoCollapseCategories = ("SuperDex Physics|Internal"))
 class SUPERDEXPHYSICS_API UMochiArticulation : public UMochiArticulationBase {
   GENERATED_BODY()
  protected:
   /** The name of the articulation described. */
-  UPROPERTY(EditAnywhere, Category = "Articulation", BlueprintReadOnly, AssetRegistrySearchable)
+  UPROPERTY(
+      EditAnywhere,
+      Category = "SuperDex Physics|Articulation",
+      BlueprintReadOnly,
+      AssetRegistrySearchable)
   FString ArticulationName;
 
   /** Optional joint positions that define a default "home" pose of the articulation [rad or m] */
   UPROPERTY(
       EditAnywhere,
-      Category = "Articulation",
+      Category = "SuperDex Physics|Articulation",
       BlueprintReadOnly,
       AssetRegistrySearchable,
       EditFixedSize,
@@ -64,7 +69,7 @@ class SUPERDEXPHYSICS_API UMochiArticulation : public UMochiArticulationBase {
   /** The joints of the articulation, one per link. */
   UPROPERTY(
       EditAnywhere,
-      Category = "Articulation",
+      Category = "SuperDex Physics|Articulation",
       BlueprintReadOnly,
       meta = (TitleProperty = "Name"))
   TArray<FMochiArticulatedJoint> Joints;
@@ -72,19 +77,19 @@ class SUPERDEXPHYSICS_API UMochiArticulation : public UMochiArticulationBase {
   /** The links of the articulation. Parents must precede their children. */
   UPROPERTY(
       EditAnywhere,
-      Category = "Articulation",
+      Category = "SuperDex Physics|Articulation",
       BlueprintReadOnly,
       meta = (TitleProperty = "Name"))
   TArray<FMochiArticulatedLink> Links;
 
   /** Cycle-closing joints for closed-loop topologies. */
-  UPROPERTY(EditAnywhere, Category = "Articulation", BlueprintReadOnly)
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics|Articulation", BlueprintReadOnly)
   TArray<FMochiArticulatedCycleJoint> Cycles;
 
   /** Whether the articulation includes a collision skin. */
   UPROPERTY(
       EditAnywhere,
-      Category = "Articulation",
+      Category = "SuperDex Physics|Articulation",
       BlueprintReadOnly,
       meta = (InlineEditConditionToggle))
   bool bHasSkin = false;
@@ -92,7 +97,7 @@ class SUPERDEXPHYSICS_API UMochiArticulation : public UMochiArticulationBase {
   /** Optional deformable collision skin wrapped over the links. */
   UPROPERTY(
       EditAnywhere,
-      Category = "Articulation",
+      Category = "SuperDex Physics|Articulation",
       BlueprintReadOnly,
       meta = (EditCondition = "bHasSkin"))
   FMochiArticulatedSkin Skin;
@@ -101,15 +106,27 @@ class SUPERDEXPHYSICS_API UMochiArticulation : public UMochiArticulationBase {
    * Link pairs whose contact is enabled or disabled, applied in order after the links are created.
    * Adjacent links have contact disabled by default.
    */
-  UPROPERTY(EditAnywhere, Category = "Articulation", BlueprintReadOnly, AssetRegistrySearchable)
+  UPROPERTY(
+      EditAnywhere,
+      Category = "SuperDex Physics|Articulation",
+      BlueprintReadOnly,
+      AssetRegistrySearchable)
   TArray<FMochiArticulationContactOverride> ContactOverrides;
 
   /** Additional constraints to create between rigid links. */
-  UPROPERTY(EditAnywhere, Category = "Articulation", BlueprintReadOnly, AssetRegistrySearchable)
+  UPROPERTY(
+      EditAnywhere,
+      Category = "SuperDex Physics|Articulation",
+      BlueprintReadOnly,
+      AssetRegistrySearchable)
   TArray<FMochiArticulationConstraint> AdditionalConstraints;
 
   /** Soft links to attach to rigid links */
-  UPROPERTY(EditAnywhere, Category = "Articulation", BlueprintReadOnly, AssetRegistrySearchable)
+  UPROPERTY(
+      EditAnywhere,
+      Category = "SuperDex Physics|Articulation",
+      BlueprintReadOnly,
+      AssetRegistrySearchable)
   TArray<FMochiArticulationSoftLink> SoftLinks;
 
   /** Whether the rigid links also collide with other actors when there are soft links. */
@@ -120,11 +137,15 @@ class SUPERDEXPHYSICS_API UMochiArticulation : public UMochiArticulationBase {
    * The SkeletalMesh asset associated with the articulation. Can be regenerated with Generate
    * Skeletal Mesh.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Assets", AssetRegistrySearchable)
+  UPROPERTY(
+      EditAnywhere,
+      BlueprintReadOnly,
+      Category = "SuperDex Physics|Assets",
+      AssetRegistrySearchable)
   TObjectPtr<USkeletalMesh> SkeletalMesh = nullptr;
 
   /** User added notes/README about the articulation. */
-  UPROPERTY(EditAnywhere, Category = "Internal", meta = (MultiLine = true))
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics|Internal", meta = (MultiLine = true))
   FString Notes;
 
  public:
@@ -167,7 +188,7 @@ class SUPERDEXPHYSICS_API UMochiArticulation : public UMochiArticulationBase {
    *
    * @return Link definitions in articulation order.
    */
-  UFUNCTION(BlueprintPure, Category = "Mochi|Articulation")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Physics|Articulation")
   const TArray<FMochiArticulatedLink>& GetLinks() const;
 
   /**
@@ -175,7 +196,7 @@ class SUPERDEXPHYSICS_API UMochiArticulation : public UMochiArticulationBase {
    *
    * @return Joint definitions, one per link.
    */
-  UFUNCTION(BlueprintPure, Category = "Mochi|Articulation")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Physics|Articulation")
   const TArray<FMochiArticulatedJoint>& GetJoints() const;
 
   /**
@@ -183,7 +204,7 @@ class SUPERDEXPHYSICS_API UMochiArticulation : public UMochiArticulationBase {
    *
    * @return Cycle-closing joint definitions.
    */
-  UFUNCTION(BlueprintPure, Category = "Mochi|Articulation")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Physics|Articulation")
   const TArray<FMochiArticulatedCycleJoint>& GetCycles() const;
 
   /**
@@ -191,7 +212,7 @@ class SUPERDEXPHYSICS_API UMochiArticulation : public UMochiArticulationBase {
    *
    * @return Whether a collision skin is configured.
    */
-  UFUNCTION(BlueprintPure, Category = "Mochi|Articulation")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Physics|Articulation")
   bool HasSkin() const;
 
   /**
@@ -199,7 +220,7 @@ class SUPERDEXPHYSICS_API UMochiArticulation : public UMochiArticulationBase {
    *
    * @return The configured collision-skin definition.
    */
-  UFUNCTION(BlueprintPure, Category = "Mochi|Articulation")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Physics|Articulation")
   const FMochiArticulatedSkin& GetSkin() const;
 
   /**
@@ -207,7 +228,7 @@ class SUPERDEXPHYSICS_API UMochiArticulation : public UMochiArticulationBase {
    *
    * @return Whether soft-link attachments are configured.
    */
-  UFUNCTION(BlueprintPure, Category = "Mochi|Articulation")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Physics|Articulation")
   bool HasSoftLinks() const;
 
   /**
@@ -215,7 +236,7 @@ class SUPERDEXPHYSICS_API UMochiArticulation : public UMochiArticulationBase {
    *
    * @return The configured soft-link attachments.
    */
-  UFUNCTION(BlueprintPure, Category = "Mochi|Articulation")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Physics|Articulation")
   const TArray<FMochiArticulationSoftLink>& GetSoftLinks() const;
 
   /** Whether the rigid links also collide with other actors when there are soft links. */
@@ -226,7 +247,7 @@ class SUPERDEXPHYSICS_API UMochiArticulation : public UMochiArticulationBase {
    *
    * @return The contact overrides.
    */
-  UFUNCTION(BlueprintPure, Category = "Mochi|Articulation")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Physics|Articulation")
   const TArray<FMochiArticulationContactOverride>& GetContactOverrides() const;
 
   /**
@@ -241,7 +262,7 @@ class SUPERDEXPHYSICS_API UMochiArticulation : public UMochiArticulationBase {
    *
    * @return The additional constraints.
    */
-  UFUNCTION(BlueprintPure, Category = "Mochi|Articulation")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Physics|Articulation")
   const TArray<FMochiArticulationConstraint>& GetAdditionalConstraints() const;
 
   /**
@@ -257,7 +278,7 @@ class SUPERDEXPHYSICS_API UMochiArticulation : public UMochiArticulationBase {
    *
    * @return Whether the articulation's root joint is fixed by default.
    */
-  UFUNCTION(BlueprintPure, Category = "Mochi|Articulation")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Physics|Articulation")
   bool DefaultFixedBase() const;
 
   /**
@@ -276,7 +297,7 @@ class SUPERDEXPHYSICS_API UMochiArticulation : public UMochiArticulationBase {
    * @param LinkName Name of the requested articulation link.
    * @return Index of the named link, or -1 when it is not found.
    */
-  UFUNCTION(BlueprintPure, Category = "Mochi|Articulation")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Physics|Articulation")
   int GetLinkIndex(FName LinkName) const;
 
   /**
@@ -289,7 +310,7 @@ class SUPERDEXPHYSICS_API UMochiArticulation : public UMochiArticulationBase {
   UFUNCTION(
       BlueprintCallable,
       meta = (ExpandBoolAsExecs = "ReturnValue"),
-      Category = "Mochi|Articulation")
+      Category = "SuperDex Physics|Articulation")
   bool GetLink(FName LinkName, FMochiArticulatedLink& OutLink) const;
 
   /**
@@ -299,7 +320,7 @@ class SUPERDEXPHYSICS_API UMochiArticulation : public UMochiArticulationBase {
    * @param JointName Name of the requested articulation joint.
    * @return Index of the named joint, or -1 when it is not found.
    */
-  UFUNCTION(BlueprintPure, Category = "Mochi|Articulation")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Physics|Articulation")
   int GetJointIndex(FName JointName) const;
 
   /**
@@ -312,7 +333,7 @@ class SUPERDEXPHYSICS_API UMochiArticulation : public UMochiArticulationBase {
   UFUNCTION(
       BlueprintCallable,
       meta = (ExpandBoolAsExecs = "ReturnValue"),
-      Category = "Mochi|Articulation")
+      Category = "SuperDex Physics|Articulation")
   bool GetJoint(FName JointName, FMochiArticulatedJoint& OutJoint) const;
 
   /**
@@ -322,7 +343,7 @@ class SUPERDEXPHYSICS_API UMochiArticulation : public UMochiArticulationBase {
    * @param OutJoint Storage for the requested joint definition.
    * @return Whether the link index resolved to a joint.
    */
-  UFUNCTION(BlueprintPure, Category = "Mochi|Articulation")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Physics|Articulation")
   bool GetLinkJoint(int LinkIndex, FMochiArticulatedJoint& OutJoint) const;
 
   /**
@@ -331,7 +352,7 @@ class SUPERDEXPHYSICS_API UMochiArticulation : public UMochiArticulationBase {
    * @param LinkIndex Index of the articulation link.
    * @return The child link indices.
    */
-  UFUNCTION(BlueprintPure, Category = "Mochi|Articulation")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Physics|Articulation")
   TArray<int> GetChildLinkIndices(int LinkIndex) const;
 
   /**
@@ -339,7 +360,7 @@ class SUPERDEXPHYSICS_API UMochiArticulation : public UMochiArticulationBase {
    *
    * @return The leaf link indices.
    */
-  UFUNCTION(BlueprintPure, Category = "Mochi|Articulation")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Physics|Articulation")
   TArray<int> GetLeafLinkIndices() const;
 
   /**
@@ -348,7 +369,7 @@ class SUPERDEXPHYSICS_API UMochiArticulation : public UMochiArticulationBase {
    *
    * @return The last or first forking link.
    */
-  UFUNCTION(BlueprintPure, Category = "Mochi|Articulation")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Physics|Articulation")
   FMochiArticulatedLink GetLastOrFirstForkingLink() const;
 
   /**
@@ -363,7 +384,7 @@ class SUPERDEXPHYSICS_API UMochiArticulation : public UMochiArticulationBase {
    *
    * @return Joint index for each articulated degree of freedom.
    */
-  UFUNCTION(BlueprintPure, Category = "Mochi|Articulation")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Physics|Articulation")
   const TArray<int>& GetDofIndices() const;
 
   /**
@@ -372,7 +393,7 @@ class SUPERDEXPHYSICS_API UMochiArticulation : public UMochiArticulationBase {
    * @param JointName Name of the requested articulation joint.
    * @return Index of the joint's first DOF, or -1 when it has no DOFs.
    */
-  UFUNCTION(BlueprintPure, Category = "Mochi|Articulation")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Physics|Articulation")
   int GetDofIndex(FName JointName) const;
 
   /**
@@ -382,7 +403,7 @@ class SUPERDEXPHYSICS_API UMochiArticulation : public UMochiArticulationBase {
    * @param OutJoint Storage for the requested joint definition.
    * @return Whether the DOF index resolved to a joint.
    */
-  UFUNCTION(BlueprintPure, Category = "Mochi|Articulation")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Physics|Articulation")
   bool GetDof(int DofIndex, FMochiArticulatedJoint& OutJoint) const;
 
   /**
@@ -393,7 +414,7 @@ class SUPERDEXPHYSICS_API UMochiArticulation : public UMochiArticulationBase {
    * @param OutUpper Storage for the upper joint-motion limit.
    * @return Whether limits were available for the requested DOF.
    */
-  UFUNCTION(BlueprintPure, Category = "Mochi|Articulation")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Physics|Articulation")
   bool GetDofLimits(int DofIndex, double& OutLower, double& OutUpper) const;
 
   /**
@@ -445,7 +466,7 @@ class SUPERDEXPHYSICS_API UMochiArticulation : public UMochiArticulationBase {
    * @param LengthScale Scale converting linear joint values to Unreal lengths.
    * @return Whether the requested link transform was computed.
    */
-  UFUNCTION(BlueprintCallable, Category = "Mochi|Articulation")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Physics|Articulation")
   bool ForwardKinematics(
       FName LinkName,
       const TArray<double>& JointPositions,
@@ -458,7 +479,7 @@ class SUPERDEXPHYSICS_API UMochiArticulation : public UMochiArticulationBase {
    *
    * @param JointPositions Joint-position values to read and clamp in place.
    */
-  UFUNCTION(BlueprintCallable, Category = "Mochi|Articulation")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Physics|Articulation")
   void ClampJointPositions(TArray<double>& JointPositions) const;
 
   /**
@@ -468,7 +489,7 @@ class SUPERDEXPHYSICS_API UMochiArticulation : public UMochiArticulationBase {
    * @param bNormalDistribution Whether to sample from a normal distribution instead of a uniform
    * distribution.
    */
-  UFUNCTION(BlueprintCallable, Category = "Mochi|Articulation")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Physics|Articulation")
   void RandomJointPositions(TArray<double>& JointPositions, bool bNormalDistribution = false) const;
 
  public:
@@ -523,11 +544,11 @@ class SUPERDEXPHYSICS_API UMochiArticulation : public UMochiArticulationBase {
 
  protected:
   /** Get the ordered array of link names; for editor drop down menus. */
-  UFUNCTION(Category = "Mochi|Articulation")
+  UFUNCTION(Category = "SuperDex Physics|Articulation")
   TArray<FName> GetLinkNames_EditorOnly() const;
 
   /** Get the ordered array of joint names; for editor drop down menus. */
-  UFUNCTION(Category = "Mochi|Articulation")
+  UFUNCTION(Category = "SuperDex Physics|Articulation")
   TArray<FName> GetJointNames_EditorOnly() const;
 #endif
 

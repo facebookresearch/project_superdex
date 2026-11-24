@@ -29,26 +29,26 @@ class SUPERDEXPHYSICS_API UMochiImplicitShapeComponent : public USceneComponent,
   GENERATED_BODY()
 
   /** Implicit shape type. */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   EMochiImplicitShape Shape = EMochiImplicitShape::Plane;
 
   /** Sphere radius in world units (centimeters). */
   UPROPERTY(
       EditAnywhere,
       meta = (EditCondition = "Shape == EMochiImplicitShape::Sphere", EditConditionHides),
-      Category = "Mochi")
+      Category = "SuperDex Physics")
   float SphereRadius = 50;
 
   /** The layer this object is simulated on. */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   FName Layer = FMochiLayer::GenericObject;
 
   /** Parameters controlling physical material properties. */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   UMochiMaterialParams* MaterialParams = nullptr;
 
   /** Parameters controlling contacts. */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   UMochiContactParams* ContactParams;
 
  public:

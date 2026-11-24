@@ -104,6 +104,6 @@ class UBakeSdfOptions : public UObject {
   GENERATED_BODY()
  public:
   /** Grid signed-distance-field settings used by the bake dialog. */
-  UPROPERTY(EditAnywhere, Category = "SDF")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics|SDF")
   FMochiGridSdfParams GridSdfParams;
 };

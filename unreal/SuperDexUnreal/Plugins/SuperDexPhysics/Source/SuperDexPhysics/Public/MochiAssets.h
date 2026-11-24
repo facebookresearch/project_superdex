@@ -33,7 +33,7 @@ class SUPERDEXPHYSICS_API UMochiMaterialParams : public UObject {
 
  public:
   /** Material type. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   EMochiSoftMaterialType MaterialType;
 
   /** Material Young's modulus */
@@ -46,7 +46,7 @@ class SUPERDEXPHYSICS_API UMochiMaterialParams : public UObject {
            EditCondition =
                "MaterialType != EMochiSoftMaterialType::Arap && MaterialType != EMochiSoftMaterialType::ActiveShapeTargetingArap",
            EditConditionHides),
-      Category = "Mochi")
+      Category = "SuperDex Physics")
   float YoungsModulus;
 
   /** Material poisson ratio. */
@@ -59,11 +59,15 @@ class SUPERDEXPHYSICS_API UMochiMaterialParams : public UObject {
            EditCondition =
                "MaterialType != EMochiSoftMaterialType::Arap && MaterialType != EMochiSoftMaterialType::ActiveShapeTargetingArap",
            EditConditionHides),
-      Category = "Mochi")
+      Category = "SuperDex Physics")
   float PoissonRatio;
 
   /** Density in the undeformed configuration. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ForceUnits = "kg/m3"), Category = "Mochi")
+  UPROPERTY(
+      EditAnywhere,
+      BlueprintReadWrite,
+      meta = (ForceUnits = "kg/m3"),
+      Category = "SuperDex Physics")
   float Density;
 
   /** Mass damping coefficient. */
@@ -71,7 +75,7 @@ class SUPERDEXPHYSICS_API UMochiMaterialParams : public UObject {
       EditAnywhere,
       BlueprintReadWrite,
       meta = (DisplayName = "Mass Damping Coefficient (1/s)"),
-      Category = "Shell Material")
+      Category = "SuperDex Physics|Shell Material")
   float MassDampingCoefficient;
 
   /** Stiffness damping coefficient. */
@@ -79,14 +83,14 @@ class SUPERDEXPHYSICS_API UMochiMaterialParams : public UObject {
       EditAnywhere,
       BlueprintReadWrite,
       meta = (ForceUnits = "s"),
-      Category = "Shell Material")
+      Category = "SuperDex Physics|Shell Material")
   float StiffnessDampingCoefficient;
 
   /** Strategy for keeping the material's Hessian positive semi-definite. */
   UPROPERTY(
       EditAnywhere,
       BlueprintReadWrite,
-      Category = "Mochi",
+      Category = "SuperDex Physics",
       AdvancedDisplay,
       meta =
           (EditCondition = "MaterialType != EMochiSoftMaterialType::LinearElastic",
@@ -103,7 +107,7 @@ class SUPERDEXPHYSICS_API UMochiMaterialParams : public UObject {
            EditCondition =
                "MaterialType == EMochiSoftMaterialType::Arap || MaterialType == EMochiSoftMaterialType::ActiveShapeTargetingArap",
            EditConditionHides),
-      Category = "ARAP Material")
+      Category = "SuperDex Physics|ARAP Material")
   float ArapStiffness;
 
   /** Local shape the material is driven towards, as an offset from the identity. */
@@ -113,7 +117,7 @@ class SUPERDEXPHYSICS_API UMochiMaterialParams : public UObject {
       meta =
           (EditCondition = "MaterialType == EMochiSoftMaterialType::ActiveShapeTargetingArap",
            EditConditionHides),
-      Category = "ARAP Material")
+      Category = "SuperDex Physics|ARAP Material")
   FMochiShapeTargetTensor ShapeTargetTensor;
 
   /** Anisotropic stiffness along the fiber direction. */
@@ -125,7 +129,7 @@ class SUPERDEXPHYSICS_API UMochiMaterialParams : public UObject {
            ClampMin = 0,
            EditCondition = "MaterialType == EMochiSoftMaterialType::ActiveNeoHookean",
            EditConditionHides),
-      Category = "Active Material")
+      Category = "SuperDex Physics|Active Material")
   float AnisoAlpha;
 
   /** Anisotropic reference length (dimensionless). Drives activation along the fiber. */
@@ -136,7 +140,7 @@ class SUPERDEXPHYSICS_API UMochiMaterialParams : public UObject {
           (ClampMin = 0,
            EditCondition = "MaterialType == EMochiSoftMaterialType::ActiveNeoHookean",
            EditConditionHides),
-      Category = "Active Material")
+      Category = "SuperDex Physics|Active Material")
   float AnisoLength;
 
   /**
@@ -150,7 +154,7 @@ class SUPERDEXPHYSICS_API UMochiMaterialParams : public UObject {
       meta =
           (EditCondition = "MaterialType == EMochiSoftMaterialType::ActiveNeoHookean",
            EditConditionHides),
-      Category = "Active Material")
+      Category = "SuperDex Physics|Active Material")
   FVector3f AnisoDirection;
 
  public:
@@ -184,19 +188,28 @@ class SUPERDEXPHYSICS_API UMochiShellMaterialParams : public UObject {
  public:
 #if WITH_EDITORONLY_DATA
   /** Young's modulus of the 3D solid material. */
-  UPROPERTY(EditAnywhere, meta = (ForceUnits = "Pa"), Category = "Estimate from 3D Parameters")
+  UPROPERTY(
+      EditAnywhere,
+      meta = (ForceUnits = "Pa"),
+      Category = "SuperDex Physics|Estimate from 3D Parameters")
   float YoungModulus3D = mochi::kDefaultYoungsModulus;
 
   /** Poisson's ratio of the 3D solid material. */
-  UPROPERTY(EditAnywhere, Category = "Estimate from 3D Parameters")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics|Estimate from 3D Parameters")
   float PoissonsRatio3D = mochi::kDefaultPoissonRatio;
 
   /** Volumetric density of the 3D solid material. */
-  UPROPERTY(EditAnywhere, meta = (ForceUnits = "kg/m^3"), Category = "Estimate from 3D Parameters")
+  UPROPERTY(
+      EditAnywhere,
+      meta = (ForceUnits = "kg/m^3"),
+      Category = "SuperDex Physics|Estimate from 3D Parameters")
   float Density3D = mochi::kDefaultDensity;
 
   /** Shell thickness. */
-  UPROPERTY(EditAnywhere, meta = (ForceUnits = "m"), Category = "Estimate from 3D Parameters")
+  UPROPERTY(
+      EditAnywhere,
+      meta = (ForceUnits = "m"),
+      Category = "SuperDex Physics|Estimate from 3D Parameters")
   float Thickness = 0.001f;
 #endif
 
@@ -205,7 +218,7 @@ class SUPERDEXPHYSICS_API UMochiShellMaterialParams : public UObject {
       EditAnywhere,
       BlueprintReadWrite,
       meta = (ForceUnits = "Pa*m"),
-      Category = "Shell Material")
+      Category = "SuperDex Physics|Shell Material")
   float MembraneLambda;
 
   /** Second membrane Lamé parameter (shear modulus, force per unit length). */
@@ -213,7 +226,7 @@ class SUPERDEXPHYSICS_API UMochiShellMaterialParams : public UObject {
       EditAnywhere,
       BlueprintReadWrite,
       meta = (ForceUnits = "Pa*m"),
-      Category = "Shell Material")
+      Category = "SuperDex Physics|Shell Material")
   float MembraneMu;
 
   /** First bending stiffness parameter. */
@@ -221,7 +234,7 @@ class SUPERDEXPHYSICS_API UMochiShellMaterialParams : public UObject {
       EditAnywhere,
       BlueprintReadWrite,
       meta = (ForceUnits = "Pa*m^3"),
-      Category = "Shell Material")
+      Category = "SuperDex Physics|Shell Material")
   float BendingAlpha;
 
   /** Second bending stiffness parameter. */
@@ -229,7 +242,7 @@ class SUPERDEXPHYSICS_API UMochiShellMaterialParams : public UObject {
       EditAnywhere,
       BlueprintReadWrite,
       meta = (ForceUnits = "Pa*m^3"),
-      Category = "Shell Material")
+      Category = "SuperDex Physics|Shell Material")
   float BendingBeta;
 
   /** Area density (mass per unit area). */
@@ -237,7 +250,7 @@ class SUPERDEXPHYSICS_API UMochiShellMaterialParams : public UObject {
       EditAnywhere,
       BlueprintReadWrite,
       meta = (ForceUnits = "kg/m^2"),
-      Category = "Shell Material")
+      Category = "SuperDex Physics|Shell Material")
   float Density;
 
   /** Mass damping coefficient. */
@@ -245,7 +258,7 @@ class SUPERDEXPHYSICS_API UMochiShellMaterialParams : public UObject {
       EditAnywhere,
       BlueprintReadWrite,
       meta = (DisplayName = "Mass Damping Coefficient (1/s)"),
-      Category = "Shell Material")
+      Category = "SuperDex Physics|Shell Material")
   float MassDampingCoefficient;
 
   /** Stiffness damping coefficient. */
@@ -253,14 +266,18 @@ class SUPERDEXPHYSICS_API UMochiShellMaterialParams : public UObject {
       EditAnywhere,
       BlueprintReadWrite,
       meta = (ForceUnits = "s"),
-      Category = "Shell Material")
+      Category = "SuperDex Physics|Shell Material")
   float StiffnessDampingCoefficient;
 
   /**
    * Dimensionless scale of the membrane collapse barrier, which resists element collapse under
    * large in-plane compression. Zero disables it.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ClampMin = 0), Category = "Shell Material")
+  UPROPERTY(
+      EditAnywhere,
+      BlueprintReadWrite,
+      meta = (ClampMin = 0),
+      Category = "SuperDex Physics|Shell Material")
   float MembraneCollapseBarrierScale;
 
  public:
@@ -288,7 +305,7 @@ class SUPERDEXPHYSICS_API UMochiShellMaterialParams : public UObject {
    */
   UFUNCTION(
       CallInEditor,
-      Category = "Estimate from 3D Parameters",
+      Category = "SuperDex Physics|Estimate from 3D Parameters",
       DisplayName = "Apply Estimate to Shell Material")
   void Apply3DParametersTo2D();
 #endif
@@ -311,23 +328,43 @@ class SUPERDEXPHYSICS_API UMochiRodMaterialParams : public UObject {
 
  public:
   /** Mass per unit undeformed length [kg/m]. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ForceUnits = "kg/m"), Category = "Mochi")
+  UPROPERTY(
+      EditAnywhere,
+      BlueprintReadWrite,
+      meta = (ForceUnits = "kg/m"),
+      Category = "SuperDex Physics")
   float LinearDensity;
 
   /** Rotational inertia about the rod axis, per unit undeformed length [kg*m]. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ForceUnits = "kg*m"), Category = "Mochi")
+  UPROPERTY(
+      EditAnywhere,
+      BlueprintReadWrite,
+      meta = (ForceUnits = "kg*m"),
+      Category = "SuperDex Physics")
   float LinearRotationalInertia;
 
   /** Axial stiffness (Young's modulus x cross-section area) [N]. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ForceUnits = "N"), Category = "Mochi")
+  UPROPERTY(
+      EditAnywhere,
+      BlueprintReadWrite,
+      meta = (ForceUnits = "N"),
+      Category = "SuperDex Physics")
   float AxialStiffness;
 
   /** Torsional stiffness (shear modulus x torsion constant) [N*m^2]. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ForceUnits = "N*m^2"), Category = "Mochi")
+  UPROPERTY(
+      EditAnywhere,
+      BlueprintReadWrite,
+      meta = (ForceUnits = "N*m^2"),
+      Category = "SuperDex Physics")
   float TorsionalStiffness;
 
   /** Flexural stiffness about two principal axes (E*I1, E*I2) [N*m^2]. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ForceUnits = "N*m^2"), Category = "Mochi")
+  UPROPERTY(
+      EditAnywhere,
+      BlueprintReadWrite,
+      meta = (ForceUnits = "N*m^2"),
+      Category = "SuperDex Physics")
   FVector2D FlexuralStiffness;
 
   /** Mass damping coefficient. */
@@ -335,18 +372,22 @@ class SUPERDEXPHYSICS_API UMochiRodMaterialParams : public UObject {
       EditAnywhere,
       BlueprintReadWrite,
       meta = (DisplayName = "Mass Damping Coefficient (1/s)"),
-      Category = "Mochi")
+      Category = "SuperDex Physics")
   float MassDampingCoefficient;
 
   /** Stiffness damping coefficient. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ForceUnits = "s"), Category = "Mochi")
+  UPROPERTY(
+      EditAnywhere,
+      BlueprintReadWrite,
+      meta = (ForceUnits = "s"),
+      Category = "SuperDex Physics")
   float StiffnessDampingCoefficient;
 
   /**
    * Dimensionless scale of the axial collapse barrier, which resists element collapse under large
    * axial compression. Zero disables it.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ClampMin = 0), Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ClampMin = 0), Category = "SuperDex Physics")
   float AxialCollapseBarrierScale;
 
  public:
@@ -382,7 +423,7 @@ class SUPERDEXPHYSICS_API UMochiContactParams : public UObject {
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
-      Category = "Contact",
+      Category = "SuperDex Physics|Contact",
       meta = (DisplayName = "Penalty Coefficient (MPa/m)", ForceUnits = "MPa"))
   float PenaltyCoefficient;
 
@@ -390,14 +431,22 @@ class SUPERDEXPHYSICS_API UMochiContactParams : public UObject {
    * Default detection threshold, if no extra padding is added. Determines the distance to the
    * object at which contact forces will begin to be applied.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Contact", meta = (Units = "m"))
+  UPROPERTY(
+      EditAnywhere,
+      BlueprintReadOnly,
+      Category = "SuperDex Physics|Contact",
+      meta = (Units = "m"))
   float PenaltyThresholdDist;
 
   /**
    * Extra padding for penalty detection. This is helpful when this collider actor is thin and the
    * colliding actor has no collider (i.e. contact cannot be sync).
    */
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Contact", meta = (Units = "m"))
+  UPROPERTY(
+      EditAnywhere,
+      BlueprintReadOnly,
+      Category = "SuperDex Physics|Contact",
+      meta = (Units = "m"))
   float PenaltyExtraPadding;
 
   /**
@@ -408,7 +457,7 @@ class SUPERDEXPHYSICS_API UMochiContactParams : public UObject {
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
-      Category = "Contact",
+      Category = "SuperDex Physics|Contact",
       AdvancedDisplay,
       meta = (Units = "m"))
   float CollidingPenaltyThresholdPadding;
@@ -417,14 +466,22 @@ class SUPERDEXPHYSICS_API UMochiContactParams : public UObject {
    * PolyReLU falloff: Half-distance over which the ReLU function is smoothed to allow
    * differentiation. Should typically be set to the same as PenaltyThresholdDist.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Contact", meta = (Units = "m"))
+  UPROPERTY(
+      EditAnywhere,
+      BlueprintReadOnly,
+      Category = "SuperDex Physics|Contact",
+      meta = (Units = "m"))
   float PenaltySmoothingHalfDistance;
 
   /**
    * True = Use the collider's normal (SDF gradient) for friction, False = use the normal at the
    * collision sample.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Friction", AdvancedDisplay)
+  UPROPERTY(
+      EditAnywhere,
+      BlueprintReadOnly,
+      Category = "SuperDex Physics|Friction",
+      AdvancedDisplay)
   bool bFrictionWithColliderNormal;
 
   /**
@@ -437,7 +494,7 @@ class SUPERDEXPHYSICS_API UMochiContactParams : public UObject {
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
-      Category = "Contact",
+      Category = "SuperDex Physics|Contact",
       AdvancedDisplay,
       meta = (UIMin = -1.0, UIMax = 1.0))
   float MaxAlignmentNormals;
@@ -451,17 +508,17 @@ class SUPERDEXPHYSICS_API UMochiContactParams : public UObject {
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
-      Category = "Contact",
+      Category = "SuperDex Physics|Contact",
       AdvancedDisplay,
       meta = (ClampMin = 0.0, ClampMax = 1.0))
   float AlignmentSmoothingFraction;
 
   /** Viscous friction coefficient. */
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Friction")
+  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SuperDex Physics|Friction")
   float ViscousFrictionCoefficient;
 
   /** Coulomb friction coefficient. */
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Friction")
+  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SuperDex Physics|Friction")
   float CoulombFrictionCoefficient;
 
   /**
@@ -476,7 +533,11 @@ class SUPERDEXPHYSICS_API UMochiContactParams : public UObject {
    * Velocity threshold for Coulomb friction, for contacts with velocity-regularized friction (see
    * bPreferElastoPlasticFriction).
    */
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Friction", meta = (Units = "m/s"))
+  UPROPERTY(
+      EditAnywhere,
+      BlueprintReadOnly,
+      Category = "SuperDex Physics|Friction",
+      meta = (Units = "m/s"))
   float FrictionFalloffVel;
 
   /**
@@ -486,7 +547,7 @@ class SUPERDEXPHYSICS_API UMochiContactParams : public UObject {
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
-      Category = "Friction",
+      Category = "SuperDex Physics|Friction",
       AdvancedDisplay,
       meta = (Units = "m"))
   float PreslidingDisplacement;
@@ -495,12 +556,16 @@ class SUPERDEXPHYSICS_API UMochiContactParams : public UObject {
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
-      Category = "Friction",
+      Category = "SuperDex Physics|Friction",
       meta = (DisplayName = "Normal Viscous Damping Coefficient (s/m)"))
   float NormalViscousDampingCoefficient;
 
   /** Safety distance necessary for approximate SDFs (e.g., deep flow map). */
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Deep Flow", AdvancedDisplay)
+  UPROPERTY(
+      EditAnywhere,
+      BlueprintReadOnly,
+      Category = "SuperDex Physics|Deep Flow",
+      AdvancedDisplay)
   float DistanceErrorBound;
 
  public:
@@ -532,19 +597,19 @@ class SUPERDEXPHYSICS_API UMochiSolverParams : public UObject {
   GENERATED_BODY()
  public:
   /** Settings for the nonlinear solver. */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   FMochiNonLinearSolverParams NonLinearSolverParams;
 
   /** Settings for the linear solver. */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   FMochiLinearSolverParams LinearSolverParams;
 
   /** Integration method used to advance the scene. */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   EMochiIntegrationMethod IntegrationMethod;
 
   /** Experimental settings for native evaluation. */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   FMochiExperimentalEvalParams ExperimentalEvalParams;
 
  public:
@@ -576,7 +641,7 @@ class SUPERDEXPHYSICS_API UMochiContactMatrix : public UObject {
   GENERATED_BODY()
  public:
   /** Contact rules to apply to the scene. */
-  UPROPERTY(EditAnywhere, meta = (ShowOnlyInnerProperties), Category = "Mochi")
+  UPROPERTY(EditAnywhere, meta = (ShowOnlyInnerProperties), Category = "SuperDex Physics")
   TArray<FMochiContactMatrixEntry> Matrix;
 };
 
@@ -595,6 +660,6 @@ class SUPERDEXPHYSICS_API UMochiModelMaterialModifiers : public UObject {
   GENERATED_BODY()
  public:
   /** Map of <ElementNumber, MaterialProperties> */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   TMap<int, FMochiMaterialModifier> MaterialModifiers;
 };

@@ -37,7 +37,10 @@ class SUPERDEXPHYSICS_API UMochiPhysicsFunctionLibrary : public UBlueprintFuncti
    * @param WorldContext Object used to resolve the world and game instance.
    * @param GravityVector Gravity vector to apply to the scene.
    */
-  UFUNCTION(BlueprintCallable, Category = "Mochi", meta = (WorldContext = "WorldContext"))
+  UFUNCTION(
+      BlueprintCallable,
+      Category = "SuperDex Physics",
+      meta = (WorldContext = "WorldContext"))
   static void SetMochiGravity(UObject* WorldContext, FVector GravityVector);
 
   /**
@@ -46,7 +49,10 @@ class SUPERDEXPHYSICS_API UMochiPhysicsFunctionLibrary : public UBlueprintFuncti
    * @param WorldContext Object used to resolve the world and game instance.
    * @param Entry Layer-to-layer contact rule.
    */
-  UFUNCTION(BlueprintCallable, Category = "Mochi", meta = (WorldContext = "WorldContext"))
+  UFUNCTION(
+      BlueprintCallable,
+      Category = "SuperDex Physics",
+      meta = (WorldContext = "WorldContext"))
   static void SetMochiContactMatrixEntry(
       UObject* WorldContext,
       const FMochiContactMatrixEntry& Entry);
@@ -58,7 +64,10 @@ class SUPERDEXPHYSICS_API UMochiPhysicsFunctionLibrary : public UBlueprintFuncti
    * @param ActorA First actor of the contact pair.
    * @param ActorB Second actor of the contact pair.
    */
-  UFUNCTION(BlueprintCallable, Category = "Mochi", meta = (WorldContext = "WorldContext"))
+  UFUNCTION(
+      BlueprintCallable,
+      Category = "SuperDex Physics",
+      meta = (WorldContext = "WorldContext"))
   static void DisableContact(
       UObject* WorldContext,
       const UMochiActorObject* ActorA,
@@ -75,7 +84,7 @@ class SUPERDEXPHYSICS_API UMochiPhysicsFunctionLibrary : public UBlueprintFuncti
   UFUNCTION(
       BlueprintCallable,
       DisplayName = "Disable Contact (Articulated)",
-      Category = "Mochi",
+      Category = "SuperDex Physics",
       meta = (WorldContext = "WorldContext"))
   static void DisableContact_Articulated(
       UObject* WorldContext,
@@ -88,7 +97,10 @@ class SUPERDEXPHYSICS_API UMochiPhysicsFunctionLibrary : public UBlueprintFuncti
    *
    * @param WorldContext Object used to resolve the world and game instance.
    */
-  UFUNCTION(BlueprintCallable, Category = "Mochi", meta = (WorldContext = "WorldContext"))
+  UFUNCTION(
+      BlueprintCallable,
+      Category = "SuperDex Physics",
+      meta = (WorldContext = "WorldContext"))
   static void EnableMochiDebugDraw(UObject* WorldContext);
 
   /**
@@ -96,7 +108,10 @@ class SUPERDEXPHYSICS_API UMochiPhysicsFunctionLibrary : public UBlueprintFuncti
    *
    * @param WorldContext Object used to resolve the world and game instance.
    */
-  UFUNCTION(BlueprintCallable, Category = "Mochi", meta = (WorldContext = "WorldContext"))
+  UFUNCTION(
+      BlueprintCallable,
+      Category = "SuperDex Physics",
+      meta = (WorldContext = "WorldContext"))
   static void DisableMochiDebugDraw(UObject* WorldContext);
 
   /**
@@ -104,7 +119,10 @@ class SUPERDEXPHYSICS_API UMochiPhysicsFunctionLibrary : public UBlueprintFuncti
    *
    * @param WorldContext Object used to resolve the world and game instance.
    */
-  UFUNCTION(BlueprintCallable, Category = "Mochi", meta = (WorldContext = "WorldContext"))
+  UFUNCTION(
+      BlueprintCallable,
+      Category = "SuperDex Physics",
+      meta = (WorldContext = "WorldContext"))
   static void ToggleMochiDebugDraw(UObject* WorldContext);
 
   /**
@@ -113,7 +131,7 @@ class SUPERDEXPHYSICS_API UMochiPhysicsFunctionLibrary : public UBlueprintFuncti
    * @param WorldContext Object used to resolve the world and game instance.
    * @return Whether game-instance debug drawing is enabled.
    */
-  UFUNCTION(BlueprintPure, Category = "Mochi", meta = (WorldContext = "WorldContext"))
+  UFUNCTION(BlueprintPure, Category = "SuperDex Physics", meta = (WorldContext = "WorldContext"))
   static bool IsMochiDebugDrawEnabled(UObject* WorldContext);
 
   /**
@@ -122,7 +140,10 @@ class SUPERDEXPHYSICS_API UMochiPhysicsFunctionLibrary : public UBlueprintFuncti
    * @param WorldContext Object used to resolve the world and game instance.
    * @param bPaused Requested pause state.
    */
-  UFUNCTION(BlueprintCallable, Category = "Mochi", meta = (WorldContext = "WorldContext"))
+  UFUNCTION(
+      BlueprintCallable,
+      Category = "SuperDex Physics",
+      meta = (WorldContext = "WorldContext"))
   static void SetPaused(UObject* WorldContext, bool bPaused);
 
   /**
@@ -131,7 +152,10 @@ class SUPERDEXPHYSICS_API UMochiPhysicsFunctionLibrary : public UBlueprintFuncti
    * @param WorldContext Object used to resolve the world and game instance.
    * @return Pause state of the scene, or true when no scene is available.
    */
-  UFUNCTION(BlueprintCallable, Category = "Mochi", meta = (WorldContext = "WorldContext"))
+  UFUNCTION(
+      BlueprintCallable,
+      Category = "SuperDex Physics",
+      meta = (WorldContext = "WorldContext"))
   static bool IsPaused(UObject* WorldContext);
 
   /**
@@ -140,7 +164,10 @@ class SUPERDEXPHYSICS_API UMochiPhysicsFunctionLibrary : public UBlueprintFuncti
    * @param WorldContext Object used to resolve the world and game instance.
    * @return Number of native scene steps accumulated since startup.
    */
-  UFUNCTION(BlueprintCallable, Category = "Mochi", meta = (WorldContext = "WorldContext"))
+  UFUNCTION(
+      BlueprintCallable,
+      Category = "SuperDex Physics",
+      meta = (WorldContext = "WorldContext"))
   static int GetNumMochiStepsSinceStart(UObject* WorldContext);
 
   /**
@@ -149,7 +176,10 @@ class SUPERDEXPHYSICS_API UMochiPhysicsFunctionLibrary : public UBlueprintFuncti
    * @param WorldContext Object used to resolve the world and game instance.
    * @return Accumulated simulated time in seconds.
    */
-  UFUNCTION(BlueprintCallable, Category = "Mochi", meta = (WorldContext = "WorldContext"))
+  UFUNCTION(
+      BlueprintCallable,
+      Category = "SuperDex Physics",
+      meta = (WorldContext = "WorldContext"))
   static double GetTotalSimulatedTimeSinceStartSec(UObject* WorldContext);
 
   /**
@@ -158,7 +188,10 @@ class SUPERDEXPHYSICS_API UMochiPhysicsFunctionLibrary : public UBlueprintFuncti
    * @param WorldContext Object used to resolve the world and game instance.
    * @param FilePath Directory in which to store the recording or exported scene.
    */
-  UFUNCTION(BlueprintCallable, Category = "Mochi", meta = (WorldContext = "WorldContext"))
+  UFUNCTION(
+      BlueprintCallable,
+      Category = "SuperDex Physics",
+      meta = (WorldContext = "WorldContext"))
   static void StartRecording(UObject* WorldContext, const FString& FilePath);
 
   /**
@@ -166,7 +199,10 @@ class SUPERDEXPHYSICS_API UMochiPhysicsFunctionLibrary : public UBlueprintFuncti
    *
    * @param WorldContext Object used to resolve the world and game instance.
    */
-  UFUNCTION(BlueprintCallable, Category = "Mochi", meta = (WorldContext = "WorldContext"))
+  UFUNCTION(
+      BlueprintCallable,
+      Category = "SuperDex Physics",
+      meta = (WorldContext = "WorldContext"))
   static void StopRecording(UObject* WorldContext);
 
   /**
@@ -176,7 +212,10 @@ class SUPERDEXPHYSICS_API UMochiPhysicsFunctionLibrary : public UBlueprintFuncti
    * @param ExportName Name of the exported native prefab.
    * @param FilePath Directory in which to store the recording or exported scene.
    */
-  UFUNCTION(BlueprintCallable, Category = "Mochi", meta = (WorldContext = "WorldContext"))
+  UFUNCTION(
+      BlueprintCallable,
+      Category = "SuperDex Physics",
+      meta = (WorldContext = "WorldContext"))
   static void
   ExportMochiScene(UObject* WorldContext, const FString& ExportName, const FString& FilePath);
 
@@ -186,6 +225,9 @@ class SUPERDEXPHYSICS_API UMochiPhysicsFunctionLibrary : public UBlueprintFuncti
    * @param WorldContext Object used to resolve the world and game instance.
    * @return The physics subsystem for the context's game instance.
    */
-  UFUNCTION(BlueprintCallable, Category = "Mochi", meta = (WorldContext = "WorldContext"))
+  UFUNCTION(
+      BlueprintCallable,
+      Category = "SuperDex Physics",
+      meta = (WorldContext = "WorldContext"))
   static UMochiGameInstanceSubsystem* GetMochiGameInstanceSubsystem(UObject* WorldContext);
 };

@@ -36,14 +36,14 @@ class SUPERDEXPHYSICS_API UMochiNodeBoundaryConditionComponent : public UActorCo
 
  public:
   /** The deformable body, by name: "cloth", or "inner/cloth" inside a child actor. */
-  UPROPERTY(EditAnywhere, Category = "Mochi Boundary Condition")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics|Boundary Condition")
   FString Body;
 
   /**
    * The name of the Box Collision or Sphere Collision component whose volume holds the nodes to
    * pin.
    */
-  UPROPERTY(EditAnywhere, Category = "Mochi Boundary Condition")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics|Boundary Condition")
   FName Volume = NAME_None;
 
   /**
@@ -52,15 +52,15 @@ class SUPERDEXPHYSICS_API UMochiNodeBoundaryConditionComponent : public UActorCo
    * @param OutNodeIndices Storage for the queried node indices.
    * @return Whether pinned-node indices were available.
    */
-  UFUNCTION(BlueprintCallable, Category = "Mochi")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Physics")
   bool GetPinnedNodeIndices(TArray<int>& OutNodeIndices) const;
 
   /** (Re)pin the nodes inside the volume where they are now. */
-  UFUNCTION(BlueprintCallable, Category = "Mochi")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Physics")
   void CreateBoundaryConditions();
 
   /** Release the pinned nodes. Clears every boundary condition of the body. */
-  UFUNCTION(BlueprintCallable, Category = "Mochi")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Physics")
   void DestroyBoundaryConditions();
 
  protected:

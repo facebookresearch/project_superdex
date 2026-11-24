@@ -41,18 +41,26 @@ class SUPERDEXPHYSICS_API UMochiConstraintComponentBase : public USceneComponent
 
  public:
   /** Stiffness [N/m for a distance, N*m/rad for an angle]. */
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mochi Constraint", meta = (ClampMin = "0"))
+  UPROPERTY(
+      EditAnywhere,
+      BlueprintReadOnly,
+      Category = "SuperDex Physics|Constraint",
+      meta = (ClampMin = "0"))
   float Stiffness = mochi::ConstraintParams{}.stiffness;
 
   /** Damping [N*s/m for a distance, N*m*s/rad for an angle]. */
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mochi Constraint", meta = (ClampMin = "0"))
+  UPROPERTY(
+      EditAnywhere,
+      BlueprintReadOnly,
+      Category = "SuperDex Physics|Constraint",
+      meta = (ClampMin = "0"))
   float Damping = mochi::ConstraintParams{}.damping;
 
   /**
    * Deviation beyond which the constraint force stops growing, in the unit of what the constraint
    * drives (see the subclass). Negative disables saturation.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mochi Constraint")
+  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SuperDex Physics|Constraint")
   float Saturation = mochi::ConstraintParams{}.saturation;
 
   /**
@@ -60,7 +68,7 @@ class SUPERDEXPHYSICS_API UMochiConstraintComponentBase : public USceneComponent
    *
    * @param NewStiffness Constraint stiffness to configure.
    */
-  UFUNCTION(BlueprintCallable, Category = "Mochi Constraint")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Physics|Constraint")
   void SetStiffness(float NewStiffness);
 
   /**
@@ -68,7 +76,7 @@ class SUPERDEXPHYSICS_API UMochiConstraintComponentBase : public USceneComponent
    *
    * @param NewDamping Constraint damping to configure.
    */
-  UFUNCTION(BlueprintCallable, Category = "Mochi Constraint")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Physics|Constraint")
   void SetDamping(float NewDamping);
 
   /**
@@ -76,18 +84,18 @@ class SUPERDEXPHYSICS_API UMochiConstraintComponentBase : public USceneComponent
    *
    * @param NewSaturation Constraint saturation to configure.
    */
-  UFUNCTION(BlueprintCallable, Category = "Mochi Constraint")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Physics|Constraint")
   void SetSaturation(float NewSaturation);
 
   /**
    * (Re)create the constraints from the current properties, as soon as the bodies' Mochi actors
    * exist.
    */
-  UFUNCTION(BlueprintCallable, Category = "Mochi Constraint")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Physics|Constraint")
   void CreateConstraints();
 
   /** Destroy the constraints. */
-  UFUNCTION(BlueprintCallable, Category = "Mochi Constraint")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Physics|Constraint")
   void DestroyConstraints();
 
   /**
@@ -95,7 +103,7 @@ class SUPERDEXPHYSICS_API UMochiConstraintComponentBase : public USceneComponent
    *
    * @return The are constraints created state.
    */
-  UFUNCTION(BlueprintPure, Category = "Mochi Constraint")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Physics|Constraint")
   bool AreConstraintsCreated() const {
     return bCreated;
   }

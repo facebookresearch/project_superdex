@@ -266,7 +266,7 @@ void FMochiArticulationDetailsCustomization::CustomizeDetails(IDetailLayoutBuild
       // Warnings category
       TArray<FString> Warnings;
       if (!Articulation->IsReady(true, &Warnings)) {
-        IDetailCategoryBuilder& WarnCat = DetailLayout.EditCategory("Warnings");
+        IDetailCategoryBuilder& WarnCat = DetailLayout.EditCategory("SuperDex Physics|Warnings");
         for (const FString& Msg : Warnings) {
           WarnCat.AddCustomRow(FText::FromString(Msg))
               .WholeRowContent()[SNew(SWarningOrErrorBox)
@@ -284,7 +284,7 @@ void FMochiArticulationDetailsCustomization::CustomizeDetails(IDetailLayoutBuild
         }
       }
       // Robot category
-      IDetailCategoryBuilder& ArtCat = DetailLayout.EditCategory("Articulation");
+      IDetailCategoryBuilder& ArtCat = DetailLayout.EditCategory("SuperDex Physics|Articulation");
       ArtCat.AddProperty(
           DetailLayout.GetProperty(GET_MEMBER_NAME_CHECKED(UMochiArticulation, ArticulationName)));
       const TSharedPtr<IPropertyHandle> PosProp = DetailLayout.GetProperty(
@@ -310,7 +310,7 @@ void FMochiArticulationDetailsCustomization::CustomizeDetails(IDetailLayoutBuild
       ArtCat.AddProperty(
           DetailLayout.GetProperty(GET_MEMBER_NAME_CHECKED(UMochiArticulation, SoftLinks)));
       // Assets category
-      IDetailCategoryBuilder& AssCat = DetailLayout.EditCategory("Assets");
+      IDetailCategoryBuilder& AssCat = DetailLayout.EditCategory("SuperDex Physics|Assets");
       AddFancyAsset(
           DetailLayout,
           AssCat,
@@ -322,7 +322,7 @@ void FMochiArticulationDetailsCustomization::CustomizeDetails(IDetailLayoutBuild
               [this] { FMochiArticulationAssetUtils::GenerateSkeletalMesh(Articulation); }));
       MochiSkeletonHeaderExport::AddDetailsRow(DetailLayout, AssCat, Articulation);
       // Internal category
-      IDetailCategoryBuilder& IntCat = DetailLayout.EditCategory("Internal");
+      IDetailCategoryBuilder& IntCat = DetailLayout.EditCategory("SuperDex Physics|Internal");
       IntCat.SetDisplayName(FText::FromString(TEXT("Internal (Advanced Use Only)")));
       IntCat.InitiallyCollapsed(true);
     }
@@ -355,7 +355,7 @@ void FMochiArticulationComponentDetailsCustomization::CustomizeDetails(
     Articulation = Component->GetArticulationAsset();
     if (Articulation) {
       IDetailCategoryBuilder& ArticulationCat = DetailLayout.EditCategory(
-          "Mochi Articulation", FText::GetEmpty(), ECategoryPriority::Important);
+          "SuperDex Physics|Articulation", FText::GetEmpty(), ECategoryPriority::Important);
       ArticulationCat.AddProperty(DetailLayout.GetProperty(
           GET_MEMBER_NAME_CHECKED(UMochiArticulationComponent, Articulation)));
       const TSharedPtr<IPropertyHandle> PosProp = DetailLayout.GetProperty(

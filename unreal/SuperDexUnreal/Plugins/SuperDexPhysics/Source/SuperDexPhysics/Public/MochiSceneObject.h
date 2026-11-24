@@ -283,7 +283,7 @@ class SUPERDEXPHYSICS_API UMochiSceneObject : public UObject {
    *
    * @return Number of native scene steps accumulated since startup.
    */
-  UFUNCTION(BlueprintPure, Category = "Mochi")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Physics")
   int GetNumMochiStepsSinceStart() const;
 
   /**
@@ -293,7 +293,7 @@ class SUPERDEXPHYSICS_API UMochiSceneObject : public UObject {
    *
    * @return Accumulated simulated time in seconds.
    */
-  UFUNCTION(BlueprintPure, Category = "Mochi")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Physics")
   double GetTotalSimulatedTimeSinceStartSec() const;
 
   /**
@@ -301,7 +301,7 @@ class SUPERDEXPHYSICS_API UMochiSceneObject : public UObject {
    *
    * @return Step duration reported by the scene statistics.
    */
-  UFUNCTION(BlueprintPure, Category = "Mochi")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Physics")
   double GetTotalStepDuration() const;
 
  protected:

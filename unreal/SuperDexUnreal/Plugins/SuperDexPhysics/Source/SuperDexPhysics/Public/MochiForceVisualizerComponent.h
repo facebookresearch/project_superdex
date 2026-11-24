@@ -38,26 +38,26 @@ class SUPERDEXPHYSICS_API UMochiForceVisualizerComponent : public ULineSetCompon
   GENERATED_BODY()
  public:
   /** Enable/disable rendering visualization. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   bool bEnabled = true;
 
   /** Used to determine min/max force [N] for interpolating color and line length. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   FVector2D ForceMinMax = FVector2D(0.0f, 1.0f);
 
   /** Use to determine the line length [cm] given ForceMinMax. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   FVector2D LineLengthMinMax = FVector2D(0.0f, 10.0f);
 
   /** How to map forces to colors */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   EMochiForceVisualizerColorMode ColorMode = EMochiForceVisualizerColorMode::TwoTone;
 
   /**
    * The number of discrete color bands to which color should be quantized
    * (set to zero to disable)
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   int NumColorBands = 0;
 
   /** Color representing low force (for the TwoTone color mode). */
@@ -67,7 +67,7 @@ class SUPERDEXPHYSICS_API UMochiForceVisualizerComponent : public ULineSetCompon
       meta =
           (EditCondition = "ColorMode == EMochiForceVisualizerColorMode::TwoTone",
            EditConditionHides),
-      Category = "Mochi")
+      Category = "SuperDex Physics")
   FLinearColor LowColor = FColor::Blue;
 
   /** Color representing high force (for the TwoTone color mode). */
@@ -77,7 +77,7 @@ class SUPERDEXPHYSICS_API UMochiForceVisualizerComponent : public ULineSetCompon
       meta =
           (EditCondition = "ColorMode == EMochiForceVisualizerColorMode::TwoTone",
            EditConditionHides),
-      Category = "Mochi")
+      Category = "SuperDex Physics")
   FLinearColor HighColor = FColor::Red;
 
   /**
@@ -93,7 +93,7 @@ class SUPERDEXPHYSICS_API UMochiForceVisualizerComponent : public ULineSetCompon
       meta =
           (EditCondition = "ColorMode == EMochiForceVisualizerColorMode::Rainbow",
            EditConditionHides),
-      Category = "Mochi")
+      Category = "SuperDex Physics")
   FVector2D RainbowRange = FVector2D(0.0f, 1.0f);
 
   /**
@@ -106,7 +106,7 @@ class SUPERDEXPHYSICS_API UMochiForceVisualizerComponent : public ULineSetCompon
       meta =
           (EditCondition = "ColorMode == EMochiForceVisualizerColorMode::Rainbow",
            EditConditionHides),
-      Category = "Mochi")
+      Category = "SuperDex Physics")
   FColor MinColor = FColor::Black;
 
   /**
@@ -119,7 +119,7 @@ class SUPERDEXPHYSICS_API UMochiForceVisualizerComponent : public ULineSetCompon
       meta =
           (EditCondition = "ColorMode == EMochiForceVisualizerColorMode::Rainbow",
            EditConditionHides),
-      Category = "Mochi")
+      Category = "SuperDex Physics")
   FColor MaxColor = FColor::White;
 
  public:
@@ -134,20 +134,20 @@ class SUPERDEXPHYSICS_API UMochiForceVisualizerComponent : public ULineSetCompon
       FActorComponentTickFunction* ThisTickFunction) override;
 
  private:
-  UFUNCTION(Category = "Mochi")
+  UFUNCTION()
   void OnMochiComponentBeginContact(
       USceneComponent* MochiComponent,
       AActor* OtherMochiActor,
       USceneComponent* OtherMochiComponent,
       const TArray<FMochiContactPoint>& Contacts);
 
-  UFUNCTION(Category = "Mochi")
+  UFUNCTION()
   void OnMochiComponentEndContact(
       USceneComponent* MochiComponent,
       AActor* OtherMochiActor,
       USceneComponent* OtherMochiComponent);
 
-  UFUNCTION(Category = "Mochi")
+  UFUNCTION()
   void OnMochiComponentContact(
       USceneComponent* MochiComponent,
       const TArray<FMochiContactPoint>& Contacts);

@@ -33,19 +33,19 @@ struct FMochiSceneSettings {
   GENERATED_BODY()
  public:
   /** If true, the SimulationSpace defined below will override the project-level SimulationSpace. */
-  UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Scene")
+  UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "SuperDex Physics|Scene")
   bool bOverrideSimulationSpace = false;
 
   /** The coordinate space used for simulation. Only used if bOverrideSimulationSpace is true. */
   UPROPERTY(
       BlueprintReadOnly,
       EditAnywhere,
-      Category = "Scene",
+      Category = "SuperDex Physics|Scene",
       meta = (EditCondition = "bOverrideSimulationSpace"))
   FMochiSpaceDefinition SimulationSpace = SuperDexSpace;
 
   /** Gravity vector in m/s^2. */
-  UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Scene")
+  UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "SuperDex Physics|Scene")
   FVector GravityVector = TMochiSpaceConverter<double>(MochiSpace, UnrealMetersSpace)
                               .DirectionToOutput(FVector(
                                   mochi::kDefaultGravity[0],
@@ -53,7 +53,7 @@ struct FMochiSceneSettings {
                                   mochi::kDefaultGravity[2]));
 
   /** Parameters that control how the scene steps on the simulation thread. */
-  UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Scene")
+  UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "SuperDex Physics|Scene")
   FMochiAsyncStepParams StepParams;
 
   /** Solver-parameters asset used when the scene is created. */
@@ -61,7 +61,7 @@ struct FMochiSceneSettings {
       Config,
       BlueprintReadOnly,
       EditAnywhere,
-      Category = "Scene",
+      Category = "SuperDex Physics|Scene",
       meta = (AllowedClasses = "/Script/SuperDexPhysics.MochiSolverParams"))
   FSoftObjectPath SolverParams;
 
@@ -70,27 +70,27 @@ struct FMochiSceneSettings {
       Config,
       BlueprintReadOnly,
       EditAnywhere,
-      Category = "Scene",
+      Category = "SuperDex Physics|Scene",
       meta = (AllowedClasses = "/Script/SuperDexPhysics.MochiContactMatrix"))
   FSoftObjectPath ContactMatrix;
 
   /** Whether scene creation starts with stepping paused. */
-  UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Scene")
+  UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "SuperDex Physics|Scene")
   bool bStartPaused = false;
 
   /** Whether debug drawing is enabled when the scene is created. */
-  UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "DebugDraw")
+  UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "SuperDex Physics|DebugDraw")
   bool bEnableDebugDraw = false;
 
   /**
    * Scale the length of all lines drawn by mochi. This is useful for scaling elements like contact
    * forces, but will also alter how elements like mesh edges are drawn. Use at your own risk.
    */
-  UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "DebugDraw")
+  UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "SuperDex Physics|DebugDraw")
   float DebugDraw_Line_Length_Multiplier = 1.0f;
 
   /** Native debug-draw entities selected for this scene. */
-  UPROPERTY(Config, BlueprintReadOnly, EditAnywhere, Category = "DebugDraw")
+  UPROPERTY(Config, BlueprintReadOnly, EditAnywhere, Category = "SuperDex Physics|DebugDraw")
   FMochiDebugDrawFlags DebugDrawFlags;
 
   /**
@@ -125,7 +125,7 @@ class SUPERDEXPHYSICS_API UMochiPhysicsSettings : public UDeveloperSettings {
    * space (+X forward, +Y left, +Z up) with meter scaling, the convention of SuperDex bot and
    * scene files.
    */
-  UPROPERTY(Config, BlueprintReadOnly, EditAnywhere, Category = "Simulation")
+  UPROPERTY(Config, BlueprintReadOnly, EditAnywhere, Category = "SuperDex Physics|Simulation")
   FMochiSpaceDefinition SimulationSpace = SuperDexSpace;
 
   /**
@@ -133,14 +133,14 @@ class SUPERDEXPHYSICS_API UMochiPhysicsSettings : public UDeveloperSettings {
    * in Shipping builds. The server advertises the effective simulation space. A scene override
    * restarts it on the same port so connected debugger clients can immediately reconnect.
    */
-  UPROPERTY(Config, BlueprintReadOnly, EditAnywhere, Category = "Debugging")
+  UPROPERTY(Config, BlueprintReadOnly, EditAnywhere, Category = "SuperDex Physics|Debugging")
   bool bEnablePhysicsDebuggerConnection = false;
 
   /**
    * Number of worker threads Mochi should use. If the value is <= zero, then Mochi will
    * automatically determine how many threads to use.
    */
-  UPROPERTY(Config, BlueprintReadOnly, EditAnywhere, Category = "Simulation")
+  UPROPERTY(Config, BlueprintReadOnly, EditAnywhere, Category = "SuperDex Physics|Simulation")
   int NumWorkerThreads = 0;
 
   /**
@@ -148,7 +148,7 @@ class SUPERDEXPHYSICS_API UMochiPhysicsSettings : public UDeveloperSettings {
    * the option to force them into a single island. This may be useful for debugging, but it will
    * hurt performance.
    */
-  UPROPERTY(Config, BlueprintReadOnly, EditAnywhere, Category = "Simulation")
+  UPROPERTY(Config, BlueprintReadOnly, EditAnywhere, Category = "SuperDex Physics|Simulation")
   bool bForceSingleIsland = false;
 
   /**
@@ -160,7 +160,7 @@ class SUPERDEXPHYSICS_API UMochiPhysicsSettings : public UDeveloperSettings {
       BlueprintReadOnly,
       EditAnywhere,
       meta = (ShowOnlyInnerProperties),
-      Category = "Default Scene")
+      Category = "SuperDex Physics|Default Scene")
   FMochiSceneSettings DefaultSceneSettings;
 
   /**
@@ -173,7 +173,7 @@ class SUPERDEXPHYSICS_API UMochiPhysicsSettings : public UDeveloperSettings {
       Config,
       BlueprintReadOnly,
       EditAnywhere,
-      Category = "Editor",
+      Category = "SuperDex Physics|Editor",
       meta = (DisplayName = "Turn off 'Use Less CPU when in Background' during Play/Simulate"))
   bool bTurnOffUseLessCPUInBackgroundDuringPlay = true;
 
@@ -183,7 +183,7 @@ class SUPERDEXPHYSICS_API UMochiPhysicsSettings : public UDeveloperSettings {
    * Otherwise they are imported into the folder they are dropped into. Prefabs and bots that an
    * import references are always imported into subfolders of its folder.
    */
-  UPROPERTY(Config, BlueprintReadOnly, EditAnywhere, Category = "Editor")
+  UPROPERTY(Config, BlueprintReadOnly, EditAnywhere, Category = "SuperDex Physics|Editor")
   bool bOrganizePrefabsInRootFolder = false;
 
   /** Content Browser root folder for imported SuperDex prefabs and Mochi scenes. */
@@ -191,7 +191,7 @@ class SUPERDEXPHYSICS_API UMochiPhysicsSettings : public UDeveloperSettings {
       Config,
       BlueprintReadOnly,
       EditAnywhere,
-      Category = "Editor",
+      Category = "SuperDex Physics|Editor",
       meta = (EditCondition = "bOrganizePrefabsInRootFolder", EditConditionHides))
   FDirectoryPath PrefabRootFolder = {TEXT("/Game/Prefabs")};
 
@@ -203,7 +203,7 @@ class SUPERDEXPHYSICS_API UMochiPhysicsSettings : public UDeveloperSettings {
       Config,
       BlueprintReadOnly,
       EditAnywhere,
-      Category = "Editor",
+      Category = "SuperDex Physics|Editor",
       meta = (AllowedClasses = "/Script/Engine.World"))
   FSoftObjectPath PrefabMapTemplate{
       TEXT("/Engine/Maps/Templates/Template_Default.Template_Default")};
@@ -278,7 +278,7 @@ class SUPERDEXPHYSICS_API AMochiSceneSettingsActor : public AActor {
       BlueprintReadOnly,
       EditAnywhere,
       meta = (ShowOnlyInnerProperties),
-      Category = "Scene Settings")
+      Category = "SuperDex Physics|Scene Settings")
   FMochiSceneSettings SceneSettings;
 
  public:

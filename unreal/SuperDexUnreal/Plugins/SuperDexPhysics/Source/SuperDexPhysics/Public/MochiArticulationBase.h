@@ -42,7 +42,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationBase : public UObject {
    *
    * @return The articulation name.
    */
-  UFUNCTION(BlueprintPure, Category = "Mochi|Articulation")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Physics|Articulation")
   virtual const FString& GetArticulationName() const PURE_VIRTUAL(
       UMochiArticulationBase::GetArticulationName, static FString Empty; return Empty;);
 
@@ -51,7 +51,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationBase : public UObject {
    *
    * @return Number of degrees of freedom in the articulation or joint.
    */
-  UFUNCTION(BlueprintPure, Category = "Mochi|Articulation")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Physics|Articulation")
   virtual int GetNumDofs() const PURE_VIRTUAL(UMochiArticulationBase::GetNumDofs, return 0;);
 
   /**
@@ -59,7 +59,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationBase : public UObject {
    *
    * @return The configured default joint positions.
    */
-  UFUNCTION(BlueprintPure, Category = "Mochi|Articulation")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Physics|Articulation")
   virtual const TArray<double>& GetDefaultJointPositions() const PURE_VIRTUAL(
       UMochiArticulationBase::GetDefaultJointPositions, static TArray<double> Empty; return Empty;);
 
@@ -76,7 +76,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationBase : public UObject {
    * @param FinalLinkIndex Last link to compute; -1 selects all links.
    * @return Whether the requested computation completed.
    */
-  UFUNCTION(BlueprintCallable, Category = "Mochi|Articulation")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Physics|Articulation")
   bool ComputeLinkToParentTransforms(
       const TArray<double>& JointPositions,
       TArray<FTransform>& OutLinkTransforms,
@@ -98,7 +98,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationBase : public UObject {
    * @param FinalLinkIndex Last link to compute; -1 selects all links.
    * @return Whether the requested computation completed.
    */
-  UFUNCTION(BlueprintCallable, Category = "Mochi|Articulation")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Physics|Articulation")
   bool ComputeLinkToArticulationRootTransforms(
       const TArray<double>& JointPositions,
       TArray<FTransform>& OutLinkTransforms,
@@ -119,7 +119,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationBase : public UObject {
    * @param LengthScale Scale converting linear joint values to Unreal lengths.
    * @return Whether the requested computation completed.
    */
-  UFUNCTION(BlueprintCallable, Category = "Mochi|Articulation")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Physics|Articulation")
   bool ComputeJointPositionsFromLinkToParentTransforms(
       const TArray<FTransform>& LinkTransforms,
       TArray<double>& OutJointPositions,
@@ -138,7 +138,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationBase : public UObject {
    * @param LengthScale Scale converting linear joint values to Unreal lengths.
    * @return Whether the requested computation completed.
    */
-  UFUNCTION(BlueprintCallable, Category = "Mochi|Articulation")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Physics|Articulation")
   bool ComputeJointPositionsFromLinkToArticulationRootTransforms(
       const TArray<FTransform>& LinkTransforms,
       TArray<double>& OutJointPositions,
@@ -150,7 +150,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationBase : public UObject {
    *
    * @return The skeletal mesh associated with the articulation.
    */
-  UFUNCTION(BlueprintPure, Category = "Mochi|Articulation")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Physics|Articulation")
   virtual USkeletalMesh* GetSkeletalMesh() const
       PURE_VIRTUAL(UMochiArticulationBase::GetSkeletalMesh, return nullptr;);
 
@@ -159,7 +159,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationBase : public UObject {
    *
    * @return Link names in articulation order.
    */
-  UFUNCTION(BlueprintPure, Category = "Mochi|Articulation")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Physics|Articulation")
   virtual TArray<FName> GetLinkNames() const
       PURE_VIRTUAL(UMochiArticulationBase::GetLinkNames, return {};);
 
@@ -168,7 +168,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationBase : public UObject {
    *
    * @return Joint names in articulation order.
    */
-  UFUNCTION(BlueprintPure, Category = "Mochi|Articulation")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Physics|Articulation")
   virtual TArray<FName> GetJointNames() const
       PURE_VIRTUAL(UMochiArticulationBase::GetJointNames, return {};);
 
@@ -181,7 +181,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationBase : public UObject {
    * @param OutBounds Storage for the computed visual bounds.
    * @return Whether the requested computation completed.
    */
-  UFUNCTION(BlueprintCallable, Category = "Mochi|Articulation")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Physics|Articulation")
   bool ComputeVisualBoundsFromLinkToParentTransforms(
       const TArray<FTransform>& LinksToParent,
       FBoxSphereBounds& OutBounds) const;
@@ -195,7 +195,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationBase : public UObject {
    * @param OutBounds Storage for the computed visual bounds.
    * @return Whether the requested computation completed.
    */
-  UFUNCTION(BlueprintCallable, Category = "Mochi|Articulation")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Physics|Articulation")
   bool ComputeVisualBoundsFromLinkToArticulationRootTransforms(
       const TArray<FTransform>& LinksToArticulationRoot,
       FBoxSphereBounds& OutBounds) const;
@@ -219,7 +219,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationBase : public UObject {
    * @param CollisionRelPath Relative path used for collision geometry entries in exported URDF.
    * @return URDF XML, or an empty string when the articulation cannot be exported.
    */
-  UFUNCTION(BlueprintCallable, Category = "Mochi|Articulation")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Physics|Articulation")
   virtual FString ToUrdfXml(
       const FString& VisualRelPath = TEXT(""),
       const FString& CollisionRelPath = TEXT("")) const {
@@ -238,7 +238,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationBase : public UObject {
    * @param LengthScale Scale converting linear joint values to Unreal lengths.
    * @return Whether the requested computation completed.
    */
-  UFUNCTION(BlueprintCallable, Category = "Mochi|Articulation")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Physics|Articulation")
   bool ComputeVisualBoundsFromJointPositions(
       const TArray<double>& JointPositions,
       FBoxSphereBounds& OutBounds,

@@ -159,13 +159,17 @@ USTRUCT(BlueprintType)
 struct SUPERDEXPHYSICS_API FMochiSpaceDefinition {
   GENERATED_BODY()
   /** The axes used for Forward, Right, and Up */
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, DisplayName = "Axes (FRU)")
+  UPROPERTY(
+      EditAnywhere,
+      BlueprintReadOnly,
+      DisplayName = "Axes (FRU)",
+      Category = "SuperDex Physics")
   EMochiSpaceAxes Axes = EMochiSpaceAxes::Unreal;
 
   // Note: This feature is intentionally read-only and locked to 1.0 at this time.
   // Mochi should always be simulated at meter scale.
   /** How many units are in a meter? */
-  UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "SuperDex Physics")
   double UnitsPerMeter = 1.0;
 
   /** Initialize the default coordinate-space definition. */
@@ -288,13 +292,13 @@ struct SUPERDEXPHYSICS_API FMochiContactPoint {
   // NOTE: this is the Actor from which the contact point was generated
   //       if and only if ContactDirection equals ThisContactsOther
   /** The Actor receiving the FMochiContactPoint data. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   AActor* MochiActor = nullptr;
 
   // NOTE: this is the Component from which the contact point was generated
   //       if and only if ContactDirection equals ThisContactsOther
   /** The Component receiving the FMochiContactPoint data. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   USceneComponent* MochiComponent = nullptr;
 
   /**
@@ -302,39 +306,39 @@ struct SUPERDEXPHYSICS_API FMochiContactPoint {
    * this will be the name of that actor. For a skin, which has no nested actor of its own, it is
    * the name of the articulated actor the skin belongs to. Otherwise it will be None.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   FName NestedName = NAME_None;
 
   // NOTE: this is the actor from which the contact point was generated
   //       if and only if ContactDirection equals OtherContactsThis
   /** The other Actor in contact. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   AActor* OtherMochiActor = nullptr;
 
   // NOTE: this is the Component from which the contact point was generated
   //       if and only if ContactDirection equals OtherContactsThis
   /** The other Component in contact. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   USceneComponent* OtherMochiComponent = nullptr;
 
   /** The distance between MochiComponent and OtherMochiComponent */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   double Distance = 0;
 
   /** The location of the contact on MochiComponent in world-space. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   FVector Location = FVector::ZeroVector;
 
   /** The location of the contact on OtherMochiComponent in world-space. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   FVector OtherLocation = FVector::ZeroVector;
 
   /** The point velocity of the contact on MochiComponent in world-space. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   FVector Velocity = FVector::ZeroVector;
 
   /** The point velocity of the contact on OtherMochiComponent in world-space. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   FVector OtherVelocity = FVector::ZeroVector;
 
   // NOTE: this corresponds to surface normals on the surface of the Component from which the
@@ -342,11 +346,11 @@ struct SUPERDEXPHYSICS_API FMochiContactPoint {
   //         ThisContactsOther -> MochiComponent
   //         OtherContactsThis -> OtherMochiComponent
   /** The contact normal pointing from OtherMochiComponent to MochiComponent. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   FVector Normal = FVector::ZeroVector;
 
   /** The contact force applied to MochiComponent from OtherMochiComponent. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   FVector Force = FVector::ZeroVector;
 
   // ADVANCED
@@ -356,15 +360,15 @@ struct SUPERDEXPHYSICS_API FMochiContactPoint {
   //         ThisContactsOther -> MochiComponent
   //         OtherContactsThis -> OtherMochiComponent
   /** The index of the Mochi surface triangle associated with this contact. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   int TriangleIndex = -1;
 
   /** The barycentric coords of the contact within its associated Mochi surface triangle. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   FVector ParametricCoords = FVector::ZeroVector;
 
   /** The integration area of the contact in cm^2 (divide Force by Area to get pressure). */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   float Area = 0;
 
   // NOTE: this determines how TriangleIndex should be interpreted
@@ -376,21 +380,21 @@ struct SUPERDEXPHYSICS_API FMochiContactPoint {
    * Which direction is the contact in? (this->other or other->this)
    * Equivalently, which object generated the contact point? (other or this)
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   EMochiContactDirection ContactDirection = EMochiContactDirection::ThisContactsOther;
 
   /**
    * The name of the internal Mochi actor originating contact, not to be confused with Unreal
    * actors.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   FName InternalMochiActor;
 
   /**
    * The name of the other internal Mochi actor originating contact, not to be confused with Unreal
    * actors.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   FName OtherInternalMochiActor;
 };
 
@@ -399,22 +403,22 @@ USTRUCT(BlueprintType)
 struct SUPERDEXPHYSICS_API FMochiContactMatrixEntry {
   GENERATED_BODY()
   /** Name of the layer of the "colliding" actor (the one checking for contact). */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   FName LayerA;
 
   /**
    * Name of the layer of the "collider" actor (the one with a ColliderType (e.g. SDF) being
    * tested).
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   FName LayerB;
 
   /** True to enable contact, false to disable it. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   bool bEnabled = true;
 
   /** If true, an additional entry is created with swapped layer arguments. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   bool bSymmetric = false;
 };
 
@@ -425,11 +429,11 @@ struct SUPERDEXPHYSICS_API FMochiRomParams {
 
   FMochiRomParams();
   /** Specifies a ROM inside the rom group of a .mochi.h5 file. */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   FString Source;
 
   /** Hyper-reduction quadrature strategy for this ROM. */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   EMochiHyperReductionStrategy HyperReductionStrategy;
 
   /** Parameter that defines a sample mesh when subsampling the boundary elements. */
@@ -439,7 +443,7 @@ struct SUPERDEXPHYSICS_API FMochiRomParams {
           (EditCondition =
                "HyperReductionStrategy == EMochiHyperReductionStrategy::StaticHyperReductionUsingRandomSampling",
            EditConditionHides),
-      Category = "Mochi")
+      Category = "SuperDex Physics")
   int StepSizeForBoundaryElementsSelection;
 
   /** Parameter that defines a sample mesh when subsampling the interior elements. */
@@ -449,7 +453,7 @@ struct SUPERDEXPHYSICS_API FMochiRomParams {
           (EditCondition =
                "HyperReductionStrategy == EMochiHyperReductionStrategy::StaticHyperReductionUsingRandomSampling",
            EditConditionHides),
-      Category = "Mochi")
+      Category = "SuperDex Physics")
   int StepSizeForInteriorElementsSelection;
 
  public:
@@ -527,27 +531,27 @@ struct SUPERDEXPHYSICS_API FMochiMomentOfInertia {
   // Read https://www.mathworks.com/help/sm/ug/specify-custom-inertia.html.
 
   /** Ixx = I(1,1) [kg*cm^2] */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   double Ixx = 0;
 
   /** Ixy = I(1,2) [kg*cm^2] */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   double Ixy = 0;
 
   /** Ixz = I(1,3) [kg*cm^2] */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   double Ixz = 0;
 
   /** Iyy = I(2,2) [kg*cm^2] */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   double Iyy = 0;
 
   /** Iyz = I(2,3) [kg*cm^2] */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   double Iyz = 0;
 
   /** Izz = I(3,3) [kg*cm^2] */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   double Izz = 0;
 
  public:
@@ -576,27 +580,27 @@ struct SUPERDEXPHYSICS_API FMochiShapeTargetTensor {
   }
 
   /** XX entry of the symmetric shape-target offset. */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   float XX;
 
   /** XY entry of the symmetric shape-target offset. */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   float XY;
 
   /** XZ entry of the symmetric shape-target offset. */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   float XZ;
 
   /** YY entry of the symmetric shape-target offset. */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   float YY;
 
   /** YZ entry of the symmetric shape-target offset. */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   float YZ;
 
   /** ZZ entry of the symmetric shape-target offset. */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   float ZZ;
 
   /**
@@ -632,11 +636,11 @@ struct SUPERDEXPHYSICS_API FMochiMaterialModifier {
       DisplayName = "Young's Modulus",
       meta = (ClampMin = 0, UIMin = 0),
       meta = (ForceUnit = "MPa"),
-      Category = "Mochi")
+      Category = "SuperDex Physics")
   float YoungsModulus;
 
   /** Poisson ratio assigned by the material modifier. */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   float PoissonRatio;
 };
 
@@ -648,7 +652,7 @@ struct FMochiArticulationSoftLink {
    * The Model to use for the soft link. The Model H5 must have constrained
    * nodes, which currently cannot be authored in Unreal.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   UMochiModel* Model = nullptr;
 
   /** Material of the soft link. Uses Mochi's default material when null. */
@@ -656,22 +660,22 @@ struct FMochiArticulationSoftLink {
   UMochiMaterialParams* MaterialParams = nullptr;
 
   /** Scale applied to the Mochi Model when its shape is loaded. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   FVector ModelScale = FVector::OneVector;
 
   /** Rotation applied to the Mochi Model when its shape is loaded. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   FVector ModelOriginRPY = FVector::ZeroVector;
 
   /** Translation applied to the Mochi Model when its shape is loaded. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   FVector ModelOriginXYZ = FVector::ZeroVector;
 
   /**
    * Name of the soft link. This should be uniquely different from the link names
    * used in UMochiArticulation::Links
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   FName Name = NAME_None;
 
   /**
@@ -682,7 +686,7 @@ struct FMochiArticulationSoftLink {
       EditAnywhere,
       BlueprintReadWrite,
       meta = (GetOptions = "GetLinkNames_EditorOnly"),
-      Category = "Mochi")
+      Category = "SuperDex Physics")
   FName ParentName = NAME_None;
 };
 
@@ -696,11 +700,11 @@ struct FMochiArticulationConstraint {
       DisplayName = "Link A Name",
       BlueprintReadWrite,
       meta = (GetOptions = "GetLinkNames_EditorOnly"),
-      Category = "Mochi")
+      Category = "SuperDex Physics")
   FName LinkAName = NAME_None;
 
   /** Constraint point in the first link's local frame. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   FVector LinkAPosition = FVector::ZeroVector;
 
   /** Name of the second constrained link. */
@@ -709,23 +713,23 @@ struct FMochiArticulationConstraint {
       DisplayName = "Link B Name",
       BlueprintReadWrite,
       meta = (GetOptions = "GetLinkNames_EditorOnly"),
-      Category = "Mochi")
+      Category = "SuperDex Physics")
   FName LinkBName = NAME_None;
 
   /** Constraint point in the second link's local frame. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   FVector LinkBPosition = FVector::ZeroVector;
 
   /** Stiffness of constraint [N/m] */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   float Stiffness = mochi::RigidSphericalJointConstraintParams{}.stiffness;
 
   /** Damping on the constraint limit [Ns/m] */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   float Damping = mochi::RigidSphericalJointConstraintParams{}.damping;
 
   /** Displacement at which the constraint stiffness saturates, -1 for no saturation */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   float Saturation = mochi::RigidSphericalJointConstraintParams{}.saturation;
 };
 
@@ -742,7 +746,7 @@ struct FMochiArticulationContactOverride {
       DisplayName = "Link A Name",
       BlueprintReadWrite,
       meta = (GetOptions = "GetLinkNames_EditorOnly"),
-      Category = "Mochi")
+      Category = "SuperDex Physics")
   FName LinkAName = NAME_None;
 
   /** Name of the second link whose contact is overridden. */
@@ -751,11 +755,11 @@ struct FMochiArticulationContactOverride {
       DisplayName = "Link B Name",
       BlueprintReadWrite,
       meta = (GetOptions = "GetLinkNames_EditorOnly"),
-      Category = "Mochi")
+      Category = "SuperDex Physics")
   FName LinkBName = NAME_None;
 
   /** Whether contact between the links is enabled. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics")
   bool bEnable = false;
 };
 
@@ -775,32 +779,32 @@ USTRUCT(BlueprintType)
 struct SUPERDEXPHYSICS_API FMochiJointCoupling {
   GENERATED_BODY()
   /** Uncheck to ignore this entry without deleting it. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite)
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics|Articulation")
   bool bEnabled = true;
 
   /**
    * Name of the first joint, as it appears in the articulation. Must be a single-dof joint
    * (revolute or prismatic); welded and free joints have no dof to couple and are rejected.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite)
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics|Articulation")
   FName JointAName;
 
   /** Name of the second joint. Same requirements as JointAName, and must differ from it. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite)
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics|Articulation")
   FName JointBName;
 
   /**
    * Coupling ratio in JointB = Ratio * JointA + Offset. Dimensionless when both joints are the
    * same kind; for a revolute/prismatic pair it is a moment arm [m/rad].
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite)
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics|Articulation")
   double Ratio = 1.0;
 
   /**
    * Constant offset in JointB = Ratio * JointA + Offset. Carries the joints' own units, in Mochi's
    * SI convention rather than Unreal's: radians for revolute joints, metres for prismatic ones.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite)
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics|Articulation")
   double Offset = 0.0;
 
   /**
@@ -809,7 +813,7 @@ struct SUPERDEXPHYSICS_API FMochiJointCoupling {
    * and can overpower a joint's limits, which are themselves only penalties. Keep it in the same
    * order as the solver's other weights.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite)
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Physics|Articulation")
   double Stiffness = 10.0;
 };
 

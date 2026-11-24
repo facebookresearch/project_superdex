@@ -38,14 +38,14 @@ class SUPERDEXPHYSICS_API IMochiMeshComponentInterface {
    * (Re)create the underlying MochiActorObject controlling this mesh component.
    * For advanced use only. Note this will break constraints on this actor.
    */
-  UFUNCTION(BlueprintCallable, Category = "Mochi")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Physics")
   virtual void CreateMochiActor() = 0;
 
   /**
    * Destroy the underlying MochiActorObject controlling this mesh component. This stops
    * the simulation but keeps the component alive. For advanced use only.
    */
-  UFUNCTION(BlueprintCallable, Category = "Mochi")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Physics")
   virtual void DestroyMochiActor() = 0;
 
   /**
@@ -53,7 +53,7 @@ class SUPERDEXPHYSICS_API IMochiMeshComponentInterface {
    *
    * @return The mochi actor.
    */
-  UFUNCTION(BlueprintCallable, Category = "Mochi")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Physics")
   virtual UMochiActorObject* GetMochiActor() const = 0;
 
   /**
@@ -61,7 +61,7 @@ class SUPERDEXPHYSICS_API IMochiMeshComponentInterface {
    *
    * @param NewTransform World transform to apply.
    */
-  UFUNCTION(BlueprintCallable, Category = "Mochi")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Physics")
   virtual void SetWorldTransformMochi(const FTransform& NewTransform);
 
   /**
@@ -70,7 +70,7 @@ class SUPERDEXPHYSICS_API IMochiMeshComponentInterface {
    * @param NewLocation World location to apply.
    * @param NewRotation World rotation to apply.
    */
-  UFUNCTION(BlueprintCallable, Category = "Mochi")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Physics")
   virtual void SetWorldLocationAndRotationMochi(FVector NewLocation, FRotator NewRotation);
 
   // Note: does not reflect runtime changes made via SetContactParams.
@@ -79,7 +79,7 @@ class SUPERDEXPHYSICS_API IMochiMeshComponentInterface {
    *
    * @return The contact params.
    */
-  UFUNCTION(BlueprintCallable, Category = "Mochi")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Physics")
   virtual UMochiContactParams* GetContactParams() const = 0;
 
   // Note: does not reflect runtime changes made via SetMaterialParams.
@@ -88,7 +88,7 @@ class SUPERDEXPHYSICS_API IMochiMeshComponentInterface {
    *
    * @return The material params.
    */
-  UFUNCTION(BlueprintCallable, Category = "Mochi")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Physics")
   virtual UMochiMaterialParams* GetMaterialParams() const = 0;
 
   /**
@@ -96,7 +96,7 @@ class SUPERDEXPHYSICS_API IMochiMeshComponentInterface {
    *
    * @param ContactParams Contact-parameter asset or native values supplied to the operation.
    */
-  UFUNCTION(BlueprintCallable, Category = "Mochi")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Physics")
   virtual void SetContactParams(const UMochiContactParams* ContactParams);
 
   /**
@@ -104,7 +104,7 @@ class SUPERDEXPHYSICS_API IMochiMeshComponentInterface {
    *
    * @param MaterialParams Material-parameter asset supplied to the operation.
    */
-  UFUNCTION(BlueprintCallable, Category = "Mochi")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Physics")
   virtual void SetMaterialParams(const UMochiMaterialParams* MaterialParams);
 
   /**
@@ -112,7 +112,7 @@ class SUPERDEXPHYSICS_API IMochiMeshComponentInterface {
    *
    * @return The model asset assigned to this component.
    */
-  UFUNCTION(Blueprintable, Category = "Mochi")
+  UFUNCTION(Blueprintable, Category = "SuperDex Physics")
   virtual UMochiModel* GetMochiModel() const = 0;
 
   /**
@@ -120,15 +120,15 @@ class SUPERDEXPHYSICS_API IMochiMeshComponentInterface {
    *
    * @return Whether contact queries are configured for this component.
    */
-  UFUNCTION(Blueprintable, Category = "Mochi")
+  UFUNCTION(Blueprintable, Category = "SuperDex Physics")
   virtual bool GetContactsEnabled() const = 0;
 
   /** Clear boundary conditions */
-  UFUNCTION(BlueprintCallable, Category = "Mochi")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Physics")
   virtual void ClearBoundaryConditions();
 
   /** Resets the local deformation to zero */
-  UFUNCTION(BlueprintCallable, Category = "Mochi")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Physics")
   virtual void SetZeroDeformation() const;
 
   /**
@@ -137,11 +137,11 @@ class SUPERDEXPHYSICS_API IMochiMeshComponentInterface {
    * @param LinearVelocity Linear velocity to apply.
    * @param AngularVelocity Angular velocity to apply.
    */
-  UFUNCTION(BlueprintCallable, Category = "Mochi")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Physics")
   virtual void SetVelocities(FVector LinearVelocity, FVector AngularVelocity) const;
 
   /** Resets the linear and angular velocities to zero */
-  UFUNCTION(BlueprintCallable, Category = "Mochi")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Physics")
   virtual void SetZeroVelocities();
 
   /**
@@ -151,7 +151,7 @@ class SUPERDEXPHYSICS_API IMochiMeshComponentInterface {
    * @param CenterOfMass Center-of-mass storage supplied to the native query.
    * @param MomentOfInertia Inertia storage supplied to the native query.
    */
-  UFUNCTION(BlueprintCallable, Category = "Mochi")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Physics")
   virtual void
   GetInertialParams(double& Mass, FVector& CenterOfMass, FMochiMomentOfInertia& MomentOfInertia);
 };
@@ -172,7 +172,7 @@ class SUPERDEXPHYSICS_API IMochiSoftMeshComponentInterface {
    *
    * @return The volume node reference positions.
    */
-  UFUNCTION(BlueprintCallable, Category = "Mochi")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Physics")
   virtual const TArray<FVector>& GetVolumeNodeReferencePositions() const = 0;
 
   /**
@@ -180,7 +180,7 @@ class SUPERDEXPHYSICS_API IMochiSoftMeshComponentInterface {
    *
    * @return The volume node positions.
    */
-  UFUNCTION(BlueprintCallable, Category = "Mochi")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Physics")
   virtual const TArray<FVector>& GetVolumeNodePositions() const = 0;
 
   /**
@@ -188,6 +188,6 @@ class SUPERDEXPHYSICS_API IMochiSoftMeshComponentInterface {
    *
    * @param Modifiers Element material modifiers to apply.
    */
-  UFUNCTION(BlueprintCallable, Category = "Mochi")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Physics")
   virtual const void ApplyMaterialModifiers(UMochiModelMaterialModifiers* Modifiers) const = 0;
 };

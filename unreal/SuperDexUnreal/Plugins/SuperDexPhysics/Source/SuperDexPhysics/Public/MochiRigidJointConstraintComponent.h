@@ -53,31 +53,31 @@ class SUPERDEXPHYSICS_API UMochiRigidJointConstraintComponent
 
  public:
   /** Constraint mode to create between the selected bodies. */
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mochi Constraint")
+  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SuperDex Physics|Constraint")
   EMochiRigidJointConstraintType Type = EMochiRigidJointConstraintType::SphericalJoint;
 
   /**
    * The first body, by name: "lid", "arm/elbow" for a link, or "inner/lid" inside a child actor.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mochi Constraint")
+  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SuperDex Physics|Constraint")
   FString BodyA;
 
   /** The second body. */
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mochi Constraint")
+  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SuperDex Physics|Constraint")
   FString BodyB;
 
   /**
    * Whether the two bodies can touch once constrained. If true, make sure they don't overlap in
    * their constrained configuration. Contact stays disabled after the constraint is destroyed.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mochi Constraint")
+  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SuperDex Physics|Constraint")
   bool bAllowContact = false;
 
   /** The joint point on body A [cm], in its local frame. */
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
-      Category = "Mochi Constraint",
+      Category = "SuperDex Physics|Constraint",
       meta =
           (EditCondition = "Type == EMochiRigidJointConstraintType::SphericalJoint",
            EditConditionHides))
@@ -87,7 +87,7 @@ class SUPERDEXPHYSICS_API UMochiRigidJointConstraintComponent
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
-      Category = "Mochi Constraint",
+      Category = "SuperDex Physics|Constraint",
       meta =
           (EditCondition = "Type == EMochiRigidJointConstraintType::SphericalJoint",
            EditConditionHides))
@@ -97,7 +97,7 @@ class SUPERDEXPHYSICS_API UMochiRigidJointConstraintComponent
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
-      Category = "Mochi Constraint",
+      Category = "SuperDex Physics|Constraint",
       meta =
           (EditCondition = "Type == EMochiRigidJointConstraintType::PrismaticJoint",
            EditConditionHides))
@@ -107,7 +107,7 @@ class SUPERDEXPHYSICS_API UMochiRigidJointConstraintComponent
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
-      Category = "Mochi Constraint",
+      Category = "SuperDex Physics|Constraint",
       meta =
           (EditCondition = "Type == EMochiRigidJointConstraintType::PrismaticJoint && bHasMinLimit",
            EditConditionHides))
@@ -117,7 +117,7 @@ class SUPERDEXPHYSICS_API UMochiRigidJointConstraintComponent
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
-      Category = "Mochi Constraint",
+      Category = "SuperDex Physics|Constraint",
       meta =
           (EditCondition = "Type == EMochiRigidJointConstraintType::PrismaticJoint",
            EditConditionHides))
@@ -127,7 +127,7 @@ class SUPERDEXPHYSICS_API UMochiRigidJointConstraintComponent
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
-      Category = "Mochi Constraint",
+      Category = "SuperDex Physics|Constraint",
       meta =
           (EditCondition = "Type == EMochiRigidJointConstraintType::PrismaticJoint && bHasMaxLimit",
            EditConditionHides))
@@ -137,7 +137,7 @@ class SUPERDEXPHYSICS_API UMochiRigidJointConstraintComponent
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
-      Category = "Mochi Constraint",
+      Category = "SuperDex Physics|Constraint",
       meta =
           (EditCondition = "Type == EMochiRigidJointConstraintType::RotationRange",
            EditConditionHides))
@@ -150,7 +150,7 @@ class SUPERDEXPHYSICS_API UMochiRigidJointConstraintComponent
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
-      Category = "Mochi Constraint",
+      Category = "SuperDex Physics|Constraint",
       meta =
           (EditCondition = "Type == EMochiRigidJointConstraintType::RotationRange",
            EditConditionHides))
@@ -166,7 +166,7 @@ class SUPERDEXPHYSICS_API UMochiRigidJointConstraintComponent
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
-      Category = "Mochi Constraint",
+      Category = "SuperDex Physics|Constraint",
       meta =
           (EditCondition = "Type == EMochiRigidJointConstraintType::RotationRange",
            EditConditionHides))
@@ -177,7 +177,7 @@ class SUPERDEXPHYSICS_API UMochiRigidJointConstraintComponent
    *
    * @param NewTargetRotation Rotation target to configure.
    */
-  UFUNCTION(BlueprintCallable, Category = "Mochi Constraint")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Physics|Constraint")
   void SetTargetRotation(FRotator NewTargetRotation);
 
  protected:

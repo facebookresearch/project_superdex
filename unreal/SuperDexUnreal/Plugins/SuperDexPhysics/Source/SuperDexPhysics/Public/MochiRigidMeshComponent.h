@@ -37,30 +37,33 @@ class SUPERDEXPHYSICS_API UMochiRigidMeshComponent : public UStaticMeshComponent
    * properties if this is true. Failure to do this may result in undefined behavior
    * (particularly packaged builds) due to GPU synchronization issues.
    */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   bool bUseStaticMeshAsMochiModel = false;
 
   /** How to pull the triangular mesh from the static mesh. */
-  UPROPERTY(EditAnywhere, meta = (EditCondition = "bUseStaticMeshAsMochiModel"), Category = "Mochi")
+  UPROPERTY(
+      EditAnywhere,
+      meta = (EditCondition = "bUseStaticMeshAsMochiModel"),
+      Category = "SuperDex Physics")
   ETriangularMeshCollisionSource CollisionSource = ETriangularMeshCollisionSource::Complex;
 
   /** The Mochi Model to use. */
   UPROPERTY(
       EditAnywhere,
       meta = (EditCondition = "!bUseStaticMeshAsMochiModel"),
-      Category = "Mochi")
+      Category = "SuperDex Physics")
   UMochiModel* Model = nullptr;
 
   /** Is this a static Mochi actor (i.e. non-simulated)? */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   bool bIsStatic = mochi::RigidActorParams{}.isStatic;
 
   /** Should this mesh be influenced by scene gravity? */
-  UPROPERTY(EditAnywhere, meta = (EditCondition = "!bIsStatic"), Category = "Mochi")
+  UPROPERTY(EditAnywhere, meta = (EditCondition = "!bIsStatic"), Category = "SuperDex Physics")
   bool bHasGravity = mochi::RigidActorParams{}.hasGravity;
 
   /** The layer this object is simulated on. */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   FName Layer = FMochiLayer::GenericObject;
 
   /**
@@ -68,7 +71,7 @@ class SUPERDEXPHYSICS_API UMochiRigidMeshComponent : public UStaticMeshComponent
    */
   UPROPERTY(
       EditAnywhere,
-      Category = "Mochi",
+      Category = "SuperDex Physics",
       meta = (ValidEnumValues = "None, Auto, Sphere, Box, Mesh, Plane, Sdf"))
   EMochiColliderType ColliderType = ::ToUnreal(mochi::RigidActorParams{}.colliderType);
 
@@ -79,74 +82,74 @@ class SUPERDEXPHYSICS_API UMochiRigidMeshComponent : public UStaticMeshComponent
           (EditCondition =
                "(ColliderType==EMochiColliderType::Sdf || ColliderType==EMochiColliderType::Auto) && bUseStaticMeshAsMochiModel",
            EditConditionHides),
-      Category = "Mochi")
+      Category = "SuperDex Physics")
   FMochiGridSdfParams GridSdfParams = {};
 
   /** The boundary element type used for the rigid actor's surface discretization. */
   UPROPERTY(
       EditAnywhere,
-      Category = "Mochi",
+      Category = "SuperDex Physics",
       meta = (ValidEnumValues = "P1Q1, P1Q3, P1Q6, Default"))
   EMochiActorBoundaryElementType BoundaryElementType =
       ::ToUnreal(mochi::RigidActorParams{}.boundaryElementType);
 
   /** Enable boundary subsampling to reduce contact sample count. */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   bool bEnableBoundarySubsampling = false;
 
   /** Boundary subsampling parameters (density + strategy). */
   UPROPERTY(
       EditAnywhere,
       meta = (EditCondition = "bEnableBoundarySubsampling", EditConditionHides),
-      Category = "Mochi")
+      Category = "SuperDex Physics")
   FMochiBoundarySubsamplingParams BoundarySubsamplingParams;
 
   /** Parameters controlling physical material properties. */
-  UPROPERTY(EditAnywhere, meta = (EditCondition = "!bIsStatic"), Category = "Mochi")
+  UPROPERTY(EditAnywhere, meta = (EditCondition = "!bIsStatic"), Category = "SuperDex Physics")
   UMochiMaterialParams* MaterialParams = nullptr;
 
   /** Parameters controlling contacts. */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   UMochiContactParams* ContactParams = nullptr;
 
   /** Override mass value. */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   bool bOverrideMass = false;
 
   /** Overriding mass [kg] */
   UPROPERTY(
       EditAnywhere,
       meta = (EditCondition = "bOverrideMass", EditConditionHides),
-      Category = "Mochi")
+      Category = "SuperDex Physics")
   double Mass = 0;
 
   /** Override inertial properties. */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   bool bOverrideInertialParams = false;
 
   /** Override center of mass. */
   UPROPERTY(
       EditAnywhere,
       meta = (EditCondition = "bOverrideInertialParams", EditConditionHides),
-      Category = "Mochi")
+      Category = "SuperDex Physics")
   FVector CenterOfMass = {};
 
   /** Moment of inertia used when overriding the actor's inertial properties. */
   UPROPERTY(
       EditAnywhere,
       meta = (EditCondition = "bOverrideInertialParams", EditConditionHides),
-      Category = "Mochi")
+      Category = "SuperDex Physics")
   FMochiMomentOfInertia MomentOfInertia = {};
 
   /** Enable contact queries and events. */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   bool bEnableContacts = false;
 
   /** Freeze actor translation and/or rotation to world-aligned axes. */
   UPROPERTY(
       EditAnywhere,
       meta = (Bitmask, BitmaskEnum = "/Script/SuperDexPhysics.EMochiFreezeConstraint"),
-      Category = "Mochi")
+      Category = "SuperDex Physics")
   int FreezeConstraints = 0;
 
  public:
@@ -154,21 +157,21 @@ class SUPERDEXPHYSICS_API UMochiRigidMeshComponent : public UStaticMeshComponent
    * Emitted when this component begins contact with another Mochi component.
    * bEnableContacts must be enabled.
    */
-  UPROPERTY(BlueprintAssignable, Category = "Mochi")
+  UPROPERTY(BlueprintAssignable, Category = "SuperDex Physics")
   FOnMochiComponentBeginContact OnMochiComponentBeginContact;
 
   /**
    * Emitted when this component ends contact with another Mochi component.
    * bEnableContacts must be enabled.
    */
-  UPROPERTY(BlueprintAssignable, Category = "Mochi")
+  UPROPERTY(BlueprintAssignable, Category = "SuperDex Physics")
   FOnMochiComponentEndContact OnMochiComponentEndContact;
 
   /**
    * Emitted when this component is contacting any other Mochi components.
    * bEnableContacts must be enabled.
    */
-  UPROPERTY(BlueprintAssignable, Category = "Mochi")
+  UPROPERTY(BlueprintAssignable, Category = "SuperDex Physics")
   FOnMochiComponentContact OnMochiComponentContact;
 
  public:
@@ -179,7 +182,7 @@ class SUPERDEXPHYSICS_API UMochiRigidMeshComponent : public UStaticMeshComponent
    * @param NewModel Model asset to assign.
    * @return Whether the model was assigned before native actor creation.
    */
-  UFUNCTION(BlueprintCallable, Category = "Mochi")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Physics")
   bool SetModel(UMochiModel* NewModel);
 
   /**
@@ -191,7 +194,7 @@ class SUPERDEXPHYSICS_API UMochiRigidMeshComponent : public UStaticMeshComponent
    *
    * @param NewTransform World transform to apply.
    */
-  UFUNCTION(BlueprintCallable, Category = "Mochi")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Physics")
   void SetWorldLocationAndRotationMochiWithDynamicsTransform(const FTransform& NewTransform);
 
   /**
@@ -200,7 +203,7 @@ class SUPERDEXPHYSICS_API UMochiRigidMeshComponent : public UStaticMeshComponent
    * @param NewLocation World location to apply.
    * @param NewRotation World rotation to apply.
    */
-  UFUNCTION(BlueprintCallable, Category = "Mochi")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Physics")
   void SetWorldLocationAndRotationMochiWithDynamics(
       const FVector& NewLocation,
       const FRotator& NewRotation);
@@ -210,7 +213,7 @@ class SUPERDEXPHYSICS_API UMochiRigidMeshComponent : public UStaticMeshComponent
    *
    * @return Cached world-space linear velocity.
    */
-  UFUNCTION(BlueprintPure, Category = "Mochi")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Physics")
   FVector GetWorldLinearVelocity() const;
 
   /**
@@ -218,7 +221,7 @@ class SUPERDEXPHYSICS_API UMochiRigidMeshComponent : public UStaticMeshComponent
    *
    * @return Cached world-space angular velocity.
    */
-  UFUNCTION(BlueprintPure, Category = "Mochi")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Physics")
   FVector GetWorldAngularVelocity() const;
 
   /**
@@ -226,7 +229,7 @@ class SUPERDEXPHYSICS_API UMochiRigidMeshComponent : public UStaticMeshComponent
    *
    * @return Contact points cached for this component.
    */
-  UFUNCTION(BlueprintPure, Category = "Mochi")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Physics")
   const TArray<FMochiContactPoint>& GetContactPoints() const;
 
  public:

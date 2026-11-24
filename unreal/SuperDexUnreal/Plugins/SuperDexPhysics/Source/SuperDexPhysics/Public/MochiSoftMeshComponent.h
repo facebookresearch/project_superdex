@@ -31,18 +31,21 @@ class SUPERDEXPHYSICS_API UMochiSoftMeshComponent : public UMochiDeformableMeshC
 
  public:
   /** Parameters controlling physical material properties. */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   UMochiMaterialParams* MaterialParams = nullptr;
 
   /** Collider representation used by the soft actor. */
-  UPROPERTY(EditAnywhere, Category = "Mochi", meta = (ValidEnumValues = "None, Auto, Sdf"))
+  UPROPERTY(
+      EditAnywhere,
+      Category = "SuperDex Physics",
+      meta = (ValidEnumValues = "None, Auto, Sdf"))
   EMochiColliderType ColliderType =
       ::ToUnreal(mochi::experimental::ExperimentalSoftActorParams{}.colliderType);
 
   /** The boundary element type used for the soft actor's surface discretization. */
   UPROPERTY(
       EditAnywhere,
-      Category = "Mochi",
+      Category = "SuperDex Physics",
       meta = (ValidEnumValues = "P1Q1, P1Q3, P1Q6, Default"))
   EMochiActorBoundaryElementType BoundaryElementType =
       ::ToUnreal(mochi::SoftActorParams{}.boundaryElementType);
@@ -51,23 +54,23 @@ class SUPERDEXPHYSICS_API UMochiSoftMeshComponent : public UMochiDeformableMeshC
    * Use the model's embedded contact skin for contact. Rendering does not depend on this setting:
    * without a visual mesh, the model's contact skin is rendered whenever it has skinning data.
    */
-  UPROPERTY(EditAnywhere, Category = "Mochi", meta = (EditCondition = "!bEnableRom"))
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics", meta = (EditCondition = "!bEnableRom"))
   bool bUseContactSkin = mochi::SoftActorParams{}.useContactSkin;
 
   /** Modifiers for individual elements that get applied during initialization */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   UMochiModelMaterialModifiers* MaterialModifiers = nullptr;
 
   /** Recomputes local soft actor frame for more optimal performance. */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   bool bUseRecentering = mochi::experimental::ExperimentalSoftActorParams{}.useRecentering;
 
   /** Enable volume node positions query. */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   bool bEnableVolumeNodePositionsQuery = false;
 
   /** Enable elastic energy query. */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   bool bEnableElasticEnergyQuery = false;
 
   /**
@@ -87,13 +90,13 @@ class SUPERDEXPHYSICS_API UMochiSoftMeshComponent : public UMochiDeformableMeshC
    * Enable reduced order model (ROM). The imported .mochi.h5 MochiModel must provide ROM sources
    * inside of a rom group.
    */
-  UPROPERTY(EditAnywhere, Category = "MochiSoftMeshComponent|Experimental")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics|Soft Mesh|Experimental")
   bool bEnableRom = false;
 
   /** Reduced-order-model source and sampling settings. */
   UPROPERTY(
       EditAnywhere,
-      Category = "MochiSoftMeshComponent|Experimental",
+      Category = "SuperDex Physics|Soft Mesh|Experimental",
       meta = (ShowOnlyInnerProperties, EditCondition = "bEnableRom"))
   FMochiRomParams RomParams;
 
@@ -103,7 +106,7 @@ class SUPERDEXPHYSICS_API UMochiSoftMeshComponent : public UMochiDeformableMeshC
    *
    * @return Elastic energy cached from the native query.
    */
-  UFUNCTION(BlueprintPure, Category = "Mochi")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Physics")
   float GetElasticEnergy() const {
     return ElasticEnergy;
   }

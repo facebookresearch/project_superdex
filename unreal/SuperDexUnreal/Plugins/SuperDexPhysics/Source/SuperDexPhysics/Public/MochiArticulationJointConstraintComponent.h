@@ -53,15 +53,15 @@ class SUPERDEXPHYSICS_API UMochiArticulationJointConstraintComponent
 
  public:
   /** Constraint mode to create for the selected joint. */
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mochi Constraint")
+  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SuperDex Physics|Constraint")
   EMochiArticulationJointConstraintType Type = EMochiArticulationJointConstraintType::Target;
 
   /** The articulation component, by name: "arm", or "inner/arm" inside a child actor. */
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mochi Constraint")
+  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SuperDex Physics|Constraint")
   FString Articulation;
 
   /** The joint, by name. */
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mochi Constraint")
+  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SuperDex Physics|Constraint")
   FName Joint = NAME_None;
 
   /**
@@ -71,7 +71,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationJointConstraintComponent
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
-      Category = "Mochi Constraint",
+      Category = "SuperDex Physics|Constraint",
       meta =
           (ClampMin = "0",
            ClampMax = "2",
@@ -84,7 +84,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationJointConstraintComponent
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
-      Category = "Mochi Constraint",
+      Category = "SuperDex Physics|Constraint",
       meta =
           (EditCondition = "Type == EMochiArticulationJointConstraintType::Target",
            EditConditionHides))
@@ -94,7 +94,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationJointConstraintComponent
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
-      Category = "Mochi Constraint",
+      Category = "SuperDex Physics|Constraint",
       meta =
           (EditCondition = "Type == EMochiArticulationJointConstraintType::Range",
            EditConditionHides))
@@ -104,7 +104,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationJointConstraintComponent
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
-      Category = "Mochi Constraint",
+      Category = "SuperDex Physics|Constraint",
       meta =
           (EditCondition = "Type == EMochiArticulationJointConstraintType::Range",
            EditConditionHides))
@@ -114,7 +114,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationJointConstraintComponent
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
-      Category = "Mochi Constraint",
+      Category = "SuperDex Physics|Constraint",
       meta =
           (EditCondition = "Type == EMochiArticulationJointConstraintType::RotationTarget",
            EditConditionHides))
@@ -124,7 +124,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationJointConstraintComponent
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
-      Category = "Mochi Constraint",
+      Category = "SuperDex Physics|Constraint",
       meta =
           (EditCondition = "Type == EMochiArticulationJointConstraintType::RotationRange",
            EditConditionHides))
@@ -134,7 +134,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationJointConstraintComponent
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
-      Category = "Mochi Constraint",
+      Category = "SuperDex Physics|Constraint",
       meta =
           (EditCondition = "Type == EMochiArticulationJointConstraintType::RotationRange",
            EditConditionHides))
@@ -145,7 +145,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationJointConstraintComponent
    *
    * @param NewTargetValue Joint-constraint target value.
    */
-  UFUNCTION(BlueprintCallable, Category = "Mochi Constraint")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Physics|Constraint")
   void SetTargetValue(double NewTargetValue);
 
   /**
@@ -153,7 +153,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationJointConstraintComponent
    *
    * @param NewTargetRotation Rotation target to configure.
    */
-  UFUNCTION(BlueprintCallable, Category = "Mochi Constraint")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Physics|Constraint")
   void SetTargetRotation(FRotator NewTargetRotation);
 
  protected:

@@ -61,7 +61,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationController : public UObject {
    * @param Component Component supplied to the controller or editor operation.
    * @return True to permit controller deployment, false to cancel deployment.
    */
-  UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Mochi Controller")
+  UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "SuperDex Physics|Controller")
   bool Initialize(const UMochiArticulationComponent* Component);
   virtual bool Initialize_Implementation(const UMochiArticulationComponent* Component);
 
@@ -73,7 +73,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationController : public UObject {
    *
    * @param Component Component supplied to the controller or editor operation.
    */
-  UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Mochi Controller")
+  UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "SuperDex Physics|Controller")
   void Shutdown(const UMochiArticulationComponent* Component);
   virtual void Shutdown_Implementation(const UMochiArticulationComponent* Component);
 
@@ -96,7 +96,7 @@ class SUPERDEXPHYSICS_API UMochiArticulationController : public UObject {
    * @param Component Component supplied to the controller or editor operation.
    * @param GameDeltaTime Game-thread update interval.
    */
-  UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Mochi Controller")
+  UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "SuperDex Physics|Controller")
   void TickController(const UMochiArticulationComponent* Component, double GameDeltaTime);
   virtual void TickController_Implementation(
       const UMochiArticulationComponent* Component,

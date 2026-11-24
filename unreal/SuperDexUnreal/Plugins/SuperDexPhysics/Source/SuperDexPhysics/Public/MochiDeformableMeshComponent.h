@@ -35,27 +35,27 @@ class SUPERDEXPHYSICS_API UMochiDeformableMeshComponent : public UDynamicMeshCom
 
  public:
   /** The Mochi Model to use. */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   UMochiModel* Model = nullptr;
 
   /** Should this mesh be influenced by scene gravity? */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   bool bHasGravity = mochi::SoftActorParams{}.hasGravity;
 
   /** The layer this object is simulated on. */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   FName Layer = FMochiLayer::GenericObject;
 
   /** Parameters controlling contacts. */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   UMochiContactParams* ContactParams = nullptr;
 
   /** Use Mochi computed node normals to set the dynamic mesh normals. */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   bool bUseMochiNodeNormals = true;
 
   /** Enable contact queries and events. */
-  UPROPERTY(EditAnywhere, Category = "Mochi")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   bool bEnableContacts = false;
 
   /**
@@ -70,7 +70,7 @@ class SUPERDEXPHYSICS_API UMochiDeformableMeshComponent : public UDynamicMeshCom
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
-      Category = "Mochi",
+      Category = "SuperDex Physics",
       meta = (EditCondition = "bEnableContacts", DisplayName = "Filter Self-Contacts From Events"))
   bool bFilterSelfContacts = true;
 
@@ -78,21 +78,21 @@ class SUPERDEXPHYSICS_API UMochiDeformableMeshComponent : public UDynamicMeshCom
    * Emitted when this component begins contact with another Mochi component.
    * bEnableContacts must be enabled.
    */
-  UPROPERTY(BlueprintAssignable, Category = "Mochi")
+  UPROPERTY(BlueprintAssignable, Category = "SuperDex Physics")
   FOnMochiComponentBeginContact OnMochiComponentBeginContact;
 
   /**
    * Emitted when this component ends contact with another Mochi component.
    * bEnableContacts must be enabled.
    */
-  UPROPERTY(BlueprintAssignable, Category = "Mochi")
+  UPROPERTY(BlueprintAssignable, Category = "SuperDex Physics")
   FOnMochiComponentEndContact OnMochiComponentEndContact;
 
   /**
    * Emitted when this component is contacting any other Mochi components.
    * bEnableContacts must be enabled.
    */
-  UPROPERTY(BlueprintAssignable, Category = "Mochi")
+  UPROPERTY(BlueprintAssignable, Category = "SuperDex Physics")
   FOnMochiComponentContact OnMochiComponentContact;
 
  public:
@@ -101,7 +101,7 @@ class SUPERDEXPHYSICS_API UMochiDeformableMeshComponent : public UDynamicMeshCom
    *
    * @return Contact points cached for this component.
    */
-  UFUNCTION(BlueprintPure, Category = "Mochi")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Physics")
   const TArray<FMochiContactPoint>& GetContactPoints() const;
 
  public:

@@ -31,6 +31,6 @@ class SUPERDEXPHYSICSEDITOR_API UMochiModelEditorSelectedElements : public UObje
 
  public:
   /** Model elements selected in the editor. */
-  UPROPERTY(EditAnywhere)
+  UPROPERTY(EditAnywhere, Category = "SuperDex Physics|Editor")
   TSet<int> SelectedElements;
 };
