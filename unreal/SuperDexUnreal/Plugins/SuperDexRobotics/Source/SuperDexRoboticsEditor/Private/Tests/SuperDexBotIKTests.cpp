@@ -323,86 +323,60 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FSuperDexBotIKConversionTest::RunTest(const FString& Parameters) {
   TestEqual(TEXT("Current native schema is v9"), superdex::robotics::kIKConfigVersion, 9);
-  TestTrue(
-      TEXT("Direct historical serialized redirect"),
-      FCoreRedirects::GetRedirectedName(
-          ECoreRedirectFlags::Type_Struct,
-          FCoreRedirectObjectName(
-              FString(TEXT("/Script/SuperDexRobotics.SuperDexBotIKTargetConfig")))) ==
-          FCoreRedirectObjectName(
-              FString(TEXT("/Script/SuperDexRobotics.SuperDexBotIKGoalConfig"))));
-  TestTrue(
-      TEXT("Direct historical serialized redirect"),
-      FCoreRedirects::GetRedirectedName(
-          ECoreRedirectFlags::Type_Enum,
-          FCoreRedirectObjectName(
-              FString(TEXT("/Script/SuperDexRobotics.ESuperDexBotIKTargetSpace")))) ==
-          FCoreRedirectObjectName(
-              FString(TEXT("/Script/SuperDexRobotics.ESuperDexBotIKGoalSpace"))));
-  TestTrue(
-      TEXT("Direct historical serialized redirect"),
-      FCoreRedirects::GetRedirectedName(
-          ECoreRedirectFlags::Type_Property,
-          FCoreRedirectObjectName(
-              FString(TEXT("/Script/SuperDexRobotics.SuperDexBotIKConfig.Targets")))) ==
-          FCoreRedirectObjectName(
-              FString(TEXT("/Script/SuperDexRobotics.SuperDexBotIKConfig.Goals"))));
+  const auto CheckRetiredRedirect = [this](ECoreRedirectFlags Type, const TCHAR* OldPath) -> void {
+    const FCoreRedirectObjectName OldName{FString(OldPath)};
+    FCoreRedirectObjectName ResolvedName;
+    const FCoreRedirect* ValueRedirect = nullptr;
+    const bool bRenamed =
+        FCoreRedirects::RedirectNameAndValues(Type, OldName, ResolvedName, &ValueRedirect);
+    TArray<const FCoreRedirect*> Matches;
+    FCoreRedirects::GetMatchingRedirects(Type, OldName, Matches);
+    TestTrue(
+        *FString::Printf(TEXT("Retired name has no redirect: %s"), OldPath),
+        !bRenamed && ResolvedName == OldName && ValueRedirect == nullptr && Matches.IsEmpty());
+  };
+  CheckRetiredRedirect(
+      ECoreRedirectFlags::Type_Struct, TEXT("/Script/SuperDexRobotics.SuperDexBotIKTargetConfig"));
+  CheckRetiredRedirect(
+      ECoreRedirectFlags::Type_Enum, TEXT("/Script/SuperDexRobotics.ESuperDexBotIKTargetSpace"));
+  CheckRetiredRedirect(
+      ECoreRedirectFlags::Type_Property,
+      TEXT("/Script/SuperDexRobotics.SuperDexBotIKConfig.Targets"));
   TestNull(
       TEXT("No old-name config alias"),
       FindFProperty<FProperty>(USuperDexBotIKConfig::StaticClass(), TEXT("Targets")));
   TestNotNull(
       TEXT("Final config property exists"),
       FindFProperty<FProperty>(USuperDexBotIKConfig::StaticClass(), TEXT("Goals")));
-  TestTrue(
-      TEXT("Direct historical serialized redirect"),
-      FCoreRedirects::GetRedirectedName(
-          ECoreRedirectFlags::Type_Property,
-          FCoreRedirectObjectName(
-              FString(TEXT("/Script/SuperDexRobotics.SuperDexBotIKConfig.Bot")))) ==
-          FCoreRedirectObjectName(
-              FString(TEXT("/Script/SuperDexRobotics.SuperDexBotIKConfig.OutputBot"))));
+  CheckRetiredRedirect(
+      ECoreRedirectFlags::Type_Property, TEXT("/Script/SuperDexRobotics.SuperDexBotIKConfig.Bot"));
   TestNull(
       TEXT("No old-name config alias"),
       FindFProperty<FProperty>(USuperDexBotIKConfig::StaticClass(), TEXT("Bot")));
   TestNotNull(
       TEXT("Final config property exists"),
       FindFProperty<FProperty>(USuperDexBotIKConfig::StaticClass(), TEXT("OutputBot")));
-  TestTrue(
-      TEXT("Direct historical serialized redirect"),
-      FCoreRedirects::GetRedirectedName(
-          ECoreRedirectFlags::Type_Property,
-          FCoreRedirectObjectName(
-              FString(TEXT("/Script/SuperDexRobotics.SuperDexBotIKConfig.ReferenceBot")))) ==
-          FCoreRedirectObjectName(
-              FString(TEXT("/Script/SuperDexRobotics.SuperDexBotIKConfig.InputBot"))));
+  CheckRetiredRedirect(
+      ECoreRedirectFlags::Type_Property,
+      TEXT("/Script/SuperDexRobotics.SuperDexBotIKConfig.ReferenceBot"));
   TestNull(
       TEXT("No old-name config alias"),
       FindFProperty<FProperty>(USuperDexBotIKConfig::StaticClass(), TEXT("ReferenceBot")));
   TestNotNull(
       TEXT("Final config property exists"),
       FindFProperty<FProperty>(USuperDexBotIKConfig::StaticClass(), TEXT("InputBot")));
-  TestTrue(
-      TEXT("Direct historical serialized redirect"),
-      FCoreRedirects::GetRedirectedName(
-          ECoreRedirectFlags::Type_Property,
-          FCoreRedirectObjectName(
-              FString(TEXT("/Script/SuperDexRobotics.SuperDexBotIKConfig.TargetBot")))) ==
-          FCoreRedirectObjectName(
-              FString(TEXT("/Script/SuperDexRobotics.SuperDexBotIKConfig.InputBot"))));
+  CheckRetiredRedirect(
+      ECoreRedirectFlags::Type_Property,
+      TEXT("/Script/SuperDexRobotics.SuperDexBotIKConfig.TargetBot"));
   TestNull(
       TEXT("No old-name config alias"),
       FindFProperty<FProperty>(USuperDexBotIKConfig::StaticClass(), TEXT("TargetBot")));
   TestNotNull(
       TEXT("Final config property exists"),
       FindFProperty<FProperty>(USuperDexBotIKConfig::StaticClass(), TEXT("InputBot")));
-  TestTrue(
-      TEXT("Direct historical serialized redirect"),
-      FCoreRedirects::GetRedirectedName(
-          ECoreRedirectFlags::Type_Property,
-          FCoreRedirectObjectName(
-              FString(TEXT("/Script/SuperDexRobotics.SuperDexBotIKConfig.BotConfiguration")))) ==
-          FCoreRedirectObjectName(FString(
-              TEXT("/Script/SuperDexRobotics.SuperDexBotIKConfig.OutputBotConfiguration"))));
+  CheckRetiredRedirect(
+      ECoreRedirectFlags::Type_Property,
+      TEXT("/Script/SuperDexRobotics.SuperDexBotIKConfig.BotConfiguration"));
   TestNull(
       TEXT("No old-name config alias"),
       FindFProperty<FProperty>(USuperDexBotIKConfig::StaticClass(), TEXT("BotConfiguration")));
@@ -410,14 +384,9 @@ bool FSuperDexBotIKConversionTest::RunTest(const FString& Parameters) {
       TEXT("Final config property exists"),
       FindFProperty<FProperty>(
           USuperDexBotIKConfig::StaticClass(), TEXT("OutputBotConfiguration")));
-  TestTrue(
-      TEXT("Direct historical serialized redirect"),
-      FCoreRedirects::GetRedirectedName(
-          ECoreRedirectFlags::Type_Property,
-          FCoreRedirectObjectName(FString(
-              TEXT("/Script/SuperDexRobotics.SuperDexBotIKConfig.ReferenceBotConfiguration")))) ==
-          FCoreRedirectObjectName(
-              FString(TEXT("/Script/SuperDexRobotics.SuperDexBotIKConfig.InputBotConfiguration"))));
+  CheckRetiredRedirect(
+      ECoreRedirectFlags::Type_Property,
+      TEXT("/Script/SuperDexRobotics.SuperDexBotIKConfig.ReferenceBotConfiguration"));
   TestNull(
       TEXT("No old-name config alias"),
       FindFProperty<FProperty>(
@@ -425,14 +394,9 @@ bool FSuperDexBotIKConversionTest::RunTest(const FString& Parameters) {
   TestNotNull(
       TEXT("Final config property exists"),
       FindFProperty<FProperty>(USuperDexBotIKConfig::StaticClass(), TEXT("InputBotConfiguration")));
-  TestTrue(
-      TEXT("Direct historical serialized redirect"),
-      FCoreRedirects::GetRedirectedName(
-          ECoreRedirectFlags::Type_Property,
-          FCoreRedirectObjectName(FString(
-              TEXT("/Script/SuperDexRobotics.SuperDexBotIKConfig.TargetBotConfiguration")))) ==
-          FCoreRedirectObjectName(
-              FString(TEXT("/Script/SuperDexRobotics.SuperDexBotIKConfig.InputBotConfiguration"))));
+  CheckRetiredRedirect(
+      ECoreRedirectFlags::Type_Property,
+      TEXT("/Script/SuperDexRobotics.SuperDexBotIKConfig.TargetBotConfiguration"));
   TestNull(
       TEXT("No old-name config alias"),
       FindFProperty<FProperty>(
@@ -440,14 +404,9 @@ bool FSuperDexBotIKConversionTest::RunTest(const FString& Parameters) {
   TestNotNull(
       TEXT("Final config property exists"),
       FindFProperty<FProperty>(USuperDexBotIKConfig::StaticClass(), TEXT("InputBotConfiguration")));
-  TestTrue(
-      TEXT("Direct historical serialized redirect"),
-      FCoreRedirects::GetRedirectedName(
-          ECoreRedirectFlags::Type_Property,
-          FCoreRedirectObjectName(FString(
-              TEXT("/Script/SuperDexRobotics.SuperDexBotIKConfig.BaseFromReferenceBot")))) ==
-          FCoreRedirectObjectName(FString(TEXT(
-              "/Script/SuperDexRobotics.SuperDexBotIKConfig.OutputBaseFrameFromInputBaseFrame"))));
+  CheckRetiredRedirect(
+      ECoreRedirectFlags::Type_Property,
+      TEXT("/Script/SuperDexRobotics.SuperDexBotIKConfig.BaseFromReferenceBot"));
   TestNull(
       TEXT("No old-name config alias"),
       FindFProperty<FProperty>(USuperDexBotIKConfig::StaticClass(), TEXT("BaseFromReferenceBot")));
@@ -455,14 +414,9 @@ bool FSuperDexBotIKConversionTest::RunTest(const FString& Parameters) {
       TEXT("Final config property exists"),
       FindFProperty<FProperty>(
           USuperDexBotIKConfig::StaticClass(), TEXT("OutputBaseFrameFromInputBaseFrame")));
-  TestTrue(
-      TEXT("Direct historical serialized redirect"),
-      FCoreRedirects::GetRedirectedName(
-          ECoreRedirectFlags::Type_Property,
-          FCoreRedirectObjectName(
-              FString(TEXT("/Script/SuperDexRobotics.SuperDexBotIKConfig.BaseFromTargetBot")))) ==
-          FCoreRedirectObjectName(FString(TEXT(
-              "/Script/SuperDexRobotics.SuperDexBotIKConfig.OutputBaseFrameFromInputBaseFrame"))));
+  CheckRetiredRedirect(
+      ECoreRedirectFlags::Type_Property,
+      TEXT("/Script/SuperDexRobotics.SuperDexBotIKConfig.BaseFromTargetBot"));
   TestNull(
       TEXT("No old-name config alias"),
       FindFProperty<FProperty>(USuperDexBotIKConfig::StaticClass(), TEXT("BaseFromTargetBot")));
@@ -470,98 +424,63 @@ bool FSuperDexBotIKConversionTest::RunTest(const FString& Parameters) {
       TEXT("Final config property exists"),
       FindFProperty<FProperty>(
           USuperDexBotIKConfig::StaticClass(), TEXT("OutputBaseFrameFromInputBaseFrame")));
-  TestTrue(
-      TEXT("Direct historical serialized redirect"),
-      FCoreRedirects::GetRedirectedName(
-          ECoreRedirectFlags::Type_Property,
-          FCoreRedirectObjectName(
-              FString(TEXT("/Script/SuperDexRobotics.SuperDexBotIKConfig.ReferenceBotScale")))) ==
-          FCoreRedirectObjectName(
-              FString(TEXT("/Script/SuperDexRobotics.SuperDexBotIKConfig.InputBotScale"))));
+  CheckRetiredRedirect(
+      ECoreRedirectFlags::Type_Property,
+      TEXT("/Script/SuperDexRobotics.SuperDexBotIKConfig.ReferenceBotScale"));
   TestNull(
       TEXT("No old-name config alias"),
       FindFProperty<FProperty>(USuperDexBotIKConfig::StaticClass(), TEXT("ReferenceBotScale")));
   TestNotNull(
       TEXT("Final config property exists"),
       FindFProperty<FProperty>(USuperDexBotIKConfig::StaticClass(), TEXT("InputBotScale")));
-  TestTrue(
-      TEXT("Direct historical serialized redirect"),
-      FCoreRedirects::GetRedirectedName(
-          ECoreRedirectFlags::Type_Property,
-          FCoreRedirectObjectName(
-              FString(TEXT("/Script/SuperDexRobotics.SuperDexBotIKConfig.TargetBotScale")))) ==
-          FCoreRedirectObjectName(
-              FString(TEXT("/Script/SuperDexRobotics.SuperDexBotIKConfig.InputBotScale"))));
+  CheckRetiredRedirect(
+      ECoreRedirectFlags::Type_Property,
+      TEXT("/Script/SuperDexRobotics.SuperDexBotIKConfig.TargetBotScale"));
   TestNull(
       TEXT("No old-name config alias"),
       FindFProperty<FProperty>(USuperDexBotIKConfig::StaticClass(), TEXT("TargetBotScale")));
   TestNotNull(
       TEXT("Final config property exists"),
       FindFProperty<FProperty>(USuperDexBotIKConfig::StaticClass(), TEXT("InputBotScale")));
-  TestTrue(
-      TEXT("Direct historical serialized redirect"),
-      FCoreRedirects::GetRedirectedName(
-          ECoreRedirectFlags::Type_Property,
-          FCoreRedirectObjectName(
-              FString(TEXT("/Script/SuperDexRobotics.SuperDexBotIKConfig.BotReference")))) ==
-          FCoreRedirectObjectName(
-              FString(TEXT("/Script/SuperDexRobotics.SuperDexBotIKConfig.OutputBotReference"))));
+  CheckRetiredRedirect(
+      ECoreRedirectFlags::Type_Property,
+      TEXT("/Script/SuperDexRobotics.SuperDexBotIKConfig.BotReference"));
   TestNull(
       TEXT("No old-name config alias"),
       FindFProperty<FProperty>(USuperDexBotIKConfig::StaticClass(), TEXT("BotReference")));
   TestNotNull(
       TEXT("Final config property exists"),
       FindFProperty<FProperty>(USuperDexBotIKConfig::StaticClass(), TEXT("OutputBotReference")));
-  TestTrue(
-      TEXT("Direct historical serialized redirect"),
-      FCoreRedirects::GetRedirectedName(
-          ECoreRedirectFlags::Type_Property,
-          FCoreRedirectObjectName(FString(
-              TEXT("/Script/SuperDexRobotics.SuperDexBotIKConfig.ReferenceBotReference")))) ==
-          FCoreRedirectObjectName(
-              FString(TEXT("/Script/SuperDexRobotics.SuperDexBotIKConfig.InputBotReference"))));
+  CheckRetiredRedirect(
+      ECoreRedirectFlags::Type_Property,
+      TEXT("/Script/SuperDexRobotics.SuperDexBotIKConfig.ReferenceBotReference"));
   TestNull(
       TEXT("No old-name config alias"),
       FindFProperty<FProperty>(USuperDexBotIKConfig::StaticClass(), TEXT("ReferenceBotReference")));
   TestNotNull(
       TEXT("Final config property exists"),
       FindFProperty<FProperty>(USuperDexBotIKConfig::StaticClass(), TEXT("InputBotReference")));
-  TestTrue(
-      TEXT("Direct historical serialized redirect"),
-      FCoreRedirects::GetRedirectedName(
-          ECoreRedirectFlags::Type_Property,
-          FCoreRedirectObjectName(
-              FString(TEXT("/Script/SuperDexRobotics.SuperDexBotIKConfig.TargetBotReference")))) ==
-          FCoreRedirectObjectName(
-              FString(TEXT("/Script/SuperDexRobotics.SuperDexBotIKConfig.InputBotReference"))));
+  CheckRetiredRedirect(
+      ECoreRedirectFlags::Type_Property,
+      TEXT("/Script/SuperDexRobotics.SuperDexBotIKConfig.TargetBotReference"));
   TestNull(
       TEXT("No old-name config alias"),
       FindFProperty<FProperty>(USuperDexBotIKConfig::StaticClass(), TEXT("TargetBotReference")));
   TestNotNull(
       TEXT("Final config property exists"),
       FindFProperty<FProperty>(USuperDexBotIKConfig::StaticClass(), TEXT("InputBotReference")));
-  TestTrue(
-      TEXT("Direct historical serialized redirect"),
-      FCoreRedirects::GetRedirectedName(
-          ECoreRedirectFlags::Type_Property,
-          FCoreRedirectObjectName(
-              FString(TEXT("/Script/SuperDexRobotics.SuperDexBotIKConfig.SourceBotPath")))) ==
-          FCoreRedirectObjectName(
-              FString(TEXT("/Script/SuperDexRobotics.SuperDexBotIKConfig.SourceOutputBotPath"))));
+  CheckRetiredRedirect(
+      ECoreRedirectFlags::Type_Property,
+      TEXT("/Script/SuperDexRobotics.SuperDexBotIKConfig.SourceBotPath"));
   TestNull(
       TEXT("No old-name config alias"),
       FindFProperty<FProperty>(USuperDexBotIKConfig::StaticClass(), TEXT("SourceBotPath")));
   TestNotNull(
       TEXT("Final config property exists"),
       FindFProperty<FProperty>(USuperDexBotIKConfig::StaticClass(), TEXT("SourceOutputBotPath")));
-  TestTrue(
-      TEXT("Direct historical serialized redirect"),
-      FCoreRedirects::GetRedirectedName(
-          ECoreRedirectFlags::Type_Property,
-          FCoreRedirectObjectName(FString(
-              TEXT("/Script/SuperDexRobotics.SuperDexBotIKConfig.SourceReferenceBotPath")))) ==
-          FCoreRedirectObjectName(
-              FString(TEXT("/Script/SuperDexRobotics.SuperDexBotIKConfig.SourceInputBotPath"))));
+  CheckRetiredRedirect(
+      ECoreRedirectFlags::Type_Property,
+      TEXT("/Script/SuperDexRobotics.SuperDexBotIKConfig.SourceReferenceBotPath"));
   TestNull(
       TEXT("No old-name config alias"),
       FindFProperty<FProperty>(
@@ -569,110 +488,60 @@ bool FSuperDexBotIKConversionTest::RunTest(const FString& Parameters) {
   TestNotNull(
       TEXT("Final config property exists"),
       FindFProperty<FProperty>(USuperDexBotIKConfig::StaticClass(), TEXT("SourceInputBotPath")));
-  TestTrue(
-      TEXT("Direct historical serialized redirect"),
-      FCoreRedirects::GetRedirectedName(
-          ECoreRedirectFlags::Type_Property,
-          FCoreRedirectObjectName(
-              FString(TEXT("/Script/SuperDexRobotics.SuperDexBotIKConfig.SourceTargetBotPath")))) ==
-          FCoreRedirectObjectName(
-              FString(TEXT("/Script/SuperDexRobotics.SuperDexBotIKConfig.SourceInputBotPath"))));
+  CheckRetiredRedirect(
+      ECoreRedirectFlags::Type_Property,
+      TEXT("/Script/SuperDexRobotics.SuperDexBotIKConfig.SourceTargetBotPath"));
   TestNull(
       TEXT("No old-name config alias"),
       FindFProperty<FProperty>(USuperDexBotIKConfig::StaticClass(), TEXT("SourceTargetBotPath")));
   TestNotNull(
       TEXT("Final config property exists"),
       FindFProperty<FProperty>(USuperDexBotIKConfig::StaticClass(), TEXT("SourceInputBotPath")));
-  TestTrue(
-      TEXT("Direct historical serialized redirect"),
-      FCoreRedirects::GetRedirectedName(
-          ECoreRedirectFlags::Type_Property,
-          FCoreRedirectObjectName(
-              FString(TEXT("/Script/SuperDexRobotics.SuperDexBotIKTargetConfig.Link")))) ==
-          FCoreRedirectObjectName(
-              FString(TEXT("/Script/SuperDexRobotics.SuperDexBotIKGoalConfig.OutputBotLink"))));
-  TestTrue(
-      TEXT("Direct historical serialized redirect"),
-      FCoreRedirects::GetRedirectedName(
-          ECoreRedirectFlags::Type_Property,
-          FCoreRedirectObjectName(FString(
-              TEXT("/Script/SuperDexRobotics.SuperDexBotIKTargetConfig.ReferenceBotLink")))) ==
-          FCoreRedirectObjectName(
-              FString(TEXT("/Script/SuperDexRobotics.SuperDexBotIKGoalConfig.InputBotLink"))));
-  TestTrue(
-      TEXT("Direct historical serialized redirect"),
-      FCoreRedirects::GetRedirectedName(
-          ECoreRedirectFlags::Type_Property,
-          FCoreRedirectObjectName(
-              FString(TEXT("/Script/SuperDexRobotics.SuperDexBotIKTargetConfig.TargetBotLink")))) ==
-          FCoreRedirectObjectName(
-              FString(TEXT("/Script/SuperDexRobotics.SuperDexBotIKGoalConfig.InputBotLink"))));
-  TestTrue(
-      TEXT("Direct historical serialized redirect"),
-      FCoreRedirects::GetRedirectedName(
-          ECoreRedirectFlags::Type_Property,
-          FCoreRedirectObjectName(FString(
-              TEXT("/Script/SuperDexRobotics.SuperDexBotIKTargetConfig.LinkRelativeFrame")))) ==
-          FCoreRedirectObjectName(FString(TEXT(
-              "/Script/SuperDexRobotics.SuperDexBotIKGoalConfig.LinkFrameFromConstraintFrame"))));
-  TestTrue(
-      TEXT("Direct historical serialized redirect"),
-      FCoreRedirects::GetRedirectedName(
-          ECoreRedirectFlags::Type_Property,
-          FCoreRedirectObjectName(
-              FString(TEXT("/Script/SuperDexRobotics.SuperDexBotIKTargetConfig.Transform")))) ==
-          FCoreRedirectObjectName(FString(TEXT(
-              "/Script/SuperDexRobotics.SuperDexBotIKGoalConfig.BaseOrInputLinkFrameFromConstraintFrame"))));
-  TestTrue(
-      TEXT("Direct historical serialized redirect"),
-      FCoreRedirects::GetRedirectedName(
-          ECoreRedirectFlags::Type_Property,
-          FCoreRedirectObjectName(
-              FString(TEXT("/Script/SuperDexRobotics.SuperDexBotIKGoalConfig.Link")))) ==
-          FCoreRedirectObjectName(
-              FString(TEXT("/Script/SuperDexRobotics.SuperDexBotIKGoalConfig.OutputBotLink"))));
+  CheckRetiredRedirect(
+      ECoreRedirectFlags::Type_Property,
+      TEXT("/Script/SuperDexRobotics.SuperDexBotIKTargetConfig.Link"));
+  CheckRetiredRedirect(
+      ECoreRedirectFlags::Type_Property,
+      TEXT("/Script/SuperDexRobotics.SuperDexBotIKTargetConfig.ReferenceBotLink"));
+  CheckRetiredRedirect(
+      ECoreRedirectFlags::Type_Property,
+      TEXT("/Script/SuperDexRobotics.SuperDexBotIKTargetConfig.TargetBotLink"));
+  CheckRetiredRedirect(
+      ECoreRedirectFlags::Type_Property,
+      TEXT("/Script/SuperDexRobotics.SuperDexBotIKTargetConfig.LinkRelativeFrame"));
+  CheckRetiredRedirect(
+      ECoreRedirectFlags::Type_Property,
+      TEXT("/Script/SuperDexRobotics.SuperDexBotIKTargetConfig.Transform"));
+  CheckRetiredRedirect(
+      ECoreRedirectFlags::Type_Property,
+      TEXT("/Script/SuperDexRobotics.SuperDexBotIKGoalConfig.Link"));
   TestNull(
       TEXT("No old-name goal alias"),
       FindFProperty<FProperty>(FSuperDexBotIKGoalConfig::StaticStruct(), TEXT("Link")));
   TestNotNull(
       TEXT("Final goal property exists"),
       FindFProperty<FProperty>(FSuperDexBotIKGoalConfig::StaticStruct(), TEXT("OutputBotLink")));
-  TestTrue(
-      TEXT("Direct historical serialized redirect"),
-      FCoreRedirects::GetRedirectedName(
-          ECoreRedirectFlags::Type_Property,
-          FCoreRedirectObjectName(FString(
-              TEXT("/Script/SuperDexRobotics.SuperDexBotIKGoalConfig.ReferenceBotLink")))) ==
-          FCoreRedirectObjectName(
-              FString(TEXT("/Script/SuperDexRobotics.SuperDexBotIKGoalConfig.InputBotLink"))));
+  CheckRetiredRedirect(
+      ECoreRedirectFlags::Type_Property,
+      TEXT("/Script/SuperDexRobotics.SuperDexBotIKGoalConfig.ReferenceBotLink"));
   TestNull(
       TEXT("No old-name goal alias"),
       FindFProperty<FProperty>(FSuperDexBotIKGoalConfig::StaticStruct(), TEXT("ReferenceBotLink")));
   TestNotNull(
       TEXT("Final goal property exists"),
       FindFProperty<FProperty>(FSuperDexBotIKGoalConfig::StaticStruct(), TEXT("InputBotLink")));
-  TestTrue(
-      TEXT("Direct historical serialized redirect"),
-      FCoreRedirects::GetRedirectedName(
-          ECoreRedirectFlags::Type_Property,
-          FCoreRedirectObjectName(
-              FString(TEXT("/Script/SuperDexRobotics.SuperDexBotIKGoalConfig.TargetBotLink")))) ==
-          FCoreRedirectObjectName(
-              FString(TEXT("/Script/SuperDexRobotics.SuperDexBotIKGoalConfig.InputBotLink"))));
+  CheckRetiredRedirect(
+      ECoreRedirectFlags::Type_Property,
+      TEXT("/Script/SuperDexRobotics.SuperDexBotIKGoalConfig.TargetBotLink"));
   TestNull(
       TEXT("No old-name goal alias"),
       FindFProperty<FProperty>(FSuperDexBotIKGoalConfig::StaticStruct(), TEXT("TargetBotLink")));
   TestNotNull(
       TEXT("Final goal property exists"),
       FindFProperty<FProperty>(FSuperDexBotIKGoalConfig::StaticStruct(), TEXT("InputBotLink")));
-  TestTrue(
-      TEXT("Direct historical serialized redirect"),
-      FCoreRedirects::GetRedirectedName(
-          ECoreRedirectFlags::Type_Property,
-          FCoreRedirectObjectName(FString(
-              TEXT("/Script/SuperDexRobotics.SuperDexBotIKGoalConfig.LinkRelativeFrame")))) ==
-          FCoreRedirectObjectName(FString(TEXT(
-              "/Script/SuperDexRobotics.SuperDexBotIKGoalConfig.LinkFrameFromConstraintFrame"))));
+  CheckRetiredRedirect(
+      ECoreRedirectFlags::Type_Property,
+      TEXT("/Script/SuperDexRobotics.SuperDexBotIKGoalConfig.LinkRelativeFrame"));
   TestNull(
       TEXT("No old-name goal alias"),
       FindFProperty<FProperty>(
@@ -681,14 +550,9 @@ bool FSuperDexBotIKConversionTest::RunTest(const FString& Parameters) {
       TEXT("Final goal property exists"),
       FindFProperty<FProperty>(
           FSuperDexBotIKGoalConfig::StaticStruct(), TEXT("LinkFrameFromConstraintFrame")));
-  TestTrue(
-      TEXT("Direct historical serialized redirect"),
-      FCoreRedirects::GetRedirectedName(
-          ECoreRedirectFlags::Type_Property,
-          FCoreRedirectObjectName(
-              FString(TEXT("/Script/SuperDexRobotics.SuperDexBotIKGoalConfig.Transform")))) ==
-          FCoreRedirectObjectName(FString(TEXT(
-              "/Script/SuperDexRobotics.SuperDexBotIKGoalConfig.BaseOrInputLinkFrameFromConstraintFrame"))));
+  CheckRetiredRedirect(
+      ECoreRedirectFlags::Type_Property,
+      TEXT("/Script/SuperDexRobotics.SuperDexBotIKGoalConfig.Transform"));
   TestNull(
       TEXT("No old-name goal alias"),
       FindFProperty<FProperty>(FSuperDexBotIKGoalConfig::StaticStruct(), TEXT("Transform")));
@@ -697,46 +561,62 @@ bool FSuperDexBotIKConversionTest::RunTest(const FString& Parameters) {
       FindFProperty<FProperty>(
           FSuperDexBotIKGoalConfig::StaticStruct(),
           TEXT("BaseOrInputLinkFrameFromConstraintFrame")));
-  TestTrue(
-      TEXT("Direct historical serialized redirect"),
-      FCoreRedirects::GetRedirectedName(
-          ECoreRedirectFlags::Type_Function,
-          FCoreRedirectObjectName(FString(
-              TEXT("/Script/SuperDexRobotics.SuperDexBotIKComponent.ResetTargetsToConfig")))) ==
-          FCoreRedirectObjectName(
-              FString(TEXT("/Script/SuperDexRobotics.SuperDexBotIKComponent.ResetGoalsToConfig"))));
-  TestTrue(
-      TEXT("Direct historical serialized redirect"),
-      FCoreRedirects::GetRedirectedName(
-          ECoreRedirectFlags::Type_Function,
-          FCoreRedirectObjectName(FString(
-              TEXT("/Script/SuperDexRobotics.SuperDexBotIKComponent.SetTargetTransform")))) ==
-          FCoreRedirectObjectName(
-              FString(TEXT("/Script/SuperDexRobotics.SuperDexBotIKComponent.SetGoalTransform"))));
-  TestTrue(
-      TEXT("Direct historical serialized redirect"),
-      FCoreRedirects::GetRedirectedName(
-          ECoreRedirectFlags::Type_Function,
-          FCoreRedirectObjectName(
-              FString(TEXT("/Script/SuperDexRobotics.SuperDexBotIKComponent.SetTargetEnabled")))) ==
-          FCoreRedirectObjectName(
-              FString(TEXT("/Script/SuperDexRobotics.SuperDexBotIKComponent.SetGoalEnabled"))));
-  TestTrue(
-      TEXT("Direct historical serialized redirect"),
-      FCoreRedirects::GetRedirectedName(
-          ECoreRedirectFlags::Type_Function,
-          FCoreRedirectObjectName(FString(
-              TEXT("/Script/SuperDexRobotics.SuperDexBotIKComponent.SetTargetStiffness")))) ==
-          FCoreRedirectObjectName(
-              FString(TEXT("/Script/SuperDexRobotics.SuperDexBotIKComponent.SetGoalStiffness"))));
-  TestTrue(
-      TEXT("Direct historical serialized redirect"),
-      FCoreRedirects::GetRedirectedName(
-          ECoreRedirectFlags::Type_Property,
-          FCoreRedirectObjectName(FString(TEXT(
-              "/Script/SuperDexRobotics.SuperDexBotIKComponent.SolveIK.OutTargetsReached")))) ==
-          FCoreRedirectObjectName(FString(
-              TEXT("/Script/SuperDexRobotics.SuperDexBotIKComponent.SolveIK.bOutGoalsReached"))));
+  CheckRetiredRedirect(
+      ECoreRedirectFlags::Type_Function,
+      TEXT("/Script/SuperDexRobotics.SuperDexBotIKComponent.ResetTargetsToConfig"));
+  CheckRetiredRedirect(
+      ECoreRedirectFlags::Type_Function,
+      TEXT("/Script/SuperDexRobotics.SuperDexBotIKComponent.SetTargetTransform"));
+  CheckRetiredRedirect(
+      ECoreRedirectFlags::Type_Function,
+      TEXT("/Script/SuperDexRobotics.SuperDexBotIKComponent.SetTargetEnabled"));
+  CheckRetiredRedirect(
+      ECoreRedirectFlags::Type_Function,
+      TEXT("/Script/SuperDexRobotics.SuperDexBotIKComponent.SetTargetStiffness"));
+  CheckRetiredRedirect(
+      ECoreRedirectFlags::Type_Property,
+      TEXT("/Script/SuperDexRobotics.SuperDexBotIKComponent.SolveIK.OutTargetsReached"));
+
+  TestEqual(
+      TEXT("Current reflected goal struct"),
+      FSuperDexBotIKGoalConfig::StaticStruct()->GetPathName(),
+      FString(TEXT("/Script/SuperDexRobotics.SuperDexBotIKGoalConfig")));
+  TestEqual(
+      TEXT("Current reflected goal enum"),
+      StaticEnum<ESuperDexBotIKGoalSpace>()->GetPathName(),
+      FString(TEXT("/Script/SuperDexRobotics.ESuperDexBotIKGoalSpace")));
+
+  UClass* const ComponentClass = USuperDexBotIKComponent::StaticClass();
+  struct FGoalFunctionNames {
+    const TCHAR* OldName;
+    const TCHAR* CurrentName;
+  };
+  const FGoalFunctionNames GoalFunctions[] = {
+      {TEXT("ResetTargetsToConfig"), TEXT("ResetGoalsToConfig")},
+      {TEXT("SetTargetTransform"), TEXT("SetGoalTransform")},
+      {TEXT("SetTargetEnabled"), TEXT("SetGoalEnabled")},
+      {TEXT("SetTargetStiffness"), TEXT("SetGoalStiffness")},
+  };
+  for (const FGoalFunctionNames& Function : GoalFunctions) {
+    TestNull(Function.OldName, ComponentClass->FindFunctionByName(FName(Function.OldName)));
+    TestNotNull(
+        Function.CurrentName, ComponentClass->FindFunctionByName(FName(Function.CurrentName)));
+  }
+  const UFunction* const SolveFunction = ComponentClass->FindFunctionByName(TEXT("SolveIK"));
+  if (TestNotNull(TEXT("SolveIK function"), SolveFunction)) {
+    const FBoolProperty* const GoalsReached =
+        FindFProperty<FBoolProperty>(SolveFunction, TEXT("bOutGoalsReached"));
+    TestTrue(
+        TEXT("SolveIK convergence remains a Boolean output, not the return value"),
+        GoalsReached && GoalsReached->HasAllPropertyFlags(CPF_Parm | CPF_OutParm) &&
+            !GoalsReached->HasAnyPropertyFlags(CPF_ReturnParm));
+    TestNull(
+        TEXT("No old targets output"),
+        FindFProperty<FProperty>(SolveFunction, TEXT("OutTargetsReached")));
+    TestNull(
+        TEXT("No old goals output"),
+        FindFProperty<FProperty>(SolveFunction, TEXT("OutGoalsReached")));
+  }
 
   superdex::robotics::BotIKConfig Native;
   Native.outputBot = "robot.superdex_bot";
