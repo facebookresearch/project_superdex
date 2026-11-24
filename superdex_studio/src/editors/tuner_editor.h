@@ -31,6 +31,8 @@
 #include <superdex_asset_tuner/tuner_runner.h>
 #include <superdex_asset_tuner/tuner_session.h>
 
+#include <mochi_core/utils/dynamic_array.h>
+
 #include <atomic>
 #include <deque>
 #include <memory>
@@ -191,8 +193,20 @@ class TunerEditor : public AssetEditor {
   // Index of the load whose card is selected (the transform gizmo edits it), or -1.
   [[nodiscard]] int SelectedLoadIndex() const;
   void SelectLoad(int index);
-  // Index of the selected waypoint of the selected pose path (the gizmo edits it), or -1.
+  // Index of the selected waypoint of the selected pose path or controller pose input (the gizmo
+  // edits it), or -1.
   [[nodiscard]] int SelectedWaypointIndex() const;
+  // Index of the selected key of the selected Controller Input load, or -1.
+  [[nodiscard]] int SelectedInputKeyIndex() const;
+  // The controller a Controller Input load targets ("bot/controller"), as described, or null.
+  [[nodiscard]] superdex::tuner::ControllerTarget const* FindController(
+      std::string_view name) const;
+  // World from the frame of `load`'s waypoints: the world for a pose path, the bot's root for a
+  // controller pose input. Empty while that controller is unknown.
+  [[nodiscard]] std::optional<mochi::TransformRT> WaypointFrame(
+      superdex::tuner::LoadSpec const& load) const;
+  // Controller Input load `index`'s input now: live while simulating, else where it starts.
+  [[nodiscard]] std::optional<mochi::DynamicArray<mochi::real>> CurrentInput(size_t index) const;
   // The selected key if load `index` is the selected load, else -1. Keyed directions and points are
   // shown and edited at this key (the first when none is selected; see ClampKey).
   [[nodiscard]] int KeyShownFor(size_t index) const;
@@ -221,6 +235,20 @@ class TunerEditor : public AssetEditor {
   // Strip of the path's waypoints over run time, with each span's drive mode shaded. Markers select
   // a waypoint on click and retime it on drag. `compact` draws a short read-only strip instead.
   void ShowWaypointTimeline(size_t index, bool compact, bool& changed);
+  // The waypoint table, Add Waypoint, Set to Current Pose and the selected waypoint's pose, shared
+  // by pose paths (in the world) and controller pose inputs (in the bot's root frame).
+  // `currentPose` is the pose those buttons take, in the waypoints' frame.
+  void ShowWaypointList(
+      size_t index,
+      std::optional<mochi::TransformRT> const& currentPose,
+      bool& changed);
+  // Controller Input settings of a load card: the waypoints of a tool pose, or the keys of joint
+  // positions with a row per joint for the selected key.
+  void ShowControllerInputEditor(size_t index, bool& changed);
+  void ShowInputKeyEditor(
+      size_t index,
+      superdex::tuner::ControllerTarget const& controller,
+      bool& changed);
   // The prefab or scene the tuner simulates; for a scene, its task, its bots and the load that
   // drives each of their controllers. Sets `structural` when it changes what the tuner references.
   void ShowSourceSection(bool& structural);

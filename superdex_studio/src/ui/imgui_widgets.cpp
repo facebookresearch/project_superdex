@@ -3734,6 +3734,36 @@ bool ImGui::ArticulatedLinkEditor(
   return changed;
 }
 
+bool ImGui::JointDofEditor(
+    char const* label,
+    ArticulatedJointType type,
+    real minLimit,
+    real maxLimit,
+    real& position) {
+  bool const isSpherical = type == ArticulatedJointType::Spherical;
+  bool const isAngular = type == ArticulatedJointType::Revolute || isSpherical;
+  char const* unitFmt = isSpherical ? ::GetUnitFormat(UnitFormat::Degrees)
+                                    : ::GetUnitFormat(UnitFormat::Position, type);
+  float const scale = isAngular ? mochi::kDegreesPerRadian : 1.0f;
+  auto value = static_cast<float>(position) * scale;
+  bool edited = false;
+  if (mochi::IsFinite(minLimit) && mochi::IsFinite(maxLimit)) {
+    edited = ImGui::SliderFloat(
+        label,
+        &value,
+        static_cast<float>(minLimit) * scale,
+        static_cast<float>(maxLimit) * scale,
+        unitFmt);
+  } else {
+    // DragFloat for infinite / unbounded position.
+    edited = ImGui::DragFloat(label, &value, isAngular ? 1.0f : 0.001f, 0, 0, unitFmt);
+  }
+  if (edited) {
+    position = static_cast<real>(value) / scale;
+  }
+  return edited;
+}
+
 bool ImGui::JointPoseEditor(BotPrefab const& builtPrefab, DynamicArray<real>& pose) {
   using namespace mochi;
   if (builtPrefab._dofIndices.empty()) {
@@ -3787,43 +3817,24 @@ bool ImGui::JointPoseEditor(BotPrefab const& builtPrefab, DynamicArray<real>& po
 
     ImGui::PushID(static_cast<int>(iDof));
 
-    char const* unitFmt = isSpherical ? ::GetUnitFormat(UnitFormat::Degrees)
-                                      : ::GetUnitFormat(UnitFormat::Position, joint.type);
     char hiddenLabel[32];
     snprintf(hiddenLabel, sizeof(hiddenLabel), "##dof%zu", iDof);
-
-    // Rotational DOFs (revolute and spherical sub-DOFs) display in degrees.
-    float scale =
-        (joint.type == ArticulatedJointType::Revolute || isSpherical) ? kDegreesPerRadian : 1.0f;
-    auto value = static_cast<float>(pose[iDof]) * scale;
-    bool edited = false;
     // Compute per-DOF scalar limits. Revolute/Prismatic encode limits as
     // axis * scalar (extract via Dot). Spherical encodes per-axis limits in
     // (X, Y, Z) components — index directly by sphericalSubDof.
-    bool hasFiniteLimits = joint.minLimit.has_value() && IsFinite(*joint.minLimit) &&
-        joint.maxLimit.has_value() && IsFinite(*joint.maxLimit);
-    if (hasFiniteLimits) {
-      float minLimit = 0.0f;
-      float maxLimit = 0.0f;
+    real minLimit = -std::numeric_limits<real>::infinity();
+    real maxLimit = std::numeric_limits<real>::infinity();
+    if (joint.minLimit.has_value() && joint.maxLimit.has_value()) {
       if (isSpherical) {
-        minLimit = static_cast<float>((*joint.minLimit)[sphericalSubDof]) * scale;
-        maxLimit = static_cast<float>((*joint.maxLimit)[sphericalSubDof]) * scale;
+        minLimit = (*joint.minLimit)[sphericalSubDof];
+        maxLimit = (*joint.maxLimit)[sphericalSubDof];
       } else {
         auto const axisNormalized = Normalize(joint.axis);
-        minLimit = static_cast<float>(Dot(*joint.minLimit, axisNormalized)) * scale;
-        maxLimit = static_cast<float>(Dot(*joint.maxLimit, axisNormalized)) * scale;
+        minLimit = Dot(*joint.minLimit, axisNormalized);
+        maxLimit = Dot(*joint.maxLimit, axisNormalized);
       }
-      edited = ImGui::SliderFloat(hiddenLabel, &value, minLimit, maxLimit, unitFmt);
-    } else {
-      // DragFloat for infinite / unbounded position.
-      float const speed =
-          (joint.type == ArticulatedJointType::Revolute || isSpherical) ? 1.0f : 0.001f;
-      edited = ImGui::DragFloat(hiddenLabel, &value, speed, 0, 0, unitFmt);
     }
-    if (edited) {
-      pose[iDof] = static_cast<real>(value) / scale;
-      changed = true;
-    }
+    changed |= ImGui::JointDofEditor(hiddenLabel, joint.type, minLimit, maxLimit, pose[iDof]);
     ImGui::SameLine();
     ImGui::Text("[%d] %s", iJoint, joint.name.c_str());
     if (isSpherical) {

@@ -609,6 +609,16 @@ bool ArticulatedLinkEditor(
 // editors. Excludes bot-specific fields (e.g. effort limit). Returns true if any value changed.
 bool ArticulatedJointEditor(mochi::prefab::ArticulatedJointPrefab& joint, bool isRoot);
 
+// One joint DoF's position (rad or m): a SliderFloat within [minLimit, maxLimit] when both are
+// finite, else a DragFloat. Revolute and spherical DoFs are shown in degrees, prismatic in meters.
+// Returns true if @p position changed.
+bool JointDofEditor(
+    char const* label,
+    mochi::ArticulatedJointType type,
+    mochi::real minLimit,
+    mochi::real maxLimit,
+    mochi::real& position);
+
 // Renders the joint-pose editor for a built bot: preset buttons (Zero / Min / Max / Mid / Random,
 // produced via superdex::robotics::MakeBotPose) followed by one limit-aware widget per DOF -- a
 // SliderFloat when the joint has finite limits, otherwise a DragFloat. Revolute and spherical DOFs

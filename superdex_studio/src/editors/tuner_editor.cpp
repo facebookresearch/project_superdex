@@ -240,9 +240,52 @@ mochi::TransformRT WaypointPose(tuner::PoseWaypoint const& waypoint) {
       mochi::Quaternion::FromRotationVector(waypoint.rotation), waypoint.position);
 }
 
+// A Pose controller input (x y z, qx qy qz qw) as a pose; identity unless it has 7 values.
+mochi::TransformRT InputPose(mochi::DynamicArray<real> const& input) {
+  if (input.size() != 7) {
+    return mochi::TransformRT::Identity();
+  }
+  return mochi::TransformRT(
+      mochi::Quaternion(input[3], input[4], input[5], input[6]),
+      Real3{input[0], input[1], input[2]});
+}
+
+// World from the controller's bot root at the start of a run, the frame of its Pose input.
+mochi::TransformRT RootPose(tuner::ControllerTarget const& controller) {
+  return mochi::TransformRT(
+      mochi::Quaternion::FromRotationVector(controller.rootRotation), controller.rootPosition);
+}
+
+bool TakesPose(tuner::ControllerTarget const& controller) {
+  return std::string_view(controller.inputKind) == "Pose";
+}
+
 // Whether a run builds `bot` (TunerSpec::bots; empty: every bot).
 bool BuildsBot(tuner::TunerSpec const& spec, DynamicString const& bot) {
   return spec.bots.empty() || std::find(spec.bots.begin(), spec.bots.end(), bot) != spec.bots.end();
+}
+
+// Holds `controller` where it starts, from 1 s: one waypoint at its tool's pose, or one key at its
+// input. Clears what `load` held for another controller.
+void SeedControllerInput(tuner::LoadSpec& load, tuner::ControllerTarget const& controller) {
+  load.waypoints.clear();
+  load.inputKeys.clear();
+  load.joints.clear();
+  if (TakesPose(controller)) {
+    mochi::TransformRT const pose = InputPose(controller.input);
+    tuner::PoseWaypoint start;
+    start.time = 1.0;
+    start.position = pose.GetTranslation();
+    start.rotation = pose.GetRotation().ToRotationVector();
+    start.interpolation = tuner::Interpolation::Step;
+    load.waypoints.push_back(start);
+    return;
+  }
+  tuner::InputKey key;
+  key.time = 1.0;
+  key.values = controller.input;
+  key.interpolation = tuner::Interpolation::Step;
+  load.inputKeys.push_back(std::move(key));
 }
 
 // `items` sorted by time, for previews of keys or waypoints mid-edit (the spec is sorted once an
@@ -1759,6 +1802,9 @@ std::vector<std::string> TunerEditor::GetTargetCandidates(tuner::LoadType type) 
 }
 
 std::optional<std::string> TunerEditor::SelectedLoadTarget(tuner::LoadType type) const {
+  if (type == tuner::LoadType::ControllerInput) {
+    return std::nullopt; // controllers are not bodies
+  }
   auto const contains = [](std::vector<std::string> const& names, std::string const& name) {
     return std::find(names.begin(), names.end(), name) != names.end();
   };
@@ -1851,9 +1897,55 @@ int TunerEditor::SelectedWaypointIndex() const {
     return -1;
   }
   tuner::LoadSpec const& load = _tunerAsset->GetSpec().loads[static_cast<size_t>(index)];
-  bool const valid = load.type == tuner::LoadType::PosePath && _selectedWaypoint >= 0 &&
-      _selectedWaypoint < static_cast<int>(load.waypoints.size());
+  bool const valid =
+      (load.type == tuner::LoadType::PosePath || load.type == tuner::LoadType::ControllerInput) &&
+      _selectedWaypoint >= 0 && _selectedWaypoint < static_cast<int>(load.waypoints.size());
   return valid ? _selectedWaypoint : -1;
+}
+
+int TunerEditor::SelectedInputKeyIndex() const {
+  int const index = SelectedLoadIndex();
+  if (index < 0) {
+    return -1;
+  }
+  tuner::LoadSpec const& load = _tunerAsset->GetSpec().loads[static_cast<size_t>(index)];
+  bool const valid = load.type == tuner::LoadType::ControllerInput && _selectedKey >= 0 &&
+      _selectedKey < static_cast<int>(load.inputKeys.size());
+  return valid ? _selectedKey : -1;
+}
+
+tuner::ControllerTarget const* TunerEditor::FindController(std::string_view name) const {
+  if (!_describedTargets) {
+    return nullptr;
+  }
+  for (tuner::ControllerTarget const& controller : _describedTargets->controllers) {
+    if (std::string_view(controller.name) == name) {
+      return &controller;
+    }
+  }
+  return nullptr;
+}
+
+std::optional<mochi::TransformRT> TunerEditor::WaypointFrame(tuner::LoadSpec const& load) const {
+  if (load.type == tuner::LoadType::PosePath) {
+    return mochi::TransformRT::Identity();
+  }
+  tuner::ControllerTarget const* const controller =
+      load.type == tuner::LoadType::ControllerInput ? FindController(load.target) : nullptr;
+  if (controller == nullptr || !TakesPose(*controller)) {
+    return std::nullopt;
+  }
+  return RootPose(*controller);
+}
+
+std::optional<mochi::DynamicArray<real>> TunerEditor::CurrentInput(size_t index) const {
+  if (_mochiScene.IsSimulating() && _hasSample && index < _lastSample.loads.size() &&
+      !_lastSample.loads[index].input.empty()) {
+    return _lastSample.loads[index].input;
+  }
+  tuner::ControllerTarget const* const controller =
+      FindController(_tunerAsset->GetSpec().loads[index].target);
+  return controller == nullptr ? std::nullopt : std::optional(controller->input);
 }
 
 int TunerEditor::SelectedStopBoxIndex() const {
@@ -2052,11 +2144,12 @@ std::optional<mochi::TransformRT> TunerEditor::SelectedLoadGizmoFrame() const {
     return std::nullopt;
   }
   tuner::LoadSpec const& load = _tunerAsset->GetSpec().loads[static_cast<size_t>(index)];
-  if (load.type == tuner::LoadType::PosePath) {
+  if (load.type == tuner::LoadType::PosePath || load.type == tuner::LoadType::ControllerInput) {
     int const waypoint = SelectedWaypointIndex();
-    return waypoint < 0
+    std::optional<mochi::TransformRT> const frame = WaypointFrame(load);
+    return waypoint < 0 || !frame
         ? std::nullopt
-        : std::optional(WaypointPose(load.waypoints[static_cast<size_t>(waypoint)]));
+        : std::optional(*frame * WaypointPose(load.waypoints[static_cast<size_t>(waypoint)]));
   }
   StagedActor const* staged =
       load.type == tuner::LoadType::JointEffort ? nullptr : FindStagedBody(load.target);
@@ -2083,12 +2176,13 @@ void TunerEditor::OnLoadGizmoDelta(mochi::TransformRT const& delta) {
     return;
   }
   tuner::LoadSpec& load = _tunerAsset->GetSpec().loads[static_cast<size_t>(index)];
-  if (load.type == tuner::LoadType::PosePath) {
+  if (load.type == tuner::LoadType::PosePath || load.type == tuner::LoadType::ControllerInput) {
+    // The delta is in the world; a controller's waypoints are in its bot's root frame.
+    mochi::TransformRT const root = *WaypointFrame(load);
     tuner::PoseWaypoint& waypoint = load.waypoints[static_cast<size_t>(SelectedWaypointIndex())];
-    waypoint.position = delta.TransformPoint(waypoint.position);
-    waypoint.rotation =
-        (delta.GetRotation() * mochi::Quaternion::FromRotationVector(waypoint.rotation))
-            .ToRotationVector();
+    mochi::TransformRT const moved = mochi::Invert(root) * delta * root * WaypointPose(waypoint);
+    waypoint.position = moved.GetTranslation();
+    waypoint.rotation = moved.GetRotation().ToRotationVector();
     OnSpecEdited(false);
     return;
   }
@@ -2318,9 +2412,20 @@ void TunerEditor::DrawLoadArrows() {
     if (!load.enabled) {
       continue;
     }
+    bool const isInput = load.type == tuner::LoadType::ControllerInput;
+    tuner::ControllerTarget const* const controller =
+        isInput ? FindController(load.target) : nullptr;
     tuner::AppliedLoad applied;
     if (live && i < _lastSample.loads.size()) {
       applied = _lastSample.loads[i];
+    } else if (isInput) {
+      if (controller == nullptr) {
+        continue;
+      }
+      // Where the tool starts, or the bot's root for joint positions.
+      applied.pointWorld = TakesPose(*controller)
+          ? (RootPose(*controller) * InputPose(controller->input)).GetTranslation()
+          : controller->rootPosition;
     } else {
       StagedActor const* staged = FindStagedBody(load.target);
       if (staged == nullptr) {
@@ -2334,14 +2439,31 @@ void TunerEditor::DrawLoadArrows() {
     bool const isPath = load.type == tuner::LoadType::PosePath;
     bool const active =
         isPath ? applied.driveMode != tuner::PathDriveMode::Off : applied.magnitude != 0;
-    bool const showPath = isPath && shows(overlays.paths, i, active);
+    // A controller's tool path is in its bot's root frame; it starts where the tool starts.
+    std::optional<mochi::TransformRT> const waypointFrame = WaypointFrame(load);
+    bool const isPoseInput = isInput && waypointFrame && !load.waypoints.empty();
+    bool const showPath = (isPath || isPoseInput) && shows(overlays.paths, i, active);
     bool const showArrow = shows(overlays.arrows, i, active);
     bool const showLabel = shows(overlays.labels, i, active);
-    if (showPath && !load.waypoints.empty()) {
+    auto const toWorld = [&](tuner::PoseWaypoint waypoint) {
+      mochi::TransformRT const pose = *waypointFrame * WaypointPose(waypoint);
+      waypoint.position = pose.GetTranslation();
+      waypoint.rotation = pose.GetRotation().ToRotationVector();
+      return waypoint;
+    };
+    if (showPath && !load.waypoints.empty() && waypointFrame) {
       // The path, sampled densely enough to look smooth and colored by drive mode, then each
       // waypoint with its orientation.
       float4 const pathColor = kLoadColors[type];
-      std::vector<tuner::PoseWaypoint> const path = SortedByTime(load.waypoints);
+      std::vector<tuner::PoseWaypoint> path = SortedByTime(load.waypoints);
+      if (isPoseInput && path.front().time > 0) {
+        tuner::PoseWaypoint start = path.front();
+        start.time = 0;
+        start.position = InputPose(controller->input).GetTranslation();
+        start.rotation = InputPose(controller->input).GetRotation().ToRotationVector();
+        path.insert(path.begin(), start);
+      }
+      std::transform(path.begin(), path.end(), path.begin(), toWorld);
       double const first = path.front().time;
       double const last = path.back().time;
       int const samples = 48 * static_cast<int>(path.size() - 1);
@@ -2350,13 +2472,22 @@ void TunerEditor::DrawLoadArrows() {
         double const t = first + (last - first) * s / samples;
         float3 const next = point(tuner::EvaluatePosePath(path, t).GetTranslation());
         double const mid = first + (last - first) * (s - 0.5) / samples;
-        ImVec4 const c = DriveModeColor(tuner::EvaluatePathDrive(path, mid));
+        ImVec4 const c =
+            isPath ? DriveModeColor(tuner::EvaluatePathDrive(path, mid)) : LoadAccent(load.type);
         drawSegment(previous, next, 0.5f * thicknessAt(next), float4{c.x, c.y, c.z, 1.0f});
         previous = next;
       }
-      int const selectedWaypoint = SelectedWaypointIndex();
+      int const selectedWaypoint =
+          SelectedLoadIndex() == static_cast<int>(i) ? SelectedWaypointIndex() : -1;
+      // One time label per spot: waypoints at the same place (a pause, a squeeze) share it.
+      struct Spot {
+        Real3 position{0.0f, 0.0f, 0.0f};
+        std::string times;
+        bool selected = false;
+      };
+      std::vector<Spot> spots;
       for (size_t w = 0; w < load.waypoints.size(); ++w) {
-        tuner::PoseWaypoint const& waypoint = load.waypoints[w];
+        tuner::PoseWaypoint const waypoint = toWorld(load.waypoints[w]);
         bool const isSelected = static_cast<int>(w) == selectedWaypoint;
         float4 const waypointColor = isSelected ? kSelectedLoadColor : pathColor;
         float3 const at = point(waypoint.position);
@@ -2364,11 +2495,33 @@ void TunerEditor::DrawLoadArrows() {
         drawTriad(WaypointPose(waypoint));
         char time[32];
         std::snprintf(time, sizeof(time), "%.2f s", waypoint.time);
-        debugText->Draw(at, time, waypointColor, labelOffsetAbove(time));
+        constexpr real kSameSpot = 1e-3f; // [m]
+        auto const spot = std::find_if(spots.begin(), spots.end(), [&](Spot const& other) {
+          return mochi::Norm(other.position - waypoint.position) < kSameSpot;
+        });
+        if (spot == spots.end()) {
+          spots.push_back({waypoint.position, time, isSelected});
+        } else {
+          spot->times += std::string(", ") + time;
+          spot->selected |= isSelected;
+        }
+      }
+      for (Spot const& spot : spots) {
+        debugText->Draw(
+            point(spot.position),
+            spot.times.c_str(),
+            spot.selected ? kSelectedLoadColor : pathColor,
+            labelOffsetAbove(spot.times.c_str()));
       }
     }
     if (showPath && live && applied.driveMode != tuner::PathDriveMode::Off) {
       // Where the path wants the body now, tied to the driven point. Hidden while released.
+      float3 const target = point(applied.targetPose.GetTranslation());
+      drawSegment(point(applied.pointWorld), target, 0.4f * thicknessAt(target), color);
+      drawTriad(applied.targetPose);
+    }
+    if (isPoseInput && live && i < _lastSample.loads.size() && shows(overlays.paths, i, active)) {
+      // Where the controller's input wants the tool now, tied to the tool.
       float3 const target = point(applied.targetPose.GetTranslation());
       drawSegment(point(applied.pointWorld), target, 0.4f * thicknessAt(target), color);
       drawTriad(applied.targetPose);
@@ -2379,16 +2532,23 @@ void TunerEditor::DrawLoadArrows() {
     // Forces and the pose path drive pull on their point; torques and efforts act on the body.
     bool const pullsPoint = IsForce(load.type) || isPath;
     char label[128];
-    std::snprintf(
-        label,
-        sizeof(label),
-        "%s %s %.3g %s",
-        isPath           ? ICON_FA_ROUTE
-            : pullsPoint ? ICON_FA_LONG_ARROW_ALT_DOWN
-                         : ICON_FA_REDO,
-        load.name.c_str(),
-        static_cast<double>(applied.magnitude),
-        pullsPoint ? "N" : "N m");
+    if (isInput && !live) {
+      std::snprintf(label, sizeof(label), "%s %s", ICON_FA_ROBOT, load.name.c_str());
+    } else {
+      std::snprintf(
+          label,
+          sizeof(label),
+          "%s %s %.3g %s",
+          isPath           ? ICON_FA_ROUTE
+              : isInput    ? ICON_FA_ROBOT
+              : pullsPoint ? ICON_FA_LONG_ARROW_ALT_DOWN
+                           : ICON_FA_REDO,
+          load.name.c_str(),
+          static_cast<double>(applied.magnitude),
+          isInput          ? ""
+              : pullsPoint ? "N"
+                           : "N m");
+    }
     drawLoadVector(load, applied, color, label, showArrow, showLabel);
 
     // A selected load whose keys animate its direction or point also shows its other keys, dimmed
@@ -2536,12 +2696,12 @@ void TunerEditor::ShowProfileEditor(size_t index, bool& changed) {
           selectOnActivate();
         } else {
           ImGui::AlignTextToFramePadding();
-          ImGui::TextDisabled("end");
+          ImGui::TextUnformatted("end");
           Tooltip("The last key's value holds until the run ends.");
         }
 
         ImGui::TableNextColumn();
-        if (ImGui::SmallButton(ICON_FA_TRASH)) {
+        if (ImGui::Button(ICON_FA_TRASH)) {
           removeKey = id;
         }
         Tooltip("Remove this key.");
@@ -2781,8 +2941,24 @@ bool TunerEditor::ShowLoadBody(size_t index, bool& structural) {
           ? "Load names cannot be empty"
           : "Load's name as shown in plots and recordings (load.<name>.mag). Must be unique.");
 
+  tuner::LoadType const typeBefore = load.type;
+  DynamicString const targetBefore = load.target;
   structural |= DescribedCombo("Type", load.type, kLoadTypes);
   structural |= TargetPicker("Target", load.target, GetTargetCandidates(load.type));
+  if ((load.type == tuner::LoadType::ControllerInput) !=
+      (typeBefore == tuner::LoadType::ControllerInput)) {
+    // A controller's waypoints are in its bot's root frame, other loads' in the world.
+    load.waypoints.clear();
+    load.inputKeys.clear();
+    load.joints.clear();
+  }
+  // A controller input starts where its new controller is: another controller's keys need not fit.
+  if (load.type == tuner::LoadType::ControllerInput &&
+      (load.type != typeBefore || load.target != targetBefore)) {
+    if (tuner::ControllerTarget const* const controller = FindController(load.target)) {
+      SeedControllerInput(load, *controller);
+    }
+  }
   bool const isPath = load.type == tuner::LoadType::PosePath;
   Tooltip(
       load.type == tuner::LoadType::JointEffort           ? "Joint to drive"
@@ -2790,6 +2966,7 @@ bool TunerEditor::ShowLoadBody(size_t index, bool& structural) {
                                                           : "Non-static rigid body, or articulated "
                                                             "link. Can be in a nested prefab.");
   if (load.type == tuner::LoadType::ControllerInput) {
+    ShowControllerInputEditor(index, changed);
     return changed || structural;
   }
 
@@ -2947,11 +3124,11 @@ void ShowDrivePull(
     double dt) {
   tuner::PathDrive const& drive = load.drive;
   if (!scale) {
-    ImGui::TextDisabled("Pick a dynamic body or link as Target to estimate the pull.");
+    ImGui::TextUnformatted("Pick a dynamic body or link as Target to estimate the pull.");
     return;
   }
   if (load.waypoints.empty() || !(drive.responseHz > 0)) {
-    ImGui::TextDisabled(
+    ImGui::TextUnformatted(
         load.waypoints.empty() ? "Add waypoints to estimate the pull."
                                : "Response is 0: the drive does not pull.");
     return;
@@ -2972,13 +3149,12 @@ void ShowDrivePull(
     // One table row. Negative values show as the `negative` text.
     auto const row = [&](char const* label,
                          char const* tip,
-                         bool textDisabled,
                          std::array<double, 2> values,
                          std::array<char const*, 2> units,
                          char const* negative) {
       ImGui::TableNextRow();
       ImGui::TableNextColumn();
-      textDisabled ? ImGui::TextDisabled("%s", label) : ImGui::TextUnformatted(label);
+      ImGui::TextUnformatted(label);
       Tooltip(tip);
       for (int column = 0; column < (turning ? 2 : 1); ++column) {
         ImGui::TableNextColumn();
@@ -2988,32 +3164,28 @@ void ShowDrivePull(
         } else {
           std::snprintf(text, sizeof(text), "%.3g %s", values[column], units[column]);
         }
-        textDisabled ? ImGui::TextDisabled("%s", text) : ImGui::TextUnformatted(text);
+        ImGui::TextUnformatted(text);
       }
     };
     auto const value = [](real v) { return static_cast<double>(v); };
     double const radToDeg = 180.0 / std::numbers::pi;
     row("Spring",
         "Theoretical max force the spring applies on a body that is fully blocked from moving.",
-        false,
         {value(pull.springForce), value(pull.springTorque)},
         {"N", "N m"},
         "no cap");
     row("   reached at",
         "How far behind the path the body is when the spring reaches its max.",
-        true,
         {value(pull.capLag) * 1e3, value(pull.capAngle) * radToDeg},
         {"mm", "deg"},
         "-");
     row("Damper",
         "Theoretical max force damping adds, depends on how fast the target point moves.",
-        false,
         {value(pull.damperForce), value(pull.damperTorque)},
         {"N", "N m"},
         "-");
     row("   at path velocity",
         "The path's fastest velocity along the entire path.",
-        true,
         {value(pull.peakVelocity), value(pull.peakAngularVelocity)},
         {"m/s", "rad/s"},
         "-");
@@ -3022,13 +3194,11 @@ void ShowDrivePull(
     };
     row("Peak",
         "Maximum combined force between spring and damper",
-        false,
         {peak(pull.springForce, pull.damperForce), peak(pull.springTorque, pull.damperTorque)},
         {"N", "N m"},
         "unbounded");
     row("Estimated drive mass, inertia",
         "The drive's strength scales with these. For an articulation link, this is the whole articulation's mass.",
-        false,
         {value(scale->mass), value(scale->inertia)},
         {"kg", "kg m^2"},
         "-");
@@ -3113,6 +3283,22 @@ void TunerEditor::ShowPosePathEditor(size_t index, bool& changed) {
   ImGui::SeparatorText("Max Pull Force Prediction");
   ShowDrivePull(load, scale, _tunerAsset->GetSpec().run.dt);
 
+  StagedActor const* staged = FindStagedBody(load.target);
+  std::optional<mochi::TransformRT> current;
+  if (staged != nullptr) {
+    current = mochi::TransformRT(
+        staged->worldTransform.GetRotation(),
+        staged->worldTransform.TransformPoint(load.pointLocal));
+  }
+  ShowWaypointList(index, current, changed);
+}
+
+void TunerEditor::ShowWaypointList(
+    size_t index,
+    std::optional<mochi::TransformRT> const& currentPose,
+    bool& changed) {
+  tuner::LoadSpec& load = _tunerAsset->GetSpec().loads[index];
+  bool const isPath = load.type == tuner::LoadType::PosePath;
   ImGui::SeparatorText("Waypoints");
   auto& waypoints = load.waypoints;
   bool const isSelectedLoad = SelectedLoadIndex() == static_cast<int>(index);
@@ -3122,17 +3308,19 @@ void TunerEditor::ShowPosePathEditor(size_t index, bool& changed) {
     _selectedWaypoint = waypoint;
   };
   if (waypoints.empty()) {
-    ImGui::TextDisabled("No waypoints yet. Add one below.");
+    ImGui::TextUnformatted("No waypoints yet. Add one below.");
   } else {
     ShowWaypointTimeline(index, false, changed);
   }
 
   int removeWaypoint = -1;
   int sortAfterEdit = -1;
-  if (!waypoints.empty() && ImGui::BeginTable("##waypoints", 5, kListTableFlags)) {
+  if (!waypoints.empty() && ImGui::BeginTable("##waypoints", isPath ? 5 : 4, kListTableFlags)) {
     ImGui::TableSetupColumn("#", ImGuiTableColumnFlags_WidthStretch, 0.15f);
     ImGui::TableSetupColumn("Time", ImGuiTableColumnFlags_WidthStretch, 1.0f);
-    ImGui::TableSetupColumn("Drive", ImGuiTableColumnFlags_WidthStretch, 1.0f);
+    if (isPath) {
+      ImGui::TableSetupColumn("Drive", ImGuiTableColumnFlags_WidthStretch, 1.0f);
+    }
     ImGui::TableSetupColumn("To Next", ImGuiTableColumnFlags_WidthStretch, 1.0f);
     ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed);
     ImGui::TableHeadersRow();
@@ -3152,7 +3340,8 @@ void TunerEditor::ShowPosePathEditor(size_t index, bool& changed) {
       ImGui::TableNextColumn();
       char number[16];
       std::snprintf(number, sizeof(number), "%d", id);
-      ImGui::PushStyleColor(ImGuiCol_Text, DriveModeColor(waypoint.drive));
+      ImGui::PushStyleColor(
+          ImGuiCol_Text, isPath ? DriveModeColor(waypoint.drive) : LoadAccent(load.type));
       if (ImGui::Selectable(
               number,
               current == id,
@@ -3170,12 +3359,16 @@ void TunerEditor::ShowPosePathEditor(size_t index, bool& changed) {
       if (ImGui::IsItemDeactivatedAfterEdit()) {
         sortAfterEdit = id;
       }
-      Tooltip("Simulation time the body should reach this pose");
+      Tooltip(
+          isPath ? "Simulation time the body should reach this pose"
+                 : "Simulation time the tool should reach this pose");
 
-      ImGui::TableNextColumn();
-      ImGui::SetNextItemWidth(-FLT_MIN);
-      changed |= DescribedCombo("##drive", waypoint.drive, kDriveModes);
-      selectOnActivate();
+      if (isPath) {
+        ImGui::TableNextColumn();
+        ImGui::SetNextItemWidth(-FLT_MIN);
+        changed |= DescribedCombo("##drive", waypoint.drive, kDriveModes);
+        selectOnActivate();
+      }
 
       ImGui::TableNextColumn();
       if (w + 1 < waypoints.size()) {
@@ -3184,13 +3377,13 @@ void TunerEditor::ShowPosePathEditor(size_t index, bool& changed) {
         selectOnActivate();
       } else {
         ImGui::AlignTextToFramePadding();
-        ImGui::TextDisabled("end");
+        ImGui::TextUnformatted("end");
         Tooltip("The last waypoint's pose and drive hold until the run ends.");
       }
 
       ImGui::TableNextColumn();
       ImGui::BeginDisabled(waypoints.size() <= 1);
-      if (ImGui::SmallButton(ICON_FA_TRASH)) {
+      if (ImGui::Button(ICON_FA_TRASH)) {
         removeWaypoint = id;
       }
       ImGui::EndDisabled();
@@ -3211,10 +3404,9 @@ void TunerEditor::ShowPosePathEditor(size_t index, bool& changed) {
     _selectedWaypoint = SortByTimeTracking(waypoints, static_cast<size_t>(sortAfterEdit));
   }
 
-  StagedActor const* staged = FindStagedBody(load.target);
-  auto const bodyPose = [&](tuner::PoseWaypoint& waypoint) {
-    waypoint.position = staged->worldTransform.TransformPoint(load.pointLocal);
-    waypoint.rotation = staged->worldTransform.GetRotation().ToRotationVector();
+  auto const setToCurrent = [&](tuner::PoseWaypoint& waypoint) {
+    waypoint.position = currentPose->GetTranslation();
+    waypoint.rotation = currentPose->GetRotation().ToRotationVector();
   };
   bool const simulating = _mochiScene.IsSimulating();
   if (ImGui::Button(ICON_FA_PLUS " Add Waypoint")) {
@@ -3227,29 +3419,35 @@ void TunerEditor::ShowPosePathEditor(size_t index, bool& changed) {
         (waypoints.empty() || _lastSample.time > waypoints.back().time)) {
       waypoint.time = _lastSample.time;
     }
-    if (staged != nullptr && (simulating || waypoints.empty())) {
-      bodyPose(waypoint);
+    if (currentPose && (simulating || waypoints.empty())) {
+      setToCurrent(waypoint);
     }
     waypoints.push_back(waypoint);
     select(static_cast<int>(waypoints.size()) - 1);
     changed = true;
   }
   Tooltip(
-      "Add a waypoint after the last.\n"
-      "While simulating will take the current body's pose.\n"
-      "Otherwise will copy the last waypoint +1 second.");
+      isPath ? "Add a waypoint after the last.\n"
+               "While simulating will take the current body's pose.\n"
+               "Otherwise will copy the last waypoint +1 second."
+             : "Add a waypoint after the last.\n"
+               "While simulating will take the tool's pose.\n"
+               "Otherwise will copy the last waypoint +1 second.");
   // Re-read: Add Waypoint may just have selected this load and its new waypoint.
   int const selected =
       SelectedLoadIndex() == static_cast<int>(index) ? SelectedWaypointIndex() : -1;
   ImGui::SameLine();
-  ImGui::BeginDisabled(selected < 0 || staged == nullptr);
+  ImGui::BeginDisabled(selected < 0 || !currentPose);
   if (ImGui::Button(ICON_FA_CROSSHAIRS " Set to Current Pose")) {
-    bodyPose(waypoints[static_cast<size_t>(selected)]);
+    setToCurrent(waypoints[static_cast<size_t>(selected)]);
     changed = true;
   }
   ImGui::EndDisabled();
   Tooltip(
-      "Set the selected waypoint to the body's current pose. Will use live pose while simulating.");
+      isPath
+          ? "Set the selected waypoint to the body's current pose. Will use live pose while "
+            "simulating."
+          : "Set the selected waypoint to the tool's pose. Will use live pose while simulating.");
 
   if (selected >= 0) {
     tuner::PoseWaypoint& waypoint = waypoints[static_cast<size_t>(selected)];
@@ -3258,13 +3456,19 @@ void TunerEditor::ShowPosePathEditor(size_t index, bool& changed) {
     ImGui::SameLine();
     ImGui::Text("at %.3f s", waypoint.time);
     changed |= ImGui::DragRealXYZ("Position", waypoint.position, 0.001f, 0.0f, 0.0f, "%.4f m");
-    Tooltip("Where the Grab Point should be, in world space.");
+    Tooltip(
+        isPath
+            ? "Where the Grab Point should be, in world space."
+            : "Where the tool should be, in the bot's root frame. The viewport gizmo moves it in "
+              "the world (W, E).");
     mochi::Quaternion rotation = mochi::Quaternion::FromRotationVector(waypoint.rotation);
     if (ImGui::DragQuaternion("Rotation", rotation)) {
       waypoint.rotation = rotation.ToRotationVector();
       changed = true;
     }
-    Tooltip("Body orientation in world space, as roll, pitch and yaw.");
+    Tooltip(
+        isPath ? "Body orientation in world space, as roll, pitch and yaw."
+               : "Tool orientation in the bot's root frame, as roll, pitch and yaw.");
   }
 }
 
@@ -3277,6 +3481,10 @@ void TunerEditor::ShowWaypointTimeline(size_t index, bool compact, bool& changed
   std::vector<tuner::PoseWaypoint> const sorted = SortedByTime(waypoints);
   double const end =
       std::max({_tunerAsset->GetSpec().run.duration, sorted.back().time, kTimeEpsilon});
+  auto const spanColor = [&](tuner::PoseWaypoint const& waypoint) {
+    return load.type == tuner::LoadType::PosePath ? DriveModeColor(waypoint.drive)
+                                                  : LoadAccent(load.type);
+  };
 
   // Compact: a read-only strip for a collapsed card, without tick labels or waypoint numbers.
   float const height = compact ? 32.0f : 76.0f;
@@ -3303,7 +3511,7 @@ void TunerEditor::ShowWaypointTimeline(size_t index, bool compact, bool& changed
   for (size_t w = 0; w < sorted.size(); ++w) {
     double const from = w == 0 ? 0.0 : sorted[w].time;
     double const to = w + 1 < sorted.size() ? sorted[w + 1].time : end;
-    ImVec4 color = DriveModeColor(sorted[w].drive);
+    ImVec4 color = spanColor(sorted[w]);
     color.w = 0.35f;
     drawList->AddRectFilled(
         ImPlot::PlotToPixels(from, 0.8), ImPlot::PlotToPixels(to, 0.2), ImGui::GetColorU32(color));
@@ -3322,7 +3530,7 @@ void TunerEditor::ShowWaypointTimeline(size_t index, bool compact, bool& changed
     tuner::PoseWaypoint& waypoint = waypoints[w];
     int const id = static_cast<int>(w);
     bool const isSelected = id == current;
-    ImVec4 const color = isSelected ? selectedColor : DriveModeColor(waypoint.drive);
+    ImVec4 const color = isSelected ? selectedColor : spanColor(waypoint);
     double x = waypoint.time;
     double y = 0.5;
     if (compact) {
@@ -3371,6 +3579,240 @@ void TunerEditor::ShowWaypointTimeline(size_t index, bool compact, bool& changed
       _selectedWaypoint = SortByTimeTracking(waypoints, static_cast<size_t>(_timelineDragWaypoint));
     }
     _timelineDragWaypoint = -1;
+  }
+}
+
+void TunerEditor::ShowControllerInputEditor(size_t index, bool& changed) {
+  tuner::LoadSpec const& load = _tunerAsset->GetSpec().loads[index];
+  tuner::ControllerTarget const* const controller = FindController(load.target);
+  if (controller == nullptr) {
+    ImGui::TextColored(
+        kWarningColor,
+        ICON_FA_EXCLAMATION_TRIANGLE " The scene has no controller '%s' with a float input.",
+        load.target.c_str());
+    return;
+  }
+  bool const pose = TakesPose(*controller);
+  ImGui::Text(
+      pose ? "%s: the tool's pose, in the bot's root frame."
+          : std::string_view(controller->inputKind) == "JointPositions" ? "%s: joint positions."
+                                                                        : "%s: input values.",
+      controller->type.c_str());
+  if (!pose) {
+    ShowInputKeyEditor(index, *controller, changed);
+    return;
+  }
+  std::optional<mochi::TransformRT> current;
+  if (std::optional<mochi::DynamicArray<real>> const input = CurrentInput(index);
+      input && input->size() == 7) {
+    current = InputPose(*input);
+  }
+  ShowWaypointList(index, current, changed);
+}
+
+void TunerEditor::ShowInputKeyEditor(
+    size_t index,
+    tuner::ControllerTarget const& controller,
+    bool& changed) {
+  tuner::LoadSpec& load = _tunerAsset->GetSpec().loads[index];
+  auto& keys = load.inputKeys;
+  // The input entries the keys set: the load's joints, else the whole input.
+  std::vector<int> entries;
+  if (load.joints.empty()) {
+    for (int e = 0; e < mochi::isize(controller.input); ++e) {
+      entries.push_back(e);
+    }
+  }
+  auto const& joints = controller.inputJoints;
+  for (DynamicString const& name : load.joints) {
+    auto const it = std::find_if(joints.begin(), joints.end(), [&](tuner::InputJoint const& joint) {
+      return joint.name == name;
+    });
+    entries.push_back(it == joints.end() ? -1 : static_cast<int>(it - joints.begin()));
+  }
+  // The entries now: live while simulating, else where the controller starts.
+  std::optional<mochi::DynamicArray<real>> now = CurrentInput(index);
+  if (now) {
+    mochi::DynamicArray<real> values;
+    for (int const e : entries) {
+      if (e < 0 || e >= mochi::isize(*now)) {
+        now.reset();
+        break;
+      }
+      values.push_back((*now)[static_cast<size_t>(e)]);
+    }
+    if (now) {
+      *now = std::move(values);
+    }
+  }
+
+  ImGui::SeparatorText("Keys");
+  bool const isSelectedLoad = SelectedLoadIndex() == static_cast<int>(index);
+  int const current = isSelectedLoad ? SelectedInputKeyIndex() : -1;
+  auto const select = [&](int key) {
+    SelectLoad(static_cast<int>(index));
+    _selectedKey = key;
+  };
+  if (keys.empty()) {
+    ImGui::TextUnformatted("No keys yet. Add one below.");
+  }
+  int removeKey = -1;
+  int sortAfterEdit = -1;
+  if (!keys.empty() && ImGui::BeginTable("##inputKeys", 4, kListTableFlags)) {
+    ImGui::TableSetupColumn("#", ImGuiTableColumnFlags_WidthStretch, 0.15f);
+    ImGui::TableSetupColumn("Time", ImGuiTableColumnFlags_WidthStretch, 1.0f);
+    ImGui::TableSetupColumn("To Next", ImGuiTableColumnFlags_WidthStretch, 1.0f);
+    ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed);
+    ImGui::TableHeadersRow();
+    double const minTime = 0.0;
+    for (size_t k = 0; k < keys.size(); ++k) {
+      tuner::InputKey& key = keys[k];
+      int const id = static_cast<int>(k);
+      ImGui::PushID(id);
+      ImGui::TableNextRow();
+      auto const selectOnActivate = [&] {
+        if (ImGui::IsItemActivated()) {
+          select(id);
+        }
+      };
+      ImGui::TableNextColumn();
+      char number[16];
+      std::snprintf(number, sizeof(number), "%d", id);
+      if (ImGui::Selectable(
+              number,
+              current == id,
+              ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap,
+              ImVec2(0.0f, ImGui::GetFrameHeight()))) {
+        select(id);
+      }
+      ImGui::TableNextColumn();
+      ImGui::SetNextItemWidth(-FLT_MIN);
+      changed |= ImGui::DragScalar(
+          "##time", ImGuiDataType_Double, &key.time, 0.01f, &minTime, nullptr, "%.3f s");
+      selectOnActivate();
+      if (ImGui::IsItemDeactivatedAfterEdit()) {
+        sortAfterEdit = id;
+      }
+      Tooltip("Simulation time the joints should reach these positions");
+      ImGui::TableNextColumn();
+      if (k + 1 < keys.size()) {
+        ImGui::SetNextItemWidth(-FLT_MIN);
+        changed |= DescribedCombo("##interpolation", key.interpolation, kInterpolations);
+        selectOnActivate();
+      } else {
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextUnformatted("end");
+        Tooltip("The last key holds until the run ends.");
+      }
+      ImGui::TableNextColumn();
+      ImGui::BeginDisabled(keys.size() <= 1);
+      if (ImGui::Button(ICON_FA_TRASH)) {
+        removeKey = id;
+      }
+      ImGui::EndDisabled();
+      Tooltip(keys.size() <= 1 ? "An input needs at least one key." : "Remove this key.");
+      ImGui::PopID();
+    }
+    ImGui::EndTable();
+  }
+  if (removeKey >= 0) {
+    keys.erase(keys.begin() + removeKey);
+    if (isSelectedLoad) {
+      _selectedKey =
+          std::min(current - (current > removeKey ? 1 : 0), static_cast<int>(keys.size()) - 1);
+    }
+    changed = true;
+  } else if (sortAfterEdit >= 0) {
+    _selectedKey = SortByTimeTracking(keys, static_cast<size_t>(sortAfterEdit));
+  }
+
+  bool const simulating = _mochiScene.IsSimulating();
+  if (ImGui::Button(ICON_FA_PLUS " Add Key")) {
+    tuner::InputKey key;
+    key.interpolation = tuner::Interpolation::Step;
+    if (!keys.empty()) {
+      key = keys.back();
+      key.time += 1.0;
+    }
+    if (simulating && _hasSample && (keys.empty() || _lastSample.time > keys.back().time)) {
+      key.time = _lastSample.time;
+    }
+    if (now && (simulating || keys.empty())) {
+      key.values = *now;
+    }
+    keys.push_back(std::move(key));
+    select(static_cast<int>(keys.size()) - 1);
+    changed = true;
+  }
+  Tooltip(
+      "Add a key after the last.\n"
+      "While simulating it takes the joints' positions now.\n"
+      "Otherwise it copies the last key, 1 second later.");
+  if (keys.empty()) {
+    return;
+  }
+  // The selected key (the first when none is selected), with a row per joint.
+  int const selected =
+      SelectedLoadIndex() == static_cast<int>(index) ? SelectedInputKeyIndex() : -1;
+  size_t const shown = selected >= 0 ? static_cast<size_t>(selected) : 0;
+  ImGui::SameLine();
+  ImGui::BeginDisabled(!now);
+  if (ImGui::Button(ICON_FA_CROSSHAIRS " Set to Current Pose")) {
+    keys[shown].values = *now;
+    select(static_cast<int>(shown));
+    changed = true;
+  }
+  ImGui::EndDisabled();
+  Tooltip(
+      "Set the shown key to the joints' positions: live while simulating, else where they "
+      "start.");
+  tuner::InputKey& key = keys[shown];
+  ImGui::Text("Key %d at %.3f s", static_cast<int>(shown), key.time);
+  if (key.values.size() != entries.size()) {
+    ImGui::TextColored(
+        kWarningColor,
+        ICON_FA_EXCLAMATION_TRIANGLE " This key has %d values for %d joints.",
+        static_cast<int>(key.values.size()),
+        static_cast<int>(entries.size()));
+    return;
+  }
+  // As the bot editor's joint poses: revolute joints in degrees, within their limits.
+  for (size_t k = 0; k < entries.size(); ++k) {
+    int const e = entries[k];
+    tuner::InputJoint const* const joint =
+        e >= 0 && e < mochi::isize(joints) ? &joints[static_cast<size_t>(e)] : nullptr;
+    ImGui::PushID(static_cast<int>(k));
+    bool edited = false;
+    if (joint != nullptr) {
+      // Equal limits mean none.
+      bool const limited = joint->min < joint->max;
+      real const none = std::numeric_limits<real>::infinity();
+      edited = ImGui::JointDofEditor(
+          "##value",
+          joint->type,
+          limited ? joint->min : -none,
+          limited ? joint->max : none,
+          key.values[k]);
+    } else {
+      edited = ImGui::DragReal("##value", &key.values[k], 0.001f, 0.0f, 0.0f, "%.4g");
+    }
+    if (edited) {
+      select(static_cast<int>(shown));
+      changed = true;
+    }
+    ImGui::SameLine();
+    if (e < 0) {
+      // A run refuses the load.
+      ImGui::TextColored(
+          kWarningColor,
+          ICON_FA_EXCLAMATION_TRIANGLE " %s: not a joint of this controller",
+          load.joints[k].c_str());
+    } else {
+      ImGui::TextUnformatted(
+          joint != nullptr && !joint->name.empty() ? joint->name.c_str()
+                                                   : ("input " + std::to_string(e)).c_str());
+    }
+    ImGui::PopID();
   }
 }
 
@@ -3458,7 +3900,17 @@ void TunerEditor::ShowLoadsWindow(bool* open) {
     } else {
       // Collapsed: a short read-only preview of what the load does over the run.
       ImGui::BeginDisabled(!load.enabled);
-      if (load.type != tuner::LoadType::PosePath) {
+      if (load.type == tuner::LoadType::ControllerInput) {
+        bool unused = false;
+        if (!load.waypoints.empty()) {
+          ShowWaypointTimeline(i, true, unused);
+        } else if (!load.inputKeys.empty()) {
+          ImGui::Text(
+              "%d keys, to %.2f s",
+              static_cast<int>(load.inputKeys.size()),
+              load.inputKeys.back().time);
+        }
+      } else if (load.type != tuner::LoadType::PosePath) {
         bool unused = false;
         ShowProfilePreview(i, true, unused);
       } else if (!load.waypoints.empty()) {
@@ -3513,6 +3965,16 @@ void TunerEditor::ShowLoadsWindow(bool* open) {
           load.target = std::move(*target);
         } else if (auto const candidates = GetTargetCandidates(load.type); !candidates.empty()) {
           load.target = candidates.front();
+          // A controller no load drives yet, if any.
+          for (std::string const& candidate : candidates) {
+            if (std::none_of(loads.begin(), loads.end(), [&](tuner::LoadSpec const& other) {
+                  return other.type == tuner::LoadType::ControllerInput &&
+                      std::string_view(other.target) == candidate;
+                })) {
+              load.target = candidate;
+              break;
+            }
+          }
         }
         load.name = MakeUniqueLoadName(kDefaultNames[static_cast<size_t>(load.type)]);
         StagedActor const* staged = FindStagedBody(load.target);
@@ -3527,6 +3989,11 @@ void TunerEditor::ShowLoadsWindow(bool* open) {
           load.waypoints.push_back(start);
           load.waypoints.push_back(lifted);
         }
+        if (tuner::ControllerTarget const* const controller =
+                load.type == tuner::LoadType::ControllerInput ? FindController(load.target)
+                                                              : nullptr) {
+          SeedControllerInput(load, *controller);
+        }
         loads.push_back(std::move(load));
         _loadCards.AddExpanded();
         SelectLoad(static_cast<int>(loads.size()) - 1);
@@ -3536,7 +4003,9 @@ void TunerEditor::ShowLoadsWindow(bool* open) {
     }
     ImGui::EndCombo();
   }
-  Tooltip("Adds a load, targets the highlighted body if applicable.");
+  Tooltip(
+      "Adds a load, targets the highlighted body if applicable. A Controller Input drives a "
+      "controller of the scene.");
 
   if (changed || structural) {
     OnSpecEdited(structural);
@@ -4186,7 +4655,7 @@ void TunerEditor::ShowStopConditionCards(bool& structural) {
         Tooltip("Move the box so it is centered on the target's current position.");
         if (static_cast<int>(i) == selectedBox && !_mochiScene.IsSimulating()) {
           ImGui::SameLine();
-          ImGui::TextDisabled("Gizmo: W move, R scale");
+          ImGui::TextUnformatted("Gizmo: W move, R scale");
         }
       } else {
         structural |= TargetPicker("Channel", stop.channel, channels);
