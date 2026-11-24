@@ -283,8 +283,8 @@ with escapes if it contains a single quote or a control character.
 */
 static std::string QuoteConsoleToken(std::string_view token) {
   // Escapes keep a control character from breaking the line.
-  bool const hasControlCharacter = std::any_of(
-      token.begin(), token.end(), [](char c) { return static_cast<unsigned char>(c) < 0x20; });
+  bool const hasControlCharacter =
+      std::ranges::any_of(token, [](char c) { return static_cast<unsigned char>(c) < 0x20; });
   std::string error;
   auto const tokens = ConsoleTokenize(token, error);
   if (!hasControlCharacter && tokens.size() == 1 && tokens[0] == token) {
@@ -530,7 +530,7 @@ static bool IsReadOnlyMember(FieldTypeInfo const& field) {
 }
 
 static bool HasReadOnlyDescendants(TypeInfo const& type, std::vector<TypeInfo const*>& visited) {
-  if (std::find(visited.begin(), visited.end(), &type) != visited.end()) {
+  if (std::ranges::find(visited, &type) != visited.end()) {
     return false;
   }
   visited.push_back(&type);
@@ -1049,9 +1049,8 @@ static bool IsPrimitiveOrPrimitiveArrayType(TypeInfo const& type) {
         *static_cast<OptionalTypeInfo const&>(type)._innerTypeInfo);
   } else if (type._coreType == CoreType::CT_variant) {
     auto const& types = static_cast<VariantTypeInfo const&>(type)._innerTypes;
-    return std::all_of(types.begin(), types.end(), [](TypeInfo const* inner) {
-      return IsPrimitiveOrPrimitiveArrayType(*inner);
-    });
+    return std::ranges::all_of(
+        types, [](TypeInfo const* inner) { return IsPrimitiveOrPrimitiveArrayType(*inner); });
   }
   return false;
 }
@@ -1175,9 +1174,7 @@ static bool ListValue(
           entries, name, *mapType._valueTypeInfo, [&](auto const& cb) { cb(value); }, params);
       return true;
     });
-    std::sort(entries.begin(), entries.end(), [](auto const& a, auto const& b) {
-      return a._name < b._name;
-    });
+    std::ranges::sort(entries, [](auto const& a, auto const& b) { return a._name < b._name; });
   }
   return true;
 }
