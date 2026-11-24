@@ -132,7 +132,7 @@ class SUPERDEXPOSE_API USuperDexPoseSubsystem : public UWorldSubsystem {
    * @param OutPose The output pose.
    * @return true if successful, false otherwise.
    */
-  UFUNCTION(BlueprintCallable, Category = "SuperDexPoseSubsystem")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Pose Subsystem")
   bool GetPose(
       TSubclassOf<USuperDexPoseSource> PoseSourceClass,
       ESuperDexHandedness Handedness,

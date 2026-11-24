@@ -41,35 +41,35 @@ struct SUPERDEXROBOTICS_API FSuperDexBotIKSolverParams {
   void FromNative(const mochi::experimental::IKSolverParams& Params);
 
   /** Maximum solver iterations. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "IK Solver")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Bot IK|Solver")
   int32 MaxIter;
 
   /** Solver log verbosity. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "IK Solver")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Bot IK|Solver")
   EMochiVerbosityLevel Verbosity;
 
   /** Tolerance in native solver units. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "IK Solver")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Bot IK|Solver")
   double AbsTol;
 
   /** Tolerance in native solver units. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "IK Solver")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Bot IK|Solver")
   double RelTol;
 
   /** Position tolerance in metres. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "IK Solver")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Bot IK|Solver")
   double PositionErrorThreshold;
 
   /** Rotation tolerance in radians. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "IK Solver")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Bot IK|Solver")
   double RotationErrorThreshold;
 
   /** Maximum line-search iterations. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "IK Solver")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Bot IK|Solver")
   int32 LineSearchMaxIter;
 
   /** Soft time budget in seconds; zero is unlimited. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "IK Solver")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Bot IK|Solver")
   double MaxElapsedTimeSeconds;
 };
 
@@ -81,15 +81,15 @@ struct SUPERDEXROBOTICS_API FSuperDexBotIKCreateParams {
   FSuperDexBotIKCreateParams();
 
   /** Weld the bot root to its world-from-root transform; otherwise keep the root joint type. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "IK Creation")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Bot IK|Creation")
   bool bFixedBase;
 
   /** Omit collision geometry and skin from the solver's copy of the bot. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "IK Creation")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Bot IK|Creation")
   bool bExcludeCollisionShapes;
 
   /** Numerical termination and goal-reached thresholds of the solver. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "IK Creation")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Bot IK|Creation")
   FSuperDexBotIKSolverParams SolverParams;
 
   /** Converts to the native creation options. */
@@ -110,41 +110,41 @@ struct SUPERDEXROBOTICS_API FSuperDexBotIKGoalConfig {
   FSuperDexBotIKGoalConfig();
 
   /** Goal name, used to address the goal at runtime (case-sensitive). */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "IK Goal")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Bot IK|Goal")
   FString Name;
 
   /** Output bot link the goal acts on. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "IK Goal")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Bot IK|Goal")
   FString OutputBotLink;
 
   /** Whether the goal is active. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "IK Goal")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Bot IK|Goal")
   bool bEnabled;
 
   /**
    * Constraint frame expressed in InputBotLink when bound, otherwise the output base frame.
    * Translation is in centimetres; scale is ignored by rigid conversion.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "IK Goal")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Bot IK|Goal")
   FTransform BaseOrInputLinkFrameFromConstraintFrame;
 
   /**
    * Constraint frame expressed in the output bot link. Translation is in centimetres; scale is
    * ignored.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "IK Goal")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Bot IK|Goal")
   FTransform LinkFrameFromConstraintFrame;
 
   /** Exact-case input-bot link binding; empty selects the output base frame. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "IK Goal")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Bot IK|Goal")
   FString InputBotLink;
 
   /** Native translational stiffness in N/m. Zero disables the position constraint. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "IK Goal")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Bot IK|Goal")
   double PositionStiffness;
 
   /** Native rotational stiffness in N m/rad. Zero disables the rotation constraint. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "IK Goal")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Bot IK|Goal")
   double RotationStiffness;
 
   /** Converts to the native goal, converting its frames from Unreal to SuperDex space. */
@@ -162,27 +162,27 @@ struct SUPERDEXROBOTICS_API FSuperDexBotIKJointCouplingConfig {
   FSuperDexBotIKJointCouplingConfig();
 
   /** First joint of the pair (exact-case name). */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "IK Joint Coupling")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Bot IK|Joint Coupling")
   FString JointA;
 
   /** Second joint of the pair (exact-case name). */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "IK Joint Coupling")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Bot IK|Joint Coupling")
   FString JointB;
 
   /** Soft bilateral relationship: qB = Ratio * qA, measured from authored joint zero. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "IK Joint Coupling")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Bot IK|Joint Coupling")
   double Ratio;
 
   /** Native N*m/rad for revolute pairs, N/m for prismatic pairs. Zero disables the penalty. */
   UPROPERTY(
       EditAnywhere,
       BlueprintReadWrite,
-      Category = "IK Joint Coupling",
+      Category = "SuperDex Robotics|Bot IK|Joint Coupling",
       meta = (ClampMin = "0"))
   double Stiffness;
 
   /** Whether the coupling is applied. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "IK Joint Coupling")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Bot IK|Joint Coupling")
   bool bEnabled;
 
   /** Converts to the native coupling. */
@@ -204,53 +204,53 @@ class SUPERDEXROBOTICS_API USuperDexBotIKConfig : public UObject {
   USuperDexBotIKConfig();
 
   /** The bot the IK solves. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Output Bot")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Bot IK|Output Bot")
   TObjectPtr<USuperDexBot> OutputBot;
 
   /** Optional input bot whose links goals can bind to (FSuperDexBotIKGoalConfig::InputBotLink). */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input Bot")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Bot IK|Input Bot")
   TObjectPtr<USuperDexBot> InputBot;
 
   /** Joint-only output seed in native radians/metres; empty uses the bot's default pose. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Output Bot")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Bot IK|Output Bot")
   TArray<double> OutputBotConfiguration;
 
   /** Authored input-bot coordinates in native radians/metres; live retargeting may override. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input Bot")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Bot IK|Input Bot")
   TArray<double> InputBotConfiguration;
 
   /**
    * Rigid input-bot root placement in the IK base frame. Translation is in centimetres.
    * Scale must be identity; use InputBotScale for retarget geometry scaling.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input Bot")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Bot IK|Input Bot")
   FTransform OutputBaseFrameFromInputBaseFrame;
 
   /** Positive uniform retarget scale, independent of either bot prefab's scale. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input Bot")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Bot IK|Input Bot")
   double InputBotScale;
 
   /**
    * Original document references, retained even when editor resolution fails. Never opened at
    * runtime.
    */
-  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Output Bot")
+  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "SuperDex Robotics|Bot IK|Output Bot")
   FString OutputBotReference;
 
   /** The input bot reference from the original document. */
-  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Input Bot")
+  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "SuperDex Robotics|Bot IK|Input Bot")
   FString InputBotReference;
 
   /** Solver creation options. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Bot IK")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Bot IK")
   FSuperDexBotIKCreateParams CreateParams;
 
   /** The IK goals. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "IK Goal")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Bot IK|Goal")
   TArray<FSuperDexBotIKGoalConfig> Goals;
 
   /** Couplings act on the solved bot, not on the reference hand. Applied at solver creation. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Bot IK")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Bot IK")
   TArray<FSuperDexBotIKJointCouplingConfig> JointCouplings;
 
   /**
@@ -282,21 +282,21 @@ class SUPERDEXROBOTICS_API USuperDexBotIKConfig : public UObject {
 
 #if WITH_EDITORONLY_DATA
   /** Source file tracking for reimport. */
-  UPROPERTY(VisibleAnywhere, Instanced, Category = "Import Settings")
+  UPROPERTY(VisibleAnywhere, Instanced, Category = "SuperDex Robotics|Bot IK|Import Settings")
   TObjectPtr<UAssetImportData> AssetImportData;
 
   /**
    * Output bot source path stored at the last import; reimport keeps OutputBot while it still
    * matches.
    */
-  UPROPERTY(VisibleAnywhere, Category = "Import Settings")
+  UPROPERTY(VisibleAnywhere, Category = "SuperDex Robotics|Bot IK|Import Settings")
   FString SourceOutputBotPath;
 
   /**
    * Input bot source path stored at the last import; reimport keeps InputBot while it still
    * matches.
    */
-  UPROPERTY(VisibleAnywhere, Category = "Import Settings")
+  UPROPERTY(VisibleAnywhere, Category = "SuperDex Robotics|Bot IK|Import Settings")
   FString SourceInputBotPath;
 #endif
 };

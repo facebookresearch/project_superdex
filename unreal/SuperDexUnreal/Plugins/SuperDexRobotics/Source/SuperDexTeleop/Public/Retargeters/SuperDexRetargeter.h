@@ -37,7 +37,7 @@ class SUPERDEXTELEOP_API USuperDexRetargeter : public USuperDexPoseableComponent
    * If true, the PoseTransformAction will be invoked even if the SourcePose returned with false on
    * GetPose(). This value should be set by actions that are designed to handle invalid input poses.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDexPoseableComponent")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Poseable Component")
   bool bGetTransformedPoseDoesNotNeedValidSourcePose = false;
 
   /**
@@ -50,7 +50,10 @@ class SUPERDEXTELEOP_API USuperDexRetargeter : public USuperDexPoseableComponent
    * @return true if successful, false otherwise
    * @param bSourceIsValid Whether the source pose's GetPose() succeeded.
    */
-  UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "SuperDexPoseableComponent")
+  UFUNCTION(
+      BlueprintNativeEvent,
+      BlueprintCallable,
+      Category = "SuperDex Robotics|Poseable Component")
   bool GetTransformedPose(
       FSuperDexPose const& SourcePose,
       bool bSourceIsValid,

@@ -61,7 +61,7 @@ class SUPERDEXTELEOP_API UClutchSkeletonRootToVrRootRetargeter : public USuperDe
    * Determines what mechanics that clutch uses. This should not be changed while running as the
    * system is not currently written to support that without additional initialization.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SuperDex")
+  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SuperDex Robotics|Clutch")
   ESuperDexClutchType ClutchType = ESuperDexClutchType::RelativeTranslationAbsoluteRotation;
 
   /**
@@ -74,7 +74,7 @@ class SUPERDEXTELEOP_API UClutchSkeletonRootToVrRootRetargeter : public USuperDe
    * The joint positions, which the clutch holds while disengaged, lerp from the held ones to the
    * source's over this same time whatever the ClutchType.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Clutch")
   double TimeInSecondsToLerpToAbsolute = 1.0;
 
   /**
@@ -88,7 +88,7 @@ class SUPERDEXTELEOP_API UClutchSkeletonRootToVrRootRetargeter : public USuperDe
    * pauses due to excessive velocity then the jump on resume will be maximized. Disable and
    * reenabling clutch will still properly reset as expected.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Clutch")
   bool bPauseClutchInsteadOfAutoDisengaging = false;
 
   /**
@@ -100,7 +100,7 @@ class SUPERDEXTELEOP_API UClutchSkeletonRootToVrRootRetargeter : public USuperDe
    * NOTE: The pose must be valid to unpause so it must be both confident and within
    * DisengageClutchIfDeltaDistanceOverAmount_cm of the original paused location.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Clutch")
   double TimeInSecondsToLerpOnUnpause = 0.25;
 
   /**
@@ -108,14 +108,14 @@ class SUPERDEXTELEOP_API UClutchSkeletonRootToVrRootRetargeter : public USuperDe
    * transforms is greater than this amount. This will generally detect moving too quickly or hands
    * teleporting due to tracking failures.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Clutch")
   double DisengageClutchIfDeltaDistanceOverAmount_cm = 15.0;
 
   /**
    * A safety catch will automatically disengage the clutch if SourcePose.TrackingConfidence is
    * below this amount. Tracking sources report their confidence.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Clutch")
   double DisengageClutchIfSourceConfidenceBelowAmount = 0.6;
 
   /**
@@ -123,7 +123,7 @@ class SUPERDEXTELEOP_API UClutchSkeletonRootToVrRootRetargeter : public USuperDe
    * SourcePose.bIsTrackingConfident is false. Tracking sources have their own internal threshold
    * for determining this value and should set it appropriately.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Clutch")
   bool bDisengageClutchIfSourceIsNotConfident = true;
 
   /**
@@ -132,18 +132,18 @@ class SUPERDEXTELEOP_API UClutchSkeletonRootToVrRootRetargeter : public USuperDe
    * name, a missing component or mesh, no bones, or no single leaf bone when no explicit bone
    * index is selected) clear this flag and stop the retries.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SuperDex")
+  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SuperDex Robotics|Clutch")
   bool bInitializeClutchFromEndEffectorOfPoseable = false;
 
   /** Name of the SuperDexPoseableComponent the clutch is initialized from. */
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SuperDex")
+  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SuperDex Robotics|Clutch")
   FString InitializeClutchFromPosableWithName = "";
 
   /**
    * Bone of the poseable to initialize from instead of its single leaf bone, or -1 for the leaf
    * bone.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SuperDex")
+  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SuperDex Robotics|Clutch")
   int InitializeClutchRelativeToBoneIndex = -1;
 
   /**
@@ -152,7 +152,7 @@ class SUPERDEXTELEOP_API UClutchSkeletonRootToVrRootRetargeter : public USuperDe
    * SuperDexPoseableComponent found using InitializeClutchFromPosableWithName on BeginPlay. If
    * false and no valid component is present, it will be identity.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Clutch")
   bool bOverrideInitializeClutchSkeletonRootToPoseableEndEffector = false;
 
   /**
@@ -165,7 +165,7 @@ class SUPERDEXTELEOP_API UClutchSkeletonRootToVrRootRetargeter : public USuperDe
       EditAnywhere,
       BlueprintReadWrite,
       meta = (EditCondition = "bOverrideInitializeClutchSkeletonRootToPoseableEndEffector"),
-      Category = "SuperDex")
+      Category = "SuperDex Robotics|Clutch")
   FTransform InitializeClutchSkeletonRootToPoseableEndEffector = FTransform::Identity;
 
   /**
@@ -185,7 +185,10 @@ class SUPERDEXTELEOP_API UClutchSkeletonRootToVrRootRetargeter : public USuperDe
    *   InitializeClutchSkeletonRootToPoseableEndEffector from the leaf bone.
    * @return True if the clutch was initialized.
    */
-  UFUNCTION(BlueprintCallable, meta = (ReturnDisplayName = "Success"), Category = "SuperDex")
+  UFUNCTION(
+      BlueprintCallable,
+      meta = (ReturnDisplayName = "Success"),
+      Category = "SuperDex Robotics|Clutch")
   bool InitializeClutchBasedOnLeafBone(
       FString const& PosableWithName,
       bool bUpdateClutchToLeafBoneTransform = false);
@@ -207,7 +210,7 @@ class SUPERDEXTELEOP_API UClutchSkeletonRootToVrRootRetargeter : public USuperDe
    * @param bNewClutchEnabled The requested clutch state.
    * @return The clutch state after the call.
    */
-  UFUNCTION(BlueprintCallable, Category = "SuperDex")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Clutch")
   bool SetClutchEnabled(bool bNewClutchEnabled);
 
   /**
@@ -215,7 +218,7 @@ class SUPERDEXTELEOP_API UClutchSkeletonRootToVrRootRetargeter : public USuperDe
    *
    * @return True while the clutch is engaged.
    */
-  UFUNCTION(BlueprintPure, Category = "SuperDex")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Robotics|Clutch")
   bool GetClutchEnabled() const {
     FReadScopeLock Lock(ClutchLock);
     return bClutchEnabled;
@@ -226,7 +229,7 @@ class SUPERDEXTELEOP_API UClutchSkeletonRootToVrRootRetargeter : public USuperDe
    *
    * @return True once the clutch is initialized.
    */
-  UFUNCTION(BlueprintPure, Category = "SuperDex")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Robotics|Clutch")
   bool IsClutchInitialized() const {
     FReadScopeLock Lock(ClutchLock);
     return bClutchInitialized;
@@ -250,14 +253,14 @@ class SUPERDEXTELEOP_API UClutchSkeletonRootToVrRootRetargeter : public USuperDe
    * Emitted when the clutch enable state changes. Useful for knowing when the clutch has disengaged
    * itself via the safety checks and informing the user.
    */
-  UPROPERTY(BlueprintAssignable, Category = "SuperDex")
+  UPROPERTY(BlueprintAssignable, Category = "SuperDex Robotics|Clutch")
   FOnClutchChanged OnClutchStateChanged;
 
   /**
    * Emitted when the clutch pauses or unpauses. Useful for knowing when the clutch has disengaged
    * itself via the safety checks and informing the user.
    */
-  UPROPERTY(BlueprintAssignable, Category = "SuperDex")
+  UPROPERTY(BlueprintAssignable, Category = "SuperDex Robotics|Clutch")
   FOnClutchPaused OnClutchPauseUpause;
 
   /**
@@ -266,7 +269,7 @@ class SUPERDEXTELEOP_API UClutchSkeletonRootToVrRootRetargeter : public USuperDe
    *
    * @return The clutched SkeletonRootToVrRoot.
    */
-  UFUNCTION(BlueprintPure, Category = "SuperDex")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Robotics|Clutch")
   FTransform GetClutchedSkeletonRootToVrRoot() const {
     FReadScopeLock Lock(ClutchLock);
     return ClutchedSkeletonRootToVrRoot;
@@ -282,7 +285,7 @@ class SUPERDEXTELEOP_API UClutchSkeletonRootToVrRootRetargeter : public USuperDe
    * @param NewSkeletonRootToVrRoot The new clutched transform. Setting it marks the clutch
    *   initialized.
    */
-  UFUNCTION(BlueprintCallable, Category = "SuperDex")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Clutch")
   void SetClutchedSkeletonRootToVrRoot(FTransform const& NewSkeletonRootToVrRoot) {
     FWriteScopeLock Lock(ClutchLock);
     ClutchedSkeletonRootToVrRoot = NewSkeletonRootToVrRoot;

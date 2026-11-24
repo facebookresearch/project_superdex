@@ -40,11 +40,11 @@ class SUPERDEXSTUDY_API ASuperDexStudyQuestionPrompt : public AActor {
 
  public:
   /** The question to present. Setting it through SetQuestionData also calls UpdateInterface. */
-  UPROPERTY(EditAnywhere, BlueprintSetter = SetQuestionData)
+  UPROPERTY(EditAnywhere, BlueprintSetter = SetQuestionData, Category = "SuperDex Robotics|Study")
   USuperDexStudyQuestionData* QuestionData = nullptr;
 
   /** Broadcast with the participant's response. */
-  UPROPERTY(BlueprintAssignable, BlueprintCallable, Category = "Events")
+  UPROPERTY(BlueprintAssignable, BlueprintCallable, Category = "SuperDex Robotics|Study")
   FSuperDexStudyQuestionResponseDelegate OnResponse;
 
   /**
@@ -52,7 +52,7 @@ class SUPERDEXSTUDY_API ASuperDexStudyQuestionPrompt : public AActor {
    *
    * @param Data The question to present.
    */
-  UFUNCTION(BlueprintSetter)
+  UFUNCTION(BlueprintSetter, Category = "SuperDex Robotics|Study")
   void SetQuestionData(USuperDexStudyQuestionData* Data);
 
   /** Enables ticking, which prompt Blueprints use for Event Tick. */
@@ -60,6 +60,6 @@ class SUPERDEXSTUDY_API ASuperDexStudyQuestionPrompt : public AActor {
 
  protected:
   /** Refreshes the prompt for QuestionData. The native implementation does nothing. */
-  UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
+  UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "SuperDex Robotics|Study")
   void UpdateInterface();
 };

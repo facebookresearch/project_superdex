@@ -39,7 +39,7 @@ class SUPERDEXROBOTICS_API USuperDexBotComponent : public UPoseableMeshComponent
 
  protected:
   /** The SuperDexBot asset from which the bot will be generated. */
-  UPROPERTY(EditAnywhere, Category = "SuperDex Bot")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Robotics|Bot")
   TObjectPtr<USuperDexBot> Bot = nullptr;
 
   /**
@@ -48,7 +48,7 @@ class SUPERDEXROBOTICS_API USuperDexBotComponent : public UPoseableMeshComponent
    */
   UPROPERTY(
       EditAnywhere,
-      Category = "SuperDex Bot",
+      Category = "SuperDex Robotics|Bot",
       BlueprintReadOnly,
       EditFixedSize,
       meta = (EditFixedOrder))
@@ -58,22 +58,22 @@ class SUPERDEXROBOTICS_API USuperDexBotComponent : public UPoseableMeshComponent
    * Override the mochi contact layer for every collidable the bot spawns -- all links and
    * the skin, if it has one. If empty, the layers from the bot asset are used.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SuperDex Bot")
+  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SuperDex Robotics|Bot")
   FString LayerOverride;
 
   /** Whether the bot should be simulated under the influence of gravity. */
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SuperDex Bot")
+  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SuperDex Robotics|Bot")
   bool bHasGravity = mochi::ArticulatedLinkParams{}.hasGravity;
 
   /** Enable contact queries and events. */
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SuperDex Bot")
+  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SuperDex Robotics|Bot")
   bool bEnableContacts = false;
 
   /** The links that will be included in contact queries and events. */
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
-      Category = "SuperDex Bot",
+      Category = "SuperDex Robotics|Bot",
       meta = (EditCondition = "bEnableContacts"))
   TArray<FName> ContactGeneratingLinks;
 
@@ -84,7 +84,7 @@ class SUPERDEXROBOTICS_API USuperDexBotComponent : public UPoseableMeshComponent
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
-      Category = "SuperDex Bot",
+      Category = "SuperDex Robotics|Bot",
       meta = (EditCondition = "bEnableContacts"))
   bool bSkinGeneratesContacts = false;
 
@@ -92,12 +92,12 @@ class SUPERDEXROBOTICS_API USuperDexBotComponent : public UPoseableMeshComponent
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
-      Category = "SuperDex Bot",
+      Category = "SuperDex Robotics|Bot",
       meta = (EditCondition = "bEnableContacts"))
   bool bFilterSelfContacts = true;
 
   /** The SuperDexBotController class to use. */
-  UPROPERTY(EditAnywhere, Category = "SuperDex Bot", BlueprintReadOnly)
+  UPROPERTY(EditAnywhere, Category = "SuperDex Robotics|Bot", BlueprintReadOnly)
   TSubclassOf<USuperDexBotController> BotControllerClass;
 
   /**
@@ -108,14 +108,14 @@ class SUPERDEXROBOTICS_API USuperDexBotComponent : public UPoseableMeshComponent
    * so a non-uniform scale is replaced by the mean magnitude of its axes. The scale is fixed once
    * the bot exists.
    */
-  UPROPERTY(EditAnywhere, Category = "SuperDex Bot", BlueprintReadOnly)
+  UPROPERTY(EditAnywhere, Category = "SuperDex Robotics|Bot", BlueprintReadOnly)
   bool bAutoSpawn = true;
 
  public:
   DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnBotSpawned, USuperDexBotComponent*, BotComponent);
 
   /** Emitted when the bot has been spawned. */
-  UPROPERTY(BlueprintAssignable, Category = "SuperDex Bot")
+  UPROPERTY(BlueprintAssignable, Category = "SuperDex Robotics|Bot")
   FOnBotSpawned OnBotSpawned;
 
   // Contact events.
@@ -123,50 +123,50 @@ class SUPERDEXROBOTICS_API USuperDexBotComponent : public UPoseableMeshComponent
    * Emitted when a nested element of this bot begins contact with another Mochi component. Requires
    * bEnableContacts; occurs before the non-nested equivalent.
    */
-  UPROPERTY(BlueprintAssignable, Category = "SuperDex Bot")
+  UPROPERTY(BlueprintAssignable, Category = "SuperDex Robotics|Bot")
   FOnMochiComponentBeginNestedContact OnMochiComponentBeginNestedContact;
 
   /**
    * Emitted when this bot begins contact with another Mochi component. Requires bEnableContacts;
    * occurs after the nested equivalent.
    */
-  UPROPERTY(BlueprintAssignable, Category = "SuperDex Bot")
+  UPROPERTY(BlueprintAssignable, Category = "SuperDex Robotics|Bot")
   FOnMochiComponentBeginContact OnMochiComponentBeginContact;
 
   /**
    * Emitted when a nested element of this bot ends contact with another Mochi component. Requires
    * bEnableContacts; occurs before the non-nested equivalent.
    */
-  UPROPERTY(BlueprintAssignable, Category = "SuperDex Bot")
+  UPROPERTY(BlueprintAssignable, Category = "SuperDex Robotics|Bot")
   FOnMochiComponentEndNestedContact OnMochiComponentEndNestedContact;
 
   /**
    * Emitted when this bot ends contact with another Mochi component. Requires bEnableContacts;
    * occurs after the nested equivalent.
    */
-  UPROPERTY(BlueprintAssignable, Category = "SuperDex Bot")
+  UPROPERTY(BlueprintAssignable, Category = "SuperDex Robotics|Bot")
   FOnMochiComponentEndContact OnMochiComponentEndContact;
 
   /**
    * Emitted while a nested element of this bot is contacting other Mochi components. Requires
    * bEnableContacts; occurs before the non-nested equivalent.
    */
-  UPROPERTY(BlueprintAssignable, Category = "SuperDex Bot")
+  UPROPERTY(BlueprintAssignable, Category = "SuperDex Robotics|Bot")
   FOnMochiComponentNestedContact OnMochiComponentNestedContact;
 
   /**
    * Emitted while this bot is contacting other Mochi components. Requires bEnableContacts; occurs
    * after the nested equivalent.
    */
-  UPROPERTY(BlueprintAssignable, Category = "SuperDex Bot")
+  UPROPERTY(BlueprintAssignable, Category = "SuperDex Robotics|Bot")
   FOnMochiComponentContact OnMochiComponentContact;
 
   /** Emitted before any contact events are invoked. */
-  UPROPERTY(BlueprintAssignable, Category = "SuperDex Bot")
+  UPROPERTY(BlueprintAssignable, Category = "SuperDex Robotics|Bot")
   FOnMochiComponentContactProcessing OnMochiComponentBeginContactProcessing;
 
   /** Emitted after all contact events have been invoked, even if none actually were. */
-  UPROPERTY(BlueprintAssignable, Category = "SuperDex Bot")
+  UPROPERTY(BlueprintAssignable, Category = "SuperDex Robotics|Bot")
   FOnMochiComponentContactProcessing OnMochiComponentEndContactProcessing;
 
  public:
@@ -198,7 +198,7 @@ class SUPERDEXROBOTICS_API USuperDexBotComponent : public UPoseableMeshComponent
    *
    * @return True if this component poses a bot owned by the BotScene.
    */
-  UFUNCTION(BlueprintPure, Category = "SuperDex Bot")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Robotics|Bot")
   bool IsBorrowedBot() const {
     return bIsBorrowedBot;
   }
@@ -209,7 +209,7 @@ class SUPERDEXROBOTICS_API USuperDexBotComponent : public UPoseableMeshComponent
    * still poses while hidden -- the teleop clutch reads bone transforms off the retargeter
    * poseables, so posing must keep running regardless of visibility.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SuperDex Bot")
+  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SuperDex Robotics|Bot")
   bool bHideMeshWhenBoundToSceneBot = true;
 
   /**
@@ -221,7 +221,7 @@ class SUPERDEXROBOTICS_API USuperDexBotComponent : public UPoseableMeshComponent
    * @param Scale Uniform bot scale; must be positive and finite.
    * @return True if the bot exists after the call.
    */
-  UFUNCTION(BlueprintCallable, Category = "SuperDex Bot")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Bot")
   bool SpawnBot(const FTransform& WorldFromRoot, float Scale = 1.f);
 
   /**
@@ -229,7 +229,7 @@ class SUPERDEXROBOTICS_API USuperDexBotComponent : public UPoseableMeshComponent
    *
    * @param bInAutoSpawn New value of bAutoSpawn.
    */
-  UFUNCTION(BlueprintCallable, Category = "SuperDex Bot")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Bot")
   void SetAutoSpawn(bool bInAutoSpawn) {
     bAutoSpawn = bInAutoSpawn;
   }
@@ -239,7 +239,7 @@ class SUPERDEXROBOTICS_API USuperDexBotComponent : public UPoseableMeshComponent
    *
    * @return True if the bot's articulated actor exists and is valid.
    */
-  UFUNCTION(BlueprintPure, Category = "SuperDex Bot")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Robotics|Bot")
   bool IsBotSpawned() const;
 
   /**
@@ -247,7 +247,7 @@ class SUPERDEXROBOTICS_API USuperDexBotComponent : public UPoseableMeshComponent
    *
    * @return The bot's uniform scale.
    */
-  UFUNCTION(BlueprintPure, Category = "SuperDex Bot")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Robotics|Bot")
   float GetBotScale() const {
     return BotScale;
   }
@@ -257,7 +257,7 @@ class SUPERDEXROBOTICS_API USuperDexBotComponent : public UPoseableMeshComponent
    *
    * @param InBot The bot asset to use, or null to clear it.
    */
-  UFUNCTION(BlueprintCallable, Category = "SuperDex Bot")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Bot")
   void SetBotAsset(USuperDexBot* InBot);
 
   /**
@@ -265,7 +265,7 @@ class SUPERDEXROBOTICS_API USuperDexBotComponent : public UPoseableMeshComponent
    *
    * @return The bot asset, or null.
    */
-  UFUNCTION(BlueprintPure, Category = "SuperDex Bot")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Robotics|Bot")
   USuperDexBot* GetBotAsset() const;
 
   /**
@@ -275,7 +275,7 @@ class SUPERDEXROBOTICS_API USuperDexBotComponent : public UPoseableMeshComponent
    * @param NewInitialPose Joint positions [rad or m].
    * @return False if the bot has already been spawned, otherwise true.
    */
-  UFUNCTION(BlueprintCallable, Category = "SuperDex Bot")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Bot")
   bool SetInitialPose(const TArray<double>& NewInitialPose);
 
   /**
@@ -283,7 +283,7 @@ class SUPERDEXROBOTICS_API USuperDexBotComponent : public UPoseableMeshComponent
    *
    * @return The initial joint positions [rad or m].
    */
-  UFUNCTION(BlueprintPure, Category = "SuperDex Bot")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Robotics|Bot")
   const TArray<double>& GetInitialPose() const;
 
   /**
@@ -291,7 +291,7 @@ class SUPERDEXROBOTICS_API USuperDexBotComponent : public UPoseableMeshComponent
    *
    * @return True if gravity is enabled.
    */
-  UFUNCTION(BlueprintPure, Category = "SuperDex Bot")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Robotics|Bot")
   bool HasGravity() const;
 
   /**
@@ -299,7 +299,7 @@ class SUPERDEXROBOTICS_API USuperDexBotComponent : public UPoseableMeshComponent
    *
    * @return The articulated actor object, or null before the bot is spawned.
    */
-  UFUNCTION(BlueprintPure, Category = "SuperDex Bot")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Robotics|Bot")
   UMochiArticulatedActorObject* GetMochiArticulatedActor() const;
 
   /**
@@ -307,7 +307,7 @@ class SUPERDEXROBOTICS_API USuperDexBotComponent : public UPoseableMeshComponent
    *
    * @param WorldTransform New world transform of the bot base. Ignored before the bot is spawned.
    */
-  UFUNCTION(BlueprintCallable, Category = "SuperDex Bot")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Bot")
   void SetWorldTransform(const FTransform& WorldTransform);
 
   /**
@@ -315,7 +315,7 @@ class SUPERDEXROBOTICS_API USuperDexBotComponent : public UPoseableMeshComponent
    *
    * @param Pose Joint positions [rad or m]. Ignored before the bot is spawned.
    */
-  UFUNCTION(BlueprintCallable, Category = "SuperDex Bot")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Bot")
   void SetPose(TArray<double> const& Pose);
 
   /**
@@ -325,7 +325,7 @@ class SUPERDEXROBOTICS_API USuperDexBotComponent : public UPoseableMeshComponent
    * @return The link's world transform, or the identity transform if the link is unknown or the bot
    *   is not spawned.
    */
-  UFUNCTION(BlueprintPure, Category = "SuperDex Bot")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Robotics|Bot")
   FTransform GetLinkToWorldTransform(FName LinkName) const;
 
   /**
@@ -334,7 +334,7 @@ class SUPERDEXROBOTICS_API USuperDexBotComponent : public UPoseableMeshComponent
    *
    * @return The current joint positions [rad or m].
    */
-  UFUNCTION(BlueprintPure, Category = "SuperDex Bot")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Robotics|Bot")
   const TArray<double>& GetCurrentJointPositions() const;
 
   /**
@@ -343,7 +343,7 @@ class SUPERDEXROBOTICS_API USuperDexBotComponent : public UPoseableMeshComponent
    *
    * @return The current joint velocities [rad/s or m/s].
    */
-  UFUNCTION(BlueprintPure, Category = "SuperDex Bot")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Robotics|Bot")
   const TArray<double>& GetCurrentJointVelocities() const;
 
   /**
@@ -352,7 +352,7 @@ class SUPERDEXROBOTICS_API USuperDexBotComponent : public UPoseableMeshComponent
    * @param NewControllerClass Class of the new controller, or null to remove the controller.
    * @return False if the new controller could not be created or initialized, otherwise true.
    */
-  UFUNCTION(BlueprintCallable, Category = "SuperDex Bot")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Bot")
   bool SetController(TSubclassOf<USuperDexBotController> NewControllerClass);
 
   /**
@@ -360,7 +360,7 @@ class SUPERDEXROBOTICS_API USuperDexBotComponent : public UPoseableMeshComponent
    *
    * @return The controller, or null.
    */
-  UFUNCTION(BlueprintPure, Category = "SuperDex Bot")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Robotics|Bot")
   USuperDexBotController* GetController() const;
 
   /**
@@ -368,7 +368,7 @@ class SUPERDEXROBOTICS_API USuperDexBotComponent : public UPoseableMeshComponent
    *
    * @return True if contacts are enabled.
    */
-  UFUNCTION(BlueprintPure, Category = "SuperDex Bot")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Robotics|Bot")
   bool GetEnableContacts() const;
 
   /**
@@ -377,7 +377,7 @@ class SUPERDEXROBOTICS_API USuperDexBotComponent : public UPoseableMeshComponent
    *
    * @return The contact-generating links.
    */
-  UFUNCTION(BlueprintPure, Category = "SuperDex Bot")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Robotics|Bot")
   const TArray<FName>& GetContactGeneratingLinks() const;
 
   /**
@@ -385,7 +385,7 @@ class SUPERDEXROBOTICS_API USuperDexBotComponent : public UPoseableMeshComponent
    *
    * @return True if the skin generates contacts.
    */
-  UFUNCTION(BlueprintPure, Category = "SuperDex Bot")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Robotics|Bot")
   bool GetSkinGeneratesContacts() const;
 
   /**
@@ -393,7 +393,7 @@ class SUPERDEXROBOTICS_API USuperDexBotComponent : public UPoseableMeshComponent
    *
    * @return True if self contacts are filtered out.
    */
-  UFUNCTION(BlueprintPure, Category = "SuperDex Bot")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Robotics|Bot")
   bool GetFilterSelfContacts() const;
 
  public:

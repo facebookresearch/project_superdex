@@ -49,30 +49,30 @@ class SUPERDEXPOSE_API ASuperDexPoseableActor : public AActor {
 
  public:
   /** Delegate for pose source changed events. */
-  UPROPERTY(BlueprintAssignable)
+  UPROPERTY(BlueprintAssignable, Category = "SuperDex Robotics|Poseable Actor")
   FPoseSourceChanged OnPoseSourceChanged;
 
   /** Display name of this actor, as shown on the wristband component. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDexPoseableActor")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Poseable Actor")
   FText DisplayName = FText::FromString(TEXT("Poseable Actor"));
 
   /**
    * Override pose source class for this actor.
    * If set, will get pose from pose subsystem directly instead of from owning pawn.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDexPoseableActor")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Poseable Actor")
   TSubclassOf<USuperDexPoseSource> PoseSourceOverride;
 
   /** Owning pawn currently managing this poseable actor. */
-  UPROPERTY(BlueprintReadOnly, Category = "SuperDexPoseableActor")
+  UPROPERTY(BlueprintReadOnly, Category = "SuperDex Robotics|Poseable Actor")
   TObjectPtr<ASuperDexPlayerPawn> OwningPawn;
 
   /** Handedness of this actor, applies to attached poseable components w/o override set. */
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SuperDexPoseableActor")
+  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SuperDex Robotics|Poseable Actor")
   ESuperDexHandedness Handedness = ESuperDexHandedness::Right;
 
   /** If false, always return false and early out when GetPose() is called */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDexPoseableActor")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Poseable Actor")
   bool bEnableGetPose = true;
 
  public:
@@ -86,7 +86,7 @@ class SUPERDEXPOSE_API ASuperDexPoseableActor : public AActor {
    */
   UFUNCTION(
       BlueprintCallable,
-      Category = "SuperDexPoseableActor",
+      Category = "SuperDex Robotics|Poseable Actor",
       meta = (ReturnDisplayName = "Success"))
   virtual bool GetPose(FSuperDexPose& OutPose);
 
@@ -100,7 +100,7 @@ class SUPERDEXPOSE_API ASuperDexPoseableActor : public AActor {
   UFUNCTION(
       BlueprintCallable,
       BlueprintImplementableEvent,
-      Category = "SuperDexPoseableActor",
+      Category = "SuperDex Robotics|Poseable Actor",
       meta = (ReturnDisplayName = "Success"))
   bool GetPrimaryPoseableComponent(USuperDexPoseableComponent*& OutPrimaryPoseable) const;
 
@@ -114,7 +114,7 @@ class SUPERDEXPOSE_API ASuperDexPoseableActor : public AActor {
   UFUNCTION(
       BlueprintCallable,
       BlueprintImplementableEvent,
-      Category = "SuperDexPoseableActor",
+      Category = "SuperDex Robotics|Poseable Actor",
       meta = (ReturnDisplayName = "Success"))
   bool GetTrackedPoseableComponent(USuperDexPoseableComponent*& OutTrackedPoseable) const;
 };

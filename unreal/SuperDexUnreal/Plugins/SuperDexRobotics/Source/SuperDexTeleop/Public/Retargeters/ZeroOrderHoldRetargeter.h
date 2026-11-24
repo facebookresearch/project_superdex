@@ -28,7 +28,7 @@ class SUPERDEXTELEOP_API UZeroOrderHoldRetargeter : public USuperDexRetargeter {
 
  public:
   /** The articulation whose held joint configuration is output. */
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Teleop")
+  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SuperDex Robotics|Teleop")
   TObjectPtr<UMochiArticulation> Articulation;
 
   /**
@@ -37,7 +37,7 @@ class SUPERDEXTELEOP_API UZeroOrderHoldRetargeter : public USuperDexRetargeter {
    * @param ConfigurationVector Joint positions [rad or m]; ignored unless it has one value per held
    *   DOF.
    */
-  UFUNCTION(BlueprintCallable, Category = "Teleop")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Teleop")
   void SetPose(const TArray<double>& ConfigurationVector);
 
   /** Runs without a valid source pose. */
@@ -59,6 +59,6 @@ class SUPERDEXTELEOP_API UZeroOrderHoldRetargeter : public USuperDexRetargeter {
   /**
    * The held joint positions [rad or m]; initialized to Articulation's default pose on BeginPlay.
    */
-  UPROPERTY(EditAnywhere, BlueprintSetter = SetPose, Category = "Teleop")
+  UPROPERTY(EditAnywhere, BlueprintSetter = SetPose, Category = "SuperDex Robotics|Teleop")
   TArray<double> HeldPose;
 };

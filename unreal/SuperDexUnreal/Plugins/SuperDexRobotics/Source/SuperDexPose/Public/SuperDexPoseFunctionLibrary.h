@@ -45,7 +45,7 @@ class SUPERDEXPOSE_API USuperDexPoseFunctionLibrary : public UBlueprintFunctionL
    * @param B Second transform.
    * @return A*B composed without scale, with the scale set to S(A)*S(B).
    */
-  UFUNCTION(BlueprintPure, Category = "SuperDex")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Robotics|Pose")
   static FTransform MultiplyTransformsWithoutScalePreservingScale(
       FTransform const& A,
       FTransform const& B) {
@@ -67,7 +67,7 @@ class SUPERDEXPOSE_API USuperDexPoseFunctionLibrary : public UBlueprintFunctionL
    * @param B Second transform.
    * @return A*B composed with both scales removed.
    */
-  UFUNCTION(BlueprintPure, Category = "SuperDex")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Robotics|Pose")
   static FTransform MultiplyTransformsStrippingScale(FTransform const& A, FTransform const& B) {
     FTransform ANoScale = FTransform(A.GetRotation(), A.GetTranslation(), FVector::OneVector);
     FTransform BNoScale = FTransform(B.GetRotation(), B.GetTranslation(), FVector::OneVector);
@@ -83,7 +83,7 @@ class SUPERDEXPOSE_API USuperDexPoseFunctionLibrary : public UBlueprintFunctionL
    * @param Pose Pose to store.
    * @return False if Asset is null, otherwise true.
    */
-  UFUNCTION(BlueprintCallable, Category = "SuperDex")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Pose")
   static bool UpdateSuperDexPoseInAsset(USuperDexPoseAsset* Asset, FSuperDexPose Pose);
 
   /**
@@ -92,7 +92,7 @@ class SUPERDEXPOSE_API USuperDexPoseFunctionLibrary : public UBlueprintFunctionL
    * there is not one joint position per DOF of the articulation. Leaves the rest of OutPose
    * unchanged.
    */
-  UFUNCTION(BlueprintCallable, Category = "SuperDex")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Pose")
   static bool ComputeSuperDexPoseFromJointPositions(
       UMochiArticulationBase* Articulation,
       const TArray<double>& JointPositions,
@@ -209,7 +209,7 @@ class SUPERDEXPOSE_API USuperDexPoseFunctionLibrary : public UBlueprintFunctionL
    */
   UFUNCTION(
       BlueprintCallable,
-      Category = "SuperDex|Fire and Forget",
+      Category = "SuperDex Robotics|Fire and Forget",
       meta =
           (Latent,
            DisplayName = "Fire and Forget (Seconds)",
@@ -239,7 +239,7 @@ class SUPERDEXPOSE_API USuperDexPoseFunctionLibrary : public UBlueprintFunctionL
    */
   UFUNCTION(
       BlueprintCallable,
-      Category = "SuperDex|Fire and Forget",
+      Category = "SuperDex Robotics|Fire and Forget",
       meta =
           (Latent,
            DisplayName = "Fire and Forget (Frames)",
@@ -278,7 +278,7 @@ class SUPERDEXPOSE_API USuperDexPoseFunctionLibrary : public UBlueprintFunctionL
    */
   UFUNCTION(
       BlueprintCallable,
-      Category = "SuperDex|Fire and Forget",
+      Category = "SuperDex Robotics|Fire and Forget",
       meta =
           (Latent,
            DisplayName = "Fire and Forget (Iterations)",
@@ -315,7 +315,7 @@ class SUPERDEXPOSE_API USuperDexPoseFunctionLibrary : public UBlueprintFunctionL
    */
   UFUNCTION(
       BlueprintCallable,
-      Category = "SuperDex|Fire and Forget",
+      Category = "SuperDex Robotics|Fire and Forget",
       meta =
           (Latent,
            DisplayName = "Fire and Forget (Curve)",

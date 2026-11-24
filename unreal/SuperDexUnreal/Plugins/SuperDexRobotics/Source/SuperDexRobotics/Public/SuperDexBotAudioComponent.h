@@ -44,31 +44,31 @@ struct FSuperDexBotAudioParams {
   UPROPERTY(
       EditAnywhere,
       meta = (GetOptions = "GetJointNames_EditorOnly"),
-      Category = "SuperDex Bot Audio")
+      Category = "SuperDex Robotics|Bot Audio")
   TArray<FName> Joints;
 
   /** The audio clip to use. Should be seamless loop with constant vol/pitch/tone. */
-  UPROPERTY(EditAnywhere, Category = "SuperDex Bot Audio")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Robotics|Bot Audio")
   USoundBase* AudioLoop = nullptr;
 
   /** Maps joint speed to volume. */
-  UPROPERTY(EditAnywhere, Category = "SuperDex Bot Audio")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Robotics|Bot Audio")
   UCurveFloat* VelocityVolumeCurve = nullptr;
 
   /** Maps joint speed to pitch. */
-  UPROPERTY(EditAnywhere, Category = "SuperDex Bot Audio")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Robotics|Bot Audio")
   UCurveFloat* VelocityPitchCurve = nullptr;
 
   /**
    * Should each joint have an AudioComponent attached or should all joint velocities
    * be aggregated
    */
-  UPROPERTY(EditAnywhere, Category = "SuperDex Bot Audio")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Robotics|Bot Audio")
   ESuperDexBotAudioJointAggregateMode JointAggregateMode =
       ESuperDexBotAudioJointAggregateMode::Individual;
 
   /** Estimate joint velocity from joint positions instead of using Mochi's joint velocity. */
-  UPROPERTY(EditAnywhere, Category = "SuperDex Bot Audio")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Robotics|Bot Audio")
   bool bEstimateVelocity = false;
 };
 
@@ -100,16 +100,16 @@ class SUPERDEXROBOTICS_API USuperDexBotAudioComponent : public UActorComponent {
   GENERATED_BODY()
  protected:
   /** Parameters controlling the bot's audio. */
-  UPROPERTY(EditAnywhere, Category = "SuperDex Bot Audio")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Robotics|Bot Audio")
   TArray<FSuperDexBotAudioParams> BotAudioParams;
 
   /** Draw a sphere at each sound, sized by its volume. */
-  UPROPERTY(EditAnywhere, Category = "SuperDex Bot Audio")
+  UPROPERTY(EditAnywhere, Category = "SuperDex Robotics|Bot Audio")
   bool bDebugDraw = false;
 
 #if WITH_EDITOR
   /** Lists the joint names of the owning bot component's bot asset, for the Joints picker. */
-  UFUNCTION(Category = "SuperDex Bot Audio")
+  UFUNCTION(Category = "SuperDex Robotics|Bot Audio")
   TArray<FName> GetJointNames_EditorOnly() const;
 #endif
 

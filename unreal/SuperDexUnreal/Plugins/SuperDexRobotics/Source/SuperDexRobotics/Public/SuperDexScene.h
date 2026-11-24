@@ -33,15 +33,15 @@ struct SUPERDEXROBOTICS_API FSuperDexSceneSpawnable {
   GENERATED_BODY()
 
   /** Name the scene gives the spawnable. */
-  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Spawnable")
+  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "SuperDex Robotics|Spawnable")
   FString Name;
 
   /** The imported prefab, if the spawnable is a SuperDex prefab or scene. */
-  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Spawnable")
+  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "SuperDex Robotics|Spawnable")
   TObjectPtr<USuperDexPrefab> Prefab;
 
   /** The imported bot, if the spawnable is a bot. */
-  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Spawnable")
+  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "SuperDex Robotics|Spawnable")
   TObjectPtr<USuperDexBot> Bot;
 };
 
@@ -55,35 +55,39 @@ class SUPERDEXROBOTICS_API USuperDexScene : public UObject {
   GENERATED_BODY()
  public:
   /** Name of the scene, derived from its file name. */
-  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, AssetRegistrySearchable, Category = "Scene")
+  UPROPERTY(
+      VisibleAnywhere,
+      BlueprintReadOnly,
+      AssetRegistrySearchable,
+      Category = "SuperDex Robotics|Scene")
   FString SceneName;
 
   /** What the scene was imported as. */
-  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Scene")
+  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "SuperDex Robotics|Scene")
   ESuperDexPrefabImportMode ImportMode = ESuperDexPrefabImportMode::Map;
 
   /** The generated Blueprint (Blueprint import mode). */
-  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Scene")
+  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "SuperDex Robotics|Scene")
   TSoftObjectPtr<UBlueprint> GeneratedBlueprint;
 
   /** The generated level (Map import mode). */
-  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Scene")
+  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "SuperDex Robotics|Scene")
   TSoftObjectPtr<UWorld> GeneratedMap;
 
   /** The base scene, imported as a prefab Blueprint, or null if the scene has none. */
-  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Scene")
+  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "SuperDex Robotics|Scene")
   TObjectPtr<USuperDexPrefab> BaseScene;
 
   /** The bots, in scene order. Null where a bot failed to import. */
-  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Scene")
+  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "SuperDex Robotics|Scene")
   TArray<TObjectPtr<USuperDexBot>> Bots;
 
   /** The prefabs and bots the scene can spawn at runtime. They are imported but not placed. */
-  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Scene")
+  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "SuperDex Robotics|Scene")
   TArray<FSuperDexSceneSpawnable> SpawnablePrefabs;
 #if WITH_EDITORONLY_DATA
   /** Source file and generated asset tracking for reimport. */
-  UPROPERTY(VisibleAnywhere, Category = "Internal")
+  UPROPERTY(VisibleAnywhere, Category = "SuperDex Robotics|Internal")
   TObjectPtr<USuperDexPrefabImportData> AssetImportData;
 #endif
 

@@ -50,15 +50,15 @@ class SUPERDEXPOSE_API ASuperDexPlayerController : public APlayerController {
 
  public:
   /** Delegate for pose source changed events. */
-  UPROPERTY(BlueprintAssignable)
+  UPROPERTY(BlueprintAssignable, Category = "SuperDex Robotics|Player Controller")
   FPoseSourceChangedWithHandedness OnPoseSourceChanged;
 
   /** Called when the alignment keybind is pressed */
-  UPROPERTY(BlueprintAssignable)
+  UPROPERTY(BlueprintAssignable, Category = "SuperDex Robotics|Player Controller")
   FTriggerAlignment OnDoAlginmentKeypress;
 
   /** SuperDexPlayerPawn possessed by this controller. */
-  UPROPERTY(BlueprintReadOnly, Category = "SuperDexPlayerController")
+  UPROPERTY(BlueprintReadOnly, Category = "SuperDex Robotics|Player Controller")
   ASuperDexPlayerPawn* PlayerPawn;
 
  private:
@@ -82,7 +82,7 @@ class SUPERDEXPOSE_API ASuperDexPlayerController : public APlayerController {
    */
   UFUNCTION(
       BlueprintCallable,
-      Category = "ASuperDexPlayerController",
+      Category = "SuperDex Robotics|Player Controller",
       meta = (ReturnDisplayName = "Success"))
   bool GetPose(const ESuperDexHandedness Handedness, FSuperDexPose& OutPose);
 
@@ -95,12 +95,12 @@ class SUPERDEXPOSE_API ASuperDexPlayerController : public APlayerController {
    */
   UFUNCTION(
       BlueprintCallable,
-      Category = "SuperDexPlayerController",
+      Category = "SuperDex Robotics|Player Controller",
       meta = (ReturnDisplayName = "Success"))
   bool NextPoseSource(const ESuperDexHandedness Handedness, bool bPrevious = false);
 
   /** Broadcasts OnDoAlginmentKeypress. */
-  UFUNCTION(BlueprintCallable, Category = "ASuperDexPlayerController")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Player Controller")
   void TriggerAlignment();
 
   /**
@@ -110,7 +110,7 @@ class SUPERDEXPOSE_API ASuperDexPlayerController : public APlayerController {
    * @return The pose source class, nullptr if unavailable (e.g. due to misconfiguration of the
    * SuperDexPlayerStart).
    */
-  UFUNCTION(BlueprintCallable, Category = "SuperDexPlayerController")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Player Controller")
   TSubclassOf<USuperDexPoseSource> GetPoseSource(const ESuperDexHandedness Handedness) const;
 
   /**
@@ -123,7 +123,7 @@ class SUPERDEXPOSE_API ASuperDexPlayerController : public APlayerController {
    */
   UFUNCTION(
       BlueprintCallable,
-      Category = "SuperDexPlayerController",
+      Category = "SuperDex Robotics|Player Controller",
       meta = (ReturnDisplayName = "Success"))
   bool SetPoseSource(
       const ESuperDexHandedness Handedness,

@@ -89,7 +89,7 @@ class SUPERDEXTELEOP_API UTeleopDirectSubsystem : public UGameInstanceSubsystem 
    * When true, Publish_* calls invoke subscriber callbacks immediately.
    * When false (default), messages are queued and delivered via PumpSubscribers().
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TeleopDirect")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Teleop Direct")
   bool bInstantDelivery = false;
 
   //----------------------------------------------------------------------------

@@ -39,27 +39,28 @@ class SUPERDEXSTUDY_API USuperDexStudyQuestionData : public UPrimaryDataAsset {
 
  public:
   /** The question's prompt text. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite)
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Study")
   FString Prompt;
 
   /** How the question is answered. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite)
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Study")
   ESuperDexStudyQuestionResponseType ResponseType;
 
   /** Number of points on the discrete scale. */
   UPROPERTY(
       EditAnywhere,
       BlueprintReadWrite,
+      Category = "SuperDex Robotics|Study",
       Meta =
           (EditCondition = "ResponseType == ESuperDexStudyQuestionResponseType::DiscreteScale",
            EditConditionHides))
   int32 NumPoints = 7;
 
   /** Descriptor for the scale's left end. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite)
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Study")
   FString LeftDescriptor;
 
   /** Descriptor for the scale's right end. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite)
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Study")
   FString RightDescriptor;
 };

@@ -56,7 +56,7 @@ class SUPERDEXTELEOP_API UTeleopSkeletonUtils : public UBlueprintFunctionLibrary
    * default of Saved/SkeletonExports/<MeshName>.json is used.
    * @return True if the file was written successfully.
    */
-  UFUNCTION(BlueprintCallable, Category = "Teleop|Skeleton")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Teleop|Skeleton")
   static bool ExportSkeletalMeshSkeleton(
       USkeletalMesh const* SkeletalMesh,
       FString const& FilePath);
@@ -69,7 +69,7 @@ class SUPERDEXTELEOP_API UTeleopSkeletonUtils : public UBlueprintFunctionLibrary
    * @param FilePath Destination file (see @ref ExportSkeletalMeshSkeleton).
    * @return True if the file was written successfully.
    */
-  UFUNCTION(BlueprintCallable, Category = "Teleop|Skeleton")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Teleop|Skeleton")
   static bool ExportSkeletalMeshComponentSkeleton(
       USkeletalMeshComponent const* Component,
       FString const& FilePath);
@@ -109,7 +109,7 @@ class SUPERDEXTELEOP_API UTeleopSkeletonUtils : public UBlueprintFunctionLibrary
    * (set true on exactly one mesh per shared skeleton).
    * @return True if the mesh was modified successfully.
    */
-  UFUNCTION(BlueprintCallable, Category = "Teleop|Skeleton")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Teleop|Skeleton")
   static bool ClearReferenceRootBoneRotation(
       USkeletalMesh* SkeletalMesh,
       bool bAlsoUpdateSharedSkeleton = true);

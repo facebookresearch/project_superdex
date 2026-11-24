@@ -40,7 +40,7 @@ class SUPERDEXROBOTICS_API ASuperDexBotActor : public AActor {
  private:
   /** The root bot component. */
   UPROPERTY(
-      Category = SuperDexBotActor,
+      Category = "SuperDex Robotics|Bot Actor",
       VisibleAnywhere,
       BlueprintReadOnly,
       meta =
@@ -54,7 +54,7 @@ class SUPERDEXROBOTICS_API ASuperDexBotActor : public AActor {
    *
    * @param NewBot The bot asset to use.
    */
-  UFUNCTION(BlueprintCallable, Category = "SuperDexBotActor")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Bot Actor")
   void SetBotAsset(USuperDexBot* NewBot);
 
   /**
@@ -62,7 +62,7 @@ class SUPERDEXROBOTICS_API ASuperDexBotActor : public AActor {
    *
    * @return The bot asset.
    */
-  UFUNCTION(BlueprintPure, Category = "SuperDexBotActor")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Robotics|Bot Actor")
   USuperDexBot* GetBotAsset() const;
 
   /**
@@ -70,7 +70,7 @@ class SUPERDEXROBOTICS_API ASuperDexBotActor : public AActor {
    *
    * @return BotComponent.
    */
-  UFUNCTION(BlueprintPure, Category = "SuperDexBotActor")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Robotics|Bot Actor")
   USuperDexBotComponent* GetBotComponent() const;
 
  public:

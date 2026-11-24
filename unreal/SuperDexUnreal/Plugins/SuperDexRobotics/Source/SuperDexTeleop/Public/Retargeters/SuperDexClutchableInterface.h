@@ -35,6 +35,6 @@ class SUPERDEXTELEOP_API ISuperDexClutchableInterface {
    *
    * @param bClutchEnabled Whether the clutch should be engaged.
    */
-  UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "SuperDex")
+  UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "SuperDex Robotics|Clutch")
   void SetClutchEnabled(bool bClutchEnabled);
 };

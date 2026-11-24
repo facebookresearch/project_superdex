@@ -47,7 +47,7 @@ class SUPERDEXTELEOP_API USuperDexBotIKRetargeter : public USuperDexRetargeter {
   /**
    * The bot IK config solved from the input bot pose. Edits take effect after InitializeRetargeter.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bot IK")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Bot IK Retargeter")
   TObjectPtr<USuperDexBotIKConfig> Config;
 
   /**
@@ -55,14 +55,20 @@ class SUPERDEXTELEOP_API USuperDexBotIKRetargeter : public USuperDexRetargeter {
    * operator component, whose own settings govern communication. Targets are invalidated when no
    * fresh solve is available.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bot IK|Teleop")
+  UPROPERTY(
+      EditAnywhere,
+      BlueprintReadWrite,
+      Category = "SuperDex Robotics|Bot IK Retargeter|Teleop")
   bool bPublishTeleopHandJointTargets = false;
 
   /** Use available hand feedback for the displayed pose, without changing solved command joints.
    * The display follows feedback even on frames without a fresh solve (tracking lost, clutch not
    * yet initialized): only the mesh is posed then, and the pose stays invalid to consumers.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bot IK|Teleop")
+  UPROPERTY(
+      EditAnywhere,
+      BlueprintReadWrite,
+      Category = "SuperDex Robotics|Bot IK Retargeter|Teleop")
   bool bSubscribeToTeleopHandJointPositions = false;
 
   /**
@@ -70,11 +76,17 @@ class SUPERDEXTELEOP_API USuperDexBotIKRetargeter : public USuperDexRetargeter {
    * clamps every joint to the output bot's authored limits. 1.0 leaves the solve as is (no
    * clamping). Applies to the published command and its display, not to the solver or feedback.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bot IK|Teleop")
+  UPROPERTY(
+      EditAnywhere,
+      BlueprintReadWrite,
+      Category = "SuperDex Robotics|Bot IK Retargeter|Teleop")
   double JointAngleMultiplier = 1.0;
 
   /** Output bot DOF indices JointAngleMultiplier does not scale (they are still clamped). */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bot IK|Teleop")
+  UPROPERTY(
+      EditAnywhere,
+      BlueprintReadWrite,
+      Category = "SuperDex Robotics|Bot IK Retargeter|Teleop")
   TArray<int32> JointAngleMultiplierExcludeIndex;
 
   /**
@@ -131,7 +143,7 @@ class SUPERDEXTELEOP_API USuperDexBotIKRetargeter : public USuperDexRetargeter {
    * @return False off the game thread, if the configuration is invalid or if the solver cannot be
    *   created; otherwise true.
    */
-  UFUNCTION(BlueprintCallable, Category = "Bot IK")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Bot IK Retargeter")
   bool InitializeRetargeter();
 
   /**
@@ -140,14 +152,14 @@ class SUPERDEXTELEOP_API USuperDexBotIKRetargeter : public USuperDexRetargeter {
    * @param Diagnostic Set to why the configuration is invalid, or cleared.
    * @return True if the configuration is valid.
    */
-  UFUNCTION(BlueprintCallable, CallInEditor, Category = "Bot IK")
+  UFUNCTION(BlueprintCallable, CallInEditor, Category = "SuperDex Robotics|Bot IK Retargeter")
   bool ValidateConfiguration(FString& Diagnostic) const;
 
   /** The last published joint positions [rad or m] in Config.OutputBot DOF order, including
    * JointAngleMultiplier. Returns whether any solution exists; bCurrentlyValid tells whether it is
    * from the current frame or held from before tracking was lost.
    */
-  UFUNCTION(BlueprintPure, Category = "Bot IK")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Robotics|Bot IK Retargeter")
   bool GetCachedJointConfiguration(TArray<double>& JointPositions, bool& bCurrentlyValid) const;
 
   virtual bool GetTransformedPose_Implementation(

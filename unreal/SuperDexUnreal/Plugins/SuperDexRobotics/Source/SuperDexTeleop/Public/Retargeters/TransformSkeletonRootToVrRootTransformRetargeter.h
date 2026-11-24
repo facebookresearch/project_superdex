@@ -35,14 +35,14 @@ class SUPERDEXTELEOP_API UTransformSkeletonRootToVrRootTransformRetargeter
    * The TransformedPose_SkeletonRootToVrRoot = SkeletonOutRootToSkeletonInRoot *
    * InputSource_SkeletonRootToVrRoot * VrInRootToVrOutRoot
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Retargeter")
   FTransform SkeletonOutRootToSkeletonInRoot;
 
   /**
    * The TransformedPose_SkeletonRootToVrRoot = SkeletonOutRootToSkeletonInRoot *
    * InputSource_SkeletonRootToVrRoot * VrInRootToVrOutRoot
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Retargeter")
   FTransform VrInRootToVrOutRoot;
 
   virtual bool GetTransformedPose_Implementation(

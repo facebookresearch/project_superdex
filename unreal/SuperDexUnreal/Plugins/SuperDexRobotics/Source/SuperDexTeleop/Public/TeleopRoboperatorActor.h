@@ -38,11 +38,11 @@ class SUPERDEXTELEOP_API ATeleopRoboperatorActor : public ASuperDexPoseableActor
 
  public:
   /** Operator-side teleop communication node */
-  UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Teleop")
+  UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "SuperDex Robotics|Teleop")
   TObjectPtr<UTeleopNodeOperatorComponent> TeleopNodeOperator;
 
   /** Robot-side teleop communication node */
-  UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Teleop")
+  UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "SuperDex Robotics|Teleop")
   TObjectPtr<UTeleopNodeRobotComponent> TeleopNodeRobot;
 
  public:
@@ -51,14 +51,14 @@ class SUPERDEXTELEOP_API ATeleopRoboperatorActor : public ASuperDexPoseableActor
    * instead of at this actor on Begin Play. Applies to every SuperDexBotComponent on the actor; a
    * bot's tracked hand is its controller's source poseable (the first poseable attached to it).
    */
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Teleop|Bot Spawn")
+  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SuperDex Robotics|Teleop|Bot Spawn")
   bool bSpawnBotsAtTrackedHand = false;
 
   /** Scale each bot to the tracked hand when it spawns (BotPrefab::scale). Off: nominal size. */
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
-      Category = "Teleop|Bot Spawn",
+      Category = "SuperDex Robotics|Teleop|Bot Spawn",
       meta = (EditCondition = "bSpawnBotsAtTrackedHand"))
   bool bScaleBotsToTrackedHand = true;
 
@@ -69,7 +69,7 @@ class SUPERDEXTELEOP_API ATeleopRoboperatorActor : public ASuperDexPoseableActor
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
-      Category = "Teleop|Bot Spawn",
+      Category = "SuperDex Robotics|Teleop|Bot Spawn",
       meta = (EditCondition = "bSpawnBotsAtTrackedHand", ClampMin = "0"))
   float SpawnSettleSeconds = 0.5f;
 
@@ -77,7 +77,7 @@ class SUPERDEXTELEOP_API ATeleopRoboperatorActor : public ASuperDexPoseableActor
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
-      Category = "Teleop|Bot Spawn",
+      Category = "SuperDex Robotics|Teleop|Bot Spawn",
       meta = (EditCondition = "bSpawnBotsAtTrackedHand", ClampMin = "0"))
   float SpawnScaleTolerance = 0.01f;
 
@@ -85,7 +85,7 @@ class SUPERDEXTELEOP_API ATeleopRoboperatorActor : public ASuperDexPoseableActor
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
-      Category = "Teleop|Bot Spawn",
+      Category = "SuperDex Robotics|Teleop|Bot Spawn",
       meta = (EditCondition = "bSpawnBotsAtTrackedHand", ClampMin = "0"))
   float SpawnMaxWaitSeconds = 3.f;
 

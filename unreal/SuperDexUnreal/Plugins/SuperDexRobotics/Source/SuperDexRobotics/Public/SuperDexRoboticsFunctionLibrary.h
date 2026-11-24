@@ -51,7 +51,10 @@ class SUPERDEXROBOTICS_API USuperDexRoboticsFunctionLibrary : public UBlueprintF
    *   reusable base scene.
    * @return True if the scene was exported.
    */
-  UFUNCTION(BlueprintCallable, Category = "SuperDex", meta = (WorldContext = "WorldContext"))
+  UFUNCTION(
+      BlueprintCallable,
+      Category = "SuperDex Robotics|Scene",
+      meta = (WorldContext = "WorldContext"))
   static bool ExportSuperDexBotScene(
       UObject* WorldContext,
       const FString& ExportName,

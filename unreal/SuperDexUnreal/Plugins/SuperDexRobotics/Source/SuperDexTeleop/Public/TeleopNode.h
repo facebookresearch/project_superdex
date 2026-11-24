@@ -54,7 +54,7 @@ class SUPERDEXTELEOP_API UTeleopNodeBaseComponent : public UActorComponent {
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
-      Category = "TeleopNode|Configuration",
+      Category = "SuperDex Robotics|Teleop Node|Configuration",
       meta = (GetOptions = "GetCommunicationClassOptions_EditorOnly"))
   FString CommunicationClassName;
 
@@ -62,22 +62,34 @@ class SUPERDEXTELEOP_API UTeleopNodeBaseComponent : public UActorComponent {
   // Otherwise save in editor on Linux will silently drop properties
 
   /** The number of arm joints to allocate storage for. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TeleopNode|Configuration")
+  UPROPERTY(
+      EditAnywhere,
+      BlueprintReadWrite,
+      Category = "SuperDex Robotics|Teleop Node|Configuration")
   int NumArmJoints = Teleop::NumDefaultArmJoints;
 
   /** The number of hand joints to allocate storage for. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TeleopNode|Configuration")
+  UPROPERTY(
+      EditAnywhere,
+      BlueprintReadWrite,
+      Category = "SuperDex Robotics|Teleop Node|Configuration")
   int NumHandJoints = Teleop::NumDefaultHandJoints;
 
   /** The number of hand sensors to allocate storage for. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TeleopNode|Configuration")
+  UPROPERTY(
+      EditAnywhere,
+      BlueprintReadWrite,
+      Category = "SuperDex Robotics|Teleop Node|Configuration")
   int NumHandSensors = Teleop::NumDefaultHandSensors;
 
   /**
    * If true, hand sensors are 3D force sensors instead of 1D pressure sensors,
    * and Get/SetHandSensorStates_Force should be used to read/write states.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TeleopNode|Configuration")
+  UPROPERTY(
+      EditAnywhere,
+      BlueprintReadWrite,
+      Category = "SuperDex Robotics|Teleop Node|Configuration")
   bool bHandSensorsMeasureForce = false;
 
   /**
@@ -85,23 +97,29 @@ class SUPERDEXTELEOP_API UTeleopNodeBaseComponent : public UActorComponent {
    * For example, result will either be /teleop/my_robot_name/arm_joint_states
    * ... or /teleop/arm_joint_states
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TeleopNode|Configuration")
+  UPROPERTY(
+      EditAnywhere,
+      BlueprintReadWrite,
+      Category = "SuperDex Robotics|Teleop Node|Configuration")
   FString RobotNameForPublishers = "";
 
   /** Robot name inserted into the subscribed topics, like RobotNameForPublishers. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TeleopNode|Configuration")
+  UPROPERTY(
+      EditAnywhere,
+      BlueprintReadWrite,
+      Category = "SuperDex Robotics|Teleop Node|Configuration")
   FString RobotNameForSubscribers = "";
 
   /** Publish in the pre-physics tick group. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TeleopNode|Scheduling")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Teleop Node|Scheduling")
   bool bTickOnPrePhysics = true;
 
   /** Publish in the post-update-work tick group. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TeleopNode|Scheduling")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Teleop Node|Scheduling")
   bool bTickOnPostUpdateWork = false;
 
   /** Publishes the enabled channels immediately instead of waiting for the next tick. */
-  UFUNCTION(BlueprintCallable, Category = "Teleop")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Teleop")
   void PublishNow() {
     OnPublish();
   }
@@ -145,7 +163,7 @@ class SUPERDEXTELEOP_API UTeleopNodeBaseComponent : public UActorComponent {
    * Lists the path names of the non-abstract UTeleopNodeImplBase classes, for the
    * CommunicationClassName picker.
    */
-  UFUNCTION(Category = "TeleopNode")
+  UFUNCTION(Category = "SuperDex Robotics|Teleop Node")
   TArray<FString> GetCommunicationClassOptions_EditorOnly() const;
 #endif
 
@@ -184,29 +202,30 @@ class SUPERDEXTELEOP_API UTeleopNodeBaseComponent : public UActorComponent {
 UCLASS(
     ClassGroup = (Custom),
     meta = (BlueprintSpawnableComponent),
-    AutoExpandCategories = ("TeleopNode|Scheduling", "TeleopNode|Operator"))
+    AutoExpandCategories =
+        ("SuperDex Robotics|Teleop Node|Scheduling", "SuperDex Robotics|Teleop Node|Operator"))
 class SUPERDEXTELEOP_API UTeleopNodeOperatorComponent : public UTeleopNodeBaseComponent {
   GENERATED_BODY()
 
  public:
   /** Publish the arm pose target each tick. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TeleopNode|Operator")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Teleop Node|Operator")
   bool bPublishArmPoseTarget = false;
 
   /** Publish the arm end-effector stiffness target each tick. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TeleopNode|Operator")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Teleop Node|Operator")
   bool bPublishArmEndEffectorStiffnessTarget = false;
 
   /** Publish the arm joint targets each tick. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TeleopNode|Operator")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Teleop Node|Operator")
   bool bPublishArmJointTargets = false;
 
   /** Publish the hand joint targets each tick. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TeleopNode|Operator")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Teleop Node|Operator")
   bool bPublishHandJointTargets = false;
 
   /** Publish the hand stiffness targets each tick. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TeleopNode|Operator")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Teleop Node|Operator")
   bool bPublishHandStiffnessTargets = false;
 
  public:
@@ -216,7 +235,7 @@ class SUPERDEXTELEOP_API UTeleopNodeOperatorComponent : public UTeleopNodeBaseCo
    *
    * @param Target The arm pose target.
    */
-  UFUNCTION(BlueprintCallable, Category = "TeleopNode|Operator")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Teleop Node|Operator")
   void SetArmPoseTarget(const FTransform& Target);
 
   /**
@@ -225,7 +244,7 @@ class SUPERDEXTELEOP_API UTeleopNodeOperatorComponent : public UTeleopNodeBaseCo
    * @param Pose Set to the received pose; unchanged until a message has been received.
    * @return False until a message has been received.
    */
-  UFUNCTION(BlueprintCallable, Category = "TeleopNode|Operator")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Teleop Node|Operator")
   bool GetArmPoseClampedTarget(FTransform& Pose);
 
   // Arm joints
@@ -235,7 +254,7 @@ class SUPERDEXTELEOP_API UTeleopNodeOperatorComponent : public UTeleopNodeBaseCo
    *
    * @param Targets The values to publish.
    */
-  UFUNCTION(BlueprintCallable, Category = "TeleopNode|Operator")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Teleop Node|Operator")
   void SetArmJointTargets(const TArray<double>& Targets);
 
   /**
@@ -244,7 +263,7 @@ class SUPERDEXTELEOP_API UTeleopNodeOperatorComponent : public UTeleopNodeBaseCo
    * @param State Set to the received values; unchanged until a message has been received.
    * @return False until a message has been received.
    */
-  UFUNCTION(BlueprintCallable, Category = "TeleopNode|Operator")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Teleop Node|Operator")
   bool GetArmJointStates(TArray<double>& State);
 
   // Arm end-effector stiffness
@@ -254,7 +273,7 @@ class SUPERDEXTELEOP_API UTeleopNodeOperatorComponent : public UTeleopNodeBaseCo
    *
    * @param Targets The values to publish.
    */
-  UFUNCTION(BlueprintCallable, Category = "TeleopNode|Operator")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Teleop Node|Operator")
   void SetArmEndEffectorStiffnessTarget(const TArray<double>& Targets);
 
   /**
@@ -263,7 +282,7 @@ class SUPERDEXTELEOP_API UTeleopNodeOperatorComponent : public UTeleopNodeBaseCo
    * @param State Set to the received values; unchanged until a message has been received.
    * @return False until a message has been received.
    */
-  UFUNCTION(BlueprintCallable, Category = "TeleopNode|Operator")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Teleop Node|Operator")
   bool GetArmEndEffectorStiffnessState(TArray<double>& State);
 
   // Arm velocities and efforts
@@ -273,7 +292,7 @@ class SUPERDEXTELEOP_API UTeleopNodeOperatorComponent : public UTeleopNodeBaseCo
    * @param Velocities Set to the received values; unchanged until a message has been received.
    * @return False until a message has been received.
    */
-  UFUNCTION(BlueprintCallable, Category = "TeleopNode|Operator")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Teleop Node|Operator")
   bool GetArmJointVelocities(TArray<double>& Velocities);
 
   /**
@@ -282,7 +301,7 @@ class SUPERDEXTELEOP_API UTeleopNodeOperatorComponent : public UTeleopNodeBaseCo
    * @param Efforts Set to the received values; unchanged until a message has been received.
    * @return False until a message has been received.
    */
-  UFUNCTION(BlueprintCallable, Category = "TeleopNode|Operator")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Teleop Node|Operator")
   bool GetArmJointEfforts(TArray<double>& Efforts);
 
   /**
@@ -291,7 +310,7 @@ class SUPERDEXTELEOP_API UTeleopNodeOperatorComponent : public UTeleopNodeBaseCo
    * @param Efforts Set to the received values; unchanged until a message has been received.
    * @return False until a message has been received.
    */
-  UFUNCTION(BlueprintCallable, Category = "TeleopNode|Operator")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Teleop Node|Operator")
   bool GetArmJointControlPolicyEfforts(TArray<double>& Efforts);
 
   // Hand joints
@@ -301,7 +320,7 @@ class SUPERDEXTELEOP_API UTeleopNodeOperatorComponent : public UTeleopNodeBaseCo
    *
    * @param Targets The values to publish.
    */
-  UFUNCTION(BlueprintCallable, Category = "TeleopNode|Operator")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Teleop Node|Operator")
   void SetHandJointTargets(const TArray<double>& Targets);
 
   /**
@@ -310,7 +329,7 @@ class SUPERDEXTELEOP_API UTeleopNodeOperatorComponent : public UTeleopNodeBaseCo
    * @param State Set to the received values; unchanged until a message has been received.
    * @return False until a message has been received.
    */
-  UFUNCTION(BlueprintCallable, Category = "TeleopNode|Operator")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Teleop Node|Operator")
   bool GetHandJointStates(TArray<double>& State);
 
   /**
@@ -322,7 +341,7 @@ class SUPERDEXTELEOP_API UTeleopNodeOperatorComponent : public UTeleopNodeBaseCo
    * @param Targets Set to the last published hand joint targets when they are live.
    * @return False if no live hand joint targets have been published.
    */
-  UFUNCTION(BlueprintCallable, Category = "TeleopNode|Operator")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Teleop Node|Operator")
   bool GetLastPublishedHandJointTargets(TArray<double>& Targets) const;
 
   /**
@@ -331,7 +350,7 @@ class SUPERDEXTELEOP_API UTeleopNodeOperatorComponent : public UTeleopNodeBaseCo
    * @param Target Set to the last published arm pose target when it is live.
    * @return False if no live arm pose target has been published.
    */
-  UFUNCTION(BlueprintCallable, Category = "TeleopNode|Operator")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Teleop Node|Operator")
   bool GetLastPublishedArmPoseTarget(FTransform& Target) const;
 
   /**
@@ -340,7 +359,7 @@ class SUPERDEXTELEOP_API UTeleopNodeOperatorComponent : public UTeleopNodeBaseCo
    * @param Targets Set to the last published arm joint targets when they are live.
    * @return False if no live arm joint targets have been published.
    */
-  UFUNCTION(BlueprintCallable, Category = "TeleopNode|Operator")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Teleop Node|Operator")
   bool GetLastPublishedArmJointTargets(TArray<double>& Targets) const;
 
   /** Invalidate commands published before a discontinuous retargeter recalibration. */
@@ -362,7 +381,7 @@ class SUPERDEXTELEOP_API UTeleopNodeOperatorComponent : public UTeleopNodeBaseCo
    *
    * @param Targets The values to publish.
    */
-  UFUNCTION(BlueprintCallable, Category = "TeleopNode|Operator")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Teleop Node|Operator")
   void SetHandStiffnessTargets(const TArray<double>& Targets);
 
   /**
@@ -371,7 +390,7 @@ class SUPERDEXTELEOP_API UTeleopNodeOperatorComponent : public UTeleopNodeBaseCo
    * @param State Set to the received values; unchanged until a message has been received.
    * @return False until a message has been received.
    */
-  UFUNCTION(BlueprintCallable, Category = "TeleopNode|Operator")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Teleop Node|Operator")
   bool GetHandStiffnessStates(TArray<double>& State);
 
   // Hand velocities and efforts
@@ -381,7 +400,7 @@ class SUPERDEXTELEOP_API UTeleopNodeOperatorComponent : public UTeleopNodeBaseCo
    * @param Velocities Set to the received values; unchanged until a message has been received.
    * @return False until a message has been received.
    */
-  UFUNCTION(BlueprintCallable, Category = "TeleopNode|Operator")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Teleop Node|Operator")
   bool GetHandJointVelocities(TArray<double>& Velocities);
 
   /**
@@ -390,7 +409,7 @@ class SUPERDEXTELEOP_API UTeleopNodeOperatorComponent : public UTeleopNodeBaseCo
    * @param Efforts Set to the received values; unchanged until a message has been received.
    * @return False until a message has been received.
    */
-  UFUNCTION(BlueprintCallable, Category = "TeleopNode|Operator")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Teleop Node|Operator")
   bool GetHandJointEfforts(TArray<double>& Efforts);
 
   /**
@@ -399,7 +418,7 @@ class SUPERDEXTELEOP_API UTeleopNodeOperatorComponent : public UTeleopNodeBaseCo
    * @param Efforts Set to the received values; unchanged until a message has been received.
    * @return False until a message has been received.
    */
-  UFUNCTION(BlueprintCallable, Category = "TeleopNode|Operator")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Teleop Node|Operator")
   bool GetHandJointControlPolicyEfforts(TArray<double>& Efforts);
 
   // Hand sensors
@@ -409,7 +428,7 @@ class SUPERDEXTELEOP_API UTeleopNodeOperatorComponent : public UTeleopNodeBaseCo
    * @param State Set to the received values; unchanged until a message has been received.
    * @return False until a message has been received.
    */
-  UFUNCTION(BlueprintCallable, Category = "TeleopNode|Operator")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Teleop Node|Operator")
   bool GetHandSensorStates_Pressure(TArray<double>& State);
 
   /**
@@ -418,7 +437,7 @@ class SUPERDEXTELEOP_API UTeleopNodeOperatorComponent : public UTeleopNodeBaseCo
    * @param State Set to one force per sensor; unchanged until a message has been received.
    * @return False until a message has been received.
    */
-  UFUNCTION(BlueprintCallable, Category = "TeleopNode|Operator")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Teleop Node|Operator")
   bool GetHandSensorStates_Force(TArray<FVector>& State);
 
  public:
@@ -451,7 +470,8 @@ class SUPERDEXTELEOP_API UTeleopNodeOperatorComponent : public UTeleopNodeBaseCo
 UCLASS(
     ClassGroup = (Custom),
     meta = (BlueprintSpawnableComponent),
-    AutoExpandCategories = ("TeleopNode|Scheduling", "TeleopNode|Robot"))
+    AutoExpandCategories =
+        ("SuperDex Robotics|Teleop Node|Scheduling", "SuperDex Robotics|Teleop Node|Robot"))
 class SUPERDEXTELEOP_API UTeleopNodeRobotComponent : public UTeleopNodeBaseComponent {
   GENERATED_BODY()
 
@@ -460,43 +480,43 @@ class SUPERDEXTELEOP_API UTeleopNodeRobotComponent : public UTeleopNodeBaseCompo
   // Otherwise save in editor on Linux will silently drop properties
 
   /** Publish the end-effector (wrist) pose state each tick. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TeleopNode|Robot")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Teleop Node|Robot")
   bool bPublishArmPoseState = false;
 
   /** Publish the arm end-effector stiffness state each tick. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TeleopNode|Robot")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Teleop Node|Robot")
   bool bPublishArmEndEffectorStiffnessState = false;
 
   /** Publish the arm joint states each tick. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TeleopNode|Robot")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Teleop Node|Robot")
   bool bPublishArmJointStates = false;
 
   /** Publish the hand joint states each tick. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TeleopNode|Robot")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Teleop Node|Robot")
   bool bPublishHandJointStates = false;
 
   /** Publish the hand stiffness states each tick. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TeleopNode|Robot")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Teleop Node|Robot")
   bool bPublishHandStiffnessStates = false;
 
   /** Publish the hand sensor states each tick. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TeleopNode|Robot")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Teleop Node|Robot")
   bool bPublishHandSensorStates = false;
 
   /** Publish the arm joint velocities and efforts each tick. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TeleopNode|Robot")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Teleop Node|Robot")
   bool bPublishArmJointVelocitiesAndEfforts = false;
 
   /** Publish the hand joint velocities and efforts each tick. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TeleopNode|Robot")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Teleop Node|Robot")
   bool bPublishHandJointVelocitiesAndEfforts = false;
 
   /** Publish the arm joint control policy efforts each tick. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TeleopNode|Robot")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Teleop Node|Robot")
   bool bPublishArmJointControlPolicyEfforts = false;
 
   /** Publish the hand joint control policy efforts each tick. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TeleopNode|Robot")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Teleop Node|Robot")
   bool bPublishHandJointControlPolicyEfforts = false;
 
  public:
@@ -507,7 +527,7 @@ class SUPERDEXTELEOP_API UTeleopNodeRobotComponent : public UTeleopNodeBaseCompo
    * @param Target Set to the received target; unchanged until a message has been received.
    * @return False until a message has been received.
    */
-  UFUNCTION(BlueprintCallable, Category = "TeleopNode|Robot")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Teleop Node|Robot")
   bool GetArmPoseTarget(FTransform& Target);
 
   /**
@@ -515,7 +535,7 @@ class SUPERDEXTELEOP_API UTeleopNodeRobotComponent : public UTeleopNodeBaseCompo
    *
    * @param Pose The value to publish.
    */
-  UFUNCTION(BlueprintCallable, Category = "TeleopNode|Robot")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Teleop Node|Robot")
   void SetArmPoseClampedTarget(const FTransform& Pose);
 
   // Arm joints
@@ -525,7 +545,7 @@ class SUPERDEXTELEOP_API UTeleopNodeRobotComponent : public UTeleopNodeBaseCompo
    * @param Targets Set to the received values; unchanged until a message has been received.
    * @return False until a message has been received.
    */
-  UFUNCTION(BlueprintCallable, Category = "TeleopNode|Robot")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Teleop Node|Robot")
   bool GetArmJointTargets(TArray<double>& Targets);
 
   /**
@@ -534,7 +554,7 @@ class SUPERDEXTELEOP_API UTeleopNodeRobotComponent : public UTeleopNodeBaseCompo
    *
    * @param State The values to publish.
    */
-  UFUNCTION(BlueprintCallable, Category = "TeleopNode|Robot")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Teleop Node|Robot")
   void SetArmJointStates(const TArray<double>& State);
 
   // Arm end-effector stiffness
@@ -544,7 +564,7 @@ class SUPERDEXTELEOP_API UTeleopNodeRobotComponent : public UTeleopNodeBaseCompo
    * @param Targets Set to the received values; unchanged until a message has been received.
    * @return False until a message has been received.
    */
-  UFUNCTION(BlueprintCallable, Category = "TeleopNode|Robot")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Teleop Node|Robot")
   bool GetArmEndEffectorStiffnessTarget(TArray<double>& Targets);
 
   /**
@@ -553,7 +573,7 @@ class SUPERDEXTELEOP_API UTeleopNodeRobotComponent : public UTeleopNodeBaseCompo
    *
    * @param State The values to publish.
    */
-  UFUNCTION(BlueprintCallable, Category = "TeleopNode|Robot")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Teleop Node|Robot")
   void SetArmEndEffectorStiffnessState(const TArray<double>& State);
 
   // Arm velocities and efforts
@@ -563,7 +583,7 @@ class SUPERDEXTELEOP_API UTeleopNodeRobotComponent : public UTeleopNodeBaseCompo
    *
    * @param Velocities The values to publish.
    */
-  UFUNCTION(BlueprintCallable, Category = "TeleopNode|Robot")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Teleop Node|Robot")
   void SetArmJointVelocities(const TArray<double>& Velocities);
 
   /**
@@ -572,7 +592,7 @@ class SUPERDEXTELEOP_API UTeleopNodeRobotComponent : public UTeleopNodeBaseCompo
    *
    * @param Efforts The values to publish.
    */
-  UFUNCTION(BlueprintCallable, Category = "TeleopNode|Robot")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Teleop Node|Robot")
   void SetArmJointEfforts(const TArray<double>& Efforts);
 
   /**
@@ -581,7 +601,7 @@ class SUPERDEXTELEOP_API UTeleopNodeRobotComponent : public UTeleopNodeBaseCompo
    *
    * @param Efforts The values to publish.
    */
-  UFUNCTION(BlueprintCallable, Category = "TeleopNode|Robot")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Teleop Node|Robot")
   void SetArmJointControlPolicyEfforts(const TArray<double>& Efforts);
 
   // Hand joints
@@ -591,7 +611,7 @@ class SUPERDEXTELEOP_API UTeleopNodeRobotComponent : public UTeleopNodeBaseCompo
    * @param Targets Set to the received values; unchanged until a message has been received.
    * @return False until a message has been received.
    */
-  UFUNCTION(BlueprintCallable, Category = "TeleopNode|Robot")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Teleop Node|Robot")
   bool GetHandJointTargets(TArray<double>& Targets);
 
   /**
@@ -600,7 +620,7 @@ class SUPERDEXTELEOP_API UTeleopNodeRobotComponent : public UTeleopNodeBaseCompo
    *
    * @param State The values to publish.
    */
-  UFUNCTION(BlueprintCallable, Category = "TeleopNode|Robot")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Teleop Node|Robot")
   void SetHandJointStates(const TArray<double>& State);
 
   // Hand stiffness
@@ -610,7 +630,7 @@ class SUPERDEXTELEOP_API UTeleopNodeRobotComponent : public UTeleopNodeBaseCompo
    * @param Targets Set to the received values; unchanged until a message has been received.
    * @return False until a message has been received.
    */
-  UFUNCTION(BlueprintCallable, Category = "TeleopNode|Robot")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Teleop Node|Robot")
   bool GetHandStiffnessTargets(TArray<double>& Targets);
 
   /**
@@ -619,7 +639,7 @@ class SUPERDEXTELEOP_API UTeleopNodeRobotComponent : public UTeleopNodeBaseCompo
    *
    * @param State The values to publish.
    */
-  UFUNCTION(BlueprintCallable, Category = "TeleopNode|Robot")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Teleop Node|Robot")
   void SetHandStiffnessStates(const TArray<double>& State);
 
   // Hand velocities and efforts
@@ -629,7 +649,7 @@ class SUPERDEXTELEOP_API UTeleopNodeRobotComponent : public UTeleopNodeBaseCompo
    *
    * @param Velocities The values to publish.
    */
-  UFUNCTION(BlueprintCallable, Category = "TeleopNode|Robot")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Teleop Node|Robot")
   void SetHandJointVelocities(const TArray<double>& Velocities);
 
   /**
@@ -638,7 +658,7 @@ class SUPERDEXTELEOP_API UTeleopNodeRobotComponent : public UTeleopNodeBaseCompo
    *
    * @param Efforts The values to publish.
    */
-  UFUNCTION(BlueprintCallable, Category = "TeleopNode|Robot")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Teleop Node|Robot")
   void SetHandJointEfforts(const TArray<double>& Efforts);
 
   /**
@@ -647,7 +667,7 @@ class SUPERDEXTELEOP_API UTeleopNodeRobotComponent : public UTeleopNodeBaseCompo
    *
    * @param Efforts The values to publish.
    */
-  UFUNCTION(BlueprintCallable, Category = "TeleopNode|Robot")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Teleop Node|Robot")
   void SetHandJointControlPolicyEfforts(const TArray<double>& Efforts);
 
   // Hand sensors
@@ -657,7 +677,7 @@ class SUPERDEXTELEOP_API UTeleopNodeRobotComponent : public UTeleopNodeBaseCompo
    *
    * @param State The values to publish.
    */
-  UFUNCTION(BlueprintCallable, Category = "TeleopNode|Robot")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Teleop Node|Robot")
   void SetHandSensorStates_Pressure(const TArray<double>& State);
 
   /**
@@ -665,7 +685,7 @@ class SUPERDEXTELEOP_API UTeleopNodeRobotComponent : public UTeleopNodeBaseCompo
    *
    * @param State One force per sensor.
    */
-  UFUNCTION(BlueprintCallable, Category = "TeleopNode|Robot")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Teleop Node|Robot")
   void SetHandSensorStates_Force(const TArray<FVector>& State);
 
  public:

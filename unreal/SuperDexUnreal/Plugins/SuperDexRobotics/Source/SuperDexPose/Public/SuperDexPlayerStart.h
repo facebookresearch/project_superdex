@@ -37,18 +37,18 @@ class SUPERDEXPOSE_API ASuperDexPlayerStart : public APlayerStart {
 
  public:
   /** Array of pose sources to use for the left hand, first element is the default. */
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SuperDexPlayerStart")
+  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SuperDex Robotics|Player Start")
   TArray<TSubclassOf<USuperDexPoseSource>> LeftPoseSources;
 
   /** Array of pose sources to use for the right hand, first element is the default. */
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SuperDexPlayerStart")
+  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SuperDex Robotics|Player Start")
   TArray<TSubclassOf<USuperDexPoseSource>> RightPoseSources;
 
   /** Array of poseable actors to use for the left hand, first element is the default. */
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
-      Category = "SuperDexPlayerStart",
+      Category = "SuperDex Robotics|Player Start",
       meta = (Keywords = "Hand"))
   TArray<TSubclassOf<ASuperDexPoseableActor>> LeftPoseableActors;
 
@@ -56,11 +56,11 @@ class SUPERDEXPOSE_API ASuperDexPlayerStart : public APlayerStart {
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
-      Category = "SuperDexPlayerStart",
+      Category = "SuperDex Robotics|Player Start",
       meta = (Keywords = "Hand"))
   TArray<TSubclassOf<ASuperDexPoseableActor>> RightPoseableActors;
 
   /** Whether to automatically spawn poseables at begin play or not. */
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SuperDexPlayerStart")
+  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SuperDex Robotics|Player Start")
   bool bSpawnPoseablesAtBeginPlay = true;
 };

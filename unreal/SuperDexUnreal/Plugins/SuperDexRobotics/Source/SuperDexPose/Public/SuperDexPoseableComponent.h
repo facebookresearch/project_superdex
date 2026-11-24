@@ -46,7 +46,7 @@ class SUPERDEXPOSE_API USuperDexPoseableComponent : public UPoseableMeshComponen
    * directly for a pose from this source. If the source is not valid, it will provide invalid
    * poses.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDexPoseableComponent")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Poseable Component")
   TSubclassOf<USuperDexPoseSource> PoseSourceOverride = nullptr;
 
   /**
@@ -61,7 +61,7 @@ class SUPERDEXPOSE_API USuperDexPoseableComponent : public UPoseableMeshComponen
    * component, you may enter an infinite loop if one of the components in the loop does not handle
    * caching pose each frame.
    */
-  UPROPERTY(BlueprintReadWrite, Category = "SuperDexPoseableComponent")
+  UPROPERTY(BlueprintReadWrite, Category = "SuperDex Robotics|Poseable Component")
   USuperDexPoseableComponent* SourcePoseableOverride = nullptr;
 
   /**
@@ -69,7 +69,7 @@ class SUPERDEXPOSE_API USuperDexPoseableComponent : public UPoseableMeshComponen
    * left blank if there is 0-1 children. Otherwise, when this component needs to GetPose from its
    * children it will do so using the first child matching the substring.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDexPoseableComponent")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Poseable Component")
   FString ChildSourceNameContainsSubstring = "";
 
   /**
@@ -80,41 +80,41 @@ class SUPERDEXPOSE_API USuperDexPoseableComponent : public UPoseableMeshComponen
    * and OutputPoseScaleOverride will be respected. Note that CachedOutputPose.SkeletonRootToVrRoot
    * may no longer be equal to this component's componentToRoot transform.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDexPoseableComponent")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Poseable Component")
   bool bUpdateComponentToRootTransformOnTick = true;
 
   /** Handedness override for this component. */
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SuperDexPoseableComponent")
+  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SuperDex Robotics|Poseable Component")
   ESuperDexHandedness HandednessOverride = ESuperDexHandedness::None;
 
   /**
    * If true, override the scale of the input SuperDexPose on recipt before doing anything with it.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDexPoseableComponent")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Poseable Component")
   bool bOverrideInputPoseScale = false;
 
   /** Input Pose scale override value. */
   UPROPERTY(
       EditAnywhere,
       BlueprintReadWrite,
-      Category = "SuperDexPoseableComponent",
+      Category = "SuperDex Robotics|Poseable Component",
       meta = (EditCondition = "bOverrideInputPoseScale == true", EditConditionHides))
   float InputPoseScaleOverride = 1.0f; // 0.74f
 
   /** If true, override the scale reported in the SuperDexPose output by this component. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDexPoseableComponent")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Poseable Component")
   bool bOverrideOutputPoseScale = true;
 
   /** Output Pose scale override value. */
   UPROPERTY(
       EditAnywhere,
       BlueprintReadWrite,
-      Category = "SuperDexPoseableComponent",
+      Category = "SuperDex Robotics|Poseable Component",
       meta = (EditCondition = "bOverrideOutputPoseScale == true", EditConditionHides))
   float OutputPoseScaleOverride = 1.0f; // 0.74f
 
   /** If false, always return false and early out when GetPose() is called */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDexPoseableComponent")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Poseable Component")
   bool bEnableGetPose = true;
 
   /**
@@ -125,7 +125,7 @@ class SUPERDEXPOSE_API USuperDexPoseableComponent : public UPoseableMeshComponen
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
-      Category = "SuperDexPoseableComponent",
+      Category = "SuperDex Robotics|Poseable Component",
       meta = (EditCondition = "bShow_EditorViewportPose == true", EditConditionHides))
   USuperDexPoseAsset* EditorViewportPose = nullptr;
 
@@ -141,7 +141,7 @@ class SUPERDEXPOSE_API USuperDexPoseableComponent : public UPoseableMeshComponen
    * Determined by parent poseable actor unless override is set.
    * Should not be set in the details panel.
    */
-  UPROPERTY(BlueprintReadOnly, Category = "SuperDexPoseableComponent")
+  UPROPERTY(BlueprintReadOnly, Category = "SuperDex Robotics|Poseable Component")
   ESuperDexHandedness Handedness = ESuperDexHandedness::None;
 
  protected:
@@ -190,7 +190,7 @@ class SUPERDEXPOSE_API USuperDexPoseableComponent : public UPoseableMeshComponen
    */
   UFUNCTION(
       BlueprintCallable,
-      Category = "SuperDexPoseableComponent",
+      Category = "SuperDex Robotics|Poseable Component",
       meta = (ReturnDisplayName = "Success"))
   virtual bool GetPose(FSuperDexPose& OutPose);
 
@@ -232,7 +232,7 @@ class SUPERDEXPOSE_API USuperDexPoseableComponent : public UPoseableMeshComponen
    */
   UFUNCTION(
       BlueprintPure,
-      Category = "SuperDexPoseableComponent",
+      Category = "SuperDex Robotics|Poseable Component",
       meta = (ReturnDisplayName = "Success"))
   virtual bool GetCachedPose(FSuperDexPose& OutPose) const;
 
@@ -243,7 +243,7 @@ class SUPERDEXPOSE_API USuperDexPoseableComponent : public UPoseableMeshComponen
    * @return The cached VrRootToWorld which should be equal to the parent actor's world transform at
    * time of capture.
    */
-  UFUNCTION(BlueprintPure, Category = "SuperDexPoseableComponent")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Robotics|Poseable Component")
   FTransform GetVrRootToWorld() const;
 
   /**
@@ -252,7 +252,7 @@ class SUPERDEXPOSE_API USuperDexPoseableComponent : public UPoseableMeshComponen
    * @param BoneIndex An index into the UE skeleton
    * @return The transform from the chosen bone space to the rest pose root bone space
    */
-  UFUNCTION(BlueprintPure, Category = "SuperDexPoseableComponent")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Robotics|Poseable Component")
   FTransform GetBoneToRestPoseRootTransform(int BoneIndex) const;
 
   /**
@@ -263,7 +263,7 @@ class SUPERDEXPOSE_API USuperDexPoseableComponent : public UPoseableMeshComponen
    * @return The location relative to the root bone in rest pose that corresponds with the location
    * in the chosen bone space while in rest pose.
    */
-  UFUNCTION(BlueprintPure, Category = "SuperDexPoseableComponent")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Robotics|Poseable Component")
   FVector TransformRestPoseBoneLocationToRoot(int BoneIndex, const FVector& BoneLocalLocation)
       const;
 
@@ -291,7 +291,7 @@ class SUPERDEXPOSE_API USuperDexPoseableComponent : public UPoseableMeshComponen
    * @param Finger the finger to get the tip from
    * @return The transform of the tip of the corresponding finger
    */
-  UFUNCTION(BlueprintPure, Category = "SuperDex")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Robotics|Poseable Component")
   FTransform GetFingerTipTransform(ESuperDexFinger Finger) const;
 
  protected:

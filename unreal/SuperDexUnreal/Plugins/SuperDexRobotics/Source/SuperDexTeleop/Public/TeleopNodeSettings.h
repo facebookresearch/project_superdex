@@ -34,7 +34,7 @@ class SUPERDEXTELEOP_API UTeleopNodeSettings : public UDeveloperSettings {
   UPROPERTY(
       Config,
       EditAnywhere,
-      Category = "Teleop Node",
+      Category = "SuperDex Robotics|Teleop Node",
       meta = (GetOptions = "GetCommunicationClassOptions"))
   FString DefaultCommunicationClassName;
 
@@ -45,7 +45,7 @@ class SUPERDEXTELEOP_API UTeleopNodeSettings : public UDeveloperSettings {
    * Lists the available communication classes, like
    * UTeleopNodeBaseComponent::GetCommunicationClassOptions_EditorOnly.
    */
-  UFUNCTION(Category = "Teleop Node")
+  UFUNCTION(Category = "SuperDex Robotics|Teleop Node")
   TArray<FString> GetCommunicationClassOptions() const;
 #endif
 };

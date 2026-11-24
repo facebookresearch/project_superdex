@@ -54,7 +54,7 @@ USTRUCT(BlueprintType) struct SUPERDEXPOSE_API FSuperDexPose {
    * The name of the source the pose was derived from, this can be an official source provided by an
    * USuperDexPoseSource or it can be an unofficial source such as a pose derived from mochi.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Pose")
   FName SourceName = "Invalid";
 
   /**
@@ -63,7 +63,7 @@ USTRUCT(BlueprintType) struct SUPERDEXPOSE_API FSuperDexPose {
    * be used by anyone when filtering or modifying pose for any reason. Ideally tag modifications
    * should be additive and nondestructive so they accrue over the pose chain.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Pose")
   TArray<FName> Tags;
 
   /**
@@ -72,7 +72,7 @@ USTRUCT(BlueprintType) struct SUPERDEXPOSE_API FSuperDexPose {
    * the bots of their skeletons (USuperDexPoseSource::GetBot), such as the pose skeleton bots
    * (Skeletons/SuperDexSkeletonBots.h); poses on the same skeleton share their bot.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Pose")
   TObjectPtr<UMochiArticulationBase> Bot = nullptr;
 
   /**
@@ -83,7 +83,7 @@ USTRUCT(BlueprintType) struct SUPERDEXPOSE_API FSuperDexPose {
    * transforms at these joint positions
    * (USuperDexPoseFunctionLibrary::ComputeSuperDexPoseLinkToParentTransforms).
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Pose")
   TArray<double> DofPositions;
 
   /**
@@ -93,18 +93,18 @@ USTRUCT(BlueprintType) struct SUPERDEXPOSE_API FSuperDexPose {
    * Mochi and other systems do not handle nonuniform scale well so scale should always be left
    * uniform despite UE allowing for float3 scales.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Pose")
   FTransform SkeletonRootToVrRoot = FTransform::Identity;
 
   /** True if the source is updating the tracking pose */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Pose")
   bool bIsTrackingEnabled = false;
 
   /**
    * True if the source reports confidence in its pose. The meaning of this is independent per
    * source and may be equivilent to something like (TrackingConfidence > 0.5)
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Pose")
   bool bIsTrackingConfident = false;
 
   /**
@@ -112,7 +112,7 @@ USTRUCT(BlueprintType) struct SUPERDEXPOSE_API FSuperDexPose {
    * should trust the pose so some explicitly set the TrackingConfidence to 1 if they are not able
    * to derive a value but still have confidence.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Pose")
   float TrackingConfidence = 0.f;
 
   /**
@@ -121,7 +121,7 @@ USTRUCT(BlueprintType) struct SUPERDEXPOSE_API FSuperDexPose {
    * loop has formed. This value is automatically set to false when calling GetPose() and will
    * remain true so long as you are unwinding from an infinite loop.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Pose")
   bool bIsInInfiniteLoop = false;
 };
 
@@ -131,7 +131,7 @@ class SUPERDEXPOSE_API USuperDexPoseAsset : public UDataAsset {
   GENERATED_BODY()
  public:
   /** The stored pose. */
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SuperDex")
+  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SuperDex Robotics|Pose")
   FSuperDexPose Pose;
 };
 
@@ -143,5 +143,5 @@ USTRUCT(BlueprintType)
 struct SUPERDEXPOSE_API FSuperDexSerializableTransform {
   GENERATED_BODY()
   /** The wrapped transform. */
-  UPROPERTY(EditAnywhere, Category = "SuperDex") FTransform Data;
+  UPROPERTY(EditAnywhere, Category = "SuperDex Robotics|Pose") FTransform Data;
 };

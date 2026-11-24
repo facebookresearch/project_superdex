@@ -59,7 +59,7 @@ class SUPERDEXPOSE_API USuperDexPoseSource : public UObject {
    * @param OutPose The output pose.
    * @return true if successful, false otherwise.
    */
-  UFUNCTION(BlueprintCallable, Category = "SuperDexPoseSource")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Pose Source")
   virtual bool GetPose(const ESuperDexHandedness Handedness, FSuperDexPose& OutPose);
 
   /**

@@ -57,14 +57,14 @@ class SUPERDEXRECORDER_API ASuperDexRecorder : public AActor {
   ASuperDexRecorder();
 
   /** Where episodes are written. Empty uses <Project>/Saved/SuperDexRecorder. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex|Recording")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Recording")
   FDirectoryPath OutputDirectory;
 
   /**
    * The scene archive the episode references, so the scene can be rebuilt offline. Ignored with
    * bExportLiveScene.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex|Recording")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Recording")
   FFilePath SceneArchive;
 
   /**
@@ -74,54 +74,54 @@ class SUPERDEXRECORDER_API ASuperDexRecorder : public AActor {
    * The simulation pauses while it exports. Only editor builds (PIE included) with bot-scene
    * support can export; packaged builds record without a scene archive.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex|Recording")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Recording")
   bool bExportLiveScene = false;
 
   /** Refuse to record without a scene archive (SceneArchive, or the live scene's). */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex|Recording")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Recording")
   bool bRequireSceneArchive = false;
 
   /**
    * Stored with each episode, e.g. the participant, condition or task. Set them before each
    * StartRecording.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex|Recording")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Recording")
   TMap<FString, FString> Properties;
 
   /** Records Mochi's contact forces, at a cost per contact point in every step. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex|Recording")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Recording")
   bool bRecordContactForces = superdex::recorder::PhysicsRecorderConfig{}.recordContactForces;
 
   /** Other actors whose USuperDexRecordingSourceComponents this recorder uses. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex|Recording")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Recording")
   TArray<TObjectPtr<AActor>> SourceActors;
 
   /** Start the first episode on its own once the scene and WaitForActorsBeforeStart are ready. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex|Recording")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Recording")
   bool bStartAutomatically = true;
 
   /** While true, holds back the automatic start, e.g. until the application is ready. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex|Recording")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Recording")
   bool bPreventAutomaticStart = false;
 
   /** Actors that must have begun play before the automatic start. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex|Recording")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Recording")
   TArray<TObjectPtr<AActor>> WaitForActorsBeforeStart;
 
   /** Commit the episode in progress when play ends; otherwise it's discarded. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex|Recording")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Recording")
   bool bCommitOnEndPlay = true;
 
   /** Broadcast with the episode ID when an episode starts. */
-  UPROPERTY(BlueprintAssignable, Category = "SuperDex|Recording")
+  UPROPERTY(BlueprintAssignable, Category = "SuperDex Robotics|Recording")
   FSuperDexRecordingStarted OnRecordingStarted;
 
   /** Broadcast with the episode's output path once it is written. */
-  UPROPERTY(BlueprintAssignable, Category = "SuperDex|Recording")
+  UPROPERTY(BlueprintAssignable, Category = "SuperDex Robotics|Recording")
   FSuperDexRecordingCommitted OnRecordingCommitted;
 
   /** Broadcast with the reason when an episode is aborted or its commit fails. */
-  UPROPERTY(BlueprintAssignable, Category = "SuperDex|Recording")
+  UPROPERTY(BlueprintAssignable, Category = "SuperDex Robotics|Recording")
   FSuperDexRecordingAborted OnRecordingAborted;
 
   /**
@@ -133,7 +133,7 @@ class SUPERDEXRECORDER_API ASuperDexRecorder : public AActor {
    */
   UFUNCTION(
       BlueprintPure,
-      Category = "SuperDex|Recording",
+      Category = "SuperDex Robotics|Recording",
       meta = (WorldContext = "WorldContextObject"))
   static ASuperDexRecorder* GetActiveRecorder(const UObject* WorldContextObject);
 
@@ -142,7 +142,7 @@ class SUPERDEXRECORDER_API ASuperDexRecorder : public AActor {
    *
    * @return True if an episode started.
    */
-  UFUNCTION(BlueprintCallable, Category = "SuperDex|Recording")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Recording")
   bool StartRecording();
 
   /**
@@ -150,7 +150,7 @@ class SUPERDEXRECORDER_API ASuperDexRecorder : public AActor {
    *
    * @return False if no episode was recording or its commit failed, otherwise true.
    */
-  UFUNCTION(BlueprintCallable, Category = "SuperDex|Recording")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Recording")
   bool CommitRecording();
 
   /**
@@ -158,14 +158,14 @@ class SUPERDEXRECORDER_API ASuperDexRecorder : public AActor {
    *
    * @param Reason Why the episode is discarded, broadcast through OnRecordingAborted.
    */
-  UFUNCTION(BlueprintCallable, Category = "SuperDex|Recording")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Recording")
   void AbortRecording(const FString& Reason);
 
   /**
    * With bExportLiveScene, export the live scene again when the next episode starts, e.g. after
    * physics actors or bots were added or removed. Recorded episodes keep their archive.
    */
-  UFUNCTION(BlueprintCallable, Category = "SuperDex|Recording")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Recording")
   void ExportLiveSceneAtNextEpisode();
 
   /**
@@ -173,7 +173,7 @@ class SUPERDEXRECORDER_API ASuperDexRecorder : public AActor {
    *
    * @return True while an episode is recording.
    */
-  UFUNCTION(BlueprintPure, Category = "SuperDex|Recording")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Robotics|Recording")
   bool IsRecording() const;
 
   /**
@@ -181,7 +181,7 @@ class SUPERDEXRECORDER_API ASuperDexRecorder : public AActor {
    *
    * @return The episode ID, or empty while not recording.
    */
-  UFUNCTION(BlueprintPure, Category = "SuperDex|Recording")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Robotics|Recording")
   FString GetEpisodeId() const;
 
   /**
@@ -189,7 +189,7 @@ class SUPERDEXRECORDER_API ASuperDexRecorder : public AActor {
    *
    * @return The output path, or empty while not recording.
    */
-  UFUNCTION(BlueprintPure, Category = "SuperDex|Recording")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Robotics|Recording")
   FString GetOutputPath() const;
 
   /**
@@ -199,7 +199,7 @@ class SUPERDEXRECORDER_API ASuperDexRecorder : public AActor {
    * @param Stream Event stream name.
    * @param Text Event text.
    */
-  UFUNCTION(BlueprintCallable, Category = "SuperDex|Recording")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Recording")
   void RecordEvent(const FString& Stream, const FString& Text);
 
   /**
@@ -209,7 +209,7 @@ class SUPERDEXRECORDER_API ASuperDexRecorder : public AActor {
    * @param Name Scalar stream name.
    * @param Value Sample value.
    */
-  UFUNCTION(BlueprintCallable, Category = "SuperDex|Recording")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Recording")
   void RecordScalar(const FString& Name, double Value);
 
   /**
@@ -220,7 +220,7 @@ class SUPERDEXRECORDER_API ASuperDexRecorder : public AActor {
    * @param Name Scalar stream name.
    * @param Values Sample values.
    */
-  UFUNCTION(BlueprintCallable, Category = "SuperDex|Recording")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Recording")
   void RecordScalars(const FString& Name, const TArray<double>& Values);
 
   void PostInitializeComponents() override;

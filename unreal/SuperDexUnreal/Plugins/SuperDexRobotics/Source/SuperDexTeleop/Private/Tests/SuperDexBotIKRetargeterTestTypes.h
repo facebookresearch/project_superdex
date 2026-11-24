@@ -27,11 +27,11 @@ class USuperDexBotIKTestPoseSource : public USuperDexPoseableComponent {
   GENERATED_BODY()
  public:
   /** The pose GetPose returns. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Transient, Category = "Test")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Transient, Category = "SuperDex Robotics|Test")
   FSuperDexPose TestPose;
 
   /** The value GetPose returns. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Transient, Category = "Test")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Transient, Category = "SuperDex Robotics|Test")
   bool bTestValid = true;
   virtual bool GetPose(FSuperDexPose& Out) override {
     Out = TestPose;

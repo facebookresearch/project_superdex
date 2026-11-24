@@ -32,7 +32,7 @@ class SUPERDEXTELEOP_API UOpenXR2RobotiqRetargeter : public USuperDexRetargeter 
   GENERATED_BODY()
  public:
   /** The gripper's articulation. Its joint configuration poses this component's mesh. */
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mesh")
+  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SuperDex Robotics|Mesh")
   TObjectPtr<UMochiArticulationBase> Articulation;
 
   /**
@@ -40,7 +40,7 @@ class SUPERDEXTELEOP_API UOpenXR2RobotiqRetargeter : public USuperDexRetargeter 
    * derived from the ChildSource of this SuperDexPoseableComponent on BeginPlay. If false and no
    * valid child component is present, it will be identity.
    */
-  UPROPERTY(EditAnywhere, BlueprintREADONLY, Category = "Teleop")
+  UPROPERTY(EditAnywhere, BlueprintREADONLY, Category = "SuperDex Robotics|Teleop")
   bool bOverrideRobotiqRootToSourceSkeletonRoot = false;
 
   /**
@@ -53,21 +53,21 @@ class SUPERDEXTELEOP_API UOpenXR2RobotiqRetargeter : public USuperDexRetargeter 
       EditAnywhere,
       BlueprintReadWrite,
       meta = (EditCondition = "bOverrideRobotiqRootToSourceSkeletonRoot"),
-      Category = "Teleop")
+      Category = "SuperDex Robotics|Teleop")
   FTransform RobotiqRootToSourceSkeletonRoot = FTransform::Identity;
 
   /**
    * The thumb tip link of the source pose's bot; its distance to the index tip at the source pose's
    * joint positions drives the gripper. The default is the OpenXR hand's (xr_05_thumb_tip).
    */
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Teleop")
+  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SuperDex Robotics|Teleop")
   FName ThumbTipName = SuperDexBoneNames_OXR[static_cast<int32>(ESuperDexBone_OXR::ThumbTip)];
 
   /**
    * The index finger tip link of the source pose's bot. The default is the OpenXR hand's
    * (xr_10_index_tip).
    */
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Teleop")
+  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SuperDex Robotics|Teleop")
   FName IndexTipName = SuperDexBoneNames_OXR[static_cast<int32>(ESuperDexBone_OXR::IndexTip)];
 
   /**
@@ -75,7 +75,7 @@ class SUPERDEXTELEOP_API UOpenXR2RobotiqRetargeter : public USuperDexRetargeter 
    * finger distance to pincher distance; setting
    * this to true allows you to define custom pinch mappings below.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleop")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Teleop")
   bool bUseCustomPinchRange = false;
 
   /** Pinch is "1.0" at or below this index-to-thumb-tip distance. */
@@ -83,7 +83,7 @@ class SUPERDEXTELEOP_API UOpenXR2RobotiqRetargeter : public USuperDexRetargeter 
       EditAnywhere,
       BlueprintReadOnly,
       meta = (EditCondition = "bUseCustomPinchRange"),
-      Category = "Teleop")
+      Category = "SuperDex Robotics|Teleop")
   double MinPinchDistance = 1.0;
 
   /** Pinch is "0.0" at or above this index-to-thumb-tip distance. */
@@ -91,21 +91,21 @@ class SUPERDEXTELEOP_API UOpenXR2RobotiqRetargeter : public USuperDexRetargeter 
       EditAnywhere,
       BlueprintReadOnly,
       meta = (EditCondition = "bUseCustomPinchRange"),
-      Category = "Teleop")
+      Category = "SuperDex Robotics|Teleop")
   double MaxPinchDistance = 10.0;
 
   /**
    * If true, the TransformedPose will be based on received ros poses. If false, the TransformedPose
    * will be based on the solved IK poses.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Teleop")
+  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SuperDex Robotics|Teleop")
   bool bReceiveRosPoses = false;
 
   /**
    * If true, will send the IK computed pose to the Ros interface. If false and bReceiveRosPoses is
    * true, the system will not compute or need any of the IK solvers.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Teleop")
+  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SuperDex Robotics|Teleop")
   bool bIssueRosCommands = false;
 
   /**
@@ -114,7 +114,7 @@ class SUPERDEXTELEOP_API UOpenXR2RobotiqRetargeter : public USuperDexRetargeter 
    *
    * @return The cached joint positions [rad or m].
    */
-  UFUNCTION(BlueprintPure, Category = "Teleop")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Robotics|Teleop")
   const TArray<double>& GetCachedJointPositions() const {
     return JointPositionsCache;
   }

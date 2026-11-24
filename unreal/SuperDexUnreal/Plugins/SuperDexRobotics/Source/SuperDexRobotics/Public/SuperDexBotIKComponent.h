@@ -43,7 +43,7 @@ class SUPERDEXROBOTICS_API USuperDexBotIKComponent : public USceneComponent {
   USuperDexBotIKComponent();
 
   /** The IK config the solver is created from. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Bot IK")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Bot IK")
   TObjectPtr<USuperDexBotIKConfig> Config;
 
   /**
@@ -52,7 +52,7 @@ class SUPERDEXROBOTICS_API USuperDexBotIKComponent : public USceneComponent {
    * @return False off the game thread, or if Config is missing, invalid or its solver cannot be
    * created.
    */
-  UFUNCTION(BlueprintCallable, Category = "SuperDex Bot IK")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Bot IK")
   bool InitializeSolver();
 
   /**
@@ -60,7 +60,7 @@ class SUPERDEXROBOTICS_API USuperDexBotIKComponent : public USceneComponent {
    *
    * @return False off the game thread or without a solver, otherwise true.
    */
-  UFUNCTION(BlueprintCallable, Category = "SuperDex Bot IK")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Bot IK")
   bool ResetGoalsToConfig();
 
   /**
@@ -71,7 +71,7 @@ class SUPERDEXROBOTICS_API USuperDexBotIKComponent : public USceneComponent {
    * @param Space Space Transform is given in.
    * @return False if the goal is unknown or the transform is invalid, otherwise true.
    */
-  UFUNCTION(BlueprintCallable, Category = "SuperDex Bot IK")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Bot IK")
   bool
   SetGoalTransform(const FString& Name, const FTransform& Transform, ESuperDexBotIKGoalSpace Space);
 
@@ -82,7 +82,7 @@ class SUPERDEXROBOTICS_API USuperDexBotIKComponent : public USceneComponent {
    * @param bEnabled Whether the goal is enabled.
    * @return False if the goal is unknown, otherwise true.
    */
-  UFUNCTION(BlueprintCallable, Category = "SuperDex Bot IK")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Bot IK")
   bool SetGoalEnabled(const FString& Name, bool bEnabled);
 
   /**
@@ -93,7 +93,7 @@ class SUPERDEXROBOTICS_API USuperDexBotIKComponent : public USceneComponent {
    * @param Rotation Rotation stiffness [N m/rad]; must be finite and non-negative.
    * @return False if the goal is unknown or a stiffness is invalid, otherwise true.
    */
-  UFUNCTION(BlueprintCallable, Category = "SuperDex Bot IK")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Bot IK")
   bool SetGoalStiffness(const FString& Name, double Position, double Rotation);
 
   /**
@@ -104,7 +104,7 @@ class SUPERDEXROBOTICS_API USuperDexBotIKComponent : public USceneComponent {
    * @return False off the game thread, without a solver, with no active goal or if the solve fails;
    *   otherwise true.
    */
-  UFUNCTION(BlueprintCallable, Category = "SuperDex Bot IK")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Bot IK")
   bool SolveIK(bool& bOutGoalsReached);
 
   /**
@@ -112,7 +112,7 @@ class SUPERDEXROBOTICS_API USuperDexBotIKComponent : public USceneComponent {
    *
    * @return The solved joint positions, or empty off the game thread.
    */
-  UFUNCTION(BlueprintPure, Category = "SuperDex Bot IK")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Robotics|Bot IK")
   TArray<double> GetSolvedJointPositions() const;
 
   /**
@@ -120,7 +120,7 @@ class SUPERDEXROBOTICS_API USuperDexBotIKComponent : public USceneComponent {
    *
    * @return The solved link world transforms, or empty off the game thread.
    */
-  UFUNCTION(BlueprintPure, Category = "SuperDex Bot IK")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Robotics|Bot IK")
   TArray<FTransform> GetSolvedLinkTransforms() const;
 
  protected:

@@ -72,17 +72,26 @@ struct FMochiPoseTrackingParams {
   GENERATED_BODY()
 
   /** Spring stiffness [N/m or Nm/rad] */
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (Tooltip = "Spring stiffness [N/m or Nm/rad]"))
+  UPROPERTY(
+      EditAnywhere,
+      BlueprintReadOnly,
+      Category = "SuperDex Robotics|Pose Controller",
+      meta = (Tooltip = "Spring stiffness [N/m or Nm/rad]"))
   double Stiffness = mochi::PoseTrackingParams{}.stiffness;
 
   /** Damping coefficient */
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (Tooltip = "Damping coefficient"))
+  UPROPERTY(
+      EditAnywhere,
+      BlueprintReadOnly,
+      Category = "SuperDex Robotics|Pose Controller",
+      meta = (Tooltip = "Damping coefficient"))
   double Damping = mochi::PoseTrackingParams{}.damping;
 
   /** Force/torque saturation cap (-1 = no limit) */
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
+      Category = "SuperDex Robotics|Pose Controller",
       meta = (Tooltip = "Force/torque saturation cap (-1 = no limit)"))
   double Saturation = mochi::PoseTrackingParams{}.saturation;
 };
@@ -96,6 +105,7 @@ struct FMochiPoseControllerParams {
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
+      Category = "SuperDex Robotics|Pose Controller",
       meta = (Tooltip = "Per-link position tracking (size 1 broadcasts to all links)"))
   TArray<FMochiPoseTrackingParams> LinkPosTracking;
 
@@ -103,6 +113,7 @@ struct FMochiPoseControllerParams {
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
+      Category = "SuperDex Robotics|Pose Controller",
       meta = (Tooltip = "Per-link rotation tracking (size 1 broadcasts to all links)"))
   TArray<FMochiPoseTrackingParams> LinkRotTracking;
 
@@ -110,6 +121,7 @@ struct FMochiPoseControllerParams {
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
+      Category = "SuperDex Robotics|Pose Controller",
       meta = (Tooltip = "Per-joint tracking (size 1 broadcasts to all joints)"))
   TArray<FMochiPoseTrackingParams> JointTracking;
 };
@@ -126,18 +138,21 @@ class SUPERDEXTELEOP_API UController_MochiArticulatedPose : public USuperDexBotC
    * Substring used to disambiguate among multiple child USuperDexPoseableComponents.
    * Empty string matches any child. Mirrors the pattern from GetChildSourcePoseable.
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Pose Source")
+  UPROPERTY(
+      EditAnywhere,
+      BlueprintReadWrite,
+      Category = "SuperDex Robotics|Pose Controller|Pose Source")
   FString ChildSourceNameContainsSubstring = "";
 
   /** Parameters of the Mochi articulated pose controller. */
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Pose Controller")
+  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SuperDex Robotics|Pose Controller")
   FMochiPoseControllerParams PoseControllerDetailsParams;
 
   /** Remove existing ArticulatedPoseController on actor if present */
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
-      Category = "Pose Controller",
+      Category = "SuperDex Robotics|Pose Controller",
       meta = (Tooltip = "Remove existing ArticulatedPoseController on actor if present"))
   bool bRemoveExistingController = true;
 

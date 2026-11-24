@@ -66,7 +66,7 @@ class SUPERDEXRECORDER_API USuperDexRecordingSourceComponent : public UActorComp
   USuperDexRecordingSourceComponent();
 
   /** Identifies this source's streams in the recording. Empty uses the component's name. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex|Recording")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Recording")
   FString SourceId;
 
   /** Called on the game thread when an episode begins, to add this source's streams. */

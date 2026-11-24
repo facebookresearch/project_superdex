@@ -109,35 +109,35 @@ class SUPERDEXROBOTICS_API USuperDexBotImportData : public UAssetImportData {
    * Hash of the source .superdex_bot and its referenced files at the last import (see
    * USuperDexBot::ComputeSourceHash).
    */
-  UPROPERTY(VisibleAnywhere)
+  UPROPERTY(VisibleAnywhere, Category = "SuperDex Robotics|Import")
   FString SourceFileHash;
 
   /**
    * Per-link content hash of the render model (.glb), used to skip reimporting an unchanged render
    * mesh.
    */
-  UPROPERTY(VisibleAnywhere)
+  UPROPERTY(VisibleAnywhere, Category = "SuperDex Robotics|Import")
   TArray<FString> RenderModelHashes;
 
   /**
    * Per-link content hash of the collision model (.mochi.h5), used to skip reimporting an unchanged
    * MochiModel.
    */
-  UPROPERTY(VisibleAnywhere)
+  UPROPERTY(VisibleAnywhere, Category = "SuperDex Robotics|Import")
   TArray<FString> MochiModelHashes;
 
   /**
    * Content hash of the skin collision model (skin.shape .mochi.h5), used to skip
    * reimporting an unchanged skin collision mesh. Empty if the bot has no skin.
    */
-  UPROPERTY(VisibleAnywhere)
+  UPROPERTY(VisibleAnywhere, Category = "SuperDex Robotics|Import")
   FString SkinMochiModelHash;
 
   /**
    * Content hash of the skin render model (skin.renderModel .glb), used to skip reimporting an
    * unchanged skin render mesh. Empty if the bot's skin has no render model.
    */
-  UPROPERTY(VisibleAnywhere)
+  UPROPERTY(VisibleAnywhere, Category = "SuperDex Robotics|Import")
   FString SkinRenderModelHash;
 
   /**
@@ -147,7 +147,7 @@ class SUPERDEXROBOTICS_API USuperDexBotImportData : public UAssetImportData {
    * deleted outputs even when the source .superdex_bot is unchanged. Stored relative
    * so the bot's folder can be moved and still reimport correctly.
    */
-  UPROPERTY(VisibleAnywhere)
+  UPROPERTY(VisibleAnywhere, Category = "SuperDex Robotics|Import")
   TArray<FString> GeneratedAssetPaths;
 };
 
@@ -163,8 +163,9 @@ UCLASS(
     BlueprintType,
     HideCategories = Object,
     DisplayName = "SuperDex Bot",
-    PrioritizeCategories = ("SuperDex Bot", "Assets", "Internal"),
-    AutoCollapseCategories = ("Internal"))
+    PrioritizeCategories =
+        ("SuperDex Robotics|Bot", "SuperDex Robotics|Assets", "SuperDex Robotics|Internal"),
+    AutoCollapseCategories = ("SuperDex Robotics|Internal"))
 class SUPERDEXROBOTICS_API USuperDexBot : public UMochiArticulationBase {
   GENERATED_BODY()
  public:
@@ -211,7 +212,7 @@ class SUPERDEXROBOTICS_API USuperDexBot : public UMochiArticulationBase {
    *
    * @return The bot name.
    */
-  UFUNCTION(BlueprintPure, Category = "SuperDex Bot")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Robotics|Bot")
   const FString& GetBotName() const;
 
   /** Returns the generated skeletal mesh, or nullptr if generation failed. */
@@ -222,7 +223,7 @@ class SUPERDEXROBOTICS_API USuperDexBot : public UMochiArticulationBase {
    *
    * @return The imported MochiModel assets.
    */
-  UFUNCTION(BlueprintPure, Category = "SuperDex Bot")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Robotics|Bot")
   const TArray<UMochiModel*>& GetMochiModels() const;
 
   /**
@@ -230,7 +231,7 @@ class SUPERDEXROBOTICS_API USuperDexBot : public UMochiArticulationBase {
    *
    * @return The resolved BotPrefab JSON.
    */
-  UFUNCTION(BlueprintPure, Category = "SuperDex Bot")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Robotics|Bot")
   const FString& GetBotPrefabJson() const;
 
   /** Returns the BotPrefab */
@@ -250,7 +251,7 @@ class SUPERDEXROBOTICS_API USuperDexBot : public UMochiArticulationBase {
    * @param JointName Name of the joint.
    * @return Index of the joint's first DOF, or INDEX_NONE.
    */
-  UFUNCTION(BlueprintPure, Category = "SuperDex Bot")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Robotics|Bot")
   int32 GetDofIndex(FName JointName) const;
 
   /**
@@ -259,7 +260,7 @@ class SUPERDEXROBOTICS_API USuperDexBot : public UMochiArticulationBase {
    * @param DofIndex Index among the bot's DOFs.
    * @return Name of the link the DOF moves, or NAME_None.
    */
-  UFUNCTION(BlueprintPure, Category = "SuperDex Bot")
+  UFUNCTION(BlueprintPure, Category = "SuperDex Robotics|Bot")
   FName GetDofLinkName(int32 DofIndex) const;
   virtual bool SupportsUrdfExport() const override {
     return true;
@@ -319,11 +320,15 @@ class SUPERDEXROBOTICS_API USuperDexBot : public UMochiArticulationBase {
   friend class FSuperDexBotLoader;
 
   /** Bot name extracted from the BotPrefab JSON (sanitized for use as a package path). */
-  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, AssetRegistrySearchable, Category = "SuperDex Bot")
+  UPROPERTY(
+      VisibleAnywhere,
+      BlueprintReadOnly,
+      AssetRegistrySearchable,
+      Category = "SuperDex Robotics|Bot")
   FString BotName;
 #if WITH_EDITORONLY_DATA
   /** UE import data subobject storing the source file path for reimport support. */
-  UPROPERTY(VisibleAnywhere, Category = "Internal")
+  UPROPERTY(VisibleAnywhere, Category = "SuperDex Robotics|Internal")
   TObjectPtr<USuperDexBotImportData> AssetImportData;
 #endif
 
@@ -332,7 +337,11 @@ class SUPERDEXROBOTICS_API USuperDexBot : public UMochiArticulationBase {
   FString BotPrefabJson;
 
   /** Generated skeletal mesh with per-link bones and render geometry baked in. */
-  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, AssetRegistrySearchable, Category = "Assets")
+  UPROPERTY(
+      VisibleAnywhere,
+      BlueprintReadOnly,
+      AssetRegistrySearchable,
+      Category = "SuperDex Robotics|Assets")
   TObjectPtr<USkeletalMesh> SkeletalMesh;
 
   /**
@@ -340,7 +349,7 @@ class SUPERDEXROBOTICS_API USuperDexBot : public UMochiArticulationBase {
    * plus the optional skin collision model (skin.shape) when the bot has a skin. Held here
    * to keep them GC-alive and saved with the bot; not indexed by link at runtime.
    */
-  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Assets")
+  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "SuperDex Robotics|Assets")
   TArray<TObjectPtr<UMochiModel>> MochiModels;
 
   /** Per-link local bounding boxes for visual bounds computation. */

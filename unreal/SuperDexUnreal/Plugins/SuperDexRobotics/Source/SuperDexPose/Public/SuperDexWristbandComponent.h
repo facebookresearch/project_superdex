@@ -29,35 +29,35 @@ class SUPERDEXPOSE_API USuperDexWristbandComponent : public UStaticMeshComponent
 
  public:
   /** Text render component for poseable name display. */
-  UPROPERTY(BlueprintReadOnly, Category = "SuperDex")
+  UPROPERTY(BlueprintReadOnly, Category = "SuperDex Robotics|Wristband")
   TObjectPtr<class UTextRenderComponent> NameTextRender = nullptr;
 
   /** Text render component for source name display. */
-  UPROPERTY(BlueprintReadOnly, Category = "SuperDex")
+  UPROPERTY(BlueprintReadOnly, Category = "SuperDex Robotics|Wristband")
   TObjectPtr<class UTextRenderComponent> SourceTextRender = nullptr;
 
   /** Shrink the full poseable actor name uniformly to fit its maximum width. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Wristband")
   bool bShortenPoseableActorName = true;
 
   /** Maximum name width in centimeters before the wristband component's own scale is applied. */
   UPROPERTY(
       EditAnywhere,
       BlueprintReadWrite,
-      Category = "SuperDex",
+      Category = "SuperDex Robotics|Wristband",
       meta = (Units = "cm", ClampMin = "0.0", EditCondition = "bShortenPoseableActorName"))
   float MaxPoseableActorNameWidth = 8.0f;
 
   /** Relative transform from the wristband mesh root to poseable name text render component. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Wristband")
   FTransform WristbandToNameText;
 
   /** Relative transform from the wristband mesh root to source name text render component. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Wristband")
   FTransform WristbandToSourceText;
 
   /** Material to use for text rendering on both the poseable name and source text renders. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Wristband")
   TObjectPtr<class UMaterialInterface> TextMaterial;
 
  public:

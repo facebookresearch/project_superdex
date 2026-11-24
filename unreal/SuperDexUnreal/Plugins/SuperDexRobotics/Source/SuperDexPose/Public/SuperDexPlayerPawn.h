@@ -59,42 +59,48 @@ class SUPERDEXPOSE_API ASuperDexPlayerPawn : public APawn {
 
  public:
   /** Delegate for poseable actor spawned events. */
-  UPROPERTY(BlueprintAssignable)
+  UPROPERTY(BlueprintAssignable, Category = "SuperDex Robotics|Player Pawn")
   FPoseableActorSpawned OnPoseableActorSpawned;
 
   /** Delegate for poseable actor destroyed events. */
-  UPROPERTY(BlueprintAssignable)
+  UPROPERTY(BlueprintAssignable, Category = "SuperDex Robotics|Player Pawn")
   FPoseableActorDestroyed OnPoseableActorDestroyed;
 
   /** Camera component for this pawn. */
-  UPROPERTY(BlueprintReadOnly, Category = "SuperDexPlayerPawn")
+  UPROPERTY(BlueprintReadOnly, Category = "SuperDex Robotics|Player Pawn")
   TObjectPtr<UCameraComponent> CameraComponent;
 
   /**
    * VR root location marker for this pawn. Placed at the player's feet.
    * Hand tracking transforms are applied relative to this component's world location.
    */
-  UPROPERTY(BlueprintReadOnly, Category = "SuperDexPlayerPawn")
+  UPROPERTY(BlueprintReadOnly, Category = "SuperDex Robotics|Player Pawn")
   TObjectPtr<USceneComponent> VrRootComponent;
 
   /** Collision component for this pawn. */
-  UPROPERTY(BlueprintReadOnly, Category = "SuperDexPlayerPawn")
+  UPROPERTY(BlueprintReadOnly, Category = "SuperDex Robotics|Player Pawn")
   TObjectPtr<UCapsuleComponent> CollisionComponent;
 
   /** Current left poseable actor for this pawn. */
-  UPROPERTY(BlueprintReadOnly, Category = "SuperDexPlayerPawn", meta = (Keywords = "Hand"))
+  UPROPERTY(
+      BlueprintReadOnly,
+      Category = "SuperDex Robotics|Player Pawn",
+      meta = (Keywords = "Hand"))
   TObjectPtr<ASuperDexPoseableActor> LeftPoseableActor = nullptr;
 
   /** Current right poseable actor for this pawn. */
-  UPROPERTY(BlueprintReadOnly, Category = "SuperDexPlayerPawn", meta = (Keywords = "Hand"))
+  UPROPERTY(
+      BlueprintReadOnly,
+      Category = "SuperDex Robotics|Player Pawn",
+      meta = (Keywords = "Hand"))
   TObjectPtr<ASuperDexPoseableActor> RightPoseableActor = nullptr;
 
   /** SuperDexPlayerController possessing this pawn. */
-  UPROPERTY(BlueprintReadOnly, Category = "SuperDexPlayerPawn")
+  UPROPERTY(BlueprintReadOnly, Category = "SuperDex Robotics|Player Pawn")
   TObjectPtr<ASuperDexPlayerController> SuperDexPlayerController = nullptr;
 
   /** First SuperDexPlayerStart in the level. */
-  UPROPERTY(BlueprintReadOnly, Category = "SuperDexPlayerPawn")
+  UPROPERTY(BlueprintReadOnly, Category = "SuperDex Robotics|Player Pawn")
   TObjectPtr<ASuperDexPlayerStart> SuperDexPlayerStart = nullptr;
 
  private:
@@ -120,7 +126,7 @@ class SUPERDEXPOSE_API ASuperDexPlayerPawn : public APawn {
    */
   UFUNCTION(
       BlueprintCallable,
-      Category = "SuperDexPlayerPawn",
+      Category = "SuperDex Robotics|Player Pawn",
       meta = (ReturnDisplayName = "Success"))
   bool GetPose(ESuperDexHandedness Handedness, FSuperDexPose& OutPose);
 
@@ -134,7 +140,7 @@ class SUPERDEXPOSE_API ASuperDexPlayerPawn : public APawn {
    */
   UFUNCTION(
       BlueprintCallable,
-      Category = "SuperDexPlayerPawn",
+      Category = "SuperDex Robotics|Player Pawn",
       meta = (ReturnDisplayName = "Success"))
   bool SpawnNextPoseableActor(ESuperDexHandedness Handedness, bool bPrevious = false);
 
@@ -147,7 +153,7 @@ class SUPERDEXPOSE_API ASuperDexPlayerPawn : public APawn {
    */
   UFUNCTION(
       BlueprintCallable,
-      Category = "SuperDexPlayerPawn",
+      Category = "SuperDex Robotics|Player Pawn",
       meta = (ReturnDisplayName = "Success"))
   bool SpawnPoseableActorByClass(
       TSubclassOf<ASuperDexPoseableActor> PoseableActorClass,
@@ -162,7 +168,7 @@ class SUPERDEXPOSE_API ASuperDexPlayerPawn : public APawn {
    */
   UFUNCTION(
       BlueprintCallable,
-      Category = "SuperDexPlayerPawn",
+      Category = "SuperDex Robotics|Player Pawn",
       meta = (ReturnDisplayName = "Success"))
   bool DestroyPoseableActor(ESuperDexHandedness Handedness);
 
@@ -172,7 +178,7 @@ class SUPERDEXPOSE_API ASuperDexPlayerPawn : public APawn {
    * @param Handedness The handedness to get the poseable actor for.
    * @return The current poseable actor for given handedness, nullptr if it doesn't exist.
    */
-  UFUNCTION(BlueprintCallable, Category = "SuperDexPlayerPawn")
+  UFUNCTION(BlueprintCallable, Category = "SuperDex Robotics|Player Pawn")
   ASuperDexPoseableActor* GetPoseableActor(ESuperDexHandedness Handedness) const;
 
  protected:

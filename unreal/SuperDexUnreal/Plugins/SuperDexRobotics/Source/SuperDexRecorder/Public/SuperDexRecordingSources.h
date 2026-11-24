@@ -60,14 +60,14 @@ struct SUPERDEXRECORDER_API FSuperDexRecordingTransformSourceEntry {
    * Names this component's stream "world/sources/<SourceId>.<Id>". Empty uses
    * "<actor>.<component>".
    */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex|Recording")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Recording")
   FString Id;
 
   /** The scene component whose world transform is recorded, resolved on the owning actor. */
   UPROPERTY(
       EditAnywhere,
       BlueprintReadWrite,
-      Category = "SuperDex|Recording",
+      Category = "SuperDex Robotics|Recording",
       meta = (UseComponentPicker, AllowedClasses = "/Script/Engine.SceneComponent"))
   FComponentReference Component;
 };
@@ -87,7 +87,7 @@ class SUPERDEXRECORDER_API USuperDexRecordingTransformSourceComponent
   USuperDexRecordingTransformSourceComponent();
 
   /** The scene components to record. */
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex|Recording")
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Recording")
   TArray<FSuperDexRecordingTransformSourceEntry> Components;
 
   void ConfigureRecording(FSuperDexSceneRecorderConfig& Config) override;
