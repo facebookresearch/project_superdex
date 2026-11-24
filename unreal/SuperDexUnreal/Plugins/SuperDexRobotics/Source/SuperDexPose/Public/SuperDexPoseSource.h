@@ -26,7 +26,7 @@ class UMochiArticulationBase;
 class UWorld;
 
 /** Invalid thread ID constant. */
-constexpr uint32 kInvalidThreadId = std::numeric_limits<uint32>::max();
+constexpr uint32 InvalidThreadId = std::numeric_limits<uint32>::max();
 
 /**
  * The connection between some source of pose and SuperDexPose.
@@ -107,5 +107,5 @@ class SUPERDEXPOSE_API USuperDexPoseSource : public UObject {
   friend class USuperDexPoseSubsystem;
 
   /** Necessary thread ID to update the cache for this pose source. */
-  uint32 NecessaryThreadId = kInvalidThreadId;
+  uint32 NecessaryThreadId = InvalidThreadId;
 };

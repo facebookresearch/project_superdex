@@ -36,7 +36,7 @@
 
 //------------------------------------------------------------------------------
 
-constexpr float kMetersToCm = 100.f;
+constexpr float MetersToCm = 100.f;
 
 inline FString ToFString(char const* Str) {
   return ANSI_TO_TCHAR(Str);

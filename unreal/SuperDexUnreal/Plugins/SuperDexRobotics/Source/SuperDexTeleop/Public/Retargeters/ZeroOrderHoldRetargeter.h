@@ -40,7 +40,7 @@ class SUPERDEXTELEOP_API UZeroOrderHoldRetargeter : public USuperDexRetargeter {
   virtual void BeginPlay() override;
   virtual bool GetTransformedPose_Implementation(
       FSuperDexPose const& SourcePose,
-      bool SourceIsValid,
+      bool bSourceIsValid,
       FSuperDexPose& TransformedPose) override;
 
  protected:

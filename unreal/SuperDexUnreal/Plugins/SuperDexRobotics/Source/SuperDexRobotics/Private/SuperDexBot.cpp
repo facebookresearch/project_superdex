@@ -255,10 +255,10 @@ bool USuperDexBot::MaterializeSensorParamFiles(superdex::robotics::BotPrefab& Pr
   const auto GetCapturedKey = [](const superdex::robotics::BotSensorPrefab& Sensor,
                                  FString& OutKey) -> bool {
     const std::string_view Params(Sensor.params.c_str(), Sensor.params.size());
-    if (!Params.starts_with(kSuperDexBotDataPrefix)) {
+    if (!Params.starts_with(SuperDexBotDataPrefix)) {
       return false;
     }
-    const std::string Key(Params.substr(kSuperDexBotDataPrefix.size()));
+    const std::string Key(Params.substr(SuperDexBotDataPrefix.size()));
     OutKey = UTF8_TO_TCHAR(Key.c_str());
     return true;
   };

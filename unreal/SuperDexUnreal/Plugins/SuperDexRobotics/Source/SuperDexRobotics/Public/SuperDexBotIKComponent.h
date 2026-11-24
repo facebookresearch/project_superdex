@@ -58,9 +58,9 @@ class SUPERDEXROBOTICS_API USuperDexBotIKComponent : public USceneComponent {
   UFUNCTION(BlueprintCallable, Category = "SuperDex Bot IK")
   bool SetGoalStiffness(const FString& Name, double Position, double Rotation);
 
-  /** Returns solve success; OutGoalsReached separately reports convergence. */
+  /** Returns solve success; bOutGoalsReached separately reports convergence. */
   UFUNCTION(BlueprintCallable, Category = "SuperDex Bot IK")
-  bool SolveIK(bool& OutGoalsReached);
+  bool SolveIK(bool& bOutGoalsReached);
 
   /** Native joint-only positions in metres/radians, excluding root DOFs. */
   UFUNCTION(BlueprintPure, Category = "SuperDex Bot IK")

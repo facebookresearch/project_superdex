@@ -29,6 +29,6 @@ class SUPERDEXTELEOP_API UVrRootToActorRootRetargeter : public USuperDexRetarget
  public:
   virtual bool GetTransformedPose_Implementation(
       FSuperDexPose const& SourcePose,
-      bool SourceIsValid,
+      bool bSourceIsValid,
       FSuperDexPose& TransformedPose) override;
 };

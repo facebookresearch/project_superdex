@@ -217,7 +217,7 @@ void USuperDexEEGoalPublisher::PoseMeshAtDefaultJointPositionsInEditor() {
   {
     FWriteScopeLock Lock(CacheLock);
     CachedOutputPose = Pose;
-    CacheInitialized = true;
+    bCacheInitialized = true;
   }
   ApplyCachedPoseToMesh();
   RefreshBoneTransforms();
@@ -432,7 +432,7 @@ bool USuperDexEEGoalPublisher::GetTransformedPose_Implementation(
   }
 
   TransformedPose = SourcePose;
-  TransformedPose.tags.Add(TEXT("EEGoalPublisher"));
+  TransformedPose.Tags.Add(TEXT("EEGoalPublisher"));
   TransformedPose.SkeletonRootToVrRoot = ArmBaseToActor;
   // Puts the pose on the articulation (its Bot) at the robot's arm joint positions.
   if (!USuperDexPoseFunctionLibrary::ComputeSuperDexPoseFromJointPositions(

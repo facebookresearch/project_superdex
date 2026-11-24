@@ -206,7 +206,7 @@ class SUPERDEXTELEOP_API UController_MochiArticulatedPose : public USuperDexBotC
  protected:
   // Written on the game thread (OnBotSpawned/Shutdown) and read on the Mochi simulation thread
   // (StepController), so it is atomic to avoid a data race on the lifecycle gate.
-  std::atomic<bool> isInitialized = false;
+  std::atomic<bool> bIsInitialized = false;
   mochi::ActorHandle RobotActorHandle{};
 
   superdex::robotics::ControllerHandle PoseControllerHandle{};

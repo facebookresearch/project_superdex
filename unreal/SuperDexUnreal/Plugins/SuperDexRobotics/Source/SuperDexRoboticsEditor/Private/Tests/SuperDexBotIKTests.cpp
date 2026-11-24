@@ -736,7 +736,7 @@ bool FSuperDexBotIKConversionTest::RunTest(const FString& Parameters) {
           FCoreRedirectObjectName(FString(TEXT(
               "/Script/SuperDexRobotics.SuperDexBotIKComponent.SolveIK.OutTargetsReached")))) ==
           FCoreRedirectObjectName(FString(
-              TEXT("/Script/SuperDexRobotics.SuperDexBotIKComponent.SolveIK.OutGoalsReached"))));
+              TEXT("/Script/SuperDexRobotics.SuperDexBotIKComponent.SolveIK.bOutGoalsReached"))));
 
   superdex::robotics::BotIKConfig Native;
   Native.outputBot = "robot.superdex_bot";

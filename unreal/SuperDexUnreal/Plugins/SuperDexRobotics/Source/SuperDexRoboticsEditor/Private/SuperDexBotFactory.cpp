@@ -325,7 +325,7 @@ static bool CaptureBotSensorParamsFiles(
         continue;
       }
       if (ParamsKind == ESuperDexBotComponentParamsKind::CapturedFile) {
-        const std::string CapturedPrefix(kSuperDexBotDataPrefix);
+        const std::string CapturedPrefix(SuperDexBotDataPrefix);
         UE_LOG(
             LogSuperDexBotFactory,
             Error,
@@ -377,7 +377,7 @@ static bool CaptureBotSensorParamsFiles(
         }
         CapturedParamsKeys.Add(NormalizedParamsPath, ParamsKey);
       }
-      std::string Marker(kSuperDexBotDataPrefix);
+      std::string Marker(SuperDexBotDataPrefix);
       Marker += TCHAR_TO_UTF8(*ParamsKey);
       Sensor.params = mochi::DynamicString(Marker);
     }

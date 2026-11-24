@@ -44,7 +44,7 @@ const char* const kSkeletonBotJson[kNumSkeletons][kNumHands] = {
 TArray<FName> GetBoneNames(ESkeleton Skeleton) {
   switch (Skeleton) {
     case ESkeleton::OpenXR:
-      return TArray<FName>(kSuperDexBoneNames_OXR, UE_ARRAY_COUNT(kSuperDexBoneNames_OXR));
+      return TArray<FName>(SuperDexBoneNames_OXR, UE_ARRAY_COUNT(SuperDexBoneNames_OXR));
     case ESkeleton::OculusXR:
       return TArray<FName>(
           kSuperDexBoneNames_OculusXR, UE_ARRAY_COUNT(kSuperDexBoneNames_OculusXR));

@@ -41,6 +41,6 @@ class SUPERDEXTELEOP_API UTransformSkeletonRootToVrRootTransformRetargeter
 
   virtual bool GetTransformedPose_Implementation(
       FSuperDexPose const& SourcePose,
-      bool SourceIsValid,
+      bool bSourceIsValid,
       FSuperDexPose& TransformedPose) override;
 };

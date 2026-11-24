@@ -25,19 +25,19 @@
 #include "SuperDexPoseSubsystem.generated.h"
 
 /** Default thread cache priority constant. Lowest by default. */
-constexpr uint32 kDefaultThreadCachePriority = 0;
+constexpr uint32 DefaultThreadCachePriority = 0;
 
 /** UE main thread cache priority constant. */
-constexpr uint32 kUEMainThreadCachePriority = 10;
+constexpr uint32 UEMainThreadCachePriority = 10;
 
 /** Mochi thread cache priority constant. Highest by default. */
-constexpr uint32 kMochiThreadCachePriority = 100;
+constexpr uint32 MochiThreadCachePriority = 100;
 
 /** Priority cache hold duration constant, in seconds. */
-constexpr double kPriorityCacheHoldDurationSeconds = 1.0;
+constexpr double PriorityCacheHoldDurationSeconds = 1.0;
 
 /** Priority assigned to specific thread IDs that sources have flagged as necessary. */
-constexpr uint32 kSourceNecessaryThreadPriority = std::numeric_limits<uint32>::max();
+constexpr uint32 SourceNecessaryThreadPriority = std::numeric_limits<uint32>::max();
 
 /** Thread information used by the caching system to manage caches. */
 struct ThreadInfoForCaching {
@@ -45,7 +45,7 @@ struct ThreadInfoForCaching {
   uint32 ThreadId = 0;
 
   /** Priority of the thread. Higher priorities take ownership. */
-  uint32 Priority = kDefaultThreadCachePriority;
+  uint32 Priority = DefaultThreadCachePriority;
 
   /** Callback function to get cache key used for checking whether cache needs updating. */
   std::function<double()> GetCacheKeyCallback;

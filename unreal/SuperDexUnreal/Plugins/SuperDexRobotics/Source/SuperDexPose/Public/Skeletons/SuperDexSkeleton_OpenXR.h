@@ -31,7 +31,7 @@
  * finger tip, +Y dorsal) carried into Unreal by the superdex importer, so an FSuperDexPose on this
  * skeleton drives the imported bots with no per-bone correction.
  */
-static const FName kSkeletonName_OpenXR = "OpenXR";
+static const FName SkeletonName_OpenXR = "OpenXR";
 
 UENUM(BlueprintType)
 enum class ESuperDexBone_OXR : uint8 {
@@ -67,7 +67,7 @@ enum class ESuperDexBone_OXR : uint8 {
 ENUM_RANGE_BY_COUNT(ESuperDexBone_OXR, ESuperDexBone_OXR::Count);
 
 /** Bone (link) names of the openxr superdex hand bots, indexed by ESuperDexBone_OXR. */
-static const FName kSuperDexBoneNames_OXR[] = {
+static const FName SuperDexBoneNames_OXR[] = {
     "xr_01_wrist",
     "xr_00_palm",
     "xr_02_thumb_metacarpal",
@@ -94,10 +94,10 @@ static const FName kSuperDexBoneNames_OXR[] = {
     "xr_23_little_intermediate",
     "xr_24_little_distal",
     "xr_25_little_tip"};
-static_assert(UE_ARRAY_COUNT(kSuperDexBoneNames_OXR) == static_cast<int>(ESuperDexBone_OXR::Count));
+static_assert(UE_ARRAY_COUNT(SuperDexBoneNames_OXR) == static_cast<int>(ESuperDexBone_OXR::Count));
 
 /** Parent bone of each ESuperDexBone_OXR, or Invalid for the root. */
-static constexpr ESuperDexBone_OXR kSuperDexBoneParents_OXR[] = {
+static constexpr ESuperDexBone_OXR SuperDexBoneParents_OXR[] = {
     ESuperDexBone_OXR::Invalid,
     ESuperDexBone_OXR::Wrist,
     ESuperDexBone_OXR::Wrist,
@@ -125,7 +125,7 @@ static constexpr ESuperDexBone_OXR kSuperDexBoneParents_OXR[] = {
     ESuperDexBone_OXR::LittleIntermediate,
     ESuperDexBone_OXR::LittleDistal};
 static_assert(
-    UE_ARRAY_COUNT(kSuperDexBoneParents_OXR) == static_cast<int>(ESuperDexBone_OXR::Count));
+    UE_ARRAY_COUNT(SuperDexBoneParents_OXR) == static_cast<int>(ESuperDexBone_OXR::Count));
 
 /** XrHandJointEXT (and EHandKeypoint) value of an ESuperDexBone_OXR. */
 constexpr int32 GetXrHandJointOfBone_OXR(ESuperDexBone_OXR Bone) {
@@ -133,7 +133,7 @@ constexpr int32 GetXrHandJointOfBone_OXR(ESuperDexBone_OXR Bone) {
   return Index == 0 ? 1 : (Index == 1 ? 0 : Index);
 }
 
-/** Tip bone of a finger on the OpenXR skeleton (its name: kSuperDexBoneNames_OXR[Bone]). */
+/** Tip bone of a finger on the OpenXR skeleton (its name: SuperDexBoneNames_OXR[Bone]). */
 constexpr ESuperDexBone_OXR GetFingerTipBone_OXR(ESuperDexFinger Finger) {
   switch (Finger) {
     case ESuperDexFinger::Thumb:

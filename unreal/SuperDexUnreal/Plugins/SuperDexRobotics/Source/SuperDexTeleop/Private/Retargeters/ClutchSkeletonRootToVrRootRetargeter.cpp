@@ -47,20 +47,20 @@ void UClutchSkeletonRootToVrRootRetargeter::AttemptToInitialize_RecursiveOnTick(
   }
 }
 
-bool UClutchSkeletonRootToVrRootRetargeter::SetClutchEnabled(bool clutchEnabled) {
+bool UClutchSkeletonRootToVrRootRetargeter::SetClutchEnabled(bool bNewClutchEnabled) {
   bool bChanged = false;
   bool bNowEnabled = false;
   {
     FWriteScopeLock Lock(ClutchLock);
     // only allowed to do things if initialized
     if (bClutchInitialized) {
-      if (bClutchEnabled != clutchEnabled) {
-        if (clutchEnabled == true) {
+      if (bClutchEnabled != bNewClutchEnabled) {
+        if (bNewClutchEnabled == true) {
           // if the clutch just went from disabled to enabled then flag that we should collect a new
           // relative transform
           bUpdateClutchRelativeTransform = true;
         }
-        bClutchEnabled = clutchEnabled;
+        bClutchEnabled = bNewClutchEnabled;
         bChanged = true;
       }
     }
@@ -245,7 +245,7 @@ bool UClutchSkeletonRootToVrRootRetargeter::GetTransformedPose_Implementation(
       }
     }
     TransformedPose = LastEnabledSourcePose;
-    TransformedPose.tags.Add(TEXT("ClutchedPose"));
+    TransformedPose.Tags.Add(TEXT("ClutchedPose"));
     // The held or blended joint positions, on the source's bot
     TransformedPose.SkeletonRootToVrRoot = ClutchedSkeletonRootToVrRoot;
   }
@@ -261,9 +261,9 @@ bool UClutchSkeletonRootToVrRootRetargeter::GetTransformedPose_Implementation(
 
 bool UClutchSkeletonRootToVrRootRetargeter::InitializeClutchBasedOnLeafBone(
     FString const& PosableWithName,
-    bool UpdateClutchToLeafBoneTransform) {
+    bool bUpdateClutchToLeafBoneTransform) {
   return InitializeClutchBasedOnLeafBoneInternal(
-      PosableWithName, UpdateClutchToLeafBoneTransform, /*bRequireCachedPose=*/true);
+      PosableWithName, bUpdateClutchToLeafBoneTransform, /*bRequireCachedPose=*/true);
 }
 
 bool UClutchSkeletonRootToVrRootRetargeter::InitializeClutchFromCurrentPoseableLeafBone(

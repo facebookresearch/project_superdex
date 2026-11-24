@@ -185,7 +185,7 @@ void FSuperDexRoboticsModule::StartupModule() {
        FCoreRedirect(
            ECoreRedirectFlags::Type_Property,
            TEXT("/Script/SuperDexRobotics.SuperDexBotIKComponent.SolveIK.OutTargetsReached"),
-           TEXT("/Script/SuperDexRobotics.SuperDexBotIKComponent.SolveIK.OutGoalsReached"))},
+           TEXT("/Script/SuperDexRobotics.SuperDexBotIKComponent.SolveIK.bOutGoalsReached"))},
       TEXT("SuperDexRobotics.BotIKInputOutputNomenclature"));
 
   // Force SuperDexPhysics to start up (and load mochi_physics.dll) before we load

@@ -190,7 +190,7 @@ void UController_MochiArticulatedPose::CacheBotGeometry(const USuperDexBotCompon
 
 void UController_MochiArticulatedPose::OnBotSpawned(USuperDexBotComponent* Component) {
   // Initialize() resolves SourcePoseable; if it failed there is nothing to drive, so do not create
-  // the underlying Mochi controller (otherwise StepController would run with isInitialized == true
+  // the underlying Mochi controller (otherwise StepController would run with bIsInitialized == true
   // and a missing source).
   if (SourcePoseable == nullptr) {
     return;
@@ -246,11 +246,11 @@ void UController_MochiArticulatedPose::OnBotSpawned(USuperDexBotComponent* Compo
         TEXT("[UController_MochiArticulatedPose] Error during OnBotSpawned: %hs"),
         Err.GetDescription());
   }
-  isInitialized = Err.IsOK() && PoseController;
+  bIsInitialized = Err.IsOK() && PoseController;
 }
 
 void UController_MochiArticulatedPose::Shutdown(const USuperDexBotComponent* Component) {
-  isInitialized = false;
+  bIsInitialized = false;
 
   if (PoseController) {
     // The articulated actor (and its scene) may already be torn down by the time Shutdown runs; the
@@ -276,7 +276,7 @@ void UController_MochiArticulatedPose::Shutdown(const USuperDexBotComponent* Com
 void UController_MochiArticulatedPose::TickController(
     const USuperDexBotComponent* Component,
     double GameDeltaTime) {
-  if (!isInitialized || SourcePoseable == nullptr) {
+  if (!bIsInitialized || SourcePoseable == nullptr) {
     return;
   }
 
@@ -347,7 +347,7 @@ bool UController_MochiArticulatedPose::StepController(
     double MochiDeltaTime,
     mochi::Actor* ArticulatedActor,
     mochi::Scene* Scene) {
-  if (!isInitialized || PoseController == nullptr) {
+  if (!bIsInitialized || PoseController == nullptr) {
     return false;
   }
 

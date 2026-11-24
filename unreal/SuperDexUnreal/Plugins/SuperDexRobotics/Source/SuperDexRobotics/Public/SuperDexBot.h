@@ -39,7 +39,7 @@ class FMaterialRenderProxy;
 /// that map. Chosen so superdex_robotics still classifies the value as a path rather than
 /// inline JSON (@ref superdex::robotics::IsInlineJson), and so it collides with neither of
 /// that library's own path forms (`//` root-relative and `@tag/`).
-inline constexpr std::string_view kSuperDexBotDataPrefix = "botdata:";
+inline constexpr std::string_view SuperDexBotDataPrefix = "botdata:";
 
 enum class ESuperDexBotComponentParamsKind : uint8 {
   Empty,
@@ -70,7 +70,7 @@ inline ESuperDexBotComponentParamsKind ClassifyBotComponentParams(std::string_vi
   if (IsInlineJsonParams(Value)) {
     return ESuperDexBotComponentParamsKind::InlineJson;
   }
-  if (Value.starts_with(kSuperDexBotDataPrefix)) {
+  if (Value.starts_with(SuperDexBotDataPrefix)) {
     return ESuperDexBotComponentParamsKind::CapturedFile;
   }
   if (Value.starts_with("//") || Value.starts_with("@")) {

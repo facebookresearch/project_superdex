@@ -178,8 +178,8 @@ bool USuperDexBotIKComponent::SetGoalStiffness(
   return true;
 }
 
-bool USuperDexBotIKComponent::SolveIK(bool& OutGoalsReached) {
-  OutGoalsReached = false;
+bool USuperDexBotIKComponent::SolveIK(bool& bOutGoalsReached) {
+  bOutGoalsReached = false;
   if (!IsInGameThread() || !Solver || !ValidRigidTransform(GetComponentTransform())) {
     return false;
   }
@@ -207,7 +207,7 @@ bool USuperDexBotIKComponent::SolveIK(bool& OutGoalsReached) {
     }
     bActive |= Position > 0 || Rotation > 0;
   }
-  if (!bActive || !Solver->SolveBotIK(OutGoalsReached)) {
+  if (!bActive || !Solver->SolveBotIK(bOutGoalsReached)) {
     return false;
   }
   UpdateResults();

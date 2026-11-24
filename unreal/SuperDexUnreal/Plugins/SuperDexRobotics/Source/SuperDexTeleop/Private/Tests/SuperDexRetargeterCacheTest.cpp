@@ -59,7 +59,7 @@ bool FSuperDexRetargeterReadsItsCacheWhileComputingTest::RunTest(const FString& 
   Source->TestPose.bIsTrackingEnabled = Source->TestPose.bIsTrackingConfident = true;
   Source->TestPose.TrackingConfidence = 1;
   Reader->LinkName =
-      kSuperDexBoneNames_OXR[static_cast<int32>(GetFingerTipBone_OXR(ESuperDexFinger::Index))];
+      SuperDexBoneNames_OXR[static_cast<int32>(GetFingerTipBone_OXR(ESuperDexFinger::Index))];
 
   // A new cache key for each request, so that each one computes the pose.
   double Key = 0;

@@ -57,15 +57,15 @@ class SUPERDEXTELEOP_API UTeleopNodeBaseComponent : public UActorComponent {
 
   // The number of arm joints to allocate storage for.
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TeleopNode|Configuration")
-  int NumArmJoints = Teleop::kNumDefaultArmJoints;
+  int NumArmJoints = Teleop::NumDefaultArmJoints;
 
   // The number of hand joints to allocate storage for.
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TeleopNode|Configuration")
-  int NumHandJoints = Teleop::kNumDefaultHandJoints;
+  int NumHandJoints = Teleop::NumDefaultHandJoints;
 
   // The number of hand sensors to allocate storage for.
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TeleopNode|Configuration")
-  int NumHandSensors = Teleop::kNumDefaultHandSensors;
+  int NumHandSensors = Teleop::NumDefaultHandSensors;
 
   // If true, hand sensors are 3D force sensors instead of 1D pressure sensors,
   // and Get/SetHandSensorStates_Force should be used to read/write states.

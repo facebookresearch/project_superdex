@@ -148,7 +148,7 @@ FThumbKinematics ComputeThumbKinematics(const USuperDexBot& Bot) {
   K.Pivot = Rest[kThumbBase].GetLocation();
   for (int32 Link = 0; Link < kNumOpenXRBones; ++Link) {
     if (Link > 0 &&
-        Prefab.links[Link].parentLink != static_cast<int32>(kSuperDexBoneParents_OXR[Link])) {
+        Prefab.links[Link].parentLink != static_cast<int32>(SuperDexBoneParents_OXR[Link])) {
       return K;
     }
     K.Offsets.Add(Rest[Link].GetLocation());
@@ -432,7 +432,7 @@ bool BlendOpenXRFingersIntoPinch(
   Rotation[0] = FQuat::Identity;
   Location[0] = FVector::ZeroVector;
   for (int32 Link = 1; Link < kNumOpenXRBones; ++Link) {
-    const int32 Parent = static_cast<int32>(kSuperDexBoneParents_OXR[Link]);
+    const int32 Parent = static_cast<int32>(SuperDexBoneParents_OXR[Link]);
     Rotation[Link] = (Rotation[Parent] * InOutLinkToParent[Link]).GetNormalized();
     Location[Link] = Location[Parent] + Rotation[Parent].RotateVector(K.Offsets[Link]);
   }
@@ -462,7 +462,7 @@ bool BlendOpenXRFingersIntoPinch(
     const FVector PadInDistal = GetOpenXRFingerPadInDistal(Finger.Finger, K.Offsets[Finger.Tip]);
     const FVector Pad = Location[Finger.Distal] + Rotation[Finger.Distal].RotateVector(PadInDistal);
     const FVector& Knuckle = Location[Finger.Proximal];
-    const int32 Parent = static_cast<int32>(kSuperDexBoneParents_OXR[Finger.Proximal]);
+    const int32 Parent = static_cast<int32>(SuperDexBoneParents_OXR[Finger.Proximal]);
     const FQuat Turn = FQuat::FindBetweenVectors(Pad - Knuckle, Pad + Weight * Shortfall - Knuckle);
     const FQuat TurnedProximal =
         (Rotation[Parent].Inverse() * Turn * Rotation[Finger.Proximal]).GetNormalized();

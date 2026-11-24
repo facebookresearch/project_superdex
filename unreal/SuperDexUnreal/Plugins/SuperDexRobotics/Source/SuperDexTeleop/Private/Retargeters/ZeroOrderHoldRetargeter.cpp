@@ -62,7 +62,7 @@ void UZeroOrderHoldRetargeter::BeginPlay() {
 
 bool UZeroOrderHoldRetargeter::GetTransformedPose_Implementation(
     FSuperDexPose const& SourcePose,
-    bool SourceIsValid,
+    bool bSourceIsValid,
     FSuperDexPose& TransformedPose) {
   if (!Articulation) {
     return false;
@@ -75,6 +75,6 @@ bool UZeroOrderHoldRetargeter::GetTransformedPose_Implementation(
   TransformedPose.bIsTrackingEnabled = bResult;
   TransformedPose.bIsTrackingConfident = bResult;
   TransformedPose.TrackingConfidence = bResult ? 1.0f : 0.0f;
-  TransformedPose.tags.Add(TEXT("ZeroOrderHold"));
+  TransformedPose.Tags.Add(TEXT("ZeroOrderHold"));
   return bResult;
 }

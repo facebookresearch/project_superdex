@@ -81,7 +81,7 @@ bool USuperDexRetargeter::GetPose(FSuperDexPose& OutPose) {
   FSuperDexPoseCacheWriteScope Lock1(*this);
   // Get cache and thread priorities
   uint32 PriorityNeededToUpdateCache =
-      GetHighestPriorityLastCalledWithin(CurrentTime, kPriorityCacheHoldDurationSeconds);
+      GetHighestPriorityLastCalledWithin(CurrentTime, PriorityCacheHoldDurationSeconds);
   // Unregistered threads will be error reported by the USuperDexPoseSubsystem so only check
   // for null
   uint32 ThisThreadPriority = 0;
@@ -121,18 +121,18 @@ bool USuperDexRetargeter::GetPose(FSuperDexPose& OutPose) {
       }
       CachedOutputPose = TransformedPose;
       CacheKey = CurrentCacheKey;
-      CacheInitialized = true;
+      bCacheInitialized = true;
     }
   }
   // Get pose from cache
-  if (CacheInitialized) {
+  if (bCacheInitialized) {
     // no need to preserve the entry OutPose.bIsInInfiniteLoop because all combinations of it in
     // OutPose and CachedOutputPose result in the correct bool value
     bool bIsInInfiniteLoop = OutPose.bIsInInfiniteLoop;
     OutPose = CachedOutputPose;
     OutPose.bIsInInfiniteLoop = bIsInInfiniteLoop;
   }
-  return CacheInitialized;
+  return bCacheInitialized;
 }
 
 void USuperDexRetargeter::OnTickManageCache(FSuperDexPose& Pose, bool bIsValid) {

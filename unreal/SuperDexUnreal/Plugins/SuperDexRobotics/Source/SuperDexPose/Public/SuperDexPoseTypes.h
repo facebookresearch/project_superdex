@@ -56,7 +56,7 @@ USTRUCT(BlueprintType) struct SUPERDEXPOSE_API FSuperDexPose {
   // be used by anyone when filtering or modifying pose for any reason. Ideally tag modifications
   // should be additive and nondestructive so they accrue over the pose chain.
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex")
-  TArray<FName> tags;
+  TArray<FName> Tags;
 
   // The bot whose skeleton the pose is on. Its links are the skeleton's bones, DofPositions are its
   // joint positions, and SkeletonRootToVrRoot places its root link. Pose sources report poses on

@@ -90,16 +90,16 @@ bool USuperDexPoseableComponent::IsCacheWriterThread() const {
 bool USuperDexPoseableComponent::GetCachedPose(FSuperDexPose& OutPose) const {
   if (IsCacheWriterThread()) {
     // This thread is writing the cache and has it to itself.
-    if (CacheInitialized) {
+    if (bCacheInitialized) {
       OutPose = CachedOutputPose;
     }
-    return CacheInitialized;
+    return bCacheInitialized;
   }
   FReadScopeLock Lock(CacheLock);
-  if (CacheInitialized) {
+  if (bCacheInitialized) {
     OutPose = CachedOutputPose;
   }
-  return CacheInitialized;
+  return bCacheInitialized;
 }
 
 FTransform USuperDexPoseableComponent::GetVrRootToWorld() const {
@@ -339,7 +339,7 @@ FTransform USuperDexPoseableComponent::GetFingerTipTransform(ESuperDexFinger Fin
   if (TipBone == ESuperDexBone_OXR::Invalid) {
     return GetComponentTransform();
   }
-  const FName TipName = kSuperDexBoneNames_OXR[static_cast<int32>(TipBone)];
+  const FName TipName = SuperDexBoneNames_OXR[static_cast<int32>(TipBone)];
   FTransform TipToWorld;
   if (GetCachedPoseLinkTransform(TipName, TipToWorld)) {
     return TipToWorld;
@@ -388,7 +388,7 @@ const TArray<int32>& USuperDexPoseableComponent::GetMeshBonesOfLinks(
 }
 
 void USuperDexPoseableComponent::ApplyCachedPoseToMesh() {
-  if (!CacheInitialized || !GetSkinnedAsset()) {
+  if (!bCacheInitialized || !GetSkinnedAsset()) {
     return;
   }
 
@@ -455,7 +455,7 @@ void USuperDexPoseableComponent::WhenNotPlayingInitPoseCache() {
       // Write the pose to cache and set initialized true, then apply to mesh for editor preview.
       FWriteScopeLock Lock(CacheLock);
       CachedOutputPose = EditorViewportPose->Pose;
-      CacheInitialized = true;
+      bCacheInitialized = true;
     } else {
       UE_LOG(
           LogSuperDexPose,
@@ -477,13 +477,13 @@ void USuperDexPoseableComponent::WhenNotPlayingInitPoseCache() {
     FWriteScopeLock Lock(CacheLock);
     CachedOutputPose = FSuperDexPose();
     CachedOutputPose.SourceName = TEXT("RefSkeleton");
-    CachedOutputPose.tags.Add(TEXT("InEditorOnly"));
+    CachedOutputPose.Tags.Add(TEXT("InEditorOnly"));
     CachedOutputPose.SkeletonRootToVrRoot = FTransform::Identity;
     CachedOutputPose.TrackingConfidence = 1;
     CachedOutputPose.bIsTrackingConfident = true;
     CachedOutputPose.bIsTrackingEnabled = true;
 
-    CacheInitialized = true;
+    bCacheInitialized = true;
   }
 
   // Apply the cached pose directly to the mesh bones for editor preview
@@ -570,14 +570,14 @@ void USuperDexPoseableComponent::OnTickManageCache(FSuperDexPose& Pose, bool bIs
   if (bIsValid) {
     FWriteScopeLock Lock(CacheLock);
     CachedOutputPose = Pose;
-    CacheInitialized = true;
+    bCacheInitialized = true;
   }
 }
 
 void USuperDexPoseableComponent::OnTickUpdateComponentActorRelativeTransformFromCache() {
   // if we can get a pose, and we're in a game world
   if (GWorld->IsGameWorld()) {
-    if (CacheInitialized == false) {
+    if (bCacheInitialized == false) {
       return; // do nothing if no cache
     }
     // get the transform of the poseable component who is placed at the pawn's VR root component

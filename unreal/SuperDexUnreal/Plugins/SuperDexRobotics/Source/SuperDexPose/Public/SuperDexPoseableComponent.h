@@ -142,7 +142,7 @@ class SUPERDEXPOSE_API USuperDexPoseableComponent : public UPoseableMeshComponen
   mutable FRWLock CacheLock;
 
   /** bool indicating that at least one valid pose has been put into the cache */
-  bool CacheInitialized = false;
+  bool bCacheInitialized = false;
 
   /**
    * Local cache for the output pose. The cache is by default updated each Tick() as part of

@@ -85,7 +85,7 @@ FRandomHand MakeHand(TArray<FQuat> XrLocals) {
   TArray<FQuat> BoneWorld;
   BoneWorld.SetNum(NumBones);
   for (int32 Bone = 0; Bone < NumBones; ++Bone) {
-    const ESuperDexBone_OXR Parent = kSuperDexBoneParents_OXR[Bone];
+    const ESuperDexBone_OXR Parent = SuperDexBoneParents_OXR[Bone];
     BoneWorld[Bone] = Parent == ESuperDexBone_OXR::Invalid
         ? Hand.XrLocals[Bone]
         : BoneWorld[static_cast<int32>(Parent)] * Hand.XrLocals[Bone];
@@ -249,7 +249,7 @@ bool FOpenXRPoseSourceHandScaleTest::RunTest(const FString& Parameters) {
         TArray<FVector> Locations;
         Locations.SetNum(EHandKeypointCount);
         for (int32 Bone = 0; Bone < NumBones; ++Bone) {
-          const ESuperDexBone_OXR Parent = kSuperDexBoneParents_OXR[Bone];
+          const ESuperDexBone_OXR Parent = SuperDexBoneParents_OXR[Bone];
           if (Parent != ESuperDexBone_OXR::Invalid) {
             const int32 P = static_cast<int32>(Parent);
             const FQuat ParentWorld = Hand.XrWorld[GetXrHandJointOfBone_OXR(Parent)];

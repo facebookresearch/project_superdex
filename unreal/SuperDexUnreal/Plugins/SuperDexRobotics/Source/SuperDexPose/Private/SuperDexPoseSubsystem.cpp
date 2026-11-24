@@ -117,16 +117,16 @@ bool USuperDexPoseSubsystem::GetPose(
 
   // Get cache and thread priorities
   uint32 ThreadId = FPlatformTLS::GetCurrentThreadId();
-  bool bHasNecessaryThread = (SourceAndCache->Source->GetNecessaryThreadId() != kInvalidThreadId);
+  bool bHasNecessaryThread = (SourceAndCache->Source->GetNecessaryThreadId() != InvalidThreadId);
   bool bIsNecessaryThread = (SourceAndCache->Source->GetNecessaryThreadId() == ThreadId);
   double CurrentTime = SuperDexPoseSubsystemInternal::GetAccurateRealTime();
   uint32 PriorityNeededToUpdateCache = bHasNecessaryThread
-      ? kSourceNecessaryThreadPriority
+      ? SourceNecessaryThreadPriority
       : GetHighestPriorityLastCalledWithin(
-            SourceAndCache, CurrentTime, kPriorityCacheHoldDurationSeconds);
+            SourceAndCache, CurrentTime, PriorityCacheHoldDurationSeconds);
 
   ThreadInfoForCaching const* Info = ThreadIdToRegisteredThreadInfoMap.Find(ThreadId);
-  uint32 ThisThreadPriority = bIsNecessaryThread ? kSourceNecessaryThreadPriority : 0;
+  uint32 ThisThreadPriority = bIsNecessaryThread ? SourceNecessaryThreadPriority : 0;
   if (Info != nullptr) {
     if (!bIsNecessaryThread) {
       ThisThreadPriority = Info->Priority;
@@ -250,7 +250,7 @@ void USuperDexPoseSubsystem::Initialize(FSubsystemCollectionBase& Collection) {
   // and is only updated once per frame so it should work well. Initialize() is called from the same
   // thread as BeginPlay() and Tick().
   RegisterThisThreadForCaching(
-      kUEMainThreadCachePriority, [this]() { return GetWorld()->GetRealTimeSeconds(); });
+      UEMainThreadCachePriority, [this]() { return GetWorld()->GetRealTimeSeconds(); });
 }
 
 void USuperDexPoseSubsystem::Deinitialize() {

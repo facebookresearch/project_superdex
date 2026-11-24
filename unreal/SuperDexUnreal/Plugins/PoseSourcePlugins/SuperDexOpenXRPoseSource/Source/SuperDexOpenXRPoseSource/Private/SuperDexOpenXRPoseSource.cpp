@@ -88,7 +88,7 @@ double USuperDexOpenXRPoseSource::EstimateHandScale(TConstArrayView<FVector> Key
   double Tracked = 0.0;
   double Nominal = 0.0;
   for (const FNominalPhalanx& Phalanx : NominalPhalanges) {
-    const ESuperDexBone_OXR Parent = kSuperDexBoneParents_OXR[static_cast<int32>(Phalanx.Bone)];
+    const ESuperDexBone_OXR Parent = SuperDexBoneParents_OXR[static_cast<int32>(Phalanx.Bone)];
     Tracked += FVector::Dist(
         KeypointLocations[GetXrHandJointOfBone_OXR(Phalanx.Bone)],
         KeypointLocations[GetXrHandJointOfBone_OXR(Parent)]);
@@ -141,7 +141,7 @@ bool USuperDexOpenXRPoseSource::ConvertHandKeypointsToPose(
   LinkToParent.SetNum(NumBones);
   LinkToParent[0] = FQuat::Identity;
   for (int32 Bone = 1; Bone < NumBones; ++Bone) {
-    const int32 Parent = static_cast<int32>(kSuperDexBoneParents_OXR[Bone]);
+    const int32 Parent = static_cast<int32>(SuperDexBoneParents_OXR[Bone]);
     LinkToParent[Bone] = (BoneToTracking[Parent].Inverse() * BoneToTracking[Bone]).GetNormalized();
   }
   OutPose.SkeletonRootToVrRoot = FTransform(BoneToTracking[0], WristLocation, FVector::OneVector);
@@ -185,8 +185,8 @@ void USuperDexOpenXRPoseSource::CachePose(const ESuperDexHandedness Handedness) 
   FSuperDexPose& Cache = (Handedness == ESuperDexHandedness::Left) ? LeftPoseCache : RightPoseCache;
   Cache = FSuperDexPose();
   Cache.SourceName = TEXT("OpenXR");
-  Cache.tags.Add(TEXT("OpenXR"));
-  Cache.tags.Add((Handedness == ESuperDexHandedness::Left) ? TEXT("Left") : TEXT("Right"));
+  Cache.Tags.Add(TEXT("OpenXR"));
+  Cache.Tags.Add((Handedness == ESuperDexHandedness::Left) ? TEXT("Left") : TEXT("Right"));
 
   if (GEngine == nullptr || !GEngine->XRSystem.IsValid()) {
     return;
@@ -280,7 +280,7 @@ bool USuperDexOpenXRPoseSource::IsTickableInEditor() const {
 }
 
 void USuperDexOpenXRPoseSource::Tick(float DeltaTime) {
-  if (NecessaryThreadId == kInvalidThreadId) {
+  if (NecessaryThreadId == InvalidThreadId) {
     NecessaryThreadId = FPlatformTLS::GetCurrentThreadId();
   }
   FScopeLock Lock(&StateLock);

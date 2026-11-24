@@ -78,7 +78,7 @@ bool UOpenXR2RobotiqRetargeter::GetTransformedPose_Implementation(
   }
 
   TransformedPose = SourcePose;
-  TransformedPose.tags.Add(TEXT("OpenXR2Robotiq"));
+  TransformedPose.Tags.Add(TEXT("OpenXR2Robotiq"));
   TransformedPose.SkeletonRootToVrRoot =
       USuperDexPoseFunctionLibrary::MultiplyTransformsWithoutScalePreservingScale(
           RobotiqRootToSourceSkeletonRoot, SourcePose.SkeletonRootToVrRoot);

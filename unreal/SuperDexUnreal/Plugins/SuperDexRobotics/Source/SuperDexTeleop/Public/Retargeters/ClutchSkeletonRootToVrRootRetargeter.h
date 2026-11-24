@@ -142,17 +142,17 @@ class SUPERDEXTELEOP_API UClutchSkeletonRootToVrRootRetargeter : public USuperDe
    * InitializeClutchFromPosableWithName. Then checks if the actor is of type
    * USuperDexPoseableComponent and has a skeletal mesh attached that has only one leaf node. It
    * then calls SetClutchedSkeletonRootToVrRoot() passing in the transform of that leaf node
-   * relative to the VrRoot. If UpdateClutchToLeafBoneTransform is true, then the system will update
-   * InitializeClutchSkeletonRootToPoseableEndEffector with the correct relative pose with respect
-   * to the leaf node. In general this should only really be set to true when first initializing
-   * the clutch from the spawn pose. If false, it will use the existing relative pose, usually
-   * assigned when it was first initialized. If any stage has issues the function will abort and
-   * return false.
+   * relative to the VrRoot. If bUpdateClutchToLeafBoneTransform is true, then the system will
+   * update InitializeClutchSkeletonRootToPoseableEndEffector with the correct relative pose with
+   * respect to the leaf node. In general this should only really be set to true when first
+   * initializing the clutch from the spawn pose. If false, it will use the existing relative pose,
+   * usually assigned when it was first initialized. If any stage has issues the function will abort
+   * and return false.
    */
   UFUNCTION(BlueprintCallable, meta = (ReturnDisplayName = "Success"), Category = "SuperDex")
   bool InitializeClutchBasedOnLeafBone(
       FString const& PosableWithName,
-      bool UpdateClutchToLeafBoneTransform = false);
+      bool bUpdateClutchToLeafBoneTransform = false);
 
   bool InitializeClutchFromCurrentPoseableLeafBone(
       FString const& PosableWithName,
@@ -165,7 +165,7 @@ class SUPERDEXTELEOP_API UClutchSkeletonRootToVrRootRetargeter : public USuperDe
    * the clutch transform and SourcePose transform is recorded to compute the new TransformedPose.
    */
   UFUNCTION(BlueprintCallable, Category = "SuperDex")
-  bool SetClutchEnabled(bool clutchEnabled);
+  bool SetClutchEnabled(bool bNewClutchEnabled);
 
   UFUNCTION(BlueprintPure, Category = "SuperDex")
   bool GetClutchEnabled() const {
@@ -184,7 +184,7 @@ class SUPERDEXTELEOP_API UClutchSkeletonRootToVrRootRetargeter : public USuperDe
       UClutchSkeletonRootToVrRootRetargeter*,
       ClutchRetargeter,
       bool,
-      NewClutchState);
+      bNewClutchState);
 
   DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
       FOnClutchPaused,
@@ -229,7 +229,7 @@ class SUPERDEXTELEOP_API UClutchSkeletonRootToVrRootRetargeter : public USuperDe
 
   virtual bool GetTransformedPose_Implementation(
       FSuperDexPose const& SourcePose,
-      bool SourceIsValid,
+      bool bSourceIsValid,
       FSuperDexPose& TransformedPose) override;
 
  protected:

@@ -29,31 +29,31 @@
 
 namespace Teleop {
 
-constexpr const char* kArmPoseTargetTopic = "arm_pose_target";
-constexpr const char* kArmJointTargetsTopic = "arm_joint_targets";
-constexpr const char* kArmJointStateTopic = "arm_joint_states";
-constexpr const char* kArmEndEffectorPoseStateTopic = "arm_ee_pose_state";
-constexpr const char* kArmEndEffectorStiffnessTargetTopic = "arm_ee_stiffness_target";
-constexpr const char* kArmEndEffectorStiffnessStateTopic = "arm_ee_stiffness_state";
+constexpr const char* ArmPoseTargetTopic = "arm_pose_target";
+constexpr const char* ArmJointTargetsTopic = "arm_joint_targets";
+constexpr const char* ArmJointStateTopic = "arm_joint_states";
+constexpr const char* ArmEndEffectorPoseStateTopic = "arm_ee_pose_state";
+constexpr const char* ArmEndEffectorStiffnessTargetTopic = "arm_ee_stiffness_target";
+constexpr const char* ArmEndEffectorStiffnessStateTopic = "arm_ee_stiffness_state";
 
-constexpr const char* kHandJointTargetTopic = "hand_joint_targets";
-constexpr const char* kHandJointStateTopic = "hand_joint_states";
-constexpr const char* kHandStiffnessTargetTopic = "hand_stiffness_targets";
-constexpr const char* kHandStiffnessStateTopic = "hand_stiffness_states";
-constexpr const char* kHandSensorStateTopic = "fingertip_pressures";
+constexpr const char* HandJointTargetTopic = "hand_joint_targets";
+constexpr const char* HandJointStateTopic = "hand_joint_states";
+constexpr const char* HandStiffnessTargetTopic = "hand_stiffness_targets";
+constexpr const char* HandStiffnessStateTopic = "hand_stiffness_states";
+constexpr const char* HandSensorStateTopic = "fingertip_pressures";
 
-constexpr const char* kArmJointVelocitiesTopic = "arm_joint_velocities";
-constexpr const char* kArmJointEffortsTopic = "arm_joint_efforts";
-constexpr const char* kArmControlPolicyEffortsTopic = "arm_joint_control_policy_efforts";
+constexpr const char* ArmJointVelocitiesTopic = "arm_joint_velocities";
+constexpr const char* ArmJointEffortsTopic = "arm_joint_efforts";
+constexpr const char* ArmControlPolicyEffortsTopic = "arm_joint_control_policy_efforts";
 
-constexpr const char* kHandJointVelocitiesTopic = "hand_joint_velocities";
-constexpr const char* kHandJointEffortsTopic = "hand_joint_efforts";
-constexpr const char* kHandControlPolicyEffortsTopic = "hand_joint_control_policy_efforts";
+constexpr const char* HandJointVelocitiesTopic = "hand_joint_velocities";
+constexpr const char* HandJointEffortsTopic = "hand_joint_efforts";
+constexpr const char* HandControlPolicyEffortsTopic = "hand_joint_control_policy_efforts";
 
-constexpr int kNumDefaultArmJoints = 7;
-constexpr int kNumDefaultGripperJoints = 1;
-constexpr int kNumDefaultHandJoints = 16;
-constexpr int kNumDefaultHandSensors = 5;
+constexpr int NumDefaultArmJoints = 7;
+constexpr int NumDefaultGripperJoints = 1;
+constexpr int NumDefaultHandJoints = 16;
+constexpr int NumDefaultHandSensors = 5;
 
 } // namespace Teleop
 

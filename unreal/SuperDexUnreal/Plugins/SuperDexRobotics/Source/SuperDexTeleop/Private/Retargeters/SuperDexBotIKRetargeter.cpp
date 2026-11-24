@@ -367,7 +367,7 @@ bool USuperDexBotIKRetargeter::GetTransformedPose_Implementation(
   }
   if (!bSourceIsValid || SourcePose.bIsInInfiniteLoop ||
       SourcePose.SourceName == FName(TEXT("RefSkeleton")) ||
-      SourcePose.tags.Contains(FName(TEXT("InEditorOnly"))) ||
+      SourcePose.Tags.Contains(FName(TEXT("InEditorOnly"))) ||
       (SourcePose.bIsTrackingEnabled && !SourcePose.bIsTrackingConfident)) {
     SetStatus(false, AwaitingInputPose, false);
     return false;
@@ -473,7 +473,7 @@ bool USuperDexBotIKRetargeter::GetTransformedPose_Implementation(
     }
   }
   FSuperDexPose Candidate = SourcePose;
-  Candidate.tags.AddUnique(FName(TEXT("SuperDexBotIK")));
+  Candidate.Tags.AddUnique(FName(TEXT("SuperDexBotIK")));
   Candidate.SkeletonRootToVrRoot =
       USuperDexPoseFunctionLibrary::MultiplyTransformsWithoutScalePreservingScale(
           InputRootFrameFromOutputRootFrame, SourcePose.SkeletonRootToVrRoot);
@@ -533,7 +533,7 @@ bool USuperDexBotIKRetargeter::GetCachedPose(FSuperDexPose& OutPose) const {
     CacheGuard.Emplace(CacheLock);
   }
   FScopeLock ResultGuard(&ResultMutex);
-  if (!CacheInitialized || !bCurrentValid) {
+  if (!bCacheInitialized || !bCurrentValid) {
     return false;
   }
   OutPose = CachedOutputPose;
@@ -954,14 +954,14 @@ void USuperDexBotIKRetargeter::OnTickManageCache(FSuperDexPose& Pose, bool bIsVa
   }
   FWriteScopeLock Lock(CacheLock);
   // Without a previous pose there is no root to keep; don't invent one for a self-placing mesh.
-  if (!CacheInitialized && bUpdateComponentToRootTransformOnTick) {
+  if (!bCacheInitialized && bUpdateComponentToRootTransformOnTick) {
     return;
   }
   FSuperDexPose Display = CachedOutputPose;
   if (USuperDexPoseFunctionLibrary::ComputeSuperDexPoseFromJointPositions(
           InitializedOutputBot, Feedback, Display)) {
     CachedOutputPose = MoveTemp(Display);
-    CacheInitialized = true;
+    bCacheInitialized = true;
   }
 }
 void USuperDexBotIKRetargeter::EndPlay(const EEndPlayReason::Type Reason) {

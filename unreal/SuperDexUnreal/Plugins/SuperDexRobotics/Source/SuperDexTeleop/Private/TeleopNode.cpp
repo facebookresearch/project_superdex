@@ -336,38 +336,38 @@ bool UTeleopNodeOperatorComponent::OnCreatePubSubs() {
   // clang-format off
 
   // the Operator publishes arm pose targets
-  CreatePublisher(Communication, PubName, Teleop::kArmPoseTargetTopic, ArmPose);
+  CreatePublisher(Communication, PubName, Teleop::ArmPoseTargetTopic, ArmPose);
   // the Operator publishes arm end-effector stiffness targets (3x3 matrix)
-  CreatePublisher(Communication, PubName, Teleop::kArmEndEffectorStiffnessTargetTopic, ArmEndEffectorStiffness);
+  CreatePublisher(Communication, PubName, Teleop::ArmEndEffectorStiffnessTargetTopic, ArmEndEffectorStiffness);
   // the Operator publishes arm joint targets
-  CreatePublisher(Communication, PubName, Teleop::kArmJointTargetsTopic, ArmJointPositions);
+  CreatePublisher(Communication, PubName, Teleop::ArmJointTargetsTopic, ArmJointPositions);
   // the Operator publishes hand joint targets
-  CreatePublisher(Communication, PubName, Teleop::kHandJointTargetTopic, HandJointPositions);
+  CreatePublisher(Communication, PubName, Teleop::HandJointTargetTopic, HandJointPositions);
   // the Operator publishes hand stiffness targets
-  CreatePublisher(Communication, PubName, Teleop::kHandStiffnessTargetTopic, HandStiffness);
+  CreatePublisher(Communication, PubName, Teleop::HandStiffnessTargetTopic, HandStiffness);
 
   // the Operator subscribes end-effector (wrist) pose
-  CreateSubscriber(Communication, SubName, Teleop::kArmEndEffectorPoseStateTopic, ArmPose);
+  CreateSubscriber(Communication, SubName, Teleop::ArmEndEffectorPoseStateTopic, ArmPose);
   // the Operator subscribes end-effector (wrist) stiffness
-  CreateSubscriber(Communication, SubName, Teleop::kArmEndEffectorStiffnessStateTopic, ArmEndEffectorStiffness);
+  CreateSubscriber(Communication, SubName, Teleop::ArmEndEffectorStiffnessStateTopic, ArmEndEffectorStiffness);
   // the Operator subscribes arm joint state (init data to home position)
-  CreateSubscriber(Communication, SubName, Teleop::kArmJointStateTopic, ArmJointPositions);
+  CreateSubscriber(Communication, SubName, Teleop::ArmJointStateTopic, ArmJointPositions);
   // the Operator subscribes hand joint state
-  CreateSubscriber(Communication, SubName, Teleop::kHandJointStateTopic, HandJointPositions);
+  CreateSubscriber(Communication, SubName, Teleop::HandJointStateTopic, HandJointPositions);
   // the Operator subscribes hand stiffness state
-  CreateSubscriber(Communication, SubName, Teleop::kHandStiffnessStateTopic, HandStiffness);
+  CreateSubscriber(Communication, SubName, Teleop::HandStiffnessStateTopic, HandStiffness);
   // the Operator subscribes hand sensor state
-  CreateSubscriber(Communication, SubName, Teleop::kHandSensorStateTopic, HandSensors);
+  CreateSubscriber(Communication, SubName, Teleop::HandSensorStateTopic, HandSensors);
 
   // the Operator subscribes to joint velocities
-  CreateSubscriber(Communication, SubName, Teleop::kArmJointVelocitiesTopic, ArmJointVelocities);
-  CreateSubscriber(Communication, SubName, Teleop::kHandJointVelocitiesTopic, HandJointVelocities);
+  CreateSubscriber(Communication, SubName, Teleop::ArmJointVelocitiesTopic, ArmJointVelocities);
+  CreateSubscriber(Communication, SubName, Teleop::HandJointVelocitiesTopic, HandJointVelocities);
 
   // the Operator subscribes to joint efforts
-  CreateSubscriber(Communication, SubName, Teleop::kArmJointEffortsTopic, ArmJointEfforts);
-  CreateSubscriber(Communication, SubName, Teleop::kHandJointEffortsTopic, HandJointEfforts);
-  CreateSubscriber(Communication, SubName, Teleop::kArmControlPolicyEffortsTopic, ArmJointControlPolicyEfforts);
-  CreateSubscriber(Communication, SubName, Teleop::kHandControlPolicyEffortsTopic, HandJointControlPolicyEfforts);
+  CreateSubscriber(Communication, SubName, Teleop::ArmJointEffortsTopic, ArmJointEfforts);
+  CreateSubscriber(Communication, SubName, Teleop::HandJointEffortsTopic, HandJointEfforts);
+  CreateSubscriber(Communication, SubName, Teleop::ArmControlPolicyEffortsTopic, ArmJointControlPolicyEfforts);
+  CreateSubscriber(Communication, SubName, Teleop::HandControlPolicyEffortsTopic, HandJointControlPolicyEfforts);
 
   // clang-format on
 
@@ -559,36 +559,36 @@ bool UTeleopNodeRobotComponent::OnCreatePubSubs() {
   // clang-format off
 
   // the Robot publishes end-effector (wrist) pose
-  CreatePublisher(Communication, PubName, Teleop::kArmEndEffectorPoseStateTopic, ArmPose);
-  CreatePublisher(Communication, PubName, Teleop::kArmEndEffectorStiffnessStateTopic, ArmEndEffectorStiffness);
+  CreatePublisher(Communication, PubName, Teleop::ArmEndEffectorPoseStateTopic, ArmPose);
+  CreatePublisher(Communication, PubName, Teleop::ArmEndEffectorStiffnessStateTopic, ArmEndEffectorStiffness);
   // the Robot publishes arm joint state
-  CreatePublisher(Communication, PubName, Teleop::kArmJointStateTopic, ArmJointPositions);
+  CreatePublisher(Communication, PubName, Teleop::ArmJointStateTopic, ArmJointPositions);
   // the Robot publishes hand joint state
-  CreatePublisher(Communication, PubName, Teleop::kHandJointStateTopic, HandJointPositions);
-  CreatePublisher(Communication, PubName, Teleop::kHandStiffnessStateTopic, HandStiffness);
+  CreatePublisher(Communication, PubName, Teleop::HandJointStateTopic, HandJointPositions);
+  CreatePublisher(Communication, PubName, Teleop::HandStiffnessStateTopic, HandStiffness);
   // the Robot publishes hand sensor state
-  CreatePublisher(Communication, PubName, Teleop::kHandSensorStateTopic, HandSensors);
+  CreatePublisher(Communication, PubName, Teleop::HandSensorStateTopic, HandSensors);
 
   // the Robot publishes joint velocities
-  CreatePublisher(Communication, PubName, Teleop::kArmJointVelocitiesTopic, ArmJointVelocities);
-  CreatePublisher(Communication, PubName, Teleop::kHandJointVelocitiesTopic, HandJointVelocities);
+  CreatePublisher(Communication, PubName, Teleop::ArmJointVelocitiesTopic, ArmJointVelocities);
+  CreatePublisher(Communication, PubName, Teleop::HandJointVelocitiesTopic, HandJointVelocities);
 
   // the Robot publishes joint efforts
-  CreatePublisher(Communication, PubName, Teleop::kArmJointEffortsTopic, ArmJointEfforts);
-  CreatePublisher(Communication, PubName, Teleop::kHandJointEffortsTopic, HandJointEfforts);
-  CreatePublisher(Communication, PubName, Teleop::kArmControlPolicyEffortsTopic, ArmJointControlPolicyEfforts);
-  CreatePublisher(Communication, PubName, Teleop::kHandControlPolicyEffortsTopic, HandJointControlPolicyEfforts);
+  CreatePublisher(Communication, PubName, Teleop::ArmJointEffortsTopic, ArmJointEfforts);
+  CreatePublisher(Communication, PubName, Teleop::HandJointEffortsTopic, HandJointEfforts);
+  CreatePublisher(Communication, PubName, Teleop::ArmControlPolicyEffortsTopic, ArmJointControlPolicyEfforts);
+  CreatePublisher(Communication, PubName, Teleop::HandControlPolicyEffortsTopic, HandJointControlPolicyEfforts);
 
   // the Robot subscribes arm pose targets
-  CreateSubscriber(Communication, SubName, Teleop::kArmPoseTargetTopic, ArmPose);
+  CreateSubscriber(Communication, SubName, Teleop::ArmPoseTargetTopic, ArmPose);
   // the Robot subscribes arm joint targets
-  CreateSubscriber(Communication, SubName, Teleop::kArmJointTargetsTopic, ArmJointPositions);
+  CreateSubscriber(Communication, SubName, Teleop::ArmJointTargetsTopic, ArmJointPositions);
   // the Robot subscribes arm stiffness targets
-  CreateSubscriber(Communication, SubName, Teleop::kArmEndEffectorStiffnessTargetTopic, ArmEndEffectorStiffness);
+  CreateSubscriber(Communication, SubName, Teleop::ArmEndEffectorStiffnessTargetTopic, ArmEndEffectorStiffness);
   // the Robot subscribes hand joint targets
-  CreateSubscriber(Communication, SubName, Teleop::kHandJointTargetTopic, HandJointPositions);
+  CreateSubscriber(Communication, SubName, Teleop::HandJointTargetTopic, HandJointPositions);
   // the Robot subscribes hand stiffness targets
-  CreateSubscriber(Communication, SubName, Teleop::kHandStiffnessTargetTopic, HandStiffness);
+  CreateSubscriber(Communication, SubName, Teleop::HandStiffnessTargetTopic, HandStiffness);
 
   // clang-format on
 

@@ -49,11 +49,11 @@ class SUPERDEXTELEOP_API UOpenXR2RobotiqRetargeter : public USuperDexRetargeter 
   // The thumb tip link of the source pose's bot; its distance to the index tip at the source pose's
   // joint positions drives the gripper. The default is the OpenXR hand's (xr_05_thumb_tip).
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Teleop")
-  FName ThumbTipName = kSuperDexBoneNames_OXR[static_cast<int32>(ESuperDexBone_OXR::ThumbTip)];
+  FName ThumbTipName = SuperDexBoneNames_OXR[static_cast<int32>(ESuperDexBone_OXR::ThumbTip)];
   // The index finger tip link of the source pose's bot. The default is the OpenXR hand's
   // (xr_10_index_tip).
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Teleop")
-  FName IndexTipName = kSuperDexBoneNames_OXR[static_cast<int32>(ESuperDexBone_OXR::IndexTip)];
+  FName IndexTipName = SuperDexBoneNames_OXR[static_cast<int32>(ESuperDexBone_OXR::IndexTip)];
   // Default behavior is to directly map
   // finger distance to pincher distance; setting
   // this to true allows you to define custom pinch mappings below.
