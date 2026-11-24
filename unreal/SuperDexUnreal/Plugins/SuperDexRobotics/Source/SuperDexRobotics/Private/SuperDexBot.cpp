@@ -62,8 +62,8 @@ void USuperDexBot::PostLoad() {
     USuperDexBotImportData* NewData =
         NewObject<USuperDexBotImportData>(this, NAME_None, RF_NoFlags, nullptr);
     // Migrate source file info from the old subobject.
-    TArray<FAssetImportInfo::FSourceFile> files = OldData->GetSourceData().SourceFiles;
-    NewData->SetSourceFiles(MoveTemp(files));
+    TArray<FAssetImportInfo::FSourceFile> Files = OldData->GetSourceData().SourceFiles;
+    NewData->SetSourceFiles(MoveTemp(Files));
     AssetImportData = NewData;
     // Mark dirty so the upgrade is saved.
     MarkPackageDirty();
@@ -240,9 +240,9 @@ FName USuperDexBot::GetDofLinkName(int32 DofIndex) const {
 FString USuperDexBot::ToUrdfXml(const FString& VisualRelPath, const FString& CollisionRelPath)
     const {
   if (EnsureBotPrefabCached()) {
-    mochi::DynamicString str =
+    mochi::DynamicString Str =
         superdex::robotics::SaveToUrdfString(CachedBotPrefab, mochi::ErrorLog{});
-    return ANSI_TO_TCHAR(str.c_str());
+    return ANSI_TO_TCHAR(Str.c_str());
   }
   UE_LOG(
       LogMochiPhysics,
@@ -476,16 +476,16 @@ bool USuperDexBot::EnsureBotPrefabCached(bool bForceReload) const {
     return false;
   }
   FSuperDexBotLoader Loader;
-  mochi::ErrorLog e{};
-  CachedBotPrefab = Loader.LoadBotPrefab(this, e);
-  if (!e.IsOK()) {
+  mochi::ErrorLog E{};
+  CachedBotPrefab = Loader.LoadBotPrefab(this, E);
+  if (!E.IsOK()) {
     UE_LOG(
         LogMochiPhysics,
         Error,
         TEXT("[%hs] Failed to load BotPrefab for '%s': %hs"),
         __FUNCTION__,
         *BotName,
-        e._error.GetDescription());
+        E._error.GetDescription());
     bHasCachedBotPrefab = false;
     CachedBotPrefab = {};
     return false;
@@ -522,8 +522,8 @@ namespace {
 // index is not its joint's index.
 TArray<bool> GetPrismaticDofs(const superdex::robotics::BotPrefab& BotPrefab) {
   TArray<bool> PrismaticDofs;
-  for (size_t iLink = 1; iLink < BotPrefab.joints.size(); ++iLink) {
-    switch (BotPrefab.joints[iLink].type) {
+  for (size_t LinkIndex = 1; LinkIndex < BotPrefab.joints.size(); ++LinkIndex) {
+    switch (BotPrefab.joints[LinkIndex].type) {
       case mochi::ArticulatedJointType::Revolute:
         PrismaticDofs.Add(false);
         break;
@@ -584,27 +584,27 @@ bool USuperDexBot::ComputeLinkTransformsInternal(
   mochi::DynamicArray<mochi::real> Pose;
   Pose.resize_noinit(JointPositions.Num());
   for (int32 i = 0; i < JointPositions.Num(); ++i) {
-    const bool isPrismatic = PrismaticDofs.IsValidIndex(i) && PrismaticDofs[i];
-    const double scale = isPrismatic ? LengthToNative : AngleScale;
-    Pose[i] = static_cast<mochi::real>(JointPositions[i] * scale);
+    const bool bIsPrismatic = PrismaticDofs.IsValidIndex(i) && PrismaticDofs[i];
+    const double Scale = bIsPrismatic ? LengthToNative : AngleScale;
+    Pose[i] = static_cast<mochi::real>(JointPositions[i] * Scale);
   }
   mochi::DynamicArray<mochi::TransformRT> MochiTransforms;
-  mochi::ErrorLog e{};
+  mochi::ErrorLog E{};
   superdex::robotics::ComputeLinkTransformsFromPose(
       CachedBotPrefab,
       Pose,
       MochiTransforms,
       ToBotLinkTransformSpace(bToArticulationRoot),
-      e,
+      E,
       FinalLinkIndex);
-  if (!e.IsOK()) {
+  if (!E.IsOK()) {
     UE_LOG(
         LogMochiPhysics,
         Error,
         TEXT("[%hs] ComputeLinkTransformsFromPose failed for '%s': %hs"),
         __FUNCTION__,
         *BotName,
-        e._error.GetDescription());
+        E._error.GetDescription());
     return false;
   }
   int32 NumLinks = static_cast<int32>(MochiTransforms.size());
@@ -644,17 +644,17 @@ bool USuperDexBot::ComputeJointPositionsInternal(
     MochiTransforms[i] = Converter.TransformToMochi_RT(LinkTransforms[i]);
   }
   mochi::DynamicArray<mochi::real> Pose;
-  mochi::ErrorLog e{};
+  mochi::ErrorLog E{};
   superdex::robotics::ComputePoseFromLinkTransforms(
-      CachedBotPrefab, MochiTransforms, Pose, ToBotLinkTransformSpace(bFromArticulationRoot), e);
-  if (!e.IsOK()) {
+      CachedBotPrefab, MochiTransforms, Pose, ToBotLinkTransformSpace(bFromArticulationRoot), E);
+  if (!E.IsOK()) {
     UE_LOG(
         LogMochiPhysics,
         Error,
         TEXT("[%hs] ComputePoseFromLinkTransforms failed for '%s': %hs"),
         __FUNCTION__,
         *BotName,
-        e._error.GetDescription());
+        E._error.GetDescription());
     return false;
   }
   const TArray<bool> PrismaticDofs = GetPrismaticDofs(CachedBotPrefab);
@@ -665,9 +665,9 @@ bool USuperDexBot::ComputeJointPositionsInternal(
   const int32 NumDofs = static_cast<int32>(Pose.size());
   OutJointPositions.SetNum(NumDofs);
   for (int32 i = 0; i < NumDofs; ++i) {
-    const bool isPrismatic = PrismaticDofs.IsValidIndex(i) && PrismaticDofs[i];
+    const bool bIsPrismatic = PrismaticDofs.IsValidIndex(i) && PrismaticDofs[i];
     OutJointPositions[i] =
-        static_cast<double>(Pose[i]) / (isPrismatic ? LengthToNative : AngleScale);
+        static_cast<double>(Pose[i]) / (bIsPrismatic ? LengthToNative : AngleScale);
   }
   return true;
 }
@@ -689,11 +689,11 @@ bool USuperDexBot::ComputeVisualBoundsInternal(
   if (!bToArticulationRoot) {
     LinksToRoot.SetNum(NumLinks);
     for (int32 i = 0; i < NumLinks; ++i) {
-      int32 iParent = CachedBotPrefab.links[i].parentLink;
-      if (iParent < 0 || iParent >= NumLinks) {
+      int32 ParentIndex = CachedBotPrefab.links[i].parentLink;
+      if (ParentIndex < 0 || ParentIndex >= NumLinks) {
         LinksToRoot[i] = LinksToTransformSpace[i];
       } else {
-        LinksToRoot[i] = LinksToTransformSpace[i] * LinksToRoot[iParent];
+        LinksToRoot[i] = LinksToTransformSpace[i] * LinksToRoot[ParentIndex];
       }
     }
   }
@@ -707,11 +707,11 @@ bool USuperDexBot::ComputeVisualBoundsInternal(
     }
     FTransform MeshToRoot = LinkToRootTransforms[i];
     if (!CachedBotPrefab.links[i].renderModelFile.empty()) {
-      superdex::robotics::BotLinkPrefab const& link = CachedBotPrefab.links[i];
-      mochi::TransformRT RT(link.renderModelRotation, link.renderModelTranslation);
+      superdex::robotics::BotLinkPrefab const& Link = CachedBotPrefab.links[i];
+      mochi::TransformRT RT(Link.renderModelRotation, Link.renderModelTranslation);
       FTransform VisualMeshTransform = Converter.TransformToUnreal(RT);
       VisualMeshTransform.SetScale3D(
-          FVector(link.renderModelScale[0], link.renderModelScale[1], link.renderModelScale[2]));
+          FVector(Link.renderModelScale[0], Link.renderModelScale[1], Link.renderModelScale[2]));
       MeshToRoot = VisualMeshTransform * LinkToRootTransforms[i];
     }
     FBox TransformedBox = LinkBounds[i].GetBox().TransformBy(MeshToRoot);
@@ -728,15 +728,15 @@ bool USuperDexBot::ComputeVisualBoundsInternal(
 void USuperDexBot::ComputeOverlayStats(double& OutMass, int& OutNumSurfaceFaces) const {
   OutMass = 0.0;
   OutNumSurfaceFaces = 0;
-  superdex::robotics::BotPrefab const& params = GetBotPrefab();
-  for (superdex::robotics::BotLinkPrefab const& l : params.links) {
-    if (l.mass.has_value()) {
-      OutMass += *l.mass;
+  superdex::robotics::BotPrefab const& Params = GetBotPrefab();
+  for (superdex::robotics::BotLinkPrefab const& L : Params.links) {
+    if (L.mass.has_value()) {
+      OutMass += *L.mass;
     }
   }
-  for (UMochiModel* const& m : GetMochiModels()) {
-    if (m) {
-      OutNumSurfaceFaces += m->NumSurfaceFaces;
+  for (UMochiModel* const& M : GetMochiModels()) {
+    if (M) {
+      OutNumSurfaceFaces += M->NumSurfaceFaces;
     }
   }
 }
@@ -748,7 +748,7 @@ void USuperDexBot::DrawCustom(
     bool bShowJoints,
     bool bShowBounds,
     FMaterialRenderProxy* JointMaterialRenderProxy) const {
-  static constexpr FColor kPurpleColor = FColor(138, 43, 226, 255);
+  static constexpr FColor PurpleColor = FColor(138, 43, 226, 255);
   TMochiToUnrealConverter<double> Conv(SuperDexSpace, UnrealCentimetersSpace);
   superdex::robotics::BotPrefab const& P = GetBotPrefab();
   mochi::DynamicArray<mochi::real> Pose(P.defaultPose.begin(), P.defaultPose.end());
@@ -759,52 +759,52 @@ void USuperDexBot::DrawCustom(
   if (!Err.IsOK()) {
     return;
   }
-  for (int32 i = 0; i < (int32)P.links.size(); ++i) {
-    FTransform L2R = Conv.TransformToUnreal(RT[i]);
-    FVector loc = L2R.GetLocation();
+  for (int32 LinkIndex = 0; LinkIndex < (int32)P.links.size(); ++LinkIndex) {
+    FTransform L2R = Conv.TransformToUnreal(RT[LinkIndex]);
+    FVector Loc = L2R.GetLocation();
     if (bShowLinkTransforms) {
       FRotationMatrix R(L2R.GetRotation().Rotator());
-      float s = 5.f;
+      float S = 5.f;
       PDI->DrawLine(
-          loc, loc + R.GetScaledAxis(EAxis::X) * s, FLinearColor::Red, SDPG_Foreground, 0.1f, 1.f);
+          Loc, Loc + R.GetScaledAxis(EAxis::X) * S, FLinearColor::Red, SDPG_Foreground, 0.1f, 1.f);
       PDI->DrawLine(
-          loc,
-          loc + R.GetScaledAxis(EAxis::Y) * s,
+          Loc,
+          Loc + R.GetScaledAxis(EAxis::Y) * S,
           FLinearColor::Green,
           SDPG_Foreground,
           0.1f,
           1.f);
       PDI->DrawLine(
-          loc, loc + R.GetScaledAxis(EAxis::Z) * s, FLinearColor::Blue, SDPG_Foreground, 0.1f, 1.f);
+          Loc, Loc + R.GetScaledAxis(EAxis::Z) * S, FLinearColor::Blue, SDPG_Foreground, 0.1f, 1.f);
     }
-    if (bShowJoints && i > 0) {
-      superdex::robotics::BotJointPrefab const& jt = P.joints[i];
-      if (jt.type == mochi::ArticulatedJointType::Revolute ||
-          jt.type == mochi::ArticulatedJointType::Prismatic) {
-        int sides = jt.type == mochi::ArticulatedJointType::Prismatic ? 3 : 16;
-        FVector ax = L2R.TransformVector(Conv.DirectionToUnreal(jt.axis)).GetSafeNormal();
-        FTransform t = L2R;
-        t.SetRotation(FQuat::FindBetweenNormals(FVector(0, 0, 1), ax));
+    if (bShowJoints && LinkIndex > 0) {
+      superdex::robotics::BotJointPrefab const& Jt = P.joints[LinkIndex];
+      if (Jt.type == mochi::ArticulatedJointType::Revolute ||
+          Jt.type == mochi::ArticulatedJointType::Prismatic) {
+        int Sides = Jt.type == mochi::ArticulatedJointType::Prismatic ? 3 : 16;
+        FVector Ax = L2R.TransformVector(Conv.DirectionToUnreal(Jt.axis)).GetSafeNormal();
+        FTransform T = L2R;
+        T.SetRotation(FQuat::FindBetweenNormals(FVector(0, 0, 1), Ax));
         DrawCylinder(
             PDI,
-            loc,
-            t.TransformVector({1, 0, 0}),
-            t.TransformVector({0, 1, 0}),
-            t.TransformVector({0, 0, 1}),
+            Loc,
+            T.TransformVector({1, 0, 0}),
+            T.TransformVector({0, 1, 0}),
+            T.TransformVector({0, 0, 1}),
             0.4f,
             1.5f,
-            sides,
+            Sides,
             JointMaterialRenderProxy,
             SDPG_Foreground);
-      } else if (jt.type == mochi::ArticulatedJointType::Hard) {
-        PDI->DrawPoint(loc, kPurpleColor, 4, SDPG_Foreground);
+      } else if (Jt.type == mochi::ArticulatedJointType::Hard) {
+        PDI->DrawPoint(Loc, PurpleColor, 4, SDPG_Foreground);
       }
     }
   }
   if (bShowBounds) {
-    FBoxSphereBounds bounds;
-    if (ComputeVisualBoundsFromJointPositions(GetDefaultJointPositions(), bounds)) {
-      DrawWireBox(PDI, bounds.GetBox(), kPurpleColor, SDPG_World);
+    FBoxSphereBounds Bounds;
+    if (ComputeVisualBoundsFromJointPositions(GetDefaultJointPositions(), Bounds)) {
+      DrawWireBox(PDI, Bounds.GetBox(), PurpleColor, SDPG_World);
     }
   }
 }
@@ -848,12 +848,12 @@ void USuperDexBot::DrawCanvasCustom(
   };
   for (int32 i = 0; i < (int32)P.links.size(); ++i) {
     FTransform L2R = Conv.TransformToUnreal(RT[i]);
-    FVector loc = L2R.GetLocation();
+    FVector Loc = L2R.GetLocation();
     if (bShowLinkTransforms) {
-      AddLabel(UTF8_TO_TCHAR(std::string(P.links[i].name).c_str()), loc);
+      AddLabel(UTF8_TO_TCHAR(std::string(P.links[i].name).c_str()), Loc);
     }
     if (bShowJoints && i > 0) {
-      AddLabel(UTF8_TO_TCHAR(std::string(P.joints[i].name).c_str()), loc);
+      AddLabel(UTF8_TO_TCHAR(std::string(P.joints[i].name).c_str()), Loc);
     }
   }
   for (TPair<TPair<int32, int32>, TArray<FString>>& Pair : LabelsByScreenPos) {

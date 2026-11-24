@@ -55,9 +55,9 @@ class FSuperDexBotAssetActions : public FAssetTypeActions_Base {
       const TArray<UObject*>& InObjects,
       TSharedPtr<IToolkitHost> EditWithinLevelEditor = TSharedPtr<IToolkitHost>()) override {
     if (InObjects.Num() > 0) {
-      if (USuperDexBot* object = Cast<USuperDexBot>(InObjects[0])) {
+      if (USuperDexBot* Object = Cast<USuperDexBot>(InObjects[0])) {
         FMochiArticulationEditorToolkit::CreateEditor(
-            EToolkitMode::Standalone, EditWithinLevelEditor, object);
+            EToolkitMode::Standalone, EditWithinLevelEditor, Object);
       }
     }
   }

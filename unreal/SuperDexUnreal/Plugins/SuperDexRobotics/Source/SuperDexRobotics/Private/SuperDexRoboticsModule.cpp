@@ -202,16 +202,16 @@ void FSuperDexRoboticsModule::StartupModule() {
   // Load superdex_robotics.dll. mochi_physics.dll is loaded by the sibling SuperDexPhysics
   // plugin's own module (FMochiPhysicsModule::Initialize); this module only owns its own native
   // library.
-  const FString baseDir = IPluginManager::Get().FindPlugin(TEXT("SuperDexRobotics"))->GetBaseDir();
+  const FString BaseDir = IPluginManager::Get().FindPlugin(TEXT("SuperDexRobotics"))->GetBaseDir();
 #if PLATFORM_WINDOWS
   FString BinariesDirectory =
-      FPaths::Combine(baseDir, TEXT("/ThirdParty/superdex_robotics/lib/Win64"));
+      FPaths::Combine(BaseDir, TEXT("/ThirdParty/superdex_robotics/lib/Win64"));
 #elif PLATFORM_LINUX
   FString BinariesDirectory =
-      FPaths::Combine(baseDir, TEXT("/ThirdParty/superdex_robotics/lib/Linux"));
+      FPaths::Combine(BaseDir, TEXT("/ThirdParty/superdex_robotics/lib/Linux"));
 #else
   FString BinariesDirectory =
-      FPaths::Combine(baseDir, TEXT("/ThirdParty/superdex_robotics/lib/Android"));
+      FPaths::Combine(BaseDir, TEXT("/ThirdParty/superdex_robotics/lib/Android"));
 #endif
 
   FPlatformProcess::PushDllDirectory(*BinariesDirectory);

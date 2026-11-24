@@ -38,21 +38,21 @@
 
 constexpr float kMetersToCm = 100.f;
 
-inline FString ToFString(char const* str) {
-  return ANSI_TO_TCHAR(str);
+inline FString ToFString(char const* Str) {
+  return ANSI_TO_TCHAR(Str);
 }
 
-inline FVector RightHandedToLeftHanded(FVector const& v) {
-  return FVector(v.X, v.Z, v.Y);
+inline FVector RightHandedToLeftHanded(FVector const& V) {
+  return FVector(V.X, V.Z, V.Y);
 }
 
-inline FQuat RightHandedToLeftHanded(FQuat const& q) {
-  return FQuat(-q.X, -q.Z, -q.Y, q.W);
+inline FQuat RightHandedToLeftHanded(FQuat const& Q) {
+  return FQuat(-Q.X, -Q.Z, -Q.Y, Q.W);
 }
 
-inline FTransform RightHandedToLeftHanded(FTransform const& t) {
+inline FTransform RightHandedToLeftHanded(FTransform const& T) {
   return FTransform(
-      RightHandedToLeftHanded(t.GetRotation()), RightHandedToLeftHanded(t.GetTranslation()));
+      RightHandedToLeftHanded(T.GetRotation()), RightHandedToLeftHanded(T.GetTranslation()));
 }
 
 template <typename T>
@@ -82,8 +82,8 @@ T* GetFirstChildComponentByTypeAndNameStartsWith(
     Root->GetChildrenComponents(bIncludeAllDescendents, Children);
     for (USceneComponent* Child : Children) {
       if (T* MaybeResult = Cast<T>(Child)) {
-        FString name = MaybeResult->GetName();
-        if (name.StartsWith(Prefix, ESearchCase::IgnoreCase)) {
+        FString Name = MaybeResult->GetName();
+        if (Name.StartsWith(Prefix, ESearchCase::IgnoreCase)) {
           return MaybeResult;
         }
       }
@@ -98,15 +98,15 @@ T* GetFirstChildComponentByTypeAndNameStartsWith(
 template <typename T>
 T* GetFirstChildComponentByTypeAndNameContains(
     USceneComponent const* Root,
-    const TCHAR* substr,
+    const TCHAR* Substr,
     bool bIncludeAllDescendents) {
   if (Root) {
     TArray<USceneComponent*> Children;
     Root->GetChildrenComponents(bIncludeAllDescendents, Children);
     for (USceneComponent* Child : Children) {
       if (T* MaybeResult = Cast<T>(Child)) {
-        FString name = MaybeResult->GetName();
-        if (name.Contains(substr, ESearchCase::CaseSensitive)) {
+        FString Name = MaybeResult->GetName();
+        if (Name.Contains(Substr, ESearchCase::CaseSensitive)) {
           return MaybeResult;
         }
       }
@@ -115,12 +115,12 @@ T* GetFirstChildComponentByTypeAndNameContains(
   return nullptr;
 }
 
-inline void SetSelfAndChildrenVisible(USceneComponent* root, bool visible) {
-  TArray<USceneComponent*> children;
-  root->SetVisibility(visible);
-  root->GetChildrenComponents(true, children);
-  for (USceneComponent* child : children) {
-    child->SetVisibility(visible);
+inline void SetSelfAndChildrenVisible(USceneComponent* Root, bool bVisible) {
+  TArray<USceneComponent*> Children;
+  Root->SetVisibility(bVisible);
+  Root->GetChildrenComponents(true, Children);
+  for (USceneComponent* Child : Children) {
+    Child->SetVisibility(bVisible);
   }
 }
 
@@ -153,8 +153,8 @@ T* FindComponentStartsWithName(AActor const* Root, FString Prefix) {
   TArray<T*> Components;
   Root->GetComponents(Components);
   for (T* Component : Components) {
-    FString name = Component->GetName();
-    if (name.StartsWith(Prefix, ESearchCase::IgnoreCase)) {
+    FString Name = Component->GetName();
+    if (Name.StartsWith(Prefix, ESearchCase::IgnoreCase)) {
       return Component;
     }
   }
@@ -162,13 +162,13 @@ T* FindComponentStartsWithName(AActor const* Root, FString Prefix) {
 }
 
 template <typename T>
-T* FindChildActorByType(AActor* parent) {
-  TArray<AActor*> childActors;
-  parent->GetAttachedActors(childActors);
-  for (AActor* childActor : childActors) {
-    T* childActorT = Cast<T>(childActor);
-    if (childActorT != nullptr) {
-      return childActorT;
+T* FindChildActorByType(AActor* Parent) {
+  TArray<AActor*> ChildActors;
+  Parent->GetAttachedActors(ChildActors);
+  for (AActor* ChildActor : ChildActors) {
+    T* ChildActorT = Cast<T>(ChildActor);
+    if (ChildActorT != nullptr) {
+      return ChildActorT;
     }
   }
   return nullptr;
@@ -233,11 +233,11 @@ FString UEnumToString(TEnum EnumValue, bool bStripClassName = false) {
   if (!EnumPtr) {
     return FString("Invalid");
   }
-  FString str = EnumPtr->GetNameByValue((int64)EnumValue).ToString();
+  FString Str = EnumPtr->GetNameByValue((int64)EnumValue).ToString();
   if (bStripClassName) {
-    str.Split("::", nullptr, &str);
+    Str.Split("::", nullptr, &Str);
   }
-  return str;
+  return Str;
 }
 
 UCLASS(BlueprintType)
@@ -249,10 +249,10 @@ class SUPERDEXPOSE_API USuperDexPoseUtilsFunctionLibrary : public UBlueprintFunc
   // ancestor component. If it runs into the root before reaching the ancestor it will stop and
   // return the relative transform from the descendent component to the actor's root.
   static FTransform GetRelativeTransform_DescendentToAncestor(
-      USceneComponent* ancestorComp,
-      USceneComponent* descendentComp);
+      USceneComponent* AncestorComp,
+      USceneComponent* DescendentComp);
 
   // Recursively walks up the tree to get the transform relative to its owning actor's root
   // component.
-  static FTransform GetRelativeTransform_CompToRoot(USceneComponent* comp);
+  static FTransform GetRelativeTransform_CompToRoot(USceneComponent* Comp);
 };

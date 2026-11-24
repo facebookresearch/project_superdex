@@ -39,20 +39,20 @@ SpawnAudioAtBone(USkinnedMeshComponent* SkinnedMeshComponent, USoundBase* Sound,
   if (SkinnedMeshComponent == nullptr || Sound == nullptr) {
     return nullptr;
   }
-  UAudioComponent* audioComp = NewObject<UAudioComponent>(SkinnedMeshComponent);
-  if (audioComp) {
-    audioComp->RegisterComponent();
-    audioComp->SetSound(Sound);
-    audioComp->SetPitchMultiplier(1.0f);
-    audioComp->bAutoDestroy = false;
-    audioComp->AttachToComponent(
+  UAudioComponent* AudioComp = NewObject<UAudioComponent>(SkinnedMeshComponent);
+  if (AudioComp) {
+    AudioComp->RegisterComponent();
+    AudioComp->SetSound(Sound);
+    AudioComp->SetPitchMultiplier(1.0f);
+    AudioComp->bAutoDestroy = false;
+    AudioComp->AttachToComponent(
         SkinnedMeshComponent, FAttachmentTransformRules::SnapToTargetIncludingScale, BoneName);
-    audioComp->SetRelativeLocation(FVector::ZeroVector);
-    audioComp->SetRelativeRotation(FRotator::ZeroRotator);
-    audioComp->Play();
-    audioComp->SetVolumeMultiplier(0);
+    AudioComp->SetRelativeLocation(FVector::ZeroVector);
+    AudioComp->SetRelativeRotation(FRotator::ZeroRotator);
+    AudioComp->Play();
+    AudioComp->SetVolumeMultiplier(0);
   }
-  return audioComp;
+  return AudioComp;
 }
 
 #if WITH_EDITOR
@@ -135,13 +135,13 @@ void USuperDexBotAudioComponent::SetUpAudio() {
   }
   bAudioSetUp = true;
   // set up joint velocity estimators
-  const int numDofs = Bot->GetNumDofs();
-  JointPositionsPrevious.SetNumZeroed(numDofs);
-  EstimatedJointVelocities.SetNumZeroed(numDofs);
-  OneEuroFilters.Init(TSuperDexOneEuroFilter<double>(3.0, 1.0, 1.0), numDofs);
+  const int NumDofs = Bot->GetNumDofs();
+  JointPositionsPrevious.SetNumZeroed(NumDofs);
+  EstimatedJointVelocities.SetNumZeroed(NumDofs);
+  OneEuroFilters.Init(TSuperDexOneEuroFilter<double>(3.0, 1.0, 1.0), NumDofs);
   // spawn audio instances at the links the joints move
-  for (const FSuperDexBotAudioParams& params : BotAudioParams) {
-    if (!params.AudioLoop || !params.VelocityVolumeCurve || !params.VelocityPitchCurve) {
+  for (const FSuperDexBotAudioParams& Params : BotAudioParams) {
+    if (!Params.AudioLoop || !Params.VelocityVolumeCurve || !Params.VelocityPitchCurve) {
       UE_LOG(
           LogMochiPhysics,
           Error,
@@ -149,39 +149,39 @@ void USuperDexBotAudioComponent::SetUpAudio() {
       continue;
     }
 
-    FSuperDexBotAudioInstance audioInstance;
-    audioInstance.VelocityVolumeCurve = params.VelocityVolumeCurve;
-    audioInstance.VelocityPitchCurve = params.VelocityPitchCurve;
-    audioInstance.JointAggregateMode = params.JointAggregateMode;
-    audioInstance.bEstimateVelocity = params.bEstimateVelocity;
-    for (const FName& jName : params.Joints) {
-      const int iDof = Bot->GetDofIndex(jName);
-      if (iDof == INDEX_NONE) {
+    FSuperDexBotAudioInstance AudioInstance;
+    AudioInstance.VelocityVolumeCurve = Params.VelocityVolumeCurve;
+    AudioInstance.VelocityPitchCurve = Params.VelocityPitchCurve;
+    AudioInstance.JointAggregateMode = Params.JointAggregateMode;
+    AudioInstance.bEstimateVelocity = Params.bEstimateVelocity;
+    for (const FName& JName : Params.Joints) {
+      const int DofIndex = Bot->GetDofIndex(JName);
+      if (DofIndex == INDEX_NONE) {
         UE_LOG(
             LogMochiPhysics,
             Error,
             TEXT(
                 "[USuperDexBotAudioComponent] Joint [%s] does not exist or is not a degree of freedom!"),
-            *jName.ToString());
+            *JName.ToString());
         continue;
       }
-      if (params.JointAggregateMode == ESuperDexBotAudioJointAggregateMode::Individual) {
-        FSuperDexBotAudioInstance jointInstance = audioInstance;
-        jointInstance.DofIndices.Add(iDof);
-        jointInstance.AudioComponent =
-            SpawnAudioAtBone(BotComponent, params.AudioLoop, Bot->GetDofLinkName(iDof));
-        JointAudioInstances.Add(jointInstance);
+      if (Params.JointAggregateMode == ESuperDexBotAudioJointAggregateMode::Individual) {
+        FSuperDexBotAudioInstance JointInstance = AudioInstance;
+        JointInstance.DofIndices.Add(DofIndex);
+        JointInstance.AudioComponent =
+            SpawnAudioAtBone(BotComponent, Params.AudioLoop, Bot->GetDofLinkName(DofIndex));
+        JointAudioInstances.Add(JointInstance);
       } else {
-        if (audioInstance.DofIndices.IsEmpty()) {
-          audioInstance.AudioComponent =
-              SpawnAudioAtBone(BotComponent, params.AudioLoop, Bot->GetDofLinkName(iDof));
+        if (AudioInstance.DofIndices.IsEmpty()) {
+          AudioInstance.AudioComponent =
+              SpawnAudioAtBone(BotComponent, Params.AudioLoop, Bot->GetDofLinkName(DofIndex));
         }
-        audioInstance.DofIndices.Add(iDof);
+        AudioInstance.DofIndices.Add(DofIndex);
       }
     }
-    if (params.JointAggregateMode == ESuperDexBotAudioJointAggregateMode::Sum &&
-        !audioInstance.DofIndices.IsEmpty()) {
-      JointAudioInstances.Add(audioInstance);
+    if (Params.JointAggregateMode == ESuperDexBotAudioJointAggregateMode::Sum &&
+        !AudioInstance.DofIndices.IsEmpty()) {
+      JointAudioInstances.Add(AudioInstance);
     }
   }
 }
@@ -210,28 +210,28 @@ void USuperDexBotAudioComponent::TickComponent(
     EstimatedJointVelocities[i] = (JointPositions[i] - JointPositionsPrevious[i]) / DeltaTime;
   }
   JointPositionsPrevious = JointPositions;
-  for (FSuperDexBotAudioInstance& instance : JointAudioInstances) {
-    if (instance.AudioComponent == nullptr) {
+  for (FSuperDexBotAudioInstance& Instance : JointAudioInstances) {
+    if (Instance.AudioComponent == nullptr) {
       continue;
     }
-    float velocity = 0.0f;
-    for (const int dofIndex : instance.DofIndices) {
-      velocity += FMath::Abs(
-          OneEuroFilters[dofIndex].Filter(
-              instance.bEstimateVelocity ? EstimatedJointVelocities[dofIndex]
-                                         : JointVelocities[dofIndex],
+    float Velocity = 0.0f;
+    for (const int DofIndex : Instance.DofIndices) {
+      Velocity += FMath::Abs(
+          OneEuroFilters[DofIndex].Filter(
+              Instance.bEstimateVelocity ? EstimatedJointVelocities[DofIndex]
+                                         : JointVelocities[DofIndex],
               DeltaTime));
     }
-    float volume = instance.VelocityVolumeCurve->GetFloatValue(velocity);
-    float pitch = instance.VelocityPitchCurve->GetFloatValue(velocity);
-    instance.AudioComponent->SetVolumeMultiplier(volume);
-    instance.AudioComponent->SetPitchMultiplier(pitch);
+    float Volume = Instance.VelocityVolumeCurve->GetFloatValue(Velocity);
+    float Pitch = Instance.VelocityPitchCurve->GetFloatValue(Velocity);
+    Instance.AudioComponent->SetVolumeMultiplier(Volume);
+    Instance.AudioComponent->SetPitchMultiplier(Pitch);
     if (bDebugDraw) {
-      float radius = volume * 10;
+      float Radius = Volume * 10;
       DrawDebugSphere(
           GetWorld(),
-          instance.AudioComponent->GetComponentLocation(),
-          radius,
+          Instance.AudioComponent->GetComponentLocation(),
+          Radius,
           16,
           FColor::Blue,
           false,

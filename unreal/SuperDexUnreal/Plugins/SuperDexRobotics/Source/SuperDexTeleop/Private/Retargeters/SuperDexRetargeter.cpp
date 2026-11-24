@@ -44,10 +44,10 @@ uint32 USuperDexRetargeter::GetHighestPriorityLastCalledWithin(
     double CurrentTime,
     double WithinDeltaSecondsAgo) {
   uint32 HighestPriority = 0;
-  for (TPair<uint32, double> kv : CachePriorityToLastRequestTimeMap) {
-    if (kv.Key > HighestPriority) {
-      if (CurrentTime - kv.Value < WithinDeltaSecondsAgo) {
-        HighestPriority = kv.Key;
+  for (TPair<uint32, double> Kv : CachePriorityToLastRequestTimeMap) {
+    if (Kv.Key > HighestPriority) {
+      if (CurrentTime - Kv.Value < WithinDeltaSecondsAgo) {
+        HighestPriority = Kv.Key;
       }
     }
   }
@@ -71,8 +71,8 @@ bool USuperDexRetargeter::GetPose(FSuperDexPose& OutPose) {
   double CurrentTime = SuperDexRetargeterInternal::GetAccurateRealTime();
 
   // Check for reentrant calls and exit or the CacheLock will deadlock itself
-  bool infiniteLoopDetected = CheckIfInInfiniteLoop(OutPose);
-  if (infiniteLoopDetected) {
+  bool bInfiniteLoopDetected = CheckIfInInfiniteLoop(OutPose);
+  if (bInfiniteLoopDetected) {
     return false;
   }
 
@@ -87,8 +87,8 @@ bool USuperDexRetargeter::GetPose(FSuperDexPose& OutPose) {
   uint32 ThisThreadPriority = 0;
   if (Info != nullptr) {
     ThisThreadPriority = Info->Priority;
-    double& lastAccessTime = CachePriorityToLastRequestTimeMap.FindOrAdd(ThisThreadPriority);
-    lastAccessTime = CurrentTime;
+    double& LastAccessTime = CachePriorityToLastRequestTimeMap.FindOrAdd(ThisThreadPriority);
+    LastAccessTime = CurrentTime;
   }
 
   // Update cache if needed based on thread priorities
@@ -135,7 +135,7 @@ bool USuperDexRetargeter::GetPose(FSuperDexPose& OutPose) {
   return CacheInitialized;
 }
 
-void USuperDexRetargeter::OnTickManageCache(FSuperDexPose& Pose, bool isValid) {
+void USuperDexRetargeter::OnTickManageCache(FSuperDexPose& Pose, bool bIsValid) {
   // The cache is updated as part of GetPose() so dont do the normal cache management
 }
 

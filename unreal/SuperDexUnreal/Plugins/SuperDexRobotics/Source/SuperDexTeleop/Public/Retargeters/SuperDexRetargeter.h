@@ -68,7 +68,7 @@ class SUPERDEXTELEOP_API USuperDexRetargeter : public USuperDexPoseableComponent
   virtual bool GetPose(FSuperDexPose& OutPose) override;
 
  protected:
-  virtual void OnTickManageCache(FSuperDexPose& Pose, bool isValid) override;
+  virtual void OnTickManageCache(FSuperDexPose& Pose, bool bIsValid) override;
 
   /**
    * Get the highest priority last called within a certain time frame.

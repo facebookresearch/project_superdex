@@ -124,9 +124,9 @@ void USuperDexBotComponent::SetPose(TArray<double> const& Pose) {
 
 FTransform USuperDexBotComponent::GetLinkToWorldTransform(FName LinkName) const {
   if (ArticulatedActorObject) {
-    const int iLink = ArticulatedActorObject->GetNestedLinkActorIndex(LinkName);
-    if (iLink != INDEX_NONE && iLink < QueriedLinkTransforms.Num()) {
-      return QueriedLinkTransforms[iLink];
+    const int LinkIndex = ArticulatedActorObject->GetNestedLinkActorIndex(LinkName);
+    if (LinkIndex != INDEX_NONE && LinkIndex < QueriedLinkTransforms.Num()) {
+      return QueriedLinkTransforms[LinkIndex];
     }
   }
   return FTransform();
@@ -149,7 +149,7 @@ bool USuperDexBotComponent::SetController(TSubclassOf<USuperDexBotController> Ne
   // callback returns without controlling.
   USuperDexBotController* OldController = nullptr;
   {
-    FScopeLock lock(&BotControllerMutex);
+    FScopeLock Lock(&BotControllerMutex);
     OldController = BotController;
     BotController = nullptr;
   }
@@ -226,8 +226,8 @@ void USuperDexBotComponent::BeginPlay() {
   }
   // TODO: superdex_robotics does not yet support loading a bot into coordinate spaces
   // other than RH, Z up. Until it does, throw an error and ensure.
-  const FMochiSpaceDefinition& activeSpace = UMochiPhysicsSettings::GetActiveSimulationSpace();
-  if (activeSpace != SuperDexSpace) {
+  const FMochiSpaceDefinition& ActiveSpace = UMochiPhysicsSettings::GetActiveSimulationSpace();
+  if (ActiveSpace != SuperDexSpace) {
     UE_LOG(
         LogMochiPhysics,
         Error,
@@ -297,7 +297,7 @@ void USuperDexBotComponent::TickComponent(
     }
     // SuperDexBotController game thread tick
     if (ArticulatedActorObject && BotController) {
-      FScopeLock lock(&BotControllerMutex);
+      FScopeLock Lock(&BotControllerMutex);
       BotController->TickController(this, DeltaTime);
     }
   }
@@ -358,7 +358,7 @@ void USuperDexBotComponent::CreateBotAndArticulatedActor() {
     return;
   }
   FSuperDexBotLoader Loader;
-  mochi::ErrorLog e{};
+  mochi::ErrorLog E{};
   superdex::robotics::BotPrefab BotPrefab = Bot->GetBotPrefab();
   // override default pose if InitialPose is set
   if (InitialPose.Num() == BotPrefab._numDofs) {
@@ -391,8 +391,8 @@ void USuperDexBotComponent::CreateBotAndArticulatedActor() {
   BotScale = static_cast<float>(Scale);
   BotPrefab.scale = static_cast<mochi::real>(Scale);
   // set world transform from component location (convert UE → mochi simulation space)
-  FUnrealToMochiConverter u2m;
-  BotPrefab.worldFromRoot = u2m.TransformToMochi_RT(
+  FUnrealToMochiConverter U2M;
+  BotPrefab.worldFromRoot = U2M.TransformToMochi_RT(
       FTransform(GetComponentQuat(), GetComponentLocation(), FVector::OneVector));
   // get scene
   const UGameInstance* GameInstance = GetWorld()->GetGameInstance();
@@ -416,17 +416,17 @@ void USuperDexBotComponent::CreateBotAndArticulatedActor() {
   // create articulated actor on the Mochi thread via AddToScene
   mochi::ActorHandle ActorHandle;
   SceneObject->QueueOrExecuteCommand([&](mochi::Scene* SyncScene) {
-    superdex::robotics::RoboticsContext* botsCtx =
+    superdex::robotics::RoboticsContext* BotsCtx =
         ISuperDexRoboticsModule::Get()->GetRoboticsContext();
-    BotPtr = botsCtx->CreateBot(SyncScene, BotPrefab, Loader, e);
+    BotPtr = BotsCtx->CreateBot(SyncScene, BotPrefab, Loader, E);
     mochi::Actor* Actor = BotPtr ? BotPtr->GetArticulatedActor() : nullptr;
     if (Actor) {
       ActorHandle = Actor->GetHandle();
     }
   });
   SceneObject->WaitForQueuedCommands();
-  if (!e.IsOK() || !ActorHandle.IsValid()) {
-    const char* ErrorDescription = e._error.GetDescription();
+  if (!E.IsOK() || !ActorHandle.IsValid()) {
+    const char* ErrorDescription = E._error.GetDescription();
     if (ErrorDescription == nullptr) {
       ErrorDescription = "Unknown bot creation failure";
     }
@@ -599,7 +599,7 @@ bool USuperDexBotComponent::BindToExistingBot(superdex::robotics::Bot* SceneBot)
     }
     BorrowedScale = static_cast<float>(SceneBot->GetBotPrefab().scale);
     BorrowedActorUserData.Add({ActorHandle, Actor->GetUserData()});
-    mochi::ErrorLog e{};
+    mochi::ErrorLog E{};
     auto SaveNestedUserData = [&](mochi::Span<mochi::ActorHandle const> const& Handles) {
       for (mochi::ActorHandle const Handle : Handles) {
         if (mochi::Actor* Nested = Scene->GetActor(Handle)) {
@@ -607,8 +607,8 @@ bool USuperDexBotComponent::BindToExistingBot(superdex::robotics::Bot* SceneBot)
         }
       }
     };
-    SaveNestedUserData(Actor->GetNestedLinkActors(e));
-    SaveNestedUserData(Actor->GetNestedSoftActors(e));
+    SaveNestedUserData(Actor->GetNestedLinkActors(E));
+    SaveNestedUserData(Actor->GetNestedSoftActors(E));
   });
   SceneObject->WaitForQueuedCommands();
   if (!ActorHandle.IsValid()) {
@@ -726,9 +726,9 @@ void USuperDexBotComponent::DestroyBotAndArticulatedActor() {
     const UMochiGameInstanceSubsystem* Subsys =
         GameInstance->GetSubsystem<UMochiGameInstanceSubsystem>();
     if (UMochiSceneObject* SceneObject = Subsys ? Subsys->GetScene() : nullptr) {
-      SceneObject->QueueOrExecuteCommand([&](mochi::Scene* scene) {
-        mochi::ErrorLog e{};
-        superdex::robotics::DestroyBot(scene, BotPtr);
+      SceneObject->QueueOrExecuteCommand([&](mochi::Scene* Scene) {
+        mochi::ErrorLog E{};
+        superdex::robotics::DestroyBot(Scene, BotPtr);
         BotPtr = nullptr;
       });
       SceneObject->WaitForQueuedCommands();
@@ -737,8 +737,8 @@ void USuperDexBotComponent::DestroyBotAndArticulatedActor() {
 }
 
 void USuperDexBotComponent::ApplyPrefabOverrides(superdex::robotics::BotPrefab& InOutPrefab) const {
-  for (superdex::robotics::BotLinkPrefab& link : InOutPrefab.links) {
-    link.hasGravity = bHasGravity;
+  for (superdex::robotics::BotLinkPrefab& Link : InOutPrefab.links) {
+    Link.hasGravity = bHasGravity;
   }
   if (LayerOverride.IsEmpty()) {
     return;
@@ -746,12 +746,12 @@ void USuperDexBotComponent::ApplyPrefabOverrides(superdex::robotics::BotPrefab& 
   // The layer override must reach every collidable the prefab spawns, not just the links:
   // the scene's contact matrix filters per layer, so a skin left on the layer baked into
   // the asset would keep colliding with whatever the overridden links were moved away from.
-  const mochi::DynamicString layer = mochi::DynamicString(TCHAR_TO_UTF8(*LayerOverride));
-  for (superdex::robotics::BotLinkPrefab& link : InOutPrefab.links) {
-    link.layer = layer;
+  const mochi::DynamicString Layer = mochi::DynamicString(TCHAR_TO_UTF8(*LayerOverride));
+  for (superdex::robotics::BotLinkPrefab& Link : InOutPrefab.links) {
+    Link.layer = Layer;
   }
   if (InOutPrefab.skin.has_value()) {
-    InOutPrefab.skin->layer = layer;
+    InOutPrefab.skin->layer = Layer;
   }
 }
 
@@ -760,33 +760,33 @@ bool USuperDexBotComponent::OnArticulatedActorControl(
     mochi::Actor* ArticulatedActor,
     mochi::Scene* Scene,
     double TimeStepSec) const {
-  FScopeLock lock(&BotControllerMutex);
+  FScopeLock Lock(&BotControllerMutex);
   if (!bArticulatedActorReady || !BotController) {
     return false;
   }
-  FMochiArticulationState state = ExtractArticulatedActorState(ArticulatedActor);
-  return BotController->StepController(this, state, TimeStepSec, ArticulatedActor, Scene);
+  FMochiArticulationState State = ExtractArticulatedActorState(ArticulatedActor);
+  return BotController->StepController(this, State, TimeStepSec, ArticulatedActor, Scene);
 }
 
 bool USuperDexBotComponent::EnsureArrayProperties() {
-  bool ret = false;
+  bool bRet = false;
   if (Bot) {
-    const superdex::robotics::BotPrefab& params = Bot->GetBotPrefab();
-    if (InitialPose.Num() != params._numDofs) {
-      InitialPose.SetNum(params._numDofs);
-      for (int i = 0; i < params._numDofs; ++i) {
-        InitialPose[i] = static_cast<double>(params.defaultPose[i]);
+    const superdex::robotics::BotPrefab& Params = Bot->GetBotPrefab();
+    if (InitialPose.Num() != Params._numDofs) {
+      InitialPose.SetNum(Params._numDofs);
+      for (int i = 0; i < Params._numDofs; ++i) {
+        InitialPose[i] = static_cast<double>(Params.defaultPose[i]);
       }
-      ret = true;
+      bRet = true;
     }
     if (ContactGeneratingLinks.Num() == 0) {
-      for (superdex::robotics::BotLinkPrefab const& link : params.links) {
-        ContactGeneratingLinks.Add(FName(UTF8_TO_TCHAR(link.name.c_str())));
+      for (superdex::robotics::BotLinkPrefab const& Link : Params.links) {
+        ContactGeneratingLinks.Add(FName(UTF8_TO_TCHAR(Link.name.c_str())));
       }
-      ret = true;
+      bRet = true;
     }
   }
-  return ret;
+  return bRet;
 }
 
 void USuperDexBotComponent::PoseMeshFromJointPositions(const TArray<double>& InJointPositions) {
@@ -795,13 +795,13 @@ void USuperDexBotComponent::PoseMeshFromJointPositions(const TArray<double>& InJ
   }
   if (Bot) {
     ensure(InJointPositions.Num() == Bot->GetDefaultJointPositions().Num());
-    TArray<FTransform> transforms;
-    TArray<FName> linkNames = Bot->GetLinkNames();
-    if (Bot->ComputeLinkToParentTransforms(InJointPositions, transforms)) {
-      for (int iLink = 0; iLink < transforms.Num(); ++iLink) {
-        const int32 boneIndex = GetBoneIndex(linkNames[iLink]);
-        if (boneIndex >= 0 && boneIndex < BoneSpaceTransforms.Num()) {
-          BoneSpaceTransforms[boneIndex] = transforms[iLink];
+    TArray<FTransform> Transforms;
+    TArray<FName> LinkNames = Bot->GetLinkNames();
+    if (Bot->ComputeLinkToParentTransforms(InJointPositions, Transforms)) {
+      for (int LinkIndex = 0; LinkIndex < Transforms.Num(); ++LinkIndex) {
+        const int32 BoneIndex = GetBoneIndex(LinkNames[LinkIndex]);
+        if (BoneIndex >= 0 && BoneIndex < BoneSpaceTransforms.Num()) {
+          BoneSpaceTransforms[BoneIndex] = Transforms[LinkIndex];
         }
       }
       MarkRefreshTransformDirty();
@@ -823,10 +823,10 @@ void USuperDexBotComponent::PoseMeshFromLinkWorldTransforms(
   // Mochi link transforms carry no scale. Give the bones the bot's scale so the mesh renders at the
   // size of the simulated bot whatever the component's scale.
   const FVector Scale(BotScale);
-  for (int iLink = 0; iLink < InLinkWorldTransforms.Num(); ++iLink) {
-    FTransform LinkToWorld = InLinkWorldTransforms[iLink];
+  for (int LinkIndex = 0; LinkIndex < InLinkWorldTransforms.Num(); ++LinkIndex) {
+    FTransform LinkToWorld = InLinkWorldTransforms[LinkIndex];
     LinkToWorld.SetScale3D(Scale);
-    SetBoneTransformByName(LinkNames[iLink], LinkToWorld, EBoneSpaces::WorldSpace);
+    SetBoneTransformByName(LinkNames[LinkIndex], LinkToWorld, EBoneSpaces::WorldSpace);
   }
   UpdateOverlaps();
 }
@@ -894,9 +894,9 @@ void USuperDexBotComponent::OnUnregister() {
 
 FBoxSphereBounds USuperDexBotComponent::CalcBounds(const FTransform& LocalToWorld) const {
   if (Bot) {
-    FBoxSphereBounds localBounds;
-    if (Bot->ComputeVisualBoundsFromLinkToParentTransforms(BoneSpaceTransforms, localBounds)) {
-      return localBounds.TransformBy(LocalToWorld);
+    FBoxSphereBounds LocalBounds;
+    if (Bot->ComputeVisualBoundsFromLinkToParentTransforms(BoneSpaceTransforms, LocalBounds)) {
+      return LocalBounds.TransformBy(LocalToWorld);
     }
   }
   return Super::CalcBounds(LocalToWorld);

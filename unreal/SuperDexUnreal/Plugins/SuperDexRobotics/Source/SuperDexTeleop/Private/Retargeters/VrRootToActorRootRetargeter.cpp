@@ -25,13 +25,13 @@ bool UVrRootToActorRootRetargeter::GetTransformedPose_Implementation(
     FSuperDexPose const& SourcePose,
     bool bSourceIsValid,
     FSuperDexPose& TransformedPose) {
-  ASuperDexPlayerPawn* playerPawn =
+  ASuperDexPlayerPawn* PlayerPawn =
       Cast<ASuperDexPlayerPawn>(GetWorld()->GetFirstPlayerController()->GetPawn());
-  if (playerPawn == nullptr) {
+  if (PlayerPawn == nullptr) {
     return false;
   }
 
-  FTransform VrRootToWorld = playerPawn->VrRootComponent->GetComponentTransform();
+  FTransform VrRootToWorld = PlayerPawn->VrRootComponent->GetComponentTransform();
   FTransform WorldToActorRoot = GetOwner()->GetTransform().Inverse();
   FTransform SkeletonRootToActorRoot =
       SourcePose.SkeletonRootToVrRoot * VrRootToWorld * WorldToActorRoot;

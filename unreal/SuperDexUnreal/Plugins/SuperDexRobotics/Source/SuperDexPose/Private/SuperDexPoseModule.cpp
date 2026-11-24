@@ -32,38 +32,38 @@ FTransform FSuperDexPoseModule::GetTrackingSpaceToHandParentSpaceTransform() con
 }
 
 bool FSuperDexPoseModule::LoadFromJsonFile(
-    const UStruct* structDefinition,
-    void* structData,
-    TCHAR const* filePath) {
+    const UStruct* StructDefinition,
+    void* StructData,
+    TCHAR const* FilePath) {
   // Load file
-  FString jsonStr;
-  if (!FFileHelper::LoadFileToString(jsonStr, filePath)) {
+  FString JsonStr;
+  if (!FFileHelper::LoadFileToString(JsonStr, FilePath)) {
     UE_LOG(
-        LogSuperDexPose, Warning, TEXT("[%hs] Failed to load file [%s]"), __FUNCTION__, filePath);
+        LogSuperDexPose, Warning, TEXT("[%hs] Failed to load file [%s]"), __FUNCTION__, FilePath);
     return false;
   }
 
   // Parse json
-  TSharedPtr<FJsonObject> jsonObj = MakeShareable(new FJsonObject());
-  TSharedRef<TJsonReader<>> jsonReader = TJsonReaderFactory<>::Create(jsonStr);
-  if (!FJsonSerializer::Deserialize(jsonReader, jsonObj) || !jsonObj.IsValid()) {
+  TSharedPtr<FJsonObject> JsonObj = MakeShareable(new FJsonObject());
+  TSharedRef<TJsonReader<>> JsonReader = TJsonReaderFactory<>::Create(JsonStr);
+  if (!FJsonSerializer::Deserialize(JsonReader, JsonObj) || !JsonObj.IsValid()) {
     UE_LOG(
         LogSuperDexPose,
         Warning,
         TEXT("[%hs] Failed while loading [%s]: unable to parse json [%s]"),
         __FUNCTION__,
-        filePath,
-        *jsonStr);
+        FilePath,
+        *JsonStr);
     return false;
   }
   if (!FJsonObjectConverter::JsonObjectToUStruct(
-          jsonObj.ToSharedRef(), structDefinition, structData, 0, 0)) {
+          JsonObj.ToSharedRef(), StructDefinition, StructData, 0, 0)) {
     UE_LOG(
         LogSuperDexPose,
         Warning,
         TEXT("[%hs] Failed while loading [%s]: unable to convert to struct"),
         __FUNCTION__,
-        filePath);
+        FilePath);
     return false;
   }
 
@@ -71,39 +71,39 @@ bool FSuperDexPoseModule::LoadFromJsonFile(
 }
 
 bool FSuperDexPoseModule::SaveToJsonFile(
-    const UStruct* structDefinition,
-    const void* structData,
-    TCHAR const* filePath) {
-  TSharedRef<FJsonObject> jsonObj = MakeShareable(new FJsonObject());
-  if (!FJsonObjectConverter::UStructToJsonObject(structDefinition, structData, jsonObj, 0, 0)) {
+    const UStruct* StructDefinition,
+    const void* StructData,
+    TCHAR const* FilePath) {
+  TSharedRef<FJsonObject> JsonObj = MakeShareable(new FJsonObject());
+  if (!FJsonObjectConverter::UStructToJsonObject(StructDefinition, StructData, JsonObj, 0, 0)) {
     UE_LOG(
         LogSuperDexPose,
         Warning,
         TEXT("[%hs] Failed to create json object for file [%s]"),
         __FUNCTION__,
-        filePath);
+        FilePath);
     return false;
   }
 
-  FString jsonStr;
-  TSharedRef<TJsonWriter<>> jsonWriter = TJsonWriterFactory<>::Create(&jsonStr, 0);
-  if (!FJsonSerializer::Serialize(jsonObj, jsonWriter)) {
+  FString JsonStr;
+  TSharedRef<TJsonWriter<>> JsonWriter = TJsonWriterFactory<>::Create(&JsonStr, 0);
+  if (!FJsonSerializer::Serialize(JsonObj, JsonWriter)) {
     UE_LOG(
         LogSuperDexPose,
         Warning,
         TEXT("[%hs] Failed to create json string for file [%s]"),
         __FUNCTION__,
-        filePath);
+        FilePath);
     return false;
   }
 
-  if (!FFileHelper::SaveStringToFile(jsonStr, filePath)) {
+  if (!FFileHelper::SaveStringToFile(JsonStr, FilePath)) {
     UE_LOG(
         LogSuperDexPose,
         Warning,
         TEXT("[%hs] Failed to write json file [%s]"),
         __FUNCTION__,
-        filePath);
+        FilePath);
     return false;
   }
 

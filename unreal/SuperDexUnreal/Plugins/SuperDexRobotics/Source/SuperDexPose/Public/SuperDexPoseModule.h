@@ -49,10 +49,10 @@ class FSuperDexPoseModule : public IModuleInterface {
   // Modules are not statically-linked together, so must go through some virtual interface to be
   // accessible to other modules
   virtual bool
-  LoadFromJsonFile(const UStruct* structDefinition, void* structData, TCHAR const* filePath);
+  LoadFromJsonFile(const UStruct* StructDefinition, void* StructData, TCHAR const* FilePath);
 
   virtual bool
-  SaveToJsonFile(const UStruct* structDefinition, const void* structData, TCHAR const* filePath);
+  SaveToJsonFile(const UStruct* StructDefinition, const void* StructData, TCHAR const* FilePath);
 
   /** IModuleInterface implementation */
   virtual void StartupModule() override;

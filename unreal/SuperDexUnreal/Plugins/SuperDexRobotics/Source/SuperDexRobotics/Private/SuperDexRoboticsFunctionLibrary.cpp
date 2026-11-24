@@ -60,10 +60,10 @@ struct FSuperDexSpawnablePrefabExportData {
  * remove and restore what the task spawned. Worlds without a scene session actor export no slots
  * and no spawnable prefabs.
  */
-const TCHAR* const kResolvedRoboperatorClassesProperty = TEXT("ResolvedRoboperatorClasses");
+const TCHAR* const ResolvedRoboperatorClassesProperty = TEXT("ResolvedRoboperatorClasses");
 
 bool IsSceneSessionClass(const UClass* Class) {
-  return Class && Class->FindPropertyByName(kResolvedRoboperatorClassesProperty) != nullptr;
+  return Class && Class->FindPropertyByName(ResolvedRoboperatorClassesProperty) != nullptr;
 }
 
 AActor* FindSceneSessionActor(UWorld* World) {
@@ -141,7 +141,7 @@ void CollectRoboperatorSlots(UObject* Session, FRoboperatorExportBindings& OutBi
 
 void CollectRoboperatorClassKeys(UObject* Session, FRoboperatorExportBindings& OutBindings) {
   const FProperty* Property =
-      Session->GetClass()->FindPropertyByName(kResolvedRoboperatorClassesProperty);
+      Session->GetClass()->FindPropertyByName(ResolvedRoboperatorClassesProperty);
   const FMapProperty* MapProperty = CastField<FMapProperty>(Property);
   if (!MapProperty) {
     UE_LOG(
@@ -388,9 +388,9 @@ bool USuperDexRoboticsFunctionLibrary::ExportSuperDexBotScene(
     const FString& ExportName,
     const FString& OutputDir,
     bool bCaptureLiveScene) {
-  UMochiGameInstanceSubsystem* const subsys =
+  UMochiGameInstanceSubsystem* const Subsys =
       UMochiPhysicsFunctionLibrary::GetMochiGameInstanceSubsystem(WorldContext);
-  if (!subsys || !subsys->GetScene()) {
+  if (!Subsys || !Subsys->GetScene()) {
     UE_LOG(LogMochiPhysics, Warning, TEXT("ExportSuperDexBotScene: No active Mochi scene."));
     return false;
   }
@@ -510,7 +510,7 @@ bool USuperDexRoboticsFunctionLibrary::ExportSuperDexBotScene(
   // --- Mochi thread (phase 1): export the base scene before any spawnables are created. ---
 
   bool bBaseSceneExported = false;
-  subsys->GetScene()->QueueOrExecuteCommand([ExcludeHandles = MoveTemp(ExcludeHandles),
+  Subsys->GetScene()->QueueOrExecuteCommand([ExcludeHandles = MoveTemp(ExcludeHandles),
                                              OutputDir,
                                              &bBaseSceneExported](mochi::Scene* Scene) {
     mochi::Error Error;
@@ -530,7 +530,7 @@ bool USuperDexRoboticsFunctionLibrary::ExportSuperDexBotScene(
     }
     bBaseSceneExported = true;
   });
-  subsys->GetScene()->WaitForQueuedCommands();
+  Subsys->GetScene()->WaitForQueuedCommands();
   if (!bBaseSceneExported) {
     UMochiPhysicsFunctionLibrary::SetPaused(WorldContext, /*bPaused=*/bWasPaused);
     if (!bCaptureLiveScene) {
@@ -603,7 +603,7 @@ bool USuperDexRoboticsFunctionLibrary::ExportSuperDexBotScene(
   // --- Mochi thread (phase 2): export spawnables, archive bots, compose .superdex_scene. ---
 
   bool bSuccess = false;
-  subsys->GetScene()->QueueOrExecuteCommand([CollectedBots = MoveTemp(CollectedBots),
+  Subsys->GetScene()->QueueOrExecuteCommand([CollectedBots = MoveTemp(CollectedBots),
                                              CollectedSpawnables = MoveTemp(CollectedSpawnables),
                                              OutputDir,
                                              ExportName,
@@ -857,7 +857,7 @@ bool USuperDexRoboticsFunctionLibrary::ExportSuperDexBotScene(
         *ArchivePath);
     bSuccess = true;
   });
-  subsys->GetScene()->WaitForQueuedCommands();
+  Subsys->GetScene()->WaitForQueuedCommands();
   for (AActor* SpawnedActor : SpawnedExportPrefabActors) {
     if (IsValid(SpawnedActor)) {
       SpawnedActor->Destroy();

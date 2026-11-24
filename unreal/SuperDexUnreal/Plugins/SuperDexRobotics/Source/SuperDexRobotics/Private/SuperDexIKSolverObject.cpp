@@ -254,15 +254,15 @@ bool USuperDexIKSolverObject::SetBotInputConfiguration(
   return Error.IsOK();
 }
 
-bool USuperDexIKSolverObject::SolveBotIK(bool& OutGoalsReached) {
-  OutGoalsReached = false;
+bool USuperDexIKSolverObject::SolveBotIK(bool& bOutGoalsReached) {
+  bOutGoalsReached = false;
   if (!IsInGameThread() || !bNativeJointLayout || !NativeIK) {
     return false;
   }
   mochi::Error Error;
-  OutGoalsReached = NativeIK->SolveIK(Error);
+  bOutGoalsReached = NativeIK->SolveIK(Error);
   if (!Error.IsOK()) {
-    OutGoalsReached = false;
+    bOutGoalsReached = false;
     UE_LOG(LogMochiPhysics, Warning, TEXT("Bot IK solve failed: %hs"), Error.GetDescription());
     return false;
   }
@@ -336,14 +336,14 @@ USuperDexIKSolverObject* USuperDexIKSolverObject::CreateIKSolver(
 
   // Create new object
   FString NameStr = SolverName + "___IKSolver";
-  USuperDexIKSolverObject* ikSolverObj = NewObject<USuperDexIKSolverObject>(Outer, FName(*NameStr));
-  check(ikSolverObj);
+  USuperDexIKSolverObject* IKSolverObj = NewObject<USuperDexIKSolverObject>(Outer, FName(*NameStr));
+  check(IKSolverObj);
 
   const USuperDexBot* BotAsset = Cast<USuperDexBot>(Articulation);
   if (BotAsset) {
     superdex::robotics::BotPrefab Prefab = BotAsset->GetBotPrefab();
-    FUnrealToMochiConverter u2m;
-    Prefab.worldFromRoot = u2m.TransformToMochi_RT(WorldFromRoot);
+    FUnrealToMochiConverter U2M;
+    Prefab.worldFromRoot = U2M.TransformToMochi_RT(WorldFromRoot);
     mochi::DynamicArray<superdex::robotics::BotIKJointCouplingParams> NativeCouplings =
         ConvertLegacyBotCouplings(Prefab, JointCouplings, SolverName);
 
@@ -353,7 +353,7 @@ USuperDexIKSolverObject* USuperDexIKSolverObject::CreateIKSolver(
     Params.solverParams = ::ToMochi(IKSolverParams);
     FSuperDexBotLoader Loader;
     mochi::Error Error;
-    ikSolverObj->NativeIK = superdex::robotics::BotIK::Create(
+    IKSolverObj->NativeIK = superdex::robotics::BotIK::Create(
         IMochiPhysicsModule::Get()->GetMochiContext(),
         Prefab,
         Params,
@@ -369,11 +369,11 @@ USuperDexIKSolverObject* USuperDexIKSolverObject::CreateIKSolver(
       return nullptr;
     }
 
-    ikSolverObj->NumLinks = ikSolverObj->NativeIK->GetNumLinks();
-    ikSolverObj->NumBotBaseDofs =
+    IKSolverObj->NumLinks = IKSolverObj->NativeIK->GetNumLinks();
+    IKSolverObj->NumBotBaseDofs =
         !bFixedBase && Prefab.joints[0].type == mochi::ArticulatedJointType::Free ? 6 : 0;
-    ikSolverObj->NumMochiBaseDofs = bFixedBase ? 0 : 6;
-    if (!bFixedBase && ikSolverObj->NumBotBaseDofs == 0) {
+    IKSolverObj->NumMochiBaseDofs = bFixedBase ? 0 : 6;
+    if (!bFixedBase && IKSolverObj->NumBotBaseDofs == 0) {
       UE_LOG(
           LogMochiPhysics,
           Warning,
@@ -384,8 +384,8 @@ USuperDexIKSolverObject* USuperDexIKSolverObject::CreateIKSolver(
               " correctly."),
           *SolverName);
     }
-    ikSolverObj->bIsInitialized = true;
-    return ikSolverObj;
+    IKSolverObj->bIsInitialized = true;
+    return IKSolverObj;
   }
 
   const UMochiArticulation* ArticulationAsset = Cast<UMochiArticulation>(Articulation);
@@ -402,10 +402,10 @@ USuperDexIKSolverObject* USuperDexIKSolverObject::CreateIKSolver(
   // work correctly with an AsyncScene. The IKSolver will override the settings upon creation so we
   // just pass in default. The IKSolver also handles destroying the scene so we indicate that
   // through our friend class status.
-  ikSolverObj->MochiSceneObject =
-      UMochiSceneObject::CreateScene(ikSolverObj, EMochiSceneType::Sync, SolverName, {}, true);
-  check(ikSolverObj->MochiSceneObject);
-  ikSolverObj->MochiSceneObject->bDestructionOwnedByFriend = true;
+  IKSolverObj->MochiSceneObject =
+      UMochiSceneObject::CreateScene(IKSolverObj, EMochiSceneType::Sync, SolverName, {}, true);
+  check(IKSolverObj->MochiSceneObject);
+  IKSolverObj->MochiSceneObject->bDestructionOwnedByFriend = true;
 
   if (ArticulationAsset) {
     // UMochiArticulation path: use CreateArticulation directly
@@ -419,8 +419,8 @@ USuperDexIKSolverObject* USuperDexIKSolverObject::CreateIKSolver(
               " articulation to exclude collision shapes from the IK solve."),
           *SolverName);
     }
-    ikSolverObj->ArticulatedActorObject = UMochiArticulatedActorObject::CreateArticulation(
-        ikSolverObj,
+    IKSolverObj->ArticulatedActorObject = UMochiArticulatedActorObject::CreateArticulation(
+        IKSolverObj,
         SolverName,
         ArticulationAsset,
         WorldFromRoot,
@@ -430,12 +430,12 @@ USuperDexIKSolverObject* USuperDexIKSolverObject::CreateIKSolver(
         bFixedBase,
         /* bHasGravity */ false,
         /* InitialJointVelocities */ {},
-        [ikSolverObj](
+        [IKSolverObj](
             const TArray<mochi::TransformRT>& WorldFromLink,
             const TArray<mochi::real>& JointPositions,
             mochi::Actor* ArticulatedActor,
             mochi::Scene* Scene) {
-          ikSolverObj->OnArticulatedActorGetPose(
+          IKSolverObj->OnArticulatedActorGetPose(
               WorldFromLink, JointPositions, ArticulatedActor, Scene);
         },
         /* bAddPoseController */ false,
@@ -443,41 +443,41 @@ USuperDexIKSolverObject* USuperDexIKSolverObject::CreateIKSolver(
         /* ControlCallback */ nullptr,
         /* LinksThatQueryContactPoints */ TArray<FName>{},
         /* bSkinQueriesContactPoints */ false,
-        ikSolverObj->MochiSceneObject);
+        IKSolverObj->MochiSceneObject);
   }
-  check(ikSolverObj->ArticulatedActorObject);
+  check(IKSolverObj->ArticulatedActorObject);
 
   // Legacy value. Only the fixed base path below is allowed to change it, because some existing
   // bot assets already have a Hard root joint while every caller passes bFixedBase=false, and
   // correcting their dof slice here would change existing behaviour.
-  ikSolverObj->NumMochiBaseDofs = bFixedBase ? 0 : 6;
+  IKSolverObj->NumMochiBaseDofs = bFixedBase ? 0 : 6;
 
   // TODO: consider defering the creation of the IKSolver till the first attempt to solve so that
   // the scene can still be edited after the system is created in case we need to add things in the
   // future.
 
   // Create MochiIKSolver and finalize/lock scene
-  ikSolverObj->MochiSceneObject->QueueOrExecuteCommand([&](mochi::Scene* SyncScene) {
+  IKSolverObj->MochiSceneObject->QueueOrExecuteCommand([&](mochi::Scene* SyncScene) {
     // Read the articulation's shape while the scene is still available. ArticulatedShapeInfo hands
     // back non-owning Spans into scene storage, so everything we keep must be copied out here.
-    mochi::ErrorLog shapeErr{};
-    mochi::Actor* articulatedActor =
-        SyncScene->GetActor(ikSolverObj->ArticulatedActorObject->GetArticulatedActorHandle());
-    if (articulatedActor) {
-      const mochi::ArticulatedShapeInfo shapeInfo =
-          articulatedActor->GetArticulatedShapeInfo(shapeErr);
+    mochi::ErrorLog ShapeErr{};
+    mochi::Actor* ArticulatedActor =
+        SyncScene->GetActor(IKSolverObj->ArticulatedActorObject->GetArticulatedActorHandle());
+    if (ArticulatedActor) {
+      const mochi::ArticulatedShapeInfo ShapeInfo =
+          ArticulatedActor->GetArticulatedShapeInfo(ShapeErr);
       // parents and jointTypes are both per-link, but take the smaller extent so a malformed
       // articulation cannot make the parent walk below read out of bounds.
-      const int numLinks = shapeErr.IsOK()
-          ? static_cast<int>(FMath::Min(shapeInfo.jointTypes.size(), shapeInfo.parents.size()))
+      const int NumShapeLinks = ShapeErr.IsOK()
+          ? static_cast<int>(FMath::Min(ShapeInfo.jointTypes.size(), ShapeInfo.parents.size()))
           : 0;
-      if (numLinks > 0) {
+      if (NumShapeLinks > 0) {
         // A Hard root joint is how both the bot prefab and UMochiArticulation express a base
         // welded to the world. Unlike ExtractArticulatedActorState, which only treats a Free root
         // as base DOFs, this keeps the legacy slicing described above.
-        const bool bActorIsFixedBase = shapeInfo.jointTypes[0] == mochi::ArticulatedJointType::Hard;
+        const bool bActorIsFixedBase = ShapeInfo.jointTypes[0] == mochi::ArticulatedJointType::Hard;
         if (bFixedBase) {
-          ikSolverObj->NumMochiBaseDofs = bActorIsFixedBase ? 0 : 6;
+          IKSolverObj->NumMochiBaseDofs = bActorIsFixedBase ? 0 : 6;
         } else if (bActorIsFixedBase) {
           // Pre-existing hazard, deliberately not corrected here: the articulation has no base dofs
           // but we keep stripping 6, so GetSolvedDofs() returns the wrong slice. Harmless while the
@@ -497,23 +497,23 @@ USuperDexIKSolverObject* USuperDexIKSolverObject::CreateIKSolver(
         // A link is rigid wrt the root when every joint on its path to the root is a weld. Bound
         // both the hop count and the parent index so a malformed articulation cannot spin or read
         // out of bounds here.
-        ikSolverObj->LinkIsRigidlyAttachedToRootLink.Init(false, numLinks);
-        for (int iLink = 0; iLink < numLinks; ++iLink) {
-          int iCurrent = iLink;
+        IKSolverObj->LinkIsRigidlyAttachedToRootLink.Init(false, NumShapeLinks);
+        for (int LinkIndex = 0; LinkIndex < NumShapeLinks; ++LinkIndex) {
+          int CurrentIndex = LinkIndex;
           bool bIsRigid = true;
-          for (int iHop = 0; iCurrent > 0 && iHop <= numLinks; ++iHop) {
-            if (shapeInfo.jointTypes[iCurrent] != mochi::ArticulatedJointType::Hard) {
+          for (int HopIndex = 0; CurrentIndex > 0 && HopIndex <= NumShapeLinks; ++HopIndex) {
+            if (ShapeInfo.jointTypes[CurrentIndex] != mochi::ArticulatedJointType::Hard) {
               bIsRigid = false;
               break;
             }
-            const int iParent = static_cast<int>(shapeInfo.parents[iCurrent]);
-            if (iParent < 0 || iParent >= numLinks) {
+            const int ParentIndex = static_cast<int>(ShapeInfo.parents[CurrentIndex]);
+            if (ParentIndex < 0 || ParentIndex >= NumShapeLinks) {
               bIsRigid = false;
               break;
             }
-            iCurrent = iParent;
+            CurrentIndex = ParentIndex;
           }
-          ikSolverObj->LinkIsRigidlyAttachedToRootLink[iLink] = bIsRigid && (iCurrent == 0);
+          IKSolverObj->LinkIsRigidlyAttachedToRootLink[LinkIndex] = bIsRigid && (CurrentIndex == 0);
         }
 
         // Tie pairs of joints together for the solve. Done here because we already hold the actor
@@ -521,87 +521,87 @@ USuperDexIKSolverObject* USuperDexIKSolverObject::CreateIKSolver(
         // happen before the first solve, but doing it here keeps it to a single scene command.
         // jointNames and dofInfo are both per-joint; take the smaller extent so a malformed
         // articulation cannot make the lookups below read out of bounds.
-        const int numJoints =
-            static_cast<int>(FMath::Min(shapeInfo.jointNames.size(), shapeInfo.dofInfo.size()));
-        auto findJoint = [&shapeInfo, numJoints](FName Name) -> int {
-          for (int iJoint = 0; iJoint < numJoints; ++iJoint) {
-            if (Name == FName(UTF8_TO_TCHAR(shapeInfo.jointNames[iJoint].c_str()))) {
-              return iJoint;
+        const int NumJoints =
+            static_cast<int>(FMath::Min(ShapeInfo.jointNames.size(), ShapeInfo.dofInfo.size()));
+        auto FindJoint = [&ShapeInfo, NumJoints](FName Name) -> int {
+          for (int JointIndex = 0; JointIndex < NumJoints; ++JointIndex) {
+            if (Name == FName(UTF8_TO_TCHAR(ShapeInfo.jointNames[JointIndex].c_str()))) {
+              return JointIndex;
             }
           }
           return INDEX_NONE;
         };
-        for (const FMochiJointCoupling& coupling : JointCouplings) {
-          if (!coupling.bEnabled) {
+        for (const FMochiJointCoupling& Coupling : JointCouplings) {
+          if (!Coupling.bEnabled) {
             continue;
           }
-          const int jointA = findJoint(coupling.JointAName);
-          const int jointB = findJoint(coupling.JointBName);
+          const int JointA = FindJoint(Coupling.JointAName);
+          const int JointB = FindJoint(Coupling.JointBName);
 
           // Validate here rather than letting Mochi error out, so that one bad entry produces a
           // readable message and is skipped instead of aborting the whole solver setup.
-          const TCHAR* rejection = nullptr;
-          if (jointA == INDEX_NONE || jointB == INDEX_NONE) {
-            rejection = TEXT("a joint name does not exist in the articulation");
-          } else if (jointA == jointB) {
-            rejection = TEXT("both names resolve to the same joint");
+          const TCHAR* Rejection = nullptr;
+          if (JointA == INDEX_NONE || JointB == INDEX_NONE) {
+            Rejection = TEXT("a joint name does not exist in the articulation");
+          } else if (JointA == JointB) {
+            Rejection = TEXT("both names resolve to the same joint");
           } else if (
-              shapeInfo.dofInfo[jointA].GetSize() != 1 ||
-              shapeInfo.dofInfo[jointB].GetSize() != 1) {
-            rejection = TEXT("only single-dof joints can be coupled, and one of these is not");
-          } else if (!FMath::IsFinite(coupling.Ratio) || FMath::IsNearlyZero(coupling.Ratio)) {
-            rejection = TEXT("Ratio must be finite and non-zero");
-          } else if (!FMath::IsFinite(coupling.Offset)) {
-            rejection = TEXT("Offset must be finite");
-          } else if (!FMath::IsFinite(coupling.Stiffness) || coupling.Stiffness <= 0.0) {
-            rejection = TEXT("Stiffness must be finite and positive");
+              ShapeInfo.dofInfo[JointA].GetSize() != 1 ||
+              ShapeInfo.dofInfo[JointB].GetSize() != 1) {
+            Rejection = TEXT("only single-dof joints can be coupled, and one of these is not");
+          } else if (!FMath::IsFinite(Coupling.Ratio) || FMath::IsNearlyZero(Coupling.Ratio)) {
+            Rejection = TEXT("Ratio must be finite and non-zero");
+          } else if (!FMath::IsFinite(Coupling.Offset)) {
+            Rejection = TEXT("Offset must be finite");
+          } else if (!FMath::IsFinite(Coupling.Stiffness) || Coupling.Stiffness <= 0.0) {
+            Rejection = TEXT("Stiffness must be finite and positive");
           }
-          if (rejection) {
+          if (Rejection) {
             UE_LOG(
                 LogMochiPhysics,
                 Warning,
                 TEXT("USuperDexIKSolverObject::[%s] ignoring joint coupling [%s]->[%s]: %s."),
                 *SolverName,
-                *coupling.JointAName.ToString(),
-                *coupling.JointBName.ToString(),
-                rejection);
+                *Coupling.JointAName.ToString(),
+                *Coupling.JointBName.ToString(),
+                Rejection);
             continue;
           }
 
           // displacement = Ratio * jointA - jointB, driven to -Offset, which is exactly
           // jointB = Ratio * jointA + Offset.
-          mochi::experimental::LinearTransmissionParams transmissionParams;
-          transmissionParams.jointIndices = {jointA, jointB};
-          transmissionParams.jointCoefficients = {
-              static_cast<mochi::real>(coupling.Ratio), static_cast<mochi::real>(-1.0)};
+          mochi::experimental::LinearTransmissionParams TransmissionParams;
+          TransmissionParams.jointIndices = {JointA, JointB};
+          TransmissionParams.jointCoefficients = {
+              static_cast<mochi::real>(Coupling.Ratio), static_cast<mochi::real>(-1.0)};
 
           // Plain Error rather than ErrorLog: the failure is reported explicitly below, and
           // ErrorLog would also log it from its destructor.
-          mochi::Error couplingErr;
-          const int transmissionIndex = mochi::experimental::AddLinearTransmission(
-              articulatedActor, transmissionParams, couplingErr);
-          if (couplingErr.IsOK()) {
-            mochi::experimental::DisplacementControlActuatorParams actuatorParams;
-            actuatorParams.targetDisplacement = static_cast<mochi::real>(-coupling.Offset);
-            actuatorParams.stiffness = static_cast<mochi::real>(coupling.Stiffness);
+          mochi::Error CouplingErr;
+          const int TransmissionIndex = mochi::experimental::AddLinearTransmission(
+              ArticulatedActor, TransmissionParams, CouplingErr);
+          if (CouplingErr.IsOK()) {
+            mochi::experimental::DisplacementControlActuatorParams ActuatorParams;
+            ActuatorParams.targetDisplacement = static_cast<mochi::real>(-Coupling.Offset);
+            ActuatorParams.stiffness = static_cast<mochi::real>(Coupling.Stiffness);
             // Damping keeps its native default of zero: the IK solve steps with an infinite
             // time step, so any damping term contributes nothing.
             // A joint coupling is a rigid linkage, so it must be able to push as well as pull.
             // Left false, the actuator clamps to zero force on one side and only half couples.
-            actuatorParams.allowCompressiveForce = true;
+            ActuatorParams.allowCompressiveForce = true;
             mochi::experimental::AttachDisplacementControlActuator(
-                articulatedActor, transmissionIndex, actuatorParams, couplingErr);
+                ArticulatedActor, TransmissionIndex, ActuatorParams, CouplingErr);
           }
-          if (!couplingErr.IsOK()) {
+          if (!CouplingErr.IsOK()) {
             UE_LOG(
                 LogMochiPhysics,
                 Error,
                 TEXT(
                     "USuperDexIKSolverObject::[%s] failed to create joint coupling [%s]->[%s]: %s"),
                 *SolverName,
-                *coupling.JointAName.ToString(),
-                *coupling.JointBName.ToString(),
-                *FString(couplingErr.GetDescription()));
+                *Coupling.JointAName.ToString(),
+                *Coupling.JointBName.ToString(),
+                *FString(CouplingErr.GetDescription()));
           }
         }
       }
@@ -611,21 +611,21 @@ USuperDexIKSolverObject* USuperDexIKSolverObject::CreateIKSolver(
     SyncScene->EnableLayerContactSymmetric(Layer, Layer, false, mochi::ErrorAssert{});
 
     // Get MochiPhysics world
-    mochi::Context* mochiContext = IMochiPhysicsModule::Get()->GetMochiContext();
-    check(mochiContext);
-    ikSolverObj->IKSolver =
-        mochi::experimental::CreateIKSolver(SyncScene, mochiContext, mochi::ErrorAssert{});
-    mochi::experimental::IKSolverParams params = ::ToMochi(IKSolverParams);
-    ikSolverObj->IKSolver->SetSolverParams(params);
-    check(ikSolverObj->IKSolver);
+    mochi::Context* MochiContext = IMochiPhysicsModule::Get()->GetMochiContext();
+    check(MochiContext);
+    IKSolverObj->IKSolver =
+        mochi::experimental::CreateIKSolver(SyncScene, MochiContext, mochi::ErrorAssert{});
+    mochi::experimental::IKSolverParams Params = ::ToMochi(IKSolverParams);
+    IKSolverObj->IKSolver->SetSolverParams(Params);
+    check(IKSolverObj->IKSolver);
   });
-  ikSolverObj->MochiSceneObject->WaitForQueuedCommands();
+  IKSolverObj->MochiSceneObject->WaitForQueuedCommands();
 
-  ikSolverObj->NumLinks = ikSolverObj->ArticulatedActorObject->GetNestedLinkActorHandles().Num();
+  IKSolverObj->NumLinks = IKSolverObj->ArticulatedActorObject->GetNestedLinkActorHandles().Num();
 
-  ikSolverObj->bIsInitialized = true;
+  IKSolverObj->bIsInitialized = true;
 
-  return ikSolverObj;
+  return IKSolverObj;
 }
 
 // The CreatePositionTarget() function will remove any existing position target for the specified
@@ -651,34 +651,34 @@ void USuperDexIKSolverObject::CreatePositionTargetForLink(
             "USuperDexIKSolverObject::Attempted to create target for out of bounds link index. Returning without action."));
     return;
   }
-  mochi::Error err;
-  FUnrealToMochiConverter u2m;
+  mochi::Error Err;
+  FUnrealToMochiConverter U2M;
   if (NativeIK) {
     NativeIK->SetPositionGoal(
         LinkIndex,
-        u2m.TranslationToMochi(LocalPositionToLink),
-        u2m.TranslationToMochi(TargetPositionToWorld),
+        U2M.TranslationToMochi(LocalPositionToLink),
+        U2M.TranslationToMochi(TargetPositionToWorld),
         Weight,
-        err);
+        Err);
   } else {
     MochiSceneObject->QueueOrExecuteCommand([&](mochi::Scene* SyncScene) {
-      mochi::ActorHandle linkHandle =
+      mochi::ActorHandle LinkHandle =
           ArticulatedActorObject->GetNestedLinkActorHandles()[LinkIndex];
       IKSolver->CreatePositionTarget(
-          linkHandle,
-          u2m.TranslationToMochi(LocalPositionToLink),
-          u2m.TranslationToMochi(TargetPositionToWorld),
+          LinkHandle,
+          U2M.TranslationToMochi(LocalPositionToLink),
+          U2M.TranslationToMochi(TargetPositionToWorld),
           Weight,
-          err);
+          Err);
     });
     MochiSceneObject->WaitForQueuedCommands();
   }
-  if (!err.IsOK()) {
+  if (!Err.IsOK()) {
     UE_LOG(
         LogMochiPhysics,
         Error,
         TEXT("USuperDexIKSolverObject::failure to create constraint: %s"),
-        *FString(err.GetDescription()));
+        *FString(Err.GetDescription()));
   }
 }
 
@@ -702,34 +702,34 @@ void USuperDexIKSolverObject::CreateRotationTargetForLink(
             "USuperDexIKSolverObject::Attempted to create target for out of bounds link index. Returning without action."));
     return;
   }
-  mochi::Error err;
-  FUnrealToMochiConverter u2m;
+  mochi::Error Err;
+  FUnrealToMochiConverter U2M;
   if (NativeIK) {
     NativeIK->SetRotationGoal(
         LinkIndex,
-        u2m.RotationToMochi(LocalRotationToLink),
-        u2m.RotationToMochi(TargetRotationToWorld),
+        U2M.RotationToMochi(LocalRotationToLink),
+        U2M.RotationToMochi(TargetRotationToWorld),
         Weight,
-        err);
+        Err);
   } else {
     MochiSceneObject->QueueOrExecuteCommand([&](mochi::Scene* SyncScene) {
-      mochi::ActorHandle linkHandle =
+      mochi::ActorHandle LinkHandle =
           ArticulatedActorObject->GetNestedLinkActorHandles()[LinkIndex];
       IKSolver->CreateRotationTarget(
-          linkHandle,
-          u2m.RotationToMochi(LocalRotationToLink).ToRotationVector(),
-          u2m.RotationToMochi(TargetRotationToWorld).ToRotationVector(),
+          LinkHandle,
+          U2M.RotationToMochi(LocalRotationToLink).ToRotationVector(),
+          U2M.RotationToMochi(TargetRotationToWorld).ToRotationVector(),
           Weight,
-          err);
+          Err);
     });
     MochiSceneObject->WaitForQueuedCommands();
   }
-  if (!err.IsOK()) {
+  if (!Err.IsOK()) {
     UE_LOG(
         LogMochiPhysics,
         Error,
         TEXT("USuperDexIKSolverObject::failure to create constraint: %s"),
-        *FString(err.GetDescription()));
+        *FString(Err.GetDescription()));
   }
 }
 
@@ -749,23 +749,23 @@ void USuperDexIKSolverObject::ClearPositionTargetForLink(int LinkIndex) {
             "USuperDexIKSolverObject::Attempted to clear goals for out of bounds link index. Returning without action."));
     return;
   }
-  mochi::Error err;
+  mochi::Error Err;
   if (NativeIK) {
-    NativeIK->ClearPositionGoal(LinkIndex, err);
+    NativeIK->ClearPositionGoal(LinkIndex, Err);
   } else {
     MochiSceneObject->QueueOrExecuteCommand([&](mochi::Scene* SyncScene) {
-      mochi::ActorHandle linkHandle =
+      mochi::ActorHandle LinkHandle =
           ArticulatedActorObject->GetNestedLinkActorHandles()[LinkIndex];
-      IKSolver->ClearPositionTarget(linkHandle, err);
+      IKSolver->ClearPositionTarget(LinkHandle, Err);
     });
     MochiSceneObject->WaitForQueuedCommands();
   }
-  if (!err.IsOK()) {
+  if (!Err.IsOK()) {
     UE_LOG(
         LogMochiPhysics,
         Error,
         TEXT("USuperDexIKSolverObject::Could not clear IK target from link. %s"),
-        *FString(err.GetDescription()));
+        *FString(Err.GetDescription()));
   }
 }
 void USuperDexIKSolverObject::ClearRotationTargetForLink(int LinkIndex) {
@@ -784,23 +784,23 @@ void USuperDexIKSolverObject::ClearRotationTargetForLink(int LinkIndex) {
             "USuperDexIKSolverObject::Attempted to clear goals for out of bounds link index. Returning without action."));
     return;
   }
-  mochi::Error err;
+  mochi::Error Err;
   if (NativeIK) {
-    NativeIK->ClearRotationGoal(LinkIndex, err);
+    NativeIK->ClearRotationGoal(LinkIndex, Err);
   } else {
     MochiSceneObject->QueueOrExecuteCommand([&](mochi::Scene* SyncScene) {
-      mochi::ActorHandle linkHandle =
+      mochi::ActorHandle LinkHandle =
           ArticulatedActorObject->GetNestedLinkActorHandles()[LinkIndex];
-      IKSolver->ClearRotationTarget(linkHandle, err);
+      IKSolver->ClearRotationTarget(LinkHandle, Err);
     });
     MochiSceneObject->WaitForQueuedCommands();
   }
-  if (!err.IsOK()) {
+  if (!Err.IsOK()) {
     UE_LOG(
         LogMochiPhysics,
         Error,
         TEXT("USuperDexIKSolverObject::Could not clear IK target from link. %s"),
-        *FString(err.GetDescription()));
+        *FString(Err.GetDescription()));
   }
 }
 
@@ -812,28 +812,28 @@ void USuperDexIKSolverObject::ClearAllTargets() {
         TEXT("USuperDexIKSolverObject::Cannot clear goals on uninitialized IKSolver."));
     return;
   }
-  mochi::Error errPos;
-  mochi::Error errRot;
+  mochi::Error ErrPos;
+  mochi::Error ErrRot;
   if (NativeIK) {
-    NativeIK->ClearAllGoals(errPos);
+    NativeIK->ClearAllGoals(ErrPos);
   } else {
     MochiSceneObject->QueueOrExecuteCommand([&](mochi::Scene* SyncScene) {
-      TArray<mochi::ActorHandle> const& linkHandles =
+      TArray<mochi::ActorHandle> const& LinkHandles =
           ArticulatedActorObject->GetNestedLinkActorHandles();
-      for (int iLink = 0; iLink < NumLinks; iLink++) {
-        IKSolver->ClearPositionTarget(linkHandles[iLink], errPos);
-        IKSolver->ClearRotationTarget(linkHandles[iLink], errRot);
+      for (int LinkIndex = 0; LinkIndex < NumLinks; LinkIndex++) {
+        IKSolver->ClearPositionTarget(LinkHandles[LinkIndex], ErrPos);
+        IKSolver->ClearRotationTarget(LinkHandles[LinkIndex], ErrRot);
       }
     });
     MochiSceneObject->WaitForQueuedCommands();
   }
-  if ((!errPos.IsOK()) || (!errRot.IsOK())) {
+  if ((!ErrPos.IsOK()) || (!ErrRot.IsOK())) {
     UE_LOG(
         LogMochiPhysics,
         Error,
         TEXT("USuperDexIKSolverObject::Could not clear IK target from link. pos[%s] rot[%s]"),
-        *FString(errPos.GetDescription()),
-        *FString(errRot.GetDescription()));
+        *FString(ErrPos.GetDescription()),
+        *FString(ErrRot.GetDescription()));
   }
 }
 
@@ -842,38 +842,38 @@ bool USuperDexIKSolverObject::SolveIK() {
     UE_LOG(LogMochiPhysics, Error, TEXT("USuperDexIKSolverObject::Cannot solve uninitialized IK."));
     return false;
   }
-  bool GoalsReached = false;
-  mochi::Error err;
+  bool bGoalsReached = false;
+  mochi::Error Err;
   if (NativeIK) {
     if (!ensureMsgf(IsInGameThread(), TEXT("Bot IK must be evaluated on the game thread."))) {
       return false;
     }
-    GoalsReached = NativeIK->SolveIK(err);
-    if (err.IsOK()) {
+    bGoalsReached = NativeIK->SolveIK(Err);
+    if (Err.IsOK()) {
       UpdateBotResults();
     }
   } else {
     MochiSceneObject->QueueOrExecuteCommand(
-        [&](mochi::Scene* SyncScene) { GoalsReached = IKSolver->SolveIK(err); });
+        [&](mochi::Scene* SyncScene) { bGoalsReached = IKSolver->SolveIK(Err); });
     MochiSceneObject->WaitForQueuedCommands();
   }
-  if (!err.IsOK()) {
+  if (!Err.IsOK()) {
     UE_LOG(
         LogMochiPhysics,
         Error,
         TEXT("USuperDexIKSolverObject::Error during solve. %s"),
-        *FString(err.GetDescription()));
+        *FString(Err.GetDescription()));
   }
-  return GoalsReached;
+  return bGoalsReached;
 }
 
 void USuperDexIKSolverObject::UpdateBotResults() {
-  FMochiToUnrealConverter m2u(
+  FMochiToUnrealConverter M2U(
       bNativeJointLayout ? SuperDexSpace : UMochiPhysicsSettings::GetActiveSimulationSpace());
   const mochi::Span<mochi::TransformRT const> WorldFromLinks = NativeIK->GetWorldFromLinks();
   SolvedLinkToWorld.SetNum(static_cast<int>(WorldFromLinks.size()));
-  for (int iLink = 0; iLink < SolvedLinkToWorld.Num(); ++iLink) {
-    SolvedLinkToWorld[iLink] = m2u.TransformToUnreal(WorldFromLinks[iLink]);
+  for (int LinkIndex = 0; LinkIndex < SolvedLinkToWorld.Num(); ++LinkIndex) {
+    SolvedLinkToWorld[LinkIndex] = M2U.TransformToUnreal(WorldFromLinks[LinkIndex]);
   }
 
   const mochi::Span<mochi::real const> JointPositions = NativeIK->GetJointPositions();
@@ -887,8 +887,8 @@ void USuperDexIKSolverObject::UpdateBotResults() {
       NumJointPositions,
       ExtraDofsToStrip);
   SolvedDofs.SetNum(FMath::Max(0, NumJointPositions - ExtraDofsToStrip));
-  for (int iDof = 0; iDof < SolvedDofs.Num(); ++iDof) {
-    SolvedDofs[iDof] = JointPositions[iDof + ExtraDofsToStrip];
+  for (int DofIndex = 0; DofIndex < SolvedDofs.Num(); ++DofIndex) {
+    SolvedDofs[DofIndex] = JointPositions[DofIndex + ExtraDofsToStrip];
   }
 }
 
@@ -902,10 +902,10 @@ void USuperDexIKSolverObject::OnArticulatedActorGetPose(
   if (!bIsInitialized) {
     return;
   }
-  FMochiToUnrealConverter m2u;
+  FMochiToUnrealConverter M2U;
   SolvedLinkToWorld.SetNum(InWorldFromLink.Num());
-  for (int iLink = 0; iLink < InWorldFromLink.Num(); iLink++) {
-    SolvedLinkToWorld[iLink] = m2u.TransformToUnreal(InWorldFromLink[iLink]);
+  for (int LinkIndex = 0; LinkIndex < InWorldFromLink.Num(); LinkIndex++) {
+    SolvedLinkToWorld[LinkIndex] = M2U.TransformToUnreal(InWorldFromLink[LinkIndex]);
   }
   // A shortfall means the solver and the actor disagree about the base, which would silently
   // produce a truncated pose. Clamp so we cannot SetNum a negative count, but say so.
@@ -915,9 +915,9 @@ void USuperDexIKSolverObject::OnArticulatedActorGetPose(
       InJointDofs.Num(),
       NumMochiBaseDofs);
   SolvedDofs.SetNum(FMath::Max(0, InJointDofs.Num() - NumMochiBaseDofs));
-  for (int iDof = NumMochiBaseDofs; iDof < InJointDofs.Num(); iDof++) {
-    const int iJoint = iDof - NumMochiBaseDofs;
-    SolvedDofs[iJoint] = InJointDofs[iDof];
+  for (int DofIndex = NumMochiBaseDofs; DofIndex < InJointDofs.Num(); DofIndex++) {
+    const int JointIndex = DofIndex - NumMochiBaseDofs;
+    SolvedDofs[JointIndex] = InJointDofs[DofIndex];
   }
 }
 
@@ -975,9 +975,9 @@ void USuperDexIKSolverObject::DestroyMochiResources() {
   }
   // Finally, destroy the IK solver which will actually destroy the mochi::Scene.
   if (IKSolver) {
-    mochi::Context* mochiContext = IMochiPhysicsModule::Get()->GetMochiContext();
-    check(mochiContext != nullptr);
-    mochi::experimental::DestroyIKSolver(IKSolver, mochiContext, mochi::ErrorAssert{});
+    mochi::Context* MochiContext = IMochiPhysicsModule::Get()->GetMochiContext();
+    check(MochiContext != nullptr);
+    mochi::experimental::DestroyIKSolver(IKSolver, MochiContext, mochi::ErrorAssert{});
     IKSolver = nullptr;
   }
   // The mochi::Scene should already be destroyed by the IKSolver, calling this to guarantee UE

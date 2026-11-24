@@ -26,26 +26,26 @@
 #include "SuperDexPoseableActor.h"
 
 // this exact number seems to be crucial to making "local floor" relative hand positions work
-static constexpr float kCapsuleHalfHeight = 88.0f;
+static constexpr float CapsuleHalfHeight = 88.0f;
 
 ASuperDexPlayerPawn::ASuperDexPlayerPawn() {
   PrimaryActorTick.bCanEverTick = true;
 
-  // create capsule collision component, set as root, set half height to kCapsuleHalfHeight
+  // create capsule collision component, set as root, set half height to CapsuleHalfHeight
   CollisionComponent = CreateDefaultSubobject<UCapsuleComponent>(TEXT("Collision"));
   RootComponent = CollisionComponent;
-  CollisionComponent->SetCapsuleHalfHeight(kCapsuleHalfHeight);
+  CollisionComponent->SetCapsuleHalfHeight(CapsuleHalfHeight);
   CollisionComponent->SetCollisionProfileName(TEXT("OverlapAllDynamic"), true);
 
   // create vr root component, attach to collision component, offset z to bottom of capsule
   VrRootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("VrRoot"));
   VrRootComponent->SetupAttachment(CollisionComponent);
-  VrRootComponent->SetRelativeLocation(FVector(0, 0, -kCapsuleHalfHeight));
+  VrRootComponent->SetRelativeLocation(FVector(0, 0, -CapsuleHalfHeight));
 
   // create camera component, attach to vr root component
   CameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
   CameraComponent->SetupAttachment(VrRootComponent);
-  CameraComponent->SetRelativeLocation(FVector(0, 0, 2 * kCapsuleHalfHeight));
+  CameraComponent->SetRelativeLocation(FVector(0, 0, 2 * CapsuleHalfHeight));
 }
 
 bool ASuperDexPlayerPawn::GetPose(ESuperDexHandedness Handedness, FSuperDexPose& OutPose) {

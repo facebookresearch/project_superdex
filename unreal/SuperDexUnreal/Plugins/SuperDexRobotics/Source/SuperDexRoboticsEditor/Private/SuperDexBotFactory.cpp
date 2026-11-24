@@ -45,7 +45,7 @@
 
 DEFINE_LOG_CATEGORY_STATIC(LogSuperDexBotFactory, Log, All);
 
-static constexpr bool kCleanupStaticMeshes = false;
+static constexpr bool bCleanupStaticMeshes = false;
 
 static TMochiToUnrealConverter<double> GetRosToUnrealConverter() {
   return TMochiToUnrealConverter<double>(SuperDexSpace, UnrealCentimetersSpace);
@@ -312,12 +312,12 @@ static bool CaptureBotSensorParamsFiles(
     TMap<FString, FSuperDexBotDataFile>& OutFiles) {
   TMap<FString, FString> CapturedParamsKeys;
   TSet<FString> UnavailableParamsPaths;
-  for (int32 i = 0; i < static_cast<int32>(BotPrefab.links.size()); ++i) {
-    superdex::robotics::BotLinkPrefab& Link = BotPrefab.links[i];
+  for (int32 LinkIndex = 0; LinkIndex < static_cast<int32>(BotPrefab.links.size()); ++LinkIndex) {
+    superdex::robotics::BotLinkPrefab& Link = BotPrefab.links[LinkIndex];
     const FString LinkKey =
         SuperDexImportUtils::SanitizeForFileName(UTF8_TO_TCHAR(std::string(Link.name).c_str()));
-    for (int32 s = 0; s < static_cast<int32>(Link.sensors.size()); ++s) {
-      superdex::robotics::BotSensorPrefab& Sensor = Link.sensors[s];
+    for (int32 S = 0; S < static_cast<int32>(Link.sensors.size()); ++S) {
+      superdex::robotics::BotSensorPrefab& Sensor = Link.sensors[S];
       const std::string_view Params(Sensor.params.c_str(), Sensor.params.size());
       const ESuperDexBotComponentParamsKind ParamsKind = ClassifyBotComponentParams(Params);
       if (ParamsKind == ESuperDexBotComponentParamsKind::Empty ||
@@ -362,7 +362,10 @@ static bool CaptureBotSensorParamsFiles(
         continue;
       } else {
         if (!CaptureSensorParamsFiles(
-                NormalizedParamsPath, FString::Printf(TEXT("%d/%d"), i, s), OutFiles, ParamsKey)) {
+                NormalizedParamsPath,
+                FString::Printf(TEXT("%d/%d"), LinkIndex, S),
+                OutFiles,
+                ParamsKey)) {
           UE_LOG(
               LogSuperDexBotFactory,
               Warning,
@@ -542,15 +545,16 @@ bool USuperDexBotFactory::ImportBotFromFile(
       FText::FromString(FString::Printf(TEXT("Importing SuperDexBot '%s'..."), *BotName)));
   SlowTask.MakeDialog();
 
-  for (int32 i = 0; i < NumLinks; ++i) {
-    superdex::robotics::BotLinkPrefab const& Link = BotPrefab.links[i];
+  for (int32 LinkIndex = 0; LinkIndex < NumLinks; ++LinkIndex) {
+    superdex::robotics::BotLinkPrefab const& Link = BotPrefab.links[LinkIndex];
     FString LinkName =
         SuperDexImportUtils::SanitizeForPackagePath(UTF8_TO_TCHAR(std::string(Link.name).c_str()));
 
     SlowTask.EnterProgressFrame(
         1.0f,
         FText::FromString(
-            FString::Printf(TEXT("Importing link '%s' (%d/%d)"), *LinkName, i + 1, NumLinks)));
+            FString::Printf(
+                TEXT("Importing link '%s' (%d/%d)"), *LinkName, LinkIndex + 1, NumLinks)));
 
     if (!Link.renderModelFile.empty()) {
       FString GlbPath = UTF8_TO_TCHAR(Link.renderModelFile.c_str());
@@ -560,22 +564,24 @@ bool USuperDexBotFactory::ImportBotFromFile(
       mochi::ErrorLog HashErr;
       FString GlbHash(UTF8_TO_TCHAR(
           superdex::robotics::HashGenericFile(Link.renderModelFile.c_str(), HashErr).c_str()));
-      NewRenderModelHashes[i] = GlbHash;
+      NewRenderModelHashes[LinkIndex] = GlbHash;
       FString ExpectedAssetPath =
           FPaths::Combine(RenderPath, FString::Printf(TEXT("SM_%s"), *GlbName));
-      bool bCanReuse = !GlbHash.IsEmpty() && i < Bot->AssetImportData->RenderModelHashes.Num() &&
-          GlbHash == Bot->AssetImportData->RenderModelHashes[i];
+      bool bCanReuse = !GlbHash.IsEmpty() &&
+          LinkIndex < Bot->AssetImportData->RenderModelHashes.Num() &&
+          GlbHash == Bot->AssetImportData->RenderModelHashes[LinkIndex];
       if (bCanReuse) {
-        ImportedRenderMeshes[i] = LoadObject<UStaticMesh>(nullptr, *ExpectedAssetPath);
+        ImportedRenderMeshes[LinkIndex] = LoadObject<UStaticMesh>(nullptr, *ExpectedAssetPath);
       }
-      if (ImportedRenderMeshes[i]) {
+      if (ImportedRenderMeshes[LinkIndex]) {
         UE_LOG(
             LogSuperDexBotFactory,
             Display,
             TEXT("Skipping reimport of render mesh '%s' (hash unchanged)"),
             *GlbName);
       } else {
-        ImportedRenderMeshes[i] = ImportSession.ImportGlbToStaticMesh(GlbPath, RenderPath, GlbName);
+        ImportedRenderMeshes[LinkIndex] =
+            ImportSession.ImportGlbToStaticMesh(GlbPath, RenderPath, GlbName);
       }
     }
 
@@ -586,22 +592,24 @@ bool USuperDexBotFactory::ImportBotFromFile(
       mochi::ErrorLog HashErr;
       FString H5Hash(UTF8_TO_TCHAR(
           superdex::robotics::HashGenericFile(Link.shapeFile.c_str(), HashErr).c_str()));
-      NewMochiModelHashes[i] = H5Hash;
+      NewMochiModelHashes[LinkIndex] = H5Hash;
       FString ExpectedAssetPath =
           FPaths::Combine(MochiPath, FString::Printf(TEXT("MM_%s"), *H5Name));
-      bool bCanReuse = !H5Hash.IsEmpty() && i < Bot->AssetImportData->MochiModelHashes.Num() &&
-          H5Hash == Bot->AssetImportData->MochiModelHashes[i];
+      bool bCanReuse = !H5Hash.IsEmpty() &&
+          LinkIndex < Bot->AssetImportData->MochiModelHashes.Num() &&
+          H5Hash == Bot->AssetImportData->MochiModelHashes[LinkIndex];
       if (bCanReuse) {
-        ImportedMochiModels[i] = LoadObject<UMochiModel>(nullptr, *ExpectedAssetPath);
+        ImportedMochiModels[LinkIndex] = LoadObject<UMochiModel>(nullptr, *ExpectedAssetPath);
       }
-      if (ImportedMochiModels[i]) {
+      if (ImportedMochiModels[LinkIndex]) {
         UE_LOG(
             LogSuperDexBotFactory,
             Display,
             TEXT("Skipping reimport of MochiModel '%s' (hash unchanged)"),
             *H5Name);
       } else {
-        ImportedMochiModels[i] = ImportSession.ImportH5ToMochiModel(H5Path, MochiPath, H5Name);
+        ImportedMochiModels[LinkIndex] =
+            ImportSession.ImportH5ToMochiModel(H5Path, MochiPath, H5Name);
       }
     }
   }
@@ -756,7 +764,7 @@ bool USuperDexBotFactory::ImportBotFromFile(
       }
       // The render static meshes (and their materials) persist on disk but the bot
       // holds no direct reference to them, so they must be tracked explicitly.
-      if constexpr (!kCleanupStaticMeshes) {
+      if constexpr (!bCleanupStaticMeshes) {
         if (ImportedRenderMeshes[i]) {
           RecordAsset(ImportedRenderMeshes[i]);
           RecordMeshMaterials(ImportedRenderMeshes[i]->GetStaticMaterials());
@@ -766,7 +774,7 @@ bool USuperDexBotFactory::ImportBotFromFile(
     if (ImportedSkinModel) {
       RecordAsset(ImportedSkinModel);
     }
-    if constexpr (!kCleanupStaticMeshes) {
+    if constexpr (!bCleanupStaticMeshes) {
       if (ImportedSkinRenderMesh && !SkinnedParts.IsEmpty()) {
         RecordAsset(ImportedSkinRenderMesh);
         RecordMeshMaterials(ImportedSkinRenderMesh->GetStaticMaterials());
@@ -775,7 +783,7 @@ bool USuperDexBotFactory::ImportBotFromFile(
   }
 
   // Optionally clean up intermediate static meshes after skeletal mesh generation.
-  if constexpr (kCleanupStaticMeshes) {
+  if constexpr (bCleanupStaticMeshes) {
     for (int32 i = 0; i < NumLinks; ++i) {
       if (ImportedRenderMeshes[i]) {
         ImportedRenderMeshes[i]->ClearFlags(RF_Public | RF_Standalone);

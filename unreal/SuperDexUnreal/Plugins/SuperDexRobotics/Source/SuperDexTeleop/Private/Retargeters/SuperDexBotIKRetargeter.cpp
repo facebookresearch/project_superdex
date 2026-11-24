@@ -41,15 +41,15 @@ bool UnitRotation(const FQuat& Rotation) {
       FMath::Abs(Rotation.SizeSquared() - 1.0) < 1e-4;
 }
 
-const TCHAR* const kAwaitingInputPose = TEXT("Awaiting a valid input pose from its provider.");
+const TCHAR* const AwaitingInputPose = TEXT("Awaiting a valid input pose from its provider.");
 
 // Input poses should fit the InputBot's joints, leaving only rounding error. Anything larger that a
 // joint can't produce (swing off a revolute axis, translation of a rotational joint, ...) points at
 // a mismatched skeleton, bone frames or pose source.
-constexpr double kMaxInputRotationResidual = 1e-4; // [rad]
-constexpr double kMaxInputTranslationResidual = 1e-4; // [nominal InputBot units]
+constexpr double MaxInputRotationResidual = 1e-4; // [rad]
+constexpr double MaxInputTranslationResidual = 1e-4; // [nominal InputBot units]
 // Log the first frame whose input exceeds them, then every this many such frames.
-constexpr int32 kInputResidualLogInterval = 200;
+constexpr int32 InputResidualLogInterval = 200;
 
 // Logs (throttled by LargeResidualFrames) when an input pose leaves larger residuals than rounding
 // error. Translations are only checked when the InputBot has prismatic joints: its rotational
@@ -65,8 +65,8 @@ void LogLargeInputResiduals(
   double WorstExcess = 1.0;
   for (int32 I = 0; I < static_cast<int32>(Residuals.size()); ++I) {
     const double Excess = FMath::Max(
-        Residuals[I].rotation / kMaxInputRotationResidual,
-        bCheckTranslations ? Residuals[I].translation / kMaxInputTranslationResidual : 0.0);
+        Residuals[I].rotation / MaxInputRotationResidual,
+        bCheckTranslations ? Residuals[I].translation / MaxInputTranslationResidual : 0.0);
     if (Excess > 1.0) {
       ++NumLarge;
       if (Excess > WorstExcess) {
@@ -75,7 +75,7 @@ void LogLargeInputResiduals(
       }
     }
   }
-  if (NumLarge == 0 || LargeResidualFrames++ % kInputResidualLogInterval != 0) {
+  if (NumLarge == 0 || LargeResidualFrames++ % InputResidualLogInterval != 0) {
     return;
   }
   UE_LOG(
@@ -85,10 +85,10 @@ void LogLargeInputResiduals(
           "BotIK retargeter %s: the input pose doesn't fit the InputBot's joints (%d frame(s) so far, logged every %d). This frame %d link(s) exceed %.4f deg or %.4f units; worst '%s': rotation %.4f deg, translation %.5f units%s."),
       *Retargeter.GetPathName(),
       LargeResidualFrames,
-      kInputResidualLogInterval,
+      InputResidualLogInterval,
       NumLarge,
-      FMath::RadiansToDegrees(kMaxInputRotationResidual),
-      kMaxInputTranslationResidual,
+      FMath::RadiansToDegrees(MaxInputRotationResidual),
+      MaxInputTranslationResidual,
       UTF8_TO_TCHAR(InputBot.links[Worst].name.c_str()),
       FMath::RadiansToDegrees(static_cast<double>(Residuals[Worst].rotation)),
       static_cast<double>(Residuals[Worst].translation),
@@ -234,7 +234,7 @@ bool USuperDexBotIKRetargeter::ValidateConfiguration(FString& Diagnostic) const 
     Diagnostic = UTF8_TO_TCHAR(NativeDiagnostic.c_str());
     return false;
   }
-  bool Active = false;
+  bool bActive = false;
   const superdex::robotics::BotPrefab& InputBot = Config->InputBot->GetBotPrefab();
   for (const superdex::robotics::BotIKGoalConfig& Goal : Spec.goals) {
     const auto HasLink = [](const superdex::robotics::BotPrefab& Model, std::string_view Name) {
@@ -250,9 +250,9 @@ bool USuperDexBotIKRetargeter::ValidateConfiguration(FString& Diagnostic) const 
           Goal.name.c_str());
       return false;
     }
-    Active |= Goal.enabled && (Goal.positionStiffness > 0 || Goal.rotationStiffness > 0);
+    bActive |= Goal.enabled && (Goal.positionStiffness > 0 || Goal.rotationStiffness > 0);
   }
-  if (!Active) {
+  if (!bActive) {
     Diagnostic = TEXT("The IK configuration has no active pose goals.");
     return false;
   }
@@ -276,10 +276,10 @@ void USuperDexBotIKRetargeter::SetStatus(
     bool bValid,
     const FString& Diagnostic,
     bool bConfigurationError) {
-  bool Changed;
+  bool bChanged;
   {
     FScopeLock Lock(&ResultMutex);
-    Changed = bCurrentValid != bValid || LastDiagnostic != Diagnostic;
+    bChanged = bCurrentValid != bValid || LastDiagnostic != Diagnostic;
     bCurrentValid = bValid;
     LastDiagnostic = Diagnostic;
   }
@@ -289,7 +289,7 @@ void USuperDexBotIKRetargeter::SetStatus(
       Node->InvalidateHandJointTargets();
     }
   }
-  if (bConfigurationError && Changed) {
+  if (bConfigurationError && bChanged) {
     UE_LOG(LogSuperDexTeleop, Error, TEXT("BotIK retargeter %s: %s"), *GetPathName(), *Diagnostic);
   }
   if (GEngine && IsInGameThread()) {
@@ -347,7 +347,7 @@ bool USuperDexBotIKRetargeter::InitializeRetargeter() {
       [](const superdex::robotics::BotJointPrefab& Joint) {
         return Joint.type == mochi::ArticulatedJointType::Prismatic;
       });
-  SetStatus(false, kAwaitingInputPose, false);
+  SetStatus(false, AwaitingInputPose, false);
   return true;
 }
 
@@ -369,7 +369,7 @@ bool USuperDexBotIKRetargeter::GetTransformedPose_Implementation(
       SourcePose.SourceName == FName(TEXT("RefSkeleton")) ||
       SourcePose.tags.Contains(FName(TEXT("InEditorOnly"))) ||
       (SourcePose.bIsTrackingEnabled && !SourcePose.bIsTrackingConfident)) {
-    SetStatus(false, kAwaitingInputPose, false);
+    SetStatus(false, AwaitingInputPose, false);
     return false;
   }
   const int32 InputLinks = static_cast<int32>(InputModel.links.size());
@@ -424,8 +424,8 @@ bool USuperDexBotIKRetargeter::GetTransformedPose_Implementation(
     return false;
   }
   PreviousInputPositions = MoveTemp(InputPositions);
-  bool Reached = false;
-  if (!Solver->SolveBotIK(Reached)) {
+  bool bReached = false;
+  if (!Solver->SolveBotIK(bReached)) {
     SetStatus(false, TEXT("Native IK solve failed; no fresh robot command was published."), true);
     return false;
   }
@@ -504,7 +504,7 @@ bool USuperDexBotIKRetargeter::GetTransformedPose_Implementation(
     JointCache = MoveTemp(Positions);
     bHasSolution = true;
   }
-  SetStatus(true, Reached ? TEXT("Goals reached") : TEXT("Best effort: goals unreached"), false);
+  SetStatus(true, bReached ? TEXT("Goals reached") : TEXT("Best effort: goals unreached"), false);
   return true;
 }
 

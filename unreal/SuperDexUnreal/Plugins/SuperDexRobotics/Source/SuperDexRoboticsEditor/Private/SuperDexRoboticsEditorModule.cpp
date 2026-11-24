@@ -40,35 +40,35 @@
 void FSuperDexRoboticsEditorModule::StartupModule() {
   // get asset tools -- RegisterAdvancedAssetCategory is idempotent, so this is safe
   // regardless of whether FMochiPhysicsEditorModule has already registered "Mochi".
-  IAssetTools& assetTools =
+  IAssetTools& AssetTools =
       FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools").Get();
-  EAssetTypeCategories::Type mochiCategory =
-      assetTools.RegisterAdvancedAssetCategory(FName(TEXT("Mochi")), FText::FromString("SuperDex"));
-  const TSharedRef<IAssetTypeActions> botAssetActions =
-      MakeShareable(new FSuperDexBotAssetActions(mochiCategory));
-  assetTools.RegisterAssetTypeActions(botAssetActions);
-  RegisteredAssetTypeActions.Add(botAssetActions);
-  const TSharedRef<IAssetTypeActions> sceneAssetActions =
-      MakeShareable(new FSuperDexSceneAssetActions(mochiCategory));
-  assetTools.RegisterAssetTypeActions(sceneAssetActions);
-  RegisteredAssetTypeActions.Add(sceneAssetActions);
+  EAssetTypeCategories::Type MochiCategory =
+      AssetTools.RegisterAdvancedAssetCategory(FName(TEXT("Mochi")), FText::FromString("SuperDex"));
+  const TSharedRef<IAssetTypeActions> BotAssetActions =
+      MakeShareable(new FSuperDexBotAssetActions(MochiCategory));
+  AssetTools.RegisterAssetTypeActions(BotAssetActions);
+  RegisteredAssetTypeActions.Add(BotAssetActions);
+  const TSharedRef<IAssetTypeActions> SceneAssetActions =
+      MakeShareable(new FSuperDexSceneAssetActions(MochiCategory));
+  AssetTools.RegisterAssetTypeActions(SceneAssetActions);
+  RegisteredAssetTypeActions.Add(SceneAssetActions);
 
-  const TSharedRef<IAssetTypeActions> ikAssetActions =
-      MakeShareable(new FSuperDexBotIKConfigAssetActions(mochiCategory));
-  assetTools.RegisterAssetTypeActions(ikAssetActions);
-  RegisteredAssetTypeActions.Add(ikAssetActions);
+  const TSharedRef<IAssetTypeActions> IKAssetActions =
+      MakeShareable(new FSuperDexBotIKConfigAssetActions(MochiCategory));
+  AssetTools.RegisterAssetTypeActions(IKAssetActions);
+  RegisteredAssetTypeActions.Add(IKAssetActions);
 
-  for (const TSharedRef<IAssetTypeActions>& dataAssetActions : {
-           TSharedRef<IAssetTypeActions>(MakeShared<FSuperDexPoseAssetActions>(mochiCategory)),
+  for (const TSharedRef<IAssetTypeActions>& DataAssetActions : {
+           TSharedRef<IAssetTypeActions>(MakeShared<FSuperDexPoseAssetActions>(MochiCategory)),
            TSharedRef<IAssetTypeActions>(
-               MakeShared<FSuperDexStudyQuestionDataAssetActions>(mochiCategory)),
+               MakeShared<FSuperDexStudyQuestionDataAssetActions>(MochiCategory)),
        }) {
-    assetTools.RegisterAssetTypeActions(dataAssetActions);
-    RegisteredAssetTypeActions.Add(dataAssetActions);
+    AssetTools.RegisterAssetTypeActions(DataAssetActions);
+    RegisteredAssetTypeActions.Add(DataAssetActions);
   }
 
   // Class names without their U prefix; icons live in SuperDexRobotics/Resources.
-  static const TCHAR* const kClassIcons[] = {
+  static const TCHAR* const ClassIcons[] = {
       TEXT("SuperDexBot"),
       TEXT("SuperDexScene"),
       TEXT("SuperDexBotIKConfig"),
@@ -76,7 +76,7 @@ void FSuperDexRoboticsEditorModule::StartupModule() {
       TEXT("SuperDexStudyQuestionData"),
   };
   ClassIconStyle = MakeShared<FSuperDexClassIconStyle>(
-      TEXT("SuperDexRoboticsEditorStyle"), TEXT("SuperDexRobotics"), kClassIcons);
+      TEXT("SuperDexRoboticsEditorStyle"), TEXT("SuperDexRobotics"), ClassIcons);
 
   // register the "Split Mochi Children..." content-browser context menu entry
   RegisterAssetContextMenu();
@@ -151,10 +151,10 @@ void FSuperDexRoboticsEditorModule::RegisterAssetContextMenu() {
               FToolMenuExecuteAction::CreateLambda([](const FToolMenuContext& InMenuContext) {
                 if (const UContentBrowserAssetContextMenuContext* Context =
                         InMenuContext.FindContext<UContentBrowserAssetContextMenuContext>()) {
-                  TArray<FAssetData> assets =
+                  TArray<FAssetData> Assets =
                       Context->GetSelectedAssetsOfType(UBlueprint::StaticClass());
-                  for (FAssetData const& asset : assets) {
-                    if (UBlueprint* BP = Cast<UBlueprint>(asset.GetAsset())) {
+                  for (FAssetData const& Asset : Assets) {
+                    if (UBlueprint* BP = Cast<UBlueprint>(Asset.GetAsset())) {
                       SuperDexSplitBlueprintChildren::ExecuteSplitBlueprintChildren(BP);
                     }
                   }
@@ -164,10 +164,10 @@ void FSuperDexRoboticsEditorModule::RegisterAssetContextMenu() {
               [](const FToolMenuContext& InMenuContext) -> bool {
                 if (const UContentBrowserAssetContextMenuContext* Context =
                         InMenuContext.FindContext<UContentBrowserAssetContextMenuContext>()) {
-                  TArray<FAssetData> assets =
+                  TArray<FAssetData> Assets =
                       Context->GetSelectedAssetsOfType(UBlueprint::StaticClass());
-                  for (FAssetData const& asset : assets) {
-                    if (UBlueprint const* BP = Cast<UBlueprint>(asset.GetAsset())) {
+                  for (FAssetData const& Asset : Assets) {
+                    if (UBlueprint const* BP = Cast<UBlueprint>(Asset.GetAsset())) {
                       if (SuperDexSplitBlueprintChildren::IsBlueprintSplittable(BP)) {
                         return true;
                       }
@@ -319,14 +319,14 @@ void FSuperDexRoboticsEditorModule::ExecuteExportSuperDexBotSceneInternal(bool b
   FString ParentDir = FPaths::GetPath(SelectedFilePath);
 
   if (bSuccess) {
-    auto onOpenFileLocation = [ParentDir]() {
+    auto OnOpenFileLocation = [ParentDir]() {
       FString NormalizedPath = ParentDir;
       FPaths::NormalizeDirectoryName(NormalizedPath);
       FPaths::MakePlatformFilename(NormalizedPath);
       FPlatformProcess::ExploreFolder(*NormalizedPath);
     };
 
-    TSharedRef<SCustomDialog> successDialog =
+    TSharedRef<SCustomDialog> SuccessDialog =
         SNew(SCustomDialog)
             .Title(LOCTEXT("SuperDexBotSceneExportSuccessTitle", "Export Complete"))
             .Content()
@@ -346,9 +346,9 @@ void FSuperDexRoboticsEditorModule::ExecuteExportSuperDexBotSceneInternal(bool b
             .Buttons(
                 {SCustomDialog::FButton(
                      LOCTEXT("BotSceneOpenLocationButton", "Open Location"),
-                     FSimpleDelegate::CreateLambda(onOpenFileLocation)),
+                     FSimpleDelegate::CreateLambda(OnOpenFileLocation)),
                  SCustomDialog::FButton(LOCTEXT("BotSceneDialogButtonDone", "Done"))});
-    successDialog->Show();
+    SuccessDialog->Show();
   } else {
     FMessageDialog::Open(
         EAppMsgType::Ok,

@@ -44,7 +44,7 @@ namespace {
 using mochi::operator""_r;
 using FGenericNativeIK = TStrongObjectPtr<USuperDexIKSolverObject>;
 
-superdex::robotics::BotPrefab GenericModel(bool FreeRoot, bool Prismatic, mochi::real Scale) {
+superdex::robotics::BotPrefab GenericModel(bool bFreeRoot, bool bPrismatic, mochi::real Scale) {
   using namespace superdex::robotics;
   BotPrefab Model;
   Model.name = "generic_mixed_tree";
@@ -64,11 +64,11 @@ superdex::robotics::BotPrefab GenericModel(bool FreeRoot, bool Prismatic, mochi:
     BotJointPrefab Joint;
     Joint.name = TCHAR_TO_UTF8(*FString::Printf(TEXT("generic_joint_%d"), I));
     Joint.type = I == 0
-        ? (FreeRoot ? mochi::ArticulatedJointType::Free : mochi::ArticulatedJointType::Hard)
-        : I == 2              ? mochi::ArticulatedJointType::Revolute
-        : I == 3 && Prismatic ? mochi::ArticulatedJointType::Prismatic
-        : I == 4              ? mochi::ArticulatedJointType::Spherical
-                              : mochi::ArticulatedJointType::Hard;
+        ? (bFreeRoot ? mochi::ArticulatedJointType::Free : mochi::ArticulatedJointType::Hard)
+        : I == 2               ? mochi::ArticulatedJointType::Revolute
+        : I == 3 && bPrismatic ? mochi::ArticulatedJointType::Prismatic
+        : I == 4               ? mochi::ArticulatedJointType::Spherical
+                               : mochi::ArticulatedJointType::Hard;
     Joint.axis = I == 3 ? mochi::Real3{1_r, 0_r, 0_r} : mochi::Real3{0_r, 0_r, 1_r};
     Joint.parentLinkFromJoint = I == 0
         ? mochi::TransformRT{}
@@ -76,8 +76,8 @@ superdex::robotics::BotPrefab GenericModel(bool FreeRoot, bool Prismatic, mochi:
               mochi::Quaternion::RotationY(0.2_r), mochi::Real3{0.15_r, 0.02_r, -0.01_r}};
     Model.joints.push_back(Joint);
   }
-  Model.defaultPose = Prismatic ? mochi::DynamicArray<mochi::real>{0_r, 0_r, 0_r, 0_r, 0_r}
-                                : mochi::DynamicArray<mochi::real>{0_r, 0_r, 0_r, 0_r};
+  Model.defaultPose = bPrismatic ? mochi::DynamicArray<mochi::real>{0_r, 0_r, 0_r, 0_r, 0_r}
+                                 : mochi::DynamicArray<mochi::real>{0_r, 0_r, 0_r, 0_r};
   mochi::Error Error;
   RebuildBotData(Model, Error);
   check(Error.IsOK());
@@ -152,10 +152,10 @@ bool MatchGenericQ(
     USuperDexBotIKRetargeter* Ret,
     const TArray<double>& Q) {
   TArray<double> Actual;
-  bool Valid = false;
+  bool bValid = false;
   if (!Test.TestTrue(
           TEXT("Generic output cache is present and valid"),
-          Ret->GetCachedJointConfiguration(Actual, Valid) && Valid) ||
+          Ret->GetCachedJointConfiguration(Actual, bValid) && bValid) ||
       !Test.TestEqual(TEXT("Generic output DOF width"), Actual.Num(), Q.Num())) {
     return false;
   }
@@ -173,8 +173,8 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     "Teleop.SuperDexBotIKRetargeter.GenericNativeTreeAndChaining",
     EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 bool FGenericBotIKNativeChainTest::RunTest(const FString&) {
-  for (bool Free : {false, true}) {
-    const superdex::robotics::BotPrefab Model = GenericModel(Free, true, 2_r);
+  for (bool bFree : {false, true}) {
+    const superdex::robotics::BotPrefab Model = GenericModel(bFree, true, 2_r);
     TStrongObjectPtr<USuperDexBot> Input(GenericAsset(Model, TEXT("GenericInput")));
     TStrongObjectPtr<USuperDexBot> Output(GenericAsset(Model, TEXT("GenericOutput")));
     TStrongObjectPtr<USuperDexBotIKConfig> Config(GenericConfig(Input.Get(), Output.Get()));
@@ -245,7 +245,7 @@ bool FGenericBotIKInvalidInputTest::RunTest(const FString&) {
   Ret->Config = Config.Get();
   TestTrue(TEXT("Generic configuration initializes"), Ret->InitializeRetargeter());
   const FSuperDexPose Good = GenericNativePose(Input.Get(), {0.3, 0.025, 0.1, -0.2, 0.05});
-  auto Reject = [&](FSuperDexPose Bad, const TCHAR* Message, bool SourceValid = true) {
+  auto Reject = [&](FSuperDexPose Bad, const TCHAR* Message, bool bSourceValid = true) {
     FSuperDexPose Recovery;
     TestTrue(
         TEXT("Valid native input resets diagnostic freshness before each rejection"),
@@ -255,7 +255,7 @@ bool FGenericBotIKInvalidInputTest::RunTest(const FString&) {
     AddExpectedError(Message, EAutomationExpectedErrorFlags::Contains, 1);
     TestFalse(
         TEXT("Invalid generic pose rejected"),
-        Ret->GetTransformedPose_Implementation(Bad, SourceValid, Out));
+        Ret->GetTransformedPose_Implementation(Bad, bSourceValid, Out));
     TestEqual(
         TEXT("Rejected input preserves output"), Out.SourceName, FName(TEXT("UnchangedOutput")));
   };
@@ -401,17 +401,17 @@ bool FGenericBotIKGoalsAndMetadataTest::RunTest(const FString&) {
               Goal.enabled ? Goal.positionStiffness : 0_r,
               Goal.enabled ? Goal.rotationStiffness : 0_r));
     }
-    bool Reached = false;
+    bool bReached = false;
     TestTrue(
         TEXT("Independent scaled goal batch solves without assuming convergence"),
-        Direct->SolveBotIK(Reached));
+        Direct->SolveBotIK(bReached));
     TestTrue(
         TEXT("Generic scaled input goal route solves"),
         Ret->GetTransformedPose_Implementation(Pose, true, Out));
     TArray<double> Actual;
-    bool Valid = false;
-    Ret->GetCachedJointConfiguration(Actual, Valid);
-    TestTrue(TEXT("Generic scaled result valid"), Valid);
+    bool bValid = false;
+    Ret->GetCachedJointConfiguration(Actual, bValid);
+    TestTrue(TEXT("Generic scaled result valid"), bValid);
     for (int I = 0; I < Actual.Num(); ++I) {
       TestTrue(
           TEXT("Generic direct goal path follows physical FK/offset scale rules"),

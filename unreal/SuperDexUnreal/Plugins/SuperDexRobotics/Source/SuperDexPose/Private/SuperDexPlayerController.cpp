@@ -61,15 +61,15 @@ bool ASuperDexPlayerController::NextPoseSource(
 
   // increment left/right pose source index, wrapping back to 0
   if (Handedness == ESuperDexHandedness::Left) {
-    const int numLeftSources = PlayerStart->LeftPoseSources.Num();
-    if (numLeftSources > 1) {
-      LeftPoseSourceIndex = (LeftPoseSourceIndex + Delta + numLeftSources) % numLeftSources;
+    const int NumLeftSources = PlayerStart->LeftPoseSources.Num();
+    if (NumLeftSources > 1) {
+      LeftPoseSourceIndex = (LeftPoseSourceIndex + Delta + NumLeftSources) % NumLeftSources;
       bChanged = true;
     }
   } else if (Handedness == ESuperDexHandedness::Right) {
-    const int numRightSources = PlayerStart->RightPoseSources.Num();
-    if (numRightSources > 1) {
-      RightPoseSourceIndex = (RightPoseSourceIndex + Delta + numRightSources) % numRightSources;
+    const int NumRightSources = PlayerStart->RightPoseSources.Num();
+    if (NumRightSources > 1) {
+      RightPoseSourceIndex = (RightPoseSourceIndex + Delta + NumRightSources) % NumRightSources;
       bChanged = true;
     }
   } else {

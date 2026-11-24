@@ -60,10 +60,10 @@ uint32 USuperDexPoseSubsystem::GetHighestPriorityLastCalledWithin(
     double CurrentTime,
     double WithinDeltaSecondsAgo) {
   uint32 HighestPriority = 0;
-  for (TPair<uint32, double> kv : SourceAndCache->PriorityToLastRequestTimeMap) {
-    if (kv.Key > HighestPriority) {
-      if (CurrentTime - kv.Value < WithinDeltaSecondsAgo) {
-        HighestPriority = kv.Key;
+  for (TPair<uint32, double> Kv : SourceAndCache->PriorityToLastRequestTimeMap) {
+    if (Kv.Key > HighestPriority) {
+      if (CurrentTime - Kv.Value < WithinDeltaSecondsAgo) {
+        HighestPriority = Kv.Key;
       }
     }
   }
@@ -131,9 +131,9 @@ bool USuperDexPoseSubsystem::GetPose(
     if (!bIsNecessaryThread) {
       ThisThreadPriority = Info->Priority;
     }
-    double& lastAccessTime =
+    double& LastAccessTime =
         SourceAndCache->PriorityToLastRequestTimeMap.FindOrAdd(ThisThreadPriority);
-    lastAccessTime = CurrentTime;
+    LastAccessTime = CurrentTime;
   } else {
     FScopeLock Lock2(&UnregisteredThreadsLock);
     if (!UnregisteredThreadIds.Contains(ThreadId)) {
@@ -154,24 +154,24 @@ bool USuperDexPoseSubsystem::GetPose(
   // Update cache if needed based on thread priorities
   if (ThisThreadPriority >= PriorityNeededToUpdateCache) {
     // Ensure the key is different so we default to update the cache
-    double currentCacheKey = SourceAndCache->CacheKey - 1;
+    double CurrentCacheKey = SourceAndCache->CacheKey - 1;
     if (Info != nullptr) {
-      currentCacheKey = Info->GetCacheKeyCallback();
+      CurrentCacheKey = Info->GetCacheKeyCallback();
     }
     // If the keys are different the cache is invalid and both hands should be updated
-    if (currentCacheKey != SourceAndCache->CacheKey) {
-      for (int iChirality = 0; iChirality < static_cast<int>(ESuperDexHandedness::Count);
-           iChirality++) {
-        const ESuperDexHandedness Chirality = static_cast<ESuperDexHandedness>(iChirality);
+    if (CurrentCacheKey != SourceAndCache->CacheKey) {
+      for (int ChiralityIndex = 0; ChiralityIndex < static_cast<int>(ESuperDexHandedness::Count);
+           ChiralityIndex++) {
+        const ESuperDexHandedness Chirality = static_cast<ESuperDexHandedness>(ChiralityIndex);
         FSuperDexPose Pose;
-        bool haveValidPose = SourceAndCache->Source->GetPose(Chirality, Pose);
+        bool bHaveValidPose = SourceAndCache->Source->GetPose(Chirality, Pose);
         // The cached pose must stay on its bot for consumers to read it. A pose the source calls
         // valid that is not on its bot is ignored; an invalid one, which typically has no joint
         // positions, still updates the tracking state but keeps the last joint positions.
-        FSuperDexPose& CachedPose = SourceAndCache->CachedPose[iChirality];
+        FSuperDexPose& CachedPose = SourceAndCache->CachedPose[ChiralityIndex];
         if (!SuperDexPoseSubsystemInternal::IsPoseOnSourceBot(
                 *SourceAndCache->Source, Chirality, Pose)) {
-          if (!haveValidPose) {
+          if (!bHaveValidPose) {
             Pose.Bot = CachedPose.Bot;
             Pose.DofPositions = MoveTemp(CachedPose.DofPositions);
             CachedPose = MoveTemp(Pose);
@@ -192,9 +192,9 @@ bool USuperDexPoseSubsystem::GetPose(
           continue;
         }
         CachedPose = MoveTemp(Pose);
-        if (haveValidPose == true) {
-          SourceAndCache->CacheKey = currentCacheKey;
-          SourceAndCache->bIsInitialized[iChirality] = true;
+        if (bHaveValidPose == true) {
+          SourceAndCache->CacheKey = CurrentCacheKey;
+          SourceAndCache->bIsInitialized[ChiralityIndex] = true;
         }
       }
     }

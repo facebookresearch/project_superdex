@@ -156,7 +156,7 @@ class SUPERDEXTELEOP_API UClutchSkeletonRootToVrRootRetargeter : public USuperDe
 
   bool InitializeClutchFromCurrentPoseableLeafBone(
       FString const& PosableWithName,
-      bool UpdateClutchToLeafBoneTransform = false);
+      bool bUpdateClutchToLeafBoneTransform = false);
 
   /**
    * Set the clutch state. The state is only set if the clutch transform has been initialized.
@@ -169,13 +169,13 @@ class SUPERDEXTELEOP_API UClutchSkeletonRootToVrRootRetargeter : public USuperDe
 
   UFUNCTION(BlueprintPure, Category = "SuperDex")
   bool GetClutchEnabled() const {
-    FReadScopeLock lock(ClutchLock);
+    FReadScopeLock Lock(ClutchLock);
     return bClutchEnabled;
   }
 
   UFUNCTION(BlueprintPure, Category = "SuperDex")
   bool IsClutchInitialized() const {
-    FReadScopeLock lock(ClutchLock);
+    FReadScopeLock Lock(ClutchLock);
     return bClutchInitialized;
   }
 
@@ -209,7 +209,7 @@ class SUPERDEXTELEOP_API UClutchSkeletonRootToVrRootRetargeter : public USuperDe
    */
   UFUNCTION(BlueprintPure, Category = "SuperDex")
   FTransform GetClutchedSkeletonRootToVrRoot() const {
-    FReadScopeLock lock(ClutchLock);
+    FReadScopeLock Lock(ClutchLock);
     return ClutchedSkeletonRootToVrRoot;
   }
 
@@ -221,9 +221,9 @@ class SUPERDEXTELEOP_API UClutchSkeletonRootToVrRootRetargeter : public USuperDe
    * clutched version.
    */
   UFUNCTION(BlueprintCallable, Category = "SuperDex")
-  void SetClutchedSkeletonRootToVrRoot(FTransform const& newSkeletonRootToVrRoot) {
-    FWriteScopeLock lock(ClutchLock);
-    ClutchedSkeletonRootToVrRoot = newSkeletonRootToVrRoot;
+  void SetClutchedSkeletonRootToVrRoot(FTransform const& NewSkeletonRootToVrRoot) {
+    FWriteScopeLock Lock(ClutchLock);
+    ClutchedSkeletonRootToVrRoot = NewSkeletonRootToVrRoot;
     bClutchInitialized = true;
   }
 
@@ -239,7 +239,7 @@ class SUPERDEXTELEOP_API UClutchSkeletonRootToVrRootRetargeter : public USuperDe
 
   bool InitializeClutchBasedOnLeafBoneInternal(
       FString const& PosableWithName,
-      bool UpdateClutchToLeafBoneTransform,
+      bool bUpdateClutchToLeafBoneTransform,
       bool bRequireCachedPose);
 
   // Guards access to the our clutch in case it is being evaluated on the mochi thread.

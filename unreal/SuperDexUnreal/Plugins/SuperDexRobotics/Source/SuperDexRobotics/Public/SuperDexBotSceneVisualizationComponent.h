@@ -158,7 +158,7 @@ class SUPERDEXROBOTICS_API USuperDexBotSceneVisualizationComponent : public USce
     // The bot's articulated actor handle.
     uint64 ActorKey = 0;
     FString File;
-    // Per skin bone: the link it follows (kNoLink for none). Skeleton bone i + 1 is skin bone i.
+    // Per skin bone: the link it follows (NoLink for none). Skeleton bone i + 1 is skin bone i.
     TArray<uint64> BoneLinks;
     // The skin bone whose link the component follows; bones are posed relative to it.
     int32 AnchorBone = 0;

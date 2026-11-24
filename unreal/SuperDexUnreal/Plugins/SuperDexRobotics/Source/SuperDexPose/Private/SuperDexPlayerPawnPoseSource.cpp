@@ -25,10 +25,10 @@
 bool USuperDexPlayerPawnPoseSource::GetPose(
     const ESuperDexHandedness Handedness,
     FSuperDexPose& OutPose) {
-  ASuperDexPlayerPawn* superDexPawn =
+  ASuperDexPlayerPawn* SuperDexPawn =
       Cast<ASuperDexPlayerPawn>(UGameplayStatics::GetPlayerPawn(GetWorld(), 0));
-  if (superDexPawn != nullptr) {
-    return superDexPawn->GetPose(Handedness, OutPose);
+  if (SuperDexPawn != nullptr) {
+    return SuperDexPawn->GetPose(Handedness, OutPose);
   }
   return false;
 }

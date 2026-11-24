@@ -74,7 +74,7 @@ struct FBotSceneVizSkinSnapshot {
   FString File;
   mochi::TransformRT RootFromModel;
   mochi::Real3 Scale = {1_r, 1_r, 1_r};
-  TArray<uint64> BoneLinks; // kNoLink for a bone without a link.
+  TArray<uint64> BoneLinks; // NoLink for a bone without a link.
   TArray<mochi::TransformRT> RootFromBoneRest;
   TArray<mochi::TransformRT> WorldFromBoneLink;
   TArray<uint64> CoveredLinks;
@@ -82,7 +82,7 @@ struct FBotSceneVizSkinSnapshot {
 
 namespace {
 // A skin bone that follows no link.
-constexpr uint64 kNoLink = MAX_uint64;
+constexpr uint64 NoLink = MAX_uint64;
 
 // Stable per-mesh palette - 16 distinct hues spanning the wheel so you do not
 // get all-reds when shape handles are sequential.
@@ -433,7 +433,7 @@ bool USuperDexBotSceneVisualizationComponent::TrySnapshotLinkTransforms(
       for (int32 i = 0; i < (int32)Skin->boneLinks.size(); ++i) {
         const mochi::ActorHandle Link = Skin->boneLinks[i];
         mochi::Actor* const LinkActor = Link.IsValid() && Scene ? Scene->GetActor(Link) : nullptr;
-        S.BoneLinks.Add(LinkActor ? Link.value : kNoLink);
+        S.BoneLinks.Add(LinkActor ? Link.value : NoLink);
         S.RootFromBoneRest.Add(Skin->rootFromBoneRest[i]);
         S.WorldFromBoneLink.Add(
             LinkActor ? LinkActor->GetRootTransform() : mochi::TransformRT::Identity());
@@ -561,13 +561,13 @@ void USuperDexBotSceneVisualizationComponent::EnsureSkinsForSnapshot(
   TSet<uint64> SeenThisFrame;
   for (const FBotSceneVizSkinSnapshot& S : Snapshot) {
     const int32 AnchorBone =
-        S.BoneLinks.IndexOfByPredicate([](uint64 Link) { return Link != kNoLink; });
+        S.BoneLinks.IndexOfByPredicate([](uint64 Link) { return Link != NoLink; });
     if (AnchorBone == INDEX_NONE) {
       continue;
     }
     SeenThisFrame.Add(S.ActorKey);
     for (int32 i = 0; i < S.BoneLinks.Num(); ++i) {
-      if (S.BoneLinks[i] != kNoLink) {
+      if (S.BoneLinks[i] != NoLink) {
         LinkToWorldByHandle.Add(S.BoneLinks[i], M2U.TransformToUnreal(S.WorldFromBoneLink[i]));
       }
     }
@@ -609,7 +609,7 @@ void USuperDexBotSceneVisualizationComponent::EnsureSkinsForSnapshot(
     Request.RestBoneToComponent = RestBoneToComponent;
     for (int32 i = 0; i < S.BoneLinks.Num(); ++i) {
       Request.BoneNames.Add(FName(*FString::Printf(TEXT("skin_bone_%d"), i)));
-      Request.JointToBone.Add(S.BoneLinks[i] != kNoLink ? i + 1 : INDEX_NONE);
+      Request.JointToBone.Add(S.BoneLinks[i] != NoLink ? i + 1 : INDEX_NONE);
     }
 
     FSkinVisual& Skin = Skins.AddDefaulted_GetRef();
@@ -953,7 +953,7 @@ void USuperDexBotSceneVisualizationComponent::RebuildIfNeeded() {
     }
     for (FSkinVisual const& Skin : Skins) {
       for (uint64 Link : Skin.BoneLinks) {
-        if (Link != kNoLink) {
+        if (Link != NoLink) {
           Handles.AddUnique(Link);
         }
       }

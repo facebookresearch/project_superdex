@@ -117,7 +117,7 @@ EMochiPoseTargetResult UController_MochiArticulatedPose::BuildPoseTarget(
   }
   const int NumLinks = LinkToParent.Num();
 
-  FUnrealToMochiConverter u2m;
+  FUnrealToMochiConverter U2M;
 
   // A pose on the bot gives its link translations too (in nominal bot units, scaled to the bot's
   // scale), prismatic joint motion included. A pose on another bot, such as the OpenXR pose
@@ -133,7 +133,7 @@ EMochiPoseTargetResult UController_MochiArticulatedPose::BuildPoseTarget(
   mochi::DynamicArray<mochi::TransformRT> LocalToParentTransforms(NumLinks);
   const mochi::real Scale = static_cast<mochi::real>(Geometry.Scale);
   for (int i = 0; i < NumLinks; ++i) {
-    const mochi::TransformRT Link = u2m.TransformToMochi_RT(LinkToParent[i]);
+    const mochi::TransformRT Link = U2M.TransformToMochi_RT(LinkToParent[i]);
     const mochi::Quaternion Rotation = Link.GetRotation();
     LocalToParentTransforms[i] = bPoseOnBot
         ? mochi::TransformRT(Rotation, Link.GetTranslation() * Scale)
@@ -151,7 +151,7 @@ EMochiPoseTargetResult UController_MochiArticulatedPose::BuildPoseTarget(
   const FTransform WorldFromRoot = Pose.SkeletonRootToVrRoot * UnscaledVrRootToWorld;
 
   OutTarget.localToParentTransforms = MoveTemp(LocalToParentTransforms);
-  OutTarget.worldFromRoot = u2m.TransformToMochi_RT(WorldFromRoot);
+  OutTarget.worldFromRoot = U2M.TransformToMochi_RT(WorldFromRoot);
   return EMochiPoseTargetResult::Built;
 }
 
@@ -208,8 +208,8 @@ void UController_MochiArticulatedPose::OnBotSpawned(USuperDexBotComponent* Compo
   RobotActorHandle = ArticulatedActor->GetArticulatedActorHandle();
   CacheBotGeometry(Component);
 
-  UMochiSceneObject* mochiScene = ArticulatedActor->GetMochiScene();
-  if (mochiScene == nullptr) {
+  UMochiSceneObject* MochiScene = ArticulatedActor->GetMochiScene();
+  if (MochiScene == nullptr) {
     UE_LOG(
         LogSuperDexTeleop,
         Error,
@@ -217,36 +217,36 @@ void UController_MochiArticulatedPose::OnBotSpawned(USuperDexBotComponent* Compo
     return;
   }
 
-  mochi::Error err;
-  mochiScene->QueueOrExecuteCommand([this, &err](mochi::Scene* scene) {
-    mochi::Actor* robot = scene->GetActor(RobotActorHandle);
-    superdex::robotics::RoboticsContext* botsCtx =
+  mochi::Error Err;
+  MochiScene->QueueOrExecuteCommand([this, &Err](mochi::Scene* Scene) {
+    mochi::Actor* Robot = Scene->GetActor(RobotActorHandle);
+    superdex::robotics::RoboticsContext* BotsCtx =
         ISuperDexRoboticsModule::Get()->GetRoboticsContext();
-    PoseControllerHandle = botsCtx->CreateController(
-        "MOCHI_ARTICULATED_POSE", /*prefab*/ nullptr, robot, /*name*/ "", err);
-    if (!err.IsOK()) {
+    PoseControllerHandle = BotsCtx->CreateController(
+        "MOCHI_ARTICULATED_POSE", /*prefab*/ nullptr, Robot, /*name*/ "", Err);
+    if (!Err.IsOK()) {
       return;
     }
     PoseController = static_cast<superdex::robotics::ControllerMochiArticulatedPose*>(
-        botsCtx->GetController(PoseControllerHandle));
+        BotsCtx->GetController(PoseControllerHandle));
     if (PoseController) {
       MochiPoseParams = ConvertToMochiPoseParams(PoseControllerDetailsParams);
-      PoseController->SetParams(MochiPoseParams, err);
-      if (!err.IsOK()) {
+      PoseController->SetParams(MochiPoseParams, Err);
+      if (!Err.IsOK()) {
         return;
       }
-      PoseController->Initialize(bRemoveExistingController, err);
+      PoseController->Initialize(bRemoveExistingController, Err);
     }
   });
-  mochiScene->WaitForQueuedCommands();
-  if (!err.IsOK()) {
+  MochiScene->WaitForQueuedCommands();
+  if (!Err.IsOK()) {
     UE_LOG(
         LogSuperDexTeleop,
         Error,
         TEXT("[UController_MochiArticulatedPose] Error during OnBotSpawned: %hs"),
-        err.GetDescription());
+        Err.GetDescription());
   }
-  isInitialized = err.IsOK() && PoseController;
+  isInitialized = Err.IsOK() && PoseController;
 }
 
 void UController_MochiArticulatedPose::Shutdown(const USuperDexBotComponent* Component) {
@@ -257,15 +257,15 @@ void UController_MochiArticulatedPose::Shutdown(const USuperDexBotComponent* Com
     // PoseController guard above does not protect against that. If the scene is gone the controller
     // went with it, so just drop our pointer. Otherwise queue the explicit destroy.
     UMochiArticulatedActorObject* ArticulatedActor = Component->GetMochiArticulatedActor();
-    UMochiSceneObject* mochiScene =
+    UMochiSceneObject* MochiScene =
         (ArticulatedActor != nullptr) ? ArticulatedActor->GetMochiScene() : nullptr;
-    if (mochiScene != nullptr) {
-      mochiScene->QueueOrExecuteCommand([this](mochi::Scene* scene) {
-        superdex::robotics::RoboticsContext* botsCtx =
+    if (MochiScene != nullptr) {
+      MochiScene->QueueOrExecuteCommand([this](mochi::Scene* Scene) {
+        superdex::robotics::RoboticsContext* BotsCtx =
             ISuperDexRoboticsModule::Get()->GetRoboticsContext();
-        botsCtx->DestroyController(PoseControllerHandle);
+        BotsCtx->DestroyController(PoseControllerHandle);
       });
-      mochiScene->WaitForQueuedCommands();
+      MochiScene->WaitForQueuedCommands();
     }
     PoseController = nullptr;
   }
@@ -326,15 +326,15 @@ void UController_MochiArticulatedPose::TickController(
   }
 
   // Resolve params from the current details-panel values, also on the game thread.
-  superdex::robotics::ControllerMochiArticulatedPose::Params params =
+  superdex::robotics::ControllerMochiArticulatedPose::Params Params =
       ConvertToMochiPoseParams(PoseControllerDetailsParams);
 
   // Stash the sampled Target for the Mochi-thread StepController to consume. Target owns its pose
   // data, so moving into it here is self-contained. TickController and StepController are mutually
   // exclusive via the bot component's BotControllerMutex; we also guard explicitly.
-  FScopeLock lock(&TargetMutex);
+  FScopeLock Lock(&TargetMutex);
   CachedTarget = MoveTemp(Target);
-  CachedParams = MoveTemp(params);
+  CachedParams = MoveTemp(Params);
   CachedTeleportDistanceThreshold = TeleportDistanceThreshold;
   CachedTeleportAngleThreshold = TeleportAngleThreshold;
   bCachedTargetTracked = !Pose.bIsTrackingEnabled || Pose.bIsTrackingConfident;
@@ -358,28 +358,28 @@ bool UController_MochiArticulatedPose::StepController(
   //
   // Copy the Target out under the lock so TickController cannot overwrite it mid-step. The copy is
   // deep -- Target owns its pose data -- so it stays valid for the ComputeOutput call below.
-  superdex::robotics::ControllerMochiArticulatedPose::Target target;
-  superdex::robotics::ControllerMochiArticulatedPose::Params params;
+  superdex::robotics::ControllerMochiArticulatedPose::Target Target;
+  superdex::robotics::ControllerMochiArticulatedPose::Params Params;
   double teleportDistanceThreshold = 0.0;
   double teleportAngleThreshold = 0.0;
   {
-    FScopeLock lock(&TargetMutex);
+    FScopeLock Lock(&TargetMutex);
     if (!bHasCachedTarget) {
       return false;
     }
-    target = CachedTarget;
-    params = CachedParams;
+    Target = CachedTarget;
+    Params = CachedParams;
     if (bCachedTargetTracked) {
       teleportDistanceThreshold = CachedTeleportDistanceThreshold;
       teleportAngleThreshold = CachedTeleportAngleThreshold;
     }
   }
 
-  mochi::Error err;
+  mochi::Error Err;
   if (teleportDistanceThreshold > 0.0 || teleportAngleThreshold > 0.0) {
     thread_local mochi::DynamicArray<mochi::TransformRT> worldFromTargets;
-    ComputeTargetWorldFromLinks(ArticulatedActor, target, worldFromTargets, err);
-    if (err.IsOK()) {
+    ComputeTargetWorldFromLinks(ArticulatedActor, Target, worldFromTargets, Err);
+    if (Err.IsOK()) {
       const FTransform RootTarget =
           FMochiToUnrealConverter{}.TransformToUnreal(worldFromTargets[0]);
       const bool bTooFar = teleportDistanceThreshold > 0.0 &&
@@ -389,37 +389,37 @@ bool UController_MochiArticulatedPose::StepController(
           FMath::RadiansToDegrees(State.BaseTransform.GetRotation().AngularDistance(
               RootTarget.GetRotation())) > teleportAngleThreshold;
       if (bTooFar || bTooTurned) {
-        TeleportArticulatedActor(ArticulatedActor, worldFromTargets, err);
+        TeleportArticulatedActor(ArticulatedActor, worldFromTargets, Err);
       }
     }
-    if (!err.IsOK()) {
+    if (!Err.IsOK()) {
       UE_LOG(
           LogSuperDexTeleop,
           Error,
           TEXT("[UController_MochiArticulatedPose] Teleport failed: %hs"),
-          err.GetDescription());
+          Err.GetDescription());
       return false;
     }
   }
 
-  PoseController->SetParams(params, err);
-  if (!err.IsOK()) {
+  PoseController->SetParams(Params, Err);
+  if (!Err.IsOK()) {
     UE_LOG(
         LogSuperDexTeleop,
         Error,
         TEXT("[UController_MochiArticulatedPose] SetParams failed: %hs"),
-        err.GetDescription());
+        Err.GetDescription());
     return false;
   }
 
-  superdex::robotics::ControllerMochiArticulatedPose::Obsv obsv;
-  PoseController->ComputeOutput(obsv, target, err);
-  if (!err.IsOK()) {
+  superdex::robotics::ControllerMochiArticulatedPose::Obsv Obsv;
+  PoseController->ComputeOutput(Obsv, Target, Err);
+  if (!Err.IsOK()) {
     UE_LOG(
         LogSuperDexTeleop,
         Error,
         TEXT("[UController_MochiArticulatedPose] ComputeOutput failed: %hs"),
-        err.GetDescription());
+        Err.GetDescription());
     return false;
   }
 

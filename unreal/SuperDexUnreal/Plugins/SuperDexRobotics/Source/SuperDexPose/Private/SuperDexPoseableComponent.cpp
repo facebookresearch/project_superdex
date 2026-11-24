@@ -48,7 +48,7 @@
  * variable should not be exposed outside of this file.
  */
 namespace {
-thread_local TMap<USuperDexPoseableComponent*, bool> gLoopDetectionMap;
+thread_local TMap<USuperDexPoseableComponent*, bool> GLoopDetectionMap;
 }
 
 USuperDexPoseableComponent::USuperDexPoseableComponent() {
@@ -66,7 +66,7 @@ USuperDexPoseableComponent::USuperDexPoseableComponent() {
 }
 
 USuperDexPoseableComponent::~USuperDexPoseableComponent() {
-  gLoopDetectionMap.Remove(this);
+  GLoopDetectionMap.Remove(this);
 }
 
 FSuperDexPoseCacheWriteScope::FSuperDexPoseCacheWriteScope(
@@ -154,8 +154,8 @@ FSuperDexPoseSourcePtrTypePair USuperDexPoseableComponent::GetSourcePoseable() c
   // if pose source override is not valid, return an invalid source
   if (PoseSourceOverride != nullptr) {
     if (IsValid(PoseSourceOverride)) {
-      USuperDexPoseSubsystem* hpss = GetWorld()->GetSubsystem<USuperDexPoseSubsystem>();
-      return FSuperDexPoseSourcePtrTypePair{ESuperDexPoseSourceType::SuperDexPoseSubsystem, hpss};
+      USuperDexPoseSubsystem* Hpss = GetWorld()->GetSubsystem<USuperDexPoseSubsystem>();
+      return FSuperDexPoseSourcePtrTypePair{ESuperDexPoseSourceType::SuperDexPoseSubsystem, Hpss};
     } else {
       return FSuperDexPoseSourcePtrTypePair{ESuperDexPoseSourceType::Invalid, nullptr};
     }
@@ -203,8 +203,8 @@ FSuperDexPoseSourcePtrTypePair USuperDexPoseableComponent::GetSourcePoseable() c
 }
 
 bool USuperDexPoseableComponent::CheckIfInInfiniteLoop(FSuperDexPose& Pose) {
-  bool& wasGetPoseCalledAlready = gLoopDetectionMap.FindOrAdd(this);
-  if (wasGetPoseCalledAlready) {
+  bool& bWasGetPoseCalledAlready = GLoopDetectionMap.FindOrAdd(this);
+  if (bWasGetPoseCalledAlready) {
     UE_LOG(
         LogSuperDexPose,
         Error,
@@ -234,35 +234,35 @@ bool USuperDexPoseableComponent::GetInputPoseFromSource(FSuperDexPose& InputPose
     return false;
   }
 
-  FSuperDexPoseSourcePtrTypePair source = GetSourcePoseable();
-  if (source.Source == nullptr) {
+  FSuperDexPoseSourcePtrTypePair Source = GetSourcePoseable();
+  if (Source.Source == nullptr) {
     return false;
   }
 
   // Check if we are in an infinite loop.
   InputPose.bIsInInfiniteLoop = false;
-  bool infiniteLoopDetected = CheckIfInInfiniteLoop(InputPose);
-  if (infiniteLoopDetected) {
+  bool bInfiniteLoopDetected = CheckIfInInfiniteLoop(InputPose);
+  if (bInfiniteLoopDetected) {
     return false;
   }
   // If not in infinite loop, set this component's flag to true so we can detect one later
-  gLoopDetectionMap.FindOrAdd(this) = true;
+  GLoopDetectionMap.FindOrAdd(this) = true;
 
   bool bHavePose = false;
-  switch (source.Type) {
+  switch (Source.Type) {
     case ESuperDexPoseSourceType::SuperDexPoseSubsystem:
-      bHavePose = static_cast<USuperDexPoseSubsystem*>(source.Source)
+      bHavePose = static_cast<USuperDexPoseSubsystem*>(Source.Source)
                       ->GetPose(PoseSourceOverride, Handedness, InputPose);
       break;
     case ESuperDexPoseSourceType::SuperDexPoseableComponent:
-      bHavePose = static_cast<USuperDexPoseableComponent*>(source.Source)->GetPose(InputPose);
+      bHavePose = static_cast<USuperDexPoseableComponent*>(Source.Source)->GetPose(InputPose);
       break;
     case ESuperDexPoseSourceType::SuperDexPoseableActor:
-      bHavePose = static_cast<ASuperDexPoseableActor*>(source.Source)->GetPose(InputPose);
+      bHavePose = static_cast<ASuperDexPoseableActor*>(Source.Source)->GetPose(InputPose);
       break;
     case ESuperDexPoseSourceType::SuperDexPlayerController:
       bHavePose =
-          static_cast<ASuperDexPlayerController*>(source.Source)->GetPose(Handedness, InputPose);
+          static_cast<ASuperDexPlayerController*>(Source.Source)->GetPose(Handedness, InputPose);
       break;
     default:
       bHavePose = false; // return false later so we can clean up elegantly
@@ -283,7 +283,7 @@ bool USuperDexPoseableComponent::GetInputPoseFromSource(FSuperDexPose& InputPose
         *GetOwner()->GetName());
   }
   // about to exit the function, set flag back to false
-  gLoopDetectionMap.FindChecked(this) = false;
+  GLoopDetectionMap.FindChecked(this) = false;
   return bHavePose;
 }
 
@@ -453,7 +453,7 @@ void USuperDexPoseableComponent::WhenNotPlayingInitPoseCache() {
   if (EditorViewportPose != nullptr) {
     if (USuperDexPoseFunctionLibrary::IsSuperDexPoseOnBot(EditorViewportPose->Pose)) {
       // Write the pose to cache and set initialized true, then apply to mesh for editor preview.
-      FWriteScopeLock lock(CacheLock);
+      FWriteScopeLock Lock(CacheLock);
       CachedOutputPose = EditorViewportPose->Pose;
       CacheInitialized = true;
     } else {
@@ -474,7 +474,7 @@ void USuperDexPoseableComponent::WhenNotPlayingInitPoseCache() {
     BoneSpaceTransforms = SkelMesh->GetRefSkeleton().GetRefBonePose();
     MarkRefreshTransformDirty();
 
-    FWriteScopeLock lock(CacheLock);
+    FWriteScopeLock Lock(CacheLock);
     CachedOutputPose = FSuperDexPose();
     CachedOutputPose.SourceName = TEXT("RefSkeleton");
     CachedOutputPose.tags.Add(TEXT("InEditorOnly"));
@@ -502,9 +502,9 @@ void USuperDexPoseableComponent::BeginPlay() {
   } else {
     // if you don't have a handedness override set, try to get handedness from your attached
     // ASuperDexPoseableActor if possible
-    ASuperDexPoseableActor* poseableActor = Cast<ASuperDexPoseableActor>(GetOwner());
-    if (poseableActor != nullptr) {
-      Handedness = poseableActor->Handedness;
+    ASuperDexPoseableActor* PoseableActor = Cast<ASuperDexPoseableActor>(GetOwner());
+    if (PoseableActor != nullptr) {
+      Handedness = PoseableActor->Handedness;
     }
   }
 
@@ -521,19 +521,19 @@ void USuperDexPoseableComponent::BeginPlay() {
   }
 
   // check for multiple matching children in the initial setup
-  int numMatchingChildren = 0;
+  int NumMatchingChildren = 0;
   TArray<USceneComponent*> const& AttachedChildren = GetAttachChildren();
   for (USceneComponent* Child : AttachedChildren) {
     USuperDexPoseableComponent* ChildSource = Cast<USuperDexPoseableComponent>(Child);
     if (IsValid(ChildSource)) {
       if (!ChildSourcePoseableExcludeList.Contains(ChildSource)) {
         if (ChildSource->GetName().Contains(ChildSourceNameContainsSubstring)) {
-          numMatchingChildren++;
+          NumMatchingChildren++;
         }
       }
     }
   }
-  if (numMatchingChildren > 1) {
+  if (NumMatchingChildren > 1) {
     UE_LOG(
         LogSuperDexPose,
         Warning,
@@ -565,10 +565,10 @@ void USuperDexPoseableComponent::TickComponent(
   OnTickUpdateComponentActorRelativeTransformFromCache();
 }
 
-void USuperDexPoseableComponent::OnTickManageCache(FSuperDexPose& Pose, bool isValid) {
+void USuperDexPoseableComponent::OnTickManageCache(FSuperDexPose& Pose, bool bIsValid) {
   // The base class just stores whatever pose was handed in the cache if it is valid
-  if (isValid) {
-    FWriteScopeLock lock(CacheLock);
+  if (bIsValid) {
+    FWriteScopeLock Lock(CacheLock);
     CachedOutputPose = Pose;
     CacheInitialized = true;
   }
@@ -587,7 +587,7 @@ void USuperDexPoseableComponent::OnTickUpdateComponentActorRelativeTransformFrom
 
     FTransform SkeletonRootToVrRoot;
     {
-      FWriteScopeLock lock(CacheLock);
+      FWriteScopeLock Lock(CacheLock);
       // get this component's transform relative to vrRoot
       SkeletonRootToVrRoot = CachedOutputPose.SkeletonRootToVrRoot;
       CachedVrRootToWorld = VrRootToWorld;
@@ -624,27 +624,27 @@ bool USuperDexPoseableComponent::InitBoneToRestPoseRootTransforms() const {
   BoneToRestPoseRootTransforms.SetNum(RefSkeleton.GetNum());
 
   // First we get bone-to-parent
-  for (int iBone = 0; iBone < RefSkeleton.GetNum(); ++iBone) {
-    BoneToRestPoseRootTransforms[iBone] = RefSkeleton.GetRefBonePose()[iBone];
+  for (int BoneIndex = 0; BoneIndex < RefSkeleton.GetNum(); ++BoneIndex) {
+    BoneToRestPoseRootTransforms[BoneIndex] = RefSkeleton.GetRefBonePose()[BoneIndex];
   }
 
   // Then concatenate each transform with its parent transform to get bone-to-root
   static float ScaleThreshold = 0.001f;
   int BadScales = 0;
 
-  for (int iBone = 1; iBone < RefSkeleton.GetNum(); ++iBone) {
-    const int ParentBone = RefSkeleton.GetParentIndex(iBone);
-    check(ParentBone < iBone);
+  for (int BoneIndex = 1; BoneIndex < RefSkeleton.GetNum(); ++BoneIndex) {
+    const int ParentBone = RefSkeleton.GetParentIndex(BoneIndex);
+    check(ParentBone < BoneIndex);
 
     // C = A * B will yield a transform C that logically first
     // applies A then B to any subsequent transformation.
-    FTransform BoneToParent = BoneToRestPoseRootTransforms[iBone];
+    FTransform BoneToParent = BoneToRestPoseRootTransforms[BoneIndex];
     FTransform ParentToRoot = BoneToRestPoseRootTransforms[ParentBone];
-    BoneToRestPoseRootTransforms[iBone] = BoneToParent * ParentToRoot;
+    BoneToRestPoseRootTransforms[BoneIndex] = BoneToParent * ParentToRoot;
 
     // Check skeletal mesh transform scales
     // (Blender -> UE export can lead to non-unit scales on bone transforms if not done correctly)
-    FVector Scale = BoneToRestPoseRootTransforms[iBone].GetScale3D();
+    FVector Scale = BoneToRestPoseRootTransforms[BoneIndex].GetScale3D();
     float ScaleMax = Scale.GetAbsMax();
     float ScaleMin = Scale.GetAbsMin();
     if (ScaleMax > (1.0f + ScaleThreshold) || ScaleMin < (1.0f - ScaleThreshold)) {

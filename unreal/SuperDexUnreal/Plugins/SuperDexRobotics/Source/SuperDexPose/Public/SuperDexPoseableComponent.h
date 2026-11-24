@@ -328,9 +328,9 @@ class SUPERDEXPOSE_API USuperDexPoseableComponent : public UPoseableMeshComponen
    * utilize a Async buffer variable instead.
    *
    * @param Pose The pose to cache.
-   * @param isValid Whether the pose is valid.
+   * @param bIsValid Whether the pose is valid.
    */
-  virtual void OnTickManageCache(FSuperDexPose& Pose, bool isValid);
+  virtual void OnTickManageCache(FSuperDexPose& Pose, bool bIsValid);
 
   /**
    * Updates the component's local transform such that its transform relative to its owning actor

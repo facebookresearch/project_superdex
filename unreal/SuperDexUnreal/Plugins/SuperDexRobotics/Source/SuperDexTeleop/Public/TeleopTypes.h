@@ -102,10 +102,10 @@ struct FTeleopSubscriberHandle {
 template <typename T>
 struct TSafeLatentArray {
   TSafeLatentArray() : Data({}) { }
-  void Init(int N) { FWriteScopeLock lock(Mutex); Data.SetNumZeroed(N); bIsSet = false; }
-  void Mutate(const TFunction<void(TArray<T>&)> Func) { FWriteScopeLock lock(Mutex); Func(Data); bIsSet = true; }
-  bool TryGet(TArray<T>& Out) const { FReadScopeLock lock(Mutex); if (bIsSet) { Out = Data; } return bIsSet; }
-  bool TryGetFirst(T& Out) const { FReadScopeLock lock(Mutex); bool b = bIsSet && !Data.IsEmpty(); if (b) { Out = Data[0]; } return b; }
+  void Init(int N) { FWriteScopeLock Lock(Mutex); Data.SetNumZeroed(N); bIsSet = false; }
+  void Mutate(const TFunction<void(TArray<T>&)> Func) { FWriteScopeLock Lock(Mutex); Func(Data); bIsSet = true; }
+  bool TryGet(TArray<T>& Out) const { FReadScopeLock Lock(Mutex); if (bIsSet) { Out = Data; } return bIsSet; }
+  bool TryGetFirst(T& Out) const { FReadScopeLock Lock(Mutex); bool bResult = bIsSet && !Data.IsEmpty(); if (bResult) { Out = Data[0]; } return bResult; }
   bool IsSet() const { return bIsSet; }
   int Num() const { return Data.Num(); }
 private:
@@ -160,7 +160,7 @@ inline FString SanitizeTopicPathlet(const FString& Str) {
 // Always starts with "/teleop/"
 // e.g. /teleop/left/arm_joint_states
 template <typename... Args>
-FString BuildTeleopTopic(Args... args) {
+FString BuildTeleopTopic(Args... Arguments) {
   FString Result = TEXT("/teleop");
   auto Append = [&](const auto& Arg) {
     FString SanitizedArg = SanitizeTopicPathlet(FString(Arg));
@@ -169,6 +169,6 @@ FString BuildTeleopTopic(Args... args) {
       Result += SanitizedArg;
     }
   };
-  (Append(args), ...);
+  (Append(Arguments), ...);
   return Result;
 }

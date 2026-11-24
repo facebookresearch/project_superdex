@@ -36,7 +36,7 @@ DEFINE_LOG_CATEGORY_STATIC(LogSuperDexSceneImport, Log, All);
 namespace {
 
 // Changing what the importer generates should bump this so existing imports are regenerated.
-constexpr const TCHAR* kImporterVersion = TEXT("2");
+constexpr const TCHAR* ImporterVersion = TEXT("2");
 
 FString ToFString(const mochi::DynamicString& S) {
   return FString(UTF8_TO_TCHAR(S.c_str()));
@@ -154,7 +154,7 @@ USuperDexScene* FSuperDexSceneImporter::CreateSceneAsset(
 
 FString FSuperDexSceneImporter::ComputeSourceHash(const FString& SourcePath) {
   FSHA1 Sha;
-  const FTCHARToUTF8 Version(kImporterVersion);
+  const FTCHARToUTF8 Version(ImporterVersion);
   Sha.Update(reinterpret_cast<const uint8*>(Version.Get()), Version.Length());
   TArray<uint8> Bytes;
   if (FFileHelper::LoadFileToArray(Bytes, *SourcePath, FILEREAD_Silent)) {

@@ -81,7 +81,7 @@ class SUPERDEXROBOTICS_API USuperDexIKSolverObject : public UObject {
       mochi::TransformRT const& WorldFrameFromInputBaseFrame,
       mochi::real InputBotScale,
       mochi::Span<superdex::robotics::BotIKGoalConfig const> Goals);
-  bool SolveBotIK(bool& OutGoalsReached);
+  bool SolveBotIK(bool& bOutGoalsReached);
   /* Native link-frame snapshots in metres/FLU, including geometry scale. Game-thread-only;
    * borrowed until the next mutation or destruction. Does not trigger a solve or expose the actor.
    */

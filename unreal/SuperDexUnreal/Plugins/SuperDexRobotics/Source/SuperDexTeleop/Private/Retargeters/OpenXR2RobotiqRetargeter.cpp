@@ -55,9 +55,9 @@ void UOpenXR2RobotiqRetargeter::BeginPlay() {
     RobotiqRootToSourceSkeletonRoot = FTransform::Identity;
     USuperDexPoseableComponent* ChildSource = GetChildSourcePoseable();
     if (ChildSource != nullptr) {
-      FTransform transform = ChildSource->GetRelativeTransform();
-      transform.SetScale3D(FVector(1));
-      RobotiqRootToSourceSkeletonRoot = transform.Inverse();
+      FTransform Transform = ChildSource->GetRelativeTransform();
+      Transform.SetScale3D(FVector(1));
+      RobotiqRootToSourceSkeletonRoot = Transform.Inverse();
     }
   }
 }
@@ -72,8 +72,8 @@ bool UOpenXR2RobotiqRetargeter::GetTransformedPose_Implementation(
   if ((bIssueRosCommands || bReceiveRosPoses) && (RosInterface == nullptr)) {
     return false;
   }
-  double fingerTipDist = 0;
-  if (!ComputeFingerTipDistance(SourcePose, fingerTipDist)) {
+  double FingerTipDist = 0;
+  if (!ComputeFingerTipDistance(SourcePose, FingerTipDist)) {
     return false;
   }
 
@@ -82,35 +82,35 @@ bool UOpenXR2RobotiqRetargeter::GetTransformedPose_Implementation(
   TransformedPose.SkeletonRootToVrRoot =
       USuperDexPoseFunctionLibrary::MultiplyTransformsWithoutScalePreservingScale(
           RobotiqRootToSourceSkeletonRoot, SourcePose.SkeletonRootToVrRoot);
-  double theta = 0;
-  constexpr double kMaxTheta = 0.8;
-  constexpr double kMaxGripperDist = 8.5;
+  double Theta = 0;
+  constexpr double MaxTheta = 0.8;
+  constexpr double MaxGripperDist = 8.5;
   if (bUseCustomPinchRange) {
-    double grip01 = FMath::GetMappedRangeValueClamped(
-        FVector2D{MaxPinchDistance, MinPinchDistance}, FVector2D{0, 1}, fingerTipDist);
-    theta = kMaxTheta * grip01;
+    double Grip01 = FMath::GetMappedRangeValueClamped(
+        FVector2D{MaxPinchDistance, MinPinchDistance}, FVector2D{0, 1}, FingerTipDist);
+    Theta = MaxTheta * Grip01;
   } else {
-    theta = FMath::Acos(fingerTipDist / kMaxGripperDist) / 2;
+    Theta = FMath::Acos(FingerTipDist / MaxGripperDist) / 2;
   }
-  theta = FMath::Clamp(theta, 0, kMaxTheta);
-  TArray<double> jointAngles = {theta, theta, -theta, -theta, -theta, theta};
+  Theta = FMath::Clamp(Theta, 0, MaxTheta);
+  TArray<double> JointAngles = {Theta, Theta, -Theta, -Theta, -Theta, Theta};
   if (bIssueRosCommands) {
-    RosInterface->SetHandJointTargets(jointAngles);
+    RosInterface->SetHandJointTargets(JointAngles);
   }
   bool bHaveAngles = false;
   if (bReceiveRosPoses) {
     // get joint angles
-    bHaveAngles = RosInterface->GetHandJointStates(jointAngles);
+    bHaveAngles = RosInterface->GetHandJointStates(JointAngles);
   } else {
-    if (!jointAngles.IsEmpty()) {
+    if (!JointAngles.IsEmpty()) {
       bHaveAngles = true;
     }
   }
   if (bHaveAngles) {
-    bool validPose = USuperDexPoseFunctionLibrary::ComputeSuperDexPoseFromJointPositions(
-        Articulation, jointAngles, TransformedPose);
-    JointPositionsCache = jointAngles;
-    return validPose;
+    bool bValidPose = USuperDexPoseFunctionLibrary::ComputeSuperDexPoseFromJointPositions(
+        Articulation, JointAngles, TransformedPose);
+    JointPositionsCache = JointAngles;
+    return bValidPose;
   }
   return false;
 }

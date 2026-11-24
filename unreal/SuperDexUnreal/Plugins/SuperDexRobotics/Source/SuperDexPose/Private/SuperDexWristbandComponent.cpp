@@ -105,11 +105,11 @@ void USuperDexWristbandComponent::TickComponent(
 
   // climb the component hierarchy to find the first USuperDexPoseableComponent ancestor
   USuperDexPoseableComponent* AncestorPoseableComponent = nullptr;
-  USceneComponent* checkComp = GetAttachParent();
+  USceneComponent* CheckComp = GetAttachParent();
   while (AncestorPoseableComponent == nullptr) {
-    AncestorPoseableComponent = Cast<USuperDexPoseableComponent>(checkComp);
-    if (checkComp != nullptr) {
-      checkComp = checkComp->GetAttachParent();
+    AncestorPoseableComponent = Cast<USuperDexPoseableComponent>(CheckComp);
+    if (CheckComp != nullptr) {
+      CheckComp = CheckComp->GetAttachParent();
     } else {
       break;
     }

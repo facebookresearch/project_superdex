@@ -218,13 +218,13 @@ bool FSuperDexBotIKRetargetBridgeTest::RunTest(const FString&) {
         Config.inputBotScale,
         Config.goals,
         Error);
-    bool Reached = false;
+    bool bReached = false;
     TestTrue(
         TEXT("Bridge returns error-free best effort independently of convergence"),
-        Solver->SolveBotIK(Reached));
-    const bool DirectReached = Direct->SolveIK(Error);
+        Solver->SolveBotIK(bReached));
+    const bool bDirectReached = Direct->SolveIK(Error);
     TestTrue(TEXT("Direct native solve remains error-free"), Error.IsOK());
-    TestEqual(TEXT("Goals-reached status is forwarded separately"), Reached, DirectReached);
+    TestEqual(TEXT("Goals-reached status is forwarded separately"), bReached, bDirectReached);
     CompareBridge(*this, Solver.Get(), *Direct);
     const TArray<double> Cached = Solver->GetSolvedDofs();
     TestTrue(
@@ -242,8 +242,8 @@ bool FSuperDexBotIKRetargetBridgeTest::RunTest(const FString&) {
       Config.inputBotScale,
       Config.goals,
       Error);
-  const bool UncoupledReached = Uncoupled->SolveIK(Error);
-  (void)UncoupledReached;
+  const bool bUncoupledReached = Uncoupled->SolveIK(Error);
+  (void)bUncoupledReached;
   TestTrue(
       TEXT("Couplings affect the source solve"),
       mochi::Abs(Uncoupled->GetJointPositions()[1] - Direct->GetJointPositions()[1]) > 1e-3_r);
@@ -275,10 +275,10 @@ bool FSuperDexBotIKRetargetBridgeTest::RunTest(const FString&) {
       Goal.baseOrInputLinkFrameFromConstraintFrame.GetRotation(),
       Goal.rotationStiffness,
       Error);
-  bool Reached = false;
-  TestTrue(TEXT("Attachment bridge solves"), Solver->SolveBotIK(Reached));
-  const bool DirectReached = Direct->SolveIK(Error);
-  TestEqual(TEXT("Attachment convergence parity"), Reached, DirectReached);
+  bool bReached = false;
+  TestTrue(TEXT("Attachment bridge solves"), Solver->SolveBotIK(bReached));
+  const bool bDirectReached = Direct->SolveIK(Error);
+  TestEqual(TEXT("Attachment convergence parity"), bReached, bDirectReached);
   TestTrue(TEXT("Attachment direct solve error-free"), Error.IsOK());
   CompareBridge(*this, Solver.Get(), *Direct);
   Solver->DestroyMochiResources();
@@ -393,20 +393,20 @@ bool FSuperDexBotIKRetargetBridgeValidationTest::RunTest(const FString&) {
     TestTrue(
         TEXT("Game-thread guards reject worker calls without solving"),
         Async(EAsyncExecution::Thread, [&]() {
-          bool Reached = true;
+          bool bReached = true;
           return !Solver->SetBotInputConfiguration(
                      Prefab,
                      Config.inputBotConfiguration,
                      Config.outputBaseFrameFromInputBaseFrame,
                      Config.inputBotScale,
                      Config.goals) &&
-              !Solver->SolveBotIK(Reached) && !Reached &&
+              !Solver->SolveBotIK(bReached) && !bReached &&
               Solver->GetOutputBotWorldFromLinks().empty() &&
               !USuperDexIKSolverObject::CreateBotIKSolver(
                   GetTransientPackage(), Asset.Get(), Config);
         }).Get());
-    bool Reached = false;
-    TestTrue(TEXT("Valid goals survive rejected updates"), Solver->SolveBotIK(Reached));
+    bool bReached = false;
+    TestTrue(TEXT("Valid goals survive rejected updates"), Solver->SolveBotIK(bReached));
     Solver->DestroyMochiResources();
     TestTrue(
         TEXT("Destroyed native borrowed snapshot is empty"),
@@ -454,18 +454,18 @@ bool FSuperDexBotIKSingleFrameGoalValidationTest::RunTest(const FString&) {
     TestFalse(
         TEXT("Invalid single-frame update rejected"),
         Solver->SetBotGoal(LinkIndex, InvalidGoal, PositionStiffness, RotationStiffness));
-    bool Reached = false;
-    TestTrue(TEXT("Previous single-frame goals remain solvable"), Solver->SolveBotIK(Reached));
-    const bool DirectReached = Direct->SolveIK(Error);
+    bool bReached = false;
+    TestTrue(TEXT("Previous single-frame goals remain solvable"), Solver->SolveBotIK(bReached));
+    const bool bDirectReached = Direct->SolveIK(Error);
     TestTrue(TEXT("Reference goals solve without error"), Error.IsOK());
-    TestEqual(TEXT("Rejected update preserves convergence result"), Reached, DirectReached);
+    TestEqual(TEXT("Rejected update preserves convergence result"), bReached, bDirectReached);
     CompareBridge(*this, Solver.Get(), *Direct);
     TestTrue(TEXT("Zero stiffness still clears goals"), Solver->SetBotGoal(3, Goal, 0_r, 0_r));
     Direct->ClearAllGoals(Error);
-    TestFalse(TEXT("Cleared goals have no IK objective"), Solver->SolveBotIK(Reached));
-    const bool ClearedDirectReached = Direct->SolveIK(Error);
+    TestFalse(TEXT("Cleared goals have no IK objective"), Solver->SolveBotIK(bReached));
+    const bool bClearedDirectReached = Direct->SolveIK(Error);
     TestFalse(TEXT("Direct solver also rejects an empty objective"), Error.IsOK());
-    TestEqual(TEXT("Cleared goal convergence parity"), Reached, ClearedDirectReached);
+    TestEqual(TEXT("Cleared goal convergence parity"), bReached, bClearedDirectReached);
     CompareBridge(*this, Solver.Get(), *Direct);
     Solver->DestroyMochiResources();
   };

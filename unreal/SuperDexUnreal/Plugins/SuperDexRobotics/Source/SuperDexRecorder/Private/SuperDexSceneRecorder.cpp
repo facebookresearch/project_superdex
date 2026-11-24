@@ -342,11 +342,11 @@ void FSuperDexSceneRecorder::InitializeOnMochiThread(mochi::Scene& Scene) {
     PhysicsRecorder->Record(LastStateTime, Error);
   }
   if (Error.IsOK()) {
-    constexpr int kPriority = mochi::Scene::kDefaultCallbackPriority + 100;
+    constexpr int Priority = mochi::Scene::kDefaultCallbackPriority + 100;
     PostStepCallback = Scene.RegisterPostStepCallback(
         "FSuperDexSceneRecorder::PostStep",
         [this](const mochi::StepInfo& StepInfo) { RecordPostStep(StepInfo); },
-        kPriority);
+        Priority);
   }
   if (!Error.IsOK()) {
     SetCaptureError(Error);

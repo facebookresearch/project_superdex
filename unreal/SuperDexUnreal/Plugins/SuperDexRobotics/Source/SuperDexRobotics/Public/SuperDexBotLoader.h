@@ -39,32 +39,32 @@ class SUPERDEXROBOTICS_API FSuperDexBotLoader : public superdex::robotics::IBotL
   explicit FSuperDexBotLoader();
   ~FSuperDexBotLoader() override = default;
 
-  superdex::robotics::BotFileType GetBotFileType(std::string_view path, mochi::Error& error)
+  superdex::robotics::BotFileType GetBotFileType(std::string_view Path, mochi::Error& Error)
       const override;
 
-  superdex::robotics::BotPrefab LoadBotPrefab(std::string_view path, mochi::Error& error)
+  superdex::robotics::BotPrefab LoadBotPrefab(std::string_view Path, mochi::Error& Error)
       const override;
 
   /// Convenience overload: loads BotPrefab directly from a USuperDexBot pointer.
-  superdex::robotics::BotPrefab LoadBotPrefab(const USuperDexBot* Bot, mochi::Error& error) const;
+  superdex::robotics::BotPrefab LoadBotPrefab(const USuperDexBot* Bot, mochi::Error& Error) const;
 
-  superdex::robotics::ModBotPrefab LoadModBotPrefab(std::string_view path, mochi::Error& error)
+  superdex::robotics::ModBotPrefab LoadModBotPrefab(std::string_view Path, mochi::Error& Error)
       const override;
 
   mochi::ShapeHandle LoadShape(
-      std::string_view path,
-      mochi::Real3 const& bakeScale,
-      mochi::TransformRT const& bakeTransform,
-      mochi::Context* context,
-      mochi::Error& error) const override;
+      std::string_view Path,
+      mochi::Real3 const& BakeScale,
+      mochi::TransformRT const& BakeTransform,
+      mochi::Context* Context,
+      mochi::Error& Error) const override;
 
   /// Load raw model data (mesh + skinning) for a skin whose baked bone indices must be remapped
   /// onto a composed skeleton (the non-identity skin path in BuildArticulatedActorParams). Resolves
   /// the UE asset path stored in BotPrefab to a UMochiModel, same as LoadShape.
-  mochi::ModelData LoadModelData(std::string_view path, mochi::Error& error) const override;
+  mochi::ModelData LoadModelData(std::string_view Path, mochi::Error& Error) const override;
 
  private:
   /// Resolve a path to a USuperDexBot. Tries to load as a UE asset path first,
   /// falls back to DefaultBot if the path is empty or resolution fails.
-  const USuperDexBot* ResolveBot(std::string_view path, mochi::Error& error) const;
+  const USuperDexBot* ResolveBot(std::string_view Path, mochi::Error& Error) const;
 };

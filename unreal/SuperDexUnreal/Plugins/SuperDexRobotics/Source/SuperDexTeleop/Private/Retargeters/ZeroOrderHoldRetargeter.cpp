@@ -24,7 +24,7 @@ void UZeroOrderHoldRetargeter::SetPose(const TArray<double>& ConfigurationVector
   // Verify that the dimension of the new pose corresponds to the length we're expecting based on
   // the robot description articulation.
   if (ConfigurationVector.Num() == HeldPose.Num()) {
-    FWriteScopeLock lock(HeldPoseMutex);
+    FWriteScopeLock Lock(HeldPoseMutex);
     HeldPose = ConfigurationVector;
   }
 }
@@ -41,10 +41,10 @@ void UZeroOrderHoldRetargeter::BeginPlay() {
   // Find an attached UMochiArticulationComponent that holds the articulation asset describing our
   // kinematics
   if (!Articulation) {
-    UMochiArticulationComponent const* robot =
+    UMochiArticulationComponent const* Robot =
         GetOwner()->FindComponentByClass<UMochiArticulationComponent>();
-    if (robot) {
-      Articulation = robot->GetArticulationAsset();
+    if (Robot) {
+      Articulation = Robot->GetArticulationAsset();
     } else {
       UE_LOG(
           LogSuperDexTeleop,
@@ -69,12 +69,12 @@ bool UZeroOrderHoldRetargeter::GetTransformedPose_Implementation(
   }
 
   // Just forward the held pose into the TransformedPose output
-  FReadScopeLock lock(HeldPoseMutex);
-  bool result = USuperDexPoseFunctionLibrary::ComputeSuperDexPoseFromJointPositions(
+  FReadScopeLock Lock(HeldPoseMutex);
+  bool bResult = USuperDexPoseFunctionLibrary::ComputeSuperDexPoseFromJointPositions(
       Articulation.Get(), HeldPose, TransformedPose);
-  TransformedPose.bIsTrackingEnabled = result;
-  TransformedPose.bIsTrackingConfident = result;
-  TransformedPose.TrackingConfidence = result ? 1.0f : 0.0f;
+  TransformedPose.bIsTrackingEnabled = bResult;
+  TransformedPose.bIsTrackingConfident = bResult;
+  TransformedPose.TrackingConfidence = bResult ? 1.0f : 0.0f;
   TransformedPose.tags.Add(TEXT("ZeroOrderHold"));
-  return result;
+  return bResult;
 }

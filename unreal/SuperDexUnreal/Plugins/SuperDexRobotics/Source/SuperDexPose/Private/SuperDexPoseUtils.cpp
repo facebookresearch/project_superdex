@@ -17,18 +17,18 @@
 #include "SuperDexPoseUtils.h"
 
 FTransform USuperDexPoseUtilsFunctionLibrary::GetRelativeTransform_DescendentToAncestor(
-    USceneComponent* ancestorComp,
-    USceneComponent* descendentComp) {
-  if (!IsValid(descendentComp)) {
+    USceneComponent* AncestorComp,
+    USceneComponent* DescendentComp) {
+  if (!IsValid(DescendentComp)) {
     return FTransform::Identity;
   }
-  USceneComponent* parent = descendentComp->GetAttachParent();
-  if (parent != nullptr) {
-    if (parent != ancestorComp) {
-      FTransform compToParent = descendentComp->GetRelativeTransform();
-      FTransform descendentToAncestor =
-          compToParent * GetRelativeTransform_DescendentToAncestor(ancestorComp, parent);
-      return descendentToAncestor;
+  USceneComponent* Parent = DescendentComp->GetAttachParent();
+  if (Parent != nullptr) {
+    if (Parent != AncestorComp) {
+      FTransform CompToParent = DescendentComp->GetRelativeTransform();
+      FTransform DescendentToAncestor =
+          CompToParent * GetRelativeTransform_DescendentToAncestor(AncestorComp, Parent);
+      return DescendentToAncestor;
     }
   }
   // GetRelativeTransform() is inconsistent if called on the root component, so return identity if
@@ -37,13 +37,13 @@ FTransform USuperDexPoseUtilsFunctionLibrary::GetRelativeTransform_DescendentToA
 }
 
 FTransform USuperDexPoseUtilsFunctionLibrary::GetRelativeTransform_CompToRoot(
-    USceneComponent* comp) {
-  if (!IsValid(comp)) {
+    USceneComponent* Comp) {
+  if (!IsValid(Comp)) {
     return FTransform::Identity;
   }
-  AActor* owner = comp->GetOwner();
-  if (!IsValid(owner)) {
+  AActor* Owner = Comp->GetOwner();
+  if (!IsValid(Owner)) {
     return FTransform::Identity;
   }
-  return GetRelativeTransform_DescendentToAncestor(owner->GetRootComponent(), comp);
+  return GetRelativeTransform_DescendentToAncestor(Owner->GetRootComponent(), Comp);
 }
