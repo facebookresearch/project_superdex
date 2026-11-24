@@ -157,8 +157,9 @@ void FMochiModelEditorToolkit::ExtendToolBars() {
             SNew(SSegmentedControl<EMochiModelEditorSelectionMode>)
                 .Visibility(EVisibility::Visible)
                 .OnValueChanged_Lambda([this](EMochiModelEditorSelectionMode InMode) {
-                  if (InMode != GetViewportSelectionMode())
+                  if (InMode != GetViewportSelectionMode()) {
                     SetViewportSelectionMode(InMode);
+                  }
                 })
                 .Value(this, &FMochiModelEditorToolkit::GetViewportSelectionMode)
 
@@ -187,8 +188,9 @@ void FMochiModelEditorToolkit::ExtendToolBars() {
             SNew(SSegmentedControl<EMochiModelEditorElementViewMode>)
                 .Visibility(EVisibility::Visible)
                 .OnValueChanged_Lambda([this](EMochiModelEditorElementViewMode InMode) {
-                  if (InMode != GetViewportElementViewMode())
+                  if (InMode != GetViewportElementViewMode()) {
                     SetViewportElementViewMode(InMode);
+                  }
                 })
                 .Value(this, &FMochiModelEditorToolkit::GetViewportElementViewMode)
 

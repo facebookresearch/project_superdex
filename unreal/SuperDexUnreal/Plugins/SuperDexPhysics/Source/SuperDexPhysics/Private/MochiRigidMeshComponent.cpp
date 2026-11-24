@@ -266,10 +266,12 @@ void UMochiRigidMeshComponent::SetWorldLocationAndRotationMochiWithDynamics(
             translation + NewTransform_Mochi.TransformDirection(comLocalPos);
         mochi::Real3 rotationDof = rotationVec;
 
-        for (int i = 0; i < 3; ++i)
+        for (int i = 0; i < 3; ++i) {
           dofValues[i] = translationDof[i];
-        for (int i = 3; i < 6; ++i)
+        }
+        for (int i = 3; i < 6; ++i) {
           dofValues[i] = rotationDof[i - 3];
+        }
 
         Actor->ClearBoundaryConditions();
         Actor->AddBoundaryConditionDofsWorld(dofIndices, dofValues, e);
