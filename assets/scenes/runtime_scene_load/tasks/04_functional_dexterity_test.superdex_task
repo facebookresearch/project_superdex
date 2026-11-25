@@ -1,0 +1,12 @@
+{
+  "metadata": {
+    "name": "Functional Dexterity Test",
+    "description": "Pick, flip and reinsert the four pegs left white end up."
+  },
+  "resetState": [
+    {
+      "name": "functional_dexterity_test",
+      "prefabName": "functional_dexterity_test_partly_flipped"
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "metadata": {
+    "name": "Paper cup pyramid",
+    "description": "Finish the pyramid: its bottom two rows stand at the task root, and its other three cups are nested in a stack on the operator's right."
+  },
+  "resetState": [
+    {
+      "name": "paper_cup_pyramid_half_built",
+      "prefabName": "paper_cup_pyramid_half_built"
+    }
+  ]
+}

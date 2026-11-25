@@ -1,0 +1,37 @@
+{
+  "scene": {
+    "description": "L_Sampler's physics: the workbench on a floor at z = 0, its top 0.9 m up, 0.5 m in front of the origin and facing it",
+    "gravity": [
+      0,
+      0,
+      -9.8
+    ]
+  },
+  "actors": {
+    "rigid": [
+      {
+        "name": "floor",
+        "isStatic": true,
+        "colliderType": "Plane",
+        "shape": "./floor.mochi.json"
+      }
+    ]
+  },
+  "prefabs": [
+    {
+      "name": "workbench",
+      "path": "./../../../prefabs/workbench/workbench.superdex_prefab",
+      "translation": [
+        0.5,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        1,
+        0
+      ]
+    }
+  ]
+}

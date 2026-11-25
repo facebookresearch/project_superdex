@@ -1,0 +1,12 @@
+{
+  "metadata": {
+    "name": "Brick toys",
+    "description": "Stack all eight bricks into one tower, in any order."
+  },
+  "resetState": [
+    {
+      "name": "brick_toys",
+      "prefabName": "brick_toys"
+    }
+  ]
+}

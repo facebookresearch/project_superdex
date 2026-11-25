@@ -1,0 +1,12 @@
+{
+  "metadata": {
+    "name": "Puzzle cube",
+    "description": "Solve the puzzle cube, which starts two quarter turns from solved."
+  },
+  "resetState": [
+    {
+      "name": "puzzle_cube",
+      "prefabName": "puzzle_cube_scrambled"
+    }
+  ]
+}

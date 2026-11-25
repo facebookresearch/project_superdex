@@ -1,0 +1,12 @@
+{
+  "metadata": {
+    "name": "Nine-hole peg transfer",
+    "description": "Move the nine pegs from the board on the operator's left into the empty board on their right."
+  },
+  "resetState": [
+    {
+      "name": "nine_hole_peg_test_transfer",
+      "prefabName": "nine_hole_peg_test_transfer"
+    }
+  ]
+}

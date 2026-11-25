@@ -1,0 +1,12 @@
+{
+  "metadata": {
+    "name": "Shape box",
+    "description": "Put the four pieces on the table into the shape box through their holes: the ellipse (left face), the square (lid), the octagon (front face) and the hexagon (right face)."
+  },
+  "resetState": [
+    {
+      "name": "shape_box",
+      "prefabName": "shape_box_four_out"
+    }
+  ]
+}

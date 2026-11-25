@@ -1,0 +1,660 @@
+{
+  "metadata": {
+    "name": "runtime_scene_load",
+    "description": "SuperDex Unreal's L_Sampler: the workbench, the FR3 + DG-5F SEED and Tianji M6 + Wuji Hand 2 arms in each hand's slot, and L_Sampler's prefabs as task objects",
+    "version": "1.0",
+    "author": "SuperDex"
+  },
+  "scene": {
+    "baseScene": "./base_scene/runtime_scene_load.mochi_scene",
+    "spawnablePrefabs": [
+      {
+        "name": "paper_cup_pyramid_half_built",
+        "path": "@prefabs/paper_cups/paper_cup_pyramid_half_built.superdex_prefab"
+      },
+      {
+        "name": "shape_box_four_out",
+        "path": "@prefabs/shape_box/shape_box_four_out.superdex_prefab"
+      },
+      {
+        "name": "puzzle_cube_scrambled",
+        "path": "@prefabs/puzzle_cube/puzzle_cube_scrambled.superdex_prefab"
+      },
+      {
+        "name": "functional_dexterity_test_partly_flipped",
+        "path": "@prefabs/functional_dexterity_test/functional_dexterity_test_partly_flipped.superdex_prefab"
+      },
+      {
+        "name": "nine_hole_peg_test_transfer",
+        "path": "@prefabs/nine_hole_peg_test/nine_hole_peg_test_transfer.superdex_prefab"
+      },
+      {
+        "name": "brick_toys",
+        "path": "@prefabs/brick_toys/brick_toys.mochi_prefab"
+      },
+      {
+        "name": "jar",
+        "path": "@prefabs/kitchen/jar/jar.mochi_prefab"
+      }
+    ],
+    "taskRoot": {
+      "translation": [
+        0.5,
+        0,
+        0.9
+      ],
+      "rotation": [
+        0,
+        0,
+        1,
+        0
+      ]
+    }
+  },
+  "bots": [
+    {
+      "name": "fr3_v2_dg5f_long_seed_left",
+      "path": "@bots/arm_hand_combos/fr3_v2_dg5f_long_seed/left/fr3_v2_dg5f_long_seed_left.superdex_bot",
+      "hasGravity": false,
+      "parentFromBot": {
+        "translation": [
+          0,
+          0.1,
+          0.75
+        ],
+        "rotation": [
+          -0.382683432365,
+          0,
+          0,
+          0.923879532511
+        ]
+      },
+      "initialPose": [
+        -0.5,
+        -1.5,
+        0.0,
+        -3.04,
+        -0.7,
+        2.9,
+        1.35,
+        -0.261799,
+        0.959931,
+        -0.261799,
+        -0.261799,
+        0.10472,
+        0.261799,
+        0.261799,
+        0.261799,
+        0.034907,
+        0.261799,
+        0.261799,
+        0.261799,
+        -0.034907,
+        0.261799,
+        0.261799,
+        0.261799,
+        -0.087266,
+        -0.10472,
+        0.261799,
+        0.261799
+      ],
+      "controllers": [
+        {
+          "type": "BASIC_OSC_PD",
+          "name": "osc",
+          "initArgs": {
+            "baseLinkName": "fr3_link0",
+            "eeLinkName": "fr3_link8"
+          },
+          "params": "@bots/arm_hand_combos/fr3_v2_dg5f_long_seed/left/control/fr3_v2_dg5f_long_seed_left_arm_osc.superdex_controller"
+        },
+        {
+          "type": "BASIC_JSC_PD",
+          "name": "jsc",
+          "params": "@bots/arm_hand_combos/fr3_v2_dg5f_long_seed/left/control/fr3_v2_dg5f_long_seed_left_hand_jsc.superdex_controller"
+        }
+      ],
+      "roboperatorClass": "BP_Roboperator_Virtual_fr3_v2_dg5f_long_seed_left"
+    },
+    {
+      "name": "tianji_m6_wuji2_beta1_left",
+      "path": "@bots/arm_hand_combos/tianji_m6_wuji2_beta1/left/tianji_m6_wuji2_beta1_left.superdex_bot",
+      "hasGravity": false,
+      "parentFromBot": {
+        "translation": [
+          0.1,
+          0.1,
+          1.3
+        ],
+        "rotation": [
+          -0.707106781187,
+          0,
+          0,
+          0.707106781187
+        ]
+      },
+      "initialPose": [
+        0.5162,
+        -0.7522,
+        -0.8603,
+        -1.6013,
+        0.7833,
+        -0.6158,
+        -0.4496,
+        0.1926,
+        -0.37,
+        0.2088,
+        0.2429,
+        0.2542,
+        0.0756,
+        0.1179,
+        0.1173,
+        0.2511,
+        0.1542,
+        0.1594,
+        0.16,
+        0.1083,
+        0.1505,
+        0.2391,
+        0.1346,
+        0.1007,
+        0.2693,
+        0.2425,
+        0.1008
+      ],
+      "controllers": [
+        {
+          "type": "BASIC_OSC_PD",
+          "name": "osc",
+          "initArgs": {
+            "baseLinkName": "Base_L",
+            "eeLinkName": "TCP_Link_L"
+          },
+          "params": "@bots/arm_hand_combos/tianji_m6_wuji2_beta1/left/control/tianji_m6_wuji2_beta1_left_arm_osc.superdex_controller"
+        },
+        {
+          "type": "BASIC_JSC_PD",
+          "name": "jsc",
+          "params": "@bots/arm_hand_combos/tianji_m6_wuji2_beta1/left/control/tianji_m6_wuji2_beta1_left_hand_jsc.superdex_controller"
+        }
+      ],
+      "roboperatorClass": "BP_Roboperator_Virtual_tianji_m6_wuji2_beta1_left"
+    },
+    {
+      "name": "fr3_v2_dg5f_long_seed_right",
+      "path": "@bots/arm_hand_combos/fr3_v2_dg5f_long_seed/right/fr3_v2_dg5f_long_seed_right.superdex_bot",
+      "hasGravity": false,
+      "parentFromBot": {
+        "translation": [
+          0,
+          -0.1,
+          0.75
+        ],
+        "rotation": [
+          0.382683432365,
+          0,
+          0,
+          0.923879532511
+        ]
+      },
+      "initialPose": [
+        0.5,
+        -1.5,
+        0.0,
+        -3.04,
+        0.7,
+        2.9,
+        -1.35,
+        0.261799,
+        -0.959931,
+        0.261799,
+        0.261799,
+        -0.10472,
+        0.261799,
+        0.261799,
+        0.261799,
+        -0.034907,
+        0.261799,
+        0.261799,
+        0.261799,
+        0.034907,
+        0.261799,
+        0.261799,
+        0.261799,
+        0.087266,
+        0.10472,
+        0.261799,
+        0.261799
+      ],
+      "controllers": [
+        {
+          "type": "BASIC_OSC_PD",
+          "name": "osc",
+          "initArgs": {
+            "baseLinkName": "fr3_link0",
+            "eeLinkName": "fr3_link8"
+          },
+          "params": "@bots/arm_hand_combos/fr3_v2_dg5f_long_seed/right/control/fr3_v2_dg5f_long_seed_right_arm_osc.superdex_controller"
+        },
+        {
+          "type": "BASIC_JSC_PD",
+          "name": "jsc",
+          "params": "@bots/arm_hand_combos/fr3_v2_dg5f_long_seed/right/control/fr3_v2_dg5f_long_seed_right_hand_jsc.superdex_controller"
+        }
+      ],
+      "roboperatorClass": "BP_Roboperator_Virtual_fr3_v2_dg5f_long_seed_right"
+    },
+    {
+      "name": "tianji_m6_wuji2_beta1_right",
+      "path": "@bots/arm_hand_combos/tianji_m6_wuji2_beta1/right/tianji_m6_wuji2_beta1_right.superdex_bot",
+      "hasGravity": false,
+      "parentFromBot": {
+        "translation": [
+          0.1,
+          -0.1,
+          1.3
+        ],
+        "rotation": [
+          0.707106781187,
+          0,
+          0,
+          0.707106781187
+        ]
+      },
+      "initialPose": [
+        -0.5139,
+        -0.7582,
+        0.859,
+        -1.598,
+        -0.7856,
+        -0.6149,
+        0.4516,
+        0.1926,
+        -0.37,
+        0.2088,
+        0.2429,
+        0.2542,
+        0.0756,
+        0.1179,
+        0.1173,
+        0.2511,
+        0.1542,
+        0.1594,
+        0.16,
+        0.1083,
+        0.1505,
+        0.2391,
+        0.1346,
+        0.1007,
+        0.2693,
+        0.2425,
+        0.1008
+      ],
+      "controllers": [
+        {
+          "type": "BASIC_OSC_PD",
+          "name": "osc",
+          "initArgs": {
+            "baseLinkName": "Base_R",
+            "eeLinkName": "TCP_Link_R"
+          },
+          "params": "@bots/arm_hand_combos/tianji_m6_wuji2_beta1/right/control/tianji_m6_wuji2_beta1_right_arm_osc.superdex_controller"
+        },
+        {
+          "type": "BASIC_JSC_PD",
+          "name": "jsc",
+          "params": "@bots/arm_hand_combos/tianji_m6_wuji2_beta1/right/control/tianji_m6_wuji2_beta1_right_hand_jsc.superdex_controller"
+        }
+      ],
+      "roboperatorClass": "BP_Roboperator_Virtual_tianji_m6_wuji2_beta1_right"
+    },
+    {
+      "name": "openxr_hand_lowpoly_left",
+      "path": "@bots/hands/openxr/left/openxr_hand_lowpoly_left.superdex_bot",
+      "hasGravity": false,
+      "parentFromBot": {
+        "translation": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      "initialPose": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "controllers": [
+        {
+          "type": "MOCHI_ARTICULATED_POSE",
+          "name": "pose",
+          "params": "@bots/hands/openxr/left/control/openxr_hand_lowpoly_left_pose.superdex_controller"
+        }
+      ],
+      "roboperatorClass": "BP_Roboperator_ProxyHand_openxr_hand_lowpoly_left"
+    },
+    {
+      "name": "wuji_hand2_beta1_skinned_left",
+      "path": "@bots/hands/wuji_hand2_beta1/left/wuji_hand2_beta1_skinned_left.superdex_bot",
+      "hasGravity": false,
+      "parentFromBot": {
+        "translation": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      "controllers": [
+        {
+          "type": "MOCHI_ARTICULATED_POSE",
+          "name": "pose",
+          "params": "@bots/hands/wuji_hand2_beta1/left/control/wuji_hand2_beta1_skinned_left_pose.superdex_controller"
+        }
+      ],
+      "roboperatorClass": "BP_Roboperator_ProxyHand_wuji_hand2_beta1_skinned_left_openxr"
+    },
+    {
+      "name": "dg5f_long_seed_left",
+      "path": "@bots/hands/dg5f_long_seed/left/dg5f_long_seed_left.superdex_bot",
+      "hasGravity": false,
+      "parentFromBot": {
+        "translation": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      "initialPose": [
+        -0.7534551620483398,
+        0.40360039472579956,
+        0.0,
+        0.0,
+        0.0,
+        0.02491108328104019,
+        0.013925982639193535,
+        0.0,
+        -0.06963340193033218,
+        0.0,
+        0.0,
+        0.0,
+        -0.1800987869501114,
+        0.01349314022809267,
+        0.0,
+        0.0,
+        -0.11281110346317291,
+        -0.23753057420253754,
+        0.03620685636997223,
+        0.0
+      ],
+      "controllers": [
+        {
+          "type": "MOCHI_ARTICULATED_POSE",
+          "name": "pose",
+          "params": "@bots/hands/dg5f_long_seed/left/control/dg5f_long_seed_left_pose.superdex_controller"
+        }
+      ],
+      "roboperatorClass": "BP_Roboperator_ProxyHand_dg5f_long_seed_left_openxr"
+    },
+    {
+      "name": "2f_85_left",
+      "path": "@bots/grippers/2f_85/2f_85.superdex_bot",
+      "hasGravity": false,
+      "parentFromBot": {
+        "translation": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      "initialPose": [
+        0.3490658700466156,
+        0.3490658700466156,
+        -0.3490658700466156,
+        -0.3490658700466156,
+        -0.3490658700466156,
+        0.3490658700466156
+      ],
+      "controllers": [
+        {
+          "type": "MOCHI_ARTICULATED_POSE",
+          "name": "pose",
+          "params": "@bots/grippers/2f_85/control/2f_85_pose.superdex_controller"
+        }
+      ],
+      "roboperatorClass": "BP_Roboperator_ProxyHand_2f_85_left_openxr"
+    },
+    {
+      "name": "openxr_hand_lowpoly_right",
+      "path": "@bots/hands/openxr/right/openxr_hand_lowpoly_right.superdex_bot",
+      "hasGravity": false,
+      "parentFromBot": {
+        "translation": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      "initialPose": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "controllers": [
+        {
+          "type": "MOCHI_ARTICULATED_POSE",
+          "name": "pose",
+          "params": "@bots/hands/openxr/right/control/openxr_hand_lowpoly_right_pose.superdex_controller"
+        }
+      ],
+      "roboperatorClass": "BP_Roboperator_ProxyHand_openxr_hand_lowpoly_right"
+    },
+    {
+      "name": "wuji_hand2_beta1_skinned_right",
+      "path": "@bots/hands/wuji_hand2_beta1/right/wuji_hand2_beta1_skinned_right.superdex_bot",
+      "hasGravity": false,
+      "parentFromBot": {
+        "translation": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      "controllers": [
+        {
+          "type": "MOCHI_ARTICULATED_POSE",
+          "name": "pose",
+          "params": "@bots/hands/wuji_hand2_beta1/right/control/wuji_hand2_beta1_skinned_right_pose.superdex_controller"
+        }
+      ],
+      "roboperatorClass": "BP_Roboperator_ProxyHand_wuji_hand2_beta1_skinned_right_openxr"
+    },
+    {
+      "name": "dg5f_long_seed_right",
+      "path": "@bots/hands/dg5f_long_seed/right/dg5f_long_seed_right.superdex_bot",
+      "hasGravity": false,
+      "parentFromBot": {
+        "translation": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      "initialPose": [
+        0.7534551620483398,
+        -0.40360039472579956,
+        0.0,
+        0.0,
+        0.0,
+        0.02491108328104019,
+        0.013925982639193535,
+        0.0,
+        0.06963340193033218,
+        0.0,
+        0.0,
+        0.0,
+        0.1800987869501114,
+        0.01349314022809267,
+        0.0,
+        0.0,
+        0.11281110346317291,
+        0.23753057420253754,
+        0.03620685636997223,
+        0.0
+      ],
+      "controllers": [
+        {
+          "type": "MOCHI_ARTICULATED_POSE",
+          "name": "pose",
+          "params": "@bots/hands/dg5f_long_seed/right/control/dg5f_long_seed_right_pose.superdex_controller"
+        }
+      ],
+      "roboperatorClass": "BP_Roboperator_ProxyHand_dg5f_long_seed_right_openxr"
+    },
+    {
+      "name": "2f_85_right",
+      "path": "@bots/grippers/2f_85/2f_85.superdex_bot",
+      "hasGravity": false,
+      "parentFromBot": {
+        "translation": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      "initialPose": [
+        0.3490658700466156,
+        0.3490658700466156,
+        -0.3490658700466156,
+        -0.3490658700466156,
+        -0.3490658700466156,
+        0.3490658700466156
+      ],
+      "controllers": [
+        {
+          "type": "MOCHI_ARTICULATED_POSE",
+          "name": "pose",
+          "params": "@bots/grippers/2f_85/control/2f_85_pose.superdex_controller"
+        }
+      ],
+      "roboperatorClass": "BP_Roboperator_ProxyHand_2f_85_right_openxr"
+    }
+  ],
+  "slots": [
+    {
+      "name": "left",
+      "controlledBots": [
+        "fr3_v2_dg5f_long_seed_left",
+        "tianji_m6_wuji2_beta1_left",
+        "openxr_hand_lowpoly_left",
+        "wuji_hand2_beta1_skinned_left",
+        "dg5f_long_seed_left",
+        "2f_85_left"
+      ]
+    },
+    {
+      "name": "right",
+      "controlledBots": [
+        "fr3_v2_dg5f_long_seed_right",
+        "tianji_m6_wuji2_beta1_right",
+        "openxr_hand_lowpoly_right",
+        "wuji_hand2_beta1_skinned_right",
+        "dg5f_long_seed_right",
+        "2f_85_right"
+      ]
+    }
+  ]
+}

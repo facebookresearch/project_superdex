@@ -1,0 +1,12 @@
+{
+  "metadata": {
+    "name": "Jar",
+    "description": "Take the lid off the jar."
+  },
+  "resetState": [
+    {
+      "name": "jar",
+      "prefabName": "jar"
+    }
+  ]
+}

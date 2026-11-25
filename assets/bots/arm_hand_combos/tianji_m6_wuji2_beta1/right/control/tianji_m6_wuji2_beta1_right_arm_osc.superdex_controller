@@ -1,0 +1,10 @@
+{
+  "Kp_p": 2000,
+  "Kd_p": 100,
+  "Kp_r": 50,
+  "Kd_r": 4,
+  "bApplyMaxErrorMagnitudeNormalization": true,
+  "maxTranslationError": 0.05,
+  "maxRotationError": 0.4,
+  "bApplyMaxOSCTorqueNormalization": true
+}
