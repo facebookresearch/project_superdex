@@ -24,6 +24,7 @@ The following work was done to produce this simulation-ready asset:
 - Exported STEP CAD interchange files from which surface triangle meshes were generated.
 - Generated a tetrahedral mesh from the surface mesh geometry.
 - Constructed a soft-body physics simulation and collision model from surface and tetrahedral geometry.
+- Combined the render model, `duck_lamp.glb`, into one textured mesh and embedded it in the tetrahedral mesh as the soft body's visual mesh, so it deforms with the simulation. The tetrahedral mesh was rebuilt from the same boundary surface for the embedding ([`intermediates/duck_lamp.StudioProcessing.json`](./intermediates/duck_lamp.StudioProcessing.json)).
 
 ## License & IP Notes
 

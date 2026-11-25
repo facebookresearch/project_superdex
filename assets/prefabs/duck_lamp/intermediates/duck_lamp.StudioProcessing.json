@@ -1,0 +1,79 @@
+{
+  "editorState": {
+    "cadRotation": [
+      0,
+      0,
+      0,
+      1
+    ],
+    "cadScale": [
+      1,
+      1,
+      1
+    ],
+    "cadTranslation": [
+      0,
+      0,
+      0
+    ]
+  },
+  "modifiers": [
+    {
+      "collapsed": false,
+      "enabled": true,
+      "method": "From Model Viewer",
+      "modifier": "Source from Render Model",
+      "properties": {}
+    },
+    {
+      "collapsed": false,
+      "enabled": true,
+      "method": "From Model Viewer",
+      "modifier": "Source from Mochi Model",
+      "properties": {}
+    },
+    {
+      "collapsed": false,
+      "enabled": true,
+      "method": "Make Manifold",
+      "modifier": "Refine Mesh",
+      "properties": {
+        "removeAlmostDegenerateFaces": false,
+        "thenMakeWatertight": false
+      }
+    },
+    {
+      "collapsed": false,
+      "enabled": true,
+      "method": "Constrained Delaunay",
+      "modifier": "Tetrahedralize",
+      "properties": {
+        "edgeSize": 0.013,
+        "relativeToMeshSize": false,
+        "iterations": 10,
+        "strict": false
+      }
+    },
+    {
+      "collapsed": false,
+      "enabled": true,
+      "method": "Upstream Surface",
+      "modifier": "Embed Visual Mesh",
+      "properties": {
+        "referenceIndex": 0
+      }
+    },
+    {
+      "collapsed": false,
+      "enabled": true,
+      "method": "SDF",
+      "modifier": "Export Mochi Model",
+      "properties": {
+        "bakeSdf": false,
+        "exportPath": "../duck_lamp.mochi.h5"
+      }
+    }
+  ],
+  "referenceModels": [],
+  "version": 1
+}

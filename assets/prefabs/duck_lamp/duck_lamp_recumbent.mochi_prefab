@@ -12,6 +12,7 @@
           }
         },
         "name": "DuckLamp",
+        "renderModel": "./duck_lamp.glb",
         "rotation": [
           -6.1817281959974935e-08,
           0.70710670948028564,
