@@ -101,6 +101,17 @@ and soft-body authoring, and improves contact and solver behavior.
   mid-episode states. The included `rrd_video` tool generates real-time video clips
   directly from `.rrd` recordings using headless Rerun rendering, with automatic camera
   framing and support for selecting a time range.
+- **Robotics scenes.** Load scenes that specify prefab assets, robots, controllers
+  and sensor graphs. Configure robot placement and initial joint poses, select robots
+  to instantiate, and spawn or remove prefab instances.
+- **Domain randomization in Robotics.** Derive deterministic seeds for named
+  quantities and random streams, and draw from common distributions. Save
+  per-episode seeds, draws, sampled values, applied values and other bookkeeping metadata.
+- **Robotics SensorGraph.** Connect numeric observation sources and transforms
+  into a graph that synchronously runs in dependency order. Current source sensor
+  types include contact forces, joint positions and velocities, joint wrenches,
+  and tactile responses. Transforms include aggregation, concatenation, delay, history,
+  spatial mapping and noise. Async sensors (e.g., cameras) are deferred.
 
 #### Performance
 
@@ -204,6 +215,20 @@ depend on the scene and settings.
   existing `.mochi_prefab` files still open and save in place.
 - **Python dependency:** `superdex-physics` no longer depends on scikit-image.
   Declare it yourself if you use it directly.
+- **Robot scene APIs.** `BotScenePrefab` describes a scene; `LoadBotScene` instantiates
+  it. `BotScene` provides named component lookup, robot initialization/removal, prefab
+  spawning/destruction and task termination criteria.
+- **Domain randomization:** Deterministic, keyed 64-bit seeds can be consistently derived
+  in C++ and Python. `Uniform`, `Normal` and `UniformQuat` functions draw values from a
+  caller-owned RNG state. Per-episode randomized state and its application-specific
+  metadata can be serialized and deserialized in C++ and Python.
+- **Sensors and SensorGraph:** Declare sensors and their inputs in bot/scene files, or
+  construct and connect them programmatically. Create, build and select outputs from the
+  `SensorGraph`; it can then be stepped using caller-supplied simulation time, and each
+  output's sample is accessed with `Latest`. A `SensorFormat` struct describes each
+  output sample's shape, units and labels. Sensors must be removed from graphs before
+  they are destroyed. Adding or removing sensors preserves the state of unaffected
+  sensors.
 
 
 ## [1.0.1]
@@ -213,9 +238,6 @@ new tools for recording episodes, authoring robot scenes, and processing CAD.
 
 ### What's New
 
-- **Bot-relative sensor inputs.** Bot-owned inputs accept `./<sensor>` and
-  `../<link>/<sensor>`, resolved once into complete graph names when the scene
-  loads. A bot file can be reused under different scene instance names.
 - **Python 3.13 and 3.14 support.** Native wheels now use the CPython stable ABI
   and support standard CPython 3.12+. The nanobind port preserves the Python API
   and enables parallel calls in free-threaded CPython source builds.
@@ -270,19 +292,6 @@ new tools for recording episodes, authoring robot scenes, and processing CAD.
 - **Debugger debug-draw.** Enable various debug draw options to visualize
   contacts, forces, bounds, and more. Controlled through the properties panel.
 - **Native neural inference.** Native MLPs now support SiLU activation.
-- **Robotics scenes**. Load scenes that specify prefab assets, robots, controllers
-  and sensor graphs. Configure robot placement and initial joint poses, select robots
-  to instantiate, and spawn or remove prefab instances.
-- **Domain randomization in Robotics.** Derive deterministic seeds for named
-  quantities and random streams, and draw from common distributions. Save
-  per-episode seeds, draws, sampled values, applied values and other book-keeping metadata.
-- **Robotics SensorGraph.**  Connect numeric observation sources and transforms
-  into a graph that synchronously runs in dependency order. Current source sensor
-  types include contact forces, joint positions and velocities, joint wrenches,
-  and tactile responses. Transforms include aggregation, concatenation, delay, history,
-  spatial mapping and noise. Async sensors (e.g. cameras) are deferred.
-
-
 
 #### Performance
 
@@ -406,18 +415,6 @@ new tools for recording episodes, authoring robot scenes, and processing CAD.
   experimental API. It will probably be removed in the future. All new recording
   efforts are directed toward SuperDex Recorder (`superdex.recorder`), described
   above.
-- **Robot scene APIs.** `BotScenePrefab` describes a scene; `LoadBotScene` instantiates it.
-  `BotScene` provides named component lookup, robot initialization/removal, prefab
-  spawning/destruction and task termination criteria.
-- **Domain randomization:** Deterministic, keyed 64-bit seeds can be consistently derived in C++ and Python.
-  `Uniform`, `Normal` and `UniformQuat` functions draw values from a caller-owned RNG state. Per-episode
-  randomized state with application-specific metadata are (de-)serialized in C++ and Python.
-- **Sensors and SensorGraph:** Declare sensors and their inputs in bot/scene files, or
-  construct and connect them programmatically. Create, build and select outputs from the SensorGraph;
-  it can then be stepped using caller-supplied simulation time, and each output's sample is accessed
-  with `Latest()`. A `SensorFormat` struct describes its shape, units and labels. Sensors must be
-  removed from graphs before they are destroyed; a graph's extensions and removals
-  preserve its unaffected sensor state.
 
 
 ## [2026-08-24]
