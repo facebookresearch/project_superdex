@@ -30,6 +30,7 @@
 #include <mochi_core/net/message_server.h>
 #include <mochi_core/utils/container_utils.h>
 #include <mochi_core/utils/debug.h>
+#include <mochi_core/utils/defer.h>
 #include <mochi_core/utils/dynamic_array.h>
 #include <mochi_core/utils/guarded.h>
 #include <mochi_core/utils/nd_array.h>
@@ -44,11 +45,17 @@
 #include <deque>
 #include <mutex>
 #include <optional>
+#include <stdexcept>
+#include <string>
 #include <thread>
 #include <unordered_map>
 
 using namespace mochi;
 using namespace mochi::dbg;
+
+bool SceneDebugger::IsPaused() const {
+  return GetStepMode() == StepMode::Pause;
+}
 
 static SceneDebugger::ClockFn MakeDefaultClock() {
   auto const startTime = std::chrono::steady_clock::now();
@@ -170,6 +177,33 @@ class SceneDebuggerImpl final : public SceneDebugger {
   void PreShutdownAsync() override;
   void ShutdownOnSceneThread(SceneImpl* scene) override;
 
+  MOCHI_STRUCT_BEGIN(SceneDebuggerImpl)
+  MOCHI_BASE_CLASS(mochi::dbg::SceneDebugger)
+  MOCHI_PROPERTY(
+      "paused",
+      (+[](SceneDebuggerImpl const& self) { return self.IsPaused(); }),
+      (+[](SceneDebuggerImpl& self, bool paused) {
+        self.SetStepMode(paused ? StepMode::Pause : StepMode::Play);
+      }))
+  MOCHI_ATTRIBUTE(NoSerialize)
+  MOCHI_METHOD("Play()", (+[](SceneDebuggerImpl& self) { self.SetStepMode(StepMode::Play); }))
+  MOCHI_METHOD("Pause()", (+[](SceneDebuggerImpl& self) { self.SetStepMode(StepMode::Pause); }))
+  MOCHI_METHOD("Step()", (+[](SceneDebuggerImpl& self) { self.Step(); }))
+  MOCHI_METHOD("TogglePause()", (+[](SceneDebuggerImpl& self) {
+                 self.SetStepMode(self.IsPaused() ? StepMode::Play : StepMode::Pause);
+               }))
+  MOCHI_METHOD("Restore()", (+[](SceneDebuggerImpl& self) {
+                 if (!self._commandScene) {
+                   throw std::runtime_error(
+                       "This debugger control requires a scene console command");
+                 }
+                 auto const error = self.RestoreInitialState(self._commandScene);
+                 if (!error.empty()) {
+                   throw std::runtime_error(error.c_str());
+                 }
+               }))
+  MOCHI_STRUCT_END()
+
  private:
   void Init(SceneImpl* scene);
   void UpdateOnSceneThreadImpl(SceneImpl* scene);
@@ -177,6 +211,9 @@ class SceneDebuggerImpl final : public SceneDebugger {
   bool IsClientConnected() const;
   void WaitForRealTime(SceneImpl* scene);
   void SendToClient(net::Message const& msg) const;
+  void SetStepMode(StepMode mode);
+  void Step();
+  std::string RestoreInitialState(SceneImpl* scene);
 
   // Build and send a SceneSyncReply for the requested categories. Runs on the scene's thread.
   void SendSyncReply(
@@ -230,6 +267,7 @@ class SceneDebuggerImpl final : public SceneDebugger {
   net::MessageDispatcher<SceneImpl*> _dispatcher;
   Guarded<DynamicArray<std::unique_ptr<net::Message>>> _inbox;
   DynamicArray<std::unique_ptr<net::Message>> _newMessages;
+  SceneImpl* _commandScene = nullptr; // Borrowed only while executing a scene console command.
 
   // Counts simulation steps. Incremented in OnPostStep.
   uint64_t _stepCounter = 1;
@@ -314,6 +352,9 @@ void SceneDebuggerImpl::Init(SceneImpl* scene) {
     SendToClient(CompleteSceneCommand(*scene, _debugNameSuffixes, msg));
   });
   _dispatcher.Register<protocol::CommandRequest>([this](auto* scene, auto&& msg) {
+    MOCHI_ASSERT(_commandScene == nullptr);
+    _commandScene = scene;
+    MOCHI_DEFER(_commandScene = nullptr);
     SendToClient(ExecuteSceneCommand(*scene, _debugNameSuffixes, msg));
   });
   _dispatcher.Register<protocol::DebugDrawRequest>([this](auto* scene, auto&& msg) {
@@ -618,56 +659,62 @@ void SceneDebuggerImpl::OnSceneStepRequest(SceneImpl* scene, protocol::SceneStep
   protocol::SceneStepReply reply(request);
 
   if (request.mode.has_value()) {
-    if (GetStepMode() != *request.mode) {
-      _realTimeTracking.ResetTime();
-    }
-    _stepMode.store(*request.mode);
-    _singleStepRequested = false;
+    SetStepMode(*request.mode);
   }
 
   if (request.stepForward) {
-    _realTimeTracking.ResetTime();
-    _stepMode.store(StepMode::Pause);
-    _singleStepRequested = true;
+    Step();
   }
 
   if (request.restoreInitialState) {
-    if (_initialState.captureData.empty()) {
-      reply.error = _initialState.error.empty()
-          ? "Initial scene state is not available"
-          : Format(
-                "Failed to restore state because the initial capture failed. Reason: %s",
-                _initialState.error.c_str());
-    } else {
-      MOCHI_ASSERT_VERBOSE(
-          _initialState.error.empty(), "If there was an error, then captureData should be empty.");
-      Error error;
-      scene->RestoreStateFromBytes(_initialState.captureData, error);
-      if (error.IsOK()) {
-        // This is a discontinuity in the timeline
-        _realTimeTracking.ResetTime();
-
-        // Increment the step counter because the state of the scene has changed
-        // and should thus be synced to client.
-        ++_stepCounter;
-
-        // Re-process queries after RestoreStateFromBytes.
-        Error queryError;
-        scene->UpdateQueries(queryError);
-        if (!queryError.IsOK()) {
-          MOCHI_LOG_WARNING_ONCE(
-              "[SceneDebugger] UpdateQueries: %s", queryError.ToString().c_str());
-        }
-      } else {
-        reply.error =
-            Format("Failed to restore initial scene state. Reason: %s", error.GetDescription());
-      }
-    }
+    reply.error = RestoreInitialState(scene);
   }
 
   if (request.sendReply) {
     SendToClient(reply);
   }
+}
+
+void SceneDebuggerImpl::SetStepMode(StepMode mode) {
+  if (GetStepMode() != mode) {
+    _realTimeTracking.ResetTime();
+  }
+  _stepMode.store(mode);
+  _singleStepRequested = false;
+}
+
+void SceneDebuggerImpl::Step() {
+  _realTimeTracking.ResetTime();
+  _stepMode.store(StepMode::Pause);
+  _singleStepRequested = true;
+}
+
+std::string SceneDebuggerImpl::RestoreInitialState(SceneImpl* scene) {
+  if (_initialState.captureData.empty()) {
+    return _initialState.error.empty()
+        ? "Initial scene state is not available"
+        : Format(
+              "Failed to restore state because the initial capture failed. Reason: %s",
+              _initialState.error.c_str());
+  }
+  MOCHI_ASSERT_VERBOSE(
+      _initialState.error.empty(), "If there was an error, then captureData should be empty.");
+  Error restoreError;
+  scene->RestoreStateFromBytes(_initialState.captureData, restoreError);
+  if (!restoreError.IsOK()) {
+    return Format(
+        "Failed to restore initial scene state. Reason: %s", restoreError.GetDescription());
+  }
+
+  _realTimeTracking.ResetTime();
+  ++_stepCounter;
+
+  Error queryError;
+  scene->UpdateQueries(queryError);
+  if (!queryError.IsOK()) {
+    MOCHI_LOG_WARNING_ONCE("[SceneDebugger] UpdateQueries: %s", queryError.ToString().c_str());
+  }
+  return {};
 }
 
 void SceneDebuggerImpl::OnSceneSyncRequest(SceneImpl* scene, protocol::SceneSyncRequest&& request) {

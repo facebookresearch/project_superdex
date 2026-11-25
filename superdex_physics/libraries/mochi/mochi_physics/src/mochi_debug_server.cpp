@@ -99,6 +99,7 @@ class DebugServerImpl : public DebugServerInternal {
     bool hasRegistered = false;
     bool hasStarted = false;
     bool isInProcSocket = false;
+    bool pauseNewScenes = true;
   };
 
  private:
@@ -124,9 +125,13 @@ class DebugServerImpl : public DebugServerInternal {
 
   // Call fn(object, typeInfo) with the object that console paths outside "scenes" start from. The
   // context is bound to this thread, and shapes made by console members stay registered, until fn
-  // returns.
+  // returns. With the default root, a path into /debug uses this server's own reflection, which
+  // adds controls that the public DebugServer interface does not have.
   template <class Fn>
-  void WithConsoleRoot(Fn const& fn);
+  void WithConsoleRoot(
+      Span<SReflect::detail::ConsolePathStep const> steps,
+      std::string_view resolved,
+      Fn const& fn);
 
   // Message Handlers:
   void OnSceneRequest(
@@ -143,6 +148,34 @@ class DebugServerImpl : public DebugServerInternal {
  public:
   MOCHI_STRUCT_BEGIN(DebugServerImpl)
   MOCHI_BASE_CLASS(mochi::DebugServer)
+  // Whether newly attached scene debuggers start paused. Defaults to true.
+  MOCHI_PROPERTY(
+      "pauseNewScenes",
+      (+[](DebugServerImpl const& self) {
+        return self._state.Read([](auto const& state) { return state.pauseNewScenes; });
+      }),
+      (+[](DebugServerImpl& self, bool paused) {
+        self._state.Mutate([&](auto& state) { state.pauseNewScenes = paused; });
+      }))
+  MOCHI_ATTRIBUTE(NoSerialize)
+  MOCHI_METHOD("PauseAll()", (+[](DebugServerImpl& self) {
+                 self._state.Read([](auto const& state) {
+                   for (auto const& info : state.scenes) {
+                     if (info.debugger) {
+                       SetSceneStepMode(info, StepMode::Pause);
+                     }
+                   }
+                 });
+               }))
+  MOCHI_METHOD("UnpauseAll()", (+[](DebugServerImpl& self) {
+                 self._state.Read([](auto const& state) {
+                   for (auto const& info : state.scenes) {
+                     if (info.debugger) {
+                       SetSceneStepMode(info, StepMode::Play);
+                     }
+                   }
+                 });
+               }))
   MOCHI_STRUCT_END()
 };
 
@@ -377,6 +410,9 @@ void DebugServerImpl::OnClientConnect(net::ClientId client) {
 
     for (auto& sceneInfo : state.scenes) {
       AttachSceneDebuggerForClient(sceneInfo, client, _server);
+      if (!state.pauseNewScenes) {
+        SetSceneStepMode(sceneInfo, StepMode::Play);
+      }
     }
 
     // Push the authoritative snapshot to the newly connected client, under the lock, so it is
@@ -518,7 +554,10 @@ static size_t ScenePathStart(
 }
 
 template <class Fn>
-void DebugServerImpl::WithConsoleRoot(Fn const& fn) {
+void DebugServerImpl::WithConsoleRoot(
+    Span<SReflect::detail::ConsolePathStep const> steps,
+    std::string_view resolved,
+    Fn const& fn) {
   ScopedSchedulerBinding schedulerBinding(_context->GetTaskScheduler());
   ContextImpl::ScopedShapeHandleRetention retainShapes(_context);
   auto const [object, typeInfo] = _state.Read([&](auto const& state) {
@@ -528,7 +567,13 @@ void DebugServerImpl::WithConsoleRoot(Fn const& fn) {
     }
     return Root{_context, &SReflect::GetTypeInfo<ContextImpl>()};
   });
-  fn(object, *typeInfo);
+  if (object == _context && !steps.empty() && steps[0].name == "debug") {
+    fn(static_cast<void*>(this),
+       SReflect::GetTypeInfo<DebugServerImpl>(),
+       steps.size() > 1 ? steps[1].offset : resolved.size());
+    return;
+  }
+  fn(object, *typeInfo, size_t{1});
 }
 
 void DebugServerImpl::OnConsoleRequest(net::ClientId client, protocol::CommandRequest request) {
@@ -604,25 +649,28 @@ void DebugServerImpl::OnConsoleRequest(net::ClientId client, protocol::CommandRe
       reply.error = SReflect::detail::FormatConsoleError(error, resolved, args, 0, errorOffset);
     }
   } else {
-    WithConsoleRoot([&](void* object, SReflect::TypeInfo const& typeInfo) {
-      if (request.isList) {
-        auto listing = SReflect::ConsoleList(object, typeInfo, resolved, /*params*/ {}, &error, 1);
-        if (error.empty()) {
-          if (steps.empty()) {
-            auto scenes = MakeDirectoryEntry("scenes");
-            scenes._coreType = SReflect::CoreType::CT_map;
-            scenes._containerSize =
-                _state.Read([](auto const& state) { return state.scenes.size(); });
-            listing.insert(listing.begin(), std::move(scenes));
+    WithConsoleRoot(
+        steps, resolved, [&](void* object, SReflect::TypeInfo const& typeInfo, size_t pathStart) {
+          if (request.isList) {
+            auto listing =
+                SReflect::ConsoleList(object, typeInfo, resolved, /*params*/ {}, &error, pathStart);
+            if (error.empty()) {
+              if (steps.empty()) {
+                auto scenes = MakeDirectoryEntry("scenes");
+                scenes._coreType = SReflect::CoreType::CT_map;
+                scenes._containerSize =
+                    _state.Read([](auto const& state) { return state.scenes.size(); });
+                listing.insert(listing.begin(), std::move(scenes));
+              }
+              reply.listing = std::move(listing);
+            }
+          } else {
+            std::string output;
+            SReflect::detail::ConsoleExecute(
+                object, typeInfo, resolved, args, &output, &error, pathStart);
+            reply.output = output;
           }
-          reply.listing = std::move(listing);
-        }
-      } else {
-        std::string output;
-        SReflect::detail::ConsoleExecute(object, typeInfo, resolved, args, &output, &error, 1);
-        reply.output = output;
-      }
-    });
+        });
     reply.error = error;
   }
   _server.SendTo(client, reply);
@@ -672,13 +720,14 @@ void DebugServerImpl::OnAutoCompleteRequest(
           it != candidates.end() ? static_cast<size_t>(it - candidates.begin()) : 0;
     }
   } else {
-    WithConsoleRoot([&](void* object, SReflect::TypeInfo const& typeInfo) {
-      bool const ok = SReflect::detail::ConsoleAutoComplete(
-          object, typeInfo, *completion, typed, params, reply.result, &error, 1);
-      if (ok && isStep && steps.empty()) {
-        SReflect::detail::AddConsoleStepCandidates(reply.result, {"scenes"}, typed, params);
-      }
-    });
+    WithConsoleRoot(
+        steps, resolved, [&](void* object, SReflect::TypeInfo const& typeInfo, size_t pathStart) {
+          bool const ok = SReflect::detail::ConsoleAutoComplete(
+              object, typeInfo, *completion, typed, params, reply.result, &error, pathStart);
+          if (ok && isStep && steps.empty()) {
+            SReflect::detail::AddConsoleStepCandidates(reply.result, {"scenes"}, typed, params);
+          }
+        });
   }
   _server.SendTo(client, reply);
 }
@@ -733,9 +782,9 @@ void DebugServerImpl::OnAddScene(Scene* scene) {
       // Broadcast the delta under the lock so it is ordered with WelcomeMessage::scenes.
       if (state.client != 0) {
         AttachSceneDebuggerForClient(info, state.client, _server);
-
-        // All new scenes start out paused.
-        SetSceneStepMode(info, StepMode::Pause);
+        if (!state.pauseNewScenes) {
+          SetSceneStepMode(info, StepMode::Play);
+        }
 
         protocol::SceneAddRemove delta;
         delta.scene = handle;

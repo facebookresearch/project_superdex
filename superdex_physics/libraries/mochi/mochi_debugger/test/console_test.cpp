@@ -26,6 +26,8 @@
 #include <mochi_debugger/lib/auto_completer.h>
 #include <mochi_physics/src/mochi_common_components.h>
 #include <mochi_physics/src/mochi_scene.h>
+#include <mochi_physics/src/mochi_scene_console.h>
+#include <mochi_physics/src/mochi_scene_debugger.h>
 
 #include <picojson/picojson.h>
 #include <simple_reflection/simple_reflection.h>
@@ -832,6 +834,31 @@ TEST_F(DefaultRootConsoleTest, ListsScenesAtDefaultRoot) {
       "1_2 (handle=" + std::to_string(_sceneB->GetHandle().value) +
           ")\nA (handle=" + std::to_string(_sceneA->GetHandle().value) + ")",
       Run({"ls /scenes"}));
+}
+
+TEST_F(DefaultRootConsoleTest, SceneDebugRoutesToTheSceneDebugger) {
+  auto debugger = assert_cast<SceneImpl*>(_sceneA)->GetDebugger();
+  ASSERT_NE(nullptr, debugger);
+  EXPECT_TRUE(CanComplete("/scenes/A/debug", "pau", "paused"));
+  ExpectOutput("paused false", "false", Run({"/scenes/A/debug/paused false"}));
+  EXPECT_FALSE(debugger->IsPaused());
+  EXPECT_TRUE(assert_cast<SceneImpl*>(_sceneB)->GetDebugger()->IsPaused());
+}
+
+TEST_F(DefaultRootConsoleTest, SceneDebugReferenceLivesUntilSceneThreadCleanup) {
+  auto* scene = assert_cast<SceneImpl*>(_sceneA);
+  std::weak_ptr<SceneDebugger> debugger = scene->GetDebugger();
+  auto& borrowed = *debugger.lock();
+  DisconnectClient();
+  EXPECT_FALSE(debugger.expired());
+  EXPECT_TRUE(borrowed.IsPaused());
+  protocol::CommandRequest request;
+  request.path = "debug/paused";
+  ActorDebugNameSuffixes names;
+  auto const reply = ExecuteSceneCommand(*scene, names, request);
+  EXPECT_NE(std::string_view{reply.error}.find("no debugger client connected"), std::string::npos);
+  scene->UpdateDebugger();
+  EXPECT_TRUE(debugger.expired());
 }
 
 TEST_F(ShapeConsoleTest, RetainsHandlesReturnedByConsoleCalls) {

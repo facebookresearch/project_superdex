@@ -20,6 +20,7 @@
 #include "mochi_callback_set.h"
 #include "mochi_common_components.h"
 #include "mochi_ecs.h"
+#include "mochi_scene_debugger.h"
 #include "mochi_scene_recorder.h"
 
 #include <mochi_core/utils/guarded.h>
@@ -30,6 +31,7 @@
 #include <atomic>
 #include <functional>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 
@@ -43,10 +45,6 @@ class TetrahedralMeshShape;
 class TriangularMeshShape;
 class ArticulatedBodyShape;
 class PolylineShape;
-
-namespace dbg {
-class SceneDebugger;
-}
 
 class SceneImpl final : public Scene {
  public:
@@ -302,7 +300,7 @@ class SceneImpl final : public Scene {
   // Called by the DebugServer to install a SceneDebugger, or clear via null pointer. Thread-safe.
   void SetDebugger(std::shared_ptr<dbg::SceneDebugger> debugger);
 
-  // Return a shared_ptr to the current debugger (if any). For unit tests. Thread-safe.
+  // Return a shared_ptr to the current debugger (if any). Thread-safe.
   std::shared_ptr<dbg::SceneDebugger> GetDebugger() const;
 
  private:
@@ -402,6 +400,15 @@ class SceneImpl final : public Scene {
  public:
   MOCHI_STRUCT_BEGIN(mochi::SceneImpl)
   MOCHI_BASE_CLASS(mochi::Scene)
+  // Scene thread only. The scene keeps a retired debugger alive until its next debugger update.
+  MOCHI_PROPERTY("debug", (+[](SceneImpl const& self) -> dbg::SceneDebugger& {
+                   auto debugger = self.GetDebugger();
+                   if (!debugger) {
+                     throw std::runtime_error("The scene has no debugger client connected");
+                   }
+                   return *debugger;
+                 }))
+  MOCHI_ATTRIBUTE(NoSerialize)
   MOCHI_STRUCT_END()
 };
 

@@ -109,6 +109,25 @@ TEST_F(SceneRestoreTest, RestoreSceneStateRestoresInitialStateWithoutChangingMod
   EXPECT_EQ(StepMode::Play, GetDebugger(scene)->GetStepMode());
 }
 
+TEST_F(SceneRestoreTest, ConsoleRestoreRestoresInitialState) {
+  _client->SetSceneStepMode(StepMode::Play);
+  Scene* scene = _context->CreateScene("ConsoleRestore");
+  Actor* actor = CreateRigidActor(scene, Real3{1_r, 2_r, 3_r});
+  TransformRT const initialTransform = actor->GetRootTransform();
+  ConnectSelectedPlayingScene(scene);
+
+  // The debugger captures the initial state snapshot just before the first step.
+  scene->Step(kTimeStep);
+
+  actor->SetRootTransform(TransformRT{Real3{4_r, 5_r, 6_r}}, test::ExpectOK{});
+  _client->QueueCommand("/scenes/ConsoleRestore/debug/Restore");
+  EXPECT_TRUE(test::WaitUntil([&]() {
+    scene->UpdateDebugger();
+    return actor->GetRootTransform().GetTranslation() == initialTransform.GetTranslation();
+  }));
+  _client->WaitForQueuedCommands();
+}
+
 TEST_F(SceneRestoreTest, RestoreSceneStateFailureLogsWarning) {
   _client->SetSceneStepMode(StepMode::Play);
   Scene* scene = _context->CreateScene("RestoreSceneStateFailure");

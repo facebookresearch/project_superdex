@@ -18,6 +18,7 @@
 
 #include <mochi_core/test/mochi_test_helpers.h>
 #include <mochi_core/test/wait_until.h>
+#include <mochi_core/utils/defer.h>
 #include <mochi_physics/dbg/protocol.h>
 #include <mochi_physics/mochi_physics.h>
 #include <mochi_physics/src/mochi_scene.h>
@@ -56,6 +57,11 @@ class ScenePauseTest : public MochiDebuggerTest {
 
   static std::shared_ptr<SceneDebugger> GetDebugger(Scene* scene) {
     return assert_cast<SceneImpl*>(scene)->GetDebugger();
+  }
+
+  void RunCommand(std::string_view command) {
+    _client->QueueCommand(command);
+    _client->WaitForQueuedCommands();
   }
 
   static void WaitForServerMode(Scene* scene, StepMode mode) {
@@ -103,6 +109,46 @@ TEST_F(ScenePauseTest, NewScenePauseOnStart) {
   auto sceneDebuggerA = assert_cast<SceneImpl*>(sceneA)->GetDebugger();
   ASSERT_NE(nullptr, sceneDebuggerA);
   EXPECT_TRUE(sceneDebuggerA->IsPaused()); // Paused automatically
+}
+
+TEST_F(ScenePauseTest, PauseNewScenesSetsInitialModeAndLeavesExistingScenesAlone) {
+  StartServer();
+  ConnectClient();
+  Scene* sceneA = _context->CreateScene("A");
+  sceneA->UpdateDebugger();
+  EXPECT_TRUE(GetDebugger(sceneA)->IsPaused());
+
+  RunCommand("/debug/pauseNewScenes false");
+  Scene* sceneB = _context->CreateScene("B");
+  sceneB->UpdateDebugger();
+  EXPECT_FALSE(GetDebugger(sceneB)->IsPaused());
+  sceneA->UpdateDebugger();
+  EXPECT_TRUE(GetDebugger(sceneA)->IsPaused());
+
+  RunCommand("/debug/pauseNewScenes true");
+  Scene* sceneC = _context->CreateScene("C");
+  sceneC->UpdateDebugger();
+  EXPECT_TRUE(GetDebugger(sceneC)->IsPaused());
+  sceneB->UpdateDebugger();
+  EXPECT_FALSE(GetDebugger(sceneB)->IsPaused());
+}
+
+TEST_F(ScenePauseTest, PauseAllAndUnpauseAllChangeEveryScene) {
+  Scene* sceneA = _context->CreateScene("A");
+  Scene* sceneB = _context->CreateScene("B");
+  StartServer();
+  ConnectClient();
+
+  RunCommand("/debug/UnpauseAll");
+  for (Scene* scene : {sceneA, sceneB}) {
+    scene->UpdateDebugger();
+    EXPECT_FALSE(GetDebugger(scene)->IsPaused());
+  }
+  RunCommand("/debug/PauseAll");
+  for (Scene* scene : {sceneA, sceneB}) {
+    scene->UpdateDebugger();
+    EXPECT_TRUE(GetDebugger(scene)->IsPaused());
+  }
 }
 
 TEST_F(ScenePauseTest, PlayModeBeforeConnect) {
@@ -298,6 +344,38 @@ TEST_F(ScenePauseTest, SingleStepPausesScene) {
 
   // This step will not block, but a 2nd step would block.
   scene->Step(kTimeStep);
+}
+
+TEST_F(ScenePauseTest, ConsoleStepAllowsExactlyOneStepThenUnpauseResumes) {
+  Scene* scene = _context->CreateScene("console_scene");
+  StartServer();
+  ConnectClient();
+  auto debugger = GetDebugger(scene);
+  ASSERT_NE(nullptr, debugger);
+  std::atomic<bool> ready = false;
+  std::atomic<int> steps = 0;
+  std::thread thread{[&] {
+    assert_cast<SceneImpl*>(scene)->SetThreadAffinity();
+    ready = true;
+    for (int i = 0; i < 3; ++i) {
+      scene->Step(kTimeStep);
+      ++steps;
+    }
+  }};
+  MOCHI_DEFER(DisconnectClient(); thread.join());
+  ASSERT_TRUE(test::WaitUntil([&] { return ready.load(); }));
+  EXPECT_FALSE(test::WaitUntil([&] { return steps > 0; }, kShortTimeout, false));
+
+  _client->QueueCommand("/scenes/console_scene/debug/Step");
+  _client->WaitForQueuedCommands();
+  ASSERT_TRUE(test::WaitUntil([&] { return steps == 1; }));
+  EXPECT_TRUE(debugger->IsPaused());
+  EXPECT_FALSE(test::WaitUntil([&] { return steps > 1; }, kShortTimeout, false));
+
+  _client->QueueCommand("/scenes/console_scene/debug/Play");
+  _client->WaitForQueuedCommands();
+  EXPECT_TRUE(test::WaitUntil([&] { return steps == 3; }));
+  EXPECT_FALSE(debugger->IsPaused());
 }
 
 TEST_F(ScenePauseTest, UnpauseWhenClientDisconnects) {

@@ -16,9 +16,8 @@
 
 #pragma once
 
-#include <mochi_core/utils/dynamic_array.h>
+#include <mochi_core/utils/reflection.h>
 #include <mochi_physics/cpp_api/mochi_handle.h>
-#include <mochi_physics/dbg/protocol.h>
 
 #include <functional>
 #include <memory>
@@ -36,13 +35,15 @@ class MessageServer;
 
 namespace mochi::dbg {
 
+enum class StepMode;
+
 // Simulation duration of one SceneImpl::Step [s], excluding callbacks. Zero if not simulated.
 struct StepProfileTimers {
   int numWorkerThreads = 0; // Effective workers when simulation begins
   double stepSec = 0.0;
 };
 
-class SceneDebugger {
+class SceneDebugger : public SReflect::BaseObject {
  public:
   using ClockFn = std::function<double()>;
 
@@ -71,9 +72,7 @@ class SceneDebugger {
   virtual StepMode GetStepMode() const = 0;
 
   // Check the current pause state (modified by queued messages). Thread-safe.
-  bool IsPaused() const {
-    return GetStepMode() == StepMode::Pause;
-  }
+  bool IsPaused() const;
 
   // Override the clock used by debugger timing. Clock values are elapsed seconds. Pass an empty
   // function to restore the default clock.
@@ -91,6 +90,9 @@ class SceneDebugger {
   virtual void ShutdownOnSceneThread(SceneImpl* scene) = 0;
 
   virtual ~SceneDebugger() = default;
+
+  MOCHI_STRUCT_BEGIN(mochi::dbg::SceneDebugger)
+  MOCHI_STRUCT_END()
 };
 
 std::shared_ptr<dbg::SceneDebugger>

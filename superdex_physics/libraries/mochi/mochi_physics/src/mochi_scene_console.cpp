@@ -359,6 +359,14 @@ static SceneTarget ResolveScenePath(SceneImpl& scene, std::string_view path, siz
     target.type = &actorInterface->GetFinalTypeInfo();
     target.pathStart = startAt(i);
     target.actor = actor;
+  } else if (!steps.empty() && steps[0].name == "debug") {
+    auto const debugger = scene.GetDebugger();
+    if (!debugger) {
+      return fail("The scene has no debugger client connected", steps[0].offset);
+    }
+    target.object = dynamic_cast<void*>(debugger.get());
+    target.type = &debugger->GetFinalTypeInfo();
+    target.pathStart = startAt(1);
   } else if (!steps.empty() && steps[0].name == "debugDraw") {
     auto* draw = assert_cast<DebugDrawInternal*>(&scene.GetDebugDraw());
     target.object = dynamic_cast<void*>(draw);
