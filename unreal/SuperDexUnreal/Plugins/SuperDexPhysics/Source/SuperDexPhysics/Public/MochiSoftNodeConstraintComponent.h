@@ -60,6 +60,10 @@ enum class EMochiSoftNodeSelection : uint8 {
    */
   InsideRigidBounds UMETA(DisplayName = "Inside Rigid Bounds"),
 };
+// UMochiSoftNodeConstraintComponent::NodeSelection's default casts a bool to this enum.
+static_assert(
+    static_cast<uint8>(EMochiSoftNodeSelection::Index) == 0 &&
+    static_cast<uint8>(EMochiSoftNodeSelection::Closest) == 1);
 
 /**
  * Ties nodes of a deformable body (a soft, shell or rod component) to this component's location, a
@@ -109,9 +113,8 @@ class SUPERDEXPHYSICS_API UMochiSoftNodeConstraintComponent : public UMochiConst
       meta =
           (EditCondition = "Type != EMochiSoftNodeConstraintType::NodePosition",
            EditConditionHides))
-  EMochiSoftNodeSelection NodeSelection = mochi::DeformableNodeToRigidConstraintParams{}.findClosest
-      ? EMochiSoftNodeSelection::Closest
-      : EMochiSoftNodeSelection::Index;
+  EMochiSoftNodeSelection NodeSelection = static_cast<EMochiSoftNodeSelection>(
+      mochi::DeformableNodeToRigidConstraintParams{}.findClosest);
 
   /** The node of Body. */
   UPROPERTY(
