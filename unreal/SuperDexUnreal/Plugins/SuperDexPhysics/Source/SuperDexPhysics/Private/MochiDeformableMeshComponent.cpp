@@ -90,6 +90,33 @@ bool UMochiDeformableMeshComponent::AddRenderModelAttributes(
   return false;
 }
 
+void UMochiDeformableMeshComponent::ConfigureShading() {
+  SetEnableFlatShading(!bUseMochiNodeNormals);
+  if (!bUseMochiNodeNormals) {
+    return;
+  }
+  if (!RenderModelUVs.IsEmpty()) {
+    // Normal maps need tangents that follow the deformation.
+    SetTangentsType(EDynamicMeshComponentTangentsMode::AutoCalculated);
+  }
+  if (!RenderModelColors.IsEmpty()) {
+    // Converts the linear colors as a static mesh does.
+    SetVertexColorSpaceTransformMode(EDynamicMeshVertexColorTransformMode::LinearToSRGB);
+  }
+}
+
+void UMochiDeformableMeshComponent::WarnIfRenderModelAttributesNotDrawn() const {
+  if (!bUseMochiNodeNormals && (!RenderModelUVs.IsEmpty() || !RenderModelColors.IsEmpty())) {
+    UE_LOG(
+        LogMochiPhysics,
+        Warning,
+        TEXT(
+            "%s has render model UVs or colors, which aren't drawn because Use Mochi Node Normals "
+            "is off: flat shading can't give the render model's material matching tangents."),
+        *GetPathName());
+  }
+}
+
 void UMochiDeformableMeshComponent::DestroyMochiActor() {
   if (MochiActorObject) {
     MochiActorObject->DestroyMochiResources();
@@ -118,6 +145,7 @@ UMochiDeformableMeshComponent::UMochiDeformableMeshComponent(
 
 void UMochiDeformableMeshComponent::BeginPlay() {
   MOCHI_PROFILE_SCOPE();
+  WarnIfRenderModelAttributesNotDrawn();
 
   if (!MochiComponentTags::AreComponentsDisabled(GetOwner()) && MochiActorObject == nullptr) {
     CreateMochiActor();
@@ -130,6 +158,17 @@ void UMochiDeformableMeshComponent::EndPlay(const EEndPlayReason::Type EndPlayRe
   Super::EndPlay(EndPlayReason);
   DestroyMochiActor();
 }
+
+#if WITH_EDITOR
+void UMochiDeformableMeshComponent::PostEditChangeProperty(
+    FPropertyChangedEvent& PropertyChangedEvent) {
+  if (PropertyChangedEvent.GetPropertyName() ==
+      GET_MEMBER_NAME_CHECKED(UMochiDeformableMeshComponent, bUseMochiNodeNormals)) {
+    WarnIfRenderModelAttributesNotDrawn();
+  }
+  Super::PostEditChangeProperty(PropertyChangedEvent);
+}
+#endif
 
 void UMochiDeformableMeshComponent::TickComponent(
     float DeltaTime,

@@ -140,38 +140,10 @@ void UMochiSoftMeshComponent::SetMochiModel(UMochiModel* NewMochiModel) {
 
 void UMochiSoftMeshComponent::OnRegister() {
   MOCHI_PROFILE_SCOPE();
-  SetEnableFlatShading(!bUseMochiNodeNormals);
-  if (bUseMochiNodeNormals) {
-    if (!RenderModelUVs.IsEmpty()) {
-      // Normal maps need tangents that follow the deformation.
-      SetTangentsType(EDynamicMeshComponentTangentsMode::AutoCalculated);
-    }
-    if (!RenderModelColors.IsEmpty()) {
-      // Converts the linear colors as a static mesh does.
-      SetVertexColorSpaceTransformMode(EDynamicMeshVertexColorTransformMode::LinearToSRGB);
-    }
-  }
+  ConfigureShading();
   RebuildPreviewMesh();
   ValidateMaterialSlots();
   Super::OnRegister();
-}
-
-void UMochiSoftMeshComponent::BeginPlay() {
-  MOCHI_PROFILE_SCOPE();
-  WarnIfRenderModelAttributesNotDrawn();
-  Super::BeginPlay();
-}
-
-void UMochiSoftMeshComponent::WarnIfRenderModelAttributesNotDrawn() const {
-  if (!bUseMochiNodeNormals && (!RenderModelUVs.IsEmpty() || !RenderModelColors.IsEmpty())) {
-    UE_LOG(
-        LogMochiPhysics,
-        Warning,
-        TEXT(
-            "%s has render model UVs or colors, which aren't drawn because Use Mochi Node Normals "
-            "is off: flat shading can't give the render model's material matching tangents."),
-        *GetPathName());
-  }
 }
 
 void UMochiSoftMeshComponent::SetExistingMochiActorHandle(mochi::ActorHandle Handle) {
@@ -195,9 +167,6 @@ void UMochiSoftMeshComponent::PostEditChangeProperty(FPropertyChangedEvent& Prop
   MOCHI_PROFILE_SCOPE();
   // Check for changes in the Model property, and regenerate dynamic mesh if needed
   const FName PropName = PropertyChangedEvent.GetPropertyName();
-  if (PropName == GET_MEMBER_NAME_CHECKED(UMochiSoftMeshComponent, bUseMochiNodeNormals)) {
-    WarnIfRenderModelAttributesNotDrawn();
-  }
   if (PropName == GET_MEMBER_NAME_CHECKED(UMochiSoftMeshComponent, Model)) {
     UE_LOG(LogMochiPhysics, Display, TEXT("[%hs] %s changed"), __FUNCTION__, *PropName.ToString());
 

@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-#include "SuperDexSoftRenderModel.h"
+#include "SuperDexDeformableRenderModel.h"
 
 #include "Algo/AnyOf.h"
 #include "GLTFAsset.h"
 #include "GLTFReader.h"
 #include "MochiGenTypes.h"
 
-namespace SuperDexSoftRenderModel {
+namespace SuperDexDeformableRenderModel {
 
 bool ReadRenderModelAttributes(
     const FString& Path,
@@ -45,7 +45,8 @@ bool ReadRenderModelAttributes(
           return Extension.Equals(GLTF::ToString(Supported), ESearchCase::CaseSensitive);
         })) {
       OutReason = FString::Printf(
-          TEXT("The GLB requires %s, which soft-actor render models don't support in Unreal."),
+          TEXT(
+              "The GLB requires %s, which deformable-actor render models don't support in Unreal."),
           *Extension);
       return false;
     }
@@ -59,7 +60,7 @@ bool ReadRenderModelAttributes(
     OutReason = TEXT("The GLB's primitive geometry is invalid.");
     return false;
   }
-  // The imported material may sample TEXCOORD_1, which the soft mesh does not supply.
+  // The imported material may sample TEXCOORD_1, which the deformable mesh does not supply.
   if (Primitive.HasTexCoords(1)) {
     OutReason = TEXT("The GLB's primitive has a texture-coordinate set other than TEXCOORD_0.");
     return false;
@@ -87,7 +88,7 @@ bool ReadRenderModelAttributes(
   return true;
 }
 
-FString CheckSoftRenderModelLink(
+FString CheckRenderModelLink(
     const FRenderModelAttributes& Attributes,
     const FMochiMeshData* VisualMesh) {
   if (!VisualMesh || VisualMesh->Coordinates.IsEmpty()) {
@@ -108,14 +109,24 @@ FString CheckSoftRenderModelLink(
     return TEXT("The render model's UV or color count differs from its vertex count.");
   }
   const TArray<int32>& Connectivity = VisualMesh->Connectivity;
-  bool bSameTriangles = Attributes.TriangleIndices.Num() == Connectivity.Num();
-  for (int32 i = 0; bSameTriangles && i < Connectivity.Num(); ++i) {
-    bSameTriangles = Attributes.TriangleIndices[i] == static_cast<uint32>(Connectivity[i]);
+  bool bSameTriangles =
+      Attributes.TriangleIndices.Num() == Connectivity.Num() && Connectivity.Num() % 3 == 0;
+  bool bReversedTriangles = bSameTriangles;
+  // A mirrored bake reverses every triangle, but preserves the vertex-to-attribute mapping.
+  for (int32 i = 0; (bSameTriangles || bReversedTriangles) && i < Connectivity.Num(); i += 3) {
+    bSameTriangles = bSameTriangles &&
+        Attributes.TriangleIndices[i] == static_cast<uint32>(Connectivity[i]) &&
+        Attributes.TriangleIndices[i + 1] == static_cast<uint32>(Connectivity[i + 1]) &&
+        Attributes.TriangleIndices[i + 2] == static_cast<uint32>(Connectivity[i + 2]);
+    bReversedTriangles = bReversedTriangles &&
+        Attributes.TriangleIndices[i] == static_cast<uint32>(Connectivity[i + 1]) &&
+        Attributes.TriangleIndices[i + 1] == static_cast<uint32>(Connectivity[i]) &&
+        Attributes.TriangleIndices[i + 2] == static_cast<uint32>(Connectivity[i + 2]);
   }
-  if (!bSameTriangles) {
+  if (!bSameTriangles && !bReversedTriangles) {
     return TEXT("The render model's triangles differ from the visual mesh's.");
   }
   return FString();
 }
 
-} // namespace SuperDexSoftRenderModel
+} // namespace SuperDexDeformableRenderModel

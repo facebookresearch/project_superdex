@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "SuperDexSoftRenderModel.h"
+#include "SuperDexDeformableRenderModel.h"
 
 #include "HAL/FileManager.h"
 #include "Misc/AutomationTest.h"
@@ -24,14 +24,14 @@
 
 #if WITH_DEV_AUTOMATION_TESTS
 
-#define SUPERDEX_SOFT_RENDER_MODEL_TEST_FLAGS \
+#define SUPERDEX_DEFORMABLE_RENDER_MODEL_TEST_FLAGS \
   (EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::SmokeFilter)
 
 namespace {
 
-using SuperDexSoftRenderModel::CheckSoftRenderModelLink;
-using SuperDexSoftRenderModel::FRenderModelAttributes;
-using SuperDexSoftRenderModel::ReadRenderModelAttributes;
+using SuperDexDeformableRenderModel::CheckRenderModelLink;
+using SuperDexDeformableRenderModel::FRenderModelAttributes;
+using SuperDexDeformableRenderModel::ReadRenderModelAttributes;
 
 // Two triangles over four vertices, listed out of vertex order.
 const TArray<float> Positions = {0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0};
@@ -130,7 +130,7 @@ FString WriteTestGlb(
       Bin.Num());
 
   const FString Path =
-      FPaths::Combine(FPaths::AutomationTransientDir(), TEXT("SoftRenderModel"), Name) +
+      FPaths::Combine(FPaths::AutomationTransientDir(), TEXT("DeformableRenderModel"), Name) +
       TEXT(".glb");
   FFileHelper::SaveArrayToFile(AssembleGlb(Json, MoveTemp(Bin)), *Path);
   return Path;
@@ -166,11 +166,11 @@ FRenderModelAttributes MakeAttributes() {
 } // namespace
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-    FSuperDexSoftRenderModelReadsAccessorOrderTest,
-    "SuperDexPhysics.SoftRenderModel.ReadsAttributesInAccessorOrder",
-    SUPERDEX_SOFT_RENDER_MODEL_TEST_FLAGS)
+    FSuperDexDeformableRenderModelReadsAccessorOrderTest,
+    "SuperDexPhysics.DeformableRenderModel.ReadsAttributesInAccessorOrder",
+    SUPERDEX_DEFORMABLE_RENDER_MODEL_TEST_FLAGS)
 
-bool FSuperDexSoftRenderModelReadsAccessorOrderTest::RunTest(const FString& Parameters) {
+bool FSuperDexDeformableRenderModelReadsAccessorOrderTest::RunTest(const FString& Parameters) {
   const FRenderModelAttributes Attributes = ReadTestGlb(
       *this, WriteTestGlb(TEXT("UVsAndColors"), TEXT(R"(,"TEXCOORD_0":2,"COLOR_0":3)")));
   TestEqual(TEXT("Vertex count"), Attributes.NumVertices, 4);
@@ -178,31 +178,31 @@ bool FSuperDexSoftRenderModelReadsAccessorOrderTest::RunTest(const FString& Para
   TestTrue(TEXT("UVs"), Attributes.UVs == ExpectedUVs());
   TestTrue(TEXT("Colors"), Attributes.Colors == ExpectedColors());
   const FMochiMeshData VisualMesh = MakeVisualMesh();
-  TestEqual(TEXT("Reason"), CheckSoftRenderModelLink(Attributes, &VisualMesh), FString());
+  TestEqual(TEXT("Reason"), CheckRenderModelLink(Attributes, &VisualMesh), FString());
   return true;
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-    FSuperDexSoftRenderModelNoUVsTest,
-    "SuperDexPhysics.SoftRenderModel.AConstantMaterialWithoutUVsIsLinked",
-    SUPERDEX_SOFT_RENDER_MODEL_TEST_FLAGS)
+    FSuperDexDeformableRenderModelNoUVsTest,
+    "SuperDexPhysics.DeformableRenderModel.AConstantMaterialWithoutUVsIsLinked",
+    SUPERDEX_DEFORMABLE_RENDER_MODEL_TEST_FLAGS)
 
-bool FSuperDexSoftRenderModelNoUVsTest::RunTest(const FString& Parameters) {
+bool FSuperDexDeformableRenderModelNoUVsTest::RunTest(const FString& Parameters) {
   const FRenderModelAttributes Attributes =
       ReadTestGlb(*this, WriteTestGlb(TEXT("NoUVs"), TEXT("")));
   TestTrue(TEXT("No UVs"), Attributes.UVs.IsEmpty());
   TestTrue(TEXT("No colors"), Attributes.Colors.IsEmpty());
   const FMochiMeshData VisualMesh = MakeVisualMesh();
-  TestEqual(TEXT("Reason"), CheckSoftRenderModelLink(Attributes, &VisualMesh), FString());
+  TestEqual(TEXT("Reason"), CheckRenderModelLink(Attributes, &VisualMesh), FString());
   return true;
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-    FSuperDexSoftRenderModelColorsWithoutUVsTest,
-    "SuperDexPhysics.SoftRenderModel.ReadsColorsWithoutUVs",
-    SUPERDEX_SOFT_RENDER_MODEL_TEST_FLAGS)
+    FSuperDexDeformableRenderModelColorsWithoutUVsTest,
+    "SuperDexPhysics.DeformableRenderModel.ReadsColorsWithoutUVs",
+    SUPERDEX_DEFORMABLE_RENDER_MODEL_TEST_FLAGS)
 
-bool FSuperDexSoftRenderModelColorsWithoutUVsTest::RunTest(const FString& Parameters) {
+bool FSuperDexDeformableRenderModelColorsWithoutUVsTest::RunTest(const FString& Parameters) {
   const FRenderModelAttributes Attributes =
       ReadTestGlb(*this, WriteTestGlb(TEXT("ColorsOnly"), TEXT(R"(,"COLOR_0":3)")));
   TestTrue(TEXT("No UVs"), Attributes.UVs.IsEmpty());
@@ -211,11 +211,11 @@ bool FSuperDexSoftRenderModelColorsWithoutUVsTest::RunTest(const FString& Parame
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-    FSuperDexSoftRenderModelMultiplePrimitivesTest,
-    "SuperDexPhysics.SoftRenderModel.MultiplePrimitivesAreNotRead",
-    SUPERDEX_SOFT_RENDER_MODEL_TEST_FLAGS)
+    FSuperDexDeformableRenderModelMultiplePrimitivesTest,
+    "SuperDexPhysics.DeformableRenderModel.MultiplePrimitivesAreNotRead",
+    SUPERDEX_DEFORMABLE_RENDER_MODEL_TEST_FLAGS)
 
-bool FSuperDexSoftRenderModelMultiplePrimitivesTest::RunTest(const FString& Parameters) {
+bool FSuperDexDeformableRenderModelMultiplePrimitivesTest::RunTest(const FString& Parameters) {
   const FString Reason = ReadFailureReason(*this, WriteTestGlb(TEXT("TwoPrimitives"), TEXT(""), 2));
   TestTrue(
       *FString::Printf(TEXT("Reason: %s"), *Reason),
@@ -224,11 +224,11 @@ bool FSuperDexSoftRenderModelMultiplePrimitivesTest::RunTest(const FString& Para
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-    FSuperDexSoftRenderModelSecondUVSetTest,
-    "SuperDexPhysics.SoftRenderModel.ASecondUVSetIsNotRead",
-    SUPERDEX_SOFT_RENDER_MODEL_TEST_FLAGS)
+    FSuperDexDeformableRenderModelSecondUVSetTest,
+    "SuperDexPhysics.DeformableRenderModel.ASecondUVSetIsNotRead",
+    SUPERDEX_DEFORMABLE_RENDER_MODEL_TEST_FLAGS)
 
-bool FSuperDexSoftRenderModelSecondUVSetTest::RunTest(const FString& Parameters) {
+bool FSuperDexDeformableRenderModelSecondUVSetTest::RunTest(const FString& Parameters) {
   const FString Reason = ReadFailureReason(
       *this, WriteTestGlb(TEXT("SecondUVSet"), TEXT(R"(,"TEXCOORD_0":2,"TEXCOORD_1":2)")));
   TestTrue(*FString::Printf(TEXT("Reason: %s"), *Reason), Reason.Contains(TEXT("TEXCOORD_0")));
@@ -236,11 +236,11 @@ bool FSuperDexSoftRenderModelSecondUVSetTest::RunTest(const FString& Parameters)
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-    FSuperDexSoftRenderModelMeshoptTest,
-    "SuperDexPhysics.SoftRenderModel.RequiredMeshoptIsNotRead",
-    SUPERDEX_SOFT_RENDER_MODEL_TEST_FLAGS)
+    FSuperDexDeformableRenderModelMeshoptTest,
+    "SuperDexPhysics.DeformableRenderModel.RequiredMeshoptIsNotRead",
+    SUPERDEX_DEFORMABLE_RENDER_MODEL_TEST_FLAGS)
 
-bool FSuperDexSoftRenderModelMeshoptTest::RunTest(const FString& Parameters) {
+bool FSuperDexDeformableRenderModelMeshoptTest::RunTest(const FString& Parameters) {
   const FString Reason = ReadFailureReason(
       *this,
       WriteTestGlb(
@@ -257,25 +257,25 @@ bool FSuperDexSoftRenderModelMeshoptTest::RunTest(const FString& Parameters) {
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-    FSuperDexSoftRenderModelNoVisualMeshTest,
-    "SuperDexPhysics.SoftRenderModel.NoVisualMeshIsNotLinked",
-    SUPERDEX_SOFT_RENDER_MODEL_TEST_FLAGS)
+    FSuperDexDeformableRenderModelNoVisualMeshTest,
+    "SuperDexPhysics.DeformableRenderModel.NoVisualMeshIsNotLinked",
+    SUPERDEX_DEFORMABLE_RENDER_MODEL_TEST_FLAGS)
 
-bool FSuperDexSoftRenderModelNoVisualMeshTest::RunTest(const FString& Parameters) {
-  const FString Reason = CheckSoftRenderModelLink(MakeAttributes(), nullptr);
+bool FSuperDexDeformableRenderModelNoVisualMeshTest::RunTest(const FString& Parameters) {
+  const FString Reason = CheckRenderModelLink(MakeAttributes(), nullptr);
   TestTrue(*FString::Printf(TEXT("Reason: %s"), *Reason), Reason.Contains(TEXT("no visual mesh")));
   return true;
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-    FSuperDexSoftRenderModelNoSkinningTest,
-    "SuperDexPhysics.SoftRenderModel.AVisualMeshWithoutSkinningIsNotLinked",
-    SUPERDEX_SOFT_RENDER_MODEL_TEST_FLAGS)
+    FSuperDexDeformableRenderModelNoSkinningTest,
+    "SuperDexPhysics.DeformableRenderModel.AVisualMeshWithoutSkinningIsNotLinked",
+    SUPERDEX_DEFORMABLE_RENDER_MODEL_TEST_FLAGS)
 
-bool FSuperDexSoftRenderModelNoSkinningTest::RunTest(const FString& Parameters) {
+bool FSuperDexDeformableRenderModelNoSkinningTest::RunTest(const FString& Parameters) {
   FMochiMeshData VisualMesh = MakeVisualMesh();
   VisualMesh.Skinning.Reset();
-  const FString Reason = CheckSoftRenderModelLink(MakeAttributes(), &VisualMesh);
+  const FString Reason = CheckRenderModelLink(MakeAttributes(), &VisualMesh);
   TestTrue(
       *FString::Printf(TEXT("Reason: %s"), *Reason),
       Reason.Contains(TEXT("no deformation embedding")));
@@ -283,15 +283,15 @@ bool FSuperDexSoftRenderModelNoSkinningTest::RunTest(const FString& Parameters) 
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-    FSuperDexSoftRenderModelVertexCountTest,
-    "SuperDexPhysics.SoftRenderModel.ADifferentVertexCountIsNotLinked",
-    SUPERDEX_SOFT_RENDER_MODEL_TEST_FLAGS)
+    FSuperDexDeformableRenderModelVertexCountTest,
+    "SuperDexPhysics.DeformableRenderModel.ADifferentVertexCountIsNotLinked",
+    SUPERDEX_DEFORMABLE_RENDER_MODEL_TEST_FLAGS)
 
-bool FSuperDexSoftRenderModelVertexCountTest::RunTest(const FString& Parameters) {
+bool FSuperDexDeformableRenderModelVertexCountTest::RunTest(const FString& Parameters) {
   FRenderModelAttributes Attributes = MakeAttributes();
   Attributes.NumVertices = 3;
   const FMochiMeshData VisualMesh = MakeVisualMesh();
-  const FString Reason = CheckSoftRenderModelLink(Attributes, &VisualMesh);
+  const FString Reason = CheckRenderModelLink(Attributes, &VisualMesh);
   TestTrue(
       *FString::Printf(TEXT("Reason: %s"), *Reason),
       Reason.Contains(TEXT("has 3 vertices, but the visual mesh has 4")));
@@ -299,11 +299,11 @@ bool FSuperDexSoftRenderModelVertexCountTest::RunTest(const FString& Parameters)
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-    FSuperDexSoftRenderModelAttributeCountTest,
-    "SuperDexPhysics.SoftRenderModel.ADifferentUVOrColorCountIsNotLinked",
-    SUPERDEX_SOFT_RENDER_MODEL_TEST_FLAGS)
+    FSuperDexDeformableRenderModelAttributeCountTest,
+    "SuperDexPhysics.DeformableRenderModel.ADifferentUVOrColorCountIsNotLinked",
+    SUPERDEX_DEFORMABLE_RENDER_MODEL_TEST_FLAGS)
 
-bool FSuperDexSoftRenderModelAttributeCountTest::RunTest(const FString& Parameters) {
+bool FSuperDexDeformableRenderModelAttributeCountTest::RunTest(const FString& Parameters) {
   const FMochiMeshData VisualMesh = MakeVisualMesh();
   FRenderModelAttributes ShortUVs = MakeAttributes();
   ShortUVs.UVs = ExpectedUVs();
@@ -312,7 +312,7 @@ bool FSuperDexSoftRenderModelAttributeCountTest::RunTest(const FString& Paramete
   ShortColors.Colors = ExpectedColors();
   ShortColors.Colors.Pop();
   for (const FRenderModelAttributes& Attributes : {ShortUVs, ShortColors}) {
-    const FString Reason = CheckSoftRenderModelLink(Attributes, &VisualMesh);
+    const FString Reason = CheckRenderModelLink(Attributes, &VisualMesh);
     TestTrue(
         *FString::Printf(TEXT("Reason: %s"), *Reason), Reason.Contains(TEXT("UV or color count")));
   }
@@ -320,19 +320,41 @@ bool FSuperDexSoftRenderModelAttributeCountTest::RunTest(const FString& Paramete
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-    FSuperDexSoftRenderModelTrianglesTest,
-    "SuperDexPhysics.SoftRenderModel.ADifferentTriangleIsNotLinked",
-    SUPERDEX_SOFT_RENDER_MODEL_TEST_FLAGS)
+    FSuperDexDeformableRenderModelTrianglesTest,
+    "SuperDexPhysics.DeformableRenderModel.ADifferentTriangleIsNotLinked",
+    SUPERDEX_DEFORMABLE_RENDER_MODEL_TEST_FLAGS)
 
-bool FSuperDexSoftRenderModelTrianglesTest::RunTest(const FString& Parameters) {
+bool FSuperDexDeformableRenderModelTrianglesTest::RunTest(const FString& Parameters) {
   FRenderModelAttributes Attributes = MakeAttributes();
   Attributes.TriangleIndices[5] = 1;
-  const FMochiMeshData VisualMesh = MakeVisualMesh();
-  const FString Reason = CheckSoftRenderModelLink(Attributes, &VisualMesh);
-  TestTrue(*FString::Printf(TEXT("Reason: %s"), *Reason), Reason.Contains(TEXT("triangles")));
+  FMochiMeshData VisualMesh = MakeVisualMesh();
+  TestTrue(
+      TEXT("Different indexed triangle"),
+      CheckRenderModelLink(Attributes, &VisualMesh).Contains(TEXT("triangles")));
+
+  TArray<int32>& Connectivity = VisualMesh.Connectivity;
+  for (int32 i = 0; i < Connectivity.Num(); i += 3) {
+    Swap(Connectivity[i], Connectivity[i + 1]);
+  }
+  TestEqual(
+      TEXT("Global winding reversal"),
+      CheckRenderModelLink(MakeAttributes(), &VisualMesh),
+      FString());
+  Swap(Connectivity[0], Connectivity[1]);
+  TestTrue(
+      TEXT("Mixed winding changes"),
+      CheckRenderModelLink(MakeAttributes(), &VisualMesh).Contains(TEXT("triangles")));
+
+  Attributes = MakeAttributes();
+  Attributes.TriangleIndices.Pop();
+  VisualMesh = MakeVisualMesh();
+  VisualMesh.Connectivity.Pop();
+  TestTrue(
+      TEXT("Incomplete triangle"),
+      CheckRenderModelLink(Attributes, &VisualMesh).Contains(TEXT("triangles")));
   return true;
 }
 
-#undef SUPERDEX_SOFT_RENDER_MODEL_TEST_FLAGS
+#undef SUPERDEX_DEFORMABLE_RENDER_MODEL_TEST_FLAGS
 
 #endif // WITH_DEV_AUTOMATION_TESTS

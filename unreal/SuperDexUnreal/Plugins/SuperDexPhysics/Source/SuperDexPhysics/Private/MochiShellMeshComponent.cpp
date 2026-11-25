@@ -88,7 +88,7 @@ UMochiShellMeshComponent::UMochiShellMeshComponent(const FObjectInitializer& Obj
 
 void UMochiShellMeshComponent::OnRegister() {
   MOCHI_PROFILE_SCOPE();
-  SetEnableFlatShading(!bUseMochiNodeNormals);
+  ConfigureShading();
   RebuildPreviewMesh();
   ValidateMaterialSlots();
   Super::OnRegister();

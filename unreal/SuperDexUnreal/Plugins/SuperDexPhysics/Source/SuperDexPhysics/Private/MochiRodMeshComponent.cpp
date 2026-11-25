@@ -97,7 +97,7 @@ void UMochiRodMeshComponent::EnsureBodySetupPublic() {
 void UMochiRodMeshComponent::OnRegister() {
   MOCHI_PROFILE_SCOPE();
   Super::OnRegister();
-  SetEnableFlatShading(!bUseMochiNodeNormals);
+  ConfigureShading();
   RebuildPreviewMesh();
   EnsureBodySetupPublic();
   ValidateMaterialSlots();

@@ -131,8 +131,6 @@ class SUPERDEXPHYSICS_API UMochiSoftMeshComponent : public UMochiDeformableMeshC
    */
   void SetMochiModel(UMochiModel* NewMochiModel);
 
-  virtual void BeginPlay() override;
-
   // TODO: No the most graceful, but permits a path to create a dynamic mesh component from an
   // existing Mochi actor handle.
   /**
@@ -152,8 +150,6 @@ class SUPERDEXPHYSICS_API UMochiSoftMeshComponent : public UMochiDeformableMeshC
   virtual void OnQueryDataApplied(const FMochiActorQueryData& QueryData) override;
 
  private:
-  void WarnIfRenderModelAttributesNotDrawn() const;
-
   /** Cached node positions in local space. */
   TArray<FVector> VolumeNodeReferencePositions;
   TArray<FVector> VolumeNodePositions;

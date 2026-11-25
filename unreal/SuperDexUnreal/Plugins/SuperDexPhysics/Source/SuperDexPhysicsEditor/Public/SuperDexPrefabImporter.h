@@ -27,6 +27,7 @@ class FSuperDexImportSession;
 class UBlueprint;
 class UMochiArticulation;
 class UMochiContactParams;
+class UMochiDeformableMeshComponent;
 class UMochiMaterialParams;
 class UMochiModel;
 class UMochiRodMaterialParams;
@@ -319,6 +320,18 @@ class SUPERDEXPHYSICSEDITOR_API FSuperDexPrefabImporter {
       FOutput& Output,
       const mochi::prefab::SoftActorPrefab& Actor,
       const FString& ActorName);
+
+  /**
+   * Link the GLB render model File, if any, to Component's visual mesh and assign its material.
+   * Logs a warning naming the ActorType actor if it cannot be drawn.
+   */
+  void LinkRenderModel(
+      FPrefabContext& Context,
+      UMochiDeformableMeshComponent& Component,
+      const mochi::DynamicString& File,
+      const TCHAR* ActorType,
+      const FString& ActorName);
+
   void AddRodActor(
       FPrefabContext& Context,
       FOutput& Output,

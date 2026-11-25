@@ -153,6 +153,9 @@ class SUPERDEXPHYSICS_API UMochiDeformableMeshComponent : public UDynamicMeshCom
       float DeltaTime,
       enum ELevelTick TickType,
       FActorComponentTickFunction* ThisTickFunction) override;
+#if WITH_EDITOR
+  virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
+#endif
 
   // Begin UPrimitiveComponent Interface
   virtual UMaterialInterface* GetMaterial(int32 ElementIndex) const override;
@@ -172,6 +175,12 @@ class SUPERDEXPHYSICS_API UMochiDeformableMeshComponent : public UDynamicMeshCom
   bool HasExistingMochiActor() const {
     return MochiExistingActor.IsValid();
   }
+
+  /**
+   * Set the shading the drawn mesh and its render-model attributes need. Call at registration,
+   * before building the mesh.
+   */
+  void ConfigureShading();
 
   /**
    * Subclass hook called from @ref TickComponent after the standard per-step update.
@@ -196,4 +205,5 @@ class SUPERDEXPHYSICS_API UMochiDeformableMeshComponent : public UDynamicMeshCom
       UE::Geometry::FDynamicMesh3& Mesh) const;
   bool AddRenderModelAttributes(UE::Geometry::FDynamicMesh3& Mesh, EMochiRenderMeshSource Source)
       const;
+  void WarnIfRenderModelAttributesNotDrawn() const;
 };

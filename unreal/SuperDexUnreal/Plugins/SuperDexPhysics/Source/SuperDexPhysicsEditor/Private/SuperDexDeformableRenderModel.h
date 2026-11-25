@@ -20,10 +20,10 @@
 
 struct FMochiMeshData;
 
-// A SuperDex Studio soft actor's GLB render model, as Unreal draws it: the actor's visual mesh,
-// with the render model's material and per-vertex attributes. Unlike Studio, Unreal never draws
-// the render model's own positions, so they and its placement in the prefab are not checked.
-namespace SuperDexSoftRenderModel {
+// A SuperDex Studio deformable actor's GLB render model, as Unreal draws it: the actor's visual
+// mesh, with the render model's material and per-vertex attributes. Unlike Studio, Unreal never
+// draws the render model's own positions, so they and its placement in the prefab are not checked.
+namespace SuperDexDeformableRenderModel {
 
 // The per-vertex attributes of a GLB's one mesh primitive, in accessor order.
 struct FRenderModelAttributes {
@@ -45,10 +45,11 @@ bool ReadRenderModelAttributes(
 
 // Why Attributes can't be drawn on VisualMesh (null if the model has none), or empty if they can:
 // the visual mesh must have a deformation embedding, and the render model must have its vertex
-// count and triangle indices, so that render-model vertex i is visual-mesh node i. UVs and colors
-// must each be empty or have one entry per vertex.
-FString CheckSoftRenderModelLink(
+// count and triangle indices, so that render-model vertex i is visual-mesh node i. A consistent
+// global swap of the first two indices of every triangle from a mirrored Mochi bake is accepted.
+// UVs and colors must each be empty or have one entry per vertex.
+FString CheckRenderModelLink(
     const FRenderModelAttributes& Attributes,
     const FMochiMeshData* VisualMesh);
 
-} // namespace SuperDexSoftRenderModel
+} // namespace SuperDexDeformableRenderModel
