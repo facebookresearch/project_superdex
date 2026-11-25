@@ -1,0 +1,89 @@
+{
+  "metadata": {
+    "name": "Box and blocks: move the red block",
+    "description": "The Box and Block Test box sits on the workbench in front of the arm with a red and a blue block in its compartment at -y. Pick up the red block, lift it over the partition, place it in the compartment at +y and pull the gripper away. Success: for 0.5 s, the red block rests in the +y compartment and the gripper is at least 20 cm from it. Failure: the red block falls off the workbench.",
+    "version": "1.0"
+  },
+  "timeLimitS": 20.0,
+  "resetState": [
+    {
+      "name": "box_and_blocks",
+      "prefabName": "box_and_two_blocks",
+      "parentFromSpawn": {
+        "rotation": [
+          0,
+          0,
+          0.70710678,
+          0.70710678
+        ],
+        "translation": [
+          0.277,
+          -0.2685,
+          0
+        ]
+      }
+    }
+  ],
+  "terminationCriteria": {
+    "success": {
+      "combinator": "All",
+      "criteria": [
+        {
+          "RelativeBounds": {
+            "targetTaskObject": "box_and_blocks.Box",
+            "taskObject": "box_and_blocks.Block_red/Block_red",
+            "comparator": "Inside",
+            "xRangeM": [
+              0.2735,
+              0.527
+            ],
+            "yRangeM": [
+              0.01,
+              0.244
+            ],
+            "zRangeM": [
+              0.0,
+              0.085
+            ]
+          }
+        },
+        {
+          "SphericalProximity": {
+            "taskObjectA": "box_and_blocks.Block_red/Block_red",
+            "taskObjectB": "fr3_v2_2f_85.2f_85_base_link",
+            "comparator": "GreaterThan",
+            "thresholdM": 0.2
+          }
+        }
+      ],
+      "validationTimeS": 0.5
+    },
+    "failure": {
+      "combinator": "Any",
+      "criteria": [
+        {
+          "RelativeBounds": {
+            "targetTaskObject": "box_and_blocks.Box",
+            "taskObject": "box_and_blocks.Block_red/Block_red",
+            "comparator": "Inside",
+            "xRangeM": [
+              -10.0,
+              10.0
+            ],
+            "yRangeM": [
+              -10.0,
+              10.0
+            ],
+            "zRangeM": [
+              -10.0,
+              -0.05
+            ]
+          }
+        }
+      ]
+    },
+    "sceneObjects": [
+      "fr3_v2_2f_85"
+    ]
+  }
+}

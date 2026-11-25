@@ -1,0 +1,76 @@
+{
+  "bots": [
+    {
+      "controllers": [
+        {
+          "initArgs": {
+            "baseLinkName": "fr3_link0",
+            "eeLinkName": "fr3_link8"
+          },
+          "name": "osc",
+          "params": "controllers/osc.superdex_controller",
+          "type": "BASIC_OSC_PD"
+        },
+        {
+          "name": "gripper",
+          "params": "controllers/jsc.superdex_controller",
+          "type": "BASIC_JSC_PD"
+        }
+      ],
+      "hasGravity": false,
+      "initialPose": [
+        0,
+        -0.78539818525314331,
+        0,
+        -2.3561944961547852,
+        0,
+        1.5707963705062866,
+        1.5707963705062866,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "name": "fr3",
+      "parentFromBot": {
+        "translation": [
+          -0.14000000059604645,
+          0,
+          0.89999997615814209
+        ]
+      },
+      "path": "@bots/arm_hand_combos/fr3_v2_2f_85/fr3_v2_2f_85.superdex_bot"
+    }
+  ],
+  "metadata": {
+    "description": "An FR3 V2 arm with a Robotiq 2F-85 gripper mounted on the SuperDex workbench, with a Box and Block Test box holding two blocks as a task object.",
+    "name": "FR3 V2 + 2F-85 box and blocks workbench",
+    "version": "1.0"
+  },
+  "scene": {
+    "baseScene": "scene/workbench.mochi_scene",
+    "spawnablePrefabs": [
+      {
+        "name": "box_and_two_blocks",
+        "path": "@prefabs/box_and_blocks/box_and_two_blocks.superdex_prefab"
+      }
+    ],
+    "taskRoot": {
+      "translation": [
+        0,
+        0,
+        0.89999997615814209
+      ]
+    }
+  },
+  "slots": [
+    {
+      "controlledBots": [
+        "fr3"
+      ],
+      "name": "arm"
+    }
+  ]
+}

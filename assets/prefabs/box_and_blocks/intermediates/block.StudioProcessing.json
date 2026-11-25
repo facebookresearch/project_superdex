@@ -1,10 +1,10 @@
 {
   "editorState": {
     "cadRotation": [
+      0.70710676908493042,
       0,
       0,
-      0,
-      1
+      0.70710676908493042
     ],
     "cadScale": [
       1,
@@ -19,16 +19,17 @@
   },
   "modifiers": [
     {
-      "collapsed": false,
+      "collapsed": true,
       "enabled": true,
       "method": "From Model Viewer",
       "modifier": "Source from CAD Model",
       "properties": {
         "allowPartialFailure": true,
         "angularDeflection": 0.25,
-        "backend": "CadMesher",
-        "bodySelection": 0,
+        "backend": "Isotropic",
+        "combineTouchingSolids": true,
         "edgeSampling": "Uniform",
+        "faceColorSizing": [],
         "linearDeflection": 0.050000000000000003,
         "targetEdgeLength": 0,
         "targetEdgeLengthFraction": 0.070000000000000034
@@ -36,16 +37,17 @@
     },
     {
       "collapsed": true,
-      "enabled": false,
+      "enabled": true,
       "method": "Make Manifold",
       "modifier": "Refine Mesh",
       "properties": {
+        "removeAlmostDegenerateFaces": true,
         "thenMakeWatertight": true
       }
     },
     {
       "collapsed": true,
-      "enabled": false,
+      "enabled": true,
       "method": "Tangential Relaxation (Smoothing)",
       "modifier": "Refine Mesh",
       "properties": {
@@ -54,11 +56,12 @@
       }
     },
     {
-      "collapsed": false,
+      "collapsed": true,
       "enabled": true,
       "method": "SDF",
       "modifier": "Export Mochi Model",
       "properties": {
+        "bakeSdf": true,
         "sdf": {
           "boundaryPaddingDist": 0.0050000003539025784,
           "minGridResolution": [

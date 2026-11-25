@@ -1,0 +1,323 @@
+{
+  "assetsRoot": "",
+  "comment": "Scripts the FR3 V2 + 2F-85 through box_and_blocks.superdex_task: pick the red block, lift it over the partition and place it in the other compartment. Arm waypoints are tool (pad center) poses in the arm's root frame.",
+  "loads": [
+    {
+      "direction": [
+        1,
+        0,
+        0
+      ],
+      "drive": {
+        "dampingRatio": 1,
+        "maxAcceleration": 30,
+        "maxAngularAcceleration": 30,
+        "responseHz": 6,
+        "rotDampingRatio": 1,
+        "rotResponseHz": 4,
+        "rotation": true
+      },
+      "enabled": true,
+      "frame": "World",
+      "name": "arm",
+      "pointLocal": [
+        0,
+        0,
+        0
+      ],
+      "pointWorld": [
+        0,
+        0,
+        0
+      ],
+      "profile": {
+        "animateDirection": false,
+        "animatePoint": false,
+        "end": 0,
+        "fallTime": 0,
+        "freqHz": 1,
+        "keys": [],
+        "kind": "Constant",
+        "magnitude": 1,
+        "offset": 0,
+        "phase": 0,
+        "riseTime": 1,
+        "start": 0
+      },
+      "target": "fr3/osc",
+      "type": "ControllerInput",
+      "waypoints": [
+        {
+          "drive": "On",
+          "interpolation": "Ease",
+          "position": [
+            0.28999999165534973,
+            -0.16850000619888306,
+            0.11999999731779099
+          ],
+          "rotation": [
+            3.1415927410125732,
+            0,
+            0
+          ],
+          "time": 1.5
+        },
+        {
+          "drive": "On",
+          "interpolation": "Ease",
+          "position": [
+            0.28999999165534973,
+            -0.16850000619888306,
+            0.034000001847743988
+          ],
+          "rotation": [
+            3.1415927410125732,
+            0,
+            0
+          ],
+          "time": 2.5
+        },
+        {
+          "drive": "On",
+          "interpolation": "Ease",
+          "position": [
+            0.28999999165534973,
+            -0.16850000619888306,
+            0.034000001847743988
+          ],
+          "rotation": [
+            3.1415927410125732,
+            0,
+            0
+          ],
+          "time": 3.3999999999999999
+        },
+        {
+          "drive": "On",
+          "interpolation": "Ease",
+          "position": [
+            0.28999999165534973,
+            -0.16850000619888306,
+            0.25999999046325684
+          ],
+          "rotation": [
+            3.1415927410125732,
+            0,
+            0
+          ],
+          "time": 4.4000000000000004
+        },
+        {
+          "drive": "On",
+          "interpolation": "Ease",
+          "position": [
+            0.28999999165534973,
+            0.12999999523162842,
+            0.25999999046325684
+          ],
+          "rotation": [
+            3.1415927410125732,
+            0,
+            0
+          ],
+          "time": 5.9000000000000004
+        },
+        {
+          "drive": "On",
+          "interpolation": "Ease",
+          "position": [
+            0.28999999165534973,
+            0.12999999523162842,
+            0.039999999105930328
+          ],
+          "rotation": [
+            3.1415927410125732,
+            0,
+            0
+          ],
+          "time": 6.9000000000000004
+        },
+        {
+          "drive": "On",
+          "interpolation": "Ease",
+          "position": [
+            0.28999999165534973,
+            0.12999999523162842,
+            0.039999999105930328
+          ],
+          "rotation": [
+            3.1415927410125732,
+            0,
+            0
+          ],
+          "time": 7.5999999999999996
+        },
+        {
+          "drive": "On",
+          "interpolation": "Ease",
+          "position": [
+            0.28999999165534973,
+            0.12999999523162842,
+            0.11999999731779099
+          ],
+          "rotation": [
+            3.1415927410125732,
+            0,
+            0
+          ],
+          "time": 8.5999999999999996
+        }
+      ]
+    },
+    {
+      "direction": [
+        1,
+        0,
+        0
+      ],
+      "drive": {
+        "dampingRatio": 1,
+        "maxAcceleration": 30,
+        "maxAngularAcceleration": 30,
+        "responseHz": 6,
+        "rotDampingRatio": 1,
+        "rotResponseHz": 4,
+        "rotation": true
+      },
+      "enabled": true,
+      "frame": "World",
+      "inputKeys": [
+        {
+          "interpolation": "Ease",
+          "time": 2.6000000000000001,
+          "values": [
+            0,
+            0
+          ]
+        },
+        {
+          "interpolation": "Step",
+          "time": 3.2999999999999998,
+          "values": [
+            0.80000001192092896,
+            -0.80000001192092896
+          ]
+        },
+        {
+          "interpolation": "Ease",
+          "time": 6.9000000000000004,
+          "values": [
+            0.80000001192092896,
+            -0.80000001192092896
+          ]
+        },
+        {
+          "interpolation": "Ease",
+          "time": 7.5,
+          "values": [
+            0,
+            0
+          ]
+        }
+      ],
+      "joints": [
+        "2f_85_left_knuckle_joint",
+        "2f_85_right_knuckle_joint"
+      ],
+      "name": "grip",
+      "pointLocal": [
+        0,
+        0,
+        0
+      ],
+      "pointWorld": [
+        0,
+        0,
+        0
+      ],
+      "profile": {
+        "animateDirection": false,
+        "animatePoint": false,
+        "end": 0,
+        "fallTime": 0,
+        "freqHz": 1,
+        "keys": [],
+        "kind": "Constant",
+        "magnitude": 1,
+        "offset": 0,
+        "phase": 0,
+        "riseTime": 1,
+        "start": 0
+      },
+      "target": "fr3/gripper",
+      "type": "ControllerInput",
+      "waypoints": []
+    }
+  ],
+  "plots": [
+    {
+      "channels": [
+        "perf.solveMs"
+      ],
+      "height": 200
+    },
+    {
+      "channels": [
+        "box_and_blocks/Block_red/Block_red.pos.x",
+        "box_and_blocks/Block_red/Block_red.pos.y",
+        "box_and_blocks/Block_red/Block_red.pos.z"
+      ],
+      "height": 200
+    },
+    {
+      "channels": [
+        "load.arm.error",
+        "load.grip.error"
+      ],
+      "height": 200
+    }
+  ],
+  "prefab": "",
+  "prefabOverrides": [],
+  "probes": [
+    {
+      "ignoreGround": false,
+      "kind": "BodyPose",
+      "target": "box_and_blocks/Block_red/Block_red"
+    },
+    {
+      "frame": "fr3_v2_2f_85/2f_85_base_link",
+      "ignoreGround": false,
+      "kind": "RelativePose",
+      "target": "box_and_blocks/Block_red/Block_red"
+    },
+    {
+      "ignoreGround": false,
+      "kind": "JointState",
+      "target": "fr3_v2_2f_85/2f_85_left_knuckle_joint"
+    },
+    {
+      "ignoreGround": false,
+      "kind": "ContactForce",
+      "target": "box_and_blocks/Block_red/Block_red"
+    },
+    {
+      "ignoreGround": false,
+      "kind": "Performance",
+      "target": ""
+    }
+  ],
+  "run": {
+    "dt": 0.01,
+    "duration": 12,
+    "groundPlane": false,
+    "record": {
+      "contactForces": false,
+      "enabled": true
+    },
+    "singleThreaded": true
+  },
+  "scene": "./box_and_blocks.superdex_scene",
+  "stopConditions": [],
+  "task": "./box_and_blocks.superdex_task"
+}

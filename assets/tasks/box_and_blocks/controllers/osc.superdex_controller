@@ -1,0 +1,14 @@
+{
+  "EELinkFromEE": {
+    "rotation": [0, 0, 0, 1],
+    "translation": [0, 0, 0.13]
+  },
+  "Kd_p": 75,
+  "Kd_r": 3,
+  "Kp_p": 900,
+  "Kp_r": 30,
+  "bApplyMaxErrorMagnitudeNormalization": true,
+  "bApplyMaxOSCTorqueNormalization": true,
+  "maxRotationError": 0.4,
+  "maxTranslationError": 0.05
+}

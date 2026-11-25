@@ -24,6 +24,7 @@ The following work was done to produce this simulation-ready asset:
 - Exported STEP CAD interchange files and generated GLB render meshes, including separate colored block variants.
 - Generated SDF-based Mochi collision models from the CAD-derived meshes using the recorded SuperDex Studio processing configurations.
 - Assembled the static box and colored block prefabs with simulation transforms, contact settings, and visual materials.
+- Assembled `box_and_two_blocks.superdex_prefab`, a copy of `box_and_blocks.mochi_prefab` with only one red and one blue block, resting side by side on the floor of one compartment, for pick-and-place tasks.
 
 ## License & IP Notes
 

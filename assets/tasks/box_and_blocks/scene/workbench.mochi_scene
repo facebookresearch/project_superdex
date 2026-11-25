@@ -1,0 +1,16 @@
+{
+  "prefabs": [
+    {
+      "name": "workbench",
+      "path": "./../../../prefabs/workbench/workbench.superdex_prefab"
+    }
+  ],
+  "scene": {
+    "description": "The SuperDex workbench, its top 0.9 m above z = 0.",
+    "gravity": [
+      0,
+      0,
+      -9.8100004196166992
+    ]
+  }
+}

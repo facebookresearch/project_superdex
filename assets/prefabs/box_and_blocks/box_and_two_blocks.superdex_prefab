@@ -1,0 +1,33 @@
+{
+  "actors": {
+    "rigid": [
+      {
+        "boundaryElementType": "P1Q1",
+        "isStatic": true,
+        "name": "Box",
+        "renderModel": "./render/box.glb",
+        "shape": "./collision/box.mochi.h5"
+      }
+    ]
+  },
+  "prefabs": [
+    {
+      "name": "Block_red",
+      "path": "./block_red.mochi_prefab",
+      "translation": [
+        0.0875,
+        0.1145,
+        0.01
+      ]
+    },
+    {
+      "name": "Block_blue",
+      "path": "./block_blue.mochi_prefab",
+      "translation": [
+        0.1625,
+        0.1145,
+        0.01
+      ]
+    }
+  ]
+}
