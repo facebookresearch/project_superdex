@@ -66,6 +66,10 @@ MOCHI_FIELD(recordStaticActorState)
 MOCHI_FIELD(recordContactPoints)
 MOCHI_FIELD(recordNodeContactForces)
 MOCHI_FIELD(recordSdfDistances)
+MOCHI_METHOD("All(enabled)", (+[](mochi::experimental::RecordingParams& self, bool value0) -> mochi::experimental::RecordingParams {
+  decltype(auto) result = self.All(value0);
+  return result;
+})) MOCHI_ATTRIBUTE(Description("Return experimental::RecordingParams with all boolean options set to the given\nvalue.\n\nParameters:\n- enabled [in]: True to enable all options (maximum data), false to disable\n  (minimum data).\n\nReturns: The initialized experimental::RecordingParams."))
 MOCHI_STRUCT_END_EX()
 
 // clang-format on

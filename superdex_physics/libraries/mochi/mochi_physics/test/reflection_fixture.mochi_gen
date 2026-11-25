@@ -1,0 +1,75 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+namespace reflection_fixture;
+
+struct reflection_fixture::Leaf { int count = 0; };
+struct reflection_fixture::DataView {
+  reflection_fixture::Leaf leaf;
+  Span<real const> values;
+};
+struct reflection_fixture::Samples {
+  DynamicArray<real> values;
+  ctor Samples(reflection_fixture::SamplesView const& view) [implicit];
+};
+struct reflection_fixture::SamplesView [view_of(reflection_fixture::Samples)] {
+  Span<real const> values;
+  ctor SamplesView(reflection_fixture::Samples const& samples [keep_alive]) [implicit];
+};
+struct reflection_fixture::BaseData {
+  fn GetValue() -> real [const];
+  // @brief Set a nonnegative value.
+  // @param[in] value The new value.
+  fn SetValue(real value) -> void [mochi_error];
+};
+struct reflection_fixture::HiddenSetterData(reflection_fixture::BaseData) {
+  fn SetValue(int value) -> void;
+};
+struct reflection_fixture::Data(reflection_fixture::BaseData) {
+  fn GetReference() -> real& [const];
+  fn GetLabel() -> StringView [const];
+  fn SetLabel(StringView label) -> void;
+  fn IsReady() -> bool [const, reflection_getter("ready")];
+  fn Enable(bool ready) -> void [reflection_setter("ready")];
+  fn GetData() -> reflection_fixture::DataView [const];
+  fn GetSampleView() -> reflection_fixture::SamplesView [const];
+  fn CountSamples(reflection_fixture::SamplesView samples) -> int [const];
+  fn GetChecked() -> real [const, mochi_error];
+  fn GetPointer() -> void* [const, nullable];
+  fn Scale(Span<real> values) -> Span<real const> [const];
+  fn SetSamples(Span<real const> values) -> void;
+  fn Read(Span<real const> const& values) -> int [const, overloaded];
+  fn Read(Span<real const>& values) -> int [const, overloaded, no_reflection];
+  fn Default() -> reflection_fixture::Data [static];
+};
+
+struct reflection_fixture::VirtualBase {
+  fn Run() -> int [virtual, const];
+  fn GetValue() -> int [virtual, const];
+  fn SetValue(int value) -> void [virtual];
+};
+struct reflection_fixture::VirtualDerived(reflection_fixture::VirtualBase) {
+  fn Run() -> int [const];
+  fn GetValue() -> int [const];
+  fn SetValue(int value) -> void;
+};
+
+struct reflection_fixture::FieldAndAccessors {
+  int value = 0;
+  fn GetValue() -> int [const];
+  fn SetValue(int input) -> void;
+};
+struct reflection_fixture::DerivedField(reflection_fixture::BaseData) {
+  real localValue = 3.0;
+};

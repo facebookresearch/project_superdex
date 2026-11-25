@@ -38,13 +38,27 @@
   IMPL_SR_EXPAND(IMPL_SR_EXPAND(IMPL_SR_PROPERTY_SELECT(                                           \
       __VA_ARGS__, IMPL_MOCHI_PROPERTY_WITH_ERROR_RW, IMPL_MOCHI_PROPERTY_WITH_ERROR_RO, unused))( \
       name, __VA_ARGS__))
-#define IMPL_MOCHI_PROPERTY_WITH_ERROR_RO(name, getter) \
-  IMPL_SR_Property_Get(name, IMPL_MOCHI_THROW_ON_ERROR(getter, 0))
+// MSVC requires inline lambdas to be named before using them as template arguments.
+#define IMPL_MOCHI_PROPERTY_WITH_ERROR_RO(name, getter)                   \
+  {                                                                       \
+    constexpr auto mochiGetter = getter;                                  \
+    IMPL_SR_Property_Get(name, IMPL_MOCHI_THROW_ON_ERROR(mochiGetter, 0)) \
+  }
 #define IMPL_MOCHI_PROPERTY_WITH_ERROR_RW(name, getter, setter) \
-  IMPL_SR_Property_GetSet(                                      \
-      name, IMPL_MOCHI_THROW_ON_ERROR(getter, 0), IMPL_MOCHI_THROW_ON_ERROR(setter, 1))
-#define MOCHI_METHOD_WITH_ERROR(name, fn) \
-  IMPL_SR_Method(name, IMPL_MOCHI_THROW_ON_ERROR(fn, ::SReflect::detail::CountMethodArgNames(name)))
+  {                                                             \
+    constexpr auto mochiGetter = getter;                        \
+    constexpr auto mochiSetter = setter;                        \
+    IMPL_SR_Property_GetSet(                                    \
+        name,                                                   \
+        IMPL_MOCHI_THROW_ON_ERROR(mochiGetter, 0),              \
+        IMPL_MOCHI_THROW_ON_ERROR(mochiSetter, 1))              \
+  }
+#define MOCHI_METHOD_WITH_ERROR(name, fn)                                                        \
+  {                                                                                              \
+    constexpr auto mochiFn = fn;                                                                 \
+    IMPL_SR_Method(                                                                              \
+        name, IMPL_MOCHI_THROW_ON_ERROR(mochiFn, ::SReflect::detail::CountMethodArgNames(name))) \
+  }
 
 namespace mochi::details {
 

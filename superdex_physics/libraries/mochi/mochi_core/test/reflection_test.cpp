@@ -67,11 +67,18 @@ class Tank {
   MOCHI_STRUCT_BEGIN(Tank)
   MOCHI_FIELD(capacity)
   MOCHI_PROPERTY("level", &Tank::GetLevel, &Tank::SetLevel)
-  MOCHI_PROPERTY_WITH_ERROR("checkedLevel", &Tank::GetLevel, &Tank::SetCheckedLevel)
+  MOCHI_PROPERTY_WITH_ERROR(
+      "checkedLevel",
+      (+[](Tank const& tank) -> int const& { return tank.GetLevel(); }),
+      (+[](Tank& tank, int const& level, Error& error) { tank.SetCheckedLevel(level, error); }))
   MOCHI_PROPERTY_WITH_ERROR("headroom", &Tank::GetHeadroom)
-  MOCHI_PROPERTY_WITH_ERROR("fillPercent", &Tank::GetFillPercent)
+  MOCHI_PROPERTY_WITH_ERROR("fillPercent", (+[](Tank const& tank, Error& error) {
+                              return Tank::GetFillPercent(tank, error);
+                            }))
   MOCHI_PROPERTY_WITH_ERROR("checkedCapacity", &Tank::GetCapacity, &Tank::SetCapacity)
-  MOCHI_METHOD_WITH_ERROR("fill(amount)", &Tank::Fill)
+  MOCHI_METHOD_WITH_ERROR("fill(amount)", (+[](Tank& tank, int amount, Error& error) {
+                            return tank.Fill(amount, error);
+                          }))
   MOCHI_METHOD("getLevel()", &Tank::GetLevel)
   MOCHI_STRUCT_END()
 
