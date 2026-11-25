@@ -68,8 +68,32 @@ which of the offered bots it drives. That step, and binding Unreal to the result
 [Runtime Scene Load example](#the-runtime-scene-load-example) does both:
 
 - `USuperDexBotSceneSubsystem::GetBotScene()` returns the native `BotScene`; create the bots you
-  use with `BotScene::InitializeBot`, then call `NotifySceneContentsChanged()` so the
-  visualization rebuilds.
+  use with `BotScene::InitializeBot`. The scene steps on its own thread, so make that call through
+  the Mochi scene's `QueueOrExecuteCommand`, wait with `WaitForQueuedCommands()`, and check each
+  result before using it. Then, back on the game thread, call `NotifySceneContentsChanged()` so the
+  visualization rebuilds:
+
+  ```cpp
+  UGameInstance* GameInstance = GetGameInstance();
+  USuperDexBotSceneSubsystem* Subsystem = GameInstance->GetSubsystem<USuperDexBotSceneSubsystem>();
+  superdex::robotics::BotScene* BotScene = Subsystem->GetBotScene();
+  UMochiSceneObject* SceneObject =
+      GameInstance->GetSubsystem<UMochiGameInstanceSubsystem>()->GetScene();
+
+  superdex::robotics::Bot* Bot = nullptr;
+  superdex::Error Error;
+  SceneObject->QueueOrExecuteCommand([&](mochi::Scene*) {
+    Bot = BotScene->InitializeBot("my_bot", Error);
+  });
+  SceneObject->WaitForQueuedCommands();
+  if (!Bot) {
+    UE_LOG(LogTemp, Error, TEXT("InitializeBot failed: %s"),
+        UTF8_TO_TCHAR(Error.ToString().c_str()));
+    return;
+  }
+  Subsystem->NotifySceneContentsChanged();
+  ```
+
 - `USuperDexBotComponent::BindToExistingBot` lets a level's bot component, such as the one in a
   roboperator, pose its skeletal mesh from a scene-owned bot instead of creating its own.
   `bHideMeshWhenBoundToSceneBot` (on by default) leaves drawing to the visualization.
