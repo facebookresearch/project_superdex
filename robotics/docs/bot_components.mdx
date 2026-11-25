@@ -167,8 +167,9 @@ exceed your robot's effort limits.
 | `SENSOR_GAUSSIAN_NOISE` | Sensor transform | Adds keyed, reproducible Gaussian noise once per new input publication. |
 
 See [Sensor Graphs](./sensor_graphs.mdx) for wiring, timing and acquisition limits,
-including the public delay/history transforms that require C++ creation or
-explicit factory registration.
+including the delay and history transforms. Delay lines are registered by
+default; the temporal window needs C++ creation or explicit factory
+registration.
 
 :::note Actuators
 No concrete per-link actuator component types ship in the public library yet,
