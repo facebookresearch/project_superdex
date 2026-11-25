@@ -1458,7 +1458,7 @@ struct bots::SensorAxis [no_reflection] {
 struct bots::SensorFormat [no_reflection] {
   String kind;
   DynamicArray<int> shape;
-  bots::SensorDType dtype = Float32;
+  bots::SensorDType dtype = bots::SensorDType::Float32;
   DynamicArray<bots::SensorAxis> axes;
 };
 
