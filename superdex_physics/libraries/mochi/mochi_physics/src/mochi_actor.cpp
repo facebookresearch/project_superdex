@@ -1205,7 +1205,7 @@ class ActorInterfaceImpl : public ActorInterface {
 
     // Validate through the shared per-joint validator so the runtime API and the build-time
     // ArticulatedActorParams validation stay in sync.
-    auto const jointTypes =
+    auto const& jointTypes =
         reg.get<CArticulatedBodyShape const>(e).shape->GetJointsData()->jointTypes;
     for (int i = 0; i < isize(friction); ++i) {
       ValidateFriction(jointTypes[i], friction[i], error);

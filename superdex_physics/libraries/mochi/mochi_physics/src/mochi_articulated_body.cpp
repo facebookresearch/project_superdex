@@ -2189,8 +2189,8 @@ void articulated::compound::AssembleDampingForces(
     CTimeIntegratorState const& intState,
     CActorSnle& outCompoundSnle) {
   auto const* joints = bodyShape.shape->GetJointsData();
-  auto const jointTypes = joints->jointTypes;
-  auto const dofInfo = joints->dofInfo;
+  auto const& jointTypes = joints->jointTypes;
+  auto const& dofInfo = joints->dofInfo;
   auto const dampingFuncRigidBody = GetRigidDampingFn(params.gradTarget, params.psdDRes);
   auto assemblerRigidBody =
       [&](int i, double* energy, RigidGradient* gradient, RigidHessian* hessian) -> bool {
@@ -2247,9 +2247,9 @@ void articulated::compound::AssembleInertiaForces(
     CTimeIntegratorState const& intState,
     CActorSnle& outCompoundSnle) {
   auto const* joints = bodyShape.shape->GetJointsData();
-  auto const jointTypes = joints->jointTypes;
-  auto const jointAxes = joints->jointAxes;
-  auto const dofInfo = joints->dofInfo;
+  auto const& jointTypes = joints->jointTypes;
+  auto const& jointAxes = joints->jointAxes;
+  auto const& dofInfo = joints->dofInfo;
   auto inertiaFuncRigidBody =
       GetRigidInertiaFn<real>(params.gradTarget, useNewtonEulerInertia, params.psdDRes);
   // Newton-Euler inertia reports its non-potential terms with the objective
@@ -2330,8 +2330,8 @@ void articulated::compound::AssembleFrictionForces(
       frictionAnchors.value.Rows() == currPose.value.Rows(),
       "The joint friction anchors must be prepared before assembly.");
   auto const* joints = bodyShape.shape->GetJointsData();
-  auto const jointTypes = joints->jointTypes;
-  auto const dofInfo = joints->dofInfo;
+  auto const& jointTypes = joints->jointTypes;
+  auto const& dofInfo = joints->dofInfo;
   bool const useFittedHessian = params.fittedSaturationHessian.jointFriction;
   real const dtFromAnchor = intState.dtFromStepStart;
   // Like contact friction (see ReportsContactTrustMargin), the objective and residual assemblies
@@ -2427,8 +2427,8 @@ void articulated::compound::AssembleExternalForces(
     CArticulatedReducedPose<TimeStep::StageStart> const& stageStartPose,
     CActorSnle& outCompoundSnle) {
   auto const* joints = bodyShape.shape->GetJointsData();
-  auto const jointTypes = joints->jointTypes;
-  auto const jointDofInfo = joints->dofInfo;
+  auto const& jointTypes = joints->jointTypes;
+  auto const& jointDofInfo = joints->dofInfo;
   bool const reportsNonPotential = ReportsNonPotentialTerms(params, simParams.value);
   // For convenience, fill an array with force values for all dofs, even if they're zero.
   MOCHI_FILO_STACK_ALLOCATOR(allocator, sizeof(real) * 256); // Up to 256 dofs

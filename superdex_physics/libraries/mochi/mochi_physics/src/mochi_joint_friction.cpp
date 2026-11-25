@@ -69,7 +69,7 @@ void articulated::compound::PrepareJointFrictionAnchors(
   // Radial return of the anchors of the joints with dry friction (revolute, prismatic and
   // spherical). The anchors of the other joints are not read: enabling their friction anchors them
   // at the pose (SettleJointFrictionAnchors).
-  auto const jointTypes = bodyShape.shape->GetJointsData()->jointTypes;
+  auto const& jointTypes = bodyShape.shape->GetJointsData()->jointTypes;
   for (int i = 0; i < isize(jointTypes); ++i) {
     auto const type = jointTypes[i];
     auto const& fp = frictionParams[i];
@@ -101,7 +101,7 @@ void articulated::compound::SettleJointFrictionAnchors(
   if (anchors.Rows() == 0) {
     return; // The next step anchors all joints at the pose.
   }
-  auto const jointTypes = bodyShape.shape->GetJointsData()->jointTypes;
+  auto const& jointTypes = bodyShape.shape->GetJointsData()->jointTypes;
   for (int i = 0; i < isize(jointTypes); ++i) {
     // A joint without dry friction returns to the pose: it starts without preload.
     real const delta = HasDryFriction(lastParams[i]) ? lastParams[i].preslidingDisplacement : 0_r;
