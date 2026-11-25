@@ -9,7 +9,7 @@ The cable is a rod (`cable`, 855 mm, 6 mm thick) with a rigid plug actor tied to
 ## Contents
 
 - `cad/`: the SolidWorks parts `cable_plug`, `jack_socket` and `jack_test_block`, and their STEP interchange models.
-- `collision/`: SuperDex Physics collision models generated in Studio (SDFs, and the cable's polyline with its tubes).
+- `collision/`: SuperDex Physics collision models generated in Studio (SDFs, and the cable's polyline with its contact skin and visual mesh).
 - `intermediates/`: the Studio processing configuration for each collision model, and the cable's bare centerline.
 - `render/`: render models (GLB) with PBR materials.
 - `tuning/`: `superdex_asset_tuner` scenarios used to tune the prefabs.
@@ -21,7 +21,7 @@ The cable is a rod (`cable`, 855 mm, 6 mm thick) with a rigid plug actor tied to
 
 - Modeled the plug in SolidWorks, its pin profile measured off a manufacturer's 1/4 in TRS plug drawing (6.29 mm sleeve, 30.3 mm from the tip to the seating shoulder) on a 12.7 mm chrome barrel. Its `Collision` configuration leaves out the insulator rings, the knurled bands and the cable bore, which are for the render model only. The pin's faces are colored so Studio meshes them at 0.35 mm, the barrel at 1.5 mm.
 - Modeled the jack as `jack_socket`: configurations `Bore` (a 6.8 mm bore, 33 mm deep, with a chamfered mouth) and `Detent` (the retaining ridge), one collision model each. `jack_test_block` is a steel block holding the jack's bore, with a brass insert around its mouth; its `Collision` configuration has a clearance hole the `Bore` fills.
-- Generated the cable's tubes in Studio from its centerline (`intermediates/cable_centerline.mochi.h5`, 86 elements of 10 mm): a 6 mm contact skin and visual mesh. Its render model is a tube on the visual mesh's rings, textured with orange heat-shrink ends printed "SuperDex" and a black jacket printed "SuperDex  MADE IN THE USA". Studio draws rods with their visual mesh, without the render model's texture, and the Unreal importer leaves rods out for now.
+- Generated the cable's collision model in Studio from its centerline (`intermediates/cable_centerline.mochi.h5`, 86 elements of 10 mm): a 6 mm tube for its contact skin, and its render model embedded as its visual mesh. The render model is a 6 mm tube textured with orange heat-shrink ends printed "SuperDex" and a black jacket printed "SuperDex  MADE IN THE USA".
 - Generated the other render models from the SolidWorks tessellation, the knurl a normal map generated for this package. `render/jack_socket.glb`, the socket's bore and detent in gold for the headphones' jack (and the MIDI keyboard's PHONES jack), is Studio's tessellation of their STEP models; `jack_socket_white.glb` and `jack_socket_red.glb` are the same in white and red, for the keyboard's L and R jacks.
 
 ## Physics Tuning

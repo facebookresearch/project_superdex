@@ -21,6 +21,15 @@
     {
       "collapsed": false,
       "enabled": true,
+      "method": "From File",
+      "modifier": "Source from Render Model",
+      "properties": {
+        "path": "../render/cable.glb"
+      }
+    },
+    {
+      "collapsed": false,
+      "enabled": true,
       "method": "From Model Viewer",
       "modifier": "Source from Mochi Model",
       "properties": {}
@@ -38,11 +47,12 @@
     {
       "collapsed": false,
       "enabled": true,
-      "method": "Tube",
+      "method": "Upstream Surface",
       "modifier": "Embed Visual Mesh",
       "properties": {
-        "radius": 0.003,
-        "numCrossSectionSegments": 16
+        "maxWeightsPerNode": 4,
+        "nominalWeightsPerNode": 2,
+        "referenceIndex": 0
       }
     },
     {
