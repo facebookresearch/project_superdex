@@ -42,8 +42,7 @@ void MochiDebuggerTest::SetUp() {
 }
 
 void MochiDebuggerTest::TearDown() {
-  DisconnectClient();
-  _client->WaitForQueuedCommands();
+  _client->ShutDown();
   _client->SetPrintFunction({}); // No more callbacks please
   mochi::DestroyContext(_context);
 

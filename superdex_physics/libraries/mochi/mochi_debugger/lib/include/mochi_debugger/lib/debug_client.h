@@ -221,6 +221,18 @@ class DebugClient {
   void Disconnect();
 
   /**
+   * @brief Permanently disconnect and stop the command worker and registered callbacks.
+   *
+   * @details Drop queued commands, cancel the running request and wait for the worker and receive
+   * callbacks to finish. Callback owners can be destroyed after this returns. Repeated calls are
+   * safe, and the destructor calls this automatically. Later connection attempts are ignored.
+   *
+   * @warning Do not call from a message callback or the command worker, or while holding a lock
+   * that a callback or queued command needs.
+   */
+  void ShutDown();
+
+  /**
    * @brief Return the client's protocol version (must match the server's version).
    */
   uint64_t GetVersion() const;
@@ -276,7 +288,8 @@ class DebugClient {
    * @tparam MessageT the message class to register
    * @param fn The callback function.
    *
-   * @note The callback may be fired on another thread.
+   * @note Called on a network thread, or for an in-process connection on the sending thread,
+   * possibly inside @ref Send. Keep callback captures alive until @ref ShutDown returns.
    * @note Illegal to register messages after the first dispatch.
    */
   template <class MessageT, class Fn>
@@ -591,7 +604,7 @@ class DebugClient {
   std::atomic<bool> _isFullyConnected{false}; // True after WelcomeMessage is received.
   LogFn _printFn;
   std::atomic<bool> _isInProc = false;
-  std::mutex _connectionMutex; // Serializes Connect, ConnectInProc and Disconnect
+  std::mutex _connectionMutex; // Serializes Connect, ConnectInProc, Disconnect and ShutDown
 
   struct CommandQueueState {
     std::deque<std::function<void()>> commands;
@@ -601,6 +614,7 @@ class DebugClient {
   Guarded<CommandQueueState> _commandQueue;
   std::condition_variable _commandsChanged;
   std::thread _worker;
+  std::once_flag _shutDownOnce;
 };
 
 } // namespace mochi::dbg

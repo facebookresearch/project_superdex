@@ -23,6 +23,8 @@
 #include <mochi_core/utils/defer.h>
 #include <mochi_core/utils/dynamic_array.h>
 
+#include <condition_variable>
+
 using namespace mochi;
 using namespace net;
 
@@ -36,16 +38,67 @@ thread_local static bool g_thisThreadIsInSocketCallback = false;
 // MessageClient
 //--------------------------------------------------------------------------------------
 
-MessageClient::MessageClient() {
+struct MessageClient::CallbackState {
+  explicit CallbackState(MessageClient* owner) : _state(State{owner}) {}
+
+  template <class Fn>
+  void Invoke(Fn const& fn) {
+    MessageClient* const client = _state.Mutate([](auto& state) {
+      if (state.client != nullptr) {
+        ++state.activeCallbacks;
+      }
+      return state.client;
+    });
+    if (client == nullptr) {
+      return;
+    }
+    MOCHI_DEFER({
+      bool const isIdle = _state.Mutate([](auto& state) {
+        --state.activeCallbacks;
+        return state.client == nullptr && state.activeCallbacks == 0;
+      });
+      if (isIdle) {
+        _idle.notify_all();
+      }
+    });
+    fn(*client);
+  }
+
+  void Disable() {
+    _state.Mutate([](auto& state) { state.client = nullptr; });
+  }
+
+  bool IsEnabled() {
+    return _state.Read([](auto const& state) { return state.client != nullptr; });
+  }
+
+  void Wait() {
+    _state.MutateWithLock([&](auto& lock, auto& state) {
+      _idle.wait(lock, [&] { return state.activeCallbacks == 0; });
+    });
+  }
+
+ private:
+  struct State {
+    MessageClient* client;
+    size_t activeCallbacks = 0;
+  };
+  Guarded<State> _state;
+  std::condition_variable _idle;
+};
+
+MessageClient::MessageClient() : _callbackState(std::make_shared<CallbackState>(this)) {
   _reqrep = std::make_unique<ReqRepHelper>(*this);
-  _socket.SetReceiveCallback([this](void const* data, size_t size) { OnReceive(data, size); });
-  _socket.SetStatusCallback([this](auto status) { OnStatus(status); });
+  _socket.SetReceiveCallback([state = _callbackState](void const* data, size_t size) {
+    state->Invoke([&](MessageClient& client) { client.OnReceive(data, size); });
+  });
+  _socket.SetStatusCallback([state = _callbackState](auto status) {
+    state->Invoke([&](MessageClient& client) { client.OnStatus(status); });
+  });
 }
 
 MessageClient::~MessageClient() {
-  _socket.SetStatusCallback({});
-  _socket.SetReceiveCallback({});
-  Disconnect();
+  ShutDown();
 }
 
 void MessageClient::SetVersion(uint64_t version) {
@@ -53,20 +106,33 @@ void MessageClient::SetVersion(uint64_t version) {
 }
 
 void MessageClient::Connect(std::string_view address, uint16_t port) {
+  MOCHI_ASSERT_VERBOSE(_callbackState->IsEnabled(), "Connect after ShutDown");
   _socket.Connect(address, port);
 }
 
 void MessageClient::ConnectInProc(MessageServer& server) {
-  _socket.ConnectInProc(server.GetSocket_InternalUseOnly());
+  ConnectInProc(server.GetSocket_InternalUseOnly());
 }
 
 void MessageClient::ConnectInProc(ServerSocket& server) {
+  MOCHI_ASSERT_VERBOSE(_callbackState->IsEnabled(), "ConnectInProc after ShutDown");
   _socket.ConnectInProc(server);
 }
 
 void MessageClient::Disconnect() {
   _socket.Disconnect();
   _reqrep->Cancel();
+}
+
+void MessageClient::ShutDown() {
+#if MOCHI_ASSERT_VERBOSE_ENABLED
+  MOCHI_ASSERT_VERBOSE(
+      !g_thisThreadIsInSocketCallback, "ShutDown must not be called from a socket callback");
+#endif
+  _callbackState->Disable();
+  _reqrep->Cancel();
+  Disconnect();
+  _callbackState->Wait();
 }
 
 SocketStatus MessageClient::GetStatus() const {

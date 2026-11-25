@@ -104,24 +104,44 @@ DebugClient::DebugClient() {
 }
 
 DebugClient::~DebugClient() {
-  _commandQueue.Mutate([](auto& state) {
-    state.isShuttingDown = true;
-    state.commands.clear();
+  ShutDown();
+}
+
+void DebugClient::ShutDown() {
+  std::call_once(_shutDownOnce, [this] {
+    std::deque<std::function<void()>> dropped;
+    {
+      // Connect and ConnectInProc check the flag under this lock, so none can connect after it.
+      // The socket is shut down under the same lock, because a running command may be
+      // disconnecting it at the same time.
+      std::scoped_lock lock(_connectionMutex);
+      _commandQueue.Mutate([&](auto& state) {
+        state.isShuttingDown = true;
+        dropped.swap(state.commands);
+      });
+      _socket.ShutDown(); // Also cancels the request a running command may be waiting for
+    }
+    _commandsChanged.notify_all();
+    dropped.clear(); // Outside the locks, which a command's destructor may need
+    _worker.join(); // Outside the lock, which a running command may need
+    Disconnect();
   });
-  _commandsChanged.notify_all();
-  Disconnect(); // Cancels the request that the running command may be waiting for
-  _worker.join();
-  Disconnect(); // The last command may have connected again
 }
 
 void DebugClient::Connect(std::string_view address, uint16_t port) {
   std::scoped_lock lock(_connectionMutex);
+  if (_commandQueue.Read([](auto const& state) { return state.isShuttingDown; })) {
+    return;
+  }
   DisconnectLocked();
   _socket.Connect(address, port);
 }
 
 void DebugClient::ConnectInProc(net::MessageServer& server) {
   std::scoped_lock lock(_connectionMutex);
+  if (_commandQueue.Read([](auto const& state) { return state.isShuttingDown; })) {
+    return;
+  }
   DisconnectLocked();
   _isInProc = true; // Remember that we are using an in-process connection.
   _socket.ConnectInProc(server);

@@ -25,6 +25,7 @@
 
 #include <cstdint>
 #include <functional>
+#include <memory>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -91,6 +92,17 @@ class MessageClient {
 
   /** @brief Disconnect and stop the network thread. */
   void Disconnect();
+
+  /**
+   * @brief Permanently stop callbacks and disconnect.
+   *
+   * @details Waits for receive and status callbacks already running to finish. After this returns,
+   * no registered callback can run. Connecting afterwards is a programming error. Repeated calls
+   * are safe.
+   *
+   * @warning Do not call from a receive or status callback.
+   */
+  void ShutDown();
 
   /** @brief Get the current connection status. */
   [[nodiscard]] SocketStatus GetStatus() const;
@@ -200,6 +212,8 @@ class MessageClient {
   RecursiveGuarded<std::function<void(SocketStatus)>> _statusCallback;
   struct ReqRepHelper;
   std::unique_ptr<ReqRepHelper> _reqrep;
+  struct CallbackState;
+  std::shared_ptr<CallbackState> _callbackState;
 };
 
 } // namespace mochi::net
