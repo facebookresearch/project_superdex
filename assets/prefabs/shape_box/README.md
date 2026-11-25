@@ -22,6 +22,7 @@ The following work was done to produce this simulation-ready asset:
 - Exported STEP CAD interchange files and generated GLB render meshes. The pieces' paints are tinted to the product's colors; the plywood has clear-coated faces and shows its plies, darker and matte, on the cut edges, the hole walls and the box-joint fingers at the corners.
 - Generated SDF-based Mochi collision models from the STEP files with per-part SuperDex Studio processing configurations: about 12k triangles in all, the pieces 470 to 830 each. The hole walls and the lid slot are colored in the CAD so Studio meshes them finer than the rest of the box, and the body's collision model comes from a `Collision` configuration without its 0.5 mm edge rounds, which Studio could not mesh watertight.
 - Assembled the body, lid, and 12 movable shape pieces into a prefab, the pieces resting in their holes or on the floor of the box.
+- Made `shape_box_four_out.superdex_prefab`: the same box with the easiest piece for each face (ellipse, square, octagon, hexagon) standing on the table in front of it.
 
 ## Physics Tuning
 

@@ -1,0 +1,137 @@
+{
+  "_comment": "A half-built paper cup pyramid: the bottom two rows of paper_cup_pyramid.mochi_prefab (4 and 3 upside-down cups, row1_0..3 and row2_0..2 along +y, at its poses) and its other three cups nested upright in one stack beside it on +y (stack_0 at the bottom).",
+  "prefabs": [
+    {
+      "name": "row1_0",
+      "path": "./paper_cup.mochi_prefab",
+      "translation": [
+        6.70000008540228e-05,
+        -0.142426997423172,
+        0.11233499646186829
+      ],
+      "rotation": [
+        1,
+        0.0007890000124461949,
+        -0.00011800000356743112,
+        0.00018400000408291817
+      ]
+    },
+    {
+      "name": "row1_1",
+      "path": "./paper_cup.mochi_prefab",
+      "translation": [
+        -1.395316212438047e-05,
+        -0.04747174307703972,
+        0.1122894138097763
+      ],
+      "rotation": [
+        0.9039398431777954,
+        -0.427659809589386,
+        -7.118518260540441e-05,
+        1.7253159967367537e-05
+      ]
+    },
+    {
+      "name": "row1_2",
+      "path": "./paper_cup.mochi_prefab",
+      "translation": [
+        1.4063625712879002e-05,
+        0.04747182875871658,
+        0.11228951811790466
+      ],
+      "rotation": [
+        0.8699973821640015,
+        0.49305644631385803,
+        2.6862802769755945e-05,
+        -6.814245716668665e-05
+      ]
+    },
+    {
+      "name": "row1_3",
+      "path": "./paper_cup.mochi_prefab",
+      "translation": [
+        -6.689836300211027e-05,
+        0.14242655038833618,
+        0.11233443021774292
+      ],
+      "rotation": [
+        0.7830174565315247,
+        0.6219996809959412,
+        -2.1880141503061168e-05,
+        -0.0002174883265979588
+      ]
+    },
+    {
+      "name": "row2_0",
+      "path": "./paper_cup.mochi_prefab",
+      "translation": [
+        0.00013367003703024238,
+        -0.09486523270606995,
+        0.22446773946285248
+      ],
+      "rotation": [
+        0.8741791248321533,
+        0.48560354113578796,
+        -0.00013420807954389602,
+        0.0004433522990439087
+      ]
+    },
+    {
+      "name": "row2_1",
+      "path": "./paper_cup.mochi_prefab",
+      "translation": [
+        0,
+        0,
+        0.22444044053554535
+      ],
+      "rotation": [
+        0.9650470018386841,
+        -0.26207709312438965,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "row2_2",
+      "path": "./paper_cup.mochi_prefab",
+      "translation": [
+        -0.00013459043111652136,
+        0.09486477077007294,
+        0.2244667410850525
+      ],
+      "rotation": [
+        0.8630918264389038,
+        -0.5050468444824219,
+        0.0004499030183069408,
+        -0.00011027240543626249
+      ]
+    },
+    {
+      "name": "stack_0",
+      "path": "./paper_cup.mochi_prefab",
+      "translation": [
+        0,
+        0.28,
+        0.0
+      ]
+    },
+    {
+      "name": "stack_1",
+      "path": "./paper_cup.mochi_prefab",
+      "translation": [
+        0,
+        0.28,
+        0.01698
+      ]
+    },
+    {
+      "name": "stack_2",
+      "path": "./paper_cup.mochi_prefab",
+      "translation": [
+        0,
+        0.28,
+        0.03397
+      ]
+    }
+  ]
+}

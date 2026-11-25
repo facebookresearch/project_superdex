@@ -23,6 +23,7 @@ This package contains a nine-hole peg-test simulation asset that was created in-
 - `tuning/`: `superdex_asset_tuner` scenarios used to tune the prefab.
 - `nine_hole_peg_test.mochi_prefab`: the test: the board and nine nested pegs.
 - `nine_hole_peg.superdex_prefab`: one peg.
+- `nine_hole_peg_test_transfer.superdex_prefab`: the test on the left and an empty board on the right, for moving the pegs across. A prefab reference cannot drop an actor, so it repeats the board; retune both.
 
 ## Derivations
 

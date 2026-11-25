@@ -22,6 +22,7 @@ This package contains a Functional Dexterity Test simulation asset that was crea
 - `tuning/`: `superdex_asset_tuner` scenarios used to tune the prefab.
 - `functional_dexterity_test.mochi_prefab`: the test: the board and sixteen nested pegs.
 - `fdt_peg.mochi_prefab`: one peg.
+- `functional_dexterity_test_partly_flipped.superdex_prefab`: the test partway through: every peg seated, all but four flipped black end up. A prefab reference cannot set a nested actor's pose, so it repeats the board; retune both.
 
 ## Derivations
 

@@ -11,6 +11,7 @@ This package contains a Meta-owned 2x2 puzzle cube prefab for use in SuperDex si
 - Generated collision geometry for SuperDex Physics in Studio.
 - Assembled the cube in Studio as a single articulation (a bot), scaled to 85% of the CAD model, and exported it as `puzzle_cube.mochi_prefab` with Studio's Bot > Export Prefab.
 - Gave each corner shell its own render model, `render/puzzle_cube_corner<N>_shell.glb`, colored for the corner's place in the solved cube: white +Z, yellow -Z, red +X, orange -X, blue +Y, green -Y.
+- Made `puzzle_cube_scrambled.superdex_prefab`: the cube two quarter turns from solved (the -Y layer, then the -Z layer), set by its `jointPose`. A prefab reference cannot set a nested actor's pose, so it repeats the cube; retune both.
 
 ## Physics Tuning
 

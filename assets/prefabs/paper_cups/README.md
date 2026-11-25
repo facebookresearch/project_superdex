@@ -23,6 +23,7 @@ The following work was done to produce this simulation-ready asset:
 - Generated the render model from the SolidWorks tessellation of the `Default` configuration, with a paper texture printed with the SuperDex logo under a clear coat.
 - Created the Meta-authored processing metadata for this asset in [`intermediates/paper_cup.StudioProcessing.json`](./intermediates/paper_cup.StudioProcessing.json).
 - Created reusable single-cup and ten-cup pyramid prefabs with contact settings and placement transforms; the pyramid's cups start at rest. A cup weighs 40 g.
+- Made `paper_cup_pyramid_half_built.superdex_prefab`: the pyramid's bottom two rows, with its other three cups nested upright in a stack beside it.
 
 ## Physics Tuning
 

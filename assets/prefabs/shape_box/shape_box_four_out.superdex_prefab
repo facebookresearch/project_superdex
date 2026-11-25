@@ -1,0 +1,340 @@
+{
+  "_comment": "The shape box with the easiest piece for each face out on the table in front of it, standing on end, from the operator's left: the ellipse (left face), the square (lid), the octagon (front face) and the hexagon (right face). The other pieces rest where shape_box.mochi_prefab puts them.",
+  "actors": {
+    "rigid": [
+      {
+        "name": "shapebox_body",
+        "renderModel": "./render/shape_box_body.glb",
+        "shape": "./collision/shape_box_body.mochi.h5",
+        "density": 390,
+        "boundaryElementType": "P1Q1",
+        "contact": {
+          "penaltyCoefficient": 10000000000.0,
+          "penaltySmoothingHalfDistance": 0.0001,
+          "penaltyThresholdDefault": 0.0001,
+          "penaltyThresholdExtraPadding": 0.0001,
+          "frictionFalloffVel": 0.001
+        }
+      },
+      {
+        "name": "shapebox_lid",
+        "renderModel": "./render/shape_box_lid.glb",
+        "shape": "./collision/shape_box_lid.mochi.h5",
+        "translation": [
+          0.003000000026077032,
+          0,
+          0.12502500414848328
+        ],
+        "density": 390,
+        "boundaryElementType": "P1Q1",
+        "contact": {
+          "penaltyCoefficient": 10000000000.0,
+          "penaltySmoothingHalfDistance": 0.0001,
+          "penaltyThresholdDefault": 0.0001,
+          "penaltyThresholdExtraPadding": 0.0001,
+          "frictionFalloffVel": 0.001
+        }
+      },
+      {
+        "name": "cross",
+        "renderModel": "./render/cross.glb",
+        "shape": "./collision/cross.mochi.h5",
+        "translation": [
+          -0.022,
+          0.022,
+          0.0082
+        ],
+        "rotation": [
+          9.6e-05,
+          0.707107,
+          0.707107,
+          9.6e-05
+        ],
+        "density": 390,
+        "boundaryElementType": "P1Q1",
+        "contact": {
+          "penaltyCoefficient": 10000000000.0,
+          "penaltySmoothingHalfDistance": 0.0001,
+          "penaltyThresholdDefault": 0.0001,
+          "penaltyThresholdExtraPadding": 0.0001,
+          "frictionFalloffVel": 0.001
+        }
+      },
+      {
+        "name": "triangle",
+        "renderModel": "./render/triangle.glb",
+        "shape": "./collision/triangle.mochi.h5",
+        "translation": [
+          0.0156,
+          -0.0108,
+          0.0082
+        ],
+        "rotation": [
+          0.183013,
+          -0.683013,
+          -0.683013,
+          0.183013
+        ],
+        "density": 390,
+        "boundaryElementType": "P1Q1",
+        "contact": {
+          "penaltyCoefficient": 10000000000.0,
+          "penaltySmoothingHalfDistance": 0.0001,
+          "penaltyThresholdDefault": 0.0001,
+          "penaltyThresholdExtraPadding": 0.0001,
+          "frictionFalloffVel": 0.001
+        }
+      },
+      {
+        "name": "trapezoid",
+        "renderModel": "./render/trapezoid.glb",
+        "shape": "./collision/trapezoid.mochi.h5",
+        "translation": [
+          -0.031779,
+          -0.051146,
+          0.102986
+        ],
+        "rotation": [
+          -0.995799,
+          8e-06,
+          0.000315,
+          0.091572
+        ],
+        "density": 390,
+        "boundaryElementType": "P1Q1",
+        "contact": {
+          "penaltyCoefficient": 10000000000.0,
+          "penaltySmoothingHalfDistance": 0.0001,
+          "penaltyThresholdDefault": 0.0001,
+          "penaltyThresholdExtraPadding": 0.0001,
+          "frictionFalloffVel": 0.001
+        }
+      },
+      {
+        "name": "diamond",
+        "renderModel": "./render/diamond.glb",
+        "shape": "./collision/diamond.mochi.h5",
+        "translation": [
+          -0.0,
+          -0.084,
+          0.046
+        ],
+        "rotation": [
+          0.0,
+          -0.0,
+          0.0,
+          1.0
+        ],
+        "density": 390,
+        "boundaryElementType": "P1Q1",
+        "contact": {
+          "penaltyCoefficient": 10000000000.0,
+          "penaltySmoothingHalfDistance": 0.0001,
+          "penaltyThresholdDefault": 0.0001,
+          "penaltyThresholdExtraPadding": 0.0001,
+          "frictionFalloffVel": 0.001
+        }
+      },
+      {
+        "name": "parallelogram",
+        "renderModel": "./render/parallelogram.glb",
+        "shape": "./collision/parallelogram.mochi.h5",
+        "translation": [
+          0.048362,
+          0.013387,
+          0.08255
+        ],
+        "rotation": [
+          -0.704697,
+          -0.704098,
+          0.065559,
+          0.057883
+        ],
+        "density": 390,
+        "boundaryElementType": "P1Q1",
+        "contact": {
+          "penaltyCoefficient": 10000000000.0,
+          "penaltySmoothingHalfDistance": 0.0001,
+          "penaltyThresholdDefault": 0.0001,
+          "penaltyThresholdExtraPadding": 0.0001,
+          "frictionFalloffVel": 0.001
+        }
+      },
+      {
+        "name": "star",
+        "renderModel": "./render/star.glb",
+        "shape": "./collision/star.mochi.h5",
+        "translation": [
+          0.041283,
+          0.011308,
+          0.057573
+        ],
+        "rotation": [
+          -0.19869,
+          -0.237221,
+          -0.662718,
+          0.681948
+        ],
+        "density": 390,
+        "boundaryElementType": "P1Q1",
+        "contact": {
+          "penaltyCoefficient": 10000000000.0,
+          "penaltySmoothingHalfDistance": 0.0001,
+          "penaltyThresholdDefault": 0.0001,
+          "penaltyThresholdExtraPadding": 0.0001,
+          "frictionFalloffVel": 0.001
+        }
+      },
+      {
+        "name": "pentagon",
+        "renderModel": "./render/pentagon.glb",
+        "shape": "./collision/pentagon.mochi.h5",
+        "translation": [
+          -0.000321,
+          0.090624,
+          0.035429
+        ],
+        "rotation": [
+          0.810827,
+          -0.047287,
+          -0.579311,
+          0.068716
+        ],
+        "density": 390,
+        "boundaryElementType": "P1Q1",
+        "contact": {
+          "penaltyCoefficient": 10000000000.0,
+          "penaltySmoothingHalfDistance": 0.0001,
+          "penaltyThresholdDefault": 0.0001,
+          "penaltyThresholdExtraPadding": 0.0001,
+          "frictionFalloffVel": 0.001
+        }
+      },
+      {
+        "name": "rectangle",
+        "renderModel": "./render/rectangle.glb",
+        "shape": "./collision/rectangle.mochi.h5",
+        "translation": [
+          -0.051985,
+          0.053635,
+          0.116379
+        ],
+        "rotation": [
+          -0.096658,
+          8.1e-05,
+          2.5e-05,
+          0.995318
+        ],
+        "density": 390,
+        "boundaryElementType": "P1Q1",
+        "contact": {
+          "penaltyCoefficient": 10000000000.0,
+          "penaltySmoothingHalfDistance": 0.0001,
+          "penaltyThresholdDefault": 0.0001,
+          "penaltyThresholdExtraPadding": 0.0001,
+          "frictionFalloffVel": 0.001
+        }
+      },
+      {
+        "name": "ellipse",
+        "renderModel": "./render/ellipse.glb",
+        "shape": "./collision/ellipse.mochi.h5",
+        "translation": [
+          0.15,
+          -0.12,
+          0.000435
+        ],
+        "rotation": [
+          0.707107,
+          0.0,
+          0.0,
+          0.707107
+        ],
+        "density": 390,
+        "boundaryElementType": "P1Q1",
+        "contact": {
+          "penaltyCoefficient": 10000000000.0,
+          "penaltySmoothingHalfDistance": 0.0001,
+          "penaltyThresholdDefault": 0.0001,
+          "penaltyThresholdExtraPadding": 0.0001,
+          "frictionFalloffVel": 0.001
+        }
+      },
+      {
+        "name": "square",
+        "renderModel": "./render/square.glb",
+        "shape": "./collision/square.mochi.h5",
+        "translation": [
+          0.15,
+          -0.04,
+          0.000435
+        ],
+        "rotation": [
+          0.707107,
+          0.0,
+          0.0,
+          0.707107
+        ],
+        "density": 390,
+        "boundaryElementType": "P1Q1",
+        "contact": {
+          "penaltyCoefficient": 10000000000.0,
+          "penaltySmoothingHalfDistance": 0.0001,
+          "penaltyThresholdDefault": 0.0001,
+          "penaltyThresholdExtraPadding": 0.0001,
+          "frictionFalloffVel": 0.001
+        }
+      },
+      {
+        "name": "octagon",
+        "renderModel": "./render/octagon.glb",
+        "shape": "./collision/octagon.mochi.h5",
+        "translation": [
+          0.15,
+          0.04,
+          0.000436
+        ],
+        "rotation": [
+          0.707107,
+          0.0,
+          0.0,
+          0.707107
+        ],
+        "density": 390,
+        "boundaryElementType": "P1Q1",
+        "contact": {
+          "penaltyCoefficient": 10000000000.0,
+          "penaltySmoothingHalfDistance": 0.0001,
+          "penaltyThresholdDefault": 0.0001,
+          "penaltyThresholdExtraPadding": 0.0001,
+          "frictionFalloffVel": 0.001
+        }
+      },
+      {
+        "name": "hexagon",
+        "renderModel": "./render/hexagon.glb",
+        "shape": "./collision/hexagon.mochi.h5",
+        "translation": [
+          0.15,
+          0.12,
+          0.000436
+        ],
+        "rotation": [
+          0.707107,
+          0.0,
+          0.0,
+          0.707107
+        ],
+        "density": 390,
+        "boundaryElementType": "P1Q1",
+        "contact": {
+          "penaltyCoefficient": 10000000000.0,
+          "penaltySmoothingHalfDistance": 0.0001,
+          "penaltyThresholdDefault": 0.0001,
+          "penaltyThresholdExtraPadding": 0.0001,
+          "frictionFalloffVel": 0.001
+        }
+      }
+    ]
+  }
+}

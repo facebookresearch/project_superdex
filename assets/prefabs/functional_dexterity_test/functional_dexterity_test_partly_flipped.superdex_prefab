@@ -1,0 +1,255 @@
+{
+  "_comment": "The Functional Dexterity Test partway through: every peg seated, all but pegs 2, 8, 9 and 15 flipped black end up.",
+  "actors": {
+    "rigid": [
+      {
+        "name": "board",
+        "shape": "./collision/pegboard.mochi.h5",
+        "renderModel": "./render/pegboard.glb",
+        "colliderType": "Sdf",
+        "contact": {
+          "coulombFrictionCoefficient": 0.12,
+          "penaltyCoefficient": 10000000000.0,
+          "penaltyThresholdDefault": 0.0001,
+          "penaltySmoothingHalfDistance": 0.0001
+        },
+        "translation": [
+          -0.103,
+          -0.103,
+          0.0
+        ],
+        "density": 1200.0,
+        "layer": "PegBoard"
+      }
+    ]
+  },
+  "prefabs": [
+    {
+      "name": "peg_1",
+      "path": "./fdt_peg.mochi_prefab",
+      "translation": [
+        -0.0675,
+        0.065965,
+        0.047072
+      ],
+      "rotation": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "peg_2",
+      "path": "./fdt_peg.mochi_prefab",
+      "translation": [
+        -0.0225,
+        0.065965,
+        0.007072
+      ]
+    },
+    {
+      "name": "peg_3",
+      "path": "./fdt_peg.mochi_prefab",
+      "translation": [
+        0.0225,
+        0.065965,
+        0.047072
+      ],
+      "rotation": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "peg_4",
+      "path": "./fdt_peg.mochi_prefab",
+      "translation": [
+        0.0675,
+        0.065965,
+        0.047072
+      ],
+      "rotation": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "peg_5",
+      "path": "./fdt_peg.mochi_prefab",
+      "translation": [
+        -0.0675,
+        0.020965,
+        0.047072
+      ],
+      "rotation": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "peg_6",
+      "path": "./fdt_peg.mochi_prefab",
+      "translation": [
+        -0.0225,
+        0.020965,
+        0.047072
+      ],
+      "rotation": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "peg_7",
+      "path": "./fdt_peg.mochi_prefab",
+      "translation": [
+        0.0225,
+        0.020965,
+        0.047072
+      ],
+      "rotation": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "peg_8",
+      "path": "./fdt_peg.mochi_prefab",
+      "translation": [
+        0.0675,
+        0.020965,
+        0.007072
+      ]
+    },
+    {
+      "name": "peg_9",
+      "path": "./fdt_peg.mochi_prefab",
+      "translation": [
+        -0.0675,
+        -0.024035,
+        0.007072
+      ]
+    },
+    {
+      "name": "peg_10",
+      "path": "./fdt_peg.mochi_prefab",
+      "translation": [
+        -0.0225,
+        -0.024035,
+        0.047072
+      ],
+      "rotation": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "peg_11",
+      "path": "./fdt_peg.mochi_prefab",
+      "translation": [
+        0.0225,
+        -0.024035,
+        0.047072
+      ],
+      "rotation": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "peg_12",
+      "path": "./fdt_peg.mochi_prefab",
+      "translation": [
+        0.0675,
+        -0.024035,
+        0.047072
+      ],
+      "rotation": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "peg_13",
+      "path": "./fdt_peg.mochi_prefab",
+      "translation": [
+        -0.0675,
+        -0.069035,
+        0.047072
+      ],
+      "rotation": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "peg_14",
+      "path": "./fdt_peg.mochi_prefab",
+      "translation": [
+        -0.0225,
+        -0.069035,
+        0.047072
+      ],
+      "rotation": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "peg_15",
+      "path": "./fdt_peg.mochi_prefab",
+      "translation": [
+        0.0225,
+        -0.069035,
+        0.007072
+      ]
+    },
+    {
+      "name": "peg_16",
+      "path": "./fdt_peg.mochi_prefab",
+      "translation": [
+        0.0675,
+        -0.069035,
+        0.047072
+      ],
+      "rotation": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    }
+  ],
+  "contactFilter": {
+    "layerContactAsymmetric": [
+      {
+        "enable": false,
+        "layers": [
+          "PegBoard",
+          "Peg"
+        ]
+      }
+    ]
+  }
+}
