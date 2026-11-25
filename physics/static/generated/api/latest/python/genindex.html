@@ -147,6 +147,7 @@
 <li class="toctree-l2"><a class="reference internal" href="api/viewer.html#module-superdex.physics.utils.render_model_registry">superdex.physics.utils.render_model_registry</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="api/rerun.html">Rerun Visualization</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api/scene_setup.html">Scene Setup, Assets &amp; Runtime</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="api/scene_setup.html#module-superdex.physics.paths">superdex.physics.paths</a></li>
 <li class="toctree-l2"><a class="reference internal" href="api/scene_setup.html#module-superdex.physics.environment">superdex.physics.environment</a></li>
@@ -455,6 +456,8 @@
 </li>
       <li><a href="api/physics.html#superdex.physics.PreconditionerType.AMG">AMG (PreconditionerType attribute)</a>
 </li>
+      <li><a href="api/rerun.html#superdex.physics.rerun.OverlayCfg.anchors">anchors (OverlayCfg attribute)</a>
+</li>
       <li><a href="api/physics.html#superdex.physics.JointRotationRangeConstraintParams.angle_range_x">angle_range_x (JointRotationRangeConstraintParams property)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.JointRotationRangeConstraintParams.angle_range_y">angle_range_y (JointRotationRangeConstraintParams property)</a>
@@ -613,6 +616,8 @@
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/rerun.html#superdex.physics.rerun.RerunLoggerCfg.application_id">application_id (RerunLoggerCfg attribute)</a>
+</li>
       <li><a href="api/utilities.html#superdex.physics.utils.transformations.apply_affine_transform">apply_affine_transform() (in module superdex.physics.utils.transformations)</a>
 </li>
       <li><a href="api/scene_setup.html#superdex.physics.utils.scene_helpers.apply_asset_snapshot">apply_asset_snapshot() (in module superdex.physics.utils.scene_helpers)</a>
@@ -1129,6 +1134,8 @@
         <li><a href="api/physics.html#superdex.physics.DynamicArrayUint8.clear">(DynamicArrayUint8 attribute)</a>
 </li>
       </ul></li>
+      <li><a href="api/rerun.html#superdex.physics.rerun.OverlayLogger.clear">clear() (OverlayLogger method)</a>
+</li>
       <li><a href="api/scene_setup.html#superdex.physics.utils.scene_helpers.clear_asset_snapshot">clear_asset_snapshot() (in module superdex.physics.utils.scene_helpers)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.Actor.clear_boundary_conditions">clear_boundary_conditions (Actor attribute)</a>
@@ -1145,8 +1152,12 @@
 </li>
       <li><a href="api/viewer.html#superdex.physics.utils.render_model_registry.clear_scene">clear_scene() (in module superdex.physics.utils.render_model_registry)</a>
 </li>
-      <li><a href="api/viewer.html#superdex.physics.viewer.Viewer.close">close() (Viewer method)</a>
+      <li><a href="api/rerun.html#superdex.physics.rerun.RerunLogger.close">close() (RerunLogger method)</a>
+
+      <ul>
+        <li><a href="api/viewer.html#superdex.physics.viewer.Viewer.close">(Viewer method)</a>
 </li>
+      </ul></li>
       <li><a href="api/physics.html#superdex.physics.RoutingElement.coefficient">coefficient (RoutingElement property)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.PointCloudColliderParams.collider_segment_element_type">collider_segment_element_type (PointCloudColliderParams property)</a>
@@ -1172,6 +1183,8 @@
       <li><a href="api/physics.html#superdex.physics.ContactParams.colliding_penalty_threshold_padding">colliding_penalty_threshold_padding (ContactParams property)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.Color">Color (class in superdex.physics)</a>
+</li>
+      <li><a href="api/rerun.html#superdex.physics.rerun.OverlayCfg.color">color (OverlayCfg attribute)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.PreconditionerType.COLORED_SSOR">COLORED_SSOR (PreconditionerType attribute)</a>
 </li>
@@ -1224,6 +1237,10 @@
       <li><a href="api/utilities.html#superdex.physics.utils.configclasses.configclass">configclass() (in module superdex.physics.utils.configclasses)</a>
 </li>
       <li><a href="api/utilities.html#superdex.physics.utils.logging.configure_logger">configure_logger() (in module superdex.physics.utils.logging)</a>
+</li>
+      <li><a href="api/rerun.html#superdex.physics.rerun.RerunLoggerCfg.connect">connect (RerunLoggerCfg attribute)</a>
+</li>
+      <li><a href="api/rerun.html#superdex.physics.rerun.RerunLoggerCfg.connect_addr">connect_addr (RerunLoggerCfg attribute)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.MeshData.connectivity">connectivity (MeshData property)</a>
 
@@ -1321,8 +1338,12 @@
 </li>
       <li><a href="api/viewer.html#superdex.physics.viewer.renderers.MeshRenderer.Colormap.COOL_WARM">COOL_WARM (MeshRenderer.Colormap attribute)</a>
 </li>
-      <li><a href="api/viewer.html#superdex.physics.viewer.ViewerCfg.coordinate_system">coordinate_system (ViewerCfg attribute)</a>
+      <li><a href="api/rerun.html#superdex.physics.rerun.RerunLoggerCfg.coordinate_system">coordinate_system (RerunLoggerCfg attribute)</a>
+
+      <ul>
+        <li><a href="api/viewer.html#superdex.physics.viewer.ViewerCfg.coordinate_system">(ViewerCfg attribute)</a>
 </li>
+      </ul></li>
       <li><a href="api/utilities.html#superdex.physics.utils.coordinate_systems.COORDINATE_SYSTEMS">COORDINATE_SYSTEMS (in module superdex.physics.utils.coordinate_systems)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.MeshData.coordinates">coordinates (MeshData property)</a>
@@ -1428,6 +1449,8 @@
       <li><a href="api/physics.html#superdex.physics.create_mesh_shape">create_mesh_shape() (in module superdex.physics)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.create_model_shape">create_model_shape() (in module superdex.physics)</a>
+</li>
+      <li><a href="api/rerun.html#superdex.physics.rerun.RerunLogger.create_overlay">create_overlay() (RerunLogger method)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.create_plane_shape">create_plane_shape() (in module superdex.physics)</a>
 </li>
@@ -1996,7 +2019,11 @@
       <li><a href="api/physics.html#superdex.physics.VerbosityLevel.ERROR">ERROR (VerbosityLevel attribute)</a>
 </li>
       <li><a href="api/prefab.html#superdex.physics.prefab.ExportParams.exclude_actors">exclude_actors (ExportParams property)</a>
+
+      <ul>
+        <li><a href="api/rerun.html#superdex.physics.rerun.OverlayCfg.exclude_actors">(OverlayCfg attribute)</a>
 </li>
+      </ul></li>
       <li><a href="api/utilities.html#superdex.physics.utils.profiling.Profiler.exit">exit() (Profiler method)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.LinearSolverType.EXPERIMENTAL_CUDA_SPARSE_CHOLESKY">EXPERIMENTAL_CUDA_SPARSE_CHOLESKY (LinearSolverType attribute)</a>
@@ -2201,6 +2228,8 @@
 </li>
       <li><a href="api/viewer.html#superdex.physics.viewer.renderers.MeshRenderer.Material.FLAT">FLAT (MeshRenderer.Material attribute)</a>
 </li>
+      <li><a href="api/rerun.html#superdex.physics.rerun.OverlayCfg.flat_shading">flat_shading (OverlayCfg attribute)</a>
+</li>
       <li><a href="api/physics.html#superdex.physics.CoordinateSpaceAxes.FLD">FLD (CoordinateSpaceAxes attribute)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.RodMaterialParams.flexural_stiffness">flexural_stiffness (RodMaterialParams property)</a>
@@ -2295,6 +2324,8 @@
       </ul></li>
       <li><a href="api/viewer.html#superdex.physics.viewer.renderers.ActorRenderer.get_actor">get_actor() (ActorRenderer method)</a>
 </li>
+      <li><a href="api/rerun.html#superdex.physics.rerun.OverlayLogger.get_actor_names">get_actor_names() (OverlayLogger method)</a>
+</li>
       <li><a href="api/viewer.html#superdex.physics.viewer.Viewer.get_actor_renderer">get_actor_renderer() (Viewer method)</a>
 </li>
       <li><a href="api/viewer.html#superdex.physics.viewer.Viewer.get_actor_renderers">get_actor_renderers() (Viewer method)</a>
@@ -2326,6 +2357,8 @@
       <li><a href="api/physics.html#superdex.physics.Actor.get_articulated_joint_wrenches">get_articulated_joint_wrenches (Actor attribute)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.Actor.get_articulated_link_transforms">get_articulated_link_transforms (Actor attribute)</a>
+</li>
+      <li><a href="api/rerun.html#superdex.physics.rerun.OverlayLogger.get_articulated_names">get_articulated_names() (OverlayLogger method)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.Actor.get_articulated_pose">get_articulated_pose (Actor attribute)</a>
 </li>
@@ -2465,6 +2498,8 @@
 </li>
       <li><a href="api/physics.html#superdex.physics.Actor.get_elements_deformation_gradient">get_elements_deformation_gradient (Actor attribute)</a>
 </li>
+      <li><a href="api/rerun.html#superdex.physics.rerun.OverlayLogger.get_entity_path">get_entity_path() (OverlayLogger method)</a>
+</li>
       <li><a href="api/scene_setup.html#superdex.physics.environment.get_env_var_value">get_env_var_value() (in module superdex.physics.environment)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.Actor.get_external_forces">get_external_forces (Actor attribute)</a>
@@ -2527,10 +2562,10 @@
 </li>
       <li><a href="api/viewer.html#superdex.physics.viewer.Viewer.get_mesh">get_mesh() (Viewer method)</a>
 </li>
-      <li><a href="api/viewer.html#superdex.physics.viewer.Viewer.get_meshes">get_meshes() (Viewer method)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/viewer.html#superdex.physics.viewer.Viewer.get_meshes">get_meshes() (Viewer method)</a>
+</li>
       <li><a href="api/physics.html#superdex.physics.Actor.get_name">get_name (Actor attribute)</a>
 
       <ul>
@@ -2666,6 +2701,8 @@
       <li><a href="api/physics.html#superdex.physics.get_scene">get_scene() (in module superdex.physics)</a>
 
       <ul>
+        <li><a href="api/rerun.html#superdex.physics.rerun.RerunLogger.get_scene">(RerunLogger method)</a>
+</li>
         <li><a href="api/viewer.html#superdex.physics.viewer.Viewer.get_scene">(Viewer method)</a>
 </li>
       </ul></li>
@@ -2684,6 +2721,8 @@
       <li><a href="api/physics.html#superdex.physics.get_shape_surface_mesh">get_shape_surface_mesh() (in module superdex.physics)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.get_shape_visual_mesh">get_shape_visual_mesh() (in module superdex.physics)</a>
+</li>
+      <li><a href="api/rerun.html#superdex.physics.rerun.RerunLogger.get_sim_time">get_sim_time() (RerunLogger method)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.Aabb.get_size">get_size (Aabb attribute)</a>
 
@@ -2890,6 +2929,8 @@
       <li><a href="api/physics.html#superdex.physics.PreconditionerType.ILU0">ILU0 (PreconditionerType attribute)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.ExperimentalEvalParams.implicit_normal_force_for_dissipation">implicit_normal_force_for_dissipation (ExperimentalEvalParams property)</a>
+</li>
+      <li><a href="api/rerun.html#superdex.physics.rerun.OverlayCfg.include_actors">include_actors (OverlayCfg attribute)</a>
 </li>
       <li><a href="api/prefab.html#superdex.physics.prefab.ActorContactEntry.include_nested_actors">include_nested_actors (ActorContactEntry property)</a>
 </li>
@@ -3209,14 +3250,14 @@
 </li>
       <li><a href="api/physics.html#superdex.physics.RoutingElementType.LINEAR_JOINT">LINEAR_JOINT (RoutingElementType attribute)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/physics.html#superdex.physics.RodMaterialParams.linear_rotational_inertia">linear_rotational_inertia (RodMaterialParams property)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.SolverParams.linear_solver">linear_solver (SolverParams property)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.NonLinearSolverParams.linear_tolerance_strategy">linear_tolerance_strategy (NonLinearSolverParams property)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/physics.html#superdex.physics.RigidActorParams.linear_velocity">linear_velocity (RigidActorParams property)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.LinearElasticMaterialParams">LinearElasticMaterialParams (class in superdex.physics)</a>
@@ -3297,7 +3338,19 @@
 </li>
       <li><a href="api/physics.html#superdex.physics.log">log() (in module superdex.physics)</a>
 </li>
+      <li><a href="api/rerun.html#superdex.physics.rerun.RerunLoggerCfg.log_debug_draw">log_debug_draw (RerunLoggerCfg attribute)</a>
+</li>
+      <li><a href="api/rerun.html#superdex.physics.rerun.RerunLogger.log_frame">log_frame() (RerunLogger method)</a>
+</li>
       <li><a href="api/scene_setup.html#superdex.physics.environment.LOG_LEVEL_ENV_VAR">LOG_LEVEL_ENV_VAR (in module superdex.physics.environment)</a>
+</li>
+      <li><a href="api/rerun.html#superdex.physics.rerun.RerunLoggerCfg.log_meshes">log_meshes (RerunLoggerCfg attribute)</a>
+</li>
+      <li><a href="api/rerun.html#superdex.physics.rerun.RerunLogger.log_scene_snapshot">log_scene_snapshot() (RerunLogger method)</a>
+</li>
+      <li><a href="api/rerun.html#superdex.physics.rerun.RerunLogger.log_static_geometry">log_static_geometry() (RerunLogger method)</a>
+</li>
+      <li><a href="api/rerun.html#superdex.physics.rerun.RerunLoggerCfg.log_transforms">log_transforms (RerunLoggerCfg attribute)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.LogChannel">LogChannel (class in superdex.physics)</a>
 </li>
@@ -3411,6 +3464,8 @@
         <li><a href="api/physics.html#superdex.physics.ModelDataView.mesh">(ModelDataView property)</a>
 </li>
       </ul></li>
+      <li><a href="api/rerun.html#superdex.physics.rerun.RerunLoggerCfg.mesh_assets_dir">mesh_assets_dir (RerunLoggerCfg attribute)</a>
+</li>
       <li><a href="api/physics.html#superdex.physics.MESH_DATA_SPACE_DIM">MESH_DATA_SPACE_DIM (in module superdex.physics)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.MeshData">MeshData (class in superdex.physics)</a>
@@ -3485,6 +3540,8 @@
 </li>
         <li><a href="api/scene_setup.html#module-superdex.physics.paths">superdex.physics.paths</a>
 </li>
+        <li><a href="api/rerun.html#module-superdex.physics.rerun">superdex.physics.rerun</a>
+</li>
         <li><a href="api/utilities.html#module-superdex.physics.utils.configclasses">superdex.physics.utils.configclasses</a>
 </li>
         <li><a href="api/scene_setup.html#module-superdex.physics.utils.context">superdex.physics.utils.context</a>
@@ -3542,6 +3599,8 @@
         <li><a href="api/physics.html#superdex.physics.ArticulatedJointParams.name">(ArticulatedJointParams property)</a>
 </li>
         <li><a href="api/physics.html#superdex.physics.ArticulatedLinkParams.name">(ArticulatedLinkParams property)</a>
+</li>
+        <li><a href="api/rerun.html#superdex.physics.rerun.OverlayCfg.name">(OverlayCfg attribute)</a>
 </li>
         <li><a href="api/viewer.html#superdex.physics.viewer.PlotAxisInfo.name">(PlotAxisInfo attribute)</a>
 </li>
@@ -3678,15 +3737,19 @@
 </li>
       <li><a href="api/physics.html#superdex.physics.MeshFileType.OFF">OFF (MeshFileType attribute)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/viewer.html#superdex.physics.viewer.ViewerCfg.offscreen">offscreen (ViewerCfg attribute)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/physics.html#superdex.physics.ArticulatedDofInfo.offset">offset (ArticulatedDofInfo property)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.CoordinateSpace.open_gl">open_gl (CoordinateSpace attribute)</a>
 </li>
       <li><a href="api/utilities.html#superdex.physics.utils.transformations.orthonormalize_transform">orthonormalize_transform() (in module superdex.physics.utils.transformations)</a>
+</li>
+      <li><a href="api/rerun.html#superdex.physics.rerun.OverlayCfg">OverlayCfg (class in superdex.physics.rerun)</a>
+</li>
+      <li><a href="api/rerun.html#superdex.physics.rerun.OverlayLogger">OverlayLogger (class in superdex.physics.rerun)</a>
 </li>
       <li><a href="api/utilities.html#superdex.physics.utils.decorators.override_from">override_from() (in module superdex.physics.utils.decorators)</a>
 </li>
@@ -4052,6 +4115,10 @@
 </li>
       <li><a href="api/utilities.html#superdex.physics.utils.profiling.Profiler.record_individual_samples">record_individual_samples (Profiler attribute)</a>
 </li>
+      <li><a href="api/rerun.html#superdex.physics.rerun.RerunLoggerCfg.recording_id">recording_id (RerunLoggerCfg attribute)</a>
+</li>
+      <li><a href="api/rerun.html#superdex.physics.rerun.RerunLoggerCfg.recording_name">recording_name (RerunLoggerCfg attribute)</a>
+</li>
       <li><a href="api/physics.html#superdex.physics.PerformanceStats.recording_step_duration_sec">recording_step_duration_sec (PerformanceStats property)</a>
 </li>
       <li><a href="api/viewer.html#superdex.physics.viewer.renderers.MeshRenderer.Colormap.REDS">REDS (MeshRenderer.Colormap attribute)</a>
@@ -4204,6 +4271,10 @@
 </li>
       <li><a href="api/viewer.html#superdex.physics.viewer.renderers.MeshRenderer.replace_geometry">replace_geometry() (MeshRenderer method)</a>
 </li>
+      <li><a href="api/rerun.html#superdex.physics.rerun.RerunLogger">RerunLogger (class in superdex.physics.rerun)</a>
+</li>
+      <li><a href="api/rerun.html#superdex.physics.rerun.RerunLoggerCfg">RerunLoggerCfg (class in superdex.physics.rerun)</a>
+</li>
       <li><a href="api/physics.html#superdex.physics.DynamicArrayActor.reserve">reserve (DynamicArrayActor attribute)</a>
 
       <ul>
@@ -4320,17 +4391,19 @@
         <li><a href="api/physics.html#superdex.physics.DynamicArrayUint8.reserve">(DynamicArrayUint8 attribute)</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/viewer.html#superdex.physics.viewer.renderers.DebugDrawRenderer.reset">reset() (DebugDrawRenderer method)</a>
 
       <ul>
         <li><a href="api/utilities.html#superdex.physics.utils.profiling.Profiler.reset">(Profiler method)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/physics.html#superdex.physics.Actor.reset_articulated_target_link_transforms">reset_articulated_target_link_transforms (Actor attribute)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.Actor.reset_articulated_target_pose">reset_articulated_target_pose (Actor attribute)</a>
+</li>
+      <li><a href="api/rerun.html#superdex.physics.rerun.RerunLogger.reset_scene">reset_scene() (RerunLogger method)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.LinearSolverConvergenceNorm.RESIDUAL_L2">RESIDUAL_L2 (LinearSolverConvergenceNorm attribute)</a>
 </li>
@@ -4642,6 +4715,8 @@
       </ul></li>
       <li><a href="api/physics.html#superdex.physics.SaturationHessianParams">SaturationHessianParams (class in superdex.physics)</a>
 </li>
+      <li><a href="api/rerun.html#superdex.physics.rerun.RerunLoggerCfg.save_path">save_path (RerunLoggerCfg attribute)</a>
+</li>
       <li><a href="api/models.html#superdex.physics.model.save_to_file">save_to_file() (in module superdex.physics.model)</a>
 </li>
       <li><a href="api/prefab.html#superdex.physics.prefab.save_to_json_file">save_to_json_file() (in module superdex.physics.prefab)</a>
@@ -4719,6 +4794,8 @@
       <li><a href="api/physics.html#superdex.physics.Actor.set_articulated_joint_inertia_params">set_articulated_joint_inertia_params (Actor attribute)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.Actor.set_articulated_joint_velocities">set_articulated_joint_velocities (Actor attribute)</a>
+</li>
+      <li><a href="api/rerun.html#superdex.physics.rerun.OverlayLogger.set_articulated_pose">set_articulated_pose() (OverlayLogger method)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.Actor.set_articulated_pose_controller_params">set_articulated_pose_controller_params (Actor attribute)</a>
 </li>
@@ -4874,14 +4951,20 @@
 </li>
       <li><a href="api/physics.html#superdex.physics.Constraint.set_ref_relative_rotation">set_ref_relative_rotation (Constraint attribute)</a>
 </li>
+      <li><a href="api/rerun.html#superdex.physics.rerun.OverlayLogger.set_rigid_pose">set_rigid_pose() (OverlayLogger method)</a>
+</li>
       <li><a href="api/physics.html#superdex.physics.Actor.set_rod_pose">set_rod_pose (Actor attribute)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.Actor.set_root_transform">set_root_transform (Actor attribute)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.Constraint.set_saturation">set_saturation (Constraint attribute)</a>
 </li>
-      <li><a href="api/viewer.html#superdex.physics.viewer.Viewer.set_scene">set_scene() (Viewer method)</a>
+      <li><a href="api/rerun.html#superdex.physics.rerun.RerunLogger.set_scene">set_scene() (RerunLogger method)</a>
+
+      <ul>
+        <li><a href="api/viewer.html#superdex.physics.viewer.Viewer.set_scene">(Viewer method)</a>
 </li>
+      </ul></li>
       <li><a href="api/viewer.html#superdex.physics.viewer.renderers.ActorRenderer.set_show_axes_at_com">set_show_axes_at_com() (ActorRenderer method)</a>
 </li>
       <li><a href="api/viewer.html#superdex.physics.viewer.renderers.GridRenderer.set_size">set_size() (GridRenderer method)</a>
@@ -4920,6 +5003,8 @@
 
       <ul>
         <li><a href="api/viewer.html#superdex.physics.viewer.renderers.MeshRenderer.set_transform">(MeshRenderer method)</a>
+</li>
+        <li><a href="api/rerun.html#superdex.physics.rerun.OverlayLogger.set_transform">(OverlayLogger method)</a>
 </li>
       </ul></li>
       <li><a href="api/viewer.html#superdex.physics.viewer.renderers.CurveNetworkRenderer.set_transparency">set_transparency() (CurveNetworkRenderer method)</a>
@@ -5282,6 +5367,8 @@
 </li>
       <li><a href="api/physics.html#superdex.physics.PointCloudColliderParams.spatial_hash_load_factor">spatial_hash_load_factor (PointCloudColliderParams property)</a>
 </li>
+      <li><a href="api/rerun.html#superdex.physics.rerun.RerunLoggerCfg.spawn">spawn (RerunLoggerCfg attribute)</a>
+</li>
       <li><a href="api/viewer.html#superdex.physics.viewer.renderers.MeshRenderer.Colormap.SPECTRAL">SPECTRAL (MeshRenderer.Colormap attribute)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.Sphere">Sphere (class in superdex.physics)</a>
@@ -5406,6 +5493,13 @@
 
       <ul>
         <li><a href="api/scene_setup.html#module-superdex.physics.paths">module</a>
+</li>
+      </ul></li>
+      <li>
+    superdex.physics.rerun
+
+      <ul>
+        <li><a href="api/rerun.html#module-superdex.physics.rerun">module</a>
 </li>
       </ul></li>
       <li>
@@ -5879,6 +5973,8 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/physics.html#superdex.physics.Scene.update_debugger">update_debugger (Scene attribute)</a>
 </li>
+      <li><a href="api/rerun.html#superdex.physics.rerun.OverlayLogger.update_from_scene">update_from_scene() (OverlayLogger method)</a>
+</li>
       <li><a href="api/physics.html#superdex.physics.Constraint.update_old_target">update_old_target (Constraint attribute)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.Scene.update_queries">update_queries (Scene attribute)</a>
@@ -5907,6 +6003,8 @@
         <li><a href="api/prefab.html#superdex.physics.prefab.SoftActorPrefab.use_recentering">(SoftActorPrefab property)</a>
 </li>
       </ul></li>
+      <li><a href="api/rerun.html#superdex.physics.rerun.RerunLoggerCfg.use_timeline">use_timeline (RerunLoggerCfg attribute)</a>
+</li>
       <li><a href="api/viewer.html#superdex.physics.viewer.Viewer.user_requested_close">user_requested_close() (Viewer method)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.uses_double_precision">uses_double_precision() (in module superdex.physics)</a>

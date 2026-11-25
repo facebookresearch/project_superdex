@@ -1,0 +1,28 @@
+.. @generated
+
+Rerun Visualization
+===================
+
+**Module:** ``superdex.physics.rerun``
+
+Record simulation geometry, motion, and overlays for the Rerun viewer.
+
+.. automodule:: superdex.physics.rerun
+   :no-members:
+
+.. autoclass:: superdex.physics.rerun.OverlayCfg
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.rerun.OverlayLogger
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.rerun.RerunLogger
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.rerun.RerunLoggerCfg
+   :members:
+   :show-inheritance:
+

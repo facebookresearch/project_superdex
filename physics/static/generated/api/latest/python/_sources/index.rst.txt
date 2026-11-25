@@ -13,6 +13,7 @@ Categories are shown in curated order. Symbols within each category are listed a
    api/models
    api/debugger
    api/viewer
+   api/rerun
    api/scene_setup
    api/utilities
    api/testing
