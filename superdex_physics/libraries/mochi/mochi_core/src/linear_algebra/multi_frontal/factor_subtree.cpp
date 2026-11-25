@@ -44,7 +44,7 @@ void FactorSubtree(
     auto snHeight = kDofsPerNode * tree.SuperColSize(supNd);
     // Leaf nodes won't be on the stack yet, but parents will be.
     auto space = stack.IsOnStack(supNd) ? stack.GetTopFront() : stack.PushFront(supNd);
-    auto snFront = Front<kBlockSize, true>(space.end(), snHeight - snSize, false);
+    auto snFront = Front<kBlockSize, true>(space.end(), snHeight - snSize);
 
     auto snL = lMatrix.LforSN(supNd);
     bool isLeaf = tree.IsLeaf(supNd);
@@ -60,7 +60,7 @@ void FactorSubtree(
     bool parentOnStack = stack.IsParentOnStack(supNd);
     auto parentSpace = parentOnStack ? stack.GetTopFront() : stack.PushFront(parent);
     auto parentL = lMatrix.LforSN(parent);
-    auto parentFront = Front<kBlockSize>(parentSpace.end(), parentL.Rows() - parentL.Cols(), false);
+    auto parentFront = Front<kBlockSize>(parentSpace.end(), parentL.Rows() - parentL.Cols());
     auto ranges = organizer.GetRangesInParent(supNd);
     if (!parentOnStack) {
       ExpandIntoParent<kDofsPerNode>(snFront, parentL, parentFront, ranges);

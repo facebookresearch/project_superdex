@@ -226,10 +226,7 @@ TrunkWork<Scalar, kColumnBlock>::TrunkWork(
             .superNode = child,
             .nodeIndices = frontIndices,
             .indicesInParent = relativeIndices,
-            .front = Front<kColumnBlock>(
-                childrenFrontBuffers[i].data() + childrenFrontBuffers[i].size(),
-                childFrontDOFs,
-                false),
+            .front = Front<kColumnBlock>(childrenFrontBuffers[i].end(), childFrontDOFs),
         });
   }
   auto snL = lMatrix.LforSN(superNode);
@@ -239,8 +236,7 @@ TrunkWork<Scalar, kColumnBlock>::TrunkWork(
 
   // Reserve and pre-size (Panel has std::atomic, can't be copied/moved)
   auto frontDOFs = snL.Rows() - snL.Cols();
-  Front<kColumnBlock> front(
-      frontDOFs > 0 ? frontBuffer.data() + frontBuffer.size() : nullptr, frontDOFs, false);
+  Front<kColumnBlock> front(frontDOFs > 0 ? frontBuffer.end() : nullptr, frontDOFs);
   panels.resize(numLBlocks + front.NumBlocks());
   int panelIdx = 0;
 

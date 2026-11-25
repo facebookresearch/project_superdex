@@ -31,14 +31,10 @@ namespace mochi {
  * index increases (descending steps). Each block has
  * a fixed width of kColumnBlock except for the first or last block. When kPackSmall
  * is true, the first block may be narrower, otherwise the last one may be narrower.
+ * The blocks are stored contiguously in block order.
  *
- * Storage-wise, the *normal* order of storage in memory starts with the larger blocks.
- * The user of Front objects may decide that a *mirrored* storage, where the smaller
- * blocks occupy lower addresses, may be more efficient.
- * When _mirrored is true, offsets from one block to the next are
- * negatives, otherwise positive.
  * kColumnBlock should be chosen to be a multiple of the GEMM kernel (6 in Mochi as well as MKL)
- * to avoid the loop spill-over treatment. It should also be chosen large enough so that the rang-N
+ * to avoid the loop spill-over treatment. It should also be chosen large enough so that the rank-N
  * update, where N is kColumnBlock in many of the loops is efficient for the architecture.
  * This number should ideally be tuned for the architecture/BLAS library used.
  *
@@ -52,16 +48,12 @@ class Front {
 
   static constexpr size_t StorageSize(size_t numDOFs);
 
-  /** @details If `isMirrored` is true, space points to the beginning of the front's
-   * memory, otherwise is points to the end.
-   *
-   * @param space Pointer to the beginning or end of the front memory.
+  /** @param end One past the last element of the front's storage, the @ref StorageSize(numDOFs)
+   * elements before it.
    * @param numDOFs Size of the front matrix in DOFs.
-   * @param isMirrored Whether blocks are ordered from smallest to largest,
-   *        or, largest to smallest.
    */
   template <typename Scalar>
-  Front(Scalar* space, size_t numDOFs, bool isMirrored);
+  Front(Scalar* end, size_t numDOFs);
 
   /// @brief Number of rows/columns of the front matrix.
   [[nodiscard]] constexpr size_t Size() const {
@@ -72,8 +64,7 @@ class Front {
   MatrixView<Scalar> Block(size_t block) const;
 
   /// @brief One @p kDofsPerNode-wide view per node, in increasing node order, each from the node's
-  /// diagonal down. The front must not be mirrored, and its size and @p kColumnBlock must be
-  /// multiples of @p kDofsPerNode.
+  /// diagonal down. The front's size and @p kColumnBlock must be multiples of @p kDofsPerNode.
   template <typename Scalar, size_t kDofsPerNode>
   RangeByIterators<StairNodalIterator<Scalar, kDofsPerNode, kColumnBlock>> NodalColumns() const;
 
@@ -86,27 +77,15 @@ class Front {
     return MatrixView<Scalar>(ptr, static_cast<int>(rows), static_cast<int>(cols));
   }
 
-  /**
-   * @brief Pointer to the beginning of the front's allocation.
-   *
-   * @details `_refPtr` is the low address of the allocation when `kPackSmall == _mirrored`;
-   * otherwise it points one past the last element, so `StorageSize()` is subtracted. This is the
-   * same storage-layout axis as @ref BasePtr (which keys off `kPackSmall ^ _mirrored`).
-   */
+  /// @brief Pointer to the beginning of the front's storage.
   template <typename Scalar>
   Scalar* MemoryStart() const {
-    auto* v = reinterpret_cast<Scalar*>(_refPtr);
-    if constexpr (kPackSmall) {
-      return _mirrored ? v : v - StorageSize();
-    } else {
-      return _mirrored ? v - StorageSize() : v;
-    }
+    return static_cast<Scalar*>(_end) - StorageSize();
   }
 
  private:
-  bool _mirrored = false;
-  /// @brief Reference pointer.
-  void* _refPtr;
+  /// @brief End of the front's storage.
+  void* _end;
   /// @brief Number of DOFs in the front.
   size_t _numDOFs;
   /// @brief Number of blocks.
@@ -115,16 +94,6 @@ class Front {
   size_t _edgeCols;
 
   static constexpr auto kHalfSquare = kColumnBlock * kColumnBlock / 2;
-
-  /** @brief Compute the base pointer for a block.
-   * @details The base pointer is the pointer to the beginning of the block
-   * when (kPackSmall ^ _mirrored), the end pointer of the block otherwise.
-   * @tparam Scalar
-   * @param block
-   * @return
-   */
-  template <typename Scalar>
-  Scalar* BasePtr(size_t block) const;
 };
 
 inline constexpr size_t FrontStorageSize(size_t numDOFs, size_t columnBlock) {
@@ -153,17 +122,10 @@ constexpr size_t Front<kColumnBlock, kPackSmall>::StorageSize(size_t numDOFs) {
 
 template <size_t kColumnBlock, bool kPackSmall>
 template <typename Scalar>
-Front<kColumnBlock, kPackSmall>::Front(Scalar* space, size_t numDOFs, bool isMirrored)
-    : _mirrored(isMirrored), _numDOFs(numDOFs) {
+Front<kColumnBlock, kPackSmall>::Front(Scalar* end, size_t numDOFs) : _end(end), _numDOFs(numDOFs) {
   _numBlocks = (numDOFs + kColumnBlock - 1) / kColumnBlock;
   // This formula gives kColumnBlock when numDOFs is divisible by kColumnBlock.
   _edgeCols = ((numDOFs + kColumnBlock - 1) % kColumnBlock) + 1;
-  if constexpr (kPackSmall) {
-    _refPtr = space;
-  } else {
-    auto s = static_cast<ptrdiff_t>(StorageSize());
-    _refPtr = space + (_mirrored ? s : -s);
-  }
 }
 
 template <size_t kColumnBlock, bool kPackSmall>
@@ -174,16 +136,18 @@ constexpr size_t Front<kColumnBlock, kPackSmall>::StorageSize() const {
 template <size_t kColumnBlock, bool kPackSmall>
 template <typename Scalar>
 MatrixView<Scalar> Front<kColumnBlock, kPackSmall>::Block(size_t block) const {
-  Scalar* v = BasePtr<Scalar>(block);
   if constexpr (kPackSmall) {
+    // revBlock is between 1 and _numBlocks
     auto revBlock = _numBlocks - block;
     auto height = std::min(_numDOFs, revBlock * kColumnBlock);
     auto width = std::min(kColumnBlock, _numDOFs - (revBlock - 1) * kColumnBlock);
-    return MakeBlock<Scalar>((_mirrored != kPackSmall) ? v - height * width : v, height, width);
+    auto* blockEnd = static_cast<Scalar*>(_end) - revBlock * (revBlock - 1) * kHalfSquare;
+    return MakeBlock<Scalar>(blockEnd - height * width, height, width);
   } else {
     auto height = _numDOFs - block * kColumnBlock;
     auto width = std::min(kColumnBlock, height);
-    return MakeBlock<Scalar>((_mirrored != kPackSmall) ? v - height * width : v, height, width);
+    auto offset = block * _numDOFs * kColumnBlock - block * (block - 1) * kHalfSquare;
+    return MakeBlock<Scalar>(MemoryStart<Scalar>() + offset, height, width);
   }
 }
 
@@ -194,12 +158,11 @@ Front<kColumnBlock, kPackSmall>::NodalColumns() const {
   static_assert(
       kColumnBlock % kDofsPerNode == 0,
       "Front column block size must be a multiple of DoFs per node");
-  MOCHI_ASSERT_VERBOSE(!_mirrored, "Mirrored front are not yet supported by StairNodalIterators");
   MOCHI_ASSERT_VERBOSE(
       _numDOFs % kDofsPerNode == 0, "Front size must be a multiple of DoFs per node");
 
   auto startPtr = MemoryStart<Scalar>();
-  auto endPtr = startPtr + StorageSize();
+  auto endPtr = static_cast<Scalar*>(_end);
   auto firstNumCols = kPackSmall ? _edgeCols : std::min(kColumnBlock, _numDOFs);
   auto blockEndPtr = startPtr + firstNumCols * _numDOFs;
   auto nDofs = static_cast<int>(_numDOFs);
@@ -212,21 +175,6 @@ Front<kColumnBlock, kPackSmall>::NodalColumns() const {
 template <size_t kColumnBlock, bool kPackSmall>
 size_t Front<kColumnBlock, kPackSmall>::NumBlocks() const {
   return _numBlocks;
-}
-
-template <size_t kColumnBlock, bool kPackSmall>
-template <typename Scalar>
-Scalar* Front<kColumnBlock, kPackSmall>::BasePtr(size_t block) const {
-  auto values = static_cast<Scalar*>(_refPtr);
-  if constexpr (kPackSmall) {
-    // revBlock is between 1 and _numBlocks
-    auto revBlock = _numBlocks - block;
-    ptrdiff_t offset = revBlock * (revBlock - 1) * kHalfSquare;
-    return values + (_mirrored ? offset : -offset);
-  } else {
-    ptrdiff_t offset = block * _numDOFs * kColumnBlock - block * (block - 1) * kHalfSquare;
-    return values + (_mirrored ? -offset : offset);
-  }
 }
 
 } // namespace mochi

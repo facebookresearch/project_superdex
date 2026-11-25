@@ -239,71 +239,43 @@ void TestFront(size_t numDofs) {
   std::vector<Scalar> values(Fr::StorageSize(numDofs));
   auto v = values.data();
   auto vEnd = v + values.size();
-  Front<kColumnBlock, kPackSmall> front(v, numDofs, true);
-  Front<kColumnBlock, kPackSmall> frontBack(vEnd, numDofs, false);
+  Fr front(vEnd, numDofs);
+  EXPECT_EQ(front.template MemoryStart<Scalar>(), v);
+
   auto nb = front.NumBlocks();
-  auto block_0 = front.template Block<Scalar>(0);
-  auto last_block = front.template Block<Scalar>(nb - 1);
   auto leftOver = numDofs % kColumnBlock;
   if (leftOver == 0) {
     leftOver = kColumnBlock;
   }
-  // Check that the first and last blocks have the correct sizes.
-  if constexpr (kPackSmall) {
-    EXPECT_EQ(last_block.Cols(), std::min(numDofs, kColumnBlock));
-    EXPECT_EQ(block_0.Cols(), leftOver);
-  } else {
-    EXPECT_EQ(block_0.Cols(), std::min(numDofs, kColumnBlock));
-    EXPECT_EQ(last_block.Cols(), leftOver);
-  }
-  Scalar* nextBlock = nullptr;
-  Scalar* nextBlockBack = nullptr;
+  size_t const edgeBlock = kPackSmall ? 0 : nb - 1;
+
+  // The blocks form a staircase, stored contiguously in block order.
+  Scalar* nextBlock = v;
+  size_t firstCol = 0;
   constexpr int kDofsPerNode = 2; // Divides kColumnBlock and every numDofs tested.
   DynamicArray<std::tuple<Scalar*, int, int>> expectedNodalColumns;
   for (size_t i = 0; i < nb; ++i) {
     auto block = front.template Block<Scalar>(i);
-    auto blockBack = frontBack.template Block<Scalar>(i);
     auto rows = block.Rows();
     auto cols = block.Cols();
-    EXPECT_GE(&block(0, 0), v);
-    EXPECT_LE(&block(rows - 1, cols - 1), vEnd);
-    // Check both regular and mirrored fronts give the same size
-    EXPECT_EQ(blockBack.Rows(), rows);
-    EXPECT_EQ(blockBack.Cols(), cols);
-    // Check that the mirrored block precedes the previous one in memory.
-    if (nextBlock != nullptr) {
-      EXPECT_EQ(nextBlock, &block(rows - 1, cols - 1) + 1);
-    }
-    // Check that the regular block follows the previous one in memory.
-    if (nextBlockBack != nullptr) {
-      EXPECT_EQ(nextBlockBack, &blockBack(0, 0));
-    }
-    nextBlock = &block(0, 0);
-    nextBlockBack = &blockBack(rows - 1, cols - 1) + 1;
+    EXPECT_EQ(rows, numDofs - firstCol);
+    EXPECT_EQ(cols, i == edgeBlock ? leftOver : kColumnBlock);
+    EXPECT_EQ(&block(0, 0), nextBlock);
+    nextBlock = &block(rows - 1, cols - 1) + 1;
+    firstCol += cols;
 
-    // The regular front's nodal columns run down from each block's diagonal, block by block.
+    // The nodal columns run down from each block's diagonal, block by block.
     for (int c = 0; c < cols; c += kDofsPerNode) {
-      expectedNodalColumns.emplace_back(&blockBack(c, c), rows - c, rows);
+      expectedNodalColumns.emplace_back(&block(c, c), rows - c, rows);
     }
   }
+  EXPECT_EQ(nextBlock, vEnd);
 
   DynamicArray<std::tuple<Scalar*, int, int>> nodalColumns;
-  for (auto column : frontBack.template NodalColumns<Scalar, kDofsPerNode>()) {
+  for (auto column : front.template NodalColumns<Scalar, kDofsPerNode>()) {
     nodalColumns.emplace_back(column.data(), column.Rows(), column.LeadDim());
   }
   EXPECT_EQ(nodalColumns, expectedNodalColumns);
-}
-
-template <typename Scalar, size_t kColumnBlock, bool kPackSmall>
-void TestFrontMemoryStart(size_t numDofs) {
-  using Fr = Front<kColumnBlock, kPackSmall>;
-  DynamicArray<Scalar> values(Fr::StorageSize(numDofs));
-  auto v = values.data();
-  auto vEnd = v + values.size();
-  Front<kColumnBlock, kPackSmall> front(v, numDofs, true);
-  Front<kColumnBlock, kPackSmall> frontBack(vEnd, numDofs, false);
-  EXPECT_EQ(front.template MemoryStart<Scalar>(), v);
-  EXPECT_EQ(frontBack.template MemoryStart<Scalar>(), v);
 }
 
 template <typename Scalar, size_t kColumnBlock, size_t kNodeSize>
@@ -443,8 +415,7 @@ void TestAssembly(int elemsPerSide) {
     }
   };
 
-  auto overlappingChildFront =
-      Front<kColumnBlock>(frontSpace.end(), childL.Rows() - childL.Cols(), false);
+  auto overlappingChildFront = Front<kColumnBlock>(frontSpace.end(), childL.Rows() - childL.Cols());
   auto value = [](int r, int c) { return Scalar(100 * r + c); };
   fillFront(overlappingChildFront, childFrontIndices, value);
   auto ranges = organizer.GetRangesInParent(sn);
@@ -452,7 +423,7 @@ void TestAssembly(int elemsPerSide) {
   auto parent = eTree.SuperParent(sn);
   auto parentSpace = frontStack.PushFront(parent);
   auto parentL = L.LforSN(parent);
-  auto parentFront = Front<kColumnBlock>(parentSpace.end(), parentL.Rows() - parentL.Cols(), false);
+  auto parentFront = Front<kColumnBlock>(parentSpace.end(), parentL.Rows() - parentL.Cols());
 
   ExpandIntoParent<kNodeSize>(overlappingChildFront, parentL, parentFront, ranges);
 
@@ -494,7 +465,7 @@ void TestAssembly(int elemsPerSide) {
 
   std::vector<Scalar> buffer(frontSpace.size());
   auto nonOverlappingChildFront =
-      Front<kColumnBlock>(buffer.data() + buffer.size(), childL.Rows() - childL.Cols(), false);
+      Front<kColumnBlock>(buffer.data() + buffer.size(), childL.Rows() - childL.Cols());
   fillFront(nonOverlappingChildFront, childFrontIndices, [](int r, int c) {
     return -Scalar(100 * r + c);
   });
@@ -546,7 +517,7 @@ void TestLOperations(int numRows, int numCols) {
 
   auto frontSize = FrontStorageSize(numRows - numCols, kColumnBlock);
   std::vector<Scalar> frontStorage(frontSize, Scalar{0});
-  Front<kColumnBlock> front(frontStorage.data() + frontSize, numRows - numCols, false);
+  Front<kColumnBlock> front(frontStorage.data() + frontSize, numRows - numCols);
 
   fm.RankNUpdate(mat, front, false);
 
@@ -593,14 +564,14 @@ void TestRootedFactor(
 
   auto snL = L.LforSN(root);
   // At the root, there is no front, hence the nullptr.
-  Front<kBlockSize> rootFront(static_cast<Scalar*>(nullptr), 0, false);
+  Front<kBlockSize> rootFront(static_cast<Scalar*>(nullptr), 0);
 
   // Expand/Assemble children fronts into the root's snL
   for (int i = 0; i < isize(children); ++i) {
     auto child = children[i];
     auto childL = L.LforSN(child);
     auto childFront = Front<kBlockSize>(
-        childrenFronts[i].data() + childrenFronts[i].size(), childL.Rows() - childL.Cols(), false);
+        childrenFronts[i].data() + childrenFronts[i].size(), childL.Rows() - childL.Cols());
     auto ranges = organizer.GetRangesInParent(child);
     if (i == 0) {
       ExpandIntoParent<kDofsPerNode>(childFront, snL, rootFront, ranges);
@@ -1132,15 +1103,6 @@ TEST(MultifrontalStructure, Layout) {
   TestFront<real, 24, true>(120);
   TestFront<real, 24, false>(188);
   TestFront<real, 24, true>(188);
-}
-
-TEST(MultifrontalStructure, MemoryStart) {
-  TestFrontMemoryStart<real, 24, false>(6);
-  TestFrontMemoryStart<real, 24, true>(6);
-  TestFrontMemoryStart<real, 24, false>(120);
-  TestFrontMemoryStart<real, 24, true>(120);
-  TestFrontMemoryStart<real, 24, false>(188);
-  TestFrontMemoryStart<real, 24, true>(188);
 }
 
 TEST(MultifrontalStructure, StairNodalIterator) {
