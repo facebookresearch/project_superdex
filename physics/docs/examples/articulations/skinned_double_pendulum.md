@@ -23,7 +23,7 @@ world -[Revolute]-> UpperArm -[Revolute]-> LowerArm
      \--- skin: one LBS tube bound to both links ---/
 ```
 
-A thin rectangular tube along +X spans both arms in the root-local rest frame. Vertices near the upper arm are bound to link 0, vertices past the elbow to link 1, and a smooth weight ramp blends them across the joint so one continuous surface bends as the pendulum swings. A ball rests on the ground within the tip's reach and is struck by the swinging skin.
+A thin rectangular tube along +X spans both arms in the articulation's rest frame. Vertices near the upper arm are bound to link 0, vertices past the elbow to link 1, and a smooth weight ramp blends them across the joint so one continuous surface bends as the pendulum swings. A ball rests on the ground within the tip's reach and is struck by the swinging skin.
 
 The skin is **colliding-only**: it probes other actors for contact, but it does not act as a collider. The links act as colliders.
 

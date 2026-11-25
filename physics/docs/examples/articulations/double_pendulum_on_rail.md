@@ -119,7 +119,7 @@ articulation.set_articulated_joint_velocities(velocities=[0.3, 4.2, 0, 0, 0])
 
 ### Modeling Joints Live
 
-Per-joint friction (viscous/coulomb) and armature inertia can be read and changed mid-simulation — for example, to damp the pendulum by raising the swing joints' friction.
+Per-joint friction (viscous/Coulomb) and armature inertia can be read and changed mid-simulation — for example, to damp the pendulum by raising the swing joints' friction.
 
 ```python
 friction = list(articulation.get_articulated_joint_friction_params())  # one per joint
@@ -160,7 +160,7 @@ lower_arm.get_center_of_mass_transform()   # per-link (rigid) query
 
 ### The End-Effector Jacobian
 
-The Jacobian (joint motion → link motion) is read from a nested link sub-actor. It is a flattened `6 x num_dofs` (3 translation + 3 rotation rows per joint DoF).
+The Jacobian (joint motion → link motion) is read from a nested link sub-actor. It is a flattened `6 x num_dofs` matrix (3 translation + 3 rotation rows per joint DoF).
 
 ```python
 links = articulation.get_nested_link_actors()

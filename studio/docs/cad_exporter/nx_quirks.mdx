@@ -23,7 +23,7 @@ Every time you make a selection in the exporter, **a part is modified**. Therefo
 :::
 
 :::note Best practice for Teamcenter NX
-Do note that references to components in assemblies are stored in the the top-level .prt (the .prt your Robot Configuration feature lives in), so selecting components instead of bodies will reduce the amount of parts modified.
+Do note that references to components in assemblies are stored in the top-level .prt (the .prt your Robot Configuration feature lives in), so selecting components instead of bodies will reduce the number of parts modified.
 :::
 
 ### Teamcenter NX Guardrails
@@ -43,7 +43,7 @@ Because selections cause part editing, selections will not save in Teamcenter NX
     maxWidth="600px"
   />
 
-- By default CSYS, Axis, and Points check for write-access and then will deselect on your behalf if the part is read-only. You can change this behavior to:
+- By default, CSYS, Axis, and Points check for write-access and then will deselect on your behalf if the part is read-only. You can change this behavior to:
   1. **Ignore Read-Only:** (Default) Doesn't let you select Datums/Bodies in parts you don't have write-access to.
   2. **Always create WAVE Links:** Creates WAVE links upon selecting Datums (Bodies are **NOT** supported) on the current working part, no matter if you have write-access or not
   3. **Only create WAVE Links for Read-Only:** Creates WAVE links upon selecting Datums on the current working part, only if you don't have write-access on that part.
@@ -62,7 +62,7 @@ Because selections cause part editing, selections will not save in Teamcenter NX
 
 ### Duplicated GUIDs
 
-Unfortunately, when using features like patterning or mirroring, NX copies the parent Attributes to the children; which means that we have broken the uniqueness of the GUID by having two or more copies in the assembly or part. This means that selections will be nondeterministic, the tool *will* work, but will most likely select the wrong object.
+Unfortunately, when using features like patterning or mirroring, NX copies the parent Attributes to the children, which means that we have broken the uniqueness of the GUID by having two or more copies in the assembly or part. This means that selections will be nondeterministic: the tool *will* work, but will most likely select the wrong object.
 
 Upon editing a robot or creating a new one, the tool will warn you if there are GUID collisions and offer to open the **GUID Sanitizer** tool.
 
@@ -72,7 +72,7 @@ Upon editing a robot or creating a new one, the tool will warn you if there are 
   maxWidth="700px"
 />
 
-The tool will try to select what it thinks are the original parents of the GUIDs. You can use the tool to prune duplicate GUIDs. The tool will highlight the objects the GUID belongs to in the viewport, simply move the GUIDs into or out of the top and bottom list using the **⊕** and **x** buttons to choose which ones to keep and which ones to remove.
+The tool will try to select what it thinks are the original parents of the GUIDs. You can use the tool to prune duplicate GUIDs. The tool will highlight the objects the GUID belongs to in the viewport; simply move the GUIDs into or out of the top and bottom list using the **⊕** and **x** buttons to choose which ones to keep and which ones to remove.
 
 <Figure
   src="../../../img/cad_exporter/nx_quirks_sanitizer.png"

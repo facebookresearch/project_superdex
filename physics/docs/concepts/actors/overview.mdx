@@ -26,7 +26,7 @@ There are several actor types, each targeting a different class of physical beha
 An articulated actor owns a rigid actor for each link; the API calls these nested link actors. Individual links can be referenced, e.g., to define constraints between them.
 However, articulated actors are not merely collections of actors joined by constraints; an articulated actor's configuration can be defined in a minimal reduced coordinate space that is typically much smaller than the combined degrees of freedom of its rigid links.
 
-Many references on physics simulation use the terms "soft" and "deformable" interchangeably.  However, the term "soft" is reserved for deformable volumetric bodies in SuperDex Physics, while "deformable" refers to soft, shell, and rod actors collectively.
+Many references on physics simulation use the terms "soft" and "deformable" interchangeably. However, the term "soft" is reserved for deformable volumetric bodies in SuperDex Physics, while "deformable" refers to soft, shell, and rod actors collectively.
 
 ## Creating Actors
 
@@ -77,7 +77,7 @@ soft_skinned_actor = scene.create_soft_skinned_actor(soft_skinned_actor_params)
 </Tabs>
 
 The creation methods return an [`Actor*`](pathname:///generated/api/latest/cpp/classsuperdex_1_1Actor.html) pointer (or an [`Actor`](pathname:///generated/api/latest/python/api/physics.html#superdex.physics.Actor) wrapper in Python).
-Some queries and API calls use a lightweight, strongly-typed reference called an [`ActorHandle`](pathname:///generated/api/latest/cpp/structsuperdex_1_1ActorHandle.html) to access actors.
+Some queries and API calls use a lightweight, strongly typed reference called an [`ActorHandle`](pathname:///generated/api/latest/cpp/structsuperdex_1_1ActorHandle.html) to access actors.
 Handles can be obtained from pointers using the [`Actor::GetHandle()`](pathname:///generated/api/latest/cpp/classsuperdex_1_1Actor.html) / [`Actor.get_handle()`](pathname:///generated/api/latest/python/api/physics.html#superdex.physics.Actor.get_handle) method.
 
 ## Common Properties

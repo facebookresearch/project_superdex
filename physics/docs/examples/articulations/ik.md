@@ -62,7 +62,7 @@ articulation = result.actors[0]
 scene.enable_layer_contact_symmetric("RigidLink", "RigidLink", enable=False)
 ```
 
-The links are boxes that overlap at the joints. Because the solve honours contact like any other scene constraint, leaving self-collision on would have neighbouring links push each other apart. See [Contact Filtering](../contact_constraints/contact_filtering.md) for the filtering levels available.
+The links are boxes that overlap at the joints. Because the solve honors contact like any other scene constraint, leaving self-collision on would have neighboring links push each other apart. See [Contact Filtering](../contact_constraints/contact_filtering.md) for the filtering levels available.
 
 ### Pin the Root
 
@@ -115,7 +115,7 @@ ik_solver.clear_position_target(end_effector)
 ik_solver.create_rotation_target(end_effector, [0, 0, 0], target, TARGET_WEIGHT)
 ```
 
-A position target takes a local point on the link and a world-space goal. Offsetting the local point from the link's centre of mass rather than its origin aims at the tip of the box instead of its middle:
+A position target takes a local point on the link and a world-space goal. Offsetting the local point from the link's center of mass rather than its origin aims at the tip of the box instead of its middle:
 
 ```python
 POSITION_TARGET_RANGE = 0.1 * PREFAB_SCALE  # [m]
@@ -139,7 +139,7 @@ Targets are sampled in a small box around the origin, where the pinned base sits
 
 ### Run Interactively
 
-The loop solves once per iteration and counts two separate things: how many Newton solves converged, and how many targets were actually met. Because the goals are random, some are unreachable - `solve_ik` returning `False` is an expected outcome here, not an error.
+The loop solves once per iteration and counts two separate things: how many Newton solves converged, and how many targets were actually met. Because the goals are random, some are unreachable — `solve_ik` returning `False` is an expected outcome here, not an error.
 
 ```python
 if not sdp.debugger.attach():

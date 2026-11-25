@@ -319,7 +319,7 @@ registered defaults.
 | --- | --- |
 | `description` | Human-readable only. The training script never reads it. |
 | `normalize_observations` | When `true`, installs an RLlib `MeanStdFilter` environment-to-module connector for each environment runner. This is algorithm-independent and applies to both PPO and SAC. |
-| `stop_criteria` | Two keys are recognised: `episode_return_mean` maps to RLlib's `env_runners/episode_return_mean`, and `num_env_steps_sampled_lifetime` maps to the metric of the same name. Any other key raises `ValueError`. `--max_iterations` adds a `training_iteration` stop on top. |
+| `stop_criteria` | Two keys are recognized: `episode_return_mean` maps to RLlib's `env_runners/episode_return_mean`, and `num_env_steps_sampled_lifetime` maps to the metric of the same name. Any other key raises `ValueError`. `--max_iterations` adds a `training_iteration` stop on top. |
 | `ppo` | PPO overrides layered onto `default_ppo_config`. `ppo["env_runners"]` and `ppo["training"]` are passed to the corresponding RLlib configuration methods. The additional `train_batch_size_per_runner` setting is multiplied by the effective runtime `--num_env_runners` and written to `train_batch_size`. Setting it together with `ppo.training.train_batch_size` raises under PPO because both configure the same value. SAC ignores and does not validate the entire `ppo` section. |
 
 :::warning Recipe scope and algorithm-specific validation

@@ -4,7 +4,9 @@ title: "Inspecting Scenes"
 
 # Inspecting Scenes
 
-The SuperDex Physics Debugger is a separate application that connects to your simulation over the network and lets you view a running scene, control its playback, and inspect its actors. Your application owns and steps its scenes, while the debugger receives scene data and sends playback commands back. This separation keeps the debugger optional and allows it to connect to simulations running in another process or on another computer.
+The SuperDex Physics Debugger is a separate application that connects to your simulation over a network connection and lets you view a running scene, control its playback, and inspect its actors. Your application owns and steps its scenes, while the debugger receives scene data and sends playback commands back. This separation keeps the debugger optional and lets it connect to a simulation running in another process.
+
+By default, the debug server accepts connections only from the same computer. To inspect a simulation running on another computer, start the server with [`get_debug_server().start(allow_remote_connection=True)`](pathname:///generated/api/latest/python/api/physics.html#superdex.physics.DebugServer.start) before the debugger connects.
 
 Most documented Python [examples](./examples/0_getting_started.md) open the debugger automatically and wait for you to start the simulation.
 

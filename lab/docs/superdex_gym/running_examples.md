@@ -202,7 +202,7 @@ from superdex.lab.gym.envs.benchmarks.cartpole_env import CartPoleEnv, CartPoleE
 env = CartPoleEnv(CartPoleEnvCfg(control_frequency=25, simulation_frequency=50))
 ```
 
-See [Creating Custom Environments](./environments.mdx) for the full configuration
+See [Authoring a Custom Environment](./environments.mdx) for the full configuration
 surface.
 
 ## Related Tools and Modules

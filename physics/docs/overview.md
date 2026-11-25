@@ -17,7 +17,7 @@ SuperDex Physics is a contact-first physics engine purpose-built for tactile man
 
 **Spatially dense contact forces** — Rather than reporting a single resultant contact force, SuperDex Physics computes a full 3D force distribution over contact surfaces. This enables realistic tactile sensor modeling and provides richer observation signals for RL policies.
 
-**Inverse Kinematics** — Constraint-aware inverse-kinematics, built on the same nonlinear optimization core as the forward dynamics, solve physically accurate poses under collision, end-effector, and trajectory constraints.
+**Inverse kinematics** — Constraint-aware inverse kinematics, built on the same nonlinear optimization core as the forward dynamics, solves physically accurate poses under collision, end-effector, and trajectory constraints.
 
 **Numerical stability** — Robust simulation without the restrictive time-step stability limits of explicit or semi-implicit methods.
 

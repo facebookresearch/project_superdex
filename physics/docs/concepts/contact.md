@@ -56,7 +56,7 @@ The C++ [`Scene`](pathname:///generated/api/latest/cpp/classsuperdex_1_1Scene.ht
 - `Scene::EnableActorContactAsymmetric(A, B, enable, includeNestedActors, error)` (`enable_actor_contact_asymmetric` in Python) controls an additional gate for the ordered actor pair.
 - `Scene::EnableActorContactSymmetric(A, B, enable, includeNestedActors, error)` (`enable_actor_contact_symmetric` in Python) applies that actor-pair gate in both directions.
 
-Both layer-level and actor-pair contact must be enabled for an interaction to occur; actor-pair settings cannot re-enable a layer-disabled interaction. Actor-pair filtering is useful when constrained actors overlap and would otherwise generate contact forces that oppose the constraint. Asymmetric filtering specifies which actor supplies samples and which supplies the collider field.
+Both layer-level and actor-pair contact must be enabled for an interaction to occur; actor-pair settings cannot re-enable a layer-disabled interaction. [`Scene::IsContactEnabled(colliding, collider, error)`](pathname:///generated/api/latest/cpp/classsuperdex_1_1Scene.html) ([`is_contact_enabled`](pathname:///generated/api/latest/python/api/physics.html#superdex.physics.Scene.is_contact_enabled) in Python) reports whether both filters allow an ordered actor pair, whereas `Scene::IsLayerContactEnabled` (`is_layer_contact_enabled`) checks only the layer filter. Query nested actors, such as links, directly: a parent actor's result does not describe its nested actors. Actor-pair filtering is useful when constrained actors overlap and would otherwise generate contact forces that oppose the constraint. Asymmetric filtering specifies which actor supplies samples and which supplies the collider field.
 
 When `includeNestedActors` is `IncludeNestedActors::No`, these APIs affect only the exact handles passed. With `IncludeNestedActors::Yes`, a parent actor resolves to the parent plus its nested actors, and the setting is applied to every ordered pair in the cross-product of the two resolved handle sets. No pair outside that cross-product is affected. If the sets overlap, overlap pairs, including self-pairs, are affected. Python exposes the containing [`IncludeNestedActors`](pathname:///generated/api/latest/python/api/physics.html#superdex.physics.IncludeNestedActors) enum.
 
@@ -93,7 +93,7 @@ $$
 =\left.\frac{d}{dt}\right|_{\mathbf{X}_A}\mathbf{Y}_{AB}(\mathbf{X}_A,t)
 =\mathbf{F}_B^{-1}(\mathbf{v}_A - \mathbf{v}_B)~,
 $$
-where $\mathbf{v}_A=\left.\partial_t\mathbf{x}_A\right|_{\mathbf{X}_A}$ and $\mathbf{v}_B=\left.\partial_t\mathbf{x}_B\right|_{\mathbf{X}_B}$ are the world-space velocities of the spatially-coincident material points $\mathbf{X}_A$ and $\mathbf{X}_B$ on the two bodies.
+where $\mathbf{v}_A=\left.\partial_t\mathbf{x}_A\right|_{\mathbf{X}_A}$ and $\mathbf{v}_B=\left.\partial_t\mathbf{x}_B\right|_{\mathbf{X}_B}$ are the world-space velocities of the spatially coincident material points $\mathbf{X}_A$ and $\mathbf{X}_B$ on the two bodies.
 
 For rigid motions, $\mathbf{F}_B$ is a rotation, and the collider motion $\mathbf{x}_B$ exactly maps an SDF $\Phi_B$ defined on the reference configuration to another SDF $\phi_B$ on the current configuration. However, there is usually still some approximation if the reference SDF is precomputed on a grid and interpolated.  For a soft actor with an `Sdf` collider, $\mathbf{X}_B$ is a non-rigid current-to-reference map. It may change lengths and angles, and it may be undefined at some query points, which are then rejected. The spatial field $\phi_B$ is generally not an exact SDF (even if $\Phi_B$ is), and the magnitude of $\mathbf{V}_{\mathrm{rel}}$ can be affected by local stretching of the collider.
 
@@ -395,7 +395,7 @@ For `PointCloud` colliders discretizing the [double-integral generalization](#do
 | `viscousFrictionCoefficient` | `real` | `0` | s/m | Tangential viscous friction coefficient $c_t$. |
 | `coulombFrictionCoefficient` | `real` | `0.5` | -- | Coulomb friction coefficient $\mu$. |
 | `preferElastoPlasticFriction` | `bool` | `true` | -- | **Experimental.** Prefer the [elasto-plastic regularization](#elasto-plastic-regularization) of Coulomb friction to the viscous one, where it is supported. |
-| `frictionFalloffVel` | `real` | `0.01` | m/s | **Experimental.** Falloff velocity $V_f$, the ramp width of the [viscous regularization](#viscous-regularization) of Coulomb friction. |
+| `frictionFalloffVel` | `real` | `0.01` | m/s | **Experimental.** Falloff velocity $V_f$, the ramp width of the [viscous regularization](#viscous-regularization) of Coulomb friction. `0` gives unsmoothed Coulomb friction. |
 | `preslidingDisplacement` | `real` | `1e-4` | m | Presliding displacement $\ell_p$, the ramp width of the [elasto-plastic regularization](#elasto-plastic-regularization). |
 | `normalViscousDampingCoefficient` | `real` | `0` | s/m | Normal viscous damping coefficient $c_n$, which controls velocity-dependent restitution. |
 | `distanceErrorBound` | `real` | `0` | m | **Experimental.** Extra collider bounding-volume padding for approximate distance fields. |

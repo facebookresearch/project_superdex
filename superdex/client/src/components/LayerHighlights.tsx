@@ -196,7 +196,7 @@ const LAYER_HIGHLIGHTS: readonly LayerHighlight[] = [
       {
         title: "Inverse Kinematics",
         description:
-          "Constraint-aware inverse-kinematics, built on the same nonlinear optimization core as the forward dynamics, solve physically accurate poses under collision, end-effector, and trajectory constraints.",
+          "Constraint-aware inverse kinematics, built on the same nonlinear optimization core as the forward dynamics, solves physically accurate poses under collision, end-effector, and trajectory constraints.",
       },
     ],
     cta: "Get started with SuperDex Physics",
@@ -253,7 +253,7 @@ const LAYER_HIGHLIGHTS: readonly LayerHighlight[] = [
         description: (
           <>
             A human-readable <code>.superdex_bot</code> file describes a complete
-            robot — links, joints, and mesh references. It extends the physics
+            robot — links, joints, mesh references, and sensors. It extends the physics
             engine&apos;s articulations with fields robotics workflows demand, and
             is the source of truth from Studio through simulation.
           </>

@@ -126,7 +126,7 @@ export default function CreditsPage() {
                 >
                   https://tesollo.com
                 </a>
-                {") and are used with permission. The Tesollo name, logo, and DG-5F-M and DG-5F-S product names are used only for identification and do not imply endorsement, certification, sponsorship, or an official partnership with Tesollo Inc."}
+                {") and are used with permission. The Tesollo name, logo, and DG-5F-M and DG-5F-S product names are used only for identification and do not imply endorsement, certification, sponsorship, or an official partnership with Tesollo, Inc."}
               </p>
             </li>
             <li
@@ -143,7 +143,7 @@ export default function CreditsPage() {
                   color: "oklch(0.45 0 0)",
                 }}
               >
-                Seed Robotics and SINGLEX-3 names are used solely for accurate
+                The Seed Robotics and SINGLEX-3 names are used solely for accurate
                 identification and attribution. Their use does not imply
                 endorsement, certification, sponsorship, or an official
                 partnership with Seed Robotics.

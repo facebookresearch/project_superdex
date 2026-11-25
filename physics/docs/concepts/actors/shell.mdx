@@ -103,7 +103,7 @@ The reference configuration $\Gamma_\mathbf{X}$ is discretized as a **surface tr
 
 Displacement is interpolated with linear finite element shape functions within each triangle.
 This results in a constant value for $\bm{\varepsilon}$ over each triangle, making the discrete evaluation of $W_\text{membrane}$ straightforward.
-The discretization of $W_\text{bend}$ is more complex, and depends on approximating the second fundamental form of a triangulated surface.  We use a similar discrete approximation as that of [Chen et al. (2021)](#references), Appendix A, which estimates the second fundamental form on each triangle from a four-triangle stencil including its three edge-neighbors.
+The discretization of $W_\text{bend}$ is more complex, and depends on approximating the second fundamental form of a triangulated surface.  We use a similar discrete approximation to that of [Chen et al. (2021)](#references), Appendix A, which estimates the second fundamental form on each triangle from a four-triangle stencil including its three edge-neighbors.
 This involves first computing a mid-edge normal vector $\mathbf{n}_i$ for the edge opposite each vertex $\mathbf{x}_i$ of the triangle, then approximating the partial derivatives of the normal vector with respect to parametric coordinates using finite differences between midpoints of edges:
 $$
 b_{\alpha\beta} = -\mathbf{e}_\alpha\cdot\frac{\partial\mathbf{n}}{\partial\xi^\beta} \quad\rightarrow\quad\lbrack\mathbf{b}\rbrack \approx 2

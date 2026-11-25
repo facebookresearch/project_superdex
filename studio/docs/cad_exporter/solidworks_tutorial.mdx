@@ -25,9 +25,9 @@ Before we begin, the following must exist in your part or assembly:
 4. If any link requires precise mass and inertial properties, then that link's parts/components must have a material on them.
 
 ## Importing an Existing Robot (Optional)
-The exporter supports multiple ways importing kinematic definitions of an existing robot:
-1. You can import a **URDF**, using **Tools** menu (not the tab) → **Robotics** → **Import URDF**. Coordinate Systems for all joints will be generated with the URDF's origin defined using the selected Coordinate System. Axes will be generated on joint axes that do not lie any CSYS axis. The tool will create a Robot Configuration feature prepopulated with link/joint names, joint limits, joint types, CSYS, axes.
-2. You can import an existing Robot Configuration, saved from either NX or Solidworks (via the **Back-up configuration** button), and imported using the **Import configuration** button. The imported configuration may include valid selections (CSYS, bodies/components, axes) for links if the assembly or part is derived or copied from the original. All other properties, such as link names and joint types, should be imported.
+The exporter supports multiple ways of importing kinematic definitions of an existing robot:
+1. You can import a **URDF**, using **Tools** menu (not the tab) → **Robotics** → **Import URDF**. Coordinate Systems for all joints will be generated with the URDF's origin defined using the selected Coordinate System. Axes will be generated on joint axes that do not lie on any CSYS axis. The tool will create a Robot Configuration feature prepopulated with link/joint names, joint limits, joint types, CSYS, axes.
+2. You can import an existing Robot Configuration, saved from either NX or SolidWorks (via the **Back-up configuration** button), and imported using the **Import configuration** button. The imported configuration may include valid selections (CSYS, bodies/components, axes) for links if the assembly or part is derived or copied from the original. All other properties, such as link names and joint types, should be imported.
 3. You can create a **New Robot Configuration**, and use the **Import Tree (.txt)** button under Tree Tools.
 
 The format is:
@@ -66,7 +66,7 @@ Let's create a robot arm from an assembly in SolidWorks.
      maxWidth="500px"
    />
 
-2. We've also added simplified geometry, modified from the original files, to serve as collision bodies. These bodies have features and details removed aiming to preserve fidelity and reducing meshing complexity.
+2. We've also added simplified geometry, modified from the original files, to serve as collision bodies. These bodies have features and details removed aiming to preserve fidelity and reduce meshing complexity.
 
    <Figure
      src="../../../img/cad_exporter/sw_tutorial_open_arm_collision.png"
@@ -105,7 +105,7 @@ Let's create a robot arm from an assembly in SolidWorks.
    />
 
 5. In the Robot Configuration dialog that comes up, expand the **Tree Tools** group.
-6. Since we know the arm has 7 degrees of freedom and we want 1 extra fixed joint to define the gripper's attachment point. **With the base_link selected**, we put in **7** for **Number of links in serial chain** and hit **Create Serial Chain**.
+6. Since we know the arm has 7 degrees of freedom and we want 1 extra fixed joint to define the gripper's attachment point, **with the base_link selected**, we put in **7** for **Number of links in serial chain** and hit **Create Serial Chain**.
 
    <Figure
      src="../../../img/cad_exporter/sw_tutorial_serial_chain.png"
@@ -169,13 +169,13 @@ Let's create a robot arm from an assembly in SolidWorks.
         maxWidth="500px"
       />
 
-   2. If the axis is coincident with one of the Coordinate System's axes, select that axis (CSYS X, CSYS Y, CSYS Z). If the axis is opposite, tick **Flip Axis**. If the axis is not coincident with any of the CSYS axis, then select an Axis in **Joint Axis**.
+   2. If the axis is coincident with one of the Coordinate System's axes, select that axis (CSYS X, CSYS Y, CSYS Z). If the axis is opposite, tick **Flip Axis**. If the axis is not coincident with any of the CSYS axes, then select an Axis in **Joint Axis**.
 
       <Figure
         src="../../../img/cad_exporter/sw_tutorial_csys_axis.png"
         alt="Select axis from csys"
         maxWidth="500px"
-        caption="Usually choosing one of the Coordinate System's axes the most convenient option"
+        caption="Usually choosing one of the Coordinate System's axes is the most convenient option"
       />
       <Figure
         src="../../../img/cad_exporter/sw_tutorial_joint_axis.png"
@@ -184,14 +184,14 @@ Let's create a robot arm from an assembly in SolidWorks.
         caption="Use 'Select Axis' to select an Axis instead"
       />
 
-    3. For the **Inertial Bodies**, we can select the component we want (which shown here is a subassembly) from the feature tree. This way, we have the most accurate inertial properties since all components under the subassembly are included.
+    3. For the **Inertial Bodies**, we can select the component we want (here, a subassembly) from the feature tree. This way, we have the most accurate inertial properties since all components under the subassembly are included.
 
        <Figure
          src="../../../img/cad_exporter/sw_tutorial_inertial_bodies.png"
          alt="Select inertial bodies"
        />
 
-       Either only **Inertial Bodies** or **Visual Bodies** are the bare minimum for mesh export, please consult the [Link Export Guide Table](../cad_exporter/index.mdx#link-export-guide) for how visual and collision meshes are determined.
+       Either only **Inertial Bodies** or **Visual Bodies** are the bare minimum for mesh export; please consult the [Link Export Guide Table](../cad_exporter/index.mdx#link-export-guide) for how visual and collision meshes are determined.
 
        :::note Rule of thumb for selecting Link bodies
        - **Inertial Bodies** have the highest fidelity and capture the true mass of the assembly
@@ -216,9 +216,9 @@ Let's create a robot arm from an assembly in SolidWorks.
          maxWidth="500px"
        />
 
-10. Once we're done we can hit **Preview &amp; Export…** to continue.
+10. Once we're done, we can hit **Preview &amp; Export…** to continue.
 
-    *At this point we can also hit <span style={{ color: '#00b123' }}>✓</span> at the top to take a breather, or save changes to the assembly*
+    *At this point we can also hit <span style={{ color: '#00b123' }}>✓</span> at the top to take a breather, or save changes to the assembly.*
 
 11. However, we forgot to populate link_6 with a joint axis, and we hit a validation error we need to fix before we can continue.
 
@@ -228,7 +228,7 @@ Let's create a robot arm from an assembly in SolidWorks.
       maxWidth="300px"
     />
 
-12. A progress bar appears briefly while the exporter creates temporary top-level CSYS, calculate inertial properties, and axis transforms. Then we're presented with the exporter form.
+12. A progress bar appears briefly while the exporter creates temporary top-level CSYS, calculates inertial properties, and axis transforms. Then we're presented with the exporter form.
 
     <Figure
       src="../../../img/cad_exporter/nx_tutorial_progress_bar.png"
@@ -238,7 +238,7 @@ Let's create a robot arm from an assembly in SolidWorks.
 
 ## Exporting a Robot Configuration
 
-13. From here, optionally, additional **Joint Properties** can be set for each joint such as limits and joint dynamics. For some users, this is left alone and a post-export script takes care of updating the limits from a joint-name-based look up. We can also name our robot, by default, it's the same as the assembly.
+13. From here, optionally, additional **Joint Properties** can be set for each joint such as limits and joint dynamics. For some users, this is left alone and a post-export script takes care of updating the limits from a joint-name-based lookup. We can also name our robot; by default, it's the same as the assembly.
 
     By default, joint axes and limits are drawn as lines and arcs in the viewport. You can customize these in the Visualization panel.
 
@@ -257,7 +257,7 @@ Let's create a robot arm from an assembly in SolidWorks.
     />
 
     - At this point, we can confirm that the Inertial Properties of the link are what we expect, and then we can figure out our meshing options.
-    - By default equivalent inertial boxes and center of mass are drawn as lines in the viewport. If lines are occluded, you can turn off **Highlight Selected Bodies**.
+    - By default, equivalent inertial boxes and center of mass are drawn as lines in the viewport. If lines are occluded, you can turn off **Highlight Selected Bodies**.
     - You can consult the [Mesh Export Guide table](../cad_exporter/index.mdx#mesh-export-guide) for guidance on what to choose, but there are also Presets that are good starting points. You can also save your own Presets and share them with your colleagues (so your entire team has the same settings).
 
       <Figure
@@ -268,8 +268,8 @@ Let's create a robot arm from an assembly in SolidWorks.
       />
 
     - For **Visual Meshes**, using the GLB **SuperDex** option is best for maintaining visual fidelity.
-    - SuperDex options for meshing require an intermediate STEP file to be exported, so they can be slow for large assemblies, but offer higher quality face tesselation.
-    - Per link meshing options are useful for controlling meshing fidelity at the link level. For instance, if you want fingertip meshes to have higher fidelity for contact simulation.
+    - SuperDex options for meshing require an intermediate STEP file to be exported, so they can be slow for large assemblies, but offer higher quality face tessellation.
+    - Per-link meshing options are useful for controlling meshing fidelity at the link level. For instance, if you want fingertip meshes to have higher fidelity for contact simulation.
     - STEP format isn't really a mesh, but is useful for software that can tessellate STEP files to triangular or tetrahedral meshes, including SuperDex Studio.
 
       :::note For SuperDex Studio
@@ -312,7 +312,7 @@ Let's create a robot arm from an assembly in SolidWorks.
       alt="After importing to Studio"
     />
 
-## See also
+## See Also
 
 - [Model Editor Guide](../model_editor.mdx) — post-export processing in SuperDex Studio
 - [URDF Import](../cad_exporter/urdf_import.mdx) — importing URDFs into NX and SolidWorks

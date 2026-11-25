@@ -69,7 +69,7 @@ const RELEASES: readonly Release[] = [
     icon: `${ICON_BASE}lab.png`,
     title: "SuperDex Lab",
     description:
-      "The simulation harness that abstracts the Markov decision process and dynamics-constrained-optimization underpinning RL, MPC, and system-ID.",
+      "The simulation harness that abstracts the Markov decision process and dynamics-constrained optimization underpinning RL, MPC, and system-ID.",
     status: "Early Preview",
     statusTone: "preview",
     slug: "lab",

@@ -70,7 +70,7 @@ import ViewportVideo from '@site/src/components/ViewportVideo';
               <h3>Declarative Bots</h3>
               <p>
                 A human-readable <code>.superdex_bot</code> file describes a
-                complete robot — links, joints, and mesh references. It extends the
+                complete robot — links, joints, mesh references, and sensors. It extends the
                 physics engine's articulations with fields robotics workflows
                 demand, and is the source of
                 truth from Studio through simulation.
@@ -99,7 +99,9 @@ import ViewportVideo from '@site/src/components/ViewportVideo';
               <p>
                 One uniform, extensible framework for controllers, sensors, and
                 actuators — use the built-ins or register your own. Ships
-                operational-space and joint-space PD controllers to drive robots.
+                operational-space and joint-space PD controllers to drive robots,
+                and composes sensors into a <code>SensorGraph</code> that computes
+                only the outputs you request.
               </p>
             </div>
             <VersionedDocLink docId="overview" className={styles.layerLink}>

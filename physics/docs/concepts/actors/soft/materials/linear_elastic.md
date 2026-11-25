@@ -6,9 +6,9 @@ sidebar_position: 2
 # Linear Elastic
 
 Small-strain linear elasticity is the simplest and fastest material model, but has an extremely limited range of validity, requiring both small strains and small rotations of the material.
-This model is widely used in engineering mechanics, for stress analysis of structural components with microscopically-small deformations (e.g., calculating the failure load of a concrete column).
+This model is widely used in engineering mechanics, for stress analysis of structural components with microscopically small deformations (e.g., calculating the failure load of a concrete column).
 However, in most human-scale manipulation scenarios, such objects are more likely to be modeled by rigid actors or static geometry.
-This model is not recommended for use outside of artificial benchmarks or highly-constrained scenarios (e.g., a cushion fixed to a static piece of furniture by boundary conditions and subjected only to light loading).
+This model is not recommended for use outside of artificial benchmarks or highly constrained scenarios (e.g., a cushion fixed to a static piece of furniture by boundary conditions and subjected only to light loading).
 
 **Enum value:** `SoftMaterialType::LinearElastic`
 

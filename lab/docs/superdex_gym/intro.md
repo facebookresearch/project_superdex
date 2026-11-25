@@ -91,7 +91,7 @@ for how variants are declared.
 
 :::note Environment prerequisites
 The included CartPole, Ant and HalfCheetah environments load their scenes and
-meshes from `assets/benchmarks/` from the Project Superdex source code on Github.
+meshes from `assets/benchmarks/` from the Project SuperDex source code on GitHub.
 
-All environments require `superdex-robotics`, which should be installed as a dependency of `superdex-lab`.  See [Verifying the Install](./setup.md#verifying-the-install).
+All environments require `superdex-robotics`, which should be installed as a dependency of `superdex-lab`. See [Verifying the Install](./setup.md#verifying-the-install).
 :::
