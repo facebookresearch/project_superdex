@@ -30,3 +30,12 @@ if (MOCHI_BUILD_SHARED)
 else ()
     target_link_libraries(mochi_debugger_test PRIVATE mochi_physics)
 endif ()
+
+if (TARGET imgui)
+    mochi_add_test_executable(mochi_debugger_gui_test
+        "${CMAKE_CURRENT_SOURCE_DIR}/../test_support/gui")
+    target_sources(mochi_debugger_gui_test PRIVATE
+        ../app/gui/command_input.cpp)
+    target_include_directories(mochi_debugger_gui_test PRIVATE ../app/gui)
+    target_link_libraries(mochi_debugger_gui_test PRIVATE mochi_core mochi_debugger_lib imgui gtest_main)
+endif ()
