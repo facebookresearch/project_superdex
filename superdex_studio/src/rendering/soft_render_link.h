@@ -29,8 +29,8 @@ struct DeformableMeshView;
 namespace superdex::studio {
 
 // Where a model sits in its actor's frame: scaled per axis, then rotated and translated -- the
-// order mochi::model_utils::BakeTransform applies a soft actor's scale and shape offset in. Points
-// are in Mochi's axes; a render model's are its file's, converted from renderer axes.
+// order mochi::model_utils::BakeTransform applies a soft or rod actor's scale and shape offset in.
+// Points are in Mochi's axes; a render model's are its file's, converted from renderer axes.
 struct ModelPlacement {
   mochi::Real3 scale = {mochi::real(1), mochi::real(1), mochi::real(1)};
   mochi::TransformRT transform = {};
@@ -40,7 +40,8 @@ struct ModelPlacement {
   }
 };
 
-// Whether a soft actor's render model can be drawn deformed by its visual mesh, and if not, why.
+// Whether a soft or rod actor's render model can be drawn deformed by its visual mesh, and if not,
+// why.
 struct RenderModelLink {
   bool linked = false;
   std::string reason; // empty when linked

@@ -3454,7 +3454,8 @@ bool ImGui::ModelEditor(
     AssetManager const& assetManager,
     bool acceptDragDropPayload,
     bool& modelChanged,
-    bool uniformMagnitudeScale) {
+    bool uniformMagnitudeScale,
+    bool uniformMagnitudeOtherScale) {
   bool changed = false;
   ImGui::SeparatorText(label);
   ImGui::PushID(label);
@@ -3479,9 +3480,11 @@ bool ImGui::ModelEditor(
       *otherTranslation = translation;
     }
   }
+  bool const requireUniformScale =
+      uniformMagnitudeScale || (linkModelTransforms && otherScale && uniformMagnitudeOtherScale);
   Real3 const previousScale = scale;
   if (ImGui::DragRealXYZ("Scale", scale, 0.01, 0, 0, "%.4f", 0, 1.0f)) {
-    if (uniformMagnitudeScale) {
+    if (requireUniformScale) {
       auto const editedAxis = ArgMax(Abs(scale - previousScale));
       real const magnitude = Abs(scale[editedAxis]);
       for (real& component : scale) {
@@ -3493,7 +3496,7 @@ bool ImGui::ModelEditor(
       *otherScale = scale;
     }
   }
-  if (uniformMagnitudeScale) {
+  if (requireUniformScale) {
     ImGui::TextDisabled("Point-cloud collider: scale magnitudes are linked.");
   }
   ImGui::PopID();

@@ -2571,15 +2571,16 @@ static bool ShowSoftMaterialEditor(mochi::SoftMaterialParams& material) {
   return changed;
 }
 
-// The Mochi Model and Render Model editors of a rigid or soft actor, cross-wired (link transforms)
-// so a linked render model keeps its transform in step with the shape's. Returns whether either
-// edited a path, scale or offset; @p modelChanged is set only when a path changes.
+// The Mochi Model and Render Model editors of a rigid, soft or rod actor, cross-wired (link
+// transforms) so a linked render model keeps its transform in step with the shape's. Returns
+// whether either edited a path, scale or offset; @p modelChanged is set only when a path changes.
 template <typename ActorPrefab>
 static bool ShowActorModelEditors(
     SuperDexStudio* studio,
     AssetManager const& assetManager,
     ActorPrefab& actor,
-    bool& modelChanged) {
+    bool& modelChanged,
+    bool uniformMagnitudeScale = false) {
   bool const mochiModelEdited = ImGui::ModelEditor(
       "Mochi Model",
       studio,
@@ -2593,7 +2594,8 @@ static bool ShowActorModelEditors(
       &actor.renderModelTranslation,
       assetManager,
       true,
-      modelChanged);
+      modelChanged,
+      uniformMagnitudeScale);
   bool const renderModelEdited = ImGui::ModelEditor(
       "Render Model",
       studio,
@@ -2607,7 +2609,9 @@ static bool ShowActorModelEditors(
       &actor.shapeTranslation,
       assetManager,
       true,
-      modelChanged);
+      modelChanged,
+      false,
+      uniformMagnitudeScale);
   return mochiModelEdited || renderModelEdited;
 }
 
@@ -2775,22 +2779,8 @@ void PrefabEditor::ShowRodActorDetails(int rodIndex) {
     restage = true;
   }
 
-  // External rod render models are not drawn yet, so the model editors are not linked.
-  bool const modelEdited = ImGui::ModelEditor(
-      "Mochi Model",
-      _studio,
-      AssetType::MochiModel,
-      actor->shapeFile,
-      actor->scale,
-      actor->shapeRotation,
-      actor->shapeTranslation,
-      nullptr,
-      nullptr,
-      nullptr,
-      assetManager,
-      true,
-      modelChanged,
-      UsesRodPointCloudCollider(actor->colliderType));
+  bool const modelEdited = ShowActorModelEditors(
+      _studio, assetManager, *actor, modelChanged, UsesRodPointCloudCollider(actor->colliderType));
   if (actor->pose.has_value()) {
     ImGui::TextDisabled("Has an initial pose, applied in simulation (shown at rest here).");
   }

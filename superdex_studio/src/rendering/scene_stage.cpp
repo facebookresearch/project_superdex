@@ -206,9 +206,9 @@ static mochi::Path ResolvePrefabModelPath(
   return resolved.empty() ? mochi::Path{} : mochi::Path(resolved);
 }
 
-// Whether a soft actor of @p asset can draw the render model at @p renderModelFile deformed by its
-// visual mesh, given where the two are placed in the actor's frame.
-static RenderModelLink LinkSoftRenderModel(
+// Whether a soft or rod actor of @p asset can draw the render model at @p renderModelFile deformed
+// by its visual mesh, given where the two are placed in the actor's frame.
+static RenderModelLink LinkDeformableRenderModel(
     SuperDexStudio& studio,
     MochiModelAsset const& asset,
     mochi::Path const& renderModelFile,
@@ -232,22 +232,22 @@ static RenderModelLink LinkSoftRenderModel(
       shape);
 }
 
-// Records why a soft actor's render model is not drawn (empty when it is or there is none). Warns
-// once as the actor starts falling back, not on every restage: an offset being dragged restages
-// repeatedly, and the reason then names a changing distance.
+// Records why a soft or rod actor's render model is not drawn (empty when it is or there is none).
+// Warns once as the actor starts falling back, not on every restage: an offset being dragged
+// restages repeatedly, and the reason then names a changing distance.
 static void
 SetSoftRenderModelNotice(StagedActor& actor, std::string const& name, std::string notice) {
   if (actor.softRenderModelNotice.empty() && !notice.empty()) {
     MOCHI_LOG_WARNING(
-        "Soft actor '%s' draws its Mochi model instead of its render model. %s",
+        "Actor '%s' draws its Mochi model instead of its render model. %s",
         name.c_str(),
         notice.c_str());
   }
   actor.softRenderModelNotice = std::move(notice);
 }
 
-// Calls @p fn on a soft actor's linked render model, if any, and on its highlight stand-in: a
-// separate instance, which would otherwise freeze at the pose it was cloned in.
+// Calls @p fn on a soft or rod actor's linked render model, if any, and on its highlight stand-in:
+// a separate instance, which would otherwise freeze at the pose it was cloned in.
 template <typename Fn>
 static void ForEachSoftRenderModel(StagedActor const& actor, Fn&& fn) {
   if (!actor.softRenderModel) {
@@ -589,6 +589,24 @@ static void BuildPrefabRequests(
       req.source = StagedActorSource::NestedPrefab;
       req.sourceActorIndex = topLevelNestedIndex;
     }
+    // A render model is only drawn deformed by the visual mesh it is embedded as; otherwise the
+    // Mochi model's mesh stands in and the reason is shown in the actor's details.
+    req.renderModelFile = ResolvePrefabModelPath(actor.renderModelFile, rootPath, prefabSource);
+    if (!req.renderModelFile.IsEmpty()) {
+      RenderModelLink const link = LinkDeformableRenderModel(
+          *studio,
+          asset,
+          req.renderModelFile,
+          ModelPlacement{
+              .scale = actor.renderModelScale * prefabScale,
+              .transform =
+                  TransformRT{
+                      actor.renderModelRotation, actor.renderModelTranslation * prefabScale}},
+          ModelPlacement{
+              .scale = req.deformableBakeScale, .transform = req.deformableShapeTransform});
+      req.softRenderModelLinked = link.linked;
+      req.softRenderModelNotice = link.reason;
+    }
     return req;
   };
 
@@ -609,33 +627,14 @@ static void BuildPrefabRequests(
     if (asset->GetSoftSurfaceVertexCount() <= 0) {
       continue;
     }
-    StageRequest req = deformableRequest(
+    out.push_back(deformableRequest(
         actor,
         "Soft_",
         i,
         shapePath,
         *asset,
         asset->GetSoftSurfaces(actor.useContactSkin),
-        StagedActorSource::Soft);
-    // A render model is only drawn deformed by the visual mesh it is embedded as; otherwise the
-    // solid stands in and the reason is shown in the actor's details.
-    req.renderModelFile = ResolvePrefabModelPath(actor.renderModelFile, rootPath, prefabSource);
-    if (!req.renderModelFile.IsEmpty()) {
-      RenderModelLink const link = LinkSoftRenderModel(
-          *studio,
-          *asset,
-          req.renderModelFile,
-          ModelPlacement{
-              .scale = actor.renderModelScale * prefabScale,
-              .transform =
-                  TransformRT{
-                      actor.renderModelRotation, actor.renderModelTranslation * prefabScale}},
-          ModelPlacement{
-              .scale = req.deformableBakeScale, .transform = req.deformableShapeTransform});
-      req.softRenderModelLinked = link.linked;
-      req.softRenderModelNotice = link.reason;
-    }
-    out.push_back(std::move(req));
+        StagedActorSource::Soft));
   }
 
   // Soft-skinned actors are not yet supported and will not render.
@@ -1548,9 +1547,9 @@ bool SceneStage::ApplyStageRequests(std::vector<StageRequest>& requests, StageTy
           }
         }
       } else if (req.isDeformable) {
-        // Soft actors stage a deforming wireframe in the shape slot, plus either a linked render
-        // model or a solid Mochi mesh in the render slot. The solid is smooth-lit only when it
-        // shows the visual mesh; recording that lets the highlight clone match its shading. The
+        // Soft and rod actors stage a deforming wireframe in the shape slot, plus either a linked
+        // render model or a solid Mochi mesh in the render slot. The solid is smooth-lit only when
+        // it shows the visual mesh; recording that lets the highlight clone match its shading. The
         // asset is kept so idle refresh / simulation-stop can re-bake the rest pose.
         actor.render.flatShaded = req.deformableSurfaces.rendered != DeformableSurface::Visual;
         auto* asset = manager.LoadMochiModelAsset(req.shapeModelFile);

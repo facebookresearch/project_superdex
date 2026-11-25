@@ -559,7 +559,8 @@ bool InertialProperties(
 // are non-null, edits to rotation/translation/scale are mirrored onto them, keeping the Mochi-model
 // and render-model transforms in sync. Sets `modelChanged` when the asset path changes. Returns
 // true if any value changed. With uniformMagnitudeScale, editing one scale axis updates all
-// magnitudes while preserving each axis's sign.
+// magnitudes while preserving each axis's sign. uniformMagnitudeOtherScale applies that constraint
+// only while scale edits are mirrored to otherScale.
 bool ModelEditor(
     char const* label,
     superdex::studio::SuperDexStudio* studio,
@@ -574,7 +575,8 @@ bool ModelEditor(
     superdex::studio::AssetManager const& assetManager,
     bool acceptDragDropPayload,
     bool& modelChanged,
-    bool uniformMagnitudeScale = false);
+    bool uniformMagnitudeScale = false,
+    bool uniformMagnitudeOtherScale = false);
 
 // Renders a "Collision / Contact" section under a SeparatorText(label): collider-type combo,
 // contact params, boundary element type, and (only when @p boundarySubsampling is non-null) the
