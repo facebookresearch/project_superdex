@@ -103,7 +103,7 @@ FrontalOrganizer::FrontalOrganizer(
         MOCHI_ASSERT_VERBOSE(n != -1);
       }
     }
-#ifdef MOCHI_ASSERT_VERBOSE_ENABLED
+#if MOCHI_ASSERT_VERBOSE_ENABLED
     for (auto n : tree.SuperIndices(i)) {
       parentLocations[n] = -1;
     }
