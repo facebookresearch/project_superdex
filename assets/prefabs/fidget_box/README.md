@@ -17,6 +17,6 @@ The following work was done to produce the simulation-ready asset:
 
 The CAD geometry, render meshes, collision data, Studio processing metadata, and bot description in this directory are the original work of Meta Platforms, Inc. and affiliates and are distributed under the [Creative Commons Attribution 4.0 International License (CC-BY-4.0)](./LICENSE). This license applies only to those asset files.
 
-Suggested attribution: “Fidget Bot assets © Meta Platforms, Inc. and affiliates, licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/); [source](https://github.com/facebookresearch/project_superdex/tree/main/assets/bots/fun/fidget_bot).” Indicate whether you modified the assets.
+Suggested attribution: “Fidget Box assets © Meta Platforms, Inc. and affiliates, licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/); [source](https://github.com/facebookresearch/project_superdex/tree/main/assets/prefabs/fidget_box).” Indicate whether you modified the assets.
 
 **You are responsible for ensuring your use is compatible with all applicable licenses.**
