@@ -18,7 +18,9 @@
 
 #include <mochi_core/utils/defer.h>
 #include <mochi_core/utils/log.h>
+#include <mochi_debugger/lib/address.h>
 #include <mochi_debugger/lib/debug_client.h>
+#include <mochi_physics/dbg/protocol.h>
 
 #include <string>
 
@@ -53,6 +55,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv) {
   // Create client
   dbg::DebugClient client;
   client.SetSettings({.autoSelectScene = false});
+  client.Connect(dbg::kLocalHost, dbg::kDefaultDebugServerPort);
 
   // Main loop
   std::string input;
