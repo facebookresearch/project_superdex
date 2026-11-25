@@ -16,7 +16,7 @@ import os
 import tempfile
 
 from test.conftest import (
-    assets_dir,
+    find_assets_dir,
     mochi,
     MochiTestBase,
     requires_hdf5,
@@ -83,7 +83,7 @@ class TestScene(MochiTestBase):
             center_of_mass=[0.1, 0.2, 0.3],
             moment_of_inertia=None,
             shape=mochi.load_shape_from_file(
-                os.path.join(assets_dir, "cube/cube_minimal.mochi.json")
+                os.path.join(find_assets_dir(), "cube/cube_minimal.mochi.json")
             ),
             is_static=False,
             world_from_local=mochi.TransformRT(translation=[5, 6, 7]),
@@ -326,13 +326,15 @@ class TestScene(MochiTestBase):
         link_shapes = []
         for path in link_shape_paths:
             link_shapes.append(
-                mochi.load_shape_from_file(file_path=os.path.join(assets_dir, path))
+                mochi.load_shape_from_file(
+                    file_path=os.path.join(find_assets_dir(), path)
+                )
             )
 
         # Soft shape
         soft_shape = mochi.load_shape_from_file(
             file_path=os.path.join(
-                assets_dir, "soft_character/letters/m/soft_skin.mochi.h5"
+                find_assets_dir(), "soft_character/letters/m/soft_skin.mochi.h5"
             )
         )
 

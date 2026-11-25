@@ -26,8 +26,8 @@ class ContextLifecycleTest(MochiTestBase):
     """
 
     def tearDown(self) -> None:
-        # Leave the context initialized for the rest of the (bundled) test session; the
-        # conftest initializes it once at import and other tests rely on it.
+        # Leave the context initialized for the rest of the bundled test session.
+        # The shared test setup also initializes it when needed.
         if not mochi.is_initialized():
             mochi.initialize(num_worker_threads=0)
 

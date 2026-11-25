@@ -18,8 +18,8 @@ import math
 import os
 
 from test.conftest import (
-    assets_dir,
     default_num_worker_threads,
+    find_assets_dir,
     mochi,
     MochiTestBase,
     np,
@@ -151,7 +151,7 @@ class TestContext(MochiTestBase):
         vones = [1, 1, 1]
 
         # Load from file with default scale and transform
-        path = os.path.join(assets_dir, "cube/cube_minimal.mochi.json")
+        path = os.path.join(find_assets_dir(), "cube/cube_minimal.mochi.json")
         self.assertEqual(0, mochi.get_num_shapes())
         shape1 = mochi.load_shape_from_file(path)
         self.assertTrue(shape1.is_valid())
@@ -194,7 +194,7 @@ class TestContext(MochiTestBase):
     def test_load_shape_from_bytes(self):
         vzeros = [0, 0, 0]
         vones = [1, 1, 1]
-        path = os.path.join(assets_dir, "cube/cube_minimal.mochi.json")
+        path = os.path.join(find_assets_dir(), "cube/cube_minimal.mochi.json")
         file_data = None
         with open(path, "rb") as file:
             file_data = bytearray(file.read())

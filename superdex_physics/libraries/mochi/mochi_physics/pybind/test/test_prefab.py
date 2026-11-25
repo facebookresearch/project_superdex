@@ -15,7 +15,12 @@
 import os
 import tempfile
 
-from test.conftest import assets_dir, mochi, MochiTestBase, requires_internal_assets
+from test.conftest import (
+    find_assets_dir,
+    mochi,
+    MochiTestBase,
+    requires_internal_assets,
+)
 
 
 class TestPrefab(MochiTestBase):
@@ -88,8 +93,10 @@ class TestPrefab(MochiTestBase):
     def test_add_to_scene_returns_result(self):
         """Verify that add_to_scene returns an AddToSceneResult with actors and constraints."""
         prefab = mochi.prefab.load_from_file(
-            os.path.join(assets_dir, "samples/rigid_minimal_cube_on_plane.mochi_scene"),
-            assets_dir,
+            os.path.join(
+                find_assets_dir(), "samples/rigid_minimal_cube_on_plane.mochi_scene"
+            ),
+            find_assets_dir(),
         )
         scene = mochi.create_scene("test_add_to_scene_result")
         result = mochi.prefab.add_to_scene(prefab=prefab, scene=scene)
@@ -124,7 +131,7 @@ class TestPrefab(MochiTestBase):
                 }]
             }
         }"""
-        prefab = mochi.prefab.load_from_json_string(prefab_json, assets_dir)
+        prefab = mochi.prefab.load_from_json_string(prefab_json, find_assets_dir())
 
         scene = mochi.create_scene("test_filter")
         result = mochi.prefab.add_to_scene(prefab=prefab, scene=scene)
@@ -238,7 +245,7 @@ class TestPrefab(MochiTestBase):
                 self.assertEqual(0, mochi.get_num_shapes())
 
                 # EnsureFullyLoaded should load the nested prefab and both shapes
-                mochi.prefab.ensure_fully_loaded(prefab, assets_dir)
+                mochi.prefab.ensure_fully_loaded(prefab, find_assets_dir())
 
                 # Verify shapes were loaded (parent + child)
                 self.assertTrue(prefab.actors.rigid[0].shape.is_valid())
@@ -251,7 +258,7 @@ class TestPrefab(MochiTestBase):
                 mochi.destroy_scene(scene)
 
                 # Call EnsureFullyLoaded again — no redundant loads
-                mochi.prefab.ensure_fully_loaded(prefab, assets_dir)
+                mochi.prefab.ensure_fully_loaded(prefab, find_assets_dir())
                 self.assertEqual(2, mochi.get_num_shapes())
         finally:
             mochi.enable_file_cache(was_cache_enabled)
@@ -260,8 +267,10 @@ class TestPrefab(MochiTestBase):
     def test_add_to_scene_positional_args_with_params(self):
         """Verify add_to_scene works with positional arguments including PrefabParams."""
         prefab = mochi.prefab.load_from_file(
-            os.path.join(assets_dir, "samples/rigid_minimal_cube_on_plane.mochi_scene"),
-            assets_dir,
+            os.path.join(
+                find_assets_dir(), "samples/rigid_minimal_cube_on_plane.mochi_scene"
+            ),
+            find_assets_dir(),
         )
         scene = mochi.create_scene("test_positional_with_params")
         params = mochi.prefab.PrefabParams(name="positional_test")
@@ -275,8 +284,10 @@ class TestPrefab(MochiTestBase):
     def test_add_to_scene_calling_conventions(self):
         """Verify add_to_scene works with both positional and keyword arguments."""
         prefab = mochi.prefab.load_from_file(
-            os.path.join(assets_dir, "samples/rigid_minimal_cube_on_plane.mochi_scene"),
-            assets_dir,
+            os.path.join(
+                find_assets_dir(), "samples/rigid_minimal_cube_on_plane.mochi_scene"
+            ),
+            find_assets_dir(),
         )
         scene = mochi.create_scene("test")
         params = mochi.prefab.PrefabParams(name="keyword_test")
@@ -314,7 +325,7 @@ class TestPrefab(MochiTestBase):
                 ]
             }
         }"""
-        prefab = mochi.prefab.load_from_json_string(prefab_json, assets_dir)
+        prefab = mochi.prefab.load_from_json_string(prefab_json, find_assets_dir())
         self.assertIsNone(prefab.contact_filter)
 
         # Procedurally build a ContactFilter exercising all 4 categories.
@@ -387,7 +398,7 @@ class TestPrefab(MochiTestBase):
                 ]
             }
         }"""
-        prefab = mochi.prefab.load_from_json_string(prefab_json, assets_dir)
+        prefab = mochi.prefab.load_from_json_string(prefab_json, find_assets_dir())
         self.assertIsNone(prefab.contact_pair_params_overrides)
 
         entry = mochi.prefab.ContactPairParamsOverrideEntry(
@@ -419,13 +430,13 @@ class TestPrefab(MochiTestBase):
     def test_add_to_scene_file_path_overload(self):
         """Verify the file-path overload of add_to_scene with default and custom params."""
         prefab_path = os.path.join(
-            assets_dir, "samples/rigid_minimal_cube_on_plane.mochi_scene"
+            find_assets_dir(), "samples/rigid_minimal_cube_on_plane.mochi_scene"
         )
 
         # File-path overload with default params omitted.
         scene = mochi.create_scene("test_file_path_default")
         result = mochi.prefab.add_to_scene(
-            prefab_path=prefab_path, root_path=assets_dir, scene=scene
+            prefab_path=prefab_path, root_path=find_assets_dir(), scene=scene
         )
         self.assertGreater(len(result.actors), 0)
         mochi.destroy_scene(scene)
@@ -435,7 +446,7 @@ class TestPrefab(MochiTestBase):
         params = mochi.prefab.PrefabParams(name="file_path_test")
         result = mochi.prefab.add_to_scene(
             prefab_path=prefab_path,
-            root_path=assets_dir,
+            root_path=find_assets_dir(),
             scene=scene,
             params=params,
         )
@@ -453,7 +464,7 @@ class TestPrefab(MochiTestBase):
                 ]
             }
         }"""
-        prefab = mochi.prefab.load_from_json_string(prefab_json, assets_dir)
+        prefab = mochi.prefab.load_from_json_string(prefab_json, find_assets_dir())
         scene = mochi.create_scene("test_export_scene")
         result = mochi.prefab.add_to_scene(prefab=prefab, scene=scene)
         drop = next(a for a in result.actors if a.get_name() == "Drop")
@@ -482,7 +493,7 @@ class TestPrefab(MochiTestBase):
                 "rigid": [{"name": "Box", "shape": "cube/cube_minimal.mochi.json"}]
             }
         }"""
-        prefab = mochi.prefab.load_from_json_string(prefab_json, assets_dir)
+        prefab = mochi.prefab.load_from_json_string(prefab_json, find_assets_dir())
         scene = mochi.create_scene("test_export_actor")
         actor = mochi.prefab.add_to_scene(prefab=prefab, scene=scene).actors[0]
 

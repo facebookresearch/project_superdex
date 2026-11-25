@@ -12,11 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import os
 import unittest
+from pathlib import Path
 
-import mochi
 import numpy as np
+import superdex.physics as mochi
+from superdex.physics.environment import (
+    ASSETS_PATH_ENV_VAR,
+    get_env_var_value,
+    LEGACY_ASSETS_PATH_ENV_VAR,
+)
+from superdex.physics.paths import resolve_asset_root
 
 np_real = np.float64 if mochi.uses_double_precision() else np.float32
 
@@ -32,35 +41,21 @@ requires_internal_assets = unittest.skipUnless(
 
 default_num_worker_threads = 0
 
-# Initialize Mochi up front so each test doesn't have to do it.
-mochi.initialize(num_worker_threads=default_num_worker_threads)
-
-
-def find_repo_root() -> str | None:
-    """Find the directory containing .buckconfig by walking up from current directory."""
-    current_dir = os.path.abspath(os.getcwd())
-    while current_dir != os.path.dirname(current_dir):
-        if os.path.exists(os.path.join(current_dir, ".buckconfig")):
-            return current_dir
-        current_dir = os.path.dirname(current_dir)
-    return None  # Not found
-
 
 def find_assets_dir() -> str:
-    # Case 1: Check for MOCHI_ASSETS_PATH environment variable (set by the test runner)
-    env_path = os.environ.get("MOCHI_ASSETS_PATH")
-    if env_path:
-        return env_path if env_path.endswith("/") else env_path + "/"
+    """Resolve the suite's assets only when an asset-backed test runs."""
+    reference_asset = Path("cube/cube_mesh.mochi.h5")
+    if get_env_var_value(ASSETS_PATH_ENV_VAR, LEGACY_ASSETS_PATH_ENV_VAR):
+        return str(resolve_asset_root(reference_asset)) + os.sep
 
-    # Case 2: Look in the working directory
-    if os.path.exists("./assets"):
-        return "./assets/"
+    # Pytest's executable is not the source test, so anchor source lookup here.
+    for ancestor in Path(__file__).resolve().parents:
+        candidate = ancestor / "assets" / reference_asset
+        if candidate.is_file():
+            return str(candidate.resolve().parents[1]) + os.sep
 
-    # Case 3: Assume we're running in fbsource. Find the assets relative to the repo root.
-    return os.path.join(find_repo_root(), "arvr/libraries/mochi/assets/")
+    return str(resolve_asset_root(reference_asset)) + os.sep
 
-
-assets_dir = find_assets_dir()
 
 # fmt: off
 # Minimal cube tet mesh (side length = 0.2)
@@ -121,6 +116,11 @@ class MochiTestBase(unittest.TestCase):
     every public method and type is usable and that all arguments are passed to/from c++ correctly. The goal
     is NOT to exhaustively test mochi_physics simulation behavior, since it should be tested elsewhere.
     """
+
+    def setUp(self) -> None:
+        super().setUp()
+        if not mochi.is_initialized():
+            mochi.initialize(num_worker_threads=default_num_worker_threads)
 
     def _create_two_link_articulated_actor(self, scene):
         # Rigid link shape

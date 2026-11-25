@@ -16,7 +16,14 @@ import math
 import os
 import tempfile
 
-from test.conftest import assets_dir, mochi, MochiTestBase, np, np_real, requires_hdf5
+from test.conftest import (
+    find_assets_dir,
+    mochi,
+    MochiTestBase,
+    np,
+    np_real,
+    requires_hdf5,
+)
 
 
 class TestModel(MochiTestBase):
@@ -24,7 +31,7 @@ class TestModel(MochiTestBase):
     def test_model_load_from_x(self):
         files_to_load = ["cube/cube_mesh.mochi.json", "cube/cube_mesh.mochi.h5"]
         for path in files_to_load:
-            full_path = os.path.join(assets_dir, path)
+            full_path = os.path.join(find_assets_dir(), path)
 
             # model.load_from_file
             model = mochi.model.load_from_file(path=full_path)
@@ -57,7 +64,7 @@ class TestModel(MochiTestBase):
         files_to_load = ["cube/cube_mesh.mochi.json", "cube/cube_mesh.mochi.h5"]
         for path in files_to_load:
             # model.save_to_json_string
-            full_path = os.path.join(assets_dir, path)
+            full_path = os.path.join(find_assets_dir(), path)
             model = mochi.model.load_from_file(full_path)
             json = mochi.model.save_to_json_string(model)
             json_bytes = bytes(json, "utf-8")
@@ -96,7 +103,7 @@ class TestModel(MochiTestBase):
     def test_model_auto_correct_and_validate(self):
         # Load a model with a visual mesh
         model = mochi.model.load_from_file(
-            os.path.join(assets_dir, "duck/duck_coarse.mochi.h5")
+            os.path.join(find_assets_dir(), "duck/duck_coarse.mochi.h5")
         )
         self.assertIsNotNone(model.visual_mesh)
         self.assertIsNotNone(model.visual_mesh.skinning)
@@ -121,7 +128,7 @@ class TestModel(MochiTestBase):
     def test_model_bake_transform(self):
         # Load a model with a mesh
         src_model = mochi.model.load_from_file(
-            os.path.join(assets_dir, "cube/cube_mesh.mochi.json")
+            os.path.join(find_assets_dir(), "cube/cube_mesh.mochi.json")
         )
 
         # Copy the original mesh coordinates into an Nx3 numpy array
@@ -170,7 +177,7 @@ class TestModel(MochiTestBase):
     @requires_hdf5
     def test_model_bake_sdf(self):
         model = mochi.model.load_from_file(
-            os.path.join(assets_dir, "duck/duck_coarse.mochi.h5")
+            os.path.join(find_assets_dir(), "duck/duck_coarse.mochi.h5")
         )
         model.sdf = None  # Discard the SDF if it came with one
 
@@ -299,7 +306,7 @@ class TestModel(MochiTestBase):
             self.assertIsNotNone(value)
 
     def test_load_from_bytes_without_format(self):
-        full_path = os.path.join(assets_dir, "cube/cube_mesh.mochi.json")
+        full_path = os.path.join(find_assets_dir(), "cube/cube_mesh.mochi.json")
         with open(full_path, "rb") as f:
             data = f.read()
         model = mochi.model.load_from_bytes(data)
@@ -307,7 +314,7 @@ class TestModel(MochiTestBase):
         self.assertEqual(4, model.mesh.nodes_per_element)
 
     def test_load_from_bytes_unchecked_without_format(self):
-        full_path = os.path.join(assets_dir, "cube/cube_mesh.mochi.json")
+        full_path = os.path.join(find_assets_dir(), "cube/cube_mesh.mochi.json")
         with open(full_path, "rb") as f:
             data = f.read()
         model = mochi.model.load_from_bytes_unchecked(data)
@@ -337,7 +344,7 @@ class TestModel(MochiTestBase):
         self._expect_cube_mesh(model, 8)
 
     def test_load_shape_from_bytes_without_format(self):
-        full_path = os.path.join(assets_dir, "cube/cube_mesh.mochi.json")
+        full_path = os.path.join(find_assets_dir(), "cube/cube_mesh.mochi.json")
         with open(full_path, "rb") as f:
             data = f.read()
         shape = mochi.load_shape_from_bytes(data)
@@ -358,7 +365,7 @@ class TestModel(MochiTestBase):
 
     def test_model_flip_winding_order(self):
         model = mochi.model.load_from_file(
-            os.path.join(assets_dir, "cube/cube_mesh.mochi.json")
+            os.path.join(find_assets_dir(), "cube/cube_mesh.mochi.json")
         )
         self.assertIsNotNone(model.mesh)
         self.assertEqual(4, model.mesh.nodes_per_element)
@@ -416,7 +423,7 @@ class TestModel(MochiTestBase):
         unreal_space = mochi.CoordinateSpace.unreal()
 
         src_model = mochi.model.load_from_file(
-            os.path.join(assets_dir, "cube/cube_mesh.mochi.json")
+            os.path.join(find_assets_dir(), "cube/cube_mesh.mochi.json")
         )
         src_coords = np.array(src_model.mesh.coordinates, dtype=np_real).reshape(-1, 3)
         expected_coords = 100.0 * np.column_stack(

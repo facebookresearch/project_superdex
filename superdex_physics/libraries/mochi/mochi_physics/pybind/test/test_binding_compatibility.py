@@ -17,7 +17,7 @@ import gc
 import importlib
 import pickle
 
-from mochi import loader
+from superdex.physics import loader
 from test.conftest import mochi, MochiTestBase, np, np_real
 
 
