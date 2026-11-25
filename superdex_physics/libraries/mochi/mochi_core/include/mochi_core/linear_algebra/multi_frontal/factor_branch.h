@@ -90,7 +90,8 @@ struct FactorData {
 
   [[nodiscard]] DynamicArray<Scalar> DispatchTrunkWork(
       int rootNode,
-      Span<Span<Scalar>> childrenFrontBuffers);
+      Span<Span<Scalar>> childrenFrontBuffers,
+      DynamicArray<Scalar>& scratch);
 };
 
 /**
@@ -99,26 +100,33 @@ struct FactorData {
  * allowing threads to work on separate panels of the rootNode's L and of its frontal matrix.
  * @param rootNode Node being factored.
  * @param childrenFrontBuffers Array of front buffers for children nodes.
+ * @param scratch The calling task's scratch matrix for @ref TrunkWork::EliminatePanel, which the
+ * last panel task borrows and sizes on first use.
  * @return A buffer containing rootNode's front.
  */
 template <int kDofsPerNode, typename Scalar, size_t kBlockSize>
 DynamicArray<Scalar> FactorData<kDofsPerNode, Scalar, kBlockSize>::DispatchTrunkWork(
     int rootNode,
-    Span<Span<Scalar>> childrenFrontBuffers) {
+    Span<Span<Scalar>> childrenFrontBuffers,
+    DynamicArray<Scalar>& scratch) {
   auto frontBuffer = GetFrontBuffer(rootNode);
   auto trunkWork = GetTrunkWork(rootNode, childrenFrontBuffers, frontBuffer);
   MOCHI_ASSERT_VERBOSE(
       trunkWork.GetNumPanels() == organizer.GetCosts(rootNode).numPanels,
       "The organizer must count the panels of the trunk work.");
 
-  auto factorByPanel = [&](int /*task*/) {
+  // Each panel task needs its own scratch matrix. The last one, which ParallelForN runs on the
+  // calling thread, borrows the calling task's, so a long trunk of single-task supernodes allocates
+  // one only once.
+  int const numTasks = organizer.NumPanelTasks(rootNode, minTaskTime, numThreads);
+  auto factorByPanel = [&](int task) {
     if (!trunkWork.EnterWork()) {
       return;
     }
-    // Allocate buffer for EliminatePanel
-    auto maxPanelCols = kBlockSize;
-    DynamicArray<Scalar> uBuffer;
-    uBuffer.resize_noinit(maxPanelCols * maxPanelCols);
+
+    DynamicArray<Scalar> taskScratch;
+    auto& uBuffer = task == numTasks - 1 ? scratch : taskScratch;
+    uBuffer.resize_noinit(kBlockSize * kBlockSize);
     do {
       // Look for panels to work on. The panels in L complete sequentially, but after that
       // The remaining panels can complete in any order. The start of the iteration reflects this
@@ -133,8 +141,7 @@ DynamicArray<Scalar> FactorData<kDofsPerNode, Scalar, kBlockSize>::DispatchTrunk
     } while (!trunkWork.LeaveWork());
   };
 
-  ParallelForN(
-      "TrunkWork", organizer.NumPanelTasks(rootNode, minTaskTime, numThreads), 1, factorByPanel);
+  ParallelForN("TrunkWork", numTasks, /*minPerTask=*/1, factorByPanel);
   return frontBuffer;
 }
 
@@ -171,6 +178,7 @@ void FactorTree(
     branchFront = data.GetFrontBuffer(branchRoot);
     data.FactorSubTree(branchRoot, branchFront);
 
+    DynamicArray<Scalar> scratch;
     for (int node = branchRoot; node != root;) {
       node = eTree.SuperParent(node);
       auto const children = eTree.Children(node);
@@ -185,7 +193,7 @@ void FactorTree(
       for (int child : children) {
         childFronts.push_back(fronts[child - firstNode]);
       }
-      fronts[node - firstNode] = data.DispatchTrunkWork(node, childFronts);
+      fronts[node - firstNode] = data.DispatchTrunkWork(node, childFronts, scratch);
       for (int child : children) {
         fronts[child - firstNode].reset();
       }
