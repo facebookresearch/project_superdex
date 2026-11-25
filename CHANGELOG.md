@@ -22,13 +22,12 @@ and soft-body authoring, and improves contact and solver behavior.
   zenoh-pico and Protocol Buffers backend for teleoperation across processes or
   machines on Win64 and Android.
 - **Blueprint episode recording on Win64.** Record simulation state, application
-  transforms and skeletons, text events, and scalar values into Rerun episodes.
-  Users can define additional channels with their own data and structures. Opt-in,
-  experimental native recorder builds also read and restore rigid, articulated,
-  standalone soft, and rod state and pack episodes into `.superdex_framebank` files.
-  Restoration cold-starts integration; replay is not bit-exact but is close to
-  float precision. The separate `rrd_video` source tool renders existing complete
-  episodes to video without re-simulating them.
+  transforms and skeletons, text events, and scalar values into Rerun episodes. Users
+  can define additional channels with their own data and structures. Native recorder
+  builds also read and restore rigid, articulated, standalone soft, and rod state and
+  pack episodes into `.superdex_framebank` files. Restoration cold-starts integration;
+  replay is not bit-exact but is close to float precision. The separate `rrd_video`
+  source tool renders existing complete episodes to video without re-simulating them.
 - **Combined bot scenes and tasks.** Load bots, physics prefabs, controllers,
   and supported sensors together from `.superdex_scene` files. In Studio, author
   controllers and task spawns and preview nominal `.superdex_task` reset states.
@@ -42,7 +41,8 @@ and soft-body authoring, and improves contact and solver behavior.
   repeated experiments with boundary conditions (loads) on the same scene/prefab
   multiple times with different parameters (overrides) to achieve the desired behavior.
   Asset Tuner has feature-rich integration within Studio and supports `.rrd` (Rerun)
-  and `.csv` recording.
+  and `.csv` recording. Scene tuners have experimental support for driving
+  `.superdex_bot` bots with waypoints and joint keys in `.superdex_task` environments.
 - **More complete robot imports.** Studio imports MuJoCo MJCF and URDF robots with
   primitives and multiple visual/collision geometries per link as a unioned or
   shrink-wrapped mesh, retaining supported materials and textures. Collision
@@ -51,11 +51,11 @@ and soft-body authoring, and improves contact and solver behavior.
 - **Soft-body authoring.** Studio can tetrahedralize surface and CAD models,
   extract their boundaries, embed separate visual/contact meshes, and export soft
   models. Constrained Delaunay tetrahedralization preserves boundary shape,
-  allowing subdivision unless Strict Boundary is selected. Compatible textured
+  allowing subdivision unless "Strict Boundary" is selected. Compatible textured
   GLB render models can deform with soft actors in Studio and Unreal.
 - **Prefab editing and inspection.** Author and visualize supported joint, pivot,
-  and attachment constraints in Studio and import supported prefab constraints into
-  Unreal. SDF and embedded-mesh views, geometry statistics, and hide/isolate
+  and attachment constraints in Studio and import supported prefab constraints and rod
+  actors into Unreal. SDF and embedded-mesh views, geometry statistics, and hide/isolate
   controls make complex assets easier to inspect. Robot skin visibility can be
   controlled independently of collision coverage. `hiddenLinks` controls skin
   visibility, independently of `nonCollidingLinks`; unset and empty are distinct.
@@ -73,6 +73,10 @@ and soft-body authoring, and improves contact and solver behavior.
   only if both actors prefer it. To turn it off, set the experimental
   `ContactParams::preferElastoPlasticFriction` (defaults to `true`) to `false` on either
   actor, or override the preference per pair through `ContactPairParamsOverride`.
+- **Elasto-plastic joint friction.** Dry friction in articulated joints now holds a load
+  below its static peak without creep. It ramps up over the new
+  `ArticulatedJointFrictionParams::preslidingDisplacement` (defaults to `1e-4` m or
+  rad).
 - **Per-actor linear stopping.** Opt-in
   `LinearSolverConvergenceNorm::ResidualPerActorWeighted` stops Newton's linear solves
   relative to each actor's own residual, so lightly loaded or stiff actors are no longer
@@ -83,24 +87,31 @@ and soft-body authoring, and improves contact and solver behavior.
   capture current rod poses. A rod-element rotation constraint avoids a dummy
   rigid body. Rods gain a default axial-collapse barrier; shells gain optional
   tension-only strain stiffening, disabled by default.
+- **Rods in Studio.** View rod (polyline) models and create, edit, and simulate rod
+  actors. Drag rods by their centerline, and wrap rod models in contact skins and visual
+  meshes.
 - **Profiling in Physics Debugger.** The Physics Debugger now includes a real-time
   profiler with a scrolling graph of simulation step times, helping you spot performance
   trends and spikes. Hover over a step to see details, or use the mouse wheel to zoom.
   Enable single-threaded simulation to see each step broken down by cost category and
   identify where time is spent. The profiler appears at the bottom of the debugger; if it
-  isn’t visible, choose **Reset Layout**.
+  isn't visible, choose "Reset Layout".
 - **SuperDex CAD Exporter.** Support for exporting `.superdex_prefab` directly and
   workflow improvements for NX.
-- **SuperDex Recorder.** A new recorder based on Rerun now lives in `superdex_recorder/`,
-  with C++ and Python APIs for recording physics and robotics episodes. It captures
-  rigid, articulated, soft-body, and rod state, robot controllers, and optional contact
-  forces in standard .rrd files viewable with the regular Rerun viewer. Chunked
-  background writing and transactional commits support efficient episode recording.
-  `EpisodeReader` provides selective frame reads, while `FrameBank` and `EpisodeRestorer`
-  enable "Kinematic Resume" so learning curricula can initialize rollouts from recorded
-  mid-episode states. The included `rrd_video` tool generates real-time video clips
-  directly from `.rrd` recordings using headless Rerun rendering, with automatic camera
-  framing and support for selecting a time range.
+- **SuperDex Recorder.** The Rerun-based recorder in `superdex_recorder/`, with C++ and
+  Python APIs for recording physics and robotics episodes, now ships in the Python
+  wheels and is built by default. It captures rigid, articulated, soft-body, and rod
+  state, robot controllers, and optional contact forces in standard `.rrd` files
+  viewable with the regular Rerun viewer. Chunked background writing and transactional
+  commits support efficient episode recording. `EpisodeReader` provides selective frame
+  reads, while `FrameBank` and `EpisodeRestorer` enable "Kinematic Resume" so learning
+  curricula can initialize rollouts from recorded mid-episode states. The included
+  `rrd_video` tool generates real-time video clips directly from `.rrd` recordings using
+  headless Rerun rendering, with automatic camera framing and support for selecting a
+  time range.
+- **New robot assets.** Tianji Marvin M6 arms are published under CC BY 4.0. Arm-hand
+  combinations for Tianji M6 + Wuji Hand 2 and FR3 V2 + DG-5F SEED are available in
+  SuperDex and Unreal, as are OpenXR hand bots.
 - **Robotics scenes.** Load scenes that specify prefab assets, robots, controllers
   and sensor graphs. Configure robot placement and initial joint poses, select robots
   to instantiate, and spawn or remove prefab instances.
@@ -129,6 +140,9 @@ depend on the scene and settings.
 - Rotation-aware AMG preconditioner for soft and shell actors.
 - Opt-in `AdaptivePerActor` to automatically select the most appropriate
   preconditioner type for each actor.
+- Reduced fixed per-step overhead in small rigid scenes.
+- Lock-free scene lookup improves scaling when many threads step many scenes.
+- Faster contact detection against a soft actor using an SDF collider.
 
 ### Fixes
 
@@ -165,11 +179,23 @@ depend on the scene and settings.
   no longer unnecessarily round-tripped. Sphere-pole meshing and visual normals
   are corrected.
 - Python arrays bound in submodules pickle correctly.
+- Growing a Python `DynamicArray` from its own elements no longer reads freed memory.
+- Nested soft reduced-order actors no longer miss contacts, actors with a negative
+  contact threshold no longer sink into colliders, and implicit sphere and plane rigid
+  shapes now respect `ColliderType::None`.
+- Destroying a nested soft actor individually is rejected with a warning instead of
+  crashing, and articulations with several nested soft actors step deterministically.
+- Fixed one-sided joint limits on all-negative axes, zeros from `GetDofValues` on
+  articulated links, and spurious link velocities after a diverged step.
+- Experimental reduced-order soft actors no longer gain energy or stall under `BDF2`,
+  `BDF3`, and `DIRK22`.
+- `QueryNodesInVolumeLocal` no longer crashes before the first step.
+- `superdex.physics.mesh` now imports from the installed `superdex-physics` wheels.
 
 ### API Changes
 
 - **Newton defaults:** `LineSearchType::Default` is now `WolfeStrong`, rather than
-  `ResidualNorm`; `lineSearchMaxIter` increases from 4 to 8. Nonlinear `relTol`
+  `ResidualNorm`; `lineSearchMaxIter` increases from `4` to `8`. Nonlinear `relTol`
   changes from `1e-6` to `0`, disabling relative stopping. Set these explicitly
   when relying on prior behavior. `ArmijoOrResidualNorm` and
   `LinearToleranceStrategy::EisenstatWalker3` are removed.
@@ -182,6 +208,17 @@ depend on the scene and settings.
   Existing normal/friction heuristics are now marked experimental.
   `experimental::ApplyImprovedConvergenceSettings` no longer forces
   `frictionWithColliderNormal` on; its default remains true.
+- **Friction model:** the experimental `CoulombFrictionModel` enum and
+  `ExperimentalEvalParams::frictionModel` (Python `friction_model`) are removed; default
+  simulations don't change. Delete any references, and resave prefabs that store
+  `frictionModel`, which now load with a warning.
+- **Joint friction:** `ArticulatedJointFrictionParams::falloffVel` is deprecated and
+  ignored; tune the new `preslidingDisplacement` instead. The new field precedes
+  `falloffVel`, so update positional C++ initializers. `NewtonEulerTerms` now excludes
+  joint friction.
+- **Articulated skins:** skin shapes and nested soft actor shapes are now defined in the
+  articulated actor's frame, not the root link's. Re-author skins whose root joint or
+  root link has an offset.
 - **Query refresh and timing:** use `Scene::UpdateQueries(error)` or Python
   `scene.update_queries()` to refresh registered queries without simulating a
   step. Forces are evaluated automatically when registered queries need them.
@@ -198,8 +235,7 @@ depend on the scene and settings.
   `experimental::CreateRodActor` with `Scene::CreateRodActor`. Use `GetRodPose` /
   `SetRodPose` for node displacements and element frame axes, not generic
   displacement setters. Rod boundary-condition setters now reject rods; use
-  node-position and rod-element rotation constraints instead. Unreal editor rod
-  prefab import remains unsupported.
+  node-position and rod-element rotation constraints instead.
 - **Recentering:** shell/rod translation recentering is on by default; their
   local displacements and root transforms can change frame. Use world-space
   values when appropriate, or set recentering explicitly. New rod
@@ -215,6 +251,8 @@ depend on the scene and settings.
   existing `.mochi_prefab` files still open and save in place.
 - **Python dependency:** `superdex-physics` no longer depends on scikit-image.
   Declare it yourself if you use it directly.
+- **Native library names:** CMake FP64 shared libraries now have a `_double` suffix, and
+  AVX-512 builds an `_avx512` suffix; update custom link lines.
 - **Robot scene APIs.** `BotScenePrefab` describes a scene; `LoadBotScene` instantiates
   it. `BotScene` provides named component lookup, robot initialization/removal, prefab
   spawning/destruction and task termination criteria.
