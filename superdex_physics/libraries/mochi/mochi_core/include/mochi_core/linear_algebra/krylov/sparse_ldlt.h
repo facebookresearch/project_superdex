@@ -62,8 +62,9 @@ RootTask FactorTree(Exec& dispatch, FactorData<kDofsPerNode, Scalar, kBlockSize>
 /// @note The matrix must be symmetric, and so must its stored pattern, explicit zeros included.
 /// Entries at the same position are summed.
 /// @note If a @ref TaskScheduler with at least two workers is available and in multi-threaded mode
-/// (both global and thread-local), both at construction and at each factorization,
-/// elimination-tree roots with enough work and more than one supernode are factorized in parallel.
+/// (both global and thread-local), both at construction and at each factorization, each
+/// elimination-tree root with enough work is factorized in parallel, unless its tree is a single
+/// supernode or a chain in which no supernode above the leaf gets at least two panel tasks.
 /// @note Performance for kBlockSize_ == 1 (e.g. @ref SparseMatrix) has not been optimized.
 template <typename Scalar_, int kBlockSize_, typename Index = int>
 class SparseLDLt {
@@ -178,7 +179,8 @@ class SparseLDLt {
 
  private:
   // Picks of {root} factorize the root directly. Otherwise, the picks run as branch tasks and trunk
-  // panels use up to numThreads participants.
+  // supernodes split their panels into at most numThreads tasks (see
+  // FrontalOrganizer::NumPanelTasks).
   struct RootFactorizationPlan {
     int root = 0;
     int numThreads = 0;
@@ -187,6 +189,10 @@ class SparseLDLt {
 
   // Scalar-equivalent work below which task scheduling does not amortize its overhead.
   static constexpr double kMinParallelTaskWork = 1'000'000.0;
+
+  // kMinParallelTaskWork in the organizer's time units.
+  static constexpr double kMinTaskTime =
+      kMinParallelTaskWork / (kBlockSize * kBlockSize * kBlockSize);
 
   /// @brief Initialize the multi-frontal structures.
   template <
@@ -310,23 +316,23 @@ void SparseLDLt<Scalar_, kBlockSize_, Index>::Initialize(
     auto const& eTree = *_elimData;
     auto const& organizer = *_organizer;
     int const numWorkers = Max(1, scheduler->GetNumThreads());
-    double constexpr kMinRootWork = FrontalOrganizer::kBranchesPerThread * kMinParallelTaskWork;
+    double constexpr kMinRootTime = FrontalOrganizer::kBranchesPerThread * kMinTaskTime;
     auto const roots = eTree.Roots();
     _rootFactorizationPlans.reserve(roots.size());
     for (int root : roots) {
-      double const rootWork = organizer.GetCosts(root).time * kBlockSize * kBlockSize * kBlockSize;
-      if (rootWork < kMinRootWork) {
+      double const rootTime = organizer.GetCosts(root).time;
+      if (rootTime < kMinRootTime) {
         _rootFactorizationPlans.push_back(
             {.root = root, .numThreads = 1, .pickedBranches = {root}});
         continue;
       }
 
       auto const numThreads = static_cast<int>(
-          Clamp(Floor(rootWork / kMinRootWork), 1.0, static_cast<double>(numWorkers)));
+          Clamp(Floor(rootTime / kMinRootTime), 1.0, static_cast<double>(numWorkers)));
       _rootFactorizationPlans.push_back(
           {.root = root,
            .numThreads = numThreads,
-           .pickedBranches = organizer.PickBranches(eTree, root, numThreads).first});
+           .pickedBranches = organizer.PickBranches(eTree, root, numThreads, kMinTaskTime).first});
     }
   }
 
@@ -386,7 +392,8 @@ int SparseLDLt<Scalar_, kBlockSize_, Index>::Factorize(
           A,
           *_lMatrix,
           plan.pickedBranches,
-          plan.numThreads);
+          plan.numThreads,
+          kMinTaskTime);
       details::FactorTree(dispatch, data, plan.root).RunAndWait(*scheduler, "Factor tree");
     }
   }

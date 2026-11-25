@@ -24,6 +24,7 @@
 #include <mochi_core/linear_algebra/multi_frontal/elim_tree.h>
 #include <mochi_core/linear_algebra/multi_frontal/l_matrix.h>
 #include <mochi_core/linear_algebra/multi_frontal/organizer.h>
+#include <mochi_core/utils/debug.h>
 
 #include <algorithm>
 
@@ -45,6 +46,9 @@ struct FactorData {
   DynamicArray<int> branchRoots;
   int numThreads;
 
+  /// Positive minimum estimated time of a panel task, in the organizer's time units.
+  double minTaskTime;
+
   FactorData(
       SymbolicEliminationTree const& eTree,
       FrontalOrganizer const& organizer,
@@ -52,14 +56,17 @@ struct FactorData {
       BlockSparseMatrixView<Scalar const, kDofsPerNode> const& A,
       LMatrix<Scalar, kBlockSize>& L,
       Span<int const> branchRoots,
-      int nThreads)
+      int nThreads,
+      double minTaskTime)
       : eTree(eTree),
         organizer(organizer),
         helper(helper),
         A(A),
         L(L),
         branchRoots(branchRoots.begin(), branchRoots.end()),
-        numThreads(nThreads) {
+        numThreads(nThreads),
+        minTaskTime(minTaskTime) {
+    MOCHI_ASSERT_VERBOSE(minTaskTime > 0, "The minimum time of a panel task must be positive.");
     std::ranges::sort(this->branchRoots);
   }
 
@@ -103,8 +110,8 @@ struct FactorData {
 
 /**
  * @brief Eliminate rootNode's DOFs.
- * @details The elimination is parallelized, allowing threads to work on
- * separate panels of the rootNode's L and of its frontal matrix.
+ * @details The elimination is parallelized over @ref FrontalOrganizer::NumPanelTasks tasks,
+ * allowing threads to work on separate panels of the rootNode's L and of its frontal matrix.
  * @param exec The executor to dispatch parallel panel work to.
  * @param rootNode Node being factored.
  * @param childrenFrontBuffers Array of front buffers for children nodes.
@@ -117,6 +124,9 @@ Task<DynamicArray<Scalar>> FactorData<kDofsPerNode, Scalar, kBlockSize>::Dispatc
     Span<Span<Scalar>> childrenFrontBuffers) {
   auto frontBuffer = GetFrontBuffer(rootNode);
   auto trunkWork = GetTrunkWork(rootNode, childrenFrontBuffers, frontBuffer);
+  MOCHI_ASSERT_VERBOSE(
+      trunkWork.GetNumPanels() == organizer.GetCosts(rootNode).numPanels,
+      "The organizer must count the panels of the trunk work.");
 
   auto factorByPanel = [&]() {
     if (!trunkWork.EnterWork()) {
@@ -143,7 +153,12 @@ Task<DynamicArray<Scalar>> FactorData<kDofsPerNode, Scalar, kBlockSize>::Dispatc
   };
 
   auto tr = std::make_shared<Trunk>();
-  co_await ParallelFactor(tr, exec, factorByPanel, trunkWork.GetNumPanels(), numThreads);
+  co_await ParallelFactor(
+      tr,
+      exec,
+      factorByPanel,
+      trunkWork.GetNumPanels(),
+      organizer.NumPanelTasks(rootNode, minTaskTime, numThreads));
   co_return std::move(frontBuffer);
 }
 
@@ -152,8 +167,10 @@ Task<DynamicArray<Scalar>> FactorData<kDofsPerNode, Scalar, kBlockSize>::Dispatc
  * subbranches in parallel.
  * @details If superNode is in the set of picked roots to be factored by
  * a single thread, this function does not dispatch other work. Otherwise,
- * it recursively factors its children in parallel before proceeding to
- * its own factorization.
+ * it walks down from superNode through single children that are not picked
+ * roots, to the first node that branches or whose child is a picked root. It
+ * factors that node's children in parallel, then the walked chain bottom-up,
+ * without a FactorBranch task per chain node.
  * @param executor The executor to which to dispatch the children's
  * factorization tasks.
  * @param data The factorization data of the matrix.
@@ -165,22 +182,41 @@ Task<DynamicArray<Scalar>>
 FactorBranch(Exec& executor, FactorData<kDofsPerNode, Scalar, kBlockSize>& data, int superNode) {
   // When the superNode was picked as the root of a branch to factorize sequentially.
   if (data.IsBranchRoot(superNode)) {
-    // Allows trunks to know when all the picked root tasks have been started.
     auto frontBuffer = data.GetFrontBuffer(superNode);
     data.FactorSubTree(superNode, frontBuffer);
     co_return std::move(frontBuffer);
   }
-  auto& eTree = data.eTree;
-  auto children = eTree.Children(superNode);
-  // Recursively factorize the children in parallel.
-  auto childrenFronts = co_await Execute(
-      executor,
-      [&](int child) -> Task<DynamicArray<Scalar>> { return FactorBranch(executor, data, child); },
-      async::ForEach{children});
 
-  auto chFrontsAsSpans = DynamicArray<Span<Scalar>>(childrenFronts.begin(), childrenFronts.end());
-  // Dispatch the factorization of superNode to parallel panel-based work.
-  co_return co_await data.DispatchTrunkWork(executor, superNode, chFrontsAsSpans);
+  // Single-child trunk nodes have no sibling work to overlap, so factor a chain of them here rather
+  // than with a task per node.
+  auto& eTree = data.eTree;
+  int chainBottom = superNode;
+  auto children = eTree.Children(chainBottom);
+  while (children.size() == 1 && !data.IsBranchRoot(children[0])) {
+    chainBottom = children[0];
+    children = eTree.Children(chainBottom);
+  }
+
+  // Recursively factorize the children in parallel. Their fronts are released before the walk up.
+  DynamicArray<Scalar> front;
+  {
+    auto childrenFronts = co_await Execute(
+        executor,
+        [&](int child) -> Task<DynamicArray<Scalar>> {
+          return FactorBranch(executor, data, child);
+        },
+        async::ForEach{children});
+    auto chFrontsAsSpans = DynamicArray<Span<Scalar>>(childrenFronts.begin(), childrenFronts.end());
+    front = co_await data.DispatchTrunkWork(executor, chainBottom, chFrontsAsSpans);
+  }
+
+  // Factor the chain bottom-up. Only chain nodes with enough work split their panels into tasks.
+  for (int node = chainBottom; node != superNode;) {
+    node = eTree.SuperParent(node);
+    Span<Scalar> childFront = front;
+    front = co_await data.DispatchTrunkWork(executor, node, MakeSingletonSpan(childFront));
+  }
+  co_return std::move(front);
 }
 
 } // namespace mochi

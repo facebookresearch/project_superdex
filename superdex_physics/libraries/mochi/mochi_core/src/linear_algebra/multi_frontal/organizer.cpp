@@ -46,27 +46,33 @@ FrontalOrganizer::FrontalOrganizer(
   MOCHI_ASSERT_VERBOSE(
       _blockSize % _dofsPerNode == 0, "Frontal block size must be a multiple of DoFs per node.");
   auto NSuper = tree.NumSuperNodes();
-  _costs.resize(NSuper + 1, {0.0, 0.0, 0, 0});
+  _costs.resize(NSuper + 1, Costs{});
   FrontCostMultipliers timeFactors{
       .triFactorCoef = 3.0, .triSolveCoef = 2.0, .rankUpdateCoef = 1.0};
-  FrontCostMultipliers flopCountMultipliers{
-      .triFactorCoef = 2.0 / 3.0, .triSolveCoef = 1.0, .rankUpdateCoef = 1.0};
 
   DynamicArray<size_t> firstChildFrontStack(NSuper + 1, 0);
   for (int i = 0; i < NSuper; ++i) {
     auto superSize = tree.SuperSize(i);
     auto superHeight = isize(tree.SuperIndices(i));
     auto frontNodeCount = superHeight - superSize;
-    _costs[i].time += SupernodeCost(superSize, superHeight, timeFactors);
-    _costs[i].flops += SupernodeCost(superSize, superHeight, flopCountMultipliers);
+    double const eliminationTime = SupernodeCost(superSize, superHeight, timeFactors);
+    _costs[i].time += eliminationTime;
+    _costs[i].ownTime += eliminationTime;
     _costs[i].frontSize = FrontStorageSize(frontNodeCount * _dofsPerNode, _blockSize);
+    // TrunkWork splits the L columns and the front into panels of _blockSize columns.
+    _costs[i].numPanels = static_cast<int>(
+        (RoundUp(superSize * _dofsPerNode, _blockSize) +
+         RoundUp(frontNodeCount * _dofsPerNode, _blockSize)) /
+        _blockSize);
     // Account for the fact that the first child's front will overlap its parent's.
     _costs[i].frontStackSize =
         std::max(firstChildFrontStack[i], _costs[i].frontSize + _costs[i].frontStackSize);
     auto parent = tree.SuperParent(i);
     parent = parent == -1 ? NSuper : parent;
     _costs[parent].time += _costs[i].time;
-    _costs[parent].flops += _costs[i].flops;
+    // The parent assembles this front's n(n + 1) / 2 node blocks, one unit of work per scalar.
+    _costs[parent].ownTime +=
+        0.5 * frontNodeCount * (frontNodeCount + 1) / static_cast<double>(_dofsPerNode);
     if (firstChildFrontStack[parent] == 0) {
       firstChildFrontStack[parent] = _costs[i].frontStackSize;
     } else {
@@ -132,14 +138,40 @@ FrontalOrganizer::FrontalOrganizer(
   _rangesInParent = rangeBuilder.Build();
 }
 
+int FrontalOrganizer::NumPanelTasks(int superNode, double minTaskTime, int maxTasks) const {
+  MOCHI_ASSERT_VERBOSE(
+      minTaskTime > 0 && maxTasks > 0,
+      "The minimum task time and the maximum number of tasks must be positive.");
+
+  auto const& costs = _costs[superNode];
+  return static_cast<int>(
+      Clamp(costs.ownTime / minTaskTime, 1.0, static_cast<double>(Min(maxTasks, costs.numPanels))));
+}
+
 std::pair<DynamicArray<int>, int> FrontalOrganizer::PickBranches(
     SymbolicEliminationTree const& tree,
     int rootNode,
-    int numThreads) const {
+    int numThreads,
+    double minTaskTime) const {
+  MOCHI_ASSERT_VERBOSE(minTaskTime > 0, "The minimum task time must be positive.");
+
   DynamicArray<int> pickedBranches;
   if (numThreads <= 0) {
     return {pickedBranches, 0};
   }
+
+  // Whether each subtree branches or has a non-leaf supernode that gets at least two panel tasks.
+  // Post-ordering numbers the root's subtree from firstNode to rootNode, children first.
+  auto treeGraph = tree.TreeGraph();
+  int const firstNode = tree.SubtreeRange(rootNode).Min();
+  DynamicArray<bool> hasParallelism(rootNode - firstNode + 1, false);
+  for (int sn = firstNode; sn <= rootNode; ++sn) {
+    auto const children = treeGraph[sn];
+    hasParallelism[sn - firstNode] = children.size() == 1
+        ? NumPanelTasks(sn, minTaskTime, numThreads) >= 2 || hasParallelism[children[0] - firstNode]
+        : children.size() > 1;
+  }
+
   pickedBranches.reserve(kBranchesPerThread * numThreads);
   double const rootTime = _costs[rootNode].time;
   double const threshold = rootTime / (kBranchesPerThread * numThreads);
@@ -148,17 +180,15 @@ std::pair<DynamicArray<int>, int> FrontalOrganizer::PickBranches(
   stack.reserve(numThreads);
   stack.push_back(rootNode);
 
-  auto treeGraph = tree.TreeGraph();
   int trunkCount = 0; // Number of nodes that are within the truncated tree.
   while (!stack.empty()) {
     auto sn = stack.back();
     stack.pop_back();
 
-    // Pick a node if its cost is at or below the threshold, or if it is a leaf
-    // (a leaf above threshold is unlikely but must still be picked — it cannot be split further).
+    // Splitting a subtree without parallelism only adds task overhead.
     // TODO: A large leaf selected here is later factorized sequentially because it cannot be
     // divided into independent branches. Consider parallelizing the work inside the leaf instead.
-    if (_costs[sn].time <= threshold || tree.IsLeaf(sn)) {
+    if (_costs[sn].time <= threshold || !hasParallelism[sn - firstNode]) {
       pickedBranches.push_back(sn);
     } else {
       ++trunkCount;

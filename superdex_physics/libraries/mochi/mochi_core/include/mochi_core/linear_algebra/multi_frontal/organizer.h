@@ -40,12 +40,17 @@ class FrontalOrganizer {
  public:
   /**
    * @brief Cost metrics for a supernode operation.
+   *
+   * @details Times count operations on nodes, not scalars: multiply them by dofsPerNode^3 for
+   * scalar work.
    */
   struct Costs {
-    double flops; ///< Estimated floating-point operations.
-    double time; ///< Estimated execution time.
+    double time; ///< Estimated time to eliminate the super-node's subtree, without front assembly.
+    /// Estimated time to assemble the super-node's children's fronts and eliminate the super-node.
+    double ownTime;
     size_t frontSize; ///< Number of elements in the super-node's front.
     size_t frontStackSize; ///< Number of elements for the full front stack.
+    int numPanels; ///< Number of panels, the blocks of the super-node's L columns and front.
   };
 
   /**
@@ -94,23 +99,41 @@ class FrontalOrganizer {
   static constexpr int kBranchesPerThread = 2;
 
   /**
+   * @brief Number of tasks that factorize @p superNode's panels in parallel.
+   *
+   * @details One task per @p minTaskTime of the super-node's own time (@ref Costs::ownTime),
+   * between 1 and the smaller of @p maxTasks and its number of panels.
+   *
+   * @param superNode The super-node.
+   * @param minTaskTime Positive minimum estimated time of a task.
+   * @param maxTasks Positive maximum number of tasks.
+   * @return The number of tasks.
+   */
+  [[nodiscard]] int NumPanelTasks(int superNode, double minTaskTime, int maxTasks) const;
+
+  /**
    * @brief Picks a set of super-nodes from the elimination tree for parallel factorization.
    *
    * @details Each picked super-node is a root of a branch in the elimination tree.
    * Each of these branches can be factorized in parallel by a single thread without
    * any communication or synchronization with other threads.
-   * Traverses the tree from the root down. A super-node is picked if it is a leaf or its estimated
-   * factorization time is at most the root's estimated time divided by
-   * @ref kBranchesPerThread * @p numThreads.
+   * Traverses the tree from the root down. A super-node is picked if its estimated factorization
+   * time is at most the root's estimated time divided by @ref kBranchesPerThread * @p numThreads,
+   * or if its subtree has no parallelism: it is a chain, such as a leaf, whose non-leaf super-nodes
+   * each get one task from @ref NumPanelTasks.
    *
    * @param tree The elimination tree.
    * @param rootNode The root node for which to pick branches.
-   * @param numThreads Number of threads to balance the branches across.
+   * @param numThreads Number of threads to balance the branches across and to cap panel tasks.
+   * @param minTaskTime Positive minimum estimated time of a panel task.
    * @return std::pair<DynamicArray<int>, int> Picked supernode indices and the number of nodes in
    * the truncated tree
    */
-  [[nodiscard]] std::pair<DynamicArray<int>, int>
-  PickBranches(SymbolicEliminationTree const& tree, int rootNode, int numThreads) const;
+  [[nodiscard]] std::pair<DynamicArray<int>, int> PickBranches(
+      SymbolicEliminationTree const& tree,
+      int rootNode,
+      int numThreads,
+      double minTaskTime) const;
 
  private:
   size_t _blockSize;

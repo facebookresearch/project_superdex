@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include <mochi_core/async/root_task.h>
 #include <mochi_core/linear_algebra/block_sparse_matrix.h>
 #include <mochi_core/linear_algebra/matrix.h>
 #include <mochi_core/linear_algebra/multi_frontal/assembly_helper.h>
@@ -35,9 +36,15 @@
 
 #include <gtest/gtest.h>
 
-#include <mochi_core/async/root_task.h>
+#include <algorithm>
 #include <array>
+#include <atomic>
+#include <functional>
+#include <initializer_list>
+#include <numeric>
 #include <thread>
+#include <tuple>
+#include <utility>
 #include <vector>
 
 using namespace mochi;
@@ -113,6 +120,40 @@ auto MakeMFStructure(int elemsPerSide) {
   SymbolicEliminationTree eTree(graph, order, position);
   return std::tuple{std::move(graph), std::move(order), std::move(position), std::move(eTree)};
 }
+
+} // namespace
+
+/// @brief Make the elimination tree of a star whose numArms arms are chains of armLength nodes,
+/// joined under a chain of stemLength nodes.
+static auto MakeStemmedStar(int numArms, int armLength, int stemLength) {
+  // Number nodes in elimination order: each arm from its free end, then the joint and the stem.
+  // Each node's parent is the next node, except that the arms' last nodes join the joint.
+  int const joint = numArms * armLength;
+  int const numNodes = joint + 1 + stemLength;
+  GraphBuilder<int, int> gb(numNodes - 1, 2 * (numNodes - 1));
+  for (int node = 0; node + 1 < numNodes; ++node) {
+    std::array const edge{node, node < joint && (node + 1) % armLength == 0 ? joint : node + 1};
+    gb.append(edge);
+  }
+  auto const eToN = gb.Build();
+  auto graph = Traverse(Reverse(eToN), eToN);
+  DynamicArray<int> order(numNodes);
+  std::iota(order.begin(), order.end(), 0);
+  auto position = InversePermutation(order);
+  SymbolicEliminationTree eTree(graph, order, position);
+  return std::tuple{std::move(graph), std::move(order), std::move(position), std::move(eTree)};
+}
+
+/// @brief Get the supernode where the arms of a stemmed star join.
+static int StemmedStarJoint(SymbolicEliminationTree const& tree) {
+  int joint = tree.Roots()[0];
+  while (tree.Children(joint).size() == 1) {
+    joint = tree.Children(joint)[0];
+  }
+  return joint;
+}
+
+namespace {
 
 void TestMultifrontal(int elemsPerSide) {
   auto [graph, order, position, eTree] = MakeMFStructure(elemsPerSide);
@@ -686,28 +727,47 @@ RootTask Factor(Exec executor, FactorData<kDofsPerNode, Scalar, kBlockSize>& dat
   co_return;
 }
 
+/// @brief Task submissions of a factorization with tasks.
+struct Dispatch {
+  int numThreads; ///< The scheduler's number of threads, the factorization's thread budget.
+  int numSubmissions; ///< Branch and panel helper tasks dispatched, excluding each root's task.
+};
+
+/// @brief Factor with tasks planned and run with the scheduler's threads and minTaskTime, and
+/// compare with Lref.
+///
+/// @return The threads and the tasks submitted, counted once the scheduler has run them all.
 template <int kDofsPerNode, typename Scalar, size_t kBlockSize>
-void TestFullCoroutineSystem(
+Dispatch TestFullCoroutineSystem(
     SymbolicEliminationTree const& eTree,
     FrontalOrganizer const& organizer,
     AssemblyHelper& helper,
     BlockSparseMatrix<Scalar, kDofsPerNode> const& A,
-    LMatrix<Scalar, kBlockSize>& Lref) {
+    LMatrix<Scalar, kBlockSize>& Lref,
+    double minTaskTime) {
   Scalar epsilon = Sqrt(std::numeric_limits<Scalar>::epsilon());
   LMatrix<Scalar, kBlockSize> L(eTree, kDofsPerNode);
   L.SetZero();
-  TaskScheduler scheduler(Min<int>(std::thread::hardware_concurrency(), 8));
-  int numThreads = scheduler.GetNumThreads();
-
-  for (auto root : eTree.Roots()) {
-    int nBranches = 2;
-    auto [picked, trunkCount] = organizer.PickBranches(eTree, root, nBranches);
-    FactorData<kDofsPerNode, Scalar, kBlockSize> data(
-        eTree, organizer, helper, A, L, picked, numThreads);
-    Executor executor(scheduler);
-    auto dispatch = [executor]<typename F>(F&& f) { executor.schedule(std::forward<F>(f)); };
-    Factor(dispatch, data, root).RunAndWait(scheduler, "Factor tree");
+  int numThreads = 0;
+  std::atomic<int> numSubmissions = 0;
+  {
+    // Helper tasks may still be submitting when the factorization ends. The scheduler's destructor
+    // waits for them, so the count is read after this scope.
+    TaskScheduler scheduler(Min<int>(std::thread::hardware_concurrency(), 8));
+    numThreads = scheduler.GetNumThreads();
+    for (auto root : eTree.Roots()) {
+      auto [picked, trunkCount] = organizer.PickBranches(eTree, root, numThreads, minTaskTime);
+      FactorData<kDofsPerNode, Scalar, kBlockSize> data(
+          eTree, organizer, helper, A, L, picked, numThreads, minTaskTime);
+      Executor executor(scheduler);
+      auto dispatch = [executor, &numSubmissions]<typename F>(F&& f) {
+        ++numSubmissions;
+        executor.schedule(std::forward<F>(f));
+      };
+      Factor(dispatch, data, root).RunAndWait(scheduler, "Factor tree");
+    }
   }
+
   // Compare L data with reference
   Scalar diffSqNrm = 0;
   Scalar nrmSqLref = 0;
@@ -718,12 +778,20 @@ void TestFullCoroutineSystem(
     nrmSqLref += lRefData[i] * lRefData[i];
   }
   EXPECT_LE(diffSqNrm, epsilon * nrmSqLref);
+  return {.numThreads = numThreads, .numSubmissions = numSubmissions.load()};
 }
 
+/// @brief Test all factorizations of a matrix with the structure's graph and elimination tree.
+///
+/// @param structure The graph, order, position and elimination tree.
+/// @param size Problem size that scales the tolerance.
+/// @param minTaskTimes Minimum estimated times of a panel task, one factorization with tasks each.
+/// @return The dispatch of each factorization with tasks.
 template <typename Scalar, size_t kColumnBlock, size_t kNodeSize>
-void TestFullSystem(int elemsPerSide) {
-  auto kEps = Sqrt(elemsPerSide * std::numeric_limits<Scalar>::epsilon());
-  auto [graph, order, position, eTree] = MakeMFStructure(elemsPerSide);
+DynamicArray<Dispatch>
+TestFullSystem(auto const& structure, int size, std::initializer_list<double> minTaskTimes) {
+  auto kEps = Sqrt(size * std::numeric_limits<Scalar>::epsilon());
+  auto& [graph, order, position, eTree] = structure;
   FrontalOrganizer organizer(eTree, kColumnBlock, kNodeSize);
   LMatrix<Scalar, kColumnBlock> L(eTree, kNodeSize);
   L.SetZero();
@@ -821,7 +889,21 @@ void TestFullSystem(int elemsPerSide) {
 
   TestRootedFactor<kNodeSize, Scalar, kColumnBlock>(eTree, organizer, helper, A, L);
   TestPanelBasedWork<kNodeSize, Scalar, kColumnBlock>(eTree, organizer, helper, A, L);
-  TestFullCoroutineSystem<kNodeSize, Scalar, kColumnBlock>(eTree, organizer, helper, A, L);
+  DynamicArray<Dispatch> dispatches;
+  for (double minTaskTime : minTaskTimes) {
+    dispatches.push_back(
+        TestFullCoroutineSystem<kNodeSize, Scalar, kColumnBlock>(
+            eTree, organizer, helper, A, L, minTaskTime));
+  }
+  return dispatches;
+}
+
+template <typename Scalar, size_t kColumnBlock, size_t kNodeSize>
+void TestFullSystem(int elemsPerSide) {
+  // Every supernode's own time is at least 3, so a minimum task time of 1 leaves only the threads
+  // and panels to limit parallelism.
+  TestFullSystem<Scalar, kColumnBlock, kNodeSize>(
+      MakeMFStructure(elemsPerSide), elemsPerSide, {/*minTaskTime=*/1.0});
 }
 
 TEST(MultifrontalNumerical, FullFactor) {
@@ -831,6 +913,18 @@ TEST(MultifrontalNumerical, FullFactor) {
   TestFullSystem<double, 96, 2>(6);
   TestFullSystem<double, 96, 3>(14);
   TestFullSystem<float, 96, 3>(14);
+
+  // A stemmed Y's trunk is its joint and stem, walked by one coroutine. At the joint's own time,
+  // each trunk supernode runs as one task, the top one for lack of panels, so the arms are the only
+  // submissions. At half of it, the joint, which assembles two fronts, also submits a helper if
+  // there are threads for it.
+  auto const stemmedY = MakeStemmedStar(2, 20, 5);
+  auto const& yTree = std::get<3>(stemmedY);
+  double const jointTime = FrontalOrganizer(yTree, 6, 3).GetCosts(StemmedStarJoint(yTree)).ownTime;
+  auto const dispatches =
+      TestFullSystem<double, 6, 3>(stemmedY, yTree.NumNodes(), {jointTime, jointTime / 2});
+  EXPECT_EQ(dispatches[0].numSubmissions, 2);
+  EXPECT_EQ(dispatches[1].numSubmissions, 1 + Min(dispatches[1].numThreads, 2));
 }
 
 TEST(MultifrontalNumerical, LFactor) {
@@ -861,10 +955,10 @@ static void TestPickBranches(
     SymbolicEliminationTree const& eTree,
     FrontalOrganizer const& organizer,
     int root,
-    int numThreads) {
-  auto [picked, trunkCount] = organizer.PickBranches(eTree, root, numThreads);
+    int numThreads,
+    double minTaskTime) {
+  auto [picked, trunkCount] = organizer.PickBranches(eTree, root, numThreads, minTaskTime);
 
-  EXPECT_GE(trunkCount, 1);
   EXPECT_FALSE(picked.empty());
 
   // The branches and the trunk tile the root's tree.
@@ -879,31 +973,26 @@ static void TestPickBranches(
   auto const& costs = organizer.GetCosts();
   double const threshold = costs[root].time / (FrontalOrganizer::kBranchesPerThread * numThreads);
 
-  for (int sn : picked) {
-    // Non-leaf picks stop exactly where branch cost first falls at or below the threshold.
-    if (!eTree.IsLeaf(sn)) {
-      EXPECT_LE(costs[sn].time, threshold);
+  // A subtree has parallelism if it branches or has a non-leaf supernode that gets at least two
+  // panel tasks.
+  std::function<bool(int)> const hasParallelism = [&](int sn) {
+    auto const children = eTree.Children(sn);
+    if (children.size() != 1) {
+      return children.size() > 1;
     }
-
-    // A picked node's parent remains above threshold, so the branch was not split prematurely.
-    auto parent = eTree.SuperParent(sn);
-    if (parent != -1) {
-      EXPECT_GT(costs[parent].time, threshold);
-    }
-  }
-
-  // Picks form an antichain, so independent branch tasks never overlap.
-  std::vector<bool> isPicked(eTree.NumSuperNodes(), false);
-  for (int sn : picked) {
-    isPicked[sn] = true;
-  }
-  EXPECT_FALSE(isPicked[root]);
+    return organizer.NumPanelTasks(sn, minTaskTime, numThreads) >= 2 || hasParallelism(children[0]);
+  };
 
   for (int sn : picked) {
-    auto parent = eTree.SuperParent(sn);
-    while (parent != -1) {
-      EXPECT_FALSE(isPicked[parent]);
-      parent = eTree.SuperParent(parent);
+    // Picks stop where a branch costs at most the threshold or splitting it has no parallelism.
+    EXPECT_TRUE(costs[sn].time <= threshold || !hasParallelism(sn));
+
+    // The other nodes are the trunk: the picks' ancestors, each above the threshold and with
+    // parallelism. So picks form an antichain, and independent branch tasks never overlap.
+    for (int ancestor = eTree.SuperParent(sn); rootTree.Within(ancestor);
+         ancestor = eTree.SuperParent(ancestor)) {
+      EXPECT_GT(costs[ancestor].time, threshold);
+      EXPECT_TRUE(hasParallelism(ancestor));
     }
   }
 }
@@ -911,7 +1000,7 @@ static void TestPickBranches(
 static void TestPickBranches(int elemsPerSide, int numThreads) {
   auto [graph, order, position, eTree] = MakeMFStructure(elemsPerSide);
   FrontalOrganizer organizer(eTree, 24, 3);
-  TestPickBranches(eTree, organizer, eTree.Roots()[0], numThreads);
+  TestPickBranches(eTree, organizer, eTree.Roots()[0], numThreads, /*minTaskTime=*/1);
 }
 
 namespace {
@@ -919,21 +1008,23 @@ namespace {
 TEST(MultifrontalStructure, PickBranches) {
   auto [graph, order, position, eTree] = MakeMFStructure(6);
   FrontalOrganizer organizer(eTree, 24, 3);
-  EXPECT_TRUE(organizer.PickBranches(eTree, eTree.Roots()[0], 0).first.empty());
-  EXPECT_TRUE(organizer.PickBranches(eTree, eTree.Roots()[0], -1).first.empty());
+  EXPECT_TRUE(organizer.PickBranches(eTree, eTree.Roots()[0], 0, /*minTaskTime=*/1).first.empty());
+  EXPECT_TRUE(organizer.PickBranches(eTree, eTree.Roots()[0], -1, /*minTaskTime=*/1).first.empty());
 
   {
-    // The cheap Y and costlier clique form separate trees. A forest-wide threshold would select
-    // the Y root, while the root-local threshold must split the Y into smaller branches.
-    GraphBuilder<int, int> builder(6, 16);
-    builder.append(std::array{0, 2});
-    builder.append(std::array{1, 2});
-    builder.append(std::array{0, 1, 2});
-    builder.append(std::array{3, 4, 5});
-    builder.append(std::array{3, 4, 5});
-    builder.append(std::array{3, 4, 5});
+    // The cheap star and costlier clique form separate trees. A forest-wide threshold would select
+    // the star's root, while the root-local threshold must split the star into smaller branches. Of
+    // its three leaves, one merges into the root, which keeps two children.
+    GraphBuilder<int, int> builder(7, 19);
+    builder.append(std::array{0, 3});
+    builder.append(std::array{1, 3});
+    builder.append(std::array{2, 3});
+    builder.append(std::array{0, 1, 2, 3});
+    builder.append(std::array{4, 5, 6});
+    builder.append(std::array{4, 5, 6});
+    builder.append(std::array{4, 5, 6});
     auto disconnectedGraph = builder.Build();
-    DynamicArray<int> disconnectedOrder{0, 1, 2, 3, 4, 5};
+    DynamicArray<int> disconnectedOrder{0, 1, 2, 3, 4, 5, 6};
     auto disconnectedPosition = InversePermutation(disconnectedOrder);
     SymbolicEliminationTree disconnectedTree(
         disconnectedGraph, disconnectedOrder, disconnectedPosition);
@@ -941,7 +1032,7 @@ TEST(MultifrontalStructure, PickBranches) {
 
     auto const roots = disconnectedTree.Roots();
     ASSERT_EQ(roots.size(), 2);
-    // Only the Y's root has children.
+    // Only the star's root has children.
     ASSERT_NE(disconnectedTree.IsLeaf(roots[0]), disconnectedTree.IsLeaf(roots[1]));
     int const nonLeafRoot = disconnectedTree.IsLeaf(roots[0]) ? roots[1] : roots[0];
 
@@ -950,7 +1041,71 @@ TEST(MultifrontalStructure, PickBranches) {
     double const forestTime = costs[roots[0]].time + costs[roots[1]].time;
     ASSERT_LE(
         costs[nonLeafRoot].time, forestTime / (FrontalOrganizer::kBranchesPerThread * kNumThreads));
-    TestPickBranches(disconnectedTree, disconnectedOrganizer, nonLeafRoot, kNumThreads);
+    TestPickBranches(
+        disconnectedTree, disconnectedOrganizer, nonLeafRoot, kNumThreads, /*minTaskTime=*/1);
+    auto const [picks, trunkCount] = disconnectedOrganizer.PickBranches(
+        disconnectedTree, nonLeafRoot, kNumThreads, /*minTaskTime=*/1);
+    EXPECT_TRUE(std::ranges::is_permutation(picks, disconnectedTree.Children(nonLeafRoot)));
+    EXPECT_EQ(trunkCount, 1);
+  }
+
+  {
+    // Every node is above the threshold, so only parallelism decides what is split. The arms are
+    // chains: splitting them only helps if their supernodes have work for two panel tasks. The
+    // joint branches, and the stem above it keeps that parallelism.
+    auto [yGraph, yOrder, yPosition, yTree] = MakeStemmedStar(2, 20, 5);
+    FrontalOrganizer yOrganizer(yTree, 24, 3);
+    int const root = yTree.Roots()[0];
+    auto const arms = yTree.Children(StemmedStarJoint(yTree));
+    ASSERT_EQ(arms.size(), 2);
+
+    double const armNodeTime = yOrganizer.GetCosts(arms[0]).ownTime;
+    int constexpr kNumThreads = 1000;
+    for (double minTaskTime : {1.0, armNodeTime / 2, armNodeTime}) {
+      TestPickBranches(yTree, yOrganizer, root, kNumThreads, minTaskTime);
+      // An arm alone has no parallelism unless its supernodes have work for two panel tasks. The
+      // second arm's subtree doesn't start at supernode 0.
+      TestPickBranches(yTree, yOrganizer, arms[1], kNumThreads, minTaskTime);
+    }
+
+    // Arm supernodes with work for two panel tasks are split down to the arms' leaves. Otherwise
+    // the arms are picked whole, and so is an arm on its own, also with that work but one thread.
+    auto const leafPicks = yOrganizer.PickBranches(yTree, root, kNumThreads, armNodeTime / 2).first;
+    EXPECT_EQ(leafPicks.size(), 2);
+    EXPECT_TRUE(std::ranges::all_of(leafPicks, [&](int sn) { return yTree.IsLeaf(sn); }));
+    EXPECT_TRUE(
+        std::ranges::is_permutation(
+            yOrganizer.PickBranches(yTree, root, kNumThreads, armNodeTime).first, arms));
+    EXPECT_EQ(
+        yOrganizer.PickBranches(yTree, arms[1], kNumThreads, armNodeTime),
+        (std::pair{DynamicArray<int>{arms[1]}, 0}));
+    EXPECT_EQ(
+        yOrganizer.PickBranches(yTree, arms[1], /*numThreads=*/1, armNodeTime / 2),
+        (std::pair{DynamicArray<int>{arms[1]}, 0}));
+  }
+
+  {
+    // A chain's root has work for two panel tasks but a single panel, so the chain is picked whole.
+    auto [chainGraph, chainOrder, chainPosition, chain] = MakeStemmedStar(1, 3, 0);
+    FrontalOrganizer chainOrganizer(chain, 24, 3);
+    int const root = chain.Roots()[0];
+    double const minTaskTime = chainOrganizer.GetCosts(root).ownTime / 2;
+    EXPECT_EQ(
+        chainOrganizer.PickBranches(chain, root, /*numThreads=*/8, minTaskTime),
+        (std::pair{DynamicArray<int>{root}, 0}));
+  }
+
+  {
+    // A fan's hub also assembles its many leaves' fronts, which gives it a task for each of its two
+    // panels even if each task needs as much work as eliminating the hub.
+    auto [fanGraph, fanOrder, fanPosition, fan] = MakeStemmedStar(100, 1, 2);
+    FrontalOrganizer fanOrganizer(fan, 24, 3);
+    int const hub = StemmedStarJoint(fan);
+    double eliminationTime = fanOrganizer.GetCosts(hub).time;
+    for (int leaf : fan.Children(hub)) {
+      eliminationTime -= fanOrganizer.GetCosts(leaf).time;
+    }
+    EXPECT_EQ(fanOrganizer.NumPanelTasks(hub, eliminationTime, /*maxTasks=*/8), 2);
   }
 
   TestPickBranches(6, 4);
