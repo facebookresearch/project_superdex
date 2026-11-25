@@ -43,8 +43,11 @@ static void ExpectTokens(
     size_t expectedErrorOffset = 0) {
   std::string error;
   size_t offset = std::string::npos;
-  EXPECT_EQ(SReflect::detail::ConsoleTokenize(input, error, &offset), expected)
-      << "input: " << input;
+  std::vector<std::string> texts;
+  for (auto const& token : SReflect::detail::ConsoleTokenize(input, error, &offset)) {
+    texts.push_back(token.text);
+  }
+  EXPECT_EQ(texts, expected) << "input: " << input;
   EXPECT_EQ(error, expectedError) << "input: " << input;
   EXPECT_EQ(offset, expectedErrorOffset) << "input: " << input;
 }
@@ -105,7 +108,10 @@ TEST(SReflectConsole, Tokenize) {
 
   // An error left over from an earlier call is cleared on success.
   std::string err = "stale";
-  EXPECT_EQ(SReflect::detail::ConsoleTokenize("a b", err), (std::vector<std::string>{"a", "b"}));
+  auto const tokens = SReflect::detail::ConsoleTokenize("a b", err);
+  ASSERT_EQ(tokens.size(), 2);
+  EXPECT_EQ(tokens[0].text, "a");
+  EXPECT_EQ(tokens[1].text, "b");
   EXPECT_EQ(err, "");
 }
 
@@ -136,6 +142,31 @@ TEST(SReflectConsole, TokenizeBrackets) {
 
   // Closing only appends, so this string stays unterminated for the JSON parser to report.
   ExpectTokens(R"(["a\)", {R"(["a\"])"});
+}
+
+TEST(SReflectConsole, TokenizeOffsets) {
+  // text, offset and length of each token
+  using Tokens = std::vector<std::tuple<std::string, size_t, size_t>>;
+  auto const tokenize = [](std::string_view input) {
+    std::string error;
+    Tokens tokens;
+    for (auto& token : SReflect::detail::ConsoleTokenize(input, error)) {
+      tokens.emplace_back(std::move(token.text), token.offset, token.length);
+    }
+    return tokens;
+  };
+
+  // Whitespace ends a token, so only a token with nothing after it reaches the end of the input.
+  EXPECT_EQ(tokenize("  ab  c"), (Tokens{{"ab", 2, 2}, {"c", 6, 1}}));
+  EXPECT_EQ(tokenize("ab "), (Tokens{{"ab", 0, 2}}));
+
+  // Removed quotes and escapes make text shorter than the input it came from.
+  EXPECT_EQ(tokenize("'a b'/c \"d\\\"e\""), (Tokens{{"a b/c", 0, 7}, {"d\"e", 8, 6}}));
+  EXPECT_EQ(tokenize("a\"b c\"d [1]x y"), (Tokens{{"ab cd", 0, 7}, {"[1]x", 8, 4}, {"y", 13, 1}}));
+
+  // An unclosed quote or group runs to the end of the input, including trailing whitespace.
+  EXPECT_EQ(tokenize("x \"a "), (Tokens{{"x", 0, 1}, {"a ", 2, 3}}));
+  EXPECT_EQ(tokenize("[1, "), (Tokens{{"[1, ]", 0, 4}}));
 }
 
 namespace SReflectConsoleTest {

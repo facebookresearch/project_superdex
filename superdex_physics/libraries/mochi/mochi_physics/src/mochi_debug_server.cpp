@@ -494,7 +494,10 @@ void DebugServerImpl::OnConsoleRequest(net::ClientId client, protocol::CommandRe
   };
   std::string error;
   size_t errorOffset = 0;
-  auto const tokens = SReflect::detail::ConsoleTokenize(request.command, error, &errorOffset);
+  std::vector<std::string> tokens;
+  for (auto& token : SReflect::detail::ConsoleTokenize(request.command, error, &errorOffset)) {
+    tokens.push_back(std::move(token.text));
+  }
   if (!error.empty()) {
     fail(SReflect::detail::FormatConsoleError(error, request.command, errorOffset));
     return;

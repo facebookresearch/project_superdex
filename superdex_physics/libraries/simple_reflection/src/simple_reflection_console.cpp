@@ -162,40 +162,46 @@ static bool IsSpace(char c) {
   return c == ' ' || c == '\t' || c == '\n' || c == '\v' || c == '\f' || c == '\r';
 }
 
-std::vector<std::string>
+std::vector<ConsoleToken>
 detail::ConsoleTokenize(std::string_view input, std::string& outError, size_t* outErrorOffset) {
   outError.clear();
   if (outErrorOffset != nullptr) {
     *outErrorOffset = 0;
   }
-  std::vector<std::string> tokens;
-  std::string token;
+  std::vector<ConsoleToken> tokens;
+  ConsoleToken token;
   bool inToken = false;
   size_t const n = input.size();
   for (size_t i = 0; i < n;) {
     char const c = input[i];
     if (IsSpace(c)) {
       if (inToken) {
+        token.length = i - token.offset;
         tokens.push_back(std::move(token));
-        token.clear();
+        token = {};
         inToken = false;
       }
       ++i;
-    } else if (c == '\'' || c == '"') {
+      continue;
+    }
+    bool const isStart = !inToken;
+    if (isStart) {
+      inToken = true;
+      token.offset = i;
+    }
+    if (c == '\'' || c == '"') {
       // Quotes group whitespace. Only double quotes honor backslash escape sequences.
-      inToken = true;
-      i = AppendQuoted(input, i, c, token, outError, outErrorOffset);
-    } else if (!inToken && (c == '[' || c == '{')) {
-      inToken = true;
-      i = AppendBracketGroup(input, i, token);
+      i = AppendQuoted(input, i, c, token.text, outError, outErrorOffset);
+    } else if (isStart && (c == '[' || c == '{')) {
+      i = AppendBracketGroup(input, i, token.text);
     } else {
       // Everything else, including a backslash outside quotes, is literal.
-      inToken = true;
-      token.push_back(c);
+      token.text.push_back(c);
       ++i;
     }
   }
   if (inToken) {
+    token.length = n - token.offset;
     tokens.push_back(std::move(token));
   }
   return tokens;
@@ -287,7 +293,7 @@ static std::string QuoteConsoleToken(std::string_view token) {
       std::ranges::any_of(token, [](char c) { return static_cast<unsigned char>(c) < 0x20; });
   std::string error;
   auto const tokens = ConsoleTokenize(token, error);
-  if (!hasControlCharacter && tokens.size() == 1 && tokens[0] == token) {
+  if (!hasControlCharacter && tokens.size() == 1 && tokens[0].text == token) {
     return std::string{token};
   }
   if (!hasControlCharacter && token.find('\'') == std::string_view::npos) {
@@ -1253,10 +1259,13 @@ bool ConsoleExecute(
     std::string* outError) {
   std::string error;
   size_t errorOffset = 0;
-  auto const tokens = ConsoleTokenize(command, error, &errorOffset);
+  auto tokens = ConsoleTokenize(command, error, &errorOffset);
   if (error.empty() && !tokens.empty()) {
-    return ConsoleExecute(
-        obj, typeInfo, tokens.front(), {tokens.data() + 1, tokens.size() - 1}, outString, outError);
+    std::vector<std::string> args;
+    for (size_t i = 1; i < tokens.size(); ++i) {
+      args.push_back(std::move(tokens[i].text));
+    }
+    return ConsoleExecute(obj, typeInfo, tokens.front().text, args, outString, outError);
   }
   if (error.empty()) {
     error = "Empty command";

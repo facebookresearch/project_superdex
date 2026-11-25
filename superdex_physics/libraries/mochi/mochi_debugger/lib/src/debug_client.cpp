@@ -247,7 +247,10 @@ void DebugClient::ProcessQueuedCommands() {
 void DebugClient::ExecuteCommand(std::string_view str) {
   std::string error;
   size_t errorOffset = 0;
-  auto const tokens = SReflect::detail::ConsoleTokenize(str, error, &errorOffset);
+  std::vector<std::string> tokens;
+  for (auto& token : SReflect::detail::ConsoleTokenize(str, error, &errorOffset)) {
+    tokens.push_back(std::move(token.text));
+  }
   if (!error.empty()) {
     PrintError(SReflect::detail::FormatConsoleError(error, str, errorOffset));
     return;

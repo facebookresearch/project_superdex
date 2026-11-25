@@ -63,6 +63,15 @@ bool ConsoleExecute(
 }
 
 /**
+A token from ConsoleTokenize and the part of the input it came from.
+*/
+struct ConsoleToken {
+  std::string text; // With quotes removed and escapes resolved
+  size_t offset = 0; // Byte offset of the token's first character in the input
+  size_t length = 0; // Length in bytes of the token as typed, including quotes and escapes
+};
+
+/**
 Split a command line into tokens:
 
 - Whitespace separates tokens. Quotes group text and are removed. Text in single quotes is
@@ -73,11 +82,15 @@ Split a command line into tokens:
 - Unclosed quotes consume the remaining input. Unclosed groups get a closing double quote
   if needed, followed by missing closing brackets. Other JSON errors are left to the caller.
 
+Each token reports the part of the input it came from. Only whitespace outside quotes and groups
+ends a token, so the last token reaches the end of the input unless such whitespace follows it.
+The reported length covers the original input, even when missing closing brackets are added to text.
+
 Unsupported escapes inside double quotes set outError to a description and outErrorOffset to the
 byte offset of the first offending backslash. On success, clear outError and set outErrorOffset to
 zero.
 */
-[[nodiscard]] std::vector<std::string>
+[[nodiscard]] std::vector<ConsoleToken>
 ConsoleTokenize(std::string_view input, std::string& outError, size_t* outErrorOffset = nullptr);
 
 /**
