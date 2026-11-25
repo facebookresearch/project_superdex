@@ -85,6 +85,8 @@ struct ConnectionState {
 };
 
 struct UiState : NoCopy {
+  explicit UiState(LogView& log) : logView(log) {}
+
   bool firstFrame = true;
   bool rebuildLayout = false; // request a default dock layout on the next frame
   std::map<std::string, PanelState> panels;
@@ -95,7 +97,7 @@ struct UiState : NoCopy {
   ViewportPanelState viewport;
   RenderSceneParams rendering;
   ConnectionState connection;
-  LogView logView;
+  LogView& logView; // Owned by Main, outlives the application and its logging threads.
   ConnectDialogState connectDialog;
   TerminalPanelState terminal;
   ScenePanelState scene;

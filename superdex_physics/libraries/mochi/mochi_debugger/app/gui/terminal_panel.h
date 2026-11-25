@@ -17,7 +17,10 @@
 #pragma once
 
 #include <mochi_core/utils/dynamic_array.h>
+#include <mochi_core/utils/log.h>
 
+#include <cstddef>
+#include <cstdint>
 #include <string>
 
 // Forward
@@ -28,12 +31,23 @@ namespace mochi::dbg {
 struct UiState;
 
 struct TerminalPanelState {
+  struct LogTextEntry {
+    uint64_t sequence = 0;
+    size_t offset = 0;
+    LogChannel channel = {};
+  };
+
   ImFont* font = nullptr; // font to use for the terminal (nullptr means default)
+  std::string logText;
+  DynamicArray<LogTextEntry> logEntries;
+  int logSelectionStart = 0;
+  int logSelectionEnd = 0;
   std::string input; // resizable so recalled commands can be edited to any length
   DynamicArray<std::string> history; // submitted commands, oldest first
   std::string stashed; // live line saved while browsing history
   int historyPos = 0; // browse cursor; == history.size() means the live line
   bool refocus = false; // re-assert keyboard focus on the input next frame (after Enter)
+  bool scrollToBottom = false;
   bool bringToForegroundOnErrorOrWarning = true;
 };
 

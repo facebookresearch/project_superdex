@@ -80,7 +80,10 @@ static constexpr char const* kImGuiIniName = "mochi_debugger_imgui.ini";
 namespace {
 class MochiDebuggerApp final : public ImGuios::Application {
  public:
-  MochiDebuggerApp(CommandLine cli, std::unique_ptr<SingleInstanceHelper> singleInstanceHelper);
+  MochiDebuggerApp(
+      CommandLine cli,
+      std::unique_ptr<SingleInstanceHelper> singleInstanceHelper,
+      LogView& logView);
 
   // ImGuios::Application:
   void OnInitialize() final;
@@ -121,7 +124,8 @@ class MochiDebuggerApp final : public ImGuios::Application {
 
 MochiDebuggerApp::MochiDebuggerApp(
     CommandLine cli,
-    std::unique_ptr<SingleInstanceHelper> singleInstanceHelper)
+    std::unique_ptr<SingleInstanceHelper> singleInstanceHelper,
+    LogView& logView)
     : ImGuios::Application(
           std::make_unique<ImGuios::Window>(
               kDefaultMainWindowSize[0],
@@ -129,7 +133,8 @@ MochiDebuggerApp::MochiDebuggerApp(
               kAppName,
               ImGuios::WindowFlags_MSAA)),
       _commandLine(std::move(cli)),
-      _singleInstanceHelper(std::move(singleInstanceHelper)) {
+      _singleInstanceHelper(std::move(singleInstanceHelper)),
+      _uiState(logView) {
   MOCHI_ASSERT(_singleInstanceHelper);
 }
 
@@ -544,12 +549,13 @@ static int Main(int argc, char** argv) {
     return EXIT_FAILURE;
   }
 
+  LogView logView;
   auto helper = std::make_unique<SingleInstanceHelper>(cli, args);
   if (helper->ShouldExit()) {
     return EXIT_SUCCESS;
   }
 
-  mochi::dbg::MochiDebuggerApp app(std::move(cli), std::move(helper));
+  mochi::dbg::MochiDebuggerApp app(std::move(cli), std::move(helper), logView);
   app.Run();
   return 0;
 }

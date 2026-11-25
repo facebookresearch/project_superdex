@@ -20,6 +20,7 @@
 #include <mochi_core/utils/log.h>
 
 #include <cstddef>
+#include <cstdint>
 #include <deque>
 #include <iosfwd>
 #include <memory>
@@ -30,7 +31,8 @@ namespace mochi::dbg {
 // Defined in log_view.cpp
 class LogHook;
 
-// Class to collect logging data. Used for the log panel UI.
+// Collect log-panel data and intercept process-wide streams. Construct before logging threads
+// start and destroy only after those threads have stopped.
 class LogView {
   MOCHI_DECLARE_NO_COPY_NO_MOVE(LogView);
 
@@ -43,6 +45,7 @@ class LogView {
     std::string message;
     std::string sourceFile;
     int sourceLine = 0;
+    uint64_t sequence = 0;
   };
 
   // Maximum number of retained log entries. Once full, the oldest entry is dropped.
@@ -56,12 +59,8 @@ class LogView {
   void Clear();
 
   // Resets the new-error and new-warning flags and returns whether either was set (drives raising
-  // the log panel). Independent of @ref ConsumeNewEntries. Thread-safe.
+  // the log panel). Thread-safe.
   bool ConsumeNewErrorsOrWarnings();
-
-  // Resets the new-entries flag and returns whether it was set (drives scroll-to-bottom).
-  // Independent of @ref ConsumeNewErrorsOrWarnings. Thread-safe.
-  bool ConsumeNewEntries();
 
   // Invokes visitor(Entry const&) for each retained entry, oldest to newest, under the read lock.
   template <typename Visitor>
@@ -79,7 +78,7 @@ class LogView {
   // from the front.
   struct State {
     std::deque<Entry> entries;
-    bool hasNewEntries = false;
+    uint64_t nextSequence = 0;
     bool hasNewErrors = false;
     bool hasNewWarnings = false;
   };
@@ -90,10 +89,6 @@ class LogView {
   // can safely complete before it is destroyed.
   struct SharedState {
     Guarded<State> state;
-    // The stream hooks live here so the mochi callback's ForwardRaw stays valid for the same
-    // lifetime as the callbacks that reference it.
-    std::unique_ptr<LogHook> coutHook;
-    std::unique_ptr<LogHook> cerrHook;
   };
 
   // Appends an entry under the state lock and updates the "new entries" flags. Shared by all
@@ -106,6 +101,9 @@ class LogView {
       int sourceLine);
 
   std::shared_ptr<SharedState> _shared;
+  // Also retained by the Mochi callback so in-flight forwarding can complete during teardown.
+  std::shared_ptr<LogHook> _coutHook;
+  std::unique_ptr<LogHook> _cerrHook;
   std::streambuf* _prevCoutBuf = nullptr;
   std::streambuf* _prevCerrBuf = nullptr;
   mochi::LogFn _prevMochiFn = nullptr;

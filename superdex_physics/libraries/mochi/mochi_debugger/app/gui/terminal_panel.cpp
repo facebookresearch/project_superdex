@@ -17,6 +17,7 @@
 #include "terminal_panel.h"
 
 #include "gui.h"
+#include "log_text.h"
 #include "ui_helpers.h"
 
 #include <mochi_core/utils/defer.h>
@@ -26,9 +27,11 @@
 #include <imguios/imguios.h>
 #include <misc/cpp/imgui_stdlib.h>
 
+#include <algorithm>
 #include <cstring>
 #include <functional>
 #include <string>
+#include <utility>
 
 using namespace mochi;
 using namespace mochi::dbg;
@@ -51,8 +54,11 @@ ImFont* dbg::GetTerminalFont() {
 
 // Draws the scrolling log output. Caller is responsible for pushing the desired terminal font
 // before invoking (BuildTerminalPanel does so for the whole panel).
-static void
-BuildLogOutput(LogView& logView, TerminalPanelState& terminal, float reservedFooterHeight) {
+static void BuildLogOutput(
+    LogView& logView,
+    TerminalPanelState& terminal,
+    float reservedFooterHeight,
+    DebugClient* client) {
   ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
   ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
   MOCHI_DEFER(ImGui::PopStyleVar(2));
@@ -61,12 +67,38 @@ BuildLogOutput(LogView& logView, TerminalPanelState& terminal, float reservedFoo
       "##termLog", ImVec2(0, -reservedFooterHeight), true, ImGuiWindowFlags_HorizontalScrollbar);
   MOCHI_DEFER(ImGui::EndChild());
 
-  if (ImGui::BeginPopupContextWindow()) {
+  if (client) {
+    auto const& style = ImGui::GetStyle();
+    float const scrollbarWidth = ImGui::GetScrollMaxY() > 0.0f ? style.ScrollbarSize : 0.0f;
+    float const width = ImGui::GetWindowWidth() - 2.0f * style.WindowPadding.x - scrollbarWidth;
+    float const characterWidth = ImGui::CalcTextSize("M").x;
+    client->SetConsoleLineWidth(
+        characterWidth > 0.0f ? static_cast<size_t>(std::max(1.0f, width / characterWidth)) : 0);
+  }
+
+  bool const wasAtBottom =
+      ImGui::GetScrollY() >= ImGui::GetScrollMaxY() - ImGui::GetTextLineHeight();
+  bool const hadEntries = !terminal.logEntries.empty();
+  uint64_t const previousSequence = hadEntries ? terminal.logEntries.back().sequence : 0;
+  bool const logActive = BuildSelectableLog(logView, terminal);
+  bool const newEntries = !terminal.logEntries.empty() &&
+      (!hadEntries || terminal.logEntries.back().sequence != previousSequence);
+  bool const dragging = logActive && ImGui::IsMouseDown(ImGuiMouseButton_Left);
+
+  if (ImGui::BeginPopupContextItem("##logContext")) {
     MOCHI_DEFER(ImGui::EndPopup());
-    if (ImGui::MenuItem("Copy")) {
-      std::string clipboardText;
-      logView.ReadEntries([&](LogView::Entry const& entry) { clipboardText += entry.message; });
+    bool const hasSelection = terminal.logSelectionStart != terminal.logSelectionEnd;
+    if (ImGui::MenuItem("Copy", nullptr, false, hasSelection)) {
+      auto const start =
+          static_cast<size_t>(std::min(terminal.logSelectionStart, terminal.logSelectionEnd));
+      size_t const length =
+          static_cast<size_t>(std::max(terminal.logSelectionStart, terminal.logSelectionEnd)) -
+          start;
+      std::string const clipboardText = terminal.logText.substr(start, length);
       ImGui::SetClipboardText(clipboardText.c_str());
+    }
+    if (ImGui::MenuItem("Copy All")) {
+      ImGui::SetClipboardText(terminal.logText.c_str());
     }
     if (ImGui::MenuItem("Clear")) {
       logView.Clear();
@@ -78,28 +110,7 @@ BuildLogOutput(LogView& logView, TerminalPanelState& terminal, float reservedFoo
         &terminal.bringToForegroundOnErrorOrWarning);
   }
 
-  // The store is bounded (see LogView::kMaxEntries), so simply render every retained entry.
-  logView.ReadEntries([](LogView::Entry const& entry) {
-    ImVec4 color(1.0f, 1.0f, 1.0f, 1.0f); // White
-    switch (entry.channel) {
-      case LogChannel::Warning:
-        color = ImVec4(1.0f, 1.0f, 0.0f, 1.0f); // Yellow
-        break;
-      case LogChannel::Error:
-        color = ImVec4(1.0f, 0.0f, 0.0f, 1.0f); // Red
-        break;
-      case LogChannel::Verbose:
-      case LogChannel::Info:
-      case LogChannel::Count:
-        break;
-    }
-    ImGui::PushStyleColor(ImGuiCol_Text, color);
-    MOCHI_DEFER(ImGui::PopStyleColor());
-    ImGui::TextUnformatted(entry.message.c_str());
-  });
-
-  // If new messages have arrived since the last frame, scroll to the bottom.
-  if (logView.ConsumeNewEntries()) {
+  if (std::exchange(terminal.scrollToBottom, false) || (newEntries && wasAtBottom && !dragging)) {
     ImGui::SetScrollHereY(1.0f);
   }
 }
@@ -155,7 +166,7 @@ void dbg::BuildTerminalPanel(UiState& state) {
   // Reserve space at the bottom for the single command input row.
   float const footerHeight = ImGui::GetFrameHeightWithSpacing();
 
-  BuildLogOutput(state.logView, state.terminal, footerHeight);
+  BuildLogOutput(state.logView, state.terminal, footerHeight, state.client);
 
   std::string const promptText = FormatPrompt(state.client);
 
@@ -192,6 +203,7 @@ void dbg::BuildTerminalPanel(UiState& state) {
 
   if (submit) {
     std::string const command = state.terminal.input;
+    state.terminal.scrollToBottom = true;
 
     // Queued, so the echo and cls come after the output of earlier commands
     auto const run = [&](std::function<void()> fn) {
