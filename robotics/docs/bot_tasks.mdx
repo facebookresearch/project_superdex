@@ -5,12 +5,13 @@ sidebar_position: 8
 ---
 
 import Figure, {FigureRow} from '@site/src/components/Figure';
+import ProjectSuperdexLink from '@site/src/components/ProjectSuperdexLink';
 
 # Bot Tasks
 
 A **`BotTaskPrefab`** (`.superdex_task`, JSON) describes an episode's starting
 objects, how their placement or identity may vary, and what counts as success
-or failure. It is separate from the [bot scene](./bot_scenes.mdx): one workcell
+or failure. It is separate from the [SuperDex scene](./superdex_scenes.mdx): one workcell
 can host many tasks, and a task can move between workcells that provide the
 spawnable prefabs it names.
 
@@ -107,8 +108,9 @@ double offsetMeters = superdex::robotics::Uniform(state, -0.01, 0.01);
 
 These helpers do not select ranges or apply a task: the application builds the
 DR values consumed by `ResolveResetState`. Retain the seed, stable keys,
-configuration and sampled values with the episode. These RNG helpers are
-public C++ APIs, not functions in the current Python `superdex.robotics` binding.
+configuration and sampled values with the episode. Python exposes seed
+derivation as `derive`; `Uniform`, `Normal` and `UniformQuat` are public C++
+APIs, not functions in the current Python `superdex.robotics` binding.
 
 ## Outcomes and time limits
 
@@ -160,6 +162,12 @@ Missing object references evaluate false.
 `success_authored` / `failure_authored` flags. An empty criteria group is **not
 authored**, not an automatically failed task: keep the application's own rule
 for that outcome.
+
+To author criteria interactively, use **Task Preview** in the
+<ProjectSuperdexLink site="studio" path="docs/scene_editor/">Scene Editor</ProjectSuperdexLink>:
+it adds and removes criteria and sets each group's `All`/`Any` combination and
+validation time. Renaming a spawned object there updates the criteria that
+reference it, including its sub-actors.
 
 `physicsHz` requests a physics rate; zero retains the consumer's rate.
 `timeLimitS` requests a simulated-time limit; zero means unlimited. These are

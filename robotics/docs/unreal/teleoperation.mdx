@@ -19,7 +19,7 @@ or communicate with a robot elsewhere.
 
 ## The Data Flow
 
-For example, an **FR3 + Wuji combo bot** can use this data flow. Retargeters
+For example, an **FR3 + DG-5F combo bot** can use this data flow. Retargeters
 can send targets directly to the controller or through paired TeleopNodes:
 
 ```text
@@ -41,11 +41,18 @@ a robot can hit a joint limit, fail to reach an IK goal, or lag behind a target
 under contact. Displaying each stage separately helps distinguish tracking
 problems from mapping or control problems.
 
-:::note Screenshot placeholder
-Capture a roboperator Blueprint's component tree with its tracked-hand poseable,
-clutch, IK retargeter, bot component, and operator/robot TeleopNodes labeled.
-Beside it, show tracked, target, and simulated hand poses in a running level.
-:::
+<Figure
+  src={roboperatorComponentsImage}
+  alt="The Components panel of BP_Roboperator_Virtual_fr3_v2_dg5f_long_seed_right: SuperDexBot under the root, then ArmEEGoalPublisher, HandIKRetargeter, Clutch, and TrackedHand nested in that order, and the Teleop Node Operator and Teleop Node Robot components."
+  maxWidth={462}
+  caption="An FR3 + DG-5F roboperator's components: the bot, the arm goal publisher and hand IK retargeter fed by the clutch and tracked hand, and the operator and robot TeleopNodes."
+/>
+
+<Figure
+  src={roboperatorClutchPlayImage}
+  alt="The roboperator in play beside a paper cup pyramid: a light blue tracked hand offset below and in front of the robot hand, a darker blue clutched hand fixed to the robot hand, and the simulated FR3 arm with its DG-5F hand."
+  caption="In play: the tracked hand (light blue), the clutch's output (darker blue), and the simulated bot. With relative translation and absolute rotation, the clutch offsets the tracked hand's position but keeps its rotation, and its output stays fixed relative to the robot hand. The retargeters' targets are not drawn; they overlap the simulated bot."
+/>
 
 ## Bots and Controllers
 
@@ -60,7 +67,7 @@ and joint tracking parameters set stiffness, damping, and saturation.
 When several poseable children exist, **Child Source Name Contains Substring**
 disambiguates which one supplies the target.
 
-**Teleport Distance Threshold** (centimetres) and **Teleport Angle Threshold**
+**Teleport Distance Threshold** (centimeters) and **Teleport Angle Threshold**
 (degrees) optionally reset a confidently tracked bot to its target at rest when
 its root is too far away—for example, after spawning or a tracking jump. Both
 are disabled at `0`. Unlike normal physical tracking, this recovery can move
@@ -100,8 +107,8 @@ tracking. It provides left/right hand poses on the OpenXR skeleton bot.
 
 SuperDex poses carry **bot joint positions**, not an independent transform for
 every bone. Native OpenXR input maps directly to the OpenXR bot's degrees of
-freedom. Unreal transforms use centimetres; native joint coordinates use
-radians/metres.
+freedom. Unreal transforms use centimeters; native joint coordinates use
+radians/meters.
 
 ### OpenXR Quest Pinch Compensation
 
@@ -167,7 +174,8 @@ Multiplier** biases the solved command after IK (with optional excluded DOF
 indices); biased commands are clamped to the output bot's limits. This changes
 the command, not the IK goals.
 
-See [Make a Roboperator](./tutorials/roboperator.mdx) for the authoring-to-Blueprint
+**Before using an IK asset in Unreal**, see
+[Make a Roboperator](./tutorials/roboperator.mdx) for the authoring-to-Blueprint
 workflow. The underlying asset concepts are covered in
 [Inverse Kinematics](../inverse_kinematics.mdx).
 

@@ -8,7 +8,7 @@ import SiteImage from '@site/src/components/SiteImage';
 
 # Tutorial: Roboperator from a Studio IK Config
 
-A **roboperator** is the Blueprint actor that let's you control a virtual robot hand with the pose
+A **roboperator** is the Blueprint actor that lets you control a virtual robot hand with the pose
 tracked from your real hand: it reads the
 OpenXR hand pose, retargets it onto the robot with inverse kinematics, and has the bot follow the
 result in SuperDex Physics. This tutorial takes an IK configuration authored in
@@ -91,7 +91,7 @@ In your copy, change three assets:
 3. **`BotControllerClass`**: duplicate the shipped controller Blueprint and tune its tracking
    gains for your bot, or keep it if the bots are alike.
 
-The retargeter outputs a **SuperDexPose** on the output bot: one value per actuated DOF, in the bot
+The retargeter outputs a **SuperDexPose** on the output bot: one value per joint DOF, in the bot
 prefab's DOF order and native units (radians and meters), so a spherical joint contributes three
 values. Its root placement follows the input through the IK config's
 `OutputBaseFrameFromInputBaseFrame`; this is the authored alignment, not a calibration inferred
@@ -105,11 +105,12 @@ Skeleton**.
 
 <SiteImage
   src="img/unreal/roboperator_components.png"
-  alt="Unreal Blueprint Editor showing the DG-5F roboperator's Components tree with OpenXRHandPoseBotIKRetargeter selected, the robot hand in the viewport, and the Bot IK Config field in Details"
+  alt="Unreal Blueprint Editor showing the DG-5F roboperator's Components tree with OpenXRHandPoseBotIKRetargeter selected, the robot hand in the viewport, and the Bot IK Retargeter Config field in Details"
 />
 
 *Select `OpenXRHandPoseBotIKRetargeter` in the Components tree and assign the
-imported IK configuration in **Details → Bot IK → Config**.*
+imported IK configuration in **Details → SuperDex Robotics → Bot IK Retargeter → Config**.*
+
 
 ### Spawning at the tracked hand
 

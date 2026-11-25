@@ -13,17 +13,27 @@ Run a `.superdex_scene` file in SuperDex Unreal without importing it: the file b
 scene, and a level mirrors it. For how this differs from an editor-authored level, see
 [Runtime Scene Loading](../runtime_loading.mdx).
 
-:::warning What this tutorial does not cover
-Nothing in the plugins creates the scene's bots or drives them from tracked hands: that takes C++
-in your project (see [Driving the scene's bots](../runtime_loading.mdx#driving-the-scenes-bots)),
-and no supported example of it ships. This tutorial loads a scene and shows its base scene and
-prefabs simulating.
+:::note What this tutorial does not cover
+This tutorial loads a scene and shows its base scene and prefabs simulating. Creating the scene's
+bots and driving them from tracked hands takes C++ (see
+[Driving the scene's bots](../runtime_loading.mdx#driving-the-scenes-bots)). To see that working,
+start from the example below.
 :::
+
+## Try the example first
+
+Open `/SuperDexExamples/RuntimeSceneLoad/L_RuntimeSceneLoad` and click **Play**, or use **VR
+Preview** for tracked hands. It loads the repository's `runtime_scene_load` scene and its tasks,
+spawns a roboperator for each slot's bot, and drives the scene's controllers from it. Switch bots
+with **Ctrl+A** and **Alt+A**, and step through the tasks with **B** and **N**. The
+[Runtime Scene Load example](../runtime_loading.mdx#the-runtime-scene-load-example) describes the
+actor behind it and its settings. The rest of this tutorial builds the smallest level that loads
+a scene of your own.
 
 ## 1. Get a scene file
 
 Use any `.superdex_scene` or `.superdex_scene_archive`, for example one authored in the
-<ProjectSuperdexLink site="studio" path="docs/bot_scene_editor/">SuperDex Studio Bot Scene Editor</ProjectSuperdexLink>. An archive is
+<ProjectSuperdexLink site="studio" path="docs/scene_editor/">SuperDex Studio Scene Editor</ProjectSuperdexLink>. An archive is
 self-contained, which makes it the easier file to move between machines.
 
 You can also export one from an editor-authored level. In a level's Event Graph (for example on a
@@ -57,20 +67,26 @@ the packaged executable.
 
 The output log reports the result:
 
-- `SuperDexBotSceneSubsystem: loaded '<path>' - <N> actors, <M> bots declared with <K> controllers (none initialized yet)`
+- `SuperDexBotSceneSubsystem: loaded '<path>' - <N> actors, <M> bots declared with <K> controllers (none initialized yet), <T> task spawn(s)`
   means the scene is live. The visualization builds its meshes, from the file's `.glb` render
   models where it has them; add `-NoRenderModels` to draw collision shapes instead.
 - `SuperDexBotSceneSubsystem: failed to load '<path>': <reason>` means it is not. The session
   then runs without physics rather than falling back to the level's own.
 
-:::info Screenshot placeholder: a runtime-loaded scene
-**Capture:** Export an archive from `L_Kitchen` as in step 1, launch the viewer level with it as
-in step 3, and capture the running viewport with the kitchen drawn from its render models. Save as
-`static/img/unreal/runtime_scene_viewer.webp`.
-:::
+<Figure
+  src={kitchenPlayImage}
+  alt="A robot hand holds a blue-and-yellow sponge against the faucet above the sink in the running kitchen scene, drawn from its render models."
+  maxWidth={497}
+  caption="The kitchen, drawn from its render models, with a robot hand cleaning the faucet."
+/>
 
 ## Next steps
 
-- To drive the scene's bots, write the project code described in
-  [Driving the scene's bots](../runtime_loading.mdx#driving-the-scenes-bots).
+- To drive the scene's bots, add an `ASuperDexRuntimeSceneLoadExample` to your viewer level and
+  set its **Scene File** and **Roboperators**, or adapt its code as described in
+  [Driving the scene's bots](../runtime_loading.mdx#driving-the-scenes-bots). The example draws
+  the scene itself, so remove the empty actor from step 2, and add the player setup that
+  `L_RuntimeSceneLoad` uses (a `SuperDexPlayerStart` and the `BP_SuperDexGameMode` override) so
+  its roboperators receive tracked hands.
+- For the scene format, slots, and `roboperatorClass`, see [SuperDex Scenes](../../superdex_scenes.mdx).
 - To package, see [Packaging](../runtime_loading.mdx#packaging).

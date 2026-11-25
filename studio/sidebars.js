@@ -68,7 +68,7 @@ module.exports = {
     'ik_editor',
     'prefab_editor',
     'asset_tuner',
-    'bot_scene_editor',
+    'scene_editor',
     'model_editor',
     {
       type: 'category',

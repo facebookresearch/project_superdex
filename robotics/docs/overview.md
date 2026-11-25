@@ -29,7 +29,7 @@ The following capabilities are available in R2 of SuperDex Robotics.
 
 **Skinned contact surfaces** — Attach a continuous collision and render skin to an articulated bot without replacing its links or DOFs.
 
-**Bot scenes and tasks** — Combine physics assets, bots, controllers and sensors in a reusable workcell; swap episode reset state and termination criteria independently.
+**SuperDex scenes and tasks** — Combine physics assets, bots, controllers and sensors in a reusable workcell; swap episode reset state and termination criteria independently.
 
 **Numeric sensor graphs** — Acquire contact and joint-wrench observations after physics, transform them into policy tensors, and read timestamped samples independently of acquisition.
 
@@ -61,7 +61,7 @@ Explore our documentation to begin building with SuperDex Robotics:
 | [Bot Assets](./bot_assets.mdx) | The bots we ship in the `assets/bots` folder. |
 | [Inverse Kinematics](./inverse_kinematics.mdx) | IK assets, link-frame goals, retargeting and solve limits. |
 | [Bot Skinning](./bot_skinning.mdx) | Collision and render skins, composition and coverage. |
-| [Bot Scenes](./bot_scenes.mdx) | Combined workcell configuration and runtime lookup. |
+| [SuperDex Scenes](./superdex_scenes.mdx) | Combined workcell configuration and runtime lookup. |
 | [Bot Tasks](./bot_tasks.mdx) | Episode reset state, randomization and outcomes. |
 | [Sensors](./sensors.mdx) | Sensor sources and transforms, sensor graphs and timestamped reads. |
 | [SuperDex Unreal](./unreal/overview.mdx) | Editor and runtime scene workflows, tracked-hand teleoperation, and recording in Unreal Engine. |

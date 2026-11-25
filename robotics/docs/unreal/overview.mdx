@@ -4,7 +4,10 @@ sidebar_label: Overview
 slug: /unreal/overview
 ---
 
+import Figure, {FigureLabel, FigureRow} from '@site/src/components/Figure';
 import ProjectSuperdexLink from '@site/src/components/ProjectSuperdexLink';
+import shapeBoxStudio from '@site/static/img/unreal/shape-box-studio.jpg';
+import shapeBoxSampler from '@site/static/img/unreal/shape-box-unreal-sampler.jpg';
 
 # SuperDex Unreal
 
@@ -31,11 +34,18 @@ scene and what must change without rebuilding the application. A native scene
 file does not replace an Unreal map or automatically carry arbitrary Blueprint
 logic, materials, or UI.
 
-:::note Screenshot placeholder
-Capture the public Sampler level running in SuperDexUnreal, with a task prefab
-and a tracked-hand robot visible. Pair it with the same assets open in Studio
-to show the authoring-to-interaction workflow.
-:::
+<FigureRow cols={2}>
+  <Figure
+    src={shapeBoxStudio}
+    alt="A wooden shape sorter and its colored blocks in the Studio viewport."
+    caption={<><FigureLabel>Studio</FigureLabel>The shape box prefab in the Prefab Editor.</>}
+  />
+  <Figure
+    src={shapeBoxSampler}
+    alt="A robot hand holds a red block beside the wooden sorter on the Sampler workbench."
+    caption={<><FigureLabel>Unreal</FigureLabel>The same prefab in the running Sampler level.</>}
+  />
+</FigureRow>
 
 ## The Plugins
 
@@ -45,7 +55,7 @@ to show the authoring-to-interaction workflow.
 | **SuperDexRobotics** | Bots, controllers, IK, pose/retargeting, teleop nodes, recording, and optional study prompts. Its editor module imports bot and scene assets. |
 | **SuperDexOpenXRPoseSource** | Hand tracking from OpenXR. Requires an active hand-tracking runtime and Unreal's OpenXR/OpenXRHandTracking plugins. |
 | **SuperDexAssets** | Reusable task content. |
-| **SuperDexExamples** | Example maps built from the physics, robotics, and content plugins. |
+| **SuperDexExamples** | Example maps built from the physics, robotics, and content plugins, including a runtime scene-loading example. |
 | **TeleopNodeZenoh** | Optional communication between processes or machines. In-process teleop also works without it. |
 | **AndroidInput** | Keyboard/gamepad input support for experimental Android/Quest applications. |
 

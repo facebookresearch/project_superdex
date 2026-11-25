@@ -59,7 +59,7 @@ The loader converts a robot description, **not a whole MuJoCo environment**:
   sensors, tendons and actuator gains are not imported as SuperDex components.
   Review the warnings and supply SuperDex controllers and sensors explicitly.
 - A floating robot import omits unrelated top-level bodies; use a
-  [BotScene](../../bot_scenes.mdx) to assemble its surroundings.
+  [BotScene](../../superdex_scenes.mdx) to assemble its surroundings.
 - Raw meshes are used as supplied. Open or degenerate meshes may be unusable
   as dynamic collision shapes. Runtime SDF baking is not offline mesh repair
   or validation.

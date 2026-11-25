@@ -103,7 +103,7 @@ the viewport, described in
 
 ### Scene Settings
 
-**Prefab Details** currently only contain a **Scene Prefab** toggle. Turning it on
+**Prefab Details** currently only contains a **Scene Prefab** toggle. Turning it on
 attaches a block of scene settings to the prefab, covering gravity and solver
 configuration. Turning it off strips them again.
 
@@ -158,7 +158,7 @@ reference lives in <ProjectSuperdexLink site="physics" path="docs/authoring_scen
 ### Inertial Properties
 
 Mass, center of mass, and the inertia tensor decide how a body responds to
-force. You rarely want to type all of them (especially if you know mass or density of your simulated objects). The **Setup** dropdown picks how much
+force. You rarely want to type all of them (especially if you know the mass or density of your simulated objects). The **Setup** dropdown picks how much
 you specify and how much Studio derives from the collision geometry.
 
 | Setup | You provide | Derived from geometry |
@@ -284,7 +284,7 @@ model deformed by the links underneath it.
     one actor row visibly contains many links. */}
 
 :::note
-This page covers creation of articulations for simple objects without controller. The field-by-field reference for joint limits, dynamics, and drives lives
+This page covers creation of articulations for simple objects without a controller. The field-by-field reference for joint limits, dynamics, and drives lives
 in the [Bot Editor Guide](./bot_editor/index.mdx), which is the same editing model.
 :::
 
@@ -292,7 +292,7 @@ in the [Bot Editor Guide](./bot_editor/index.mdx), which is the same editing mod
 
 A nested prefab is another prefab placed by reference, with its own transform. It
 is not a copy: the nested asset stays a separate file, and the reference is what
-gets saved. Build simpler Prefabs once and nest it wherever it is needed. Fixes in the original Prefab will be picked up by its nested versions.
+gets saved. Build simpler prefabs once and nest them wherever they are needed. Fixes in the original prefab will be picked up by its nested versions.
 
 ## Contact Filter
 
@@ -402,7 +402,7 @@ a link deletes the constraints on it.
 The viewport draws the selected constraint and the one under the mouse in the
 hierarchy: ranges as wedges or bars, targets as an orange marker with a spring
 back to the current value, and anchors as dots joined by a red line when they
-pull apart. **Show > Constraints** (`C`) draws every constraint at once.
+pull apart. **Show → Constraints** (`C`) draws every constraint at once.
 
 <Figure
   src="../../img/prefab_editor/constraints_viewport.webp"
@@ -460,7 +460,7 @@ the contact filter rules that used to apply to it.
 - [Bot Editor Guide](./bot_editor/index.mdx): the field-by-field joint and link reference.
 - [Model Editor Guide](./model_editor.mdx): building the collision models a prefab binds.
 - [Asset Tuner](./asset_tuner.mdx): testing and tuning a prefab's physics with repeatable loads and plots.
-- [Bot Scene Editor](./bot_scene_editor.mdx): using a prefab as a scene's base scene or as a spawnable object.
+- [Scene Editor](./scene_editor.mdx): using a prefab as a scene's base scene or as a spawnable object.
 - <ProjectSuperdexLink site="physics" path="docs/concepts/prefabs/">Prefabs</ProjectSuperdexLink>: the concept, as the physics engine defines it.
 - <ProjectSuperdexLink site="physics" path="docs/concepts/constraints/">Constraints</ProjectSuperdexLink>: every constraint type, its equation, and its parameters.
 - <ProjectSuperdexLink site="physics" path="docs/authoring_scenes/authoring_prefabs/">Authoring Prefabs</ProjectSuperdexLink>: the full property reference for actors, materials, contacts, and scene settings.

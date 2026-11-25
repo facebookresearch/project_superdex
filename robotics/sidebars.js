@@ -69,8 +69,18 @@ module.exports = {
     'bot_assets',
     'domain_randomization',
     'inverse_kinematics',
-    'sensor_graphs',
-    'bot_scenes',
+    {
+      type: 'category',
+      label: 'Sensors',
+      link: {type: 'doc', id: 'sensors'},
+      items: [
+        'sensor_graphs',
+        'tactile_observations',
+        'joint_pose_and_wrench',
+        'making_a_sensor',
+      ],
+    },
+    'superdex_scenes',
     'bot_tasks',
     {
       type: 'category',

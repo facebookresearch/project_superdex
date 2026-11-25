@@ -4,6 +4,7 @@ sidebar_label: Skinning
 sidebar_position: 4
 ---
 
+import Figure, {FigureRow, FigureLabel} from '@site/src/components/Figure';
 import ProjectSuperdexLink from '@site/src/components/ProjectSuperdexLink';
 
 # Skinning
@@ -21,13 +22,18 @@ A skin has two optional models, and each has its own role:
 | **Mochi Model** | The skin's collision model (`.mochi.h5`). Other bodies collide with this deforming surface. |
 | **Render Model** | A skinned `.glb` whose bones follow the bot's links. It is drawn in place of the link render models it covers. |
 
-:::info Screenshot placeholder — Skinned hand
-Open `assets/bots/hands/wuji_hand2_beta1/right/wuji_hand2_beta1_skinned_right.superdex_bot`.
-Capture two views of the same pose side by side: the default view showing the
-skin's render model, and the same view with **Show → Skin-Covered Links** on,
-or **Collision Only** (`2`), so the link geometry under the skin is visible.
-Include the **Bot Skin** window docked beside the viewport.
-:::
+<FigureRow cols={2}>
+  <Figure
+    src="/img/r2/studio-skin-render.png"
+    alt="A skinned Wuji Hand 2 shown with its continuous black render surface."
+    caption={<><FigureLabel>Render</FigureLabel>The continuous visual surface.</>}
+  />
+  <Figure
+    src="/img/r2/studio-skin-collision.png"
+    alt="The same Wuji hand and camera shown as triangulated collision geometry, with separate fingertip regions."
+    caption={<><FigureLabel>Collision</FigureLabel>The contact geometry at the same pose.</>}
+  />
+</FigureRow>
 
 ## The Bot Skin Window
 

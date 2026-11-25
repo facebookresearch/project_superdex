@@ -23,7 +23,7 @@ can drive demos and data collection; they trade off differently.
 | Visuals | Imported meshes and materials, full Unreal lighting | Built at runtime from the file's render models (`.glb`) or collision shapes |
 | Bots, controllers, sensors | The scene importer places each bot with a `SuperDexBotComponent`; it skips the file's controllers and scene sensors (add controllers in Unreal) | The native loader declares the file's bots, controllers included, but creates none until your code calls `BotScene::InitializeBot` |
 | Same physics as Python and Studio | As close as the importers allow (see their [limits](./physics.mdx#importers)) | Loaded by the same native SuperDex Robotics loader |
-| Ready-made support in the plugins | Example levels, Player Start, roboperators | Loader, visualization, and hooks; your project wires up control |
+| Ready-made support in the plugins | Example levels, Player Start, roboperators | Loader, visualization, hooks, and the `L_RuntimeSceneLoad` example to start from |
 
 ## How runtime loading works
 
@@ -45,7 +45,9 @@ shell's working directory. The subsystem then:
    actors.
 3. Populates the scene from the file and reports its state through `GetState()`: `Disabled` (no
    scene requested), `Loaded`, or `Failed`. `Failed` is terminal: the session does not quietly fall
-   back to level physics. The reason is in the log, prefixed `SuperDexBotSceneSubsystem:`.
+   back to level physics, even when the request fails before loading, as with an empty
+   `-SuperDexSceneFile=` path or a `-SuperDexTaskFolder=` that holds no tasks. The reason is in the
+   log, prefixed `SuperDexBotSceneSubsystem:`.
 
 Without `-SuperDexSceneFile=`, the subsystem stays `Disabled` and levels simulate their own
 components as usual.
@@ -62,7 +64,8 @@ or contact skin; a rod with neither is visible only in SuperDex Physics debug dr
 ### Driving the scene's bots
 
 The loader declares the scene's bots but does not create them, because only your project knows
-which of the offered bots it drives. That step, and binding Unreal to the result, is C++:
+which of the offered bots it drives. That step, and binding Unreal to the result, is C++; the
+[Runtime Scene Load example](#the-runtime-scene-load-example) does both:
 
 - `USuperDexBotSceneSubsystem::GetBotScene()` returns the native `BotScene`; create the bots you
   use with `BotScene::InitializeBot`, then call `NotifySceneContentsChanged()` so the
@@ -74,20 +77,100 @@ which of the offered bots it drives. That step, and binding Unreal to the result
   none, for editor iteration. Call it before any actor's Begin Play, for example from an actor's
   `PostInitializeComponents`.
 
-:::warning Public runtime example coming soon
-A ready-made runtime example is coming as we finish migrating the example content. For now,
-the shipped example levels are editor-authored. To drive bots in a runtime-loaded scene, add a
-C++ module that uses the hooks above to initialize the bots and bind roboperators; these hooks
-are not exposed to Blueprint. While a scene file owns the physics scene, a level-authored bot
-component that is not bound creates no bot of its own.
-:::
+These hooks are not exposed to Blueprint. While a scene file owns the physics scene, a
+level-authored bot component that is not bound creates no bot of its own. The scene's `slots` and
+each bot's `roboperatorClass` tell your code which bots to offer and which rig drives each; see
+[Slots and roboperators](../superdex_scenes.mdx#slots-and-roboperators).
+
+## The Runtime Scene Load Example
+
+`/SuperDexExamples/RuntimeSceneLoad/L_RuntimeSceneLoad` builds its workcell at runtime from a
+scene file instead of from actors placed in the level. It loads
+`assets/scenes/runtime_scene_load/runtime_scene_load.superdex_scene`, a SuperDex scene modeled on
+`L_Sampler` that differs from it in a few places: the workbench as its base scene, the arms and
+proxy hands in `left` and `right` slots, seven of `L_Sampler`'s prefabs as spawnable prefabs, and
+one task per prefab in its `tasks/` folder. The level adds the lighting, the player setup,
+keyboard overlay, and FPS/SPS counter, and one `ASuperDexRuntimeSceneLoadExample` actor (in the
+`SuperDexTeleop` module) that does the C++ work above:
+
+- Loads the scene through the subsystem and draws it.
+- Brings up each slot's selected bot (the slot's first, at first) and spawns the roboperator from
+  its **Roboperators** list whose class the bot names in `roboperatorClass`, at the bot's base and
+  bound to the scene bot.
+- Before every physics step, drives the bot's scene controllers from what that roboperator's
+  TeleopNode last published: a `Pose` controller takes the arm pose target, a `JointPositions`
+  controller the joint targets, and a `MOCHI_ARTICULATED_POSE` controller follows the tracked hand.
+  Other controllers are not driven.
+- Spawns the current task's objects, steps through a task folder, and resets the objects. Each
+  episode puts the bots back in the poses the scene first brought them up in.
+- On Win64, records each episode with SuperDex Recorder when **Record** is on or `-SuperDexRecord`
+  is passed. Each recording references the loaded scene and task files by name and content hash.
+
+Any scene whose bots name roboperators in that list runs with its own bots, prefabs, and
+controllers. **The example is a starting point, not a framework:** one actor in
+`SuperDexTeleop/Public/Examples/SuperDexRuntimeSceneLoadExample.h` and its `.cpp`, to copy into your
+own module and change.
+
+<Figure
+  src={runtimeSceneLoadPlayImage}
+  alt="L_RuntimeSceneLoad in play: two FR3 arms with DG-5F (long, seed) hands over the workbench, the shape box with four loose pieces in front of it, the keyboard-shortcut overlay, and the FPS/SPS counter."
+  caption="The 02_shape_box task loaded at runtime, with both slots on the FR3 + DG-5F (long, seed) arm."
+/>
+
+### Settings and controls
+
+The actor's properties are in the **SuperDex Robotics → Runtime Scene Load** category, which the
+Details panel shows first:
+
+| Property | Purpose |
+| --- | --- |
+| **Scene File** | The scene, relative to the project directory. `-SuperDexSceneFile=` overrides it. |
+| **Task File** | A `.superdex_task`, or a folder whose tasks play in name order, relative to the project directory. `-SuperDexTaskFolder=` or `-SuperDexTaskFile=` on the command line of the editor or a packaged executable overrides it. |
+| **Roboperators** | The roboperator classes the scene's bots name in `roboperatorClass`. |
+| **Slots** | Per scene slot: its **Name**, the **Handedness** of the hand that drives it, and its **Cycle Bot Key**. |
+| **Record**, **Recording Directory**, **Record Contact Forces** | Recording on Win64. `-SuperDexRecord`, `-SuperDexRecordDir=`, and `-SuperDexRecordContacts` override them; the directory defaults to `<Project>/Saved/SuperDexRecorder`. |
+
+In `L_RuntimeSceneLoad`, **Scene File** and **Task File** point two folders above the project, at the
+repository's `assets/scenes/runtime_scene_load/`, and **Record** is on. The keys follow
+`L_Sampler`, and the level's keyboard overlay lists them:
+
+| Key | Action |
+| --- | --- |
+| **Ctrl+A / Alt+A** | Next bot in the left / right slot. |
+| **B / N** | Previous / next task. |
+| **M** | Reset the task's objects. |
+| **Space** | Clutch the roboperators, as in `L_Sampler`. |
+| **Enter** | Start recording an episode, or keep the one recording and start the next. |
+| **Backspace** | Discard the episode being recorded and start the next. |
+
+Changing a slot's bot or the recording state restarts the episode. Each key is a property of the actor, and each action is
+also a Blueprint-callable function (`CycleSlotBot`, `NextTask`, `ResetTask`, `RecordOrKeep`, and
+so on).
+
+<Figure
+  src={runtimeSceneLoadDetailsImage}
+  alt="The SuperDexRuntimeSceneLoadExample actor's Details panel with SuperDex Robotics, Runtime Scene Load expanded: Scene File and Task File paths into assets/scenes/runtime_scene_load, 12 Roboperators, 2 Slots, Record checked, Recording Directory, Record Contact Forces, and the key properties."
+  maxWidth={507}
+  caption="The example actor in L_RuntimeSceneLoad: the repository's scene and tasks, its roboperator classes and two slots, and recording on."
+/>
+
+### Running the example in a packaged build
+
+A packaged build has no repository beside it, so pass both paths as absolute paths:
+
+```bat
+SuperDexUnreal.exe /SuperDexExamples/RuntimeSceneLoad/L_RuntimeSceneLoad -SuperDexSceneFile="C:\project_superdex\assets\scenes\runtime_scene_load\runtime_scene_load.superdex_scene" -SuperDexTaskFolder="C:\project_superdex\assets\scenes\runtime_scene_load\tasks"
+```
+
+The scene's [README](https://github.com/facebookresearch/project_superdex/tree/main/assets/scenes/runtime_scene_load#readme)
+lists its tasks and where it differs from `L_Sampler`.
 
 ## Producing a scene file
 
-For what a scene file holds, see [SuperDex Scenes](../bot_scenes.mdx).
+For what a scene file holds, see [SuperDex Scenes](../superdex_scenes.mdx).
 
 - **SuperDex Studio** authors `.superdex_scene` files and exports archives in its
-  <ProjectSuperdexLink site="studio" path="docs/bot_scene_editor/">Bot Scene Editor</ProjectSuperdexLink>.
+  <ProjectSuperdexLink site="studio" path="docs/scene_editor/">Scene Editor</ProjectSuperdexLink>.
 - **From a running level**, the Blueprint node `ExportSuperDexBotScene` (in
   `SuperDexRoboticsFunctionLibrary`) writes the current physics scene to
   `<OutputDir>.superdex_scene_archive`, with actors in their current pose and bots as bot
@@ -112,15 +195,21 @@ outcome semantics.
 
 ## Packaging
 
-The project cooks the maps listed in `Config/DefaultGame.ini` (`MapsToCook`); add the level you
-run to that list. Scene files are read from disk at runtime, so they are not cooked: ship them
-next to the build, or anywhere `-SuperDexSceneFile=` can reach.
+The project cooks the maps listed in `Config/DefaultGame.ini` (`MapsToCook`), which include
+`L_RuntimeSceneLoad`; add the level you run to that list. Scene files are read from disk at
+runtime, so they are not cooked: ship them next to the build, or anywhere `-SuperDexSceneFile=`
+can reach. The same file also always cooks `/InterchangeAssets/gltf`, Unreal's stock glTF
+materials, which the render models imported at runtime instance; a project of your own that draws
+`.glb` render models at runtime needs that entry too.
 
-For the Windows and experimental Meta Quest build steps, see the
+Runtime scene loading is supported on Windows only. It is not supported in the experimental
+Meta Quest standalone build, even though `L_RuntimeSceneLoad` is cooked into that package.
+Recording a runtime-loaded scene needs SuperDex Recorder, which is also Win64-only. For the
+Windows build steps, see the
 [SuperDex Unreal README](https://github.com/facebookresearch/project_superdex/tree/main/unreal/SuperDexUnreal#readme).
-Passing launch arguments to an app installed on a headset is not covered there.
 
 ## See Also
 
 - [Tutorial: Load a Scene File at Runtime](./tutorials/runtime_scene.mdx)
+- [SuperDex Scenes](../superdex_scenes.mdx) — the `.superdex_scene` format, slots, and archives.
 - [Physics in Unreal](./physics.mdx) — importers, settings, and components for the editor path.

@@ -93,7 +93,7 @@ motion.
 | Orbit | `Alt` + `Left-click` and drag, or drag the coordinate system in the top right corner |
 | Pan | `Middle-click` and drag |
 | Zoom | `Scroll` up or down |
-| Flight Camera Control (gamestyle) | Hold `Right-click` and translate with `W` `A` `S` `D`, plus `Q` down and `E` up. `Shift` gives a 4× boost, and `Scroll` changes the [flight speed](#camera-speed) |
+| Flight Camera Control (game-style) | Hold `Right-click` and translate with `W` `A` `S` `D`, plus `Q` down and `E` up. `Shift` gives a 4× boost, and `Scroll` changes the [flight speed](#camera-speed) |
 
 **Snapping** jumps the camera to a fixed vantage point. Every one of these has a
 keyboard shortcut, and most have a clickable equivalent in the top right corner
@@ -132,7 +132,7 @@ click or `Alt`, so a mouse is easier for sustained viewport work.
 #### Hide and Isolate
 
 You can temporarily hide selected meshes in the viewport using either the eye icon
-in each editors respective panel or the shortcuts below.
+in each editor's respective panel or the shortcuts below.
 A badge on the lower-right corner of the viewport shows if any meshes are currently hidden.
 Clicking on the badge will show all hidden meshes.
 
@@ -168,7 +168,8 @@ The menu's contents depend on the editor. Every viewport's menu has **Grid**
 (`G`) and **Measure Tool** (`Ctrl+M`, see [Measuring](#measuring)). The Bot
 Editor adds toggles for joint limits, transmissions, link transforms, inertia,
 center of mass, and skin-covered links; the Prefab Editor adds **Constraints**
-(`C`) and **Rod Frame Axes**; the IK Editor adds **IK Constraint Frames** (`T`).
+(`C`) and **Rod Frame Axes**; the IK Editor adds **IK Constraint Frames** (`T`);
+the Asset Tuner adds **Playhead Shadow** (see [Previewing Targets](./asset_tuner.mdx)).
 The IK Editor and the Asset Tuner offer only the first three geometry modes.
 The Model Editor draws its models through the [Model Viewer](./model_editor.mdx#model-viewer)
 instead.
@@ -210,13 +211,11 @@ Open **Window → Measure** for its settings and results:
 
 The tool is unavailable while a simulation runs; pause it to measure.
 
-:::info Screenshot placeholder — Measuring
-Open `assets/prefabs/shape_box/shape_box.mochi_prefab` in the Prefab Editor,
-press `Ctrl+M`, set **Pick** to **Facet**, and click two parallel faces, such
-as the tops of two walls of the box. Capture the viewport with both facets
-highlighted and the measurement drawn between them, beside **Window → Measure**
-showing the **Result**.
-:::
+<Figure
+  src="/img/r2/studio-facet-measurement.png"
+  alt="Two parallel shape-box wall facets highlighted in yellow, with their 140 millimeter gap drawn in the viewport and the Measure panel's selection and Result visible."
+  caption="Facet measurement on opposite walls of the shape box: a 140 mm plane gap."
+/>
 
 ### Selecting and Transforming
 
@@ -241,8 +240,10 @@ also the only editor with multi-selection; `Ctrl` and `Shift` both toggle
 individual objects when clicking in 3D.
 
 :::note
-The transform gizmo and its `W` / `E` / `R` shortcuts are specific to the Prefab
-Editor. In the Bot Editor, link and joint transforms are edited numerically in
+The transform gizmo toolbar and its `W` / `E` / `R` shortcuts are specific to
+the Prefab Editor. The IK Editor and the [Asset Tuner](./asset_tuner.mdx) show
+a gizmo only on what you select there, such as a goal target, a load, a
+waypoint, or a stop-condition box. In the Bot Editor, link and joint transforms are edited numerically in
 [Bot Link Details](./bot_editor/editing.mdx).
 :::
 
@@ -311,7 +312,7 @@ It recognizes the formats Studio works with, and color-codes them:
 | Collision Model | `.mochi.h5` |
 | Prefab | `.superdex_prefab` `.mochi_prefab` `.mochi_scene` |
 | Bot | `.superdex_bot` `.superdex_bot_archive` |
-| Bot Scene | `.superdex_scene` `.superdex_scene_archive` |
+| Scene | `.superdex_scene` `.superdex_scene_archive` |
 | Task | `.superdex_task` |
 | Asset Tuner | `.superdex_tuner` |
 | IK Configuration | `.superdex_ik` |
@@ -488,14 +489,14 @@ Opening an asset launches the editor registered for its type:
 | IK Configuration | `.superdex_ik` | [IK Editor](./ik_editor.mdx) |
 | Prefab | `.superdex_prefab`, `.mochi_prefab`, `.mochi_scene` | [Prefab Editor](./prefab_editor.mdx) |
 | Asset Tuner | `.superdex_tuner` | [Asset Tuner](./asset_tuner.mdx) |
-| Bot Scene | `.superdex_scene`, `.superdex_scene_archive` | [Bot Scene Editor](./bot_scene_editor.mdx) |
+| Scene | `.superdex_scene`, `.superdex_scene_archive` | [Scene Editor](./scene_editor.mdx) |
 | CAD / Render / Collision model | `STEP`, `.glb`, `.mochi.h5` | [Model Editor](./model_editor.mdx) |
 
 Read-only `_archive` variants of the bot formats open in the Bot Editor with
 editing disabled. A task (`.superdex_task`) has no editor of its own: it opens
-in the [Task Preview](./bot_scene_editor.mdx#tasks) of the active bot scene.
+in the [Task Preview](./scene_editor.mdx#tasks) of the active scene.
 
-## See also
+## See Also
 
 - [Bot Editor Guide](./bot_editor/index.mdx) — articulation, contacts, and Mod Bots.
 - [Prefab Editor Guide](./prefab_editor.mdx) — composing actors into a prefab.

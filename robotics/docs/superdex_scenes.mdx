@@ -1,19 +1,19 @@
 ---
-title: Bot Scenes
-sidebar_label: Bot Scenes
+title: SuperDex Scenes
+sidebar_label: SuperDex Scenes
 sidebar_position: 7
 ---
 
 import Figure, {FigureRow} from '@site/src/components/Figure';
 import ProjectSuperdexLink from '@site/src/components/ProjectSuperdexLink';
 
-# Bot Scenes
+# SuperDex Scenes
 
-A **`BotScenePrefab`** (`.superdex_scene`, JSON) combines the reusable pieces of
-a robotics environment: a base physics scene, bot instances, their controllers,
-scene-level sensors, and a catalog of objects that can be spawned later. Loading
-it creates a **`BotScene`**, the runtime owner and named lookup interface for
-those pieces.
+A **SuperDex scene** (`.superdex_scene`, JSON) combines the reusable pieces of a
+robotics environment: a base physics scene, bot instances, their controllers,
+scene-level sensors, and a catalog of objects that can be spawned later. The
+Robotics API represents this definition as `BotScenePrefab` and loads it into
+a `BotScene`, which owns the runtime instances and provides named lookup.
 
 Use a scene when the same workcell needs to open in Studio, run from library
 code, and host different [tasks](./bot_tasks.mdx). A scene is configuration, not
@@ -44,7 +44,9 @@ The scene references assets rather than copying their definitions:
   filtering and collision layers. Without it, the engine defaults apply.
 - **`bots`**: named instances of `.superdex_bot` or `.superdex_bot_archive`
   assets. Each entry sets placement (`parentFromBot`), an optional starting
-  joint configuration (`initialPose`), and controllers.
+  joint configuration (`initialPose`), and controllers. `hasGravity: false`
+  builds every link of that bot without gravity, for a robot whose own
+  controller compensates for it; other actors keep the base scene's gravity.
 - **`sensors`**: environment sensors, placed with `parentFromSensor` rather than
   attached to a bot. Bot-link sensors and actuators come from the bot asset.
 - **`scene.spawnablePrefabs`**: named physics prefabs/scenes or bot assets
@@ -79,7 +81,8 @@ and controller files beside it:
 Transforms map child coordinates into the parent frame, in meters and XYZW
 quaternions, using the [bot coordinate convention](./bots.mdx#coordinate-system-and-units).
 `initialPose` is in bot DOF order, excluding the root joint; omitted, it uses the
-bot's default pose.
+bot's default pose. `hasGravity` defaults to `true` (Python:
+`BotEntry.has_gravity`).
 
 Controller `type` is a registered name; `name` identifies the instance on that
 bot. `params` is a parameter-file path or inline JSON string, and `initArgs` is
@@ -92,12 +95,18 @@ Relative paths resolve from the scene file. Tagged paths such as `@bots/...`
 resolve through a nearby `.superdex_root` tag map. Keep references portable;
 do not rely on the application's working directory.
 
-:::info Screenshot placeholder — combined workcell
-Capture a loaded Studio bot scene with one arm, a fixture from its base physics
-scene, and one task object instantiated from `spawnablePrefabs`. Show the scene
-hierarchy with bot and object instance names. The image should make the
-assembled environment visible; the Studio guide covers editor controls.
-:::
+<FigureRow cols={2}>
+  <Figure
+    src="/img/r2/robotics-scene-workcell.png"
+    alt="The runtime_scene_load scene in Studio's Scene Editor: the workbench, two FR3 v2 arms with DG-5F Long SEED hands at their initial poses, and the shape box with four loose pieces on the task root."
+    caption="runtime_scene_load with tasks/02_shape_box: the base scene's workbench, the two slots' bots at their initial poses, and the task's objects."
+  />
+  <Figure
+    src="/img/r2/robotics-scene-workcell-panel.png"
+    alt="Scene Info listing the scene's declared bots and its left and right slots, each on its FR3 v2 + DG-5F Long SEED bot, and Task Preview listing the shape_box spawn of shape_box_four_out."
+    caption="Scene Info lists the declared bots and the slots that select them; Task Preview names the task's spawn."
+  />
+</FigureRow>
 
 ## Loading and looking up components
 
@@ -187,6 +196,37 @@ hide alternatives. Selective loading accepts the chosen bot names. At runtime,
 its components. Sensor graph membership follows these changes; newly added
 sensor outputs must be selected explicitly.
 
+## Example: `runtime_scene_load`
+
+The public [`runtime_scene_load`](https://github.com/facebookresearch/project_superdex/tree/main/assets/scenes/runtime_scene_load)
+scene in `assets/scenes/` combines these pieces into one workcell, matching the
+sampler level of SuperDex Unreal:
+
+| Part | Contents |
+|---|---|
+| Base scene | `base_scene/runtime_scene_load.mochi_scene`: a floor plane at z = 0 and the workbench prefab, with gravity of 9.8 m/s². |
+| Bots | Six per side: the FR3 v2 + DG-5F Long SEED and Tianji Marvin M6 + Wuji Hand 2 combos, each with a `BASIC_OSC_PD` arm controller (`osc`) and a `BASIC_JSC_PD` hand controller (`jsc`), and four proxy hands (OpenXR hand, Wuji Hand 2, DG-5F Long SEED, Robotiq 2F-85), each with a `MOCHI_ARTICULATED_POSE` controller (`pose`). Every bot sets `hasGravity: false` and a `roboperatorClass`. |
+| Slots | `left` and `right`, each listing that side's six bots. |
+| Task root and spawnables | The task root at the middle of the table top; seven spawnable prefabs. |
+| Tasks | `tasks/` holds one `.superdex_task` per spawnable. Five start from task-start variants published beside their prefabs: `paper_cup_pyramid_half_built`, `shape_box_four_out`, `puzzle_cube_scrambled`, `functional_dexterity_test_partly_flipped` and `nine_hole_peg_test_transfer`. The tasks declare reset states only, without termination criteria. |
+
+Loading the file creates all twelve bots. To bring up one bot per slot, pass
+the chosen names:
+
+```python
+bot_scene = robotics.load_bot_scene(
+    "assets/scenes/runtime_scene_load/runtime_scene_load.superdex_scene",
+    ["fr3_v2_dg5f_long_seed_left", "fr3_v2_dg5f_long_seed_right"],
+    "",  # No per-bot prefab edits.
+    context,
+)
+```
+
+Your application still supplies the arm, hand and proxy-hand targets. The
+scene's README maps each entry to the Unreal level. SuperDex Unreal loads the
+same scene and `tasks/` folder at runtime; see
+[Runtime Scene Loading](./unreal/runtime_loading.mdx) for that workflow.
+
 ## Packaging a workcell
 
 A `.superdex_scene_archive` bundles the scene and its referenced bots, meshes,
@@ -195,6 +235,6 @@ through the same scene APIs; extraction is cached. Use it when sharing or
 recording a fixed workcell so later source-asset edits cannot change that
 configuration. [Task files](./bot_tasks.mdx) remain separate from the archive.
 
-See <ProjectSuperdexLink site="studio" path="docs/bot_scene_editor/">the Studio scene editor</ProjectSuperdexLink>
+See the <ProjectSuperdexLink site="studio" path="docs/scene_editor/">Scene Editor</ProjectSuperdexLink>
 for authoring and archive export, or [Loading a Scene](./examples/basic/loading_a_scene.mdx)
 for assembling separate assets programmatically without a combined file.

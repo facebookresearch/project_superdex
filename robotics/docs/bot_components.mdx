@@ -58,7 +58,7 @@ The C++ names are the PascalCase equivalents (`IsValid()`, `GetName()`, …).
 **Controllers** may be created with or without a mochi actor. When supplying a
 mochi actor (directly or through a bot) it can use the mochi APIs to auto
 harvest values like the Jacobian, DOF counts, or joint angles from the simulated
-articualtion. Creating a controller without an actor means the application will
+articulation. Creating a controller without an actor means the application will
 supply all necessary inputs. This allows you to use the same controller to drive
 a real robot with the same code as your simulated robot. Controllers utilize a
 post-construction configuration hook to allow initialization after the
@@ -84,7 +84,7 @@ It does **not** run your controllers or actuators. Nothing feeds observations
 to a controller, chooses targets, computes actuator efforts or applies the
 resulting efforts to the articulation. **That control glue is yours to write.**
 
-Graph-native sensors are the exception: a [BotScene](./bot_scenes.mdx) can
+Graph-native sensors are the exception: a [BotScene](./superdex_scenes.mdx) can
 acquire its selected numeric [Sensor Graph](./sensor_graphs.mdx) outputs after
 each physics step. The graph does not route those samples into controllers for
 you. Sensors created outside a graph can still expose specialized read methods,
@@ -94,9 +94,9 @@ This is deliberate. The useful ways to wire sensors, controllers and actuators
 together are effectively unbounded — which sensor feeds which controller, at
 what rate, through what filters, with what arbitration between several
 controllers on one bot. A framework that ran the loop for you would have to pick
-one of those shapes and would rule out the rest or become unweldy and overly
+one of those shapes and would rule out the rest or become unwieldy and overly
 complex. Owning the loop costs you a few lines of code and gives you the
-flexability to research the way you want.
+flexibility to research the way you want.
 
 So the division is:
 
@@ -123,7 +123,7 @@ They all drive through the same four beats.
 1. **Configure** — `set_params(...)`. You may set params whenever the component
    permits. This can be used to dynamically adjust the impedance of a controller
    or alter behaviour as part of domain randomization between episodes as some
-   examples. Sensors and actuators can take in params `param_args` at creation.
+   examples. Sensors and actuators can take in params as `param_args` at creation.
    Controllers take in `param_args` and `init_args` as part of
    `configure_from_scene_entry`.
 2. **Gather observations** — assemble this step's inputs. Components may offer
@@ -164,7 +164,7 @@ exceed your robot's effort limits.
 | `SENSOR_ARTICULATED_JOINT_WRENCH` | Sensor | Solver-backed articulated-joint force/torque observations, with explicit row identities. |
 | `SENSOR_SEED_RECT_MAP` | Sensor transform | Maps vertex forces to a rectangular tactile tensor. |
 | `SENSOR_SEED_V1_MLP` | Sensor | Experimental SEED contact-force response with optional learned weights. |
-| `SENSOR_GAUSSIAN_NOISE` | Sensor transform | Add keyed, reproducible Gaussian noise once per new input capture. |
+| `SENSOR_GAUSSIAN_NOISE` | Sensor transform | Adds keyed, reproducible Gaussian noise once per new input capture. |
 
 See [Sensor Graphs](./sensor_graphs.mdx) for wiring, timing and acquisition limits,
 including the public delay/history transforms that require C++ creation or
@@ -315,7 +315,7 @@ The built-in components cover common cases; beyond them you write your own types
 or use types created by others. You can **register** your new types with the
 `RoboticsContext` under a type name, and from then on your new component is
 created by that name exactly like a built-in component. This includes being
-declared in a `.superdex_bot` link or in a [BotScene](./bot_scenes.mdx).
+declared in a `.superdex_bot` link or in a [BotScene](./superdex_scenes.mdx).
 Built-in types are registered automatically by the context in its constructor.
 
 Every type you write supplies the same four things:
@@ -821,7 +821,7 @@ and `get_python_actuator` do the same for their kinds.
 
 A Python type uses the same registered type string and factory as its C++
 counterpart. Custom components can be declared on bot links, and controllers
-and scene-level sensors can be declared in a [BotScene](./bot_scenes.mdx).
+and scene-level sensors can be declared in a [BotScene](./superdex_scenes.mdx).
 The Python shim shown here forwards specialized application-driven reads; it
 does not make the class a numeric graph node. C++ graph sensors additionally
 implement `InitSensor`, `Step` and `ResetSensor`; see

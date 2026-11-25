@@ -1,7 +1,7 @@
 ---
 title: Getting Started with Unreal
 sidebar_label: Getting Started
-slug: /unreal/getting-started
+slug: /unreal/getting_started
 ---
 
 import Figure from '@site/src/components/Figure';
@@ -60,6 +60,10 @@ The public **SuperDexExamples** plugin contains:
 - **`/SuperDexExamples/Kitchen/L_Kitchen`** — a complex manipulation showcase:
   interact with multiple objects, articulated mechanisms, and a soft body
   together in a kitchen environment.
+- **`/SuperDexExamples/RuntimeSceneLoad/L_RuntimeSceneLoad`** — a version of
+  the Sampler's scene loaded from a `.superdex_scene` file at runtime instead of
+  authored in the level, with its tasks and recording. See
+  [Runtime Scene Loading](./runtime_loading.mdx#the-runtime-scene-load-example).
 
 Start with Sampler to learn how prefabs, player pose sources, and poseable
 actors fit together. Then follow the
@@ -76,7 +80,8 @@ The supplied player setup uses **BP_SuperDexGameMode**,
 **BP_SuperDexPlayerController**, **BP_SuperDexPlayerPawn**, and a
 **SuperDexPlayerStart**. The PlayerStart's left/right pose-source lists choose
 which providers the player uses; its left/right poseable-actor lists choose
-which hands or roboperators to spawn. **The first entry is the default.**
+which hands or roboperators to spawn. These lists are in its
+**SuperDex Robotics → Player Start** Details category. **The first entry is the default.**
 Pose sources operate independently of the PlayerStart: a scene-placed bot's
 poseable actor or component can set **Pose Source Override** to use a provider
 directly. Without an override, a poseable actor attached to the player pawn
@@ -89,6 +94,7 @@ player setup; it is not required for every bot or pose source in a scene.
   maxWidth={703}
   caption="Tracking providers and available hand actors are configured separately on the PlayerStart."
 />
+
 
 The supplied player pawn and controller collectively define these keyboard
 shortcuts. Hold **Shift** for movement and rotation:
@@ -138,6 +144,11 @@ SuperDexPhysics, SuperDexRobotics, and their required content together. Include
 SuperDexOpenXRPoseSource and Unreal's OpenXR plugins for hand tracking; include
 TeleopNodeZenoh only when that transport is needed.
 
+The archives do not carry the SuperDexUnreal project's own `Config/` settings.
+Copy the ones your application relies on, such as `vr.InstancedStereo` and the
+Quest renderer settings in `DefaultEngine.ini`, or the `/InterchangeAssets/gltf`
+always-cook directory in `DefaultGame.ini` that runtime-loaded render models need.
+
 Use `--skip-hydrate` only when the staged native libraries are already current.
 Linux development packaging requires `--ue-root` or `UE_ROOT` so the native
 libraries use Unreal's toolchain. The packaging script and each plugin's
@@ -146,7 +157,7 @@ libraries use Unreal's toolchain. The packaging script and each plugin's
 ## Before Building a Custom Application
 
 - Keep **Unreal units** and **native joint coordinates** distinct. Unreal
-  transforms use centimetres; native joint positions use radians/metres.
+  transforms use centimeters; native joint positions use radians/meters.
 - SuperDex physics is separate from Unreal's Chaos simulation. Use SuperDex
   components for objects that must interact in the same SuperDex scene.
 - A pose source, a robot controller, and a communication transport are different

@@ -12,8 +12,8 @@ import ProjectSuperdexLink from '@site/src/components/ProjectSuperdexLink';
 
 The **IK Editor** authors and previews an inverse kinematics (IK)
 configuration: a `.superdex_ik` file that says which links of a bot should
-reach which targets, how hard to try, and how to solve. Use it to set up an end
-effector goal for an arm, pose several fingertips at once, or **retarget**
+reach which targets, how hard to try, and how to solve. Use it to set up an end-effector
+goal for an arm, pose several fingertips at once, or **retarget**
 motion from one bot onto another, such as a tracked human hand onto a robot
 hand.
 
@@ -30,13 +30,11 @@ produces a pose, not joint efforts; see the SuperDex Robotics guide to
 <ProjectSuperdexLink site="robotics" path="docs/inverse_kinematics/">Inverse Kinematics</ProjectSuperdexLink>
 for the file format and for solving from code.
 
-:::info Screenshot placeholder — IK retargeting
-Open `assets/bots/hands/dg5f_long/right/dg5f_long_right_retarget_openxr.superdex_ik`.
-Capture the whole window with the default layout: the DG5F hand (output bot)
-and the OpenXR hand (input bot) in the viewport with **IK Constraint Frames**
-showing the fingertip goal axes, **IK Goals** and **IK Solver** on the right,
-and **IK Solve Plots** along the bottom after pressing Play for a few seconds.
-:::
+<Figure
+  src="/img/r2/studio-ik-retargeting.png"
+  alt="The DG-5F hand overlaid with its blue OpenXR input hand, fingertip goal frames in the viewport, IK Goals and Solver panels at right, and solve plots below."
+  caption="A live retargeting preview: input and output hands, goal bindings, and solve performance are visible together."
+/>
 
 ## Creating an IK Configuration
 

@@ -178,7 +178,7 @@ botsContext->DestroySensor(cameraHandle);
 </Tabs>
 
 :::note Scene files
-[BotScene](./bot_scenes.mdx) combines bots, physics prefabs, controllers and
+[BotScene](./superdex_scenes.mdx) combines bots, physics prefabs, controllers and
 scene-level sensors in a `.superdex_scene` file. Loading creates the components;
 your application still runs controllers and actuators. Its selected numeric
 sensor graph outputs acquire after physics.
@@ -262,7 +262,7 @@ Handles are safe to hold for two reasons:
 
 :::tip Handles vs. objects
 Keep the object pointer returned by `bot.create_controller(...)` for as long as
-you need it and can guarentee its lifetime. Handles matter for objects created
+you need it and can guarantee its lifetime. Handles matter for objects created
 on your behalf or for safely referencing objects whose lifetimes your code may
 not have control over. Handles are also used for resolving our find operations
 to ensure they are safe to call regardless of timing (see
