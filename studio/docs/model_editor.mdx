@@ -943,17 +943,28 @@ tetrahedral mesh's boundary, which stays the collider geometry when an SDF
 collider is enabled. The visual mesh is for rendering and deforms with the
 simulation.
 
+A rod actor's polyline model takes a contact skin and visual mesh the same way.
+
 | Method | What it does |
 |--------|--------------|
-| **Upstream Surface** | Embed the triangle surface of a stage above in the tetrahedral mesh. |
-| **Tube** | Generate a tubular surface skinned to the segments of a polyline; see [Polyline Models](#polyline-models). |
+| **Upstream Surface** | Embed the triangle surface of a stage above in the tetrahedral mesh or polyline. |
+| **Tube** | Generate a tube of circular cross-section around a polyline, skinned to its segments; see [Polyline Models](#polyline-models). |
 
 **Upstream Surface** picks its **Surface** like Edge Flip Optimization's
 **Reference**; pick the **Wrap Mesh** stage that Tetrahedralize filled to use
-the wrapped surface itself. It must follow **Tetrahedralize**. The surface is
-embedded where it is, so an **Apply SRT Transformation** between it and the
-Embed modifier moves only the tetrahedral mesh, which shows as a large maximum
-extrapolation in the stats.
+the wrapped surface itself. It must follow **Tetrahedralize** or a polyline
+source. The surface is embedded where it is, so an **Apply SRT
+Transformation** between it and the Embed modifier moves only the tetrahedral
+mesh, which shows as a large maximum extrapolation in the stats.
+
+In a polyline, each surface node is skinned to the elements nearest it. It
+blends at most **Nominal Elements** elements where the polyline is straight or
+gently curved, and at most **Max Elements** anywhere. With **Nominal Elements**
+set to 1, two neighboring elements still blend around a joint. The log warns about nodes
+whose weights vary steeply. These usually reach toward a bend's center of
+curvature. It also warns about nodes bound to elements that are not
+consecutive, where the polyline comes close to itself. Embed in a polyline that
+is not coiled.
 
 The render model's triangle mesh is one possible upstream surface. To embed it,
 pick a **Source from Render Model** stage. When the tetrahedral mesh is built
