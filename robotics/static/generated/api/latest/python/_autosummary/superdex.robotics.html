@@ -132,6 +132,128 @@
              
   <section id="module-superdex.robotics">
 <span id="superdex-robotics"></span><h1>superdex.robotics<a class="headerlink" href="#module-superdex.robotics" title="Permalink to this heading"></a></h1>
+<p class="rubric">Functions</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#superdex.robotics.derive" title="superdex.robotics.derive"><code class="xref py py-obj docutils literal notranslate"><span class="pre">derive</span></code></a>(seed, key[, index])</p></td>
+<td><p>Deterministic 64-bit sub-seed from a master seed and a stable key.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#superdex.robotics.load_bot_prefab_from_file" title="superdex.robotics.load_bot_prefab_from_file"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load_bot_prefab_from_file</span></code></a>(path)</p></td>
+<td><p>Load bot parameters from a .superdex_bot file using the default file-based loader.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#superdex.robotics.load_bot_prefab_from_urdf_file" title="superdex.robotics.load_bot_prefab_from_urdf_file"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load_bot_prefab_from_urdf_file</span></code></a>(path)</p></td>
+<td><p>Load bot parameters from a URDF file.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#superdex.robotics.load_bot_prefab_from_mjcf_file" title="superdex.robotics.load_bot_prefab_from_mjcf_file"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load_bot_prefab_from_mjcf_file</span></code></a>(path)</p></td>
+<td><p>Load bot parameters from an MJCF (MuJoCo XML) file.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#superdex.robotics.build_articulated_pose_from_bot_pose" title="superdex.robotics.build_articulated_pose_from_bot_pose"><code class="xref py py-obj docutils literal notranslate"><span class="pre">build_articulated_pose_from_bot_pose</span></code></a>(...)</p></td>
+<td><p>Convert a bot-space pose to an articulated-actor pose.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#superdex.robotics.make_tactile_taxel_layout" title="superdex.robotics.make_tactile_taxel_layout"><code class="xref py py-obj docutils literal notranslate"><span class="pre">make_tactile_taxel_layout</span></code></a>(positions)</p></td>
+<td><p>Build an ordered tactile taxel layout.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#superdex.robotics.read_tactile_taxel_forces" title="superdex.robotics.read_tactile_taxel_forces"><code class="xref py py-obj docutils literal notranslate"><span class="pre">read_tactile_taxel_forces</span></code></a>(actor, ...)</p></td>
+<td><p>Read a dense per-taxel force observation from a Mochi actor.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#superdex.robotics.aggregate_tactile_force" title="superdex.robotics.aggregate_tactile_force"><code class="xref py py-obj docutils literal notranslate"><span class="pre">aggregate_tactile_force</span></code></a>(taxel_forces)</p></td>
+<td><p>Sum per-taxel forces into one aggregate force observation.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#superdex.robotics.aggregate_tactile_wrench" title="superdex.robotics.aggregate_tactile_wrench"><code class="xref py py-obj docutils literal notranslate"><span class="pre">aggregate_tactile_wrench</span></code></a>(layout, ...)</p></td>
+<td><p>Aggregate per-taxel forces into a wrench about referencePoint.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#superdex.robotics.build_tactile_rect_projection" title="superdex.robotics.build_tactile_rect_projection"><code class="xref py py-obj docutils literal notranslate"><span class="pre">build_tactile_rect_projection</span></code></a>(layout, params)</p></td>
+<td><p>Resolve a tactile spherical-cap layout into a rectangular projection.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#superdex.robotics.rasterize_tactile_rect_projection" title="superdex.robotics.rasterize_tactile_rect_projection"><code class="xref py py-obj docutils literal notranslate"><span class="pre">rasterize_tactile_rect_projection</span></code></a>(...)</p></td>
+<td><p>Rasterize per-taxel forces through a resolved tactile projection.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#superdex.robotics.map_tactile_hemisphere_to_rect" title="superdex.robotics.map_tactile_hemisphere_to_rect"><code class="xref py py-obj docutils literal notranslate"><span class="pre">map_tactile_hemisphere_to_rect</span></code></a>(layout, ...)</p></td>
+<td><p>Resolve and rasterize a per-taxel force observation in one call.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#superdex.robotics.create_bot" title="superdex.robotics.create_bot"><code class="xref py py-obj docutils literal notranslate"><span class="pre">create_bot</span></code></a>(scene, bot_prefab, bots_context)</p></td>
+<td><p>Create a <a class="reference internal" href="#superdex.robotics.Bot" title="superdex.robotics.Bot"><code class="xref py py-class docutils literal notranslate"><span class="pre">Bot</span></code></a> runtime object from a <a class="reference internal" href="#superdex.robotics.BotPrefab" title="superdex.robotics.BotPrefab"><code class="xref py py-class docutils literal notranslate"><span class="pre">BotPrefab</span></code></a>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#superdex.robotics.destroy_bot" title="superdex.robotics.destroy_bot"><code class="xref py py-obj docutils literal notranslate"><span class="pre">destroy_bot</span></code></a>(scene, bot)</p></td>
+<td><p>Destroy a <a class="reference internal" href="#superdex.robotics.Bot" title="superdex.robotics.Bot"><code class="xref py py-class docutils literal notranslate"><span class="pre">Bot</span></code></a> previously created by <a class="reference internal" href="#superdex.robotics.create_bot" title="superdex.robotics.create_bot"><code class="xref py py-func docutils literal notranslate"><span class="pre">create_bot()</span></code></a>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#superdex.robotics.load_bot_scene_prefab_from_file" title="superdex.robotics.load_bot_scene_prefab_from_file"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load_bot_scene_prefab_from_file</span></code></a>(path)</p></td>
+<td><p>Load bot scene parameters from a .superdex_scene JSON file.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#superdex.robotics.save_bot_scene_to_urdf_string" title="superdex.robotics.save_bot_scene_to_urdf_string"><code class="xref py py-obj docutils literal notranslate"><span class="pre">save_bot_scene_to_urdf_string</span></code></a>(scene, ...)</p></td>
+<td><p>Export a bot scene to a URDF XML string, without meshes.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#superdex.robotics.load_bot_scene" title="superdex.robotics.load_bot_scene"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load_bot_scene</span></code></a>(...)</p></td>
+<td><p>Overloaded function.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#superdex.robotics.load_bot_task_prefab_from_file" title="superdex.robotics.load_bot_task_prefab_from_file"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load_bot_task_prefab_from_file</span></code></a>(path)</p></td>
+<td><p>Load task parameters from a .superdex_task JSON file.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#superdex.robotics.load_dr_episode_list_from_file" title="superdex.robotics.load_dr_episode_list_from_file"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load_dr_episode_list_from_file</span></code></a>(path)</p></td>
+<td><p>Load and validate schema-2 resolved episodes using standard reflection.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#superdex.robotics.save_dr_episode_list_to_file" title="superdex.robotics.save_dr_episode_list_to_file"><code class="xref py py-obj docutils literal notranslate"><span class="pre">save_dr_episode_list_to_file</span></code></a>(list, path)</p></td>
+<td><p>Validate and save resolved episodes, preserving provenance and metadata.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#superdex.robotics.parse_seed" title="superdex.robotics.parse_seed"><code class="xref py py-obj docutils literal notranslate"><span class="pre">parse_seed</span></code></a>(seed)</p></td>
+<td><p>Parse a decimal uint64 seed string.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#superdex.robotics.validate_dr_episode_list" title="superdex.robotics.validate_dr_episode_list"><code class="xref py py-obj docutils literal notranslate"><span class="pre">validate_dr_episode_list</span></code></a>(list)</p></td>
+<td><p>Check supported schema, unique episode indices, nonempty keys/values, scalar length and finite values.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#superdex.robotics.spawn_pose_dr_key" title="superdex.robotics.spawn_pose_dr_key"><code class="xref py py-obj docutils literal notranslate"><span class="pre">spawn_pose_dr_key</span></code></a>(spawn_name, ...)</p></td>
+<td><p>The DR episode key an entry's PoseRandomization offset is drawn under.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#superdex.robotics.spawn_prefab_dr_key" title="superdex.robotics.spawn_prefab_dr_key"><code class="xref py py-obj docutils literal notranslate"><span class="pre">spawn_prefab_dr_key</span></code></a>(spawn_name)</p></td>
+<td><p>The DR episode key an entry's PrefabSelection is drawn under.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#superdex.robotics.get_pose_randomization_class" title="superdex.robotics.get_pose_randomization_class"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_pose_randomization_class</span></code></a>(entry)</p></td>
+<td><p>The DR class of an entry's PoseRandomization.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#superdex.robotics.get_prefab_selection" title="superdex.robotics.get_prefab_selection"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_prefab_selection</span></code></a>(entry)</p></td>
+<td><p>The candidates of an entry's PrefabSelection.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#superdex.robotics.compute_world_from_task" title="superdex.robotics.compute_world_from_task"><code class="xref py py-obj docutils literal notranslate"><span class="pre">compute_world_from_task</span></code></a>(scene, task)</p></td>
+<td><p>Where a task's root-level spawns go on a scene: scene.taskRoot * task.taskRootOffset, with an absent offset taken as identity; identity when the scene declares no task root.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#superdex.robotics.resolve_reset_state" title="superdex.robotics.resolve_reset_state"><code class="xref py py-obj docutils literal notranslate"><span class="pre">resolve_reset_state</span></code></a>(...)</p></td>
+<td><p>Overloaded function.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#superdex.robotics.load_asset_snapshot" title="superdex.robotics.load_asset_snapshot"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load_asset_snapshot</span></code></a>(path)</p></td>
+<td><p>Read a .superdex_scene_snapshot file.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#superdex.robotics.save_asset_snapshot" title="superdex.robotics.save_asset_snapshot"><code class="xref py py-obj docutils literal notranslate"><span class="pre">save_asset_snapshot</span></code></a>(snapshot, path)</p></td>
+<td><p>Write a snapshot to a file as JSON.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#superdex.robotics.apply_asset_snapshot" title="superdex.robotics.apply_asset_snapshot"><code class="xref py py-obj docutils literal notranslate"><span class="pre">apply_asset_snapshot</span></code></a>(snapshot, asset_root)</p></td>
+<td><p>Pin every file in a snapshot for the rest of the process, so each loads from its version instead, replacing any snapshot already applied.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#superdex.robotics.clear_asset_snapshot" title="superdex.robotics.clear_asset_snapshot"><code class="xref py py-obj docutils literal notranslate"><span class="pre">clear_asset_snapshot</span></code></a>()</p></td>
+<td><p>Stop applying the snapshot <a class="reference internal" href="#superdex.robotics.apply_asset_snapshot" title="superdex.robotics.apply_asset_snapshot"><code class="xref py py-func docutils literal notranslate"><span class="pre">apply_asset_snapshot()</span></code></a> applied, so files load from their tips again.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#superdex.robotics.create_context" title="superdex.robotics.create_context"><code class="xref py py-obj docutils literal notranslate"><span class="pre">create_context</span></code></a>()</p></td>
+<td><p>Create a RoboticsContext.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#superdex.robotics.register_python_controller" title="superdex.robotics.register_python_controller"><code class="xref py py-obj docutils literal notranslate"><span class="pre">register_python_controller</span></code></a>(bots_ctx, ...)</p></td>
+<td><p>Register a controller type implemented in Python.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#superdex.robotics.register_python_sensor" title="superdex.robotics.register_python_sensor"><code class="xref py py-obj docutils literal notranslate"><span class="pre">register_python_sensor</span></code></a>(bots_ctx, type_name, ...)</p></td>
+<td><p>Register a sensor type implemented in Python.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#superdex.robotics.register_python_actuator" title="superdex.robotics.register_python_actuator"><code class="xref py py-obj docutils literal notranslate"><span class="pre">register_python_actuator</span></code></a>(bots_ctx, ...)</p></td>
+<td><p>Register an actuator type implemented in Python.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#superdex.robotics.get_python_controller" title="superdex.robotics.get_python_controller"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_python_controller</span></code></a>(bots_ctx, handle)</p></td>
+<td><p>Return the Python controller instance behind a handle (created from a type registered via register_python_controller), or None if the handle is not a Python controller.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#superdex.robotics.get_python_sensor" title="superdex.robotics.get_python_sensor"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_python_sensor</span></code></a>(bots_ctx, handle)</p></td>
+<td><p>Return the Python sensor instance behind a handle (created from a type registered via register_python_sensor), or None if the handle is not a Python sensor.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#superdex.robotics.get_python_actuator" title="superdex.robotics.get_python_actuator"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_python_actuator</span></code></a>(bots_ctx, handle)</p></td>
+<td><p>Return the Python actuator instance behind a handle (created from a type registered via register_python_actuator), or None if the handle is not a Python actuator.</p></td>
+</tr>
+</tbody>
+</table>
 <p class="rubric">Classes</p>
 <table class="autosummary longtable docutils align-default">
 <tbody>
@@ -400,7 +522,7 @@
 <td><p>An extra URDF frame rigidly attached to every exported link named <code class="xref py py-attr docutils literal notranslate"><span class="pre">link</span></code>.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#superdex.robotics.SceneUrdfOptions" title="superdex.robotics.SceneUrdfOptions"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SceneUrdfOptions</span></code></a>(*args, **kwargs)</p></td>
-<td><p>Options for <code class="xref py py-func docutils literal notranslate"><span class="pre">save_bot_scene_to_urdf_string()</span></code>.</p></td>
+<td><p>Options for <a class="reference internal" href="#superdex.robotics.save_bot_scene_to_urdf_string" title="superdex.robotics.save_bot_scene_to_urdf_string"><code class="xref py py-func docutils literal notranslate"><span class="pre">save_bot_scene_to_urdf_string()</span></code></a>.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#superdex.robotics.BotScene" title="superdex.robotics.BotScene"><code class="xref py py-obj docutils literal notranslate"><span class="pre">BotScene</span></code></a></p></td>
 <td><p>Runtime representation of a loaded .superdex_scene.</p></td>
@@ -513,7 +635,7 @@
 <tr class="row-even"><td><p><a class="reference internal" href="#superdex.robotics.DynamicArraySpawnEntry" title="superdex.robotics.DynamicArraySpawnEntry"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DynamicArraySpawnEntry</span></code></a>(*args, **kwargs)</p></td>
 <td><p>A resizable array with contiguous storage.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">SpanConstSensorGraphNodeView</span></code>(*args, **kwargs)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#superdex.robotics.SpanConstSensorGraphNodeView" title="superdex.robotics.SpanConstSensorGraphNodeView"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SpanConstSensorGraphNodeView</span></code></a>(*args, **kwargs)</p></td>
 <td><p></p></td>
 </tr>
 </tbody>
@@ -650,13 +772,13 @@ when it declares one. Unset leaves every task where its own coordinates put it.<
 <p>Runtime interface to a bot instance in a <code class="xref py py-class docutils literal notranslate"><span class="pre">Scene</span></code>.</p>
 <p>A <a class="reference internal" href="#superdex.robotics.Bot" title="superdex.robotics.Bot"><code class="xref py py-class docutils literal notranslate"><span class="pre">Bot</span></code></a> wraps a single articulated
 <code class="xref py py-class docutils literal notranslate"><span class="pre">Actor</span></code> with the controllers, sensors, and actuators
-created for it. Bots are created via <code class="xref py py-func docutils literal notranslate"><span class="pre">create_bot()</span></code> and
-destroyed via <code class="xref py py-func docutils literal notranslate"><span class="pre">destroy_bot()</span></code>. The
+created for it. Bots are created via <a class="reference internal" href="#superdex.robotics.create_bot" title="superdex.robotics.create_bot"><code class="xref py py-func docutils literal notranslate"><span class="pre">create_bot()</span></code></a> and
+destroyed via <a class="reference internal" href="#superdex.robotics.destroy_bot" title="superdex.robotics.destroy_bot"><code class="xref py py-func docutils literal notranslate"><span class="pre">destroy_bot()</span></code></a>. The
 <a class="reference internal" href="#superdex.robotics.RoboticsContext" title="superdex.robotics.RoboticsContext"><code class="xref py py-class docutils literal notranslate"><span class="pre">RoboticsContext</span></code></a> owns the bot memory allocated and
 deallocated by these functions, respectively. The raw
 <a class="reference internal" href="#superdex.robotics.Bot" title="superdex.robotics.Bot"><code class="xref py py-class docutils literal notranslate"><span class="pre">Bot</span></code></a>* returned by
-<code class="xref py py-func docutils literal notranslate"><span class="pre">create_bot()</span></code> remains valid until
-<code class="xref py py-func docutils literal notranslate"><span class="pre">destroy_bot()</span></code> is called or the
+<a class="reference internal" href="#superdex.robotics.create_bot" title="superdex.robotics.create_bot"><code class="xref py py-func docutils literal notranslate"><span class="pre">create_bot()</span></code></a> remains valid until
+<a class="reference internal" href="#superdex.robotics.destroy_bot" title="superdex.robotics.destroy_bot"><code class="xref py py-func docutils literal notranslate"><span class="pre">destroy_bot()</span></code></a> is called or the
 <a class="reference internal" href="#superdex.robotics.RoboticsContext" title="superdex.robotics.RoboticsContext"><code class="xref py py-class docutils literal notranslate"><span class="pre">RoboticsContext</span></code></a> is destroyed.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
@@ -948,7 +1070,7 @@ inferred from the actor (see
 <a class="reference internal" href="#superdex.robotics.RoboticsContext.get_bot_containing_actor" title="superdex.robotics.RoboticsContext.get_bot_containing_actor"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_bot_containing_actor()</span></code></a>), so how a
 controller was created makes no difference to whether it appears here. Mirrors
 <a class="reference internal" href="#superdex.robotics.Bot.get_sensor_handles" title="superdex.robotics.Bot.get_sensor_handles"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_sensor_handles()</span></code></a>: the same set the bot-scoped
-finders draw from, and the same set <code class="xref py py-func docutils literal notranslate"><span class="pre">destroy_bot()</span></code> tears
+finders draw from, and the same set <a class="reference internal" href="#superdex.robotics.destroy_bot" title="superdex.robotics.destroy_bot"><code class="xref py py-func docutils literal notranslate"><span class="pre">destroy_bot()</span></code></a> tears
 down. Resolve each handle with
 <a class="reference internal" href="#superdex.robotics.RoboticsContext.get_controller" title="superdex.robotics.RoboticsContext.get_controller"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_controller()</span></code></a>.</p>
 <dl class="field-list simple">
@@ -1017,7 +1139,7 @@ down. Resolve each handle with
 <dd><p>Get the handles of every sensor this bot owns.</p>
 <p>Covers sensors declared per link in the <a class="reference internal" href="#superdex.robotics.BotPrefab" title="superdex.robotics.BotPrefab"><code class="xref py py-class docutils literal notranslate"><span class="pre">BotPrefab</span></code></a>
 via <a class="reference internal" href="#superdex.robotics.BotSensorPrefab" title="superdex.robotics.BotSensorPrefab"><code class="xref py py-class docutils literal notranslate"><span class="pre">BotSensorPrefab</span></code></a> and instantiated by
-<code class="xref py py-func docutils literal notranslate"><span class="pre">create_bot()</span></code>, those added afterwards via
+<a class="reference internal" href="#superdex.robotics.create_bot" title="superdex.robotics.create_bot"><code class="xref py py-func docutils literal notranslate"><span class="pre">create_bot()</span></code></a>, those added afterwards via
 <a class="reference internal" href="#superdex.robotics.Bot.create_sensor" title="superdex.robotics.Bot.create_sensor"><code class="xref py py-meth docutils literal notranslate"><span class="pre">create_sensor()</span></code></a>, and those created straight off one
 of this bot’s actors with
 <a class="reference internal" href="#superdex.robotics.RoboticsContext.create_sensor" title="superdex.robotics.RoboticsContext.create_sensor"><code class="xref py py-meth docutils literal notranslate"><span class="pre">create_sensor()</span></code></a> — the owning bot is
@@ -1025,7 +1147,7 @@ inferred from the actor (see
 <a class="reference internal" href="#superdex.robotics.RoboticsContext.get_bot_containing_actor" title="superdex.robotics.RoboticsContext.get_bot_containing_actor"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_bot_containing_actor()</span></code></a>), so how a
 sensor was created makes no difference to whether it appears here. This is the
 same set the bot-scoped finders draw from, and the same set
-<code class="xref py py-func docutils literal notranslate"><span class="pre">destroy_bot()</span></code> tears down. Use
+<a class="reference internal" href="#superdex.robotics.destroy_bot" title="superdex.robotics.destroy_bot"><code class="xref py py-func docutils literal notranslate"><span class="pre">destroy_bot()</span></code></a> tears down. Use
 <a class="reference internal" href="#superdex.robotics.RoboticsContext.get_sensor" title="superdex.robotics.RoboticsContext.get_sensor"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_sensor()</span></code></a> on each handle to obtain
 the underlying <a class="reference internal" href="#superdex.robotics.SensorBase" title="superdex.robotics.SensorBase"><code class="xref py py-class docutils literal notranslate"><span class="pre">SensorBase</span></code></a> pointer.</p>
 <dl class="field-list simple">
@@ -1225,7 +1347,7 @@ fills.</p>
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">effort_limit</span></span><a class="headerlink" href="#superdex.robotics.BotJointPrefab.effort_limit" title="Permalink to this definition"></a></dt>
 <dd><p>Maximum effort magnitude that may be applied to actuate this joint [N·m for
 revolute, N for prismatic]. Interpreted by regime: a negative value (default
-<code class="xref py py-const docutils literal notranslate"><span class="pre">EFFORT_UNBOUNDED</span></code>) is unbounded; 0 is non-actuated
+<a class="reference internal" href="#superdex.robotics.EFFORT_UNBOUNDED" title="superdex.robotics.EFFORT_UNBOUNDED"><code class="xref py py-const docutils literal notranslate"><span class="pre">EFFORT_UNBOUNDED</span></code></a>) is unbounded; 0 is non-actuated
 (no effort can be applied, though the joint still moves freely within its range
 under external forces); a positive value is a finite limit. This is advisory
 metadata — it is not copied into the physics articulation, so the sim enforces
@@ -5123,7 +5245,7 @@ SensorBase::GetWorldTransform. Default: identity.</p>
 <dt class="sig sig-object py" id="superdex.robotics.SceneUrdfOptions">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">SceneUrdfOptions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#superdex.robotics.SceneUrdfOptions" title="Permalink to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<p>Options for <code class="xref py py-func docutils literal notranslate"><span class="pre">save_bot_scene_to_urdf_string()</span></code>.</p>
+<p>Options for <a class="reference internal" href="#superdex.robotics.save_bot_scene_to_urdf_string" title="superdex.robotics.save_bot_scene_to_urdf_string"><code class="xref py py-func docutils literal notranslate"><span class="pre">save_bot_scene_to_urdf_string()</span></code></a>.</p>
 <dl class="py property">
 <dt class="sig sig-object py" id="superdex.robotics.SceneUrdfOptions.instance_name">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">instance_name</span></span><a class="headerlink" href="#superdex.robotics.SceneUrdfOptions.instance_name" title="Permalink to this definition"></a></dt>
@@ -5500,6 +5622,11 @@ default”.</p>
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">SensorDType</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">values</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#superdex.robotics.SensorDType" title="Permalink to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Enum</span></code></p>
 <p>Scalar representation of one sensor tensor element.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.robotics.SensorDType.FLOAT32">
+<span class="sig-name descname"><span class="pre">FLOAT32</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0</span></em><a class="headerlink" href="#superdex.robotics.SensorDType.FLOAT32" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
 </dd></dl>
 
 <dl class="py class">
@@ -6196,6 +6323,17 @@ business, not superdex’s.</p>
 </dd></dl>
 
 <dl class="py class">
+<dt class="sig sig-object py" id="superdex.robotics.SpanConstSensorGraphNodeView">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">SpanConstSensorGraphNodeView</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#superdex.robotics.SpanConstSensorGraphNodeView" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.robotics.SpanConstSensorGraphNodeView.tolist">
+<span class="sig-name descname"><span class="pre">tolist</span></span><a class="headerlink" href="#superdex.robotics.SpanConstSensorGraphNodeView.tolist" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
 <dt class="sig sig-object py" id="superdex.robotics.SpawnEntry">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">SpawnEntry</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#superdex.robotics.SpawnEntry" title="Permalink to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
@@ -6559,6 +6697,877 @@ consumer keeps whatever predicate it already implements, and
 <a class="reference internal" href="#superdex.robotics.TerminationOutcome.success" title="superdex.robotics.TerminationOutcome.success"><code class="xref py py-attr docutils literal notranslate"><span class="pre">success</span></code></a> is meaningless.</p>
 </dd></dl>
 
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.robotics.aggregate_tactile_force">
+<span class="sig-name descname"><span class="pre">aggregate_tactile_force</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">taxel_forces</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.robotics.TactileTaxelForces" title="superdex.robotics.TactileTaxelForces"><span class="pre">TactileTaxelForces</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.robotics.TactileAggregateForce" title="superdex.robotics.TactileAggregateForce"><span class="pre">TactileAggregateForce</span></a></span></span><a class="headerlink" href="#superdex.robotics.aggregate_tactile_force" title="Permalink to this definition"></a></dt>
+<dd><p>Sum per-taxel forces into one aggregate force observation.</p>
+<p>No learned response, calibration, threshold, or torque model is applied.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>taxel_forces</strong> (<a class="reference internal" href="#superdex.robotics.TactileTaxelForces" title="superdex.robotics.TactileTaxelForces"><em>TactileTaxelForces</em></a>) – Dense per-taxel force observation.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Sum of all taxel forces.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>Error</strong> – If an error occurs.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.robotics.aggregate_tactile_wrench">
+<span class="sig-name descname"><span class="pre">aggregate_tactile_wrench</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">layout</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.robotics.TactileTaxelLayout" title="superdex.robotics.TactileTaxelLayout"><span class="pre">TactileTaxelLayout</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">taxel_forces</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.robotics.TactileTaxelForces" title="superdex.robotics.TactileTaxelForces"><span class="pre">TactileTaxelForces</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">reference_point</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">superdex.physics.Real3</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.robotics.TactileAggregateWrench" title="superdex.robotics.TactileAggregateWrench"><span class="pre">TactileAggregateWrench</span></a></span></span><a class="headerlink" href="#superdex.robotics.aggregate_tactile_wrench" title="Permalink to this definition"></a></dt>
+<dd><p>Aggregate per-taxel forces into a wrench about referencePoint.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>layout</strong> (<a class="reference internal" href="#superdex.robotics.TactileTaxelLayout" title="superdex.robotics.TactileTaxelLayout"><em>TactileTaxelLayout</em></a>) – Ordered taxel positions in the sensor link
+frame.</p></li>
+<li><p><strong>taxel_forces</strong> (<a class="reference internal" href="#superdex.robotics.TactileTaxelForces" title="superdex.robotics.TactileTaxelForces"><em>TactileTaxelForces</em></a>) – Per-taxel forces indexed by layout.</p></li>
+<li><p><strong>reference_point</strong> (<em>Real3Like</em>) – Torque reference point [m] in the sensor link
+frame.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Force and torque about the configured reference point.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>Error</strong> – If an error occurs.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.robotics.apply_asset_snapshot">
+<span class="sig-name descname"><span class="pre">apply_asset_snapshot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">snapshot</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.robotics.AssetSnapshot" title="superdex.robotics.AssetSnapshot"><span class="pre">AssetSnapshot</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">asset_root</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#superdex.robotics.apply_asset_snapshot" title="Permalink to this definition"></a></dt>
+<dd><p>Pin every file in a snapshot for the rest of the process, so each loads from its
+version instead, replacing any snapshot already applied.</p>
+<p>Entries are resolved against assetRoot, the directory holding the scene’s
+.superdex_root, wherever its asset tree is mounted. Every version must exist,
+beside the file it pins, and no version may itself be a pinned file. Then load
+the scene from the returned path as usual: the scene and every file it
+references, however deeply, load from their pinned versions. A file under
+assetRoot, or under the .superdex_root directory of any pinned file, that the
+snapshot does not pin fails to load instead of loading its tip. Applying fails
+if a pinned .superdex_root no longer matches its version. Loaded assets carry
+the versions’ paths, so don’t save assets while a snapshot is applied; archiving
+is refused. Call <a class="reference internal" href="#superdex.robotics.clear_asset_snapshot" title="superdex.robotics.clear_asset_snapshot"><code class="xref py py-func docutils literal notranslate"><span class="pre">clear_asset_snapshot()</span></code></a> to stop
+applying it. On failure no snapshot is applied, including any applied before.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>snapshot</strong> (<a class="reference internal" href="#superdex.robotics.AssetSnapshot" title="superdex.robotics.AssetSnapshot"><em>AssetSnapshot</em></a>) – The snapshot to apply.</p></li>
+<li><p><strong>asset_root</strong> (<em>str</em>) – Directory containing the .superdex_root the snapshot’s
+paths are relative to.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Absolute path of the snapshot’s scene, to load as usual.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>Error</strong> – If an error occurs.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.robotics.build_articulated_pose_from_bot_pose">
+<span class="sig-name descname"><span class="pre">build_articulated_pose_from_bot_pose</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bot_prefab</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.robotics.BotPrefab" title="superdex.robotics.BotPrefab"><span class="pre">BotPrefab</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">src_pose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Span</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_actor_dofs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">superdex.physics.DynamicArrayReal</span></span></span><a class="headerlink" href="#superdex.robotics.build_articulated_pose_from_bot_pose" title="Permalink to this definition"></a></dt>
+<dd><p>Convert a bot-space pose to an articulated-actor pose.</p>
+<p>Bot DOFs never include the root joint’s, whether or not the articulation has
+any: a Free root contributes 6 actor DOFs that bot space excludes, and a Hard
+root contributes none. The two spaces therefore share an order and differ only
+by that leading offset, so this copies srcPose to pose[i + numBaseDofs] and
+zero-fills the base DOFs, producing the actor-DOF layout
+<code class="xref py py-meth docutils literal notranslate"><span class="pre">set_articulated_pose_from_joints()</span></code> expects. It
+never permutes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>bot_prefab</strong> (<a class="reference internal" href="#superdex.robotics.BotPrefab" title="superdex.robotics.BotPrefab"><em>BotPrefab</em></a>) – Bot describing the articulation.</p></li>
+<li><p><strong>src_pose</strong> (<em>ArrayLikeReal</em>) – Bot-space pose (must have
+<code class="docutils literal notranslate"><span class="pre">superdex::robotics::BotPrefab::_numDofs</span></code> entries).</p></li>
+<li><p><strong>num_actor_dofs</strong> (<em>int</em>) – The actor’s DOF count
+(<code class="xref py py-meth docutils literal notranslate"><span class="pre">get_num_dofs()</span></code>).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Pose in actor-DOF layout, sized to numActorDofs.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>Error</strong> – If an error occurs.</p>
+</dd>
+</dl>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>This documentation references the following C++ API, which is not available
+in Python: <code class="docutils literal notranslate"><span class="pre">superdex::robotics::BotPrefab::_numDofs</span></code>.</p>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.robotics.build_tactile_rect_projection">
+<span class="sig-name descname"><span class="pre">build_tactile_rect_projection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">layout</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.robotics.TactileTaxelLayout" title="superdex.robotics.TactileTaxelLayout"><span class="pre">TactileTaxelLayout</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.robotics.TactileHemisphereRectParams" title="superdex.robotics.TactileHemisphereRectParams"><span class="pre">TactileHemisphereRectParams</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.robotics.TactileRectProjectionMap" title="superdex.robotics.TactileRectProjectionMap"><span class="pre">TactileRectProjectionMap</span></a></span></span><a class="headerlink" href="#superdex.robotics.build_tactile_rect_projection" title="Permalink to this definition"></a></dt>
+<dd><p>Resolve a tactile spherical-cap layout into a rectangular projection.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>layout</strong> (<a class="reference internal" href="#superdex.robotics.TactileTaxelLayout" title="superdex.robotics.TactileTaxelLayout"><em>TactileTaxelLayout</em></a>) – Ordered taxel positions in the sensor link
+frame.</p></li>
+<li><p><strong>params</strong> (<a class="reference internal" href="#superdex.robotics.TactileHemisphereRectParams" title="superdex.robotics.TactileHemisphereRectParams"><em>TactileHemisphereRectParams</em></a>) – Projection frame, geometry, selection
+and output grid shape.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Stable coordinates, nearest cells and a force-conserving contribution map.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>Error</strong> – If an error occurs.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.robotics.clear_asset_snapshot">
+<span class="sig-name descname"><span class="pre">clear_asset_snapshot</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#superdex.robotics.clear_asset_snapshot" title="Permalink to this definition"></a></dt>
+<dd><p>Stop applying the snapshot <a class="reference internal" href="#superdex.robotics.apply_asset_snapshot" title="superdex.robotics.apply_asset_snapshot"><code class="xref py py-func docutils literal notranslate"><span class="pre">apply_asset_snapshot()</span></code></a>
+applied, so files load from their tips again. Loads already done are unaffected.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.robotics.compute_world_from_task">
+<span class="sig-name descname"><span class="pre">compute_world_from_task</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scene</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.robotics.BaseSceneParams" title="superdex.robotics.BaseSceneParams"><span class="pre">BaseSceneParams</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">task</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.robotics.BotTaskPrefab" title="superdex.robotics.BotTaskPrefab"><span class="pre">BotTaskPrefab</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">superdex.physics.TransformRT</span></span></span><a class="headerlink" href="#superdex.robotics.compute_world_from_task" title="Permalink to this definition"></a></dt>
+<dd><p>Where a task’s root-level spawns go on a scene: scene.taskRoot *
+task.taskRootOffset, with an absent offset taken as identity; identity when the
+scene declares no task root.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>scene</strong> (<a class="reference internal" href="#superdex.robotics.BaseSceneParams" title="superdex.robotics.BaseSceneParams"><em>BaseSceneParams</em></a>) – The bot scene’s scene block.</p></li>
+<li><p><strong>task</strong> (<a class="reference internal" href="#superdex.robotics.BotTaskPrefab" title="superdex.robotics.BotTaskPrefab"><em>BotTaskPrefab</em></a>) – The task.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The world-from-task transform to pass to ResolveResetState.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.robotics.create_bot">
+<span class="sig-name descname"><span class="pre">create_bot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scene</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">superdex.physics.Scene</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bot_prefab</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.robotics.BotPrefab" title="superdex.robotics.BotPrefab"><span class="pre">BotPrefab</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">bots_context</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.robotics.RoboticsContext" title="superdex.robotics.RoboticsContext"><span class="pre">RoboticsContext</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.robotics.Bot" title="superdex.robotics.Bot"><span class="pre">Bot</span></a></span></span><a class="headerlink" href="#superdex.robotics.create_bot" title="Permalink to this definition"></a></dt>
+<dd><p>Create a <a class="reference internal" href="#superdex.robotics.Bot" title="superdex.robotics.Bot"><code class="xref py py-class docutils literal notranslate"><span class="pre">Bot</span></code></a> runtime object from a
+<a class="reference internal" href="#superdex.robotics.BotPrefab" title="superdex.robotics.BotPrefab"><code class="xref py py-class docutils literal notranslate"><span class="pre">BotPrefab</span></code></a>. Builds the underlying articulated actor
+in scene and seeds its default pose. The returned
+<a class="reference internal" href="#superdex.robotics.Bot" title="superdex.robotics.Bot"><code class="xref py py-class docutils literal notranslate"><span class="pre">Bot</span></code></a> owns no scene resources beyond the actor —
+destroy it with <a class="reference internal" href="#superdex.robotics.destroy_bot" title="superdex.robotics.destroy_bot"><code class="xref py py-func docutils literal notranslate"><span class="pre">destroy_bot()</span></code></a>. This must be in the
+scene thread (i.e. in an async callback if using async scenes.)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>scene</strong> (<em>Scene</em>) – Target scene in which to create the bot and its components.</p></li>
+<li><p><strong>bot_prefab</strong> (<a class="reference internal" href="#superdex.robotics.BotPrefab" title="superdex.robotics.BotPrefab"><em>BotPrefab</em></a>) – Bot parameters describing the articulation.</p></li>
+<li><p><strong>bots_context</strong> (<a class="reference internal" href="#superdex.robotics.RoboticsContext" title="superdex.robotics.RoboticsContext"><em>RoboticsContext</em></a>) – Bots context used for components created on
+the bot. Must outlive the returned <a class="reference internal" href="#superdex.robotics.Bot" title="superdex.robotics.Bot"><code class="xref py py-class docutils literal notranslate"><span class="pre">Bot</span></code></a>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Pointer to the created <a class="reference internal" href="#superdex.robotics.Bot" title="superdex.robotics.Bot"><code class="xref py py-class docutils literal notranslate"><span class="pre">Bot</span></code></a>.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>Error</strong> – If an error occurs.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.robotics.create_context">
+<span class="sig-name descname"><span class="pre">create_context</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.robotics.RoboticsContext" title="superdex.robotics.RoboticsContext"><span class="pre">RoboticsContext</span></a></span></span><a class="headerlink" href="#superdex.robotics.create_context" title="Permalink to this definition"></a></dt>
+<dd><p>Create a RoboticsContext. Returns the existing one if already created.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.robotics.derive">
+<span class="sig-name descname"><span class="pre">derive</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">...</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#superdex.robotics.derive" title="Permalink to this definition"></a></dt>
+<dd><p>Deterministic 64-bit sub-seed from a master seed and a stable key.</p>
+<p>Stateless and order-independent. Returns a seed for the caller’s random
+generator; it does not sample values. Uses the FNV-1a key hash XOR seed,
+SplitMix64-finalized. Parity-locked to the Python DR derivation: both must match
+bit-for-bit, and the C++ and Python golden-vector sets must stay in sync. The
+golden vectors in test/derive_test.cpp define the seed contract. Different keys
+can collide; this is not a cryptographic hash.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>seed</strong> (<em>int</em>) – Master seed.</p></li>
+<li><p><strong>key</strong> (<em>str</em>) – Stable string key, hashed as UTF-8 bytes.</p></li>
+<li><p><strong>index</strong> (<em>Optional</em><em>[</em><em>int</em><em>]</em>) – Optional index; None and 0 are distinct.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Deterministic 64-bit sub-seed in [0, 2^64).</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.robotics.destroy_bot">
+<span class="sig-name descname"><span class="pre">destroy_bot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scene</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">superdex.physics.Scene</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bot</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.robotics.Bot" title="superdex.robotics.Bot"><span class="pre">Bot</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#superdex.robotics.destroy_bot" title="Permalink to this definition"></a></dt>
+<dd><p>Destroy a <a class="reference internal" href="#superdex.robotics.Bot" title="superdex.robotics.Bot"><code class="xref py py-class docutils literal notranslate"><span class="pre">Bot</span></code></a> previously created by
+<a class="reference internal" href="#superdex.robotics.create_bot" title="superdex.robotics.create_bot"><code class="xref py py-func docutils literal notranslate"><span class="pre">create_bot()</span></code></a>. Destroys the underlying articulated actor
+in its owning scene and any controllers, sensors, and actuators the bot created.
+This must be in the scene thread (i.e. in an async callback if using async
+scenes.)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>scene</strong> (<em>Scene</em>) – Scene to remove the bot from. Must be the same scene used to
+create the bot.</p></li>
+<li><p><strong>bot</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="#superdex.robotics.Bot" title="superdex.robotics.Bot"><em>Bot</em></a><em>]</em>) – Pointer to the bot to be destroyed.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.robotics.get_pose_randomization_class">
+<span class="sig-name descname"><span class="pre">get_pose_randomization_class</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">entry</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.robotics.SpawnEntry" title="superdex.robotics.SpawnEntry"><span class="pre">SpawnEntry</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#superdex.robotics.get_pose_randomization_class" title="Permalink to this definition"></a></dt>
+<dd><p>The DR class of an entry’s PoseRandomization.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>entry</strong> (<a class="reference internal" href="#superdex.robotics.SpawnEntry" title="superdex.robotics.SpawnEntry"><em>SpawnEntry</em></a>) – The reset-state entry.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The class, or empty if the entry has no PoseRandomization.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.robotics.get_prefab_selection">
+<span class="sig-name descname"><span class="pre">get_prefab_selection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">entry</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.robotics.SpawnEntry" title="superdex.robotics.SpawnEntry"><span class="pre">SpawnEntry</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">superdex.physics.DynamicArrayString</span></span></span><a class="headerlink" href="#superdex.robotics.get_prefab_selection" title="Permalink to this definition"></a></dt>
+<dd><p>The candidates of an entry’s PrefabSelection.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>entry</strong> (<a class="reference internal" href="#superdex.robotics.SpawnEntry" title="superdex.robotics.SpawnEntry"><em>SpawnEntry</em></a>) – The reset-state entry.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The prefab names, or empty if the entry has no PrefabSelection.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.robotics.get_python_actuator">
+<span class="sig-name descname"><span class="pre">get_python_actuator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bots_ctx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.robotics.RoboticsContext" title="superdex.robotics.RoboticsContext"><span class="pre">RoboticsContext</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">handle</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.robotics.ActuatorHandle" title="superdex.robotics.ActuatorHandle"><span class="pre">ActuatorHandle</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">object</span></span></span><a class="headerlink" href="#superdex.robotics.get_python_actuator" title="Permalink to this definition"></a></dt>
+<dd><p>Return the Python actuator instance behind a handle (created from a type registered via register_python_actuator), or None if the handle is not a Python actuator.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.robotics.get_python_controller">
+<span class="sig-name descname"><span class="pre">get_python_controller</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bots_ctx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.robotics.RoboticsContext" title="superdex.robotics.RoboticsContext"><span class="pre">RoboticsContext</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">handle</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.robotics.ControllerHandle" title="superdex.robotics.ControllerHandle"><span class="pre">ControllerHandle</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">object</span></span></span><a class="headerlink" href="#superdex.robotics.get_python_controller" title="Permalink to this definition"></a></dt>
+<dd><p>Return the Python controller instance behind a handle (created from a type registered via register_python_controller), or None if the handle is not a Python controller.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.robotics.get_python_sensor">
+<span class="sig-name descname"><span class="pre">get_python_sensor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bots_ctx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.robotics.RoboticsContext" title="superdex.robotics.RoboticsContext"><span class="pre">RoboticsContext</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">handle</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.robotics.SensorHandle" title="superdex.robotics.SensorHandle"><span class="pre">SensorHandle</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">object</span></span></span><a class="headerlink" href="#superdex.robotics.get_python_sensor" title="Permalink to this definition"></a></dt>
+<dd><p>Return the Python sensor instance behind a handle (created from a type registered via register_python_sensor), or None if the handle is not a Python sensor.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.robotics.load_asset_snapshot">
+<span class="sig-name descname"><span class="pre">load_asset_snapshot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.robotics.AssetSnapshot" title="superdex.robotics.AssetSnapshot"><span class="pre">AssetSnapshot</span></a></span></span><a class="headerlink" href="#superdex.robotics.load_asset_snapshot" title="Permalink to this definition"></a></dt>
+<dd><p>Read a .superdex_scene_snapshot file. Fails unless its formatVersion is the one
+this reader supports.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>str</em>) – The snapshot file.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The snapshot, or a default-constructed one on failure.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>Error</strong> – If an error occurs.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.robotics.load_bot_prefab_from_file">
+<span class="sig-name descname"><span class="pre">load_bot_prefab_from_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.robotics.BotPrefab" title="superdex.robotics.BotPrefab"><span class="pre">BotPrefab</span></a></span></span><a class="headerlink" href="#superdex.robotics.load_bot_prefab_from_file" title="Permalink to this definition"></a></dt>
+<dd><p>Load bot parameters from a .superdex_bot file using the default file-based
+loader. Automatically resolves ModBotPrefab files by building the final
+<a class="reference internal" href="#superdex.robotics.BotPrefab" title="superdex.robotics.BotPrefab"><code class="xref py py-class docutils literal notranslate"><span class="pre">BotPrefab</span></code></a>.</p>
+<p>If path is a .superdex_bot_archive file (see ArchiveBot), the archive is
+transparently extracted and cached into a temp directory and the embedded target
+bot is loaded.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>str</em>) – File path to the .superdex_bot or .superdex_bot_archive file.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Loaded or built <a class="reference internal" href="#superdex.robotics.BotPrefab" title="superdex.robotics.BotPrefab"><code class="xref py py-class docutils literal notranslate"><span class="pre">BotPrefab</span></code></a>, or
+default-constructed on failure.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>Error</strong> – If an error occurs.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.robotics.load_bot_prefab_from_mjcf_file">
+<span class="sig-name descname"><span class="pre">load_bot_prefab_from_mjcf_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.robotics.BotPrefab" title="superdex.robotics.BotPrefab"><span class="pre">BotPrefab</span></a></span></span><a class="headerlink" href="#superdex.robotics.load_bot_prefab_from_mjcf_file" title="Permalink to this definition"></a></dt>
+<dd><p>Load bot parameters from an MJCF (MuJoCo XML) file.</p>
+<p>Bodies become links and joints, <code class="docutils literal notranslate"><span class="pre">&lt;inertial&gt;</span></code> becomes explicit link inertia,
+and mesh geoms are assigned as link shapes and render models. A body with
+several collision or visual geoms gets one Hard-jointed child link per extra
+geom. Primitive geoms (boxes, capsules, …) are not assigned; import the MJCF
+in SuperDex Studio to convert them. MJCF content without a SuperDex equivalent
+(tendons, sites, sensors, actuator gains, …) is skipped with a logged warning.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>str</em>) – Path to the MJCF file.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The loaded <a class="reference internal" href="#superdex.robotics.BotPrefab" title="superdex.robotics.BotPrefab"><code class="xref py py-class docutils literal notranslate"><span class="pre">BotPrefab</span></code></a>.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>Error</strong> – If an error occurs.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.robotics.load_bot_prefab_from_urdf_file">
+<span class="sig-name descname"><span class="pre">load_bot_prefab_from_urdf_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.robotics.BotPrefab" title="superdex.robotics.BotPrefab"><span class="pre">BotPrefab</span></a></span></span><a class="headerlink" href="#superdex.robotics.load_bot_prefab_from_urdf_file" title="Permalink to this definition"></a></dt>
+<dd><p>Load bot parameters from a URDF file.</p>
+<p>Parses the URDF and resolves each link’s visual and collision mesh references
+relative to the URDF location (ROS <cite>package://</cite> URIs are supported), storing the
+resolved on-disk paths in the returned prefab. Collision meshes may be any
+format the shape loader accepts (e.g. .stl, .obj, .ply, .off, .mochi.h5); when a
+collision mesh carries no baked SDF, one is generated on demand at bot creation.
+A free <cite>world_joint</cite> is injected at index 0. A link with several mesh
+<code class="docutils literal notranslate"><span class="pre">&lt;collision&gt;</span></code> or <code class="docutils literal notranslate"><span class="pre">&lt;visual&gt;</span></code> elements gets one Hard-jointed child link per
+extra mesh, named after the link with a <cite>_collision_k</cite> or <cite>_visual_k</cite> suffix and
+appended after the existing links.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>str</em>) – Path to the .urdf file.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The loaded or built <a class="reference internal" href="#superdex.robotics.BotPrefab" title="superdex.robotics.BotPrefab"><code class="xref py py-class docutils literal notranslate"><span class="pre">BotPrefab</span></code></a>.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>Error</strong> – If an error occurs.</p>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Only <code class="docutils literal notranslate"><span class="pre">&lt;mesh&gt;</span></code> geometry is assigned. Primitive URDF shapes (<code class="docutils literal notranslate"><span class="pre">&lt;box&gt;</span></code>,
+<code class="docutils literal notranslate"><span class="pre">&lt;cylinder&gt;</span></code>, <code class="docutils literal notranslate"><span class="pre">&lt;sphere&gt;</span></code>) have no file to point at and are skipped.</p>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.robotics.load_bot_scene">
+<span class="sig-name descname"><span class="pre">load_bot_scene</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bots_ctx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.robotics.RoboticsContext" title="superdex.robotics.RoboticsContext"><span class="pre">RoboticsContext</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.robotics.BotScene" title="superdex.robotics.BotScene"><span class="pre">BotScene</span></a></span></span><a class="headerlink" href="#superdex.robotics.load_bot_scene" title="Permalink to this definition"></a></dt>
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">load_bot_scene</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bots</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">superdex.physics.DynamicArrayString</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">edits</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bots_ctx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.robotics.RoboticsContext" title="superdex.robotics.RoboticsContext"><span class="pre">RoboticsContext</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.robotics.BotScene" title="superdex.robotics.BotScene"><span class="pre">BotScene</span></a></span></span></dt>
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">load_bot_scene</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scene</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">superdex.physics.Scene</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prefab</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.robotics.BotScenePrefab" title="superdex.robotics.BotScenePrefab"><span class="pre">BotScenePrefab</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">root_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bots_ctx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.robotics.RoboticsContext" title="superdex.robotics.RoboticsContext"><span class="pre">RoboticsContext</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.robotics.BotScene" title="superdex.robotics.BotScene"><span class="pre">BotScene</span></a></span></span></dt>
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">load_bot_scene</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scene</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">superdex.physics.Scene</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bots_ctx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.robotics.RoboticsContext" title="superdex.robotics.RoboticsContext"><span class="pre">RoboticsContext</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.robotics.BotScene" title="superdex.robotics.BotScene"><span class="pre">BotScene</span></a></span></span></dt>
+<dd><p>Overloaded function.</p>
+<ol class="arabic simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">load_bot_scene(path:</span> <span class="pre">str,</span> <span class="pre">bots_ctx:</span> <span class="pre">superdex.robotics.RoboticsContext</span> <span class="pre">|</span> <span class="pre">None)</span> <span class="pre">-&gt;</span> <span class="pre">superdex.robotics.BotScene</span></code></p></li>
+</ol>
+<p>Load a .superdex_scene file and instantiate all scene objects.</p>
+<p>Creates the physics scene from the base_scene, instantiates all bots with
+placement and initial pose, and creates controllers via the provided
+RoboticsContext.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>str</em>) – File path to the .superdex_scene file.</p></li>
+<li><p><strong>bots_ctx</strong> (<a class="reference internal" href="#superdex.robotics.RoboticsContext" title="superdex.robotics.RoboticsContext"><em>RoboticsContext</em></a>) – RoboticsContext for controller creation and
+lifetime management.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The loaded BotScene.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>Error</strong> – If an error occurs.</p>
+</dd>
+</dl>
+<ol class="arabic simple" start="2">
+<li><p><code class="docutils literal notranslate"><span class="pre">load_bot_scene(path:</span> <span class="pre">str,</span> <span class="pre">bots:</span> <span class="pre">superdex.physics.DynamicArrayString,</span> <span class="pre">edits:</span> <span class="pre">str,</span> <span class="pre">bots_ctx:</span> <span class="pre">superdex.robotics.RoboticsContext</span> <span class="pre">|</span> <span class="pre">None)</span> <span class="pre">-&gt;</span> <span class="pre">superdex.robotics.BotScene</span></code></p></li>
+</ol>
+<p>Like the path overload above, but instantiates only the declared bots named in
+bots, each with its edit set in its prefab before the bot is created, e.g. to
+rebuild the bots a recording was made with.</p>
+<p>The rest stay declared, and <a class="reference internal" href="#superdex.robotics.BotScene.initialize_bot" title="superdex.robotics.BotScene.initialize_bot"><code class="xref py py-meth docutils literal notranslate"><span class="pre">initialize_bot()</span></code></a>
+brings them up unedited. Errors if bots names a bot the scene does not declare,
+or an edit is for a bot not in bots or does not fit it.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>str</em>) – File path to the .superdex_scene file.</p></li>
+<li><p><strong>bots</strong> (<em>ArrayLikeString</em>) – The bots to instantiate.</p></li>
+<li><p><strong>edits</strong> (<em>str</em>) – The fields to set in each bot’s prefab, as a JSON object of
+edits by bot name (<cite>DiffPrefab</cite> writes each), or empty for none.</p></li>
+<li><p><strong>bots_ctx</strong> (<a class="reference internal" href="#superdex.robotics.RoboticsContext" title="superdex.robotics.RoboticsContext"><em>RoboticsContext</em></a>) – RoboticsContext for controller creation and
+lifetime management.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The loaded BotScene.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>Error</strong> – If an error occurs.</p>
+</dd>
+</dl>
+<ol class="arabic simple" start="3">
+<li><p><code class="docutils literal notranslate"><span class="pre">load_bot_scene(scene:</span> <span class="pre">superdex.physics.Scene</span> <span class="pre">|</span> <span class="pre">None,</span> <span class="pre">prefab:</span> <span class="pre">superdex.robotics.BotScenePrefab,</span> <span class="pre">root_path:</span> <span class="pre">str,</span> <span class="pre">bots_ctx:</span> <span class="pre">superdex.robotics.RoboticsContext</span> <span class="pre">|</span> <span class="pre">None)</span> <span class="pre">-&gt;</span> <span class="pre">superdex.robotics.BotScene</span></code></p></li>
+</ol>
+<p>Load a bot scene into a caller-provided scene from an already-loaded prefab.</p>
+<p>Like the path-based <a class="reference internal" href="#superdex.robotics.load_bot_scene" title="superdex.robotics.load_bot_scene"><code class="xref py py-func docutils literal notranslate"><span class="pre">load_bot_scene()</span></code></a> overload but does
+not create or own the scene: bots and controllers are created in scene and the
+base prefab (already loaded and path-resolved, e.g. by an asset) is added
+directly. The returned <a class="reference internal" href="#superdex.robotics.BotScene" title="superdex.robotics.BotScene"><code class="xref py py-class docutils literal notranslate"><span class="pre">BotScene</span></code></a> destroys the bots
+and controllers it created but leaves scene intact (the caller retains ownership
+of the scene).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>scene</strong> (<em>Scene</em>) – Caller-owned scene to populate.</p></li>
+<li><p><strong>prefab</strong> (<a class="reference internal" href="#superdex.robotics.BotScenePrefab" title="superdex.robotics.BotScenePrefab"><em>BotScenePrefab</em></a>) – Already-loaded, path-resolved bot scene parameters.</p></li>
+<li><p><strong>root_path</strong> (<em>str</em>) – Root directory used to resolve the base scene’s relative
+shape/prefab paths.</p></li>
+<li><p><strong>bots_ctx</strong> (<a class="reference internal" href="#superdex.robotics.RoboticsContext" title="superdex.robotics.RoboticsContext"><em>RoboticsContext</em></a>) – RoboticsContext for controller creation and
+lifetime management.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The loaded BotScene (non-owning of scene).</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>Error</strong> – If an error occurs.</p>
+</dd>
+</dl>
+<ol class="arabic simple" start="4">
+<li><p><code class="docutils literal notranslate"><span class="pre">load_bot_scene(scene:</span> <span class="pre">superdex.physics.Scene</span> <span class="pre">|</span> <span class="pre">None,</span> <span class="pre">path:</span> <span class="pre">str,</span> <span class="pre">bots_ctx:</span> <span class="pre">superdex.robotics.RoboticsContext</span> <span class="pre">|</span> <span class="pre">None)</span> <span class="pre">-&gt;</span> <span class="pre">superdex.robotics.BotScene</span></code></p></li>
+</ol>
+<p>Load a bot scene into a caller-provided scene from a file or archive path.</p>
+<p>Like the prefab overload but loads and validates the
+<a class="reference internal" href="#superdex.robotics.BotScenePrefab" title="superdex.robotics.BotScenePrefab"><code class="xref py py-class docutils literal notranslate"><span class="pre">BotScenePrefab</span></code></a> through LoadBotScenePrefabFromFile so
+archive extraction remains transparent. The base-scene-relative root is derived
+analogously to the path overload (bots root with a resolved base-scene
+fallback), then delegates to the prefab overload. The returned
+<a class="reference internal" href="#superdex.robotics.BotScene" title="superdex.robotics.BotScene"><code class="xref py py-class docutils literal notranslate"><span class="pre">BotScene</span></code></a> owns the bots, controllers, and base-scene
+actors it added but leaves the caller-owned <code class="xref py py-class docutils literal notranslate"><span class="pre">Scene</span></code>
+intact.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>scene</strong> (<em>Scene</em>) – Caller-owned <code class="xref py py-class docutils literal notranslate"><span class="pre">Scene</span></code> to populate.</p></li>
+<li><p><strong>path</strong> (<em>str</em>) – File path to the .superdex_scene file or
+.superdex_scene_archive.</p></li>
+<li><p><strong>bots_ctx</strong> (<a class="reference internal" href="#superdex.robotics.RoboticsContext" title="superdex.robotics.RoboticsContext"><em>RoboticsContext</em></a>) – <a class="reference internal" href="#superdex.robotics.RoboticsContext" title="superdex.robotics.RoboticsContext"><code class="xref py py-class docutils literal notranslate"><span class="pre">RoboticsContext</span></code></a> for
+controller creation and lifetime management.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The loaded <a class="reference internal" href="#superdex.robotics.BotScene" title="superdex.robotics.BotScene"><code class="xref py py-class docutils literal notranslate"><span class="pre">BotScene</span></code></a> (non-owning of the caller
+scene).</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>Error</strong> – If an error occurs.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.robotics.load_bot_scene_prefab_from_file">
+<span class="sig-name descname"><span class="pre">load_bot_scene_prefab_from_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.robotics.BotScenePrefab" title="superdex.robotics.BotScenePrefab"><span class="pre">BotScenePrefab</span></a></span></span><a class="headerlink" href="#superdex.robotics.load_bot_scene_prefab_from_file" title="Permalink to this definition"></a></dt>
+<dd><p>Load bot scene parameters from a .superdex_scene JSON file.</p>
+<p>Deserializes the file, validates that bot, controller, and spawnable-prefab
+names are non-empty and unique, and resolves relative paths to absolute. A scene
+with no base scene and no bots is valid — that is the state of a newly created
+scene.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>str</em>) – File path to the .superdex_scene file.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Loaded <a class="reference internal" href="#superdex.robotics.BotScenePrefab" title="superdex.robotics.BotScenePrefab"><code class="xref py py-class docutils literal notranslate"><span class="pre">BotScenePrefab</span></code></a>, or default-constructed on
+failure.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>Error</strong> – If an error occurs.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.robotics.load_bot_task_prefab_from_file">
+<span class="sig-name descname"><span class="pre">load_bot_task_prefab_from_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.robotics.BotTaskPrefab" title="superdex.robotics.BotTaskPrefab"><span class="pre">BotTaskPrefab</span></a></span></span><a class="headerlink" href="#superdex.robotics.load_bot_task_prefab_from_file" title="Permalink to this definition"></a></dt>
+<dd><p>Load task parameters from a .superdex_task JSON file.</p>
+<p>Deserializes the file and validates that spawn names are non-empty, unique, and
+not equal to kTaskRootParentName; that each spawn references a non-empty prefab
+name; and that <a class="reference internal" href="#superdex.robotics.SpawnEntry.parent" title="superdex.robotics.SpawnEntry.parent"><code class="xref py py-attr docutils literal notranslate"><span class="pre">parent</span></code></a> references either
+kTaskRootParentName or the name of another spawn in this task. Parent graphs
+must be acyclic. Existence of <a class="reference internal" href="#superdex.robotics.SpawnEntry.prefab_name" title="superdex.robotics.SpawnEntry.prefab_name"><code class="xref py py-attr docutils literal notranslate"><span class="pre">prefab_name</span></code></a>
+in any scene is intentionally NOT validated here (loose binding) — that is
+checked at apply time against the loaded scene.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>str</em>) – File path to the .superdex_task file.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Loaded <a class="reference internal" href="#superdex.robotics.BotTaskPrefab" title="superdex.robotics.BotTaskPrefab"><code class="xref py py-class docutils literal notranslate"><span class="pre">BotTaskPrefab</span></code></a>, or default-constructed on
+failure.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>Error</strong> – If an error occurs.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.robotics.load_dr_episode_list_from_file">
+<span class="sig-name descname"><span class="pre">load_dr_episode_list_from_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.robotics.DREpisodeList" title="superdex.robotics.DREpisodeList"><span class="pre">DREpisodeList</span></a></span></span><a class="headerlink" href="#superdex.robotics.load_dr_episode_list_from_file" title="Permalink to this definition"></a></dt>
+<dd><p>Load and validate schema-2 resolved episodes using standard reflection.</p>
+<p>Schema 1 requires an explicit internal importer. Schema 2 uses an explicit
+metadata object. Provenance is retained without interpreting its keys. Episode
+structures are checked independently of task-specific specification, shape and
+range rules.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>str</em>) – Manifest file path.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Validated episode list; malformed input raises a Python exception.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>Error</strong> – If an error occurs.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.robotics.make_tactile_taxel_layout">
+<span class="sig-name descname"><span class="pre">make_tactile_taxel_layout</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">positions</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Span</span><span class="p"><span class="pre">[</span></span><span class="pre">superdex.physics.Real3</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.robotics.TactileTaxelLayout" title="superdex.robotics.TactileTaxelLayout"><span class="pre">TactileTaxelLayout</span></a></span></span><a class="headerlink" href="#superdex.robotics.make_tactile_taxel_layout" title="Permalink to this definition"></a></dt>
+<dd><p>Build an ordered tactile taxel layout.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>positions</strong> (<em>ArrayLikeReal3</em>) – Taxel positions [m] in sensor link frame, in
+stable taxel order.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Validated layout. Empty layouts and non-finite positions raise an error.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>Error</strong> – If an error occurs.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.robotics.map_tactile_hemisphere_to_rect">
+<span class="sig-name descname"><span class="pre">map_tactile_hemisphere_to_rect</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">layout</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.robotics.TactileTaxelLayout" title="superdex.robotics.TactileTaxelLayout"><span class="pre">TactileTaxelLayout</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">taxel_forces</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.robotics.TactileTaxelForces" title="superdex.robotics.TactileTaxelForces"><span class="pre">TactileTaxelForces</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.robotics.TactileHemisphereRectParams" title="superdex.robotics.TactileHemisphereRectParams"><span class="pre">TactileHemisphereRectParams</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.robotics.TactileForceGrid" title="superdex.robotics.TactileForceGrid"><span class="pre">TactileForceGrid</span></a></span></span><a class="headerlink" href="#superdex.robotics.map_tactile_hemisphere_to_rect" title="Permalink to this definition"></a></dt>
+<dd><p>Resolve and rasterize a per-taxel force observation in one call.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>layout</strong> (<a class="reference internal" href="#superdex.robotics.TactileTaxelLayout" title="superdex.robotics.TactileTaxelLayout"><em>TactileTaxelLayout</em></a>) – Ordered taxel positions in the sensor link
+frame.</p></li>
+<li><p><strong>taxel_forces</strong> (<a class="reference internal" href="#superdex.robotics.TactileTaxelForces" title="superdex.robotics.TactileTaxelForces"><em>TactileTaxelForces</em></a>) – Per-taxel forces indexed by layout.</p></li>
+<li><p><strong>params</strong> (<a class="reference internal" href="#superdex.robotics.TactileHemisphereRectParams" title="superdex.robotics.TactileHemisphereRectParams"><em>TactileHemisphereRectParams</em></a>) – Hemisphere frame and output grid
+shape.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Row-major rectangular force grid and per-cell taxel counts.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>Error</strong> – If an error occurs.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.robotics.parse_seed">
+<span class="sig-name descname"><span class="pre">parse_seed</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#superdex.robotics.parse_seed" title="Permalink to this definition"></a></dt>
+<dd><p>Parse a decimal uint64 seed string.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>seed</strong> (<em>str</em>) – Decimal string; leading zeros are accepted here but rejected by
+list validation.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Parsed unsigned seed.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>Error</strong> – If an error occurs.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.robotics.rasterize_tactile_rect_projection">
+<span class="sig-name descname"><span class="pre">rasterize_tactile_rect_projection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">projection</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.robotics.TactileRectProjectionMap" title="superdex.robotics.TactileRectProjectionMap"><span class="pre">TactileRectProjectionMap</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">taxel_forces</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.robotics.TactileTaxelForces" title="superdex.robotics.TactileTaxelForces"><span class="pre">TactileTaxelForces</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.robotics.TactileForceGrid" title="superdex.robotics.TactileForceGrid"><span class="pre">TactileForceGrid</span></a></span></span><a class="headerlink" href="#superdex.robotics.rasterize_tactile_rect_projection" title="Permalink to this definition"></a></dt>
+<dd><p>Rasterize per-taxel forces through a resolved tactile projection.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>projection</strong> (<a class="reference internal" href="#superdex.robotics.TactileRectProjectionMap" title="superdex.robotics.TactileRectProjectionMap"><em>TactileRectProjectionMap</em></a>) – Resolved mapping built for the source
+layout.</p></li>
+<li><p><strong>taxel_forces</strong> (<a class="reference internal" href="#superdex.robotics.TactileTaxelForces" title="superdex.robotics.TactileTaxelForces"><em>TactileTaxelForces</em></a>) – Per-taxel forces indexed by that layout.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Row-major rectangular force grid and per-cell taxel counts.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>Error</strong> – If an error occurs.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.robotics.read_tactile_taxel_forces">
+<span class="sig-name descname"><span class="pre">read_tactile_taxel_forces</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">actor</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">superdex.physics.Actor</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">world_from_sensor</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">superdex.physics.TransformRT</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">layout</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.robotics.TactileTaxelLayout" title="superdex.robotics.TactileTaxelLayout"><span class="pre">TactileTaxelLayout</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.robotics.TactileTaxelForces" title="superdex.robotics.TactileTaxelForces"><span class="pre">TactileTaxelForces</span></a></span></span><a class="headerlink" href="#superdex.robotics.read_tactile_taxel_forces" title="Permalink to this definition"></a></dt>
+<dd><p>Read a dense per-taxel force observation from a Mochi actor.</p>
+<p>The caller must register QueryType::NodeContactForces before stepping the scene
+and keep that query registered while reading.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>actor</strong> (<em>Actor</em>) – Actor whose node-force query is read.</p></li>
+<li><p><strong>world_from_sensor</strong> (<em>TransformRT</em>) – Sensor-frame pose in world space. Pass the
+actor root transform when the actor and sensor frames coincide.</p></li>
+<li><p><strong>layout</strong> (<a class="reference internal" href="#superdex.robotics.TactileTaxelLayout" title="superdex.robotics.TactileTaxelLayout"><em>TactileTaxelLayout</em></a>) – Ordered taxel layout matching the actor’s node
+indices.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>One sensor-link-frame force per layout taxel.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>Error</strong> – If an error occurs.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.robotics.register_python_actuator">
+<span class="sig-name descname"><span class="pre">register_python_actuator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bots_ctx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.robotics.RoboticsContext" title="superdex.robotics.RoboticsContext"><span class="pre">RoboticsContext</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">type_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">factory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">object</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#superdex.robotics.register_python_actuator" title="Permalink to this definition"></a></dt>
+<dd><p>Register an actuator type implemented in Python. <cite>factory</cite> is called with (actor, param_args) – the link Actor, which an actuator always has, and the actuator’s params (a file path or inline JSON, empty for defaults) – and must return a Python actuator instance, which must define <cite>reset()</cite> (an empty body is fine) – the framework invokes it between episodes. Retrieve the live instance to drive it with get_python_actuator.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.robotics.register_python_controller">
+<span class="sig-name descname"><span class="pre">register_python_controller</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bots_ctx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.robotics.RoboticsContext" title="superdex.robotics.RoboticsContext"><span class="pre">RoboticsContext</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">type_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">factory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">object</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#superdex.robotics.register_python_controller" title="Permalink to this definition"></a></dt>
+<dd><p>Register a controller type implemented in Python. <cite>factory</cite> is called with the robot Actor (None if the controller was created without one) and must return a Python controller instance. The instance must define <cite>reset()</cite> (an empty body is fine); its optional <cite>configure_from_scene_entry(param_args, init_args)</cite> is also invoked by the framework. Retrieve the live instance to drive it with get_python_controller.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.robotics.register_python_sensor">
+<span class="sig-name descname"><span class="pre">register_python_sensor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bots_ctx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.robotics.RoboticsContext" title="superdex.robotics.RoboticsContext"><span class="pre">RoboticsContext</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">type_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">factory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">object</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#superdex.robotics.register_python_sensor" title="Permalink to this definition"></a></dt>
+<dd><p>Register a sensor type implemented in Python. <cite>factory</cite> is called with (actor, param_args) – the link Actor, or None for an actor-less sensor, and the sensor’s params (a file path or inline JSON, empty for defaults) – and must return a Python sensor instance, which must define <cite>reset()</cite> (an empty body is fine) – the framework invokes it between episodes. Retrieve the live instance to drive it with get_python_sensor.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.robotics.resolve_reset_state">
+<span class="sig-name descname"><span class="pre">resolve_reset_state</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">task</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.robotics.BotTaskPrefab" title="superdex.robotics.BotTaskPrefab"><span class="pre">BotTaskPrefab</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">values</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.robotics.DynamicArrayDREpisodeEntry" title="superdex.robotics.DynamicArrayDREpisodeEntry"><span class="pre">DynamicArrayDREpisodeEntry</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">world_from_task</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">superdex.physics.TransformRT</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.robotics.DynamicArrayResolvedSpawn" title="superdex.robotics.DynamicArrayResolvedSpawn"><span class="pre">DynamicArrayResolvedSpawn</span></a></span></span><a class="headerlink" href="#superdex.robotics.resolve_reset_state" title="Permalink to this definition"></a></dt>
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">resolve_reset_state</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">task</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.robotics.BotTaskPrefab" title="superdex.robotics.BotTaskPrefab"><span class="pre">BotTaskPrefab</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">values</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.robotics.DynamicArrayDREpisodeEntry" title="superdex.robotics.DynamicArrayDREpisodeEntry"><span class="pre">DynamicArrayDREpisodeEntry</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.robotics.DynamicArrayResolvedSpawn" title="superdex.robotics.DynamicArrayResolvedSpawn"><span class="pre">DynamicArrayResolvedSpawn</span></a></span></span></dt>
+<dd><p>Overloaded function.</p>
+<ol class="arabic simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">resolve_reset_state(task:</span> <span class="pre">superdex.robotics.BotTaskPrefab,</span> <span class="pre">values:</span> <span class="pre">superdex.robotics.DynamicArrayDREpisodeEntry,</span> <span class="pre">world_from_task:</span> <span class="pre">superdex.physics.TransformRT)</span> <span class="pre">-&gt;</span> <span class="pre">superdex.robotics.DynamicArrayResolvedSpawn</span></code></p></li>
+</ol>
+<p>Resolve a task’s reset state for one episode from that episode’s DR values.</p>
+<p>Entries whose DR key is absent are placed as declared, so empty values resolve
+the nominal state. Root-level entries are composed onto worldFromTask.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>task</strong> (<a class="reference internal" href="#superdex.robotics.BotTaskPrefab" title="superdex.robotics.BotTaskPrefab"><em>BotTaskPrefab</em></a>) – The task.</p></li>
+<li><p><strong>values</strong> (<em>bots.ArrayLikeDREpisodeEntry</em>) – The episode’s DR values; keys this
+does not read are ignored.</p></li>
+<li><p><strong>world_from_task</strong> (<em>TransformRT</em>) – Where the task’s root-level spawns go; see
+ComputeWorldFromTask.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>One entry per reset-state entry, parents before their children.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>Error</strong> – If an error occurs.</p>
+</dd>
+</dl>
+<ol class="arabic simple" start="2">
+<li><p><code class="docutils literal notranslate"><span class="pre">resolve_reset_state(task:</span> <span class="pre">superdex.robotics.BotTaskPrefab,</span> <span class="pre">values:</span> <span class="pre">superdex.robotics.DynamicArrayDREpisodeEntry)</span> <span class="pre">-&gt;</span> <span class="pre">superdex.robotics.DynamicArrayResolvedSpawn</span></code></p></li>
+</ol>
+<p>ResolveResetState with the task in its own coordinates (identity worldFromTask).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>task</strong> (<a class="reference internal" href="#superdex.robotics.BotTaskPrefab" title="superdex.robotics.BotTaskPrefab"><em>BotTaskPrefab</em></a>) – The task.</p></li>
+<li><p><strong>values</strong> (<em>bots.ArrayLikeDREpisodeEntry</em>) – The episode’s DR values; keys this
+does not read are ignored.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>One entry per reset-state entry, parents before their children.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>Error</strong> – If an error occurs.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.robotics.save_asset_snapshot">
+<span class="sig-name descname"><span class="pre">save_asset_snapshot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">snapshot</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.robotics.AssetSnapshot" title="superdex.robotics.AssetSnapshot"><span class="pre">AssetSnapshot</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#superdex.robotics.save_asset_snapshot" title="Permalink to this definition"></a></dt>
+<dd><p>Write a snapshot to a file as JSON.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>snapshot</strong> (<a class="reference internal" href="#superdex.robotics.AssetSnapshot" title="superdex.robotics.AssetSnapshot"><em>AssetSnapshot</em></a>) – The snapshot to write.</p></li>
+<li><p><strong>path</strong> (<em>str</em>) – Destination file.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>Error</strong> – If an error occurs.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.robotics.save_bot_scene_to_urdf_string">
+<span class="sig-name descname"><span class="pre">save_bot_scene_to_urdf_string</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scene</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.robotics.BotScenePrefab" title="superdex.robotics.BotScenePrefab"><span class="pre">BotScenePrefab</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">root_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">options</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.robotics.SceneUrdfOptions" title="superdex.robotics.SceneUrdfOptions"><span class="pre">SceneUrdfOptions</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#superdex.robotics.save_bot_scene_to_urdf_string" title="Permalink to this definition"></a></dt>
+<dd><p>Export a bot scene to a URDF XML string, without meshes.</p>
+<p>The URDF is rooted at a <cite>world</cite> link, the scene root. Each bot entry, base-scene
+articulated actor and static rigid actor hangs from it by a <cite>fixed</cite> joint named
+<cite>{root link}_placement</cite>, with its own links and joints unchanged below. Dynamic
+and soft actors, tasks and spawnable prefabs are skipped, and skins are not
+exported, so a skinned hand is rigid. SuperDex, unlike URDF, needs joint names
+to differ from link names, so a joint named like a link (e.g. “joint_01_wrist”
+beside “link_01_wrist”, with
+<a class="reference internal" href="#superdex.robotics.SceneUrdfOptions.strip_index_prefixes" title="superdex.robotics.SceneUrdfOptions.strip_index_prefixes"><code class="xref py py-attr docutils literal notranslate"><span class="pre">strip_index_prefixes</span></code></a>) gets a
+<cite>_joint</cite> suffix.</p>
+<p>Each sensor becomes a <cite>{name}_frame</cite> link at its parentFromSensor on its link
+(bot sensors) or on <cite>world</cite> (scene sensors). A sensor whose name another sensor
+shares takes its bot’s prefix, as the bot’s links do, and an unnamed sensor is
+named <cite>{link}_sensor_{index}</cite>, after its URDF link and its index on that link. A
+camera’s parentFromSensor is its optical frame (Z forward, X right, Y down): it
+gets a <cite>{name}_optical_frame</cite> link there, and <cite>{name}_frame</cite> follows ROS REP-103
+(X forward, Z up). Intrinsics are not exported.</p>
+<p>No <code class="docutils literal notranslate"><span class="pre">&lt;visual&gt;</span></code> or <code class="docutils literal notranslate"><span class="pre">&lt;collision&gt;</span></code> elements are written. SuperDex Studio’s
+<cite>scene_to_urdf</cite> exports the meshes too, as STL.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>scene</strong> (<a class="reference internal" href="#superdex.robotics.BotScenePrefab" title="superdex.robotics.BotScenePrefab"><em>BotScenePrefab</em></a>) – Path-resolved scene, as returned by
+<a class="reference internal" href="#superdex.robotics.load_bot_scene_prefab_from_file" title="superdex.robotics.load_bot_scene_prefab_from_file"><code class="xref py py-func docutils literal notranslate"><span class="pre">load_bot_scene_prefab_from_file()</span></code></a>.</p></li>
+<li><p><strong>root_path</strong> (<em>str</em>) – Root directory for the base scene’s relative paths (see
+<cite>GetBotSceneBaseRoot</cite>).</p></li>
+<li><p><strong>options</strong> (<a class="reference internal" href="#superdex.robotics.SceneUrdfOptions" title="superdex.robotics.SceneUrdfOptions"><em>SceneUrdfOptions</em></a>) – Export options.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The URDF XML.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>Error</strong> – If an error occurs.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.robotics.save_dr_episode_list_to_file">
+<span class="sig-name descname"><span class="pre">save_dr_episode_list_to_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">list</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.robotics.DREpisodeList" title="superdex.robotics.DREpisodeList"><span class="pre">DREpisodeList</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#superdex.robotics.save_dr_episode_list_to_file" title="Permalink to this definition"></a></dt>
+<dd><p>Validate and save resolved episodes, preserving provenance and metadata.</p>
+<p>JSON formatting and key order may change. Saving does not preserve source bytes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>list</strong> (<a class="reference internal" href="#superdex.robotics.DREpisodeList" title="superdex.robotics.DREpisodeList"><em>DREpisodeList</em></a>) – Resolved episodes and opaque metadata.</p></li>
+<li><p><strong>path</strong> (<em>str</em>) – Destination manifest file path.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>Error</strong> – If an error occurs.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.robotics.spawn_pose_dr_key">
+<span class="sig-name descname"><span class="pre">spawn_pose_dr_key</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">spawn_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">domain_randomization_class</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#superdex.robotics.spawn_pose_dr_key" title="Permalink to this definition"></a></dt>
+<dd><p>The DR episode key an entry’s PoseRandomization offset is drawn under.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>spawn_name</strong> (<em>str</em>) – The reset-state entry’s name.</p></li>
+<li><p><strong>domain_randomization_class</strong> (<em>str</em>) – Its PoseRandomization class.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">dr/spawn/&lt;spawnName&gt;/&lt;domainRandomizationClass&gt;/pose</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.robotics.spawn_prefab_dr_key">
+<span class="sig-name descname"><span class="pre">spawn_prefab_dr_key</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">spawn_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#superdex.robotics.spawn_prefab_dr_key" title="Permalink to this definition"></a></dt>
+<dd><p>The DR episode key an entry’s PrefabSelection is drawn under.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>spawn_name</strong> (<em>str</em>) – The reset-state entry’s name.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">dr/spawn/&lt;spawnName&gt;/prefab</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.robotics.validate_dr_episode_list">
+<span class="sig-name descname"><span class="pre">validate_dr_episode_list</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">list</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.robotics.DREpisodeList" title="superdex.robotics.DREpisodeList"><span class="pre">DREpisodeList</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#superdex.robotics.validate_dr_episode_list" title="Permalink to this definition"></a></dt>
+<dd><p>Check supported schema, unique episode indices, nonempty keys/values, scalar
+length and finite values. Schema 2 requires a nonempty spec and canonical
+decimal seeds. Distinct episode indices may reuse a seed.</p>
+<p>Provenance must be a JSON object of strings. Metadata must be a JSON object with
+opaque meaning. Task-specific semantics remain the applier’s responsibility.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>list</strong> (<a class="reference internal" href="#superdex.robotics.DREpisodeList" title="superdex.robotics.DREpisodeList"><em>DREpisodeList</em></a>) – Episode list to validate.</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>Error</strong> – If an error occurs.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="superdex.robotics.EFFORT_UNBOUNDED">
+<span class="sig-name descname"><span class="pre">EFFORT_UNBOUNDED</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">-1.0</span></em><a class="headerlink" href="#superdex.robotics.EFFORT_UNBOUNDED" title="Permalink to this definition"></a></dt>
+<dd><p>the
+joint’s actuation effort is unbounded.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Sentinel <a class="reference internal" href="#superdex.robotics.BotJointPrefab.effort_limit" title="superdex.robotics.BotJointPrefab.effort_limit"><code class="xref py py-attr docutils literal notranslate"><span class="pre">effort_limit</span></code></a> value</p>
+</dd>
+</dl>
 </dd></dl>
 
 </section>

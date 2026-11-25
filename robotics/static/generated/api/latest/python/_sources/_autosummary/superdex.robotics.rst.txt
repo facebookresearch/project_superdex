@@ -10,6 +10,50 @@
 
    
    
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      derive
+      load_bot_prefab_from_file
+      load_bot_prefab_from_urdf_file
+      load_bot_prefab_from_mjcf_file
+      build_articulated_pose_from_bot_pose
+      make_tactile_taxel_layout
+      read_tactile_taxel_forces
+      aggregate_tactile_force
+      aggregate_tactile_wrench
+      build_tactile_rect_projection
+      rasterize_tactile_rect_projection
+      map_tactile_hemisphere_to_rect
+      create_bot
+      destroy_bot
+      load_bot_scene_prefab_from_file
+      save_bot_scene_to_urdf_string
+      load_bot_scene
+      load_bot_task_prefab_from_file
+      load_dr_episode_list_from_file
+      save_dr_episode_list_to_file
+      parse_seed
+      validate_dr_episode_list
+      spawn_pose_dr_key
+      spawn_prefab_dr_key
+      get_pose_randomization_class
+      get_prefab_selection
+      compute_world_from_task
+      resolve_reset_state
+      load_asset_snapshot
+      save_asset_snapshot
+      apply_asset_snapshot
+      clear_asset_snapshot
+      create_context
+      register_python_controller
+      register_python_sensor
+      register_python_actuator
+      get_python_controller
+      get_python_sensor
+      get_python_actuator
+   
    
 
    
