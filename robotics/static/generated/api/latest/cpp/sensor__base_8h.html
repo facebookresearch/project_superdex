@@ -166,7 +166,11 @@ $(function(){initNavTree('sensor__base_8h.html','',''); });
 <div class="contents">
 <div class="textblock"><code>#include &lt;superdex_physics.h&gt;</code><br />
 <code>#include &lt;<a class="el" href="component__base_8h_source.html">superdex_robotics/core/component_base.h</a>&gt;</code><br />
+<code>#include &lt;<a class="el" href="sensor__format_8h_source.html">superdex_robotics/sensors/sensor_format.h</a>&gt;</code><br />
 <code>#include &lt;mochi_core/utils/transform_rt.h&gt;</code><br />
+<code>#include &lt;cstddef&gt;</code><br />
+<code>#include &lt;cstdint&gt;</code><br />
+<code>#include &lt;optional&gt;</code><br />
 <code>#include &lt;string_view&gt;</code><br />
 </div>
 <p><a href="sensor__base_8h_source.html">Go to the source code of this file.</a></p>
@@ -174,12 +178,27 @@ $(function(){initNavTree('sensor__base_8h.html','',''); });
 <tr class="heading"><td colspan="2"><h2 id="header-nested-classes" class="groupheader"><a id="nested-classes" name="nested-classes"></a>
 Classes</h2></td></tr>
 <tr class="memitem:superdex_3A_3Arobotics_3A_3ASensorBase" id="r_superdex_3A_3Arobotics_3A_3ASensorBase"><td class="memItemLeft">class &#160;</td><td class="memItemRight"><a class="el" href="classsuperdex_1_1robotics_1_1SensorBase.html">superdex::robotics::SensorBase</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Base class for robot sensors.  <a href="classsuperdex_1_1robotics_1_1SensorBase.html#details">More...</a><br /></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Base class for graph-native robot sensors.  <a href="classsuperdex_1_1robotics_1_1SensorBase.html#details">More...</a><br /></td></tr>
+<tr class="memitem:superdex_3A_3Arobotics_3A_3ASensorSample" id="r_superdex_3A_3Arobotics_3A_3ASensorSample"><td class="memItemLeft">struct &#160;</td><td class="memItemRight"><a class="el" href="structsuperdex_1_1robotics_1_1SensorSample.html">superdex::robotics::SensorSample</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Borrowed view of one completed sensor publication.  <a href="structsuperdex_1_1robotics_1_1SensorSample.html#details">More...</a><br /></td></tr>
+<tr class="memitem:superdex_3A_3Arobotics_3A_3ASensorScope" id="r_superdex_3A_3Arobotics_3A_3ASensorScope"><td class="memItemLeft">struct &#160;</td><td class="memItemRight"><a class="el" href="structsuperdex_1_1robotics_1_1SensorScope.html">superdex::robotics::SensorScope</a></td></tr>
+<tr class="memitem:superdex_3A_3Arobotics_3A_3AStepTime" id="r_superdex_3A_3Arobotics_3A_3AStepTime"><td class="memItemLeft">struct &#160;</td><td class="memItemRight"><a class="el" href="structsuperdex_1_1robotics_1_1StepTime.html">superdex::robotics::StepTime</a></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-namespaces" class="groupheader"><a id="namespaces" name="namespaces"></a>
 Namespaces</h2></td></tr>
 <tr class="memitem:superdex" id="r_superdex"><td class="memItemLeft">namespace &#160;</td><td class="memItemRight"><a class="el" href="namespacesuperdex.html">superdex</a></td></tr>
 <tr class="memitem:superdex_3A_3Arobotics" id="r_superdex_3A_3Arobotics"><td class="memItemLeft">namespace &#160;</td><td class="memItemRight"><a class="el" href="namespacesuperdex_1_1robotics.html">superdex::robotics</a></td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 id="header-enum-members" class="groupheader"><a id="enum-members" name="enum-members"></a>
+Enumerations</h2></td></tr>
+<tr class="memitem:af2e36550ba48efa09d8982d060c8c435" id="r_af2e36550ba48efa09d8982d060c8c435"><td class="memItemLeft">enum class &#160;</td><td class="memItemRight"><a class="el" href="namespacesuperdex_1_1robotics.html#af2e36550ba48efa09d8982d060c8c435">superdex::robotics::SensorStepResult</a> { <a class="el" href="namespacesuperdex_1_1robotics.html#af2e36550ba48efa09d8982d060c8c435af3413da9e97ed78dada82d1330fde5f1">superdex::robotics::NoUpdate</a>
+, <a class="el" href="namespacesuperdex_1_1robotics.html#af2e36550ba48efa09d8982d060c8c435a9b9d8a976b42e0bd66381797644943d5">superdex::robotics::Published</a>
+ }</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 id="header-func-members" class="groupheader"><a id="func-members" name="func-members"></a>
+Functions</h2></td></tr>
+<tr class="memitem:a7e5d9a4c92f779661040945130c9c442" id="r_a7e5d9a4c92f779661040945130c9c442"><td class="memTemplParams" colspan="2">template&lt;typename T&gt; </td></tr>
+<tr class="memitem:a7e5d9a4c92f779661040945130c9c442 template"><td class="memItemLeft">T const *&#160;</td><td class="memItemRight"><a class="el" href="namespacesuperdex_1_1robotics.html#a7e5d9a4c92f779661040945130c9c442">superdex::robotics::TryGetSensorMetadata</a> (<a class="el" href="classsuperdex_1_1robotics_1_1SensorBase.html">SensorBase</a> const &amp;sensor)</td></tr>
 </table>
 </div><!-- contents -->
 </div><!-- doc-content -->

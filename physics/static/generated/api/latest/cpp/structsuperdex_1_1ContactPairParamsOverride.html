@@ -184,6 +184,10 @@ Public Attributes</h2></td></tr>
 <tr class="memdesc:a902f5f24039b7bde76a3170fe8b1d2f3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Pair normal viscous damping coefficient [s/m].  <br /></td></tr>
 <tr class="memitem:a4b9092be9786114bb82d43a85589ef38" id="r_a4b9092be9786114bb82d43a85589ef38"><td class="memItemLeft">std::optional&lt; <a class="el" href="namespacesuperdex.html#ab1cf40739516aea925c8ebe213131a5d">real</a> &gt;&#160;</td><td class="memItemRight"><a class="el" href="#a4b9092be9786114bb82d43a85589ef38">penaltyCoefficient</a></td></tr>
 <tr class="memdesc:a4b9092be9786114bb82d43a85589ef38"><td class="mdescLeft">&#160;</td><td class="mdescRight">Pair penalty coefficient [Pa/m] before role-dependent dimensional corrections.  <br /></td></tr>
+<tr class="memitem:a96154d55ca564e6eefa7cb5c5e292cdf" id="r_a96154d55ca564e6eefa7cb5c5e292cdf"><td class="memItemLeft">std::optional&lt; bool &gt;&#160;</td><td class="memItemRight"><a class="el" href="#a96154d55ca564e6eefa7cb5c5e292cdf">preferElastoPlasticFriction</a></td></tr>
+<tr class="memdesc:a96154d55ca564e6eefa7cb5c5e292cdf"><td class="mdescLeft">&#160;</td><td class="mdescRight">[Experimental] Whether the pair prefers elasto-plastic friction.  <br /></td></tr>
+<tr class="memitem:af7393f5f2fc3ed2872a71706d66987f5" id="r_af7393f5f2fc3ed2872a71706d66987f5"><td class="memItemLeft">std::optional&lt; <a class="el" href="namespacesuperdex.html#ab1cf40739516aea925c8ebe213131a5d">real</a> &gt;&#160;</td><td class="memItemRight"><a class="el" href="#af7393f5f2fc3ed2872a71706d66987f5">preslidingDisplacement</a></td></tr>
+<tr class="memdesc:af7393f5f2fc3ed2872a71706d66987f5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Presliding displacement of elasto-plastic friction [m].  <br /></td></tr>
 <tr class="memitem:a29832066b3d98d6b6124a7a82199b545" id="r_a29832066b3d98d6b6124a7a82199b545"><td class="memItemLeft">std::optional&lt; <a class="el" href="namespacesuperdex.html#ab1cf40739516aea925c8ebe213131a5d">real</a> &gt;&#160;</td><td class="memItemRight"><a class="el" href="#a29832066b3d98d6b6124a7a82199b545">viscousFrictionCoefficient</a></td></tr>
 <tr class="memdesc:a29832066b3d98d6b6124a7a82199b545"><td class="mdescLeft">&#160;</td><td class="mdescRight">Pair viscous friction coefficient [s/m].  <br /></td></tr>
 </table>
@@ -235,7 +239,7 @@ Public Attributes</h2></td></tr>
 <p>Pair Coulomb friction coefficient. </p>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="structsuperdex_1_1ContactParams.html#a32b0f13db6390bcbe12e2327c7715cb6" title="superdex::ContactParams::coulombFrictionCoefficient">ContactParams::coulombFrictionCoefficient</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00061">61</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00065">65</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -254,7 +258,7 @@ Public Attributes</h2></td></tr>
 <p>Friction falloff velocity [m/s]. </p>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="structsuperdex_1_1ContactParams.html#afa1094b4dacf12646fcee9f56a9e0ee8" title="superdex::ContactParams::frictionFalloffVel">ContactParams::frictionFalloffVel</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00057">57</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00059">59</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -273,7 +277,7 @@ Public Attributes</h2></td></tr>
 <p>Pair normal viscous damping coefficient [s/m]. </p>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="structsuperdex_1_1ContactParams.html#a543cf301af4ca5cfefb19c864a2b5422" title="superdex::ContactParams::normalViscousDampingCoefficient">ContactParams::normalViscousDampingCoefficient</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00063">63</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00067">67</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -296,6 +300,45 @@ Public Attributes</h2></td></tr>
 
 </div>
 </div>
+<a id="a96154d55ca564e6eefa7cb5c5e292cdf" name="a96154d55ca564e6eefa7cb5c5e292cdf"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a96154d55ca564e6eefa7cb5c5e292cdf">&#9670;&#160;</a></span>preferElastoPlasticFriction</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::optional&lt;bool&gt; superdex::ContactPairParamsOverride::preferElastoPlasticFriction</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>[Experimental] Whether the pair prefers elasto-plastic friction. </p>
+<dl class="section warning"><dt>Warning</dt><dd>This is an experimental feature. It may be changed or removed in the future. Use at your own risk.</dd></dl>
+<dl class="section see"><dt>See also</dt><dd><a class="el" href="structsuperdex_1_1ContactParams.html#a5c55ba0a580fae9f0331bd273bccff13" title="superdex::ContactParams::preferElastoPlasticFriction">ContactParams::preferElastoPlasticFriction</a> </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00057">57</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+
+</div>
+</div>
+<a id="af7393f5f2fc3ed2872a71706d66987f5" name="af7393f5f2fc3ed2872a71706d66987f5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af7393f5f2fc3ed2872a71706d66987f5">&#9670;&#160;</a></span>preslidingDisplacement</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::optional&lt;<a class="el" href="namespacesuperdex.html#ab1cf40739516aea925c8ebe213131a5d">real</a>&gt; superdex::ContactPairParamsOverride::preslidingDisplacement</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Presliding displacement of elasto-plastic friction [m]. </p>
+<dl class="section see"><dt>See also</dt><dd><a class="el" href="structsuperdex_1_1ContactParams.html#a28c4fa3187efbf1a82a19935ace291a6" title="superdex::ContactParams::preslidingDisplacement">ContactParams::preslidingDisplacement</a> </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00061">61</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+
+</div>
+</div>
 <a id="a29832066b3d98d6b6124a7a82199b545" name="a29832066b3d98d6b6124a7a82199b545"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a29832066b3d98d6b6124a7a82199b545">&#9670;&#160;</a></span>viscousFrictionCoefficient</h2>
 
@@ -311,7 +354,7 @@ Public Attributes</h2></td></tr>
 <p>Pair viscous friction coefficient [s/m]. </p>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="structsuperdex_1_1ContactParams.html#a884d5f59ea775ad3ea9d48a7d2b815cc" title="superdex::ContactParams::viscousFrictionCoefficient">ContactParams::viscousFrictionCoefficient</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00059">59</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00063">63</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>

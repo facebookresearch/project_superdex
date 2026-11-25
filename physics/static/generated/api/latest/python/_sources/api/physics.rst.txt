@@ -319,6 +319,14 @@ Runtime physical bodies.
    :members:
    :show-inheritance:
 
+.. autoclass:: superdex.physics.RodActorParams
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.RodMaterialParams
+   :members:
+   :show-inheritance:
+
 .. autoclass:: superdex.physics.SoftActorParams
    :members:
    :show-inheritance:
@@ -456,6 +464,10 @@ Constraints on and between actors.
    :members:
    :show-inheritance:
 
+.. autoclass:: superdex.physics.RodElementRotationConstraintParams
+   :members:
+   :show-inheritance:
+
 .. autoclass:: superdex.physics.RodElementRotationToRigidConstraintParams
    :members:
    :show-inheritance:
@@ -493,15 +505,15 @@ Contact and collision configuration and results.
    :members:
    :show-inheritance:
 
-.. autoclass:: superdex.physics.CoulombFrictionModel
-   :members:
-   :show-inheritance:
-
 .. autoclass:: superdex.physics.IncludeNestedActors
    :members:
    :show-inheritance:
 
 .. autoclass:: superdex.physics.NodeContactForce
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.PointCloudColliderParams
    :members:
    :show-inheritance:
 
@@ -946,6 +958,14 @@ Public symbols that are not yet grouped into a section above.
    :members:
    :show-inheritance:
 
+.. autoclass:: superdex.physics.DynamicArrayDynamicString
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.DynamicArrayInt64
+   :members:
+   :show-inheritance:
+
 .. autoclass:: superdex.physics.DynamicArrayRoutingElement
    :members:
    :show-inheritance:
@@ -967,6 +987,14 @@ Public symbols that are not yet grouped into a section above.
    :members:
    :show-inheritance:
 
+.. autoclass:: superdex.physics.SpanConstDynamicString
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.SpanConstInt64
+   :members:
+   :show-inheritance:
+
 .. autoclass:: superdex.physics.SpanReal3
    :members:
    :show-inheritance:
@@ -975,5 +1003,8 @@ Public symbols that are not yet grouped into a section above.
    :no-value:
 
 .. autodata:: superdex.physics.get_shape_contact_skin_mesh
+   :no-value:
+
+.. autodata:: superdex.physics.get_shape_element_frame_axes
    :no-value:
 

@@ -38,6 +38,7 @@ var mochi__platform_8h =
     [ "MOCHI_DECLARE_NO_COPY", "mochi__platform_8h.html#aec86f3cb78ebffc23d7aa13753a03ec3", null ],
     [ "MOCHI_DECLARE_NO_COPY_NO_MOVE", "mochi__platform_8h.html#a3a921ae9c086ccb421380fa3e37ca378", null ],
     [ "MOCHI_DECLARE_NO_MOVE", "mochi__platform_8h.html#aea8df1b54e974653bae20bec4b0fd6ac", null ],
+    [ "MOCHI_DETAILS_CPLUSPLUS", "mochi__platform_8h.html#a9e944c6b4c40524ff011ee73c8f24bd7", null ],
     [ "MOCHI_DISABLE_CUDA_GPU_EXEC_CHECK", "mochi__platform_8h.html#ab6f246de7235b66a53cd289bbf7c789b", null ],
     [ "MOCHI_EMPTY_BASE", "mochi__platform_8h.html#a78614baee77b14d1c4e5324c8bfdee33", null ],
     [ "MOCHI_FORCE_INLINE", "mochi__platform_8h.html#a72399e3db9cecef4fa7351b2f7121589", null ],

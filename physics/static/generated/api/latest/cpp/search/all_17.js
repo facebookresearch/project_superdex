@@ -8,7 +8,7 @@ var searchData=
   ['weightspernode_4',['weightsPerNode',['../structsuperdex_1_1SkinningData.html#a65373b88fe22100e9cceccd3b2177583',1,'superdex::SkinningData::weightsPerNode'],['../structsuperdex_1_1SkinningDataView.html#a21d985b1cf0881e75fc5f5908fb733c2',1,'superdex::SkinningDataView::weightsPerNode']]],
   ['wolfestrong_5',['WolfeStrong',['../namespacesuperdex.html#ab1e65537a0c9a09ecf7db46f01977326a25727e2210a26cbab660e606edf4bd1c',1,'superdex']]],
   ['wolfeweak_6',['WolfeWeak',['../namespacesuperdex.html#ab1e65537a0c9a09ecf7db46f01977326af9f0e79c5e109b3f321dd039f864e7db',1,'superdex']]],
-  ['worldfromlocal_7',['worldFromLocal',['../structsuperdex_1_1RigidActorParams.html#aa328db9298cefcab08f3cc0182a8bab2',1,'superdex::RigidActorParams::worldFromLocal'],['../structsuperdex_1_1SoftActorParams.html#ab23fc8af21d81bd22998bad8a4c1b7af',1,'superdex::SoftActorParams::worldFromLocal']]],
+  ['worldfromlocal_7',['worldFromLocal',['../structsuperdex_1_1RigidActorParams.html#aa328db9298cefcab08f3cc0182a8bab2',1,'superdex::RigidActorParams::worldFromLocal'],['../structsuperdex_1_1SoftActorParams.html#ab23fc8af21d81bd22998bad8a4c1b7af',1,'superdex::SoftActorParams::worldFromLocal'],['../structsuperdex_1_1RodActorParams.html#a072e8580456a6cb9dfc4f0ad48c7b3b7',1,'superdex::RodActorParams::worldFromLocal']]],
   ['worldfromroot_8',['worldFromRoot',['../structsuperdex_1_1ArticulatedActorParams.html#a7db5ac54935cc0d85c18211eeffeb5c8',1,'superdex::ArticulatedActorParams']]],
   ['worldpositions_9',['worldPositions',['../structsuperdex_1_1SdfDistances.html#ab1cd4b313cf768546c19c5fbaa754fd4',1,'superdex::SdfDistances']]]
 ];

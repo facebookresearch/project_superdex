@@ -1,6 +1,7 @@
 // @generated
 var searchData=
 [
-  ['sdf_0',['Sdf',['../namespacesuperdex_1_1robotics.html#a0eb33f2c2377c22f57055ea8d2e5e552a8112f5cfd81b80c1dc999d51ec3b1c24',1,'superdex::robotics']]],
-  ['sphere_1',['Sphere',['../namespacesuperdex_1_1robotics.html#a0eb33f2c2377c22f57055ea8d2e5e552ab7095f057db3fefa7325ad93a04e14fd',1,'superdex::robotics']]]
+  ['nearestcell_0',['NearestCell',['../namespacesuperdex_1_1robotics.html#aa1da36f357c194c9116318234629679aa58b51d5972940c376830faae29fc4af6',1,'superdex::robotics']]],
+  ['none_1',['None',['../namespacesuperdex_1_1robotics.html#a370112a9ab19f458c2154f83f2f439f9a6adf97f83acf6453d4a6a4b1070f3754',1,'superdex::robotics']]],
+  ['noupdate_2',['NoUpdate',['../namespacesuperdex_1_1robotics.html#af2e36550ba48efa09d8982d060c8c435af3413da9e97ed78dada82d1330fde5f1',1,'superdex::robotics']]]
 ];

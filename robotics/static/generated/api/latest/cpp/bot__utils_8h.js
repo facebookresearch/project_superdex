@@ -1,6 +1,7 @@
 // @generated
 var bot__utils_8h =
 [
+    [ "superdex::robotics::LinkPoseResidual", "structsuperdex_1_1robotics_1_1LinkPoseResidual.html", "structsuperdex_1_1robotics_1_1LinkPoseResidual" ],
     [ "superdex::robotics::ValidateResults", "structsuperdex_1_1robotics_1_1ValidateResults.html", "structsuperdex_1_1robotics_1_1ValidateResults" ],
     [ "superdex::robotics::MakeBotPoseType", "namespacesuperdex_1_1robotics.html#a9d282e31b59e8ddf3adf70df4f8f5811", [
       [ "superdex::robotics::MakeBotPoseType::Zero", "namespacesuperdex_1_1robotics.html#a9d282e31b59e8ddf3adf70df4f8f5811ad7ed4ee1df437474d005188535f74875", null ],
@@ -23,11 +24,17 @@ var bot__utils_8h =
     [ "superdex::robotics::BuildArticulatedPoseFromBotPose", "namespacesuperdex_1_1robotics.html#a70b72f14a8b423e568840666026bccf9", null ],
     [ "superdex::robotics::BuildBot", "namespacesuperdex_1_1robotics.html#aba3231a663e462e24ef16ce90a273ddd", null ],
     [ "superdex::robotics::ComputeLinkTransformsFromPose", "namespacesuperdex_1_1robotics.html#aadbd90373b3312584410dcf6fbf283ad", null ],
+    [ "superdex::robotics::ComputePoseFromLinkTransforms", "namespacesuperdex_1_1robotics.html#a6ce36682b95d734b21154bc14385c3b5", null ],
+    [ "superdex::robotics::ComputeSkinBoneLinkIndices", "namespacesuperdex_1_1robotics.html#aeb71846eb972bd9a0817b19020b74cef", null ],
+    [ "superdex::robotics::ComputeSkinCoveredLinks", "namespacesuperdex_1_1robotics.html#a148bfe2fc03b9eb3e989a1c32f712e93", null ],
+    [ "superdex::robotics::ComputeSkinHiddenLinks", "namespacesuperdex_1_1robotics.html#a16d348c2dde784e5aa224169bf49d804", null ],
     [ "superdex::robotics::FindLeafLinkIndices", "namespacesuperdex_1_1robotics.html#a8daed6f102653f121ad5b7627d119188", null ],
     [ "superdex::robotics::FindLinkIndexByName", "namespacesuperdex_1_1robotics.html#ad700a274837b66419feb2c62302d34cf", null ],
     [ "superdex::robotics::GetBotSkinName", "namespacesuperdex_1_1robotics.html#abecf7f72bfeb11af7b4b78aa4da51ad6", null ],
     [ "superdex::robotics::GetEffortLimitsPerDof", "namespacesuperdex_1_1robotics.html#ad7eb083748bef44132a55cfe5c8d6659", null ],
     [ "superdex::robotics::IsContactImplicitlyDisabled", "namespacesuperdex_1_1robotics.html#aca9bca5f7e8b4e5124a3f4a434a5d494", null ],
+    [ "superdex::robotics::details::JointEffortScale", "namespacesuperdex_1_1robotics_1_1details.html#a734c678c097e5e06b41aa87d9f993cfd", null ],
+    [ "superdex::robotics::details::JointGainScale", "namespacesuperdex_1_1robotics_1_1details.html#a55488321b153b696876346e490774348", null ],
     [ "superdex::robotics::MakeBotPose", "namespacesuperdex_1_1robotics.html#a74d86081f72857c559b6494a219cb337", null ],
     [ "superdex::robotics::RebuildBotData", "namespacesuperdex_1_1robotics.html#a01691632294cfb538e1080747878c2d2", null ],
     [ "superdex::robotics::RemoveLinkAndDescendants", "namespacesuperdex_1_1robotics.html#a48c4bc67bbbef91e414e3d65c9d284e0", null ],

@@ -31,10 +31,16 @@ superdex.physics.environment
 .. autodata:: superdex.physics.environment.DEBUGGER_PATH_ENV_VAR
    :no-value:
 
+.. autodata:: superdex.physics.environment.ISA_ENV_VAR
+   :no-value:
+
 .. autodata:: superdex.physics.environment.LEGACY_ASSETS_PATH_ENV_VAR
    :no-value:
 
 .. autodata:: superdex.physics.environment.LEGACY_DEBUGGER_PATH_ENV_VAR
+   :no-value:
+
+.. autodata:: superdex.physics.environment.LEGACY_ISA_ENV_VAR
    :no-value:
 
 .. autodata:: superdex.physics.environment.LEGACY_LOG_LEVEL_ENV_VAR
@@ -86,6 +92,10 @@ superdex.physics.utils.scene_helpers
 
 .. automodule:: superdex.physics.utils.scene_helpers
    :no-members:
+
+.. autofunction:: superdex.physics.utils.scene_helpers.apply_asset_snapshot
+
+.. autofunction:: superdex.physics.utils.scene_helpers.clear_asset_snapshot
 
 .. autofunction:: superdex.physics.utils.scene_helpers.create_ground_plane
 

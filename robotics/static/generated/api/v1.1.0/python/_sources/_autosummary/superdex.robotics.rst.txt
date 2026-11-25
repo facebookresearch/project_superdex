@@ -1,0 +1,156 @@
+# @generated
+﻿superdex.robotics
+=================
+
+.. automodule:: superdex.robotics
+
+   
+   
+   
+
+   
+   
+   
+
+   
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+   
+      BotFileType
+      LinkTransformSpace
+      ControllerInputKind
+      TactileRectProjectionType
+      TactileRectRasterizationType
+      TactileRectOutsidePolicy
+      SensorDType
+      RoboticsHandle
+      BotHandle
+      ControllerHandle
+      SensorHandle
+      ActuatorHandle
+      BotJointPrefab
+      BotSensorPrefab
+      BotActuatorPrefab
+      BotLinkPrefab
+      BotContactOverride
+      BotTransmissionPrefab
+      BotLinearTransmissionPrefab
+      BotSpatialTendonPrefab
+      BotPrefab
+      RoboticsContext
+      ComponentBase
+      ControllerBase
+      ControllerBasicOscPdParams
+      ControllerBasicOscPdObsv
+      ControllerBasicOscPdTarget
+      ControllerBasicOscPd
+      ControllerMochiArticulatedPoseParams
+      ControllerMochiArticulatedPoseObsv
+      ControllerMochiArticulatedPoseTarget
+      ControllerMochiArticulatedPose
+      Bot
+      ControllerBasicJscPdParams
+      ControllerBasicJscPdObsv
+      ControllerBasicJscPdTarget
+      SensorCameraParams
+      SensorSeedRectMapParams
+      SensorSeedV1MLPParams
+      SensorSeedV1MLPResult
+      SensorTemporalWindowParams
+      SensorRandomParams
+      SensorDelayLineParams
+      SensorGaussianNoiseParams
+      SensorJointEncoderParams
+      SensorUniformNoiseParams
+      SensorOutlierInjectionParams
+      TactileTaxelLayout
+      TactileTaxelForces
+      TactileAggregateForce
+      TactileAggregateWrench
+      TactileHemisphereRectParams
+      TactileRectProjectionMap
+      TactileForceGrid
+      ControllerBasicJscPd
+      SensorAxis
+      SensorFormat
+      SensorSample
+      SensorBase
+      SensorArticulatedJointWrench
+      SensorLinkVertexForceParams
+      SensorLinkVertexForce
+      SensorAggregateForceParams
+      SensorAggregateForce
+      SensorConcatParams
+      SensorConcat
+      ActuatorBase
+      SensorCamera
+      SensorSeedRectMap
+      SensorSeedV1MLP
+      SensorTemporalWindow
+      SensorDelayLine
+      SensorGaussianNoise
+      SensorUniformNoise
+      SensorOutlierInjection
+      SensorJointEncoder
+      SensorFunction
+      BotSceneMetadata
+      PrefabEntry
+      BaseSceneParams
+      ControllerEntry
+      BotEntry
+      SensorGraphNodeView
+      SlotEntry
+      SceneSensorEntry
+      BotScenePrefab
+      SceneUrdfJointVelocityLimit
+      SceneUrdfLinkAlias
+      SceneUrdfOptions
+      BotScene
+      SpawnEntry
+      BotTaskPrefab
+      TerminationOutcome
+      DREpisodeEntry
+      DREpisode
+      DREpisodeList
+      ResolvedSpawn
+      AssetSnapshotEntry
+      AssetSnapshot
+      SensorLinkContactForceParams
+      SensorLinkContactForce
+      DynamicArrayActuatorHandle
+      DynamicArrayAssetSnapshotEntry
+      DynamicArrayBotActuatorPrefab
+      DynamicArrayBotContactOverride
+      DynamicArrayBotEntry
+      DynamicArrayBotHandle
+      DynamicArrayBotJointPrefab
+      DynamicArrayBotLinearTransmissionPrefab
+      DynamicArrayBotLinkPrefab
+      DynamicArrayBotSensorPrefab
+      DynamicArrayBotSpatialTendonPrefab
+      DynamicArrayControllerEntry
+      DynamicArrayControllerHandle
+      DynamicArrayDREpisode
+      DynamicArrayDREpisodeEntry
+      DynamicArrayPrefabEntry
+      DynamicArrayResolvedSpawn
+      DynamicArraySceneSensorEntry
+      DynamicArraySceneUrdfJointVelocityLimit
+      DynamicArraySceneUrdfLinkAlias
+      DynamicArraySensorAxis
+      DynamicArraySensorGraphNodeView
+      DynamicArraySensorHandle
+      DynamicArraySlotEntry
+      DynamicArraySpawnEntry
+      SpanConstSensorGraphNodeView
+   
+   
+
+   
+   
+   
+
+
+

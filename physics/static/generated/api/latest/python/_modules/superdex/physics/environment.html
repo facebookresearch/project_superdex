@@ -131,6 +131,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../../../api/prefab.html#instantiation">Instantiation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../api/prefab.html#serialization-export">Serialization &amp; Export</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../api/prefab.html#containers">Containers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/prefab.html#not-yet-categorized">Not Yet Categorized</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../../../api/models.html">Models &amp; Meshes</a><ul>
@@ -246,6 +247,12 @@
 <span class="sd">&quot;&quot;&quot;Environment variable used to select precision (fp32/fp64).&quot;&quot;&quot;</span>
 <span class="n">LEGACY_PRECISION_ENV_VAR</span> <span class="o">=</span> <span class="s2">&quot;MOCHI_PRECISION&quot;</span>
 <span class="sd">&quot;&quot;&quot;Deprecated environment variable alias for bindings precision.&quot;&quot;&quot;</span>
+
+<span class="c1"># ISA selection.</span>
+<span class="n">ISA_ENV_VAR</span> <span class="o">=</span> <span class="s2">&quot;SUPERDEX_ISA&quot;</span>
+<span class="sd">&quot;&quot;&quot;Environment variable used to select the native ISA (avx2, avx512, neon).&quot;&quot;&quot;</span>
+<span class="n">LEGACY_ISA_ENV_VAR</span> <span class="o">=</span> <span class="s2">&quot;MOCHI_ISA&quot;</span>
+<span class="sd">&quot;&quot;&quot;Deprecated environment variable alias for bindings ISA.&quot;&quot;&quot;</span>
 
 
 <div class="viewcode-block" id="get_env_var_value"><a class="viewcode-back" href="../../../api/scene_setup.html#superdex.physics.environment.get_env_var_value">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_env_var_value</span><span class="p">(</span><span class="n">primary</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">legacy</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>

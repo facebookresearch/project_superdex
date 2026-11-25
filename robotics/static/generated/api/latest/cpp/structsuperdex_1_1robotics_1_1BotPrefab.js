@@ -9,6 +9,7 @@ var structsuperdex_1_1robotics_1_1BotPrefab =
     [ "linearTransmissions", "structsuperdex_1_1robotics_1_1BotPrefab.html#aeb79b0febd70736d6e3e7ba6cb4f9170", null ],
     [ "links", "structsuperdex_1_1robotics_1_1BotPrefab.html#a051a42dbe91f82a4570079f904331811", null ],
     [ "name", "structsuperdex_1_1robotics_1_1BotPrefab.html#a9558f0a9213808b2b7e449f35ef30bb4", null ],
+    [ "scale", "structsuperdex_1_1robotics_1_1BotPrefab.html#a14bafd6c602daaea1bed0c10c328345b", null ],
     [ "skin", "structsuperdex_1_1robotics_1_1BotPrefab.html#aaf45a9b5e32a3c2a4015ae75e922bc29", null ],
     [ "spatialTendons", "structsuperdex_1_1robotics_1_1BotPrefab.html#a4cff12769f9c635644f94acc04bc96a7", null ],
     [ "worldFromRoot", "structsuperdex_1_1robotics_1_1BotPrefab.html#a8c51f011d8ace6cfa635f6055b1fd479", null ]

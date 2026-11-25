@@ -180,6 +180,8 @@ Public Attributes</h2></td></tr>
 <tr class="memdesc:adf9c8cc01919cfe0818020968383cfde"><td class="mdescLeft">&#160;</td><td class="mdescRight">Legacy key captured on load: older assets named this field <span class="tt">paramsFile</span>.  <br /></td></tr>
 <tr class="memitem:a408386bf906acf08017762d07dd36c91" id="r_a408386bf906acf08017762d07dd36c91"><td class="memItemLeft">DynamicString&#160;</td><td class="memItemRight"><a class="el" href="#a408386bf906acf08017762d07dd36c91">_legacyTypeName</a></td></tr>
 <tr class="memdesc:a408386bf906acf08017762d07dd36c91"><td class="mdescLeft">&#160;</td><td class="mdescRight">Legacy key captured on load: older assets named this field <span class="tt">typeName</span>.  <br /></td></tr>
+<tr class="memitem:ad440dd03b2ba60435d50c0e8d16b1dc4" id="r_ad440dd03b2ba60435d50c0e8d16b1dc4"><td class="memItemLeft">DynamicArray&lt; DynamicString &gt;&#160;</td><td class="memItemRight"><a class="el" href="#ad440dd03b2ba60435d50c0e8d16b1dc4">inputs</a></td></tr>
+<tr class="memdesc:ad440dd03b2ba60435d50c0e8d16b1dc4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sensor graph inputs.  <br /></td></tr>
 <tr class="memitem:aad82d741ade9adbb274ab597b6b50617" id="r_aad82d741ade9adbb274ab597b6b50617"><td class="memItemLeft">DynamicString&#160;</td><td class="memItemRight"><a class="el" href="#aad82d741ade9adbb274ab597b6b50617">name</a></td></tr>
 <tr class="memdesc:aad82d741ade9adbb274ab597b6b50617"><td class="mdescLeft">&#160;</td><td class="mdescRight">Human-readable, findable identifier for this sensor instance.  <br /></td></tr>
 <tr class="memitem:a7bd5abe4bef9a4797ba44bf316c170ea" id="r_a7bd5abe4bef9a4797ba44bf316c170ea"><td class="memItemLeft">DynamicString&#160;</td><td class="memItemRight"><a class="el" href="#a7bd5abe4bef9a4797ba44bf316c170ea">params</a></td></tr>
@@ -192,7 +194,7 @@ Public Attributes</h2></td></tr>
 <a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Parameters describing a single sensor in a bot. </p>
 
-<p class="definition">Definition at line <a class="el" href="superdex__robotics_8h_source.html#l00107">107</a> of file <a class="el" href="superdex__robotics_8h_source.html">superdex_robotics.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="superdex__robotics_8h_source.html#l00102">102</a> of file <a class="el" href="superdex__robotics_8h_source.html">superdex_robotics.h</a>.</p>
 </div><a name="doc-func-members" id="doc-func-members"></a><h2 id="header-doc-func-members" class="groupheader">Member Function Documentation</h2>
 <a id="a62c5e7ecb8be12aeaeb80c596cdf2d6c" name="a62c5e7ecb8be12aeaeb80c596cdf2d6c"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a62c5e7ecb8be12aeaeb80c596cdf2d6c">&#9670;&#160;</a></span>operator==()</h2>
@@ -235,7 +237,7 @@ Public Attributes</h2></td></tr>
 <p>Legacy key captured on load: older assets named this field <span class="tt">paramsFile</span>. </p>
 <p>Folded into <span class="tt"><a class="el" href="#a7bd5abe4bef9a4797ba44bf316c170ea" title="Sensor parameters: a path to a .superdex_sensor JSON file or inline JSON.">params</a></span> by ApplyLegacyBotSensorFields and cleared (so re-saves omit it). </p>
 
-<p class="definition">Definition at line <a class="el" href="superdex__robotics_8h_source.html#l00132">132</a> of file <a class="el" href="superdex__robotics_8h_source.html">superdex_robotics.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="superdex__robotics_8h_source.html#l00130">130</a> of file <a class="el" href="superdex__robotics_8h_source.html">superdex_robotics.h</a>.</p>
 
 </div>
 </div>
@@ -254,7 +256,26 @@ Public Attributes</h2></td></tr>
 <p>Legacy key captured on load: older assets named this field <span class="tt">typeName</span>. </p>
 <p>Folded into <span class="tt"><a class="el" href="#afd95559c8b396da6d5c86e997decb9e1" title="Registered sensor type (e.g., &quot;SENSOR_CAMERA&quot;).">type</a></span> by ApplyLegacyBotSensorFields and cleared (so re-saves omit it). </p>
 
-<p class="definition">Definition at line <a class="el" href="superdex__robotics_8h_source.html#l00129">129</a> of file <a class="el" href="superdex__robotics_8h_source.html">superdex_robotics.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="superdex__robotics_8h_source.html#l00127">127</a> of file <a class="el" href="superdex__robotics_8h_source.html">superdex_robotics.h</a>.</p>
+
+</div>
+</div>
+<a id="ad440dd03b2ba60435d50c0e8d16b1dc4" name="ad440dd03b2ba60435d50c0e8d16b1dc4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad440dd03b2ba60435d50c0e8d16b1dc4">&#9670;&#160;</a></span>inputs</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DynamicArray&lt;DynamicString&gt; superdex::robotics::BotSensorPrefab::inputs</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Sensor graph inputs. </p>
+<p><span class="tt">./sensor</span> names a sensor on this sensor's link, <span class="tt">../link/sensor</span> a sensor on another link of the same bot, and any name not starting with <span class="tt">.</span> is a complete graph node name (<span class="tt">bot/link/sensor</span> or a scene sensor's name). Other relative forms are rejected. </p>
+
+<p class="definition">Definition at line <a class="el" href="superdex__robotics_8h_source.html#l00110">110</a> of file <a class="el" href="superdex__robotics_8h_source.html">superdex_robotics.h</a>.</p>
 
 </div>
 </div>
@@ -272,7 +293,7 @@ Public Attributes</h2></td></tr>
 
 <p>Human-readable, findable identifier for this sensor instance. </p>
 
-<p class="definition">Definition at line <a class="el" href="superdex__robotics_8h_source.html#l00112">112</a> of file <a class="el" href="superdex__robotics_8h_source.html">superdex_robotics.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="superdex__robotics_8h_source.html#l00107">107</a> of file <a class="el" href="superdex__robotics_8h_source.html">superdex_robotics.h</a>.</p>
 
 </div>
 </div>
@@ -291,7 +312,7 @@ Public Attributes</h2></td></tr>
 <p>Sensor parameters: a path to a .superdex_sensor JSON file or inline JSON. </p>
 <p>Empty uses defaults. </p>
 
-<p class="definition">Definition at line <a class="el" href="superdex__robotics_8h_source.html#l00120">120</a> of file <a class="el" href="superdex__robotics_8h_source.html">superdex_robotics.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="superdex__robotics_8h_source.html#l00118">118</a> of file <a class="el" href="superdex__robotics_8h_source.html">superdex_robotics.h</a>.</p>
 
 </div>
 </div>
@@ -310,7 +331,7 @@ Public Attributes</h2></td></tr>
 <p>Sensor pose relative to the associated link's actor (aFromB convention: maps sensor-frame coordinates into the link frame). </p>
 <p>Chain to world via <a class="el" href="classsuperdex_1_1robotics_1_1SensorBase.html#a9d8143f7280ea24d7c4f2462e1edfa16" title="The sensor&#39;s pose in world space.">SensorBase::GetWorldTransform</a>. </p>
 
-<p class="definition">Definition at line <a class="el" href="superdex__robotics_8h_source.html#l00116">116</a> of file <a class="el" href="superdex__robotics_8h_source.html">superdex_robotics.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="superdex__robotics_8h_source.html#l00114">114</a> of file <a class="el" href="superdex__robotics_8h_source.html">superdex_robotics.h</a>.</p>
 
 </div>
 </div>
@@ -328,7 +349,7 @@ Public Attributes</h2></td></tr>
 
 <p>Registered sensor type (e.g., "SENSOR_CAMERA"). </p>
 
-<p class="definition">Definition at line <a class="el" href="superdex__robotics_8h_source.html#l00109">109</a> of file <a class="el" href="superdex__robotics_8h_source.html">superdex_robotics.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="superdex__robotics_8h_source.html#l00104">104</a> of file <a class="el" href="superdex__robotics_8h_source.html">superdex_robotics.h</a>.</p>
 
 </div>
 </div>

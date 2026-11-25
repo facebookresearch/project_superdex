@@ -200,7 +200,7 @@ Public Attributes</h2></td></tr>
 <a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Parameters for the linear solve performed in each iteration of the non-linear solver. </p>
 
-<p class="definition">Definition at line <a class="el" href="linear__solver__params_8h_source.html#l00347">347</a> of file <a class="el" href="linear__solver__params_8h_source.html">linear_solver_params.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="linear__solver__params_8h_source.html#l00376">376</a> of file <a class="el" href="linear__solver__params_8h_source.html">linear_solver_params.h</a>.</p>
 </div><a name="doc-func-members" id="doc-func-members"></a><h2 id="header-doc-func-members" class="groupheader">Member Function Documentation</h2>
 <a id="ae372a0b1a3b37e33d2aa92c38c3bb71f" name="ae372a0b1a3b37e33d2aa92c38c3bb71f"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ae372a0b1a3b37e33d2aa92c38c3bb71f">&#9670;&#160;</a></span>operator==()</h2>
@@ -243,7 +243,7 @@ Public Attributes</h2></td></tr>
 <p>Abort solve if matrix is not SPD. </p>
 <dl class="section note"><dt>Note</dt><dd>Applies only to iterative SPD solvers (e.g., <a class="el" href="namespacesuperdex.html#abff39d229a5fb631aa4a3d5f40f63aa5a5202c6586cac8bee468e86d1ff854231" title="LinearSolverType::CG">LinearSolverType::CG</a>, <a class="el" href="namespacesuperdex.html#abff39d229a5fb631aa4a3d5f40f63aa5a8119918193dd1b5d9a3d165a82ae5c63" title="LinearSolverType::CudaCG">LinearSolverType::CudaCG</a>, <a class="el" href="namespacesuperdex.html#abff39d229a5fb631aa4a3d5f40f63aa5a75fb02c4c97b342d56c3fbfa9be05b9e" title="LinearSolverType::AugmentedCG">LinearSolverType::AugmentedCG</a>). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="linear__solver__params_8h_source.html#l00414">414</a> of file <a class="el" href="linear__solver__params_8h_source.html">linear_solver_params.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="linear__solver__params_8h_source.html#l00456">456</a> of file <a class="el" href="linear__solver__params_8h_source.html">linear_solver_params.h</a>.</p>
 
 </div>
 </div>
@@ -260,9 +260,15 @@ Public Attributes</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Absolute residual norm tolerance for convergence. </p>
-<dl class="section note"><dt>Note</dt><dd>Applies only to iterative solvers. </dd></dl>
+<dl class="section note"><dt>Note</dt><dd>Applies only to iterative solvers. </dd>
+<dd>
+When the solver stops on <a class="el" href="namespacesuperdex.html#ab6f7ba911e492877e344a2746b534475ac6b36aaadfb2f0e67b6571943ecc7f09" title="LinearSolverConvergenceNorm::ResidualPerActorWeighted">LinearSolverConvergenceNorm::ResidualPerActorWeighted</a>, the absolute stop ends the solve only once every actor's weighted residual \(\|r_a\|_W\) is at most <a class="el" href="#a2c1c881552f1c2cf7ff240be5b82ba08" title="absTol">absTol</a>. Otherwise, it bounds the solver's stopping norm. </dd>
+<dd>
+0 leaves only the relative test. </dd>
+<dd>
+A negative value lets Mochi select it. When the solver stops on <a class="el" href="namespacesuperdex.html#ab6f7ba911e492877e344a2746b534475ac6b36aaadfb2f0e67b6571943ecc7f09" title="LinearSolverConvergenceNorm::ResidualPerActorWeighted">LinearSolverConvergenceNorm::ResidualPerActorWeighted</a>, Mochi selects 1% of the residual at which the non-linear solver accepts each actor: <a class="el" href="structsuperdex_1_1NonLinearSolverParams.html#a58779906989a7a4ad01559aca0e068ee" title="NonLinearSolverParams::relTol">NonLinearSolverParams::relTol</a> times the actor's initial residual, or <a class="el" href="structsuperdex_1_1NonLinearSolverParams.html#a6f910102ba423b9a07526ca9dea9cabb" title="NonLinearSolverParams::absTol">NonLinearSolverParams::absTol</a> if larger. When it stops on <a class="el" href="namespacesuperdex.html#ab6f7ba911e492877e344a2746b534475af10d3841937e235028013a273d01daa8" title="LinearSolverConvergenceNorm::ResidualL2">LinearSolverConvergenceNorm::ResidualL2</a> in <a class="el" href="namespacesuperdex.html#af28ac7f29bed21cbcaa47c2035494994a4cc6684df7b4a92b1dec6fce3264fac8" title="NonLinearSolverConvergenceMode::Global">NonLinearSolverConvergenceMode::Global</a> mode, Mochi selects 1% of the residual at which the non-linear solver accepts the island. Otherwise, it selects 1e-9. The selection is 0 when <a class="el" href="structsuperdex_1_1NonLinearSolverParams.html#a6f910102ba423b9a07526ca9dea9cabb" title="NonLinearSolverParams::absTol">NonLinearSolverParams::absTol</a> is 0 and either <a class="el" href="structsuperdex_1_1NonLinearSolverParams.html#a58779906989a7a4ad01559aca0e068ee" title="NonLinearSolverParams::relTol">NonLinearSolverParams::relTol</a> or the initial residual of an actor or the island is 0, which leaves only the relative test. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="linear__solver__params_8h_source.html#l00370">370</a> of file <a class="el" href="linear__solver__params_8h_source.html">linear_solver_params.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="linear__solver__params_8h_source.html#l00412">412</a> of file <a class="el" href="linear__solver__params_8h_source.html">linear_solver_params.h</a>.</p>
 
 </div>
 </div>
@@ -285,7 +291,7 @@ Must be positive or <a class="el" href="namespacesuperdex.html#ace8cafd7b9b03ea0
 <dd>
 <a class="el" href="namespacesuperdex.html#ace8cafd7b9b03ea06d7edcdef83612c8" title="kAutoLinearSolverMaxIter">kAutoLinearSolverMaxIter</a> lets Mochi select the maximum number of iterations based on the problem. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="linear__solver__params_8h_source.html#l00398">398</a> of file <a class="el" href="linear__solver__params_8h_source.html">linear_solver_params.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="linear__solver__params_8h_source.html#l00440">440</a> of file <a class="el" href="linear__solver__params_8h_source.html">linear_solver_params.h</a>.</p>
 
 </div>
 </div>
@@ -304,7 +310,7 @@ Must be positive or <a class="el" href="namespacesuperdex.html#ace8cafd7b9b03ea0
 <p>Norm used for the stopping criteria. </p>
 <dl class="section note"><dt>Note</dt><dd>Applies only to the solvers documented in <a class="el" href="namespacesuperdex.html#ab6f7ba911e492877e344a2746b534475" title="LinearSolverConvergenceNorm">LinearSolverConvergenceNorm</a>. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="linear__solver__params_8h_source.html#l00363">363</a> of file <a class="el" href="linear__solver__params_8h_source.html">linear_solver_params.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="linear__solver__params_8h_source.html#l00392">392</a> of file <a class="el" href="linear__solver__params_8h_source.html">linear_solver_params.h</a>.</p>
 
 </div>
 </div>
@@ -323,7 +329,7 @@ Must be positive or <a class="el" href="namespacesuperdex.html#ace8cafd7b9b03ea0
 <p>Preconditioner type. </p>
 <dl class="section note"><dt>Note</dt><dd>Applies only to iterative solvers. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="linear__solver__params_8h_source.html#l00356">356</a> of file <a class="el" href="linear__solver__params_8h_source.html">linear_solver_params.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="linear__solver__params_8h_source.html#l00385">385</a> of file <a class="el" href="linear__solver__params_8h_source.html">linear_solver_params.h</a>.</p>
 
 </div>
 </div>
@@ -342,7 +348,7 @@ Must be positive or <a class="el" href="namespacesuperdex.html#ace8cafd7b9b03ea0
 <p>Relative residual norm tolerance for divergence, relative to the same norm of the right-hand side. </p>
 <dl class="section note"><dt>Note</dt><dd>Applies only to iterative solvers. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="linear__solver__params_8h_source.html#l00388">388</a> of file <a class="el" href="linear__solver__params_8h_source.html">linear_solver_params.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="linear__solver__params_8h_source.html#l00430">430</a> of file <a class="el" href="linear__solver__params_8h_source.html">linear_solver_params.h</a>.</p>
 
 </div>
 </div>
@@ -363,7 +369,7 @@ Must be positive or <a class="el" href="namespacesuperdex.html#ace8cafd7b9b03ea0
 <dd>
 Ignored when using <a class="el" href="namespacesuperdex.html#a18f9503a3732c254dc7cb92b817d5e3ca4ccb54edc7ce31c9ed2aa93c121bae93" title="LinearToleranceStrategy::EisenstatWalker1">LinearToleranceStrategy::EisenstatWalker1</a> or <a class="el" href="namespacesuperdex.html#a18f9503a3732c254dc7cb92b817d5e3ca2b3d419d7268ab879f4b318a9949a203" title="LinearToleranceStrategy::EisenstatWalker2">LinearToleranceStrategy::EisenstatWalker2</a> in the non-linear solver. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="linear__solver__params_8h_source.html#l00380">380</a> of file <a class="el" href="linear__solver__params_8h_source.html">linear_solver_params.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="linear__solver__params_8h_source.html#l00422">422</a> of file <a class="el" href="linear__solver__params_8h_source.html">linear_solver_params.h</a>.</p>
 
 </div>
 </div>
@@ -382,7 +388,7 @@ Ignored when using <a class="el" href="namespacesuperdex.html#a18f9503a3732c254d
 <p>Krylov subspace dimension before restarting. </p>
 <dl class="section note"><dt>Note</dt><dd>Applies only to GMRES solvers (e.g., <a class="el" href="namespacesuperdex.html#abff39d229a5fb631aa4a3d5f40f63aa5ac1bfd84e7215afa3204b8e1cdb21a2bd" title="LinearSolverType::GMRES">LinearSolverType::GMRES</a>, <a class="el" href="namespacesuperdex.html#abff39d229a5fb631aa4a3d5f40f63aa5a033eba45e32655447e57470523c72514" title="LinearSolverType::CudaGMRES">LinearSolverType::CudaGMRES</a>). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="linear__solver__params_8h_source.html#l00406">406</a> of file <a class="el" href="linear__solver__params_8h_source.html">linear_solver_params.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="linear__solver__params_8h_source.html#l00448">448</a> of file <a class="el" href="linear__solver__params_8h_source.html">linear_solver_params.h</a>.</p>
 
 </div>
 </div>
@@ -400,7 +406,7 @@ Ignored when using <a class="el" href="namespacesuperdex.html#a18f9503a3732c254d
 
 <p>Linear solver type. </p>
 
-<p class="definition">Definition at line <a class="el" href="linear__solver__params_8h_source.html#l00349">349</a> of file <a class="el" href="linear__solver__params_8h_source.html">linear_solver_params.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="linear__solver__params_8h_source.html#l00378">378</a> of file <a class="el" href="linear__solver__params_8h_source.html">linear_solver_params.h</a>.</p>
 
 </div>
 </div>
@@ -418,7 +424,7 @@ Ignored when using <a class="el" href="namespacesuperdex.html#a18f9503a3732c254d
 
 <p>Verbosity level for logging output. </p>
 
-<p class="definition">Definition at line <a class="el" href="linear__solver__params_8h_source.html#l00417">417</a> of file <a class="el" href="linear__solver__params_8h_source.html">linear_solver_params.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="linear__solver__params_8h_source.html#l00459">459</a> of file <a class="el" href="linear__solver__params_8h_source.html">linear_solver_params.h</a>.</p>
 
 </div>
 </div>

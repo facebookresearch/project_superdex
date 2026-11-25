@@ -131,6 +131,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../../../api/prefab.html#instantiation">Instantiation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../api/prefab.html#serialization-export">Serialization &amp; Export</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../api/prefab.html#containers">Containers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/prefab.html#not-yet-categorized">Not Yet Categorized</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../../../api/models.html">Models &amp; Meshes</a><ul>
@@ -232,7 +233,7 @@
     <span class="n">get_env_var_value</span><span class="p">,</span>
     <span class="n">LEGACY_DEBUGGER_PATH_ENV_VAR</span><span class="p">,</span>
 <span class="p">)</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">superdex.physics.loader</span><span class="w"> </span><span class="kn">import</span> <span class="n">native_roots</span><span class="p">,</span> <span class="n">precision_variant_for_module</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">superdex.physics.loader</span><span class="w"> </span><span class="kn">import</span> <span class="n">native_roots</span><span class="p">,</span> <span class="n">USE_DOUBLE_PRECISION</span>
 
 <span class="n">logger</span><span class="p">:</span> <span class="n">logging</span><span class="o">.</span><span class="n">Logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
 
@@ -443,15 +444,12 @@
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_debugger_exe_name</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Name a CMake build emits for the selected precision.&quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="n">_executable_name</span><span class="p">(</span><span class="n">precision_variant_for_module</span><span class="p">(</span><span class="s2">&quot;mochi_debugger&quot;</span><span class="p">))</span>
+    <span class="n">stem</span> <span class="o">=</span> <span class="s2">&quot;mochi_debugger_double&quot;</span> <span class="k">if</span> <span class="n">USE_DOUBLE_PRECISION</span> <span class="k">else</span> <span class="s2">&quot;mochi_debugger&quot;</span>
+    <span class="k">return</span> <span class="n">_executable_name</span><span class="p">(</span><span class="n">stem</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_debugger_exe_names</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Executable names to look for, most specific first.</span>
-
-<span class="sd">    CMake suffixes the FP64 build so one wheel can carry both variants. A Buck</span>
-<span class="sd">    link tree only ever stages one debugger, under the unsuffixed name.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Prefer the CMake precision name, then the plain Buck/wheel name.&quot;&quot;&quot;</span>
     <span class="n">precision_name</span> <span class="o">=</span> <span class="n">_debugger_exe_name</span><span class="p">()</span>
     <span class="n">plain_name</span> <span class="o">=</span> <span class="n">_executable_name</span><span class="p">(</span><span class="s2">&quot;mochi_debugger&quot;</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">precision_name</span> <span class="o">==</span> <span class="n">plain_name</span><span class="p">:</span>
@@ -505,7 +503,7 @@
 <span class="k">def</span><span class="w"> </span><span class="nf">_physics_extension</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">ModuleType</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the native extension the ``superdex.physics`` facade imported.</span>
 
-<span class="sd">    A CMake build emits ``mochi_debugger`` into the extension module&#39;s ``bin/`` directory,</span>
+<span class="sd">    A CMake build emits the debugger into the extension module&#39;s ``bin/`` directory,</span>
 <span class="sd">    so the extension&#39;s location anchors the executable search. Imported lazily because</span>
 <span class="sd">    ``superdex.physics`` reaches this module through its own lazy-import table.</span>
 <span class="sd">    &quot;&quot;&quot;</span>

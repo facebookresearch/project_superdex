@@ -224,6 +224,8 @@ Public Member Functions</h2></td></tr>
 <tr class="memdesc:a9a1a4b431e3351c61ef32881d25dfbf3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get an axis-aligned bounding box (AABB) that contains the shape, in its local coordinate frame.  <br /></td></tr>
 <tr class="memitem:afcda64ddc543cea1e8032518b3af6c42" id="r_afcda64ddc543cea1e8032518b3af6c42"><td class="memItemLeft">virtual <a class="el" href="structsuperdex_1_1MeshDataView.html">MeshDataView</a>&#160;</td><td class="memItemRight"><a class="el" href="#afcda64ddc543cea1e8032518b3af6c42">GetShapeContactSkinMesh</a> (<a class="el" href="structsuperdex_1_1ShapeHandle.html">ShapeHandle</a> shape, <a class="el" href="classsuperdex_1_1Error.html">Error</a> &amp;error) const =0</td></tr>
 <tr class="memdesc:afcda64ddc543cea1e8032518b3af6c42"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get a view of the shape's contact-skin mesh data, including its skinning data.  <br /></td></tr>
+<tr class="memitem:ac127830c63cdb17f769b043e53fbc171" id="r_ac127830c63cdb17f769b043e53fbc171"><td class="memItemLeft">virtual <a class="el" href="classsuperdex_1_1Span.html">Span</a>&lt; <a class="el" href="namespacesuperdex.html#ab1cf40739516aea925c8ebe213131a5d">real</a> const &gt;&#160;</td><td class="memItemRight"><a class="el" href="#ac127830c63cdb17f769b043e53fbc171">GetShapeElementFrameAxes</a> (<a class="el" href="structsuperdex_1_1ShapeHandle.html">ShapeHandle</a> shape, <a class="el" href="classsuperdex_1_1Error.html">Error</a> &amp;error) const =0</td></tr>
+<tr class="memdesc:ac127830c63cdb17f769b043e53fbc171"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the per-element frame axes of a polyline shape.  <br /></td></tr>
 <tr class="memitem:a1bd416296006cc1efd1346472308bcb7" id="r_a1bd416296006cc1efd1346472308bcb7"><td class="memItemLeft">virtual <a class="el" href="structsuperdex_1_1MeshDataView.html">MeshDataView</a>&#160;</td><td class="memItemRight"><a class="el" href="#a1bd416296006cc1efd1346472308bcb7">GetShapeMesh</a> (<a class="el" href="structsuperdex_1_1ShapeHandle.html">ShapeHandle</a> shape, <a class="el" href="classsuperdex_1_1Error.html">Error</a> &amp;error) const =0</td></tr>
 <tr class="memdesc:a1bd416296006cc1efd1346472308bcb7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get a view of the shape's main mesh data.  <br /></td></tr>
 <tr class="memitem:a130f5883bf2318cb3d4500493dab6a46" id="r_a130f5883bf2318cb3d4500493dab6a46"><td class="memItemLeft">virtual <a class="el" href="structsuperdex_1_1MeshDataView.html">MeshDataView</a>&#160;</td><td class="memItemRight"><a class="el" href="#a130f5883bf2318cb3d4500493dab6a46">GetShapeSurfaceMesh</a> (<a class="el" href="structsuperdex_1_1ShapeHandle.html">ShapeHandle</a> shape, <a class="el" href="classsuperdex_1_1Error.html">Error</a> &amp;error) const =0</td></tr>
@@ -779,7 +781,9 @@ Call on any thread.</dd></dl>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Pointer to the new scene. Call <a class="el" href="#abf067dc16c8658829478f5d60589d657" title="superdex::Context::DestroyScene">DestroyScene</a> when done with it.</dd></dl>
-<dl class="section note"><dt>Note</dt><dd>Call on any thread.</dd></dl>
+<dl class="section note"><dt>Note</dt><dd>Call on any thread. </dd>
+<dd>
+A <a class="el" href="classsuperdex_1_1Context.html" title="superdex::Context">Context</a> holds at most 65,536 scenes at once. Over its life it creates at most about 4 billion, fewer when many scenes stay alive. Creating more fails an assertion.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="#abf067dc16c8658829478f5d60589d657" title="superdex::Context::DestroyScene">DestroyScene</a> </dd></dl>
 
 </div>
@@ -1007,12 +1011,14 @@ Do not call from code executed by <code class="param">scene</code>, such as queu
   </table>
   </dd>
 </dl>
-<dl class="section note"><dt>Note</dt><dd>No-op if <code class="param">scene</code> is null or unknown to this <a class="el" href="classsuperdex_1_1Context.html" title="superdex::Context">Context</a>. </dd>
+<dl class="section note"><dt>Note</dt><dd>No-op if <code class="param">scene</code> is null or belongs to another <a class="el" href="classsuperdex_1_1Context.html" title="superdex::Context">Context</a>. </dd>
 <dd>
 Call on any thread. </dd>
 <dd>
 Any remaining scenes will be cleaned up automatically when the <a class="el" href="classsuperdex_1_1Context.html" title="superdex::Context">Context</a> is destroyed.</dd></dl>
 <dl class="section warning"><dt>Warning</dt><dd>Do not dereference pointers to the scene, actors, constraints, etc. after this call. </dd>
+<dd>
+Passing a pointer to a scene that has been destroyed is undefined behavior. </dd>
 <dd>
 If <code class="param">scene</code> is owned by an <a class="el" href="classsuperdex_1_1AsyncScene.html" title="superdex::AsyncScene">AsyncScene</a>, the call is a no-op (a warning is logged). Call <a class="el" href="#a836b5254ed6f5a6b9a1c2e6fb51b1d4b" title="superdex::Context::DestroyAsyncScene">DestroyAsyncScene</a> instead.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="#acf78a7aa80b62c1c5faf687acd8a18f2" title="superdex::Context::CreateScene">CreateScene</a>, <a class="el" href="#a836b5254ed6f5a6b9a1c2e6fb51b1d4b" title="superdex::Context::DestroyAsyncScene">DestroyAsyncScene</a> </dd></dl>
@@ -1387,7 +1393,7 @@ Call on any thread.</dd></dl>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Const pointer to the scene, or nullptr if the handle is invalid in this context.</dd></dl>
-<dl class="section note"><dt>Note</dt><dd>Call on any thread. </dd></dl>
+<dl class="section note"><dt>Note</dt><dd>Call on any thread. Never blocks. </dd></dl>
 
 </div>
 </div>
@@ -1422,7 +1428,7 @@ Call on any thread.</dd></dl>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Pointer to the scene, or nullptr if the handle is invalid in this context.</dd></dl>
-<dl class="section note"><dt>Note</dt><dd>Call on any thread. </dd></dl>
+<dl class="section note"><dt>Note</dt><dd>Call on any thread. Never blocks. </dd></dl>
 
 </div>
 </div>
@@ -1511,6 +1517,52 @@ The returned view will be invalid after the shape handle has been released. </dd
 <dd>
 For tetrahedral and triangular mesh shapes, skinning indices refer to the node ordering returned by <a class="el" href="#a1bd416296006cc1efd1346472308bcb7" title="superdex::Context::GetShapeMesh">GetShapeMesh</a>, not to the compact surface-node ordering returned by <a class="el" href="#a130f5883bf2318cb3d4500493dab6a46" title="superdex::Context::GetShapeSurfaceMesh">GetShapeSurfaceMesh</a>. For polyline shapes, skinning indices refer to polyline elements.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="structsuperdex_1_1MeshDataView.html" title="superdex::MeshDataView">MeshDataView</a>, <a class="el" href="#a1bd416296006cc1efd1346472308bcb7" title="superdex::Context::GetShapeMesh">GetShapeMesh</a>, <a class="el" href="#a130f5883bf2318cb3d4500493dab6a46" title="superdex::Context::GetShapeSurfaceMesh">GetShapeSurfaceMesh</a>, <a class="el" href="#ae28bb3db015766d22dc677100d24c6e7" title="superdex::Context::GetShapeVisualMesh">GetShapeVisualMesh</a>, <a class="el" href="classsuperdex_1_1Actor.html#a63bb41aedf1ce5e6d2bb5412517bb9eb" title="superdex::Actor::GetContactSkinMesh">Actor::GetContactSkinMesh</a> </dd></dl>
+
+</div>
+</div>
+<a id="ac127830c63cdb17f769b043e53fbc171" name="ac127830c63cdb17f769b043e53fbc171"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac127830c63cdb17f769b043e53fbc171">&#9670;&#160;</a></span>GetShapeElementFrameAxes()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">virtual <a class="el" href="classsuperdex_1_1Span.html">Span</a>&lt; <a class="el" href="namespacesuperdex.html#ab1cf40739516aea925c8ebe213131a5d">real</a> const  &gt; superdex::Context::GetShapeElementFrameAxes </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="structsuperdex_1_1ShapeHandle.html">ShapeHandle</a></td>          <td class="paramname"><span class="paramname"><em>shape</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="classsuperdex_1_1Error.html">Error</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>error</em></span>&#160;) const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span><span class="mlabel pure-virtual">pure virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Get the per-element frame axes of a polyline shape. </p>
+<p>Returns reference frame axes in the same local coordinate frame as <a class="el" href="#a1bd416296006cc1efd1346472308bcb7" title="superdex::Context::GetShapeMesh">GetShapeMesh</a>, in the format of <a class="el" href="structsuperdex_1_1ModelData.html#a7df5512bbf21d491cbb8ac9c79248d29" title="superdex::ModelData::elementFrameAxes">ModelData::elementFrameAxes</a>. XYZ triple e is a unit vector orthogonal to element e of that mesh. The span contains three values per element, including the closing element of a closed loop. These are the model's authored axes when it has them, otherwise the discrete Bishop frame generated when the shape was created, and include any bake transform applied when the shape was created or loaded.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">shape</td><td><a class="el" href="structsuperdex_1_1Handle.html" title="Generic 64-bit handle providing base functionality for strongly-typed handles.">Handle</a> to a polyline shape. </td></tr>
+    <tr><td class="paramdir">[in,out]</td><td class="paramname">error</td><td><a class="el" href="classsuperdex_1_1Error.html">Error</a> status. Check <a class="el" href="classsuperdex_1_1Error.html#a463cb4f3428a7a2dd779a2f6c5d153b2" title="superdex::Error::IsOK">Error::IsOK</a> for success. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>A non-owning view of the shape's element frame axes.</dd></dl>
+<dl class="section note"><dt>Note</dt><dd>Only supported for polyline shapes. Sets error otherwise. </dd>
+<dd>
+Can be called on any thread. </dd>
+<dd>
+The returned view will be invalid after the shape handle has been released.</dd></dl>
+<dl class="section see"><dt>See also</dt><dd><a class="el" href="structsuperdex_1_1ModelData.html#a7df5512bbf21d491cbb8ac9c79248d29" title="superdex::ModelData::elementFrameAxes">ModelData::elementFrameAxes</a>, <a class="el" href="#a1bd416296006cc1efd1346472308bcb7" title="superdex::Context::GetShapeMesh">GetShapeMesh</a>, <a class="el" href="classsuperdex_1_1Actor.html#af85d2d5462aa3f8b73bb568d5acaa355" title="superdex::Actor::GetRodPose">Actor::GetRodPose</a>, <a class="el" href="structsuperdex_1_1RodActorParams.html" title="superdex::RodActorParams">RodActorParams</a> </dd></dl>
 
 </div>
 </div>
@@ -1969,6 +2021,8 @@ Precomputed grid SDF data is preserved only when <code class="param">bakeScale</
 <dd>
 If the loaded model has <a class="el" href="structsuperdex_1_1ModelData.html#a7df5512bbf21d491cbb8ac9c79248d29" title="superdex::ModelData::elementFrameAxes">ModelData::elementFrameAxes</a>, <code class="param">bakeScale</code> transforms those axes as normal directions using the inverse-transpose of the scale transform, then normalize them. </dd>
 <dd>
+A polyline model without <a class="el" href="structsuperdex_1_1ModelData.html#a7df5512bbf21d491cbb8ac9c79248d29" title="superdex::ModelData::elementFrameAxes">ModelData::elementFrameAxes</a> gets its default axes generated from the model before the bake, which then transforms them the same way. </dd>
+<dd>
 Call on any thread.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="structsuperdex_1_1ShapeHandle.html" title="superdex::ShapeHandle">ShapeHandle</a>, <a class="el" href="#a7f618a47573644e266d35d66a8aaea53" title="superdex::Context::ReleaseShape">ReleaseShape</a>, <a class="el" href="#afe47833d9b34791e5af8e689f5059aa6" title="superdex::Context::LoadShapeFromFile">LoadShapeFromFile</a> </dd></dl>
 
@@ -2038,6 +2092,8 @@ Precomputed grid SDF data is preserved only when <code class="param">bakeScale</
 <dd>
 If the loaded model has <a class="el" href="structsuperdex_1_1ModelData.html#a7df5512bbf21d491cbb8ac9c79248d29" title="superdex::ModelData::elementFrameAxes">ModelData::elementFrameAxes</a>, <code class="param">bakeScale</code> and <code class="param">bakeTransform</code> transform those axes as normal directions using the inverse-transpose of the scale-rotation transform, then normalize them. </dd>
 <dd>
+A polyline model without <a class="el" href="structsuperdex_1_1ModelData.html#a7df5512bbf21d491cbb8ac9c79248d29" title="superdex::ModelData::elementFrameAxes">ModelData::elementFrameAxes</a> gets its default axes generated from the model before the bake, which then transforms them the same way. </dd>
+<dd>
 Call on any thread.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="structsuperdex_1_1ShapeHandle.html" title="superdex::ShapeHandle">ShapeHandle</a>, <a class="el" href="#a7f618a47573644e266d35d66a8aaea53" title="superdex::Context::ReleaseShape">ReleaseShape</a>, <a class="el" href="#afe47833d9b34791e5af8e689f5059aa6" title="superdex::Context::LoadShapeFromFile">LoadShapeFromFile</a> </dd></dl>
 
@@ -2094,6 +2150,8 @@ Call on any thread.</dd></dl>
 <dl class="section note"><dt>Note</dt><dd>The shape remains in memory while referenced by any handle or actor. In the C API, you must release the shape explicitly by calling <a class="el" href="#a7f618a47573644e266d35d66a8aaea53" title="superdex::Context::ReleaseShape">Context::ReleaseShape</a>. In C++ and Python, this is optional, since <a class="el" href="structsuperdex_1_1ShapeHandle.html" title="superdex::ShapeHandle">ShapeHandle</a> cleanup is automatic. </dd>
 <dd>
 If the loaded model has <a class="el" href="structsuperdex_1_1ModelData.html#a7df5512bbf21d491cbb8ac9c79248d29" title="superdex::ModelData::elementFrameAxes">ModelData::elementFrameAxes</a>, <code class="param">bakeTransform</code> transforms those axes as normal directions using the inverse-transpose of the rotation transform, then normalize them. </dd>
+<dd>
+A polyline model without <a class="el" href="structsuperdex_1_1ModelData.html#a7df5512bbf21d491cbb8ac9c79248d29" title="superdex::ModelData::elementFrameAxes">ModelData::elementFrameAxes</a> gets its default axes generated from the model before the bake, which then transforms them the same way. </dd>
 <dd>
 Call on any thread.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="structsuperdex_1_1ShapeHandle.html" title="superdex::ShapeHandle">ShapeHandle</a>, <a class="el" href="#a7f618a47573644e266d35d66a8aaea53" title="superdex::Context::ReleaseShape">ReleaseShape</a>, <a class="el" href="#afe47833d9b34791e5af8e689f5059aa6" title="superdex::Context::LoadShapeFromFile">LoadShapeFromFile</a> </dd></dl>
@@ -2152,6 +2210,8 @@ Some shape data cannot bake arbitrary non-uniform scale. Unsupported scale value
 Precomputed grid SDF data is preserved only when <code class="param">bakeScale</code> is uniform by absolute value. Non-uniform scale by absolute value discards the precomputed SDF. If an SDF collider later requires SDF data, SuperDex Physics regenerates it from the transformed mesh at runtime, which may be expensive. </dd>
 <dd>
 If the loaded model has <a class="el" href="structsuperdex_1_1ModelData.html#a7df5512bbf21d491cbb8ac9c79248d29" title="superdex::ModelData::elementFrameAxes">ModelData::elementFrameAxes</a>, <code class="param">bakeScale</code> transforms those axes as normal directions using the inverse-transpose of the scale transform, then normalize them. </dd>
+<dd>
+A polyline model without <a class="el" href="structsuperdex_1_1ModelData.html#a7df5512bbf21d491cbb8ac9c79248d29" title="superdex::ModelData::elementFrameAxes">ModelData::elementFrameAxes</a> gets its default axes generated from the model before the bake, which then transforms them the same way. </dd>
 <dd>
 Call on any thread.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="structsuperdex_1_1ShapeHandle.html" title="superdex::ShapeHandle">ShapeHandle</a>, <a class="el" href="#a7f618a47573644e266d35d66a8aaea53" title="superdex::Context::ReleaseShape">ReleaseShape</a>, <a class="el" href="#afe47833d9b34791e5af8e689f5059aa6" title="superdex::Context::LoadShapeFromFile">LoadShapeFromFile</a> </dd></dl>
@@ -2217,6 +2277,8 @@ Precomputed grid SDF data is preserved only when <code class="param">bakeScale</
 <dd>
 If the loaded model has <a class="el" href="structsuperdex_1_1ModelData.html#a7df5512bbf21d491cbb8ac9c79248d29" title="superdex::ModelData::elementFrameAxes">ModelData::elementFrameAxes</a>, <code class="param">bakeScale</code> and <code class="param">bakeTransform</code> transform those axes as normal directions using the inverse-transpose of the scale-rotation transform, then normalize them. </dd>
 <dd>
+A polyline model without <a class="el" href="structsuperdex_1_1ModelData.html#a7df5512bbf21d491cbb8ac9c79248d29" title="superdex::ModelData::elementFrameAxes">ModelData::elementFrameAxes</a> gets its default axes generated from the model before the bake, which then transforms them the same way. </dd>
+<dd>
 Call on any thread.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="structsuperdex_1_1ShapeHandle.html" title="superdex::ShapeHandle">ShapeHandle</a>, <a class="el" href="#a7f618a47573644e266d35d66a8aaea53" title="superdex::Context::ReleaseShape">ReleaseShape</a>, <a class="el" href="#afe47833d9b34791e5af8e689f5059aa6" title="superdex::Context::LoadShapeFromFile">LoadShapeFromFile</a> </dd></dl>
 
@@ -2270,6 +2332,8 @@ Call on any thread.</dd></dl>
 <dl class="section note"><dt>Note</dt><dd>The shape remains in memory while referenced by any handle or actor. In the C API, you must release the shape explicitly by calling <a class="el" href="#a7f618a47573644e266d35d66a8aaea53" title="superdex::Context::ReleaseShape">Context::ReleaseShape</a>. In C++ and Python, this is optional, since <a class="el" href="structsuperdex_1_1ShapeHandle.html" title="superdex::ShapeHandle">ShapeHandle</a> cleanup is automatic. </dd>
 <dd>
 If the loaded model has <a class="el" href="structsuperdex_1_1ModelData.html#a7df5512bbf21d491cbb8ac9c79248d29" title="superdex::ModelData::elementFrameAxes">ModelData::elementFrameAxes</a>, <code class="param">bakeTransform</code> transforms those axes as normal directions using the inverse-transpose of the rotation transform, then normalize them. </dd>
+<dd>
+A polyline model without <a class="el" href="structsuperdex_1_1ModelData.html#a7df5512bbf21d491cbb8ac9c79248d29" title="superdex::ModelData::elementFrameAxes">ModelData::elementFrameAxes</a> gets its default axes generated from the model before the bake, which then transforms them the same way. </dd>
 <dd>
 Call on any thread.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="structsuperdex_1_1ShapeHandle.html" title="superdex::ShapeHandle">ShapeHandle</a>, <a class="el" href="#a7f618a47573644e266d35d66a8aaea53" title="superdex::Context::ReleaseShape">ReleaseShape</a>, <a class="el" href="#afe47833d9b34791e5af8e689f5059aa6" title="superdex::Context::LoadShapeFromFile">LoadShapeFromFile</a> </dd></dl>
@@ -2373,6 +2437,8 @@ Precomputed grid SDF data is preserved only when <code class="param">bakeScale</
 <dd>
 If the loaded model has <a class="el" href="structsuperdex_1_1ModelData.html#a7df5512bbf21d491cbb8ac9c79248d29" title="superdex::ModelData::elementFrameAxes">ModelData::elementFrameAxes</a>, <code class="param">bakeScale</code> transforms those axes as normal directions using the inverse-transpose of the scale transform, then normalize them. </dd>
 <dd>
+A polyline model without <a class="el" href="structsuperdex_1_1ModelData.html#a7df5512bbf21d491cbb8ac9c79248d29" title="superdex::ModelData::elementFrameAxes">ModelData::elementFrameAxes</a> gets its default axes generated from the model before the bake, which then transforms them the same way. </dd>
+<dd>
 Call on any thread.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="structsuperdex_1_1ShapeHandle.html" title="superdex::ShapeHandle">ShapeHandle</a>, <a class="el" href="#a7f618a47573644e266d35d66a8aaea53" title="superdex::Context::ReleaseShape">ReleaseShape</a>, <a class="el" href="#a35e4d7795ceb064c3fdc6e210be0ec2d" title="superdex::Context::LoadShapeFromBytes">LoadShapeFromBytes</a> </dd></dl>
 
@@ -2437,6 +2503,8 @@ Precomputed grid SDF data is preserved only when <code class="param">bakeScale</
 <dd>
 If the loaded model has <a class="el" href="structsuperdex_1_1ModelData.html#a7df5512bbf21d491cbb8ac9c79248d29" title="superdex::ModelData::elementFrameAxes">ModelData::elementFrameAxes</a>, <code class="param">bakeScale</code> and <code class="param">bakeTransform</code> transform those axes as normal directions using the inverse-transpose of the scale-rotation transform, then normalize them. </dd>
 <dd>
+A polyline model without <a class="el" href="structsuperdex_1_1ModelData.html#a7df5512bbf21d491cbb8ac9c79248d29" title="superdex::ModelData::elementFrameAxes">ModelData::elementFrameAxes</a> gets its default axes generated from the model before the bake, which then transforms them the same way. </dd>
+<dd>
 Call on any thread.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="structsuperdex_1_1ShapeHandle.html" title="superdex::ShapeHandle">ShapeHandle</a>, <a class="el" href="#a7f618a47573644e266d35d66a8aaea53" title="superdex::Context::ReleaseShape">ReleaseShape</a>, <a class="el" href="#a35e4d7795ceb064c3fdc6e210be0ec2d" title="superdex::Context::LoadShapeFromBytes">LoadShapeFromBytes</a> </dd></dl>
 
@@ -2488,6 +2556,8 @@ Call on any thread.</dd></dl>
 <dl class="section note"><dt>Note</dt><dd>The shape remains in memory while referenced by any handle or actor. In the C API, you must release the shape explicitly by calling <a class="el" href="#a7f618a47573644e266d35d66a8aaea53" title="superdex::Context::ReleaseShape">Context::ReleaseShape</a>. In C++ and Python, this is optional, since <a class="el" href="structsuperdex_1_1ShapeHandle.html" title="superdex::ShapeHandle">ShapeHandle</a> cleanup is automatic. </dd>
 <dd>
 If the loaded model has <a class="el" href="structsuperdex_1_1ModelData.html#a7df5512bbf21d491cbb8ac9c79248d29" title="superdex::ModelData::elementFrameAxes">ModelData::elementFrameAxes</a>, <code class="param">bakeTransform</code> transforms those axes as normal directions using the inverse-transpose of the rotation transform, then normalize them. </dd>
+<dd>
+A polyline model without <a class="el" href="structsuperdex_1_1ModelData.html#a7df5512bbf21d491cbb8ac9c79248d29" title="superdex::ModelData::elementFrameAxes">ModelData::elementFrameAxes</a> gets its default axes generated from the model before the bake, which then transforms them the same way. </dd>
 <dd>
 Call on any thread.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="structsuperdex_1_1ShapeHandle.html" title="superdex::ShapeHandle">ShapeHandle</a>, <a class="el" href="#a7f618a47573644e266d35d66a8aaea53" title="superdex::Context::ReleaseShape">ReleaseShape</a>, <a class="el" href="#a35e4d7795ceb064c3fdc6e210be0ec2d" title="superdex::Context::LoadShapeFromBytes">LoadShapeFromBytes</a> </dd></dl>

@@ -10,6 +10,7 @@ var mochi__model__utils_8h =
     [ "superdex::model_utils::EmbedInTetrahedralMesh", "namespacesuperdex_1_1model__utils.html#a7ab031a60b3680d4130679f583a72373", null ],
     [ "superdex::model_utils::FlipWindingOrder", "namespacesuperdex_1_1model__utils.html#ade7cc38698e7346d4b7bfac325347b53", null ],
     [ "superdex::model_utils::FlipWindingOrder", "namespacesuperdex_1_1model__utils.html#a08d696c7c28b176f378065765976c6f9", null ],
+    [ "superdex::model_utils::GenerateMissingPolylineFrameAxes", "namespacesuperdex_1_1model__utils.html#a0aab661db1b2de0dcd07d5843d242c28", null ],
     [ "superdex::model_utils::LoadFromBytes", "namespacesuperdex_1_1model__utils.html#aad88163bc06d2a20051cfed639a69af7", null ],
     [ "superdex::model_utils::LoadFromBytes", "namespacesuperdex_1_1model__utils.html#a3171b1465be2cb37c9f2fb88b476495f", null ],
     [ "superdex::model_utils::LoadFromBytesUnchecked", "namespacesuperdex_1_1model__utils.html#ad4a77ae9d6917687683b7ab5f85184a5", null ],

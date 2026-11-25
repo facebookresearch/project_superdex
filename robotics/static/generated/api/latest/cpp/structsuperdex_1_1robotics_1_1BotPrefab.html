@@ -188,6 +188,8 @@ Public Attributes</h2></td></tr>
 <tr class="memdesc:a051a42dbe91f82a4570079f904331811"><td class="mdescLeft">&#160;</td><td class="mdescRight">Link parameters for each link in the articulation.  <br /></td></tr>
 <tr class="memitem:a9558f0a9213808b2b7e449f35ef30bb4" id="r_a9558f0a9213808b2b7e449f35ef30bb4"><td class="memItemLeft">DynamicString&#160;</td><td class="memItemRight"><a class="el" href="#a9558f0a9213808b2b7e449f35ef30bb4">name</a></td></tr>
 <tr class="memdesc:a9558f0a9213808b2b7e449f35ef30bb4"><td class="mdescLeft">&#160;</td><td class="mdescRight"><a class="el" href="classsuperdex_1_1robotics_1_1Bot.html" title="Runtime interface to a bot instance in a Scene.">Bot</a> name.  <br /></td></tr>
+<tr class="memitem:a14bafd6c602daaea1bed0c10c328345b" id="r_a14bafd6c602daaea1bed0c10c328345b"><td class="memItemLeft">real&#160;</td><td class="memItemRight"><a class="el" href="#a14bafd6c602daaea1bed0c10c328345b">scale</a> = 1</td></tr>
+<tr class="memdesc:a14bafd6c602daaea1bed0c10c328345b"><td class="mdescLeft">&#160;</td><td class="mdescRight">[Experimental] Uniform scale applied when the bot is instantiated.  <br /></td></tr>
 <tr class="memitem:aaf45a9b5e32a3c2a4015ae75e922bc29" id="r_aaf45a9b5e32a3c2a4015ae75e922bc29"><td class="memItemLeft">std::optional&lt; superdex::prefab::ArticulatedSkinPrefab &gt;&#160;</td><td class="memItemRight"><a class="el" href="#aaf45a9b5e32a3c2a4015ae75e922bc29">skin</a></td></tr>
 <tr class="memdesc:aaf45a9b5e32a3c2a4015ae75e922bc29"><td class="mdescLeft">&#160;</td><td class="mdescRight">Optional deformable skin skinned over the articulation's links, acting as a contact collidee.  <br /></td></tr>
 <tr class="memitem:a4cff12769f9c635644f94acc04bc96a7" id="r_a4cff12769f9c635644f94acc04bc96a7"><td class="memItemLeft">DynamicArray&lt; <a class="el" href="structsuperdex_1_1robotics_1_1BotSpatialTendonPrefab.html">BotSpatialTendonPrefab</a> &gt;&#160;</td><td class="memItemRight"><a class="el" href="#a4cff12769f9c635644f94acc04bc96a7">spatialTendons</a></td></tr>
@@ -198,7 +200,7 @@ Public Attributes</h2></td></tr>
 <a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Complete parameter set for a bot. </p>
 
-<p class="definition">Definition at line <a class="el" href="superdex__robotics_8h_source.html#l00296">296</a> of file <a class="el" href="superdex__robotics_8h_source.html">superdex_robotics.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="superdex__robotics_8h_source.html#l00295">295</a> of file <a class="el" href="superdex__robotics_8h_source.html">superdex_robotics.h</a>.</p>
 </div><a name="doc-variable-members" id="doc-variable-members"></a><h2 id="header-doc-variable-members" class="groupheader">Member Data Documentation</h2>
 <a id="acf6b98e242d4fbca8a27ecb9eefaa7fb" name="acf6b98e242d4fbca8a27ecb9eefaa7fb"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#acf6b98e242d4fbca8a27ecb9eefaa7fb">&#9670;&#160;</a></span>_skinBoneLinks</h2>
@@ -215,7 +217,7 @@ Public Attributes</h2></td></tr>
 <p>[Internal] For a bot with a skin, the composed link name each skin bone index binds to (_skinBoneLinks[b] = link name for skin bone b). </p>
 <p>Empty means identity (bone b -&gt; link b). Set by ApplyMod when a skin (or skinned sub-bot) is attached so the skin's baked bone indices can be remapped onto the reordered composed skeleton at instantiation time. Unlike _numDofs/_dofIndices this is NOT recomputed by RebuildBotData &ndash; it captures composition history that cannot be reconstructed from a flattened bot, so it is serialized. Populated by ApplyMod only; DO NOT set by hand. </p>
 
-<p class="definition">Definition at line <a class="el" href="superdex__robotics_8h_source.html#l00348">348</a> of file <a class="el" href="superdex__robotics_8h_source.html">superdex_robotics.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="superdex__robotics_8h_source.html#l00362">362</a> of file <a class="el" href="superdex__robotics_8h_source.html">superdex_robotics.h</a>.</p>
 
 </div>
 </div>
@@ -233,7 +235,7 @@ Public Attributes</h2></td></tr>
 
 <p>Array of link-link contact override pairs. </p>
 
-<p class="definition">Definition at line <a class="el" href="superdex__robotics_8h_source.html#l00321">321</a> of file <a class="el" href="superdex__robotics_8h_source.html">superdex_robotics.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="superdex__robotics_8h_source.html#l00335">335</a> of file <a class="el" href="superdex__robotics_8h_source.html">superdex_robotics.h</a>.</p>
 
 </div>
 </div>
@@ -252,7 +254,7 @@ Public Attributes</h2></td></tr>
 <p>Cycle-closing joints for closed-loop mechanisms (e.g. </p>
 <p>four-bar linkages, parallel grippers). Each entry becomes one superdex::ArticulatedActorParams::cycles entry at instantiation time. Link references (superdex::ArticulatedCycleJointParams::parentLink / superdex::ArticulatedCycleJointParams::childLink) are int indices into <a class="el" href="#a051a42dbe91f82a4570079f904331811" title="links">links</a>. </p>
 
-<p class="definition">Definition at line <a class="el" href="superdex__robotics_8h_source.html#l00327">327</a> of file <a class="el" href="superdex__robotics_8h_source.html">superdex_robotics.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="superdex__robotics_8h_source.html#l00341">341</a> of file <a class="el" href="superdex__robotics_8h_source.html">superdex_robotics.h</a>.</p>
 
 </div>
 </div>
@@ -270,7 +272,7 @@ Public Attributes</h2></td></tr>
 
 <p>Default pose (array of joint DOF angles/translations) used when spawning the bot. </p>
 
-<p class="definition">Definition at line <a class="el" href="superdex__robotics_8h_source.html#l00310">310</a> of file <a class="el" href="superdex__robotics_8h_source.html">superdex_robotics.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="superdex__robotics_8h_source.html#l00324">324</a> of file <a class="el" href="superdex__robotics_8h_source.html">superdex_robotics.h</a>.</p>
 
 </div>
 </div>
@@ -288,7 +290,7 @@ Public Attributes</h2></td></tr>
 
 <p>Joint parameters for each joint in the articulation. </p>
 
-<p class="definition">Definition at line <a class="el" href="superdex__robotics_8h_source.html#l00301">301</a> of file <a class="el" href="superdex__robotics_8h_source.html">superdex_robotics.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="superdex__robotics_8h_source.html#l00300">300</a> of file <a class="el" href="superdex__robotics_8h_source.html">superdex_robotics.h</a>.</p>
 
 </div>
 </div>
@@ -307,7 +309,7 @@ Public Attributes</h2></td></tr>
 <p>Linear transmissions that couple multiple joint DOFs via per-joint coefficients. </p>
 <p>Each entry produces one superdex::experimental::LinearTransmissionParams at instantiation time. </p>
 
-<p class="definition">Definition at line <a class="el" href="superdex__robotics_8h_source.html#l00314">314</a> of file <a class="el" href="superdex__robotics_8h_source.html">superdex_robotics.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="superdex__robotics_8h_source.html#l00328">328</a> of file <a class="el" href="superdex__robotics_8h_source.html">superdex_robotics.h</a>.</p>
 
 </div>
 </div>
@@ -325,7 +327,7 @@ Public Attributes</h2></td></tr>
 
 <p>Link parameters for each link in the articulation. </p>
 
-<p class="definition">Definition at line <a class="el" href="superdex__robotics_8h_source.html#l00304">304</a> of file <a class="el" href="superdex__robotics_8h_source.html">superdex_robotics.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="superdex__robotics_8h_source.html#l00303">303</a> of file <a class="el" href="superdex__robotics_8h_source.html">superdex_robotics.h</a>.</p>
 
 </div>
 </div>
@@ -343,7 +345,28 @@ Public Attributes</h2></td></tr>
 
 <p><a class="el" href="classsuperdex_1_1robotics_1_1Bot.html" title="Runtime interface to a bot instance in a Scene.">Bot</a> name. </p>
 
-<p class="definition">Definition at line <a class="el" href="superdex__robotics_8h_source.html#l00298">298</a> of file <a class="el" href="superdex__robotics_8h_source.html">superdex_robotics.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="superdex__robotics_8h_source.html#l00297">297</a> of file <a class="el" href="superdex__robotics_8h_source.html">superdex_robotics.h</a>.</p>
+
+</div>
+</div>
+<a id="a14bafd6c602daaea1bed0c10c328345b" name="a14bafd6c602daaea1bed0c10c328345b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a14bafd6c602daaea1bed0c10c328345b">&#9670;&#160;</a></span>scale</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">real superdex::robotics::BotPrefab::scale = 1</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>[Experimental] Uniform scale applied when the bot is instantiated. </p>
+<p>Meant for sizing human hand bots to a tracked hand (XR teleoperation), not for robots.</p>
+<p>The asset stays in nominal units; <a class="el" href="namespacesuperdex_1_1robotics.html#a733dacf0c4ab73c0775a991e119caa85" title="CreateBot">CreateBot</a> builds an actor whose geometry, shapes, skin, sensor offsets, prismatic limits and default pose are scaled by it. Masses scale by scale^3 and rotational inertias by scale^5. Joint friction, joint inertia, joint limit stiffness/damping and cycle stiffness are scaled for dynamic similarity, so the scaled bot responds like the nominal one on the same time scale. Rotational limits are unchanged. Contact parameters are not scaled. Units: spawn poses and controller gains are nominal. Prefab-space utilities such as <a class="el" href="namespacesuperdex_1_1robotics.html#aadbd90373b3312584410dcf6fbf283ad" title="ComputeLinkTransformsFromPose">ComputeLinkTransformsFromPose</a> stay nominal, while <a class="el" href="namespacesuperdex_1_1robotics.html#ad7eb083748bef44132a55cfe5c8d6659" title="GetEffortLimitsPerDof">GetEffortLimitsPerDof</a> and anything read from or sent to the live actor, such as pose-controller targets, are in scaled units. </p><dl class="section note"><dt>Note</dt><dd>Must be positive and finite. Values other than 1 are rejected for bots with linear transmissions or spatial tendons, and for bots composed with mods.</dd></dl>
+<p>Meant for sizing human hand bots to a tracked hand (XR teleoperation), not for robots. The asset stays in nominal units; the created actor's geometry, shapes, skin, sensor offsets, prismatic limits and default pose are scaled, masses by scale^3 and rotational inertias by scale^5, and joint friction, inertia, limit stiffness and damping and cycle stiffness for dynamic similarity. Rotational limits are unchanged. Contact parameters are not scaled. Spawn poses, controller gains and prefab-space utilities are nominal; effort limits and anything read from or sent to the live actor, such as pose-controller targets, are in scaled units. Must be positive and finite; values other than 1 are rejected for bots with linear transmissions or spatial tendons, and for bots composed with mods. </p>
+
+<p class="definition">Definition at line <a class="el" href="superdex__robotics_8h_source.html#l00321">321</a> of file <a class="el" href="superdex__robotics_8h_source.html">superdex_robotics.h</a>.</p>
 
 </div>
 </div>
@@ -363,7 +386,7 @@ Public Attributes</h2></td></tr>
 <p>When present, produces the superdex::ArticulatedActorParams::skin at instantiation time.</p>
 <p>When present, produces the superdex::ArticulatedActorParams::skin at instantiation time. </p>
 
-<p class="definition">Definition at line <a class="el" href="superdex__robotics_8h_source.html#l00331">331</a> of file <a class="el" href="superdex__robotics_8h_source.html">superdex_robotics.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="superdex__robotics_8h_source.html#l00345">345</a> of file <a class="el" href="superdex__robotics_8h_source.html">superdex_robotics.h</a>.</p>
 
 </div>
 </div>
@@ -382,7 +405,7 @@ Public Attributes</h2></td></tr>
 <p>Spatial tendons routed through waypoint and linear-joint elements. </p>
 <p>Each entry produces one superdex::experimental::SpatialTendonParams at instantiation time. </p>
 
-<p class="definition">Definition at line <a class="el" href="superdex__robotics_8h_source.html#l00318">318</a> of file <a class="el" href="superdex__robotics_8h_source.html">superdex_robotics.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="superdex__robotics_8h_source.html#l00332">332</a> of file <a class="el" href="superdex__robotics_8h_source.html">superdex_robotics.h</a>.</p>
 
 </div>
 </div>
@@ -400,7 +423,7 @@ Public Attributes</h2></td></tr>
 
 <p>Transform from the root link to the world frame. </p>
 
-<p class="definition">Definition at line <a class="el" href="superdex__robotics_8h_source.html#l00307">307</a> of file <a class="el" href="superdex__robotics_8h_source.html">superdex_robotics.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="superdex__robotics_8h_source.html#l00306">306</a> of file <a class="el" href="superdex__robotics_8h_source.html">superdex_robotics.h</a>.</p>
 
 </div>
 </div>

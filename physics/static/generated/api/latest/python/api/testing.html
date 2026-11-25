@@ -133,6 +133,7 @@
 <li class="toctree-l2"><a class="reference internal" href="prefab.html#instantiation">Instantiation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="prefab.html#serialization-export">Serialization &amp; Export</a></li>
 <li class="toctree-l2"><a class="reference internal" href="prefab.html#containers">Containers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="prefab.html#not-yet-categorized">Not Yet Categorized</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="models.html">Models &amp; Meshes</a><ul>
@@ -208,19 +209,15 @@
 <dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.utils.testing.decorators.skip">
 <span class="sig-name descname"><span class="pre">skip</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">reason</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/superdex/physics/utils/testing/decorators.html#skip"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.testing.decorators.skip" title="Permalink to this definition"></a></dt>
-<dd><p>Unconditionally skip a test with the given reason. This is a convenience wrapper
-around skip_if that always skips the test.</p>
+<dd><p>Unconditionally omit a test from discovery with the given reason.</p>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.utils.testing.decorators.skip_if">
 <span class="sig-name descname"><span class="pre">skip_if</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">condition</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reason</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/superdex/physics/utils/testing/decorators.html#skip_if"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.testing.decorators.skip_if" title="Permalink to this definition"></a></dt>
-<dd><p>Conditionally skip a test based on a boolean condition. This decorator provides
-different behavior depending on the environment. If the test is running in
-internal CI, it will print a skip message and return early, but will not set the
-skipped flag. This avoids flagging intentionally skipped tests as warnings in the
-internal CI UI. In other environments, it falls back to unittest.skip() for proper
-test reporting.</p>
+<dd><p>Omit a test method or class from discovery when the condition is true.</p>
+<p>Excluded methods and classes become None, which unittest does not discover.
+The reason documents why the test does not apply to this configuration.</p>
 </dd></dl>
 
 </section>

@@ -302,6 +302,8 @@ Public Member Functions</h2></td></tr>
 <tr class="memdesc:a5e9cdce31d803f199b4e15c8ddba2b1b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get contact forces on nodes.  <br /></td></tr>
 <tr class="memitem:ab358c74fb0c0c15c7354502be6f54b85" id="r_ab358c74fb0c0c15c7354502be6f54b85"><td class="memItemLeft">virtual <a class="el" href="classsuperdex_1_1Span.html">Span</a>&lt; <a class="el" href="namespacesuperdex.html#ab1cf40739516aea925c8ebe213131a5d">real</a> const &gt;&#160;</td><td class="memItemRight"><a class="el" href="#ab358c74fb0c0c15c7354502be6f54b85">GetNodePositionsLocal</a> (<a class="el" href="classsuperdex_1_1Error.html">Error</a> &amp;error) const =0</td></tr>
 <tr class="memdesc:ab358c74fb0c0c15c7354502be6f54b85"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the current position (reference + displacements) of each node in the actor's local frame.  <br /></td></tr>
+<tr class="memitem:a03415b905606f0381da7dc6812c8aa54" id="r_a03415b905606f0381da7dc6812c8aa54"><td class="memItemLeft">virtual <a class="el" href="classsuperdex_1_1Span.html">Span</a>&lt; <a class="el" href="namespacesuperdex.html#ab1cf40739516aea925c8ebe213131a5d">real</a> const &gt;&#160;</td><td class="memItemRight"><a class="el" href="#a03415b905606f0381da7dc6812c8aa54">GetNodeVelocitiesLocal</a> (<a class="el" href="classsuperdex_1_1Error.html">Error</a> &amp;error) const =0</td></tr>
+<tr class="memdesc:a03415b905606f0381da7dc6812c8aa54"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the current velocity of each node in the actor's local frame.  <br /></td></tr>
 <tr class="memitem:ac9329a0295b6df27653b53e794d866ff" id="r_ac9329a0295b6df27653b53e794d866ff"><td class="memItemLeft">virtual int&#160;</td><td class="memItemRight"><a class="el" href="#ac9329a0295b6df27653b53e794d866ff">GetNumDofs</a> () const =0</td></tr>
 <tr class="memdesc:ac9329a0295b6df27653b53e794d866ff"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the number of degrees of freedom (DoFs) of the actor.  <br /></td></tr>
 <tr class="memitem:a5dca09922a59fe9c63f88a0cff7fecce" id="r_a5dca09922a59fe9c63f88a0cff7fecce"><td class="memItemLeft">virtual void&#160;</td><td class="memItemRight"><a class="el" href="#a5dca09922a59fe9c63f88a0cff7fecce">GetPointsDistanceToSurface</a> (<a class="el" href="classsuperdex_1_1Span.html">Span</a>&lt; <a class="el" href="namespacesuperdex.html#a9577ed9f0b93b82ce29a8ab5f4985b32">Real3</a> const &gt; pointsWorld, <a class="el" href="classsuperdex_1_1Span.html">Span</a>&lt; <a class="el" href="namespacesuperdex.html#ab1cf40739516aea925c8ebe213131a5d">real</a> &gt; outDistances, <a class="el" href="classsuperdex_1_1Error.html">Error</a> &amp;error) const =0</td></tr>
@@ -314,6 +316,8 @@ Public Member Functions</h2></td></tr>
 <tr class="memdesc:a62c3b8bea02231f1711ba6e977a502f2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the position of the center of mass in the actor's local coordinate frame (<a class="el" href="#a39d4ab5ed8a534693247388a519152aa" title="superdex::Actor::GetRootTransform">GetRootTransform</a>).  <br /></td></tr>
 <tr class="memitem:ac32647b329cc3c01399dbc6a0c9fc7bf" id="r_ac32647b329cc3c01399dbc6a0c9fc7bf"><td class="memItemLeft">virtual <a class="el" href="namespacesuperdex.html#ae179ca4c7886b5c8acb4378442ee6362">Real6</a>&#160;</td><td class="memItemRight"><a class="el" href="#ac32647b329cc3c01399dbc6a0c9fc7bf">GetRigidMomentOfInertiaLocal</a> (<a class="el" href="classsuperdex_1_1Error.html">Error</a> &amp;error) const =0</td></tr>
 <tr class="memdesc:ac32647b329cc3c01399dbc6a0c9fc7bf"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the moment of inertia tensor of the actor at the center of mass, aligned with the actor's local reference system (root transform), and using <em>negative</em> tensor notation.  <br /></td></tr>
+<tr class="memitem:af85d2d5462aa3f8b73bb568d5acaa355" id="r_af85d2d5462aa3f8b73bb568d5acaa355"><td class="memItemLeft">virtual void&#160;</td><td class="memItemRight"><a class="el" href="#af85d2d5462aa3f8b73bb568d5acaa355">GetRodPose</a> (<a class="el" href="classsuperdex_1_1Span.html">Span</a>&lt; <a class="el" href="namespacesuperdex.html#ab1cf40739516aea925c8ebe213131a5d">real</a> &gt; outDisplacements, <a class="el" href="classsuperdex_1_1Span.html">Span</a>&lt; <a class="el" href="namespacesuperdex.html#ab1cf40739516aea925c8ebe213131a5d">real</a> &gt; outElementFrameAxes, <a class="el" href="classsuperdex_1_1Error.html">Error</a> &amp;error) const =0</td></tr>
+<tr class="memdesc:af85d2d5462aa3f8b73bb568d5acaa355"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the pose of a rod actor: its node displacements and element frame axes.  <br /></td></tr>
 <tr class="memitem:a39d4ab5ed8a534693247388a519152aa" id="r_a39d4ab5ed8a534693247388a519152aa"><td class="memItemLeft">virtual <a class="el" href="classsuperdex_1_1TransformRT.html">TransformRT</a>&#160;</td><td class="memItemRight"><a class="el" href="#a39d4ab5ed8a534693247388a519152aa">GetRootTransform</a> () const =0</td></tr>
 <tr class="memdesc:a39d4ab5ed8a534693247388a519152aa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the actor's world-from-local transform (root transform).  <br /></td></tr>
 <tr class="memitem:a17a858cc56b9509f1b5d2acfdd9d974a" id="r_a17a858cc56b9509f1b5d2acfdd9d974a"><td class="memItemLeft">virtual <a class="el" href="classsuperdex_1_1Scene.html">Scene</a> const *&#160;</td><td class="memItemRight"><a class="el" href="#a17a858cc56b9509f1b5d2acfdd9d974a">GetScene</a> () const =0</td></tr>
@@ -406,6 +410,8 @@ Public Member Functions</h2></td></tr>
 <tr class="memdesc:a144903ba4c589c9964a2e80fcc09a0fc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the current velocity of each node in the actor's local frame.  <br /></td></tr>
 <tr class="memitem:a70e78b594b500871ba816452d7628386" id="r_a70e78b594b500871ba816452d7628386"><td class="memItemLeft">virtual void&#160;</td><td class="memItemRight"><a class="el" href="#a70e78b594b500871ba816452d7628386">SetRecenteringParams</a> (<a class="el" href="structsuperdex_1_1RecenteringParams.html">RecenteringParams</a> const &amp;params, <a class="el" href="classsuperdex_1_1Error.html">Error</a> &amp;error)=0</td></tr>
 <tr class="memdesc:a70e78b594b500871ba816452d7628386"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the recentering parameters of the actor.  <br /></td></tr>
+<tr class="memitem:a75a4cec806e4eff1e023a5f5bc1c2087" id="r_a75a4cec806e4eff1e023a5f5bc1c2087"><td class="memItemLeft">virtual void&#160;</td><td class="memItemRight"><a class="el" href="#a75a4cec806e4eff1e023a5f5bc1c2087">SetRodPose</a> (<a class="el" href="classsuperdex_1_1Span.html">Span</a>&lt; <a class="el" href="namespacesuperdex.html#ab1cf40739516aea925c8ebe213131a5d">real</a> const &gt; displacements, <a class="el" href="classsuperdex_1_1Span.html">Span</a>&lt; <a class="el" href="namespacesuperdex.html#ab1cf40739516aea925c8ebe213131a5d">real</a> const &gt; elementFrameAxes, <a class="el" href="classsuperdex_1_1Error.html">Error</a> &amp;error)=0</td></tr>
+<tr class="memdesc:a75a4cec806e4eff1e023a5f5bc1c2087"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the pose of a rod actor: its node displacements and element frame axes.  <br /></td></tr>
 <tr class="memitem:ad5cda8874277a833d7a1ade811022443" id="r_ad5cda8874277a833d7a1ade811022443"><td class="memItemLeft">virtual void&#160;</td><td class="memItemRight"><a class="el" href="#ad5cda8874277a833d7a1ade811022443">SetRootTransform</a> (<a class="el" href="classsuperdex_1_1TransformRT.html">TransformRT</a> const &amp;worldFromLocal, <a class="el" href="classsuperdex_1_1Error.html">Error</a> &amp;error)=0</td></tr>
 <tr class="memdesc:ad5cda8874277a833d7a1ade811022443"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the actor's world-from-local transform (root transform).  <br /></td></tr>
 <tr class="memitem:aecc4dd1b29497dbe6fa9d4d429d16f27" id="r_aecc4dd1b29497dbe6fa9d4d429d16f27"><td class="memItemLeft">virtual void&#160;</td><td class="memItemRight"><a class="el" href="#aecc4dd1b29497dbe6fa9d4d429d16f27">SetSoftMaterialParams</a> (<a class="el" href="structsuperdex_1_1SoftMaterialParams.html">SoftMaterialParams</a> const &amp;params, <a class="el" href="classsuperdex_1_1Error.html">Error</a> &amp;error)=0</td></tr>
@@ -413,7 +419,7 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:af8f4f789b6f20d023dae2bb743175c19" id="r_af8f4f789b6f20d023dae2bb743175c19"><td class="memItemLeft">virtual void&#160;</td><td class="memItemRight"><a class="el" href="#af8f4f789b6f20d023dae2bb743175c19">SetUserData</a> (void *userData)=0</td></tr>
 <tr class="memdesc:af8f4f789b6f20d023dae2bb743175c19"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set application-specific user data for this actor.  <br /></td></tr>
 <tr class="memitem:a97f46d4ea21a6cbebddad73bf08e4c98" id="r_a97f46d4ea21a6cbebddad73bf08e4c98"><td class="memItemLeft">virtual void&#160;</td><td class="memItemRight"><a class="el" href="#a97f46d4ea21a6cbebddad73bf08e4c98">SetVelocity</a> (<a class="el" href="namespacesuperdex.html#a9577ed9f0b93b82ce29a8ab5f4985b32">Real3</a> const &amp;linearVel, <a class="el" href="namespacesuperdex.html#a9577ed9f0b93b82ce29a8ab5f4985b32">Real3</a> const &amp;angularVel, <a class="el" href="classsuperdex_1_1Error.html">Error</a> &amp;error)=0</td></tr>
-<tr class="memdesc:a97f46d4ea21a6cbebddad73bf08e4c98"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the world-frame linear and angular velocity of the actor at the center of mass.  <br /></td></tr>
+<tr class="memdesc:a97f46d4ea21a6cbebddad73bf08e4c98"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the world-frame linear and angular velocity of the actor.  <br /></td></tr>
 <tr class="memitem:a869be25e3170c7649a3f77a2cc77142a" id="r_a869be25e3170c7649a3f77a2cc77142a"><td class="memItemLeft">virtual void&#160;</td><td class="memItemRight"><a class="el" href="#a869be25e3170c7649a3f77a2cc77142a">SetZeroDisplacementsAndVelocities</a> (<a class="el" href="classsuperdex_1_1Error.html">Error</a> &amp;error)=0</td></tr>
 <tr class="memdesc:a869be25e3170c7649a3f77a2cc77142a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set all local displacement and velocity DoFs to zero.  <br /></td></tr>
 </table><table class="memberdecls">
@@ -423,6 +429,7 @@ Protected Member Functions</h2></td></tr>
 </table>
 <a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Represents a simulated body (actor) in a scene. </p>
+<p>The actor history is the state that an actor carries over from its previous time steps, besides its current state: the previous states of multi-step time integrators, the friction preload of the joints of articulated actors (see <a class="el" href="structsuperdex_1_1ArticulatedJointFrictionParams.html" title="superdex::ArticulatedJointFrictionParams">ArticulatedJointFrictionParams</a>), and the friction preload of its contacts and of contacts on it, with elasto-plastic friction (see <a class="el" href="structsuperdex_1_1ContactParams.html#a5c55ba0a580fae9f0331bd273bccff13" title="superdex::ContactParams::preferElastoPlasticFriction">ContactParams::preferElastoPlasticFriction</a>). Setters that change the state discontinuously invalidate the actor history: in the next time step, multi-step time integrators restart (e.g. BDF2 falls back to backward Euler), and the contacts restart without friction preload. Joints restart without friction preload only when their positions are set (<a class="el" href="#a5d0346d7bcd196b6026202102ac3a6f1" title="superdex::Actor::SetArticulatedPoseFromJoints">SetArticulatedPoseFromJoints</a>, <a class="el" href="#a5e68a84c5c86dba0eb12c30bae5994e3" title="superdex::Actor::SetArticulatedPoseFromLinks">SetArticulatedPoseFromLinks</a>) or their dry friction is enabled (<a class="el" href="#ae47854fb2d06874b5314832ec83f2a69" title="superdex::Actor::SetArticulatedJointFrictionParams">SetArticulatedJointFrictionParams</a>).</p>
 <dl class="section note"><dt>Note</dt><dd>Every body in the simulation is an actor. </dd>
 <dd>
 Actors always belong to exactly one scene. </dd>
@@ -695,6 +702,8 @@ See <a class="el" href="#a9e6d257ef4d1833e875c50617e709d4a" title="superdex::Act
 </dl>
 <dl class="section note"><dt>Note</dt><dd>Not supported for nested link actors (see <a class="el" href="#ad982a7b0d4938d9bbac324cb109e9f28" title="superdex::Actor::GetNestedLinkActors">GetNestedLinkActors</a>) or nested soft actors (see <a class="el" href="#a89a379d527fbda67ac45b97969ae2e82" title="superdex::Actor::GetNestedSoftActors">GetNestedSoftActors</a>). </dd>
 <dd>
+Not supported for rod actors. Use <a class="el" href="classsuperdex_1_1Scene.html#ae951a77a01fb871c7fe53025c24ec172" title="superdex::Scene::CreateDeformableNodePositionConstraint">Scene::CreateDeformableNodePositionConstraint</a> and <a class="el" href="classsuperdex_1_1Scene.html#ae1738e3236d3fada0311dd56e14ee049" title="superdex::Scene::CreateRodElementRotationConstraint">Scene::CreateRodElementRotationConstraint</a> instead. </dd>
+<dd>
 Not supported in differentiable scenes (<span class="tt">diffsim::MakeSceneDifferentiable</span>) or for ROM actors. </dd>
 <dd>
 For soft and shell actors, each node has 3 consecutive DoFs containing its target x, y, and z position [m] in the world frame. All 3 must be specified together. Consider <a class="el" href="#a5f9fb9aa0b053358c28901e6fbede04f" title="superdex::Actor::AddBoundaryConditionNodesWorld">AddBoundaryConditionNodesWorld</a> as a more convenient alternative. </dd>
@@ -704,8 +713,6 @@ For rigid and articulated actors, the DoF indices within each call must be sorte
 Rigid actors have 6 DoFs: indices 0-2 are the target world-space center-of-mass position [m], and indices 3-5 are the target world-from-local orientation as a rotation vector (axis multiplied by angle [rad]). Either all or none of the 3 rotation DoFs must be specified. </dd>
 <dd>
 Articulated actors have a number of DoFs that depends on the number of joints and the DoFs per joint. When setting boundary conditions on the rotation of a free or spherical joint, either all or none of the 3 DoFs must be specified. </dd>
-<dd>
-Rod actors have 4 DoFs per node: the first 3 values are the target node x, y, and z position [m] in the world frame, followed by the next element's scalar twist angle [rad]. (For open rods, the last DoF, i.e., the final node's twist DoF, is included for padding only, does not affect the physics, and is automatically constrained to zero. This automatic constraint is not reported by <a class="el" href="#adb826b247fd8773f7ef19e1efc53e7ac" title="superdex::Actor::GetBoundaryConditionDofIndices">GetBoundaryConditionDofIndices</a>. For closed-loop rods, all twist DoFs are physical.) Boundary conditions on a rod node's position must specify all 3 consecutive displacement DoFs for that node. Only zero values are allowed for the scalar twist angle in this function, with the interpretation that the element's cross-section material axes rotate by only the minimal amount needed to remain orthogonal to the rod's centerline. More elaborate control over rod element rotations should use constraints instead of boundary conditions. </dd>
 <dd>
 Boundary condition APIs add to existing boundary conditions; they do not replace existing entries. If a DoF has more than one entry, getter APIs return all entries in the order they were added, and the most recently added value is the effective value during the step. </dd>
 <dd>
@@ -759,6 +766,8 @@ Adding a boundary condition to the same DoF more than once is legal — the most
   </dd>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>Not supported for nested link actors (see <a class="el" href="#ad982a7b0d4938d9bbac324cb109e9f28" title="superdex::Actor::GetNestedLinkActors">GetNestedLinkActors</a>) or nested soft actors (see <a class="el" href="#a89a379d527fbda67ac45b97969ae2e82" title="superdex::Actor::GetNestedSoftActors">GetNestedSoftActors</a>). </dd>
+<dd>
+Not supported for rod actors. Use <a class="el" href="classsuperdex_1_1Scene.html#ae951a77a01fb871c7fe53025c24ec172" title="superdex::Scene::CreateDeformableNodePositionConstraint">Scene::CreateDeformableNodePositionConstraint</a> and <a class="el" href="classsuperdex_1_1Scene.html#ae1738e3236d3fada0311dd56e14ee049" title="superdex::Scene::CreateRodElementRotationConstraint">Scene::CreateRodElementRotationConstraint</a> instead. </dd>
 <dd>
 Not supported in differentiable scenes (<span class="tt">diffsim::MakeSceneDifferentiable</span>) or for ROM actors. </dd>
 <dd>
@@ -1131,9 +1140,11 @@ Deltas cannot be simply subtracted between poses. This function uses joint infor
 <dl class="section return"><dt>Returns</dt><dd>Angular velocity in world frame [rad/s].</dd></dl>
 <dl class="section note"><dt>Note</dt><dd>Only supported for rigid and soft actors. </dd>
 <dd>
-For rigid actors, it returns the actual angular velocity. </dd>
+For dynamic rigid actors, it returns the actual angular velocity. </dd>
 <dd>
-For soft actors, it returns an estimate of the angular velocity of the root transform. Requires recentering to be enabled for accurate results. </dd>
+For static actors, it returns the angular velocity over the last time step. If <a class="el" href="#a97f46d4ea21a6cbebddad73bf08e4c98" title="superdex::Actor::SetVelocity">SetVelocity</a> was called since the last step, it returns that velocity. Otherwise, if <a class="el" href="#ad5cda8874277a833d7a1ade811022443" title="superdex::Actor::SetRootTransform">SetRootTransform</a> was called, it estimates the velocity to the new root transform using the last time step (<a class="el" href="classsuperdex_1_1Scene.html#a16b324a0967988feddc5181dd8f97cc5" title="superdex::Scene::GetLastTimeStep">Scene::GetLastTimeStep</a>). </dd>
+<dd>
+For soft actors, it returns an estimate of the angular velocity of the recentering pivot. Soft actors created with <span class="tt">experimental::ExperimentalSoftActorParams::useRecentering</span> set to false have no pivot and return zero. </dd>
 <dd>
 Not supported for ROM actors. </dd></dl>
 
@@ -1295,6 +1306,8 @@ Unconstrained DoFs have limits of ±infinity.</dd></dl>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Jacobian matrix in row-major order with shape [6, numArticulatedDoFs], where 6 is the number of rigid DoFs of the link (3 translation + 3 rotation) and numArticulatedDoFs is <a class="el" href="#ac9329a0295b6df27653b53e794d866ff" title="superdex::Actor::GetNumDofs">GetNumDofs</a> of the owning articulated actor.</dd></dl>
 <dl class="section note"><dt>Note</dt><dd>Only applicable to nested link actors within articulated actors. </dd>
+<dd>
+The values are computed at the call. Later steps and state changes do not update them, but the next call on the same link overwrites them. The returned span remains valid until the owning articulated actor is destroyed. </dd>
 <dd>
 To get the Jacobian in the articulation's root frame, left-multiply the Jacobian by the 6×6 block-diagonal of the root-from-world rotation:</dd></dl>
 <div class="fragment"><div class="line">[ R  0 ] · J</div>
@@ -1591,7 +1604,7 @@ Requires registering <a class="el" href="namespacesuperdex.html#aed26e55b2a9ac69
 <dd>
 Wrenches correspond to the last state assembled by the solver. If the solver did not converge, the joint balance is only approximate. </dd>
 <dd>
-For multi-stage time integrators, wrenches correspond to the last stage. If the last stage is not at the end of the time step (<a class="el" href="namespacesuperdex.html#aba7db404f336978480a0790044d1f900a41a24d9f84acb189f64f1fdec5be6178" title="superdex::IntegrationMethod::DIRK23">IntegrationMethod::DIRK23</a>, <a class="el" href="namespacesuperdex.html#aba7db404f336978480a0790044d1f900a53cd2918343236914369b2efec79a77b" title="superdex::IntegrationMethod::SymplecticDIRK12">IntegrationMethod::SymplecticDIRK12</a> and <a class="el" href="namespacesuperdex.html#aba7db404f336978480a0790044d1f900a989bf7ccf1461736bfa0a337bdb7b992" title="superdex::IntegrationMethod::SymplecticDIRK22">IntegrationMethod::SymplecticDIRK22</a>), they differ from the wrenches at the end-of-step state, e.g. the link transforms returned by <a class="el" href="#a0422a40e039d04d7c7613b5c864772b4" title="superdex::Actor::GetArticulatedLinkTransforms">GetArticulatedLinkTransforms</a>. </dd>
+After a step, wrenches correspond to the last integration stage, see <a class="el" href="classsuperdex_1_1Scene.html#ab2ebf00d9b282dd85bc1ed59747471c4" title="superdex::Scene::Step">Scene::Step</a>. </dd>
 <dd>
 If the solver diverged in the last simulation step, the returned wrenches may be inaccurate. </dd>
 <dd>
@@ -2400,7 +2413,7 @@ Requires the actor to support <a class="el" href="namespacesuperdex.html#aed26e5
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>Total contact torque [N·m] in world frame, about the center of mass.</dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>Total contact torque [N·m] in world frame, about the center of mass at the evaluated state (see <a class="el" href="namespacesuperdex.html#aed26e55b2a9ac698fffe268c8cd9f5ebaf21cc073aaf161fd697dfc97593ca3a9" title="superdex::QueryType::TotalContactForce">QueryType::TotalContactForce</a>).</dd></dl>
 <dl class="section note"><dt>Note</dt><dd>Requires registering <a class="el" href="namespacesuperdex.html#aed26e55b2a9ac698fffe268c8cd9f5ebaf21cc073aaf161fd697dfc97593ca3a9" title="superdex::QueryType::TotalContactForce">QueryType::TotalContactForce</a> before the simulation step. Results are available after the simulation step completes. </dd>
 <dd>
 Only supported for rigid actors and articulated links that support <a class="el" href="namespacesuperdex.html#aed26e55b2a9ac698fffe268c8cd9f5ebaf21cc073aaf161fd697dfc97593ca3a9" title="superdex::QueryType::TotalContactForce">QueryType::TotalContactForce</a>. </dd>
@@ -2495,6 +2508,8 @@ If the solver diverged in the last simulation step, results may not be available
 <dd>
 Actors in sleeping islands are not solved and return <a class="el" href="namespacesuperdex.html#a38f8f32d5dc7f9828210a4ea756f592ca6adf97f83acf6453d4a6a4b1070f3754" title="superdex::ConvergenceStatus::None">ConvergenceStatus::None</a>. See <span class="tt">experimental::SleepParams</span>. </dd>
 <dd>
+Methods that overwrite the actor's state, such as <a class="el" href="#ad5cda8874277a833d7a1ade811022443" title="superdex::Actor::SetRootTransform">SetRootTransform</a> or <a class="el" href="#a97f46d4ea21a6cbebddad73bf08e4c98" title="superdex::Actor::SetVelocity">SetVelocity</a>, reset the status to <a class="el" href="namespacesuperdex.html#a38f8f32d5dc7f9828210a4ea756f592ca6adf97f83acf6453d4a6a4b1070f3754" title="superdex::ConvergenceStatus::None">ConvergenceStatus::None</a>, since the state is no longer the output of the last solve. Restoring a captured state restores the captured status. </dd>
+<dd>
 Unlike <a class="el" href="namespacesuperdex.html#a38f8f32d5dc7f9828210a4ea756f592ca531b4ea128144242345020b6115538ce" title="superdex::ConvergenceStatus::Diverged">ConvergenceStatus::Diverged</a>, <a class="el" href="namespacesuperdex.html#a38f8f32d5dc7f9828210a4ea756f592cac23e2b09ebe6bf4cb5e2a9abe85c0be2" title="superdex::ConvergenceStatus::Stopped">ConvergenceStatus::Stopped</a> does not indicate a failure. It means that the nonlinear solve reached a stopping criterion, such as the maximum number of iterations, before meeting its residual tolerances, which may be stricter than the actor requires.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="namespacesuperdex.html#a38f8f32d5dc7f9828210a4ea756f592c" title="superdex::ConvergenceStatus">ConvergenceStatus</a>, <a class="el" href="structsuperdex_1_1SolverStats.html#a37cb48870c08f45a7cd7cac135c9961d" title="superdex::SolverStats::convergenceStatus">SolverStats::convergenceStatus</a> </dd></dl>
 
@@ -2566,13 +2581,13 @@ Unlike <a class="el" href="namespacesuperdex.html#a38f8f32d5dc7f9828210a4ea756f5
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>Node displacements in the actor's local frame. Length is 3 × the number of nodes, except for rod actors, where it is 4 × the number of nodes (3 displacement [m] + 1 twist [rad] per node). The number of nodes is available from <a class="el" href="#a88745d7a8c15875010458a15dbd339c3" title="superdex::Actor::GetMesh">GetMesh</a>.</dd></dl>
-<dl class="section note"><dt>Note</dt><dd>Only supported for standalone soft actors, nested soft actors, shell actors, rod actors, and articulated actors with a skin mesh. </dd>
+<dl class="section return"><dt>Returns</dt><dd>Node displacements [m] in the actor's local frame. Length is 3 × the number of nodes. The number of nodes is available from <a class="el" href="#a88745d7a8c15875010458a15dbd339c3" title="superdex::Actor::GetMesh">GetMesh</a>.</dd></dl>
+<dl class="section note"><dt>Note</dt><dd>Only supported for standalone soft actors, nested soft actors, shell actors, and articulated actors with a skin mesh. For rod actors, use <a class="el" href="#af85d2d5462aa3f8b73bb568d5acaa355" title="superdex::Actor::GetRodPose">GetRodPose</a>. </dd>
 <dd>
 For articulated actors, returns displacements of the skin mesh. </dd>
 <dd>
 For nested soft actors, returns post-skinning displacements, which may differ from the pre-skinning elastic deformation component written by <a class="el" href="#a09c326787378eee15cf749aa1f5c93de" title="superdex::Actor::SetDisplacements">SetDisplacements</a>.</dd></dl>
-<dl class="section see"><dt>See also</dt><dd><a class="el" href="#a09c326787378eee15cf749aa1f5c93de" title="superdex::Actor::SetDisplacements">SetDisplacements</a>, <a class="el" href="#ab358c74fb0c0c15c7354502be6f54b85" title="superdex::Actor::GetNodePositionsLocal">GetNodePositionsLocal</a> </dd></dl>
+<dl class="section see"><dt>See also</dt><dd><a class="el" href="#a09c326787378eee15cf749aa1f5c93de" title="superdex::Actor::SetDisplacements">SetDisplacements</a>, <a class="el" href="#af85d2d5462aa3f8b73bb568d5acaa355" title="superdex::Actor::GetRodPose">GetRodPose</a>, <a class="el" href="#ab358c74fb0c0c15c7354502be6f54b85" title="superdex::Actor::GetNodePositionsLocal">GetNodePositionsLocal</a> </dd></dl>
 
 </div>
 </div>
@@ -2617,7 +2632,11 @@ For nested soft actors, returns post-skinning displacements, which may differ fr
   </table>
   </dd>
 </dl>
-<dl class="section note"><dt>Note</dt><dd>Not supported for static actors, even when both input and output spans are empty.</dd></dl>
+<dl class="section note"><dt>Note</dt><dd>Not supported for standalone static actors, even when both input and output spans are empty. </dd>
+<dd>
+For dynamic rigid actors and nested link actors (see <a class="el" href="#ad982a7b0d4938d9bbac324cb109e9f28" title="superdex::Actor::GetNestedLinkActors">GetNestedLinkActors</a>), the 6 DoF values are the world-space center-of-mass position [m] followed by the world-from-local orientation as a rotation vector (axis multiplied by angle [rad]). The DoFs of a nested link actor are derived from those of its articulated actor. </dd>
+<dd>
+For rod actors, each node has 4 DoF values: the (x, y, z) displacement [m] and a twist angle [rad]. The twist angle at node i belongs to element i, except for the last node of an open (non-closed-loop) rod, whose twist angle is padding and is always zero. It is the twist about the element's tangent accumulated since the start of the most recent time step, and it is reset to zero at the start of each time step and by <a class="el" href="#a75a4cec806e4eff1e023a5f5bc1c2087" title="superdex::Actor::SetRodPose">SetRodPose</a>. It is already included in the element frame axes of <a class="el" href="#af85d2d5462aa3f8b73bb568d5acaa355" title="superdex::Actor::GetRodPose">GetRodPose</a>, so it is not a total twist.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="#ac9329a0295b6df27653b53e794d866ff" title="superdex::Actor::GetNumDofs">GetNumDofs</a> </dd></dl>
 
 </div>
@@ -2803,9 +2822,11 @@ Call <a class="el" href="classsuperdex_1_1Scene.html#abae477c0d342fc011dfcbed9d1
 <dl class="section return"><dt>Returns</dt><dd>Linear velocity in world frame [m/s].</dd></dl>
 <dl class="section note"><dt>Note</dt><dd>Only supported for rigid and soft actors. </dd>
 <dd>
-For rigid actors, it returns the velocity of the center of mass. </dd>
+For dynamic rigid actors, it returns the velocity of the center of mass. </dd>
 <dd>
-For soft actors, it returns an estimate of the linear velocity of the root transform. Requires recentering to be enabled for accurate results. </dd>
+For static actors, it returns the velocity of the point described in <a class="el" href="#a97f46d4ea21a6cbebddad73bf08e4c98" title="superdex::Actor::SetVelocity">SetVelocity</a> over the last time step. If <a class="el" href="#a97f46d4ea21a6cbebddad73bf08e4c98" title="superdex::Actor::SetVelocity">SetVelocity</a> was called since the last step, it returns that velocity. Otherwise, if <a class="el" href="#ad5cda8874277a833d7a1ade811022443" title="superdex::Actor::SetRootTransform">SetRootTransform</a> was called, it estimates the velocity to the new root transform using the last time step (<a class="el" href="classsuperdex_1_1Scene.html#a16b324a0967988feddc5181dd8f97cc5" title="superdex::Scene::GetLastTimeStep">Scene::GetLastTimeStep</a>). </dd>
+<dd>
+For soft actors, it returns an estimate of the linear velocity of the rest mesh's center of mass, assuming it moves rigidly with the recentering pivot. Soft actors created with <span class="tt">experimental::ExperimentalSoftActorParams::useRecentering</span> set to false have no pivot and return zero. </dd>
 <dd>
 Not supported for ROM actors. </dd></dl>
 
@@ -3062,6 +3083,42 @@ Requires the actor to support <a class="el" href="namespacesuperdex.html#aed26e5
 
 </div>
 </div>
+<a id="a03415b905606f0381da7dc6812c8aa54" name="a03415b905606f0381da7dc6812c8aa54"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a03415b905606f0381da7dc6812c8aa54">&#9670;&#160;</a></span>GetNodeVelocitiesLocal()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">virtual <a class="el" href="classsuperdex_1_1Span.html">Span</a>&lt; <a class="el" href="namespacesuperdex.html#ab1cf40739516aea925c8ebe213131a5d">real</a> const  &gt; superdex::Actor::GetNodeVelocitiesLocal </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classsuperdex_1_1Error.html">Error</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>error</em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span><span class="mlabel pure-virtual">pure virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Get the current velocity of each node in the actor's local frame. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in,out]</td><td class="paramname">error</td><td><a class="el" href="classsuperdex_1_1Error.html">Error</a> status. Check <a class="el" href="classsuperdex_1_1Error.html#a463cb4f3428a7a2dd779a2f6c5d153b2" title="superdex::Error::IsOK">Error::IsOK</a> for success. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Node velocities in the actor's local frame, in the layout that <a class="el" href="#a144903ba4c589c9964a2e80fcc09a0fc" title="superdex::Actor::SetNodeVelocitiesLocal">SetNodeVelocitiesLocal</a> takes.</dd></dl>
+<dl class="section note"><dt>Note</dt><dd>Only supported for standalone soft actors, shell actors, and rod actors.</dd></dl>
+<dl class="section see"><dt>See also</dt><dd><a class="el" href="#a144903ba4c589c9964a2e80fcc09a0fc" title="superdex::Actor::SetNodeVelocitiesLocal">SetNodeVelocitiesLocal</a>, <a class="el" href="#a676496f6fe232603031179f04ad9e3e4" title="superdex::Actor::GetDisplacements">GetDisplacements</a> </dd></dl>
+
+</div>
+</div>
 <a id="ac9329a0295b6df27653b53e794d866ff" name="ac9329a0295b6df27653b53e794d866ff"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ac9329a0295b6df27653b53e794d866ff">&#9670;&#160;</a></span>GetNumDofs()</h2>
 
@@ -3087,7 +3144,9 @@ Requires the actor to support <a class="el" href="namespacesuperdex.html#aed26e5
 
 <p>Get the number of degrees of freedom (DoFs) of the actor. </p>
 <dl class="section return"><dt>Returns</dt><dd>Number of degrees of freedom of the actor.</dd></dl>
-<dl class="section note"><dt>Note</dt><dd>Returns zero for actors without degrees of freedom (e.g., static actors). </dd></dl>
+<dl class="section note"><dt>Note</dt><dd>Returns zero for actors without degrees of freedom (e.g., standalone static actors). </dd>
+<dd>
+For rod actors, there are 4 DoFs per node, in the layout of <a class="el" href="#ad9bd562cc797bd1a78f532e1daadc82c" title="superdex::Actor::GetDofValues">GetDofValues</a>. </dd></dl>
 
 </div>
 </div>
@@ -3165,7 +3224,7 @@ This function is not supported for soft actors or for the experimental <a class=
 
 <p>Gets the recentering parameters of the actor. </p>
 <dl class="section return"><dt>Returns</dt><dd>Recentering parameters of the actor.</dd></dl>
-<dl class="section note"><dt>Note</dt><dd>Recentering is only supported for standalone soft actors. For other actor types, returns default recentering parameters with <a class="el" href="structsuperdex_1_1RecenteringParams.html#a7264484a429cd297762bd92499c92fdd" title="superdex::RecenteringParams::useRecentering">RecenteringParams::useRecentering</a> set to false.</dd></dl>
+<dl class="section note"><dt>Note</dt><dd>Recentering is only supported for standalone soft actors, shell actors, and rod actors. For other actor types, returns default recentering parameters with <a class="el" href="structsuperdex_1_1RecenteringParams.html#a7264484a429cd297762bd92499c92fdd" title="superdex::RecenteringParams::useRecentering">RecenteringParams::useRecentering</a> set to false.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="structsuperdex_1_1RecenteringParams.html" title="superdex::RecenteringParams">RecenteringParams</a>, <a class="el" href="#a70e78b594b500871ba816452d7628386" title="superdex::Actor::SetRecenteringParams">SetRecenteringParams</a> </dd></dl>
 
 </div>
@@ -3278,6 +3337,52 @@ This function is not supported for soft actors or for the experimental <a class=
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Upper-right triangle in the form [ixx, ixy, ixz, iyy, iyz, izz]. Units: kg·m².</dd></dl>
 <dl class="section note"><dt>Note</dt><dd>Only supported for dynamic rigid actors. </dd></dl>
+
+</div>
+</div>
+<a id="af85d2d5462aa3f8b73bb568d5acaa355" name="af85d2d5462aa3f8b73bb568d5acaa355"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af85d2d5462aa3f8b73bb568d5acaa355">&#9670;&#160;</a></span>GetRodPose()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">virtual void superdex::Actor::GetRodPose </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classsuperdex_1_1Span.html">Span</a>&lt; <a class="el" href="namespacesuperdex.html#ab1cf40739516aea925c8ebe213131a5d">real</a> &gt;</td>          <td class="paramname"><span class="paramname"><em>outDisplacements</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="classsuperdex_1_1Span.html">Span</a>&lt; <a class="el" href="namespacesuperdex.html#ab1cf40739516aea925c8ebe213131a5d">real</a> &gt;</td>          <td class="paramname"><span class="paramname"><em>outElementFrameAxes</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="classsuperdex_1_1Error.html">Error</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>error</em></span>&#160;) const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel pure-virtual">pure virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Get the pose of a rod actor: its node displacements and element frame axes. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[out]</td><td class="paramname">outDisplacements</td><td>Node displacements in the actor's local frame, relative to reference (rest) positions. Must be of size 3 × the number of nodes of <a class="el" href="#a88745d7a8c15875010458a15dbd339c3" title="superdex::Actor::GetMesh">GetMesh</a>. </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">outElementFrameAxes</td><td>Element frame axes in the actor's local frame. Each axis is a unit vector orthogonal to its deformed element, and carries the rod's twist. Must be of size 3 × the number of elements of <a class="el" href="#a88745d7a8c15875010458a15dbd339c3" title="superdex::Actor::GetMesh">GetMesh</a>. </td></tr>
+    <tr><td class="paramdir">[in,out]</td><td class="paramname">error</td><td><a class="el" href="classsuperdex_1_1Error.html">Error</a> status. Check <a class="el" href="classsuperdex_1_1Error.html#a463cb4f3428a7a2dd779a2f6c5d153b2" title="superdex::Error::IsOK">Error::IsOK</a> for success.</td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section note"><dt>Note</dt><dd>Only supported for rod actors.</dd></dl>
+<dl class="section see"><dt>See also</dt><dd><a class="el" href="#a75a4cec806e4eff1e023a5f5bc1c2087" title="superdex::Actor::SetRodPose">SetRodPose</a> </dd></dl>
 
 </div>
 </div>
@@ -4119,7 +4224,7 @@ When <code class="param">boundaryOnly</code> is false, requires registering <a c
 <dl class="section return"><dt>Returns</dt><dd><a class="el" href="structsuperdex_1_1QueryHandle.html" title="superdex::QueryHandle">QueryHandle</a> for the registered query, or an invalid handle if registration fails.</dd></dl>
 <dl class="section note"><dt>Note</dt><dd>Queries may add substantial computational overhead. Use only when necessary. </dd>
 <dd>
-Data is available after the next simulation step, even if its time step is zero. </dd>
+Data is available after the next simulation step, even if its time step is zero, or after <a class="el" href="classsuperdex_1_1Scene.html#ad3f3875b26a256b70b597a6e0b359e84" title="superdex::Scene::UpdateQueries">Scene::UpdateQueries</a>. </dd>
 <dd>
 Results correspond to the last simulation step. They may become stale after API calls that modify the simulation state, e.g. setters or state restoration. </dd>
 <dd>
@@ -4172,7 +4277,7 @@ Registration is all-or-nothing: if registration fails, no query is registered.</
 <dd>
 Immediate computation is not supported for all query types. For unsupported types, the query is still registered successfully, immediate computation is skipped, and data becomes available after the next simulation step. See <a class="el" href="namespacesuperdex.html#aed26e55b2a9ac698fffe268c8cd9f5eb" title="superdex::QueryType">QueryType</a> documentation for which types support immediate computation. </dd>
 <dd>
-Stepping the scene with zero time step is another way to force queries to update, without advancing the state of the simulation.</dd></dl>
+<a class="el" href="classsuperdex_1_1Scene.html#ad3f3875b26a256b70b597a6e0b359e84" title="superdex::Scene::UpdateQueries">Scene::UpdateQueries</a> is another way to force queries to update, without advancing the state of the simulation.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="#ae14afba92874f6489d293460662bcd73" title="superdex::Actor::RegisterQuery">RegisterQuery</a>, <a class="el" href="#a72aa8f92cc076fc282ae1d262643b93e" title="superdex::Actor::CancelQuery">CancelQuery</a> </dd></dl>
 
 </div>
@@ -4332,12 +4437,14 @@ To use a non-zero target velocity, call <a class="el" href="#ab8d6ccc740a822b9b6
 <p>Set the per-joint friction parameters of the articulated actor. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">friction</td><td>Friction parameters, one per joint. Must be of size equal to the number of joints (matching <a class="el" href="#a9908ae9e57bf493d1593c8f9bfc1fde5" title="superdex::Actor::GetArticulatedJointFrictionParams">GetArticulatedJointFrictionParams</a>); all values must be finite and non-negative. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">friction</td><td>Friction parameters, one per joint. Must be of size equal to the number of joints (matching <a class="el" href="#a9908ae9e57bf493d1593c8f9bfc1fde5" title="superdex::Actor::GetArticulatedJointFrictionParams">GetArticulatedJointFrictionParams</a>); all values must be finite and non-negative, presliding displacements positive, and free joints must have zero friction. </td></tr>
     <tr><td class="paramdir">[in,out]</td><td class="paramname">error</td><td><a class="el" href="classsuperdex_1_1Error.html">Error</a> status. Check <a class="el" href="classsuperdex_1_1Error.html#a463cb4f3428a7a2dd779a2f6c5d153b2" title="superdex::Error::IsOK">Error::IsOK</a> for success.</td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section note"><dt>Note</dt><dd>Only applicable to articulated actors.</dd></dl>
+<dl class="section note"><dt>Note</dt><dd>Only applicable to articulated actors. </dd>
+<dd>
+Keeps the friction preload of the joints: each joint keeps its displacement from its friction anchor under the previous parameters, and the new parameters give its friction force. Joints whose dry friction it enables start without preload.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="#a9908ae9e57bf493d1593c8f9bfc1fde5" title="superdex::Actor::GetArticulatedJointFrictionParams">GetArticulatedJointFrictionParams</a>, <a class="el" href="structsuperdex_1_1ArticulatedJointFrictionParams.html" title="superdex::ArticulatedJointFrictionParams">ArticulatedJointFrictionParams</a> </dd></dl>
 
 </div>
@@ -4421,7 +4528,7 @@ To use a non-zero target velocity, call <a class="el" href="#ab8d6ccc740a822b9b6
 <dd>
 If the actor has a pose controller, target velocity is also set to the provided velocities. </dd>
 <dd>
-Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first time step after this method is called.</dd></dl>
+Invalidates the actor history (see <a class="el" href="classsuperdex_1_1Actor.html" title="superdex::Actor">Actor</a>).</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="#aa7680e583e9e72c8720b390e51d2471f" title="superdex::Actor::GetArticulatedJointVelocities">GetArticulatedJointVelocities</a> </dd></dl>
 
 </div>
@@ -4509,7 +4616,7 @@ If the actor has a pose controller, its target pose is reset to the provided pos
 <dd>
 Does not affect the actor's velocities. </dd>
 <dd>
-Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first time step after this method is called.</dd></dl>
+Invalidates the actor history (see <a class="el" href="classsuperdex_1_1Actor.html" title="superdex::Actor">Actor</a>).</dd></dl>
 <dl class="section warning"><dt>Warning</dt><dd>Round-trip error: <a class="el" href="#a5d0346d7bcd196b6026202102ac3a6f1" title="superdex::Actor::SetArticulatedPoseFromJoints">SetArticulatedPoseFromJoints</a> followed by <a class="el" href="#ac83458562e0b53277b8eb8a70c443d0f" title="superdex::Actor::GetArticulatedPose">GetArticulatedPose</a> may not return identical values due to internal representation differences.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="#ac83458562e0b53277b8eb8a70c443d0f" title="superdex::Actor::GetArticulatedPose">GetArticulatedPose</a>, <a class="el" href="#a5e68a84c5c86dba0eb12c30bae5994e3" title="superdex::Actor::SetArticulatedPoseFromLinks">SetArticulatedPoseFromLinks</a> </dd></dl>
 
@@ -4558,7 +4665,7 @@ If the actor has a pose controller, its target pose is reset to the provided tra
 <dd>
 Does not affect the actor's velocities. </dd>
 <dd>
-Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first time step after this method is called.</dd></dl>
+Invalidates the actor history (see <a class="el" href="classsuperdex_1_1Actor.html" title="superdex::Actor">Actor</a>).</dd></dl>
 <dl class="section warning"><dt>Warning</dt><dd>Round-trip error: <a class="el" href="#a5e68a84c5c86dba0eb12c30bae5994e3" title="superdex::Actor::SetArticulatedPoseFromLinks">SetArticulatedPoseFromLinks</a> followed by <a class="el" href="#a0422a40e039d04d7c7613b5c864772b4" title="superdex::Actor::GetArticulatedLinkTransforms">GetArticulatedLinkTransforms</a> may not return identical values due to internal representation differences.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="#a0422a40e039d04d7c7613b5c864772b4" title="superdex::Actor::GetArticulatedLinkTransforms">GetArticulatedLinkTransforms</a>, <a class="el" href="#a5d0346d7bcd196b6026202102ac3a6f1" title="superdex::Actor::SetArticulatedPoseFromJoints">SetArticulatedPoseFromJoints</a> </dd></dl>
 
@@ -4733,7 +4840,7 @@ The velocity override is applied once at the start of the next simulation step t
 <dd>
 Does not change velocity. </dd>
 <dd>
-Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first time step after this method is called. </dd>
+Invalidates the actor history (see <a class="el" href="classsuperdex_1_1Actor.html" title="superdex::Actor">Actor</a>). </dd>
 <dd>
 Moves the actor without changing where the center of mass is within the actor (<a class="el" href="#a62c3b8bea02231f1711ba6e977a502f2" title="superdex::Actor::GetRigidCenterOfMassLocal">GetRigidCenterOfMassLocal</a>). To change that, use <a class="el" href="#a53a647002f2457dc46e2d35e8b653758" title="superdex::Actor::SetInertiaProperties">SetInertiaProperties</a>.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="#adeddb626c4b8fefb946a31f454708d47" title="superdex::Actor::GetCenterOfMassTransform">GetCenterOfMassTransform</a>, <a class="el" href="#ad5cda8874277a833d7a1ade811022443" title="superdex::Actor::SetRootTransform">SetRootTransform</a> </dd></dl>
@@ -4770,6 +4877,7 @@ Moves the actor without changing where the center of mass is within the actor (<
   </table>
   </dd>
 </dl>
+<dl class="section note"><dt>Note</dt><dd>Has no effect on articulated links without a shape, which have no contact layer.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="#ae8f3d68059c2c38f0494d00ac8c6d410" title="superdex::Actor::GetContactLayer">GetContactLayer</a>, <a class="el" href="classsuperdex_1_1Scene.html#a5474be1c30817e8a85870e6bbea834fc" title="superdex::Scene::EnableLayerContactAsymmetric">Scene::EnableLayerContactAsymmetric</a>, <a class="el" href="classsuperdex_1_1Scene.html#af4f387a0fe7dbd46e2fde2056b815478" title="superdex::Scene::EnableLayerContactSymmetric">Scene::EnableLayerContactSymmetric</a> </dd></dl>
 
 </div>
@@ -4891,14 +4999,14 @@ The moment of inertia is updated based on the new density. The center of mass is
   </table>
   </dd>
 </dl>
-<dl class="section note"><dt>Note</dt><dd>Only supported for standalone soft actors, nested soft actors, and shell actors. </dd>
+<dl class="section note"><dt>Note</dt><dd>Only supported for standalone soft actors, nested soft actors, and shell actors. For rod actors, use <a class="el" href="#a75a4cec806e4eff1e023a5f5bc1c2087" title="superdex::Actor::SetRodPose">SetRodPose</a>. </dd>
 <dd>
 For nested soft actors, displacements are the elastic deformation component only (before skinning is applied). </dd>
 <dd>
 Does not change the elastic velocity DoFs, but changes the skinned node velocities of nested soft actors. </dd>
 <dd>
-Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first time step after this method is called.</dd></dl>
-<dl class="section see"><dt>See also</dt><dd><a class="el" href="#a676496f6fe232603031179f04ad9e3e4" title="superdex::Actor::GetDisplacements">GetDisplacements</a>, <a class="el" href="#aaab7610032486e06cb2d6e6c625a7d1a" title="superdex::Actor::SetNodePositionsLocal">SetNodePositionsLocal</a> </dd></dl>
+Invalidates the actor history (see <a class="el" href="classsuperdex_1_1Actor.html" title="superdex::Actor">Actor</a>). For nested soft actors of a blended articulated actor, also invalidates the actor history of the articulated actor.</dd></dl>
+<dl class="section see"><dt>See also</dt><dd><a class="el" href="#a676496f6fe232603031179f04ad9e3e4" title="superdex::Actor::GetDisplacements">GetDisplacements</a>, <a class="el" href="#aaab7610032486e06cb2d6e6c625a7d1a" title="superdex::Actor::SetNodePositionsLocal">SetNodePositionsLocal</a>, <a class="el" href="#a75a4cec806e4eff1e023a5f5bc1c2087" title="superdex::Actor::SetRodPose">SetRodPose</a> </dd></dl>
 
 </div>
 </div>
@@ -4945,7 +5053,7 @@ Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in th
 </dl>
 <dl class="section note"><dt>Note</dt><dd>Only supported for rigid, articulated, rod, and shell actors. </dd>
 <dd>
-DoF indices use the same per-actor-type index layout documented by <a class="el" href="#a6cb472c6f16b92d61b21d05cf60dd7d9" title="superdex::Actor::AddBoundaryConditionDofsWorld">AddBoundaryConditionDofsWorld</a>. </dd>
+DoF indices use the per-actor-type index layout documented by <a class="el" href="#a6cb472c6f16b92d61b21d05cf60dd7d9" title="superdex::Actor::AddBoundaryConditionDofsWorld">AddBoundaryConditionDofsWorld</a>, except for rod actors, which use the layout of <a class="el" href="#ad9bd562cc797bd1a78f532e1daadc82c" title="superdex::Actor::GetDofValues">GetDofValues</a>. </dd>
 <dd>
 External forces can be cleared with <a class="el" href="#a85ecaff8518e32991840838bf9db9f41" title="superdex::Actor::ClearExternalForces">ClearExternalForces</a>. </dd>
 <dd>
@@ -5020,7 +5128,9 @@ After this call, <a class="el" href="#adf056a687623798bb4f83d1e2433bde0" title="
 <dd>
 The root transform (<a class="el" href="#a39d4ab5ed8a534693247388a519152aa" title="superdex::Actor::GetRootTransform">GetRootTransform</a>) and the velocity of every material point are preserved, so changing the center of mass does not move the actor. <a class="el" href="#a8d59ac838a12c0254df800193e774e5f" title="superdex::Actor::GetLinearVelocity">GetLinearVelocity</a>, the center-of-mass velocity, changes accordingly when the actor is rotating. To place the new center of mass at the previous center-of-mass pose instead, call <a class="el" href="#adeddb626c4b8fefb946a31f454708d47" title="superdex::Actor::GetCenterOfMassTransform">GetCenterOfMassTransform</a> before this call and pass the result to <a class="el" href="#aae78c9d9f304182ece7c9c5159d62f16" title="superdex::Actor::SetCenterOfMassTransform">SetCenterOfMassTransform</a> afterwards. </dd>
 <dd>
-The center of mass cannot be changed while the actor has constraints or translation boundary conditions. Set the center of mass before adding them. Changing only mass or moment of inertia remains supported.</dd></dl>
+The center of mass cannot be changed while the actor has constraints or translation boundary conditions. Set the center of mass before adding them. Changing only mass or moment of inertia remains supported. </dd>
+<dd>
+Invalidates the actor history (see <a class="el" href="classsuperdex_1_1Actor.html" title="superdex::Actor">Actor</a>) if the center of mass changes.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="#ab1894d28269b8811cf34a0663a310561" title="superdex::Actor::GetMass">GetMass</a>, <a class="el" href="#adf056a687623798bb4f83d1e2433bde0" title="superdex::Actor::GetDensity">GetDensity</a>, <a class="el" href="#a7d14590d4c8235721d9f2bce477c77b0" title="superdex::Actor::SetDensity">SetDensity</a>, <a class="el" href="#a62c3b8bea02231f1711ba6e977a502f2" title="superdex::Actor::GetRigidCenterOfMassLocal">GetRigidCenterOfMassLocal</a>, <a class="el" href="#ac32647b329cc3c01399dbc6a0c9fc7bf" title="superdex::Actor::GetRigidMomentOfInertiaLocal">GetRigidMomentOfInertiaLocal</a> </dd></dl>
 
 </div>
@@ -5064,7 +5174,7 @@ The center of mass cannot be changed while the actor has constraints or translat
 <dd>
 Does not change node velocities. </dd>
 <dd>
-Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first time step after this method is called. </dd></dl>
+Invalidates the actor history (see <a class="el" href="classsuperdex_1_1Actor.html" title="superdex::Actor">Actor</a>). </dd></dl>
 
 </div>
 </div>
@@ -5107,9 +5217,10 @@ Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in th
 <dd>
 For standalone soft actors and shell actors: 3 values per node [m/s] — (vx, vy, vz). </dd>
 <dd>
-For rod actors: 4 values per node — (vx, vy, vz) in [m/s] plus a twist rate [rad/s]. </dd>
+For rod actors: 4 values per node in the layout of <a class="el" href="#ad9bd562cc797bd1a78f532e1daadc82c" title="superdex::Actor::GetDofValues">GetDofValues</a> — (vx, vy, vz) [m/s] and the twist rate [rad/s] of the element frame about its tangent, relative to its parallel transport by the centerline motion. For open rods, the last node's twist rate is padding: it has no effect and reads back as zero after the next step. </dd>
 <dd>
-Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first time step after this method is called. </dd></dl>
+Invalidates the actor history (see <a class="el" href="classsuperdex_1_1Actor.html" title="superdex::Actor">Actor</a>).</dd></dl>
+<dl class="section see"><dt>See also</dt><dd><a class="el" href="#a03415b905606f0381da7dc6812c8aa54" title="superdex::Actor::GetNodeVelocitiesLocal">GetNodeVelocitiesLocal</a> </dd></dl>
 
 </div>
 </div>
@@ -5149,8 +5260,62 @@ Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in th
   </table>
   </dd>
 </dl>
-<dl class="section note"><dt>Note</dt><dd>Only supported for standalone soft actors.</dd></dl>
+<dl class="section note"><dt>Note</dt><dd>Only supported for standalone soft actors, shell actors, and rod actors.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="structsuperdex_1_1RecenteringParams.html" title="superdex::RecenteringParams">RecenteringParams</a>, <a class="el" href="#a4d0cabdd973b4f9209426c220051cd2f" title="superdex::Actor::GetRecenteringParams">GetRecenteringParams</a> </dd></dl>
+
+</div>
+</div>
+<a id="a75a4cec806e4eff1e023a5f5bc1c2087" name="a75a4cec806e4eff1e023a5f5bc1c2087"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a75a4cec806e4eff1e023a5f5bc1c2087">&#9670;&#160;</a></span>SetRodPose()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">virtual void superdex::Actor::SetRodPose </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classsuperdex_1_1Span.html">Span</a>&lt; <a class="el" href="namespacesuperdex.html#ab1cf40739516aea925c8ebe213131a5d">real</a> const &gt;</td>          <td class="paramname"><span class="paramname"><em>displacements</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="classsuperdex_1_1Span.html">Span</a>&lt; <a class="el" href="namespacesuperdex.html#ab1cf40739516aea925c8ebe213131a5d">real</a> const &gt;</td>          <td class="paramname"><span class="paramname"><em>elementFrameAxes</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="classsuperdex_1_1Error.html">Error</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>error</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel pure-virtual">pure virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Set the pose of a rod actor: its node displacements and element frame axes. </p>
+<p>Validates sizes and finiteness, then copies the pose unchanged. Geometry or frame axes outside shape-creation tolerances generate warnings, but are not rejected or normalized. Captured simulation poses remain restorable even under extreme deformation.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">displacements</td><td>Node displacements in the actor's local frame, relative to reference (rest) positions. Must be of size 3 × the number of nodes of <a class="el" href="#a88745d7a8c15875010458a15dbd339c3" title="superdex::Actor::GetMesh">GetMesh</a>. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">elementFrameAxes</td><td>Element frame axes in the actor's local frame. Must be of size 3 × the number of elements of <a class="el" href="#a88745d7a8c15875010458a15dbd339c3" title="superdex::Actor::GetMesh">GetMesh</a>. </td></tr>
+    <tr><td class="paramdir">[in,out]</td><td class="paramname">error</td><td><a class="el" href="classsuperdex_1_1Error.html">Error</a> status. Check <a class="el" href="classsuperdex_1_1Error.html#a463cb4f3428a7a2dd779a2f6c5d153b2" title="superdex::Error::IsOK">Error::IsOK</a> for success.</td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section note"><dt>Note</dt><dd>Only supported for rod actors. </dd>
+<dd>
+Resets the twist DoF values (see <a class="el" href="#ad9bd562cc797bd1a78f532e1daadc82c" title="superdex::Actor::GetDofValues">GetDofValues</a>) to zero. The frame axes carry the twist. </dd>
+<dd>
+Does not change the velocity DoFs. </dd>
+<dd>
+Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first time step after this method is called.</dd></dl>
+<dl class="section warning"><dt>Warning</dt><dd>Caller-constructed poses must have simulation-consistent geometry and frame axes: each axis should be a unit vector orthogonal to its deformed element.</dd></dl>
+<dl class="section see"><dt>See also</dt><dd><a class="el" href="#af85d2d5462aa3f8b73bb568d5acaa355" title="superdex::Actor::GetRodPose">GetRodPose</a> </dd></dl>
 
 </div>
 </div>
@@ -5193,9 +5358,9 @@ Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in th
 <dd>
 For a top-level articulated actor, the local frame is the articulation root frame, not the root link's frame. </dd>
 <dd>
-For dynamic actors, it does not change velocity. For static actors, however, it changes velocity, because it is implicitly defined by the root transform in consecutive time steps. To cancel the velocity of a static actor, use <a class="el" href="#a97f46d4ea21a6cbebddad73bf08e4c98" title="superdex::Actor::SetVelocity">SetVelocity</a>. </dd>
+For dynamic actors, it does not change velocity. For static actors, it prescribes the root transform at the end of the next time step, and the actor moves there during the step. Its velocity is implied by the change of root transform over the time step. To move a static actor without velocity, also call <a class="el" href="#a97f46d4ea21a6cbebddad73bf08e4c98" title="superdex::Actor::SetVelocity">SetVelocity</a> with zero velocity before the next step. </dd>
 <dd>
-Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first time step after this method is called. </dd></dl>
+Invalidates the actor history (see <a class="el" href="classsuperdex_1_1Actor.html" title="superdex::Actor">Actor</a>), except for static actors. </dd></dl>
 
 </div>
 </div>
@@ -5307,22 +5472,22 @@ If the <a class="el" href="namespacesuperdex.html#aed26e55b2a9ac698fffe268c8cd9f
 </table>
 </div><div class="memdoc">
 
-<p>Set the world-frame linear and angular velocity of the actor at the center of mass. </p>
+<p>Set the world-frame linear and angular velocity of the actor. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">linearVel</td><td>Linear velocity [m/s] of the center of mass in world frame. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">angularVel</td><td>Angular velocity [rad/s] at the center of mass in world frame. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">linearVel</td><td>Linear velocity [m/s] in world frame, of the center of mass for dynamic actors, of the center of <a class="el" href="#a603a67bcc3ce1d219a18cb604734f3a0" title="superdex::Actor::GetAabbLocal">GetAabbLocal</a> for static rigid actors (for infinite planes, the point on the plane closest to the local origin). </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">angularVel</td><td>Angular velocity [rad/s] in world frame. </td></tr>
     <tr><td class="paramdir">[in,out]</td><td class="paramname">error</td><td><a class="el" href="classsuperdex_1_1Error.html">Error</a> status. Check <a class="el" href="classsuperdex_1_1Error.html#a463cb4f3428a7a2dd779a2f6c5d153b2" title="superdex::Error::IsOK">Error::IsOK</a> for success.</td></tr>
   </table>
   </dd>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>Only supported for standalone rigid actors and standalone soft actors (except ROMs). </dd>
 <dd>
-For static actors, it only supports setting zero velocity. </dd>
+For static actors, the velocity is applied at the beginning of the next time step: the actor moves at constant velocity during the step, ending at its root transform (<a class="el" href="#ad5cda8874277a833d7a1ade811022443" title="superdex::Actor::SetRootTransform">SetRootTransform</a>). It is ignored in quasistatic steps. </dd>
 <dd>
 For standalone soft actors, the angular velocity must be zero. </dd>
 <dd>
-Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first time step after this method is called. </dd></dl>
+Invalidates the actor history (see <a class="el" href="classsuperdex_1_1Actor.html" title="superdex::Actor">Actor</a>). </dd></dl>
 
 </div>
 </div>
@@ -5362,7 +5527,7 @@ For nested soft actors, it zeroes only elastic displacement and velocity. Skelet
 <dd>
 For rod actors, it zeroes both the translational displacement DoFs and the twist-angle DoFs, and returns each element's cross-section to its rest orientation. </dd>
 <dd>
-Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first time step after this method is called. </dd></dl>
+Invalidates the actor history (see <a class="el" href="classsuperdex_1_1Actor.html" title="superdex::Actor">Actor</a>). For nested soft actors of a blended articulated actor, also invalidates the actor history of the articulated actor. </dd></dl>
 
 </div>
 </div>

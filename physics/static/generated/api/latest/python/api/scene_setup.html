@@ -134,6 +134,7 @@
 <li class="toctree-l2"><a class="reference internal" href="prefab.html#instantiation">Instantiation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="prefab.html#serialization-export">Serialization &amp; Export</a></li>
 <li class="toctree-l2"><a class="reference internal" href="prefab.html#containers">Containers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="prefab.html#not-yet-categorized">Not Yet Categorized</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="models.html">Models &amp; Meshes</a><ul>
@@ -241,6 +242,12 @@ needs the root it came from rather than the directory it happens to sit in.</p>
 </dd></dl>
 
 <dl class="py data">
+<dt class="sig sig-object py" id="superdex.physics.environment.ISA_ENV_VAR">
+<span class="sig-name descname"><span class="pre">ISA_ENV_VAR</span></span><a class="headerlink" href="#superdex.physics.environment.ISA_ENV_VAR" title="Permalink to this definition"></a></dt>
+<dd><p>Environment variable used to select the native ISA (avx2, avx512, neon).</p>
+</dd></dl>
+
+<dl class="py data">
 <dt class="sig sig-object py" id="superdex.physics.environment.LEGACY_ASSETS_PATH_ENV_VAR">
 <span class="sig-name descname"><span class="pre">LEGACY_ASSETS_PATH_ENV_VAR</span></span><a class="headerlink" href="#superdex.physics.environment.LEGACY_ASSETS_PATH_ENV_VAR" title="Permalink to this definition"></a></dt>
 <dd><p>Deprecated environment variable alias for the assets directory.</p>
@@ -250,6 +257,12 @@ needs the root it came from rather than the directory it happens to sit in.</p>
 <dt class="sig sig-object py" id="superdex.physics.environment.LEGACY_DEBUGGER_PATH_ENV_VAR">
 <span class="sig-name descname"><span class="pre">LEGACY_DEBUGGER_PATH_ENV_VAR</span></span><a class="headerlink" href="#superdex.physics.environment.LEGACY_DEBUGGER_PATH_ENV_VAR" title="Permalink to this definition"></a></dt>
 <dd><p>Deprecated environment variable alias for the debugger executable path.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="superdex.physics.environment.LEGACY_ISA_ENV_VAR">
+<span class="sig-name descname"><span class="pre">LEGACY_ISA_ENV_VAR</span></span><a class="headerlink" href="#superdex.physics.environment.LEGACY_ISA_ENV_VAR" title="Permalink to this definition"></a></dt>
+<dd><p>Deprecated environment variable alias for bindings ISA.</p>
 </dd></dl>
 
 <dl class="py data">
@@ -357,6 +370,35 @@ will result in undefined behavior.</p>
 <section id="module-superdex.physics.utils.scene_helpers">
 <span id="superdex-physics-utils-scene-helpers"></span><h2>superdex.physics.utils.scene_helpers<a class="headerlink" href="#module-superdex.physics.utils.scene_helpers" title="Permalink to this heading"></a></h2>
 <p>A collection of helper functions for SuperDex Physics scene manipulation.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.physics.utils.scene_helpers.apply_asset_snapshot">
+<span class="sig-name descname"><span class="pre">apply_asset_snapshot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">snapshot_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">asset_root</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="../_modules/superdex/physics/utils/scene_helpers.html#apply_asset_snapshot"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.scene_helpers.apply_asset_snapshot" title="Permalink to this definition"></a></dt>
+<dd><p>Pin every file in a .superdex_scene_snapshot for the rest of the process.</p>
+<p>Afterwards, loading the snapshot’s scene (or a task, or a bot) loads every file it references
+from the version the snapshot pins instead of the tip, however deeply nested. A file under the
+snapshot’s roots that it does not pin fails to load rather than loading its tip. Replaces any
+snapshot already applied. Don’t save assets while a snapshot is applied: they would record the
+pinned paths.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>snapshot_path</strong> – The .superdex_scene_snapshot file.</p></li>
+<li><p><strong>asset_root</strong> – Directory containing the .superdex_root the snapshot’s paths are relative to,
+wherever that asset tree is mounted. Every pinned version must exist under it.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Path of the snapshot’s scene, to pass to <cite>load_bot_scene</cite> as usual.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.physics.utils.scene_helpers.clear_asset_snapshot">
+<span class="sig-name descname"><span class="pre">clear_asset_snapshot</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/superdex/physics/utils/scene_helpers.html#clear_asset_snapshot"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.scene_helpers.clear_asset_snapshot" title="Permalink to this definition"></a></dt>
+<dd><p>Stop applying the snapshot <cite>apply_asset_snapshot</cite> applied, so files load from their tips.</p>
+</dd></dl>
+
 <dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.utils.scene_helpers.create_ground_plane">
 <span class="sig-name descname"><span class="pre">create_ground_plane</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scene</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="physics.html#superdex.physics.Scene" title="superdex.physics.Scene"><span class="pre">Scene</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">normal</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="physics.html#superdex.physics.Real3" title="superdex.physics.Real3"><span class="pre">Real3</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">contact_params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="physics.html#superdex.physics.ContactParams" title="superdex.physics.ContactParams"><span class="pre">ContactParams</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="physics.html#superdex.physics.Actor" title="superdex.physics.Actor"><span class="pre">Actor</span></a></span></span><a class="reference internal" href="../_modules/superdex/physics/utils/scene_helpers.html#create_ground_plane"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.scene_helpers.create_ground_plane" title="Permalink to this definition"></a></dt>

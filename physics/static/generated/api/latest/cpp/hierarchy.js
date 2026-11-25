@@ -84,7 +84,12 @@ var hierarchy =
       [ "superdex::RigidSphericalJointConstraintParams", "structsuperdex_1_1RigidSphericalJointConstraintParams.html", [
         [ "superdex::prefab::RigidSphericalJointConstraintPrefab", "structsuperdex_1_1prefab_1_1RigidSphericalJointConstraintPrefab.html", null ]
       ] ],
-      [ "superdex::RodElementRotationToRigidConstraintParams", "structsuperdex_1_1RodElementRotationToRigidConstraintParams.html", null ]
+      [ "superdex::RodElementRotationConstraintParams", "structsuperdex_1_1RodElementRotationConstraintParams.html", [
+        [ "superdex::prefab::RodElementRotationConstraintPrefab", "structsuperdex_1_1prefab_1_1RodElementRotationConstraintPrefab.html", null ]
+      ] ],
+      [ "superdex::RodElementRotationToRigidConstraintParams", "structsuperdex_1_1RodElementRotationToRigidConstraintParams.html", [
+        [ "superdex::prefab::RodElementRotationToRigidConstraintPrefab", "structsuperdex_1_1prefab_1_1RodElementRotationToRigidConstraintPrefab.html", null ]
+      ] ]
     ] ],
     [ "superdex::prefab::ContactFilter", "structsuperdex_1_1prefab_1_1ContactFilter.html", null ],
     [ "superdex::ContactPairParamsOverride", "structsuperdex_1_1ContactPairParamsOverride.html", null ],
@@ -142,6 +147,7 @@ var hierarchy =
     [ "superdex::PerElementSoftMaterialDataView", "structsuperdex_1_1PerElementSoftMaterialDataView.html", null ],
     [ "superdex::PerformanceStats", "structsuperdex_1_1PerformanceStats.html", null ],
     [ "superdex::Plane", "classsuperdex_1_1Plane.html", null ],
+    [ "superdex::PointCloudColliderParams", "structsuperdex_1_1PointCloudColliderParams.html", null ],
     [ "superdex::PoseConstraintInfo", "structsuperdex_1_1PoseConstraintInfo.html", null ],
     [ "superdex::PoseControllerParams", "structsuperdex_1_1PoseControllerParams.html", null ],
     [ "superdex::prefab::PoseControllerPrefab", "structsuperdex_1_1prefab_1_1PoseControllerPrefab.html", null ],
@@ -153,6 +159,11 @@ var hierarchy =
     [ "superdex::RigidActorParams", "structsuperdex_1_1RigidActorParams.html", [
       [ "superdex::prefab::RigidActorPrefab", "structsuperdex_1_1prefab_1_1RigidActorPrefab.html", null ]
     ] ],
+    [ "superdex::RodActorParams", "structsuperdex_1_1RodActorParams.html", [
+      [ "superdex::prefab::RodActorPrefab", "structsuperdex_1_1prefab_1_1RodActorPrefab.html", null ]
+    ] ],
+    [ "superdex::RodMaterialParams", "structsuperdex_1_1RodMaterialParams.html", null ],
+    [ "superdex::prefab::RodPose", "structsuperdex_1_1prefab_1_1RodPose.html", null ],
     [ "superdex::RoutingElement", "structsuperdex_1_1RoutingElement.html", null ],
     [ "superdex::SaturationHessianParams", "structsuperdex_1_1SaturationHessianParams.html", null ],
     [ "superdex::Scene", "classsuperdex_1_1Scene.html", null ],

@@ -12,6 +12,7 @@ var constants_8h =
     [ "superdex::kInf", "namespacesuperdex.html#a0bab2dcbc614cda8ed819819e2dccc02", null ],
     [ "superdex::kInf3", "namespacesuperdex.html#a5497cd50d9ea43537bb1af0e76105be1", null ],
     [ "superdex::kIouterI", "namespacesuperdex.html#a92aec8788a6d1aea29d0015e33e2afa8", null ],
+    [ "superdex::kLn2", "namespacesuperdex.html#a53449cbdea755dac2c3503aa2c8dc56f", null ],
     [ "superdex::kMinus2PiPlus2Pi", "namespacesuperdex.html#aa6e595895794d2b3be9bb01788415aa0", null ],
     [ "superdex::kMinusOne", "namespacesuperdex.html#a8839890b3f6ad933a60f4ed9c461f85f", null ],
     [ "superdex::kPI", "namespacesuperdex.html#a5e870aa5eeb52e4c073db64e84864c72", null ],

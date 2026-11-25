@@ -40,7 +40,7 @@ var classsuperdex_1_1Simd_3_01T_00_01N_00_01std_1_1enable__if__t_3_07details_1_1
     [ "HMin", "classsuperdex_1_1Simd_3_01T_00_01N_00_01std_1_1enable__if__t_3_07details_1_1kCompositeFirstSize_87b42a4541e8a7a5909d7a82a98fe91f.html#a16f64039e03d150083b84eca3f2a10c2", null ],
     [ "HProd", "classsuperdex_1_1Simd_3_01T_00_01N_00_01std_1_1enable__if__t_3_07details_1_1kCompositeFirstSize_87b42a4541e8a7a5909d7a82a98fe91f.html#a19dcb969e4a3a94134bd0a53133812e7", null ],
     [ "HSum", "classsuperdex_1_1Simd_3_01T_00_01N_00_01std_1_1enable__if__t_3_07details_1_1kCompositeFirstSize_87b42a4541e8a7a5909d7a82a98fe91f.html#a8eced5e1f023e6a3892b2724ffd1c553", null ],
-    [ "HSumEach", "classsuperdex_1_1Simd_3_01T_00_01N_00_01std_1_1enable__if__t_3_07details_1_1kCompositeFirstSize_87b42a4541e8a7a5909d7a82a98fe91f.html#a0df0f7214d57c5b77c1adb7263b390c1", null ],
+    [ "HSumEach", "classsuperdex_1_1Simd_3_01T_00_01N_00_01std_1_1enable__if__t_3_07details_1_1kCompositeFirstSize_87b42a4541e8a7a5909d7a82a98fe91f.html#a3bed7f3487ff4df659b52924d42acd13", null ],
     [ "Ln", "classsuperdex_1_1Simd_3_01T_00_01N_00_01std_1_1enable__if__t_3_07details_1_1kCompositeFirstSize_87b42a4541e8a7a5909d7a82a98fe91f.html#ab1d7b9299b3019e6676c3844e6daa85e", null ],
     [ "Load", "classsuperdex_1_1Simd_3_01T_00_01N_00_01std_1_1enable__if__t_3_07details_1_1kCompositeFirstSize_87b42a4541e8a7a5909d7a82a98fe91f.html#a4105709cdfa81490ec2118c9971ac90a", null ],
     [ "Load", "classsuperdex_1_1Simd_3_01T_00_01N_00_01std_1_1enable__if__t_3_07details_1_1kCompositeFirstSize_87b42a4541e8a7a5909d7a82a98fe91f.html#afd8f344d9b0317d173bd85918dd8e273", null ],

@@ -1,5 +1,5 @@
 // @generated
 var searchData=
 [
-  ['sensorfactory_0',['SensorFactory',['../classsuperdex_1_1robotics_1_1RoboticsContext.html#a3943444d561fdf2ebc74af09a1d666c6',1,'superdex::robotics::RoboticsContext']]]
+  ['result_0',['Result',['../classsuperdex_1_1robotics_1_1SensorSeedV1MLP.html#acec4c6d52523e1986d044e4f72c8133c',1,'superdex::robotics::SensorSeedV1MLP']]]
 ];

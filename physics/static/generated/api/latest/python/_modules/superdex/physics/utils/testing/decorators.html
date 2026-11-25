@@ -131,6 +131,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../../../../../api/prefab.html#instantiation">Instantiation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../../../api/prefab.html#serialization-export">Serialization &amp; Export</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../../../api/prefab.html#containers">Containers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../../api/prefab.html#not-yet-categorized">Not Yet Categorized</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../../../../../api/models.html">Models &amp; Meshes</a><ul>
@@ -212,49 +213,26 @@
 <span class="c1"># See the License for the specific language governing permissions and</span>
 <span class="c1"># limitations under the License.</span>
 
-<span class="kn">import</span><span class="w"> </span><span class="nn">unittest</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">functools</span><span class="w"> </span><span class="kn">import</span> <span class="n">wraps</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Callable</span>
-
-<span class="kn">from</span><span class="w"> </span><span class="nn">superdex.physics.utils.testing.environment</span><span class="w"> </span><span class="kn">import</span> <span class="n">IS_INTERNAL_CI</span>
 
 <span class="c1">########################################################################################</span>
 
 
 <div class="viewcode-block" id="skip"><a class="viewcode-back" href="../../../../../api/testing.html#superdex.physics.utils.testing.decorators.skip">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">skip</span><span class="p">(</span><span class="n">reason</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Any</span><span class="p">],</span> <span class="n">Any</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Unconditionally skip a test with the given reason. This is a convenience wrapper</span>
-<span class="sd">    around skip_if that always skips the test.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Unconditionally omit a test from discovery with the given reason.&quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">skip_if</span><span class="p">(</span><span class="n">condition</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">reason</span><span class="o">=</span><span class="n">reason</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="skip_if"><a class="viewcode-back" href="../../../../../api/testing.html#superdex.physics.utils.testing.decorators.skip_if">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">skip_if</span><span class="p">(</span><span class="n">condition</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">reason</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Any</span><span class="p">],</span> <span class="n">Any</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Conditionally skip a test based on a boolean condition. This decorator provides</span>
-<span class="sd">    different behavior depending on the environment. If the test is running in</span>
-<span class="sd">    internal CI, it will print a skip message and return early, but will not set the</span>
-<span class="sd">    skipped flag. This avoids flagging intentionally skipped tests as warnings in the</span>
-<span class="sd">    internal CI UI. In other environments, it falls back to unittest.skip() for proper</span>
-<span class="sd">    test reporting.</span>
+<span class="sd">    Omit a test method or class from discovery when the condition is true.</span>
+
+<span class="sd">    Excluded methods and classes become None, which unittest does not discover.</span>
+<span class="sd">    The reason documents why the test does not apply to this configuration.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">factory</span><span class="p">(</span><span class="n">item</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Any</span><span class="p">],</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Any</span><span class="p">],</span> <span class="n">Any</span><span class="p">]:</span>
-        <span class="c1"># If condition is False, return the original item unchanged.</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">condition</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">item</span>
-
-        <span class="c1"># Use unittest&#39;s built-in skip mechanism for types and for methods, as long</span>
-        <span class="c1"># as the test is not running in internal CI.</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="nb">type</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">IS_INTERNAL_CI</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">unittest</span><span class="o">.</span><span class="n">skip</span><span class="p">(</span><span class="n">reason</span><span class="p">)(</span><span class="n">item</span><span class="p">)</span>
-
-        <span class="c1"># For methods running in internal CI, create a wrapper that prints skip message.</span>
-        <span class="nd">@wraps</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
-        <span class="k">def</span><span class="w"> </span><span class="nf">wrapper</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Skipping test </span><span class="si">{</span><span class="n">item</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2"> on internal CI because </span><span class="si">{</span><span class="n">reason</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
-
-        <span class="k">return</span> <span class="n">wrapper</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">factory</span><span class="p">(</span><span class="n">item</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">condition</span> <span class="k">else</span> <span class="n">item</span>
 
     <span class="k">return</span> <span class="n">factory</span></div>
 </pre></div>

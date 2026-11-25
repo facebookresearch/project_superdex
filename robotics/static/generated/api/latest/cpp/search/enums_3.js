@@ -1,5 +1,5 @@
 // @generated
 var searchData=
 [
-  ['linktransformspace_0',['LinkTransformSpace',['../namespacesuperdex_1_1robotics.html#ada7361b18baa14386788960fd94e0159',1,'superdex::robotics']]]
+  ['geomtype_0',['GeomType',['../namespacesuperdex_1_1robotics.html#a0eb33f2c2377c22f57055ea8d2e5e552',1,'superdex::robotics']]]
 ];

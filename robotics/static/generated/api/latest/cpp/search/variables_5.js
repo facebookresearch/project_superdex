@@ -5,7 +5,9 @@ var searchData=
   ['eelinkfromee_1',['EELinkFromEE',['../structsuperdex_1_1robotics_1_1ControllerBasicOscPdParams.html#a9c4729cf779beb98827c59e8f3f7371d',1,'superdex::robotics::ControllerBasicOscPdParams']]],
   ['eelinkname_2',['eeLinkName',['../structsuperdex_1_1robotics_1_1ControllerBasicOscPdInitArgs.html#a6faa16e2a7567a0821b26cd9dc446aa6',1,'superdex::robotics::ControllerBasicOscPdInitArgs']]],
   ['effortlimit_3',['effortLimit',['../structsuperdex_1_1robotics_1_1BotJointPrefab.html#af4330110704864e8d06d222790905b06',1,'superdex::robotics::BotJointPrefab']]],
-  ['enable_4',['enable',['../structsuperdex_1_1robotics_1_1BotContactOverride.html#ac120751ba9ac77f20c2bc3548743a5dc',1,'superdex::robotics::BotContactOverride']]],
-  ['enabled_5',['enabled',['../structsuperdex_1_1robotics_1_1BotModBase.html#af9071db7e38afecb4446006543898fc3',1,'superdex::robotics::BotModBase']]],
-  ['excludes_6',['excludes',['../structsuperdex_1_1robotics_1_1MjcfImportInfo.html#a1ca013b30af188e529be0294b381e3ef',1,'superdex::robotics::MjcfImportInfo']]]
+  ['elementcount_4',['elementCount',['../structsuperdex_1_1robotics_1_1SensorSample.html#a5baf23db254308cbe2077c14cdef8f11',1,'superdex::robotics::SensorSample']]],
+  ['enable_5',['enable',['../structsuperdex_1_1robotics_1_1BotContactOverride.html#ac120751ba9ac77f20c2bc3548743a5dc',1,'superdex::robotics::BotContactOverride']]],
+  ['enabled_6',['enabled',['../structsuperdex_1_1robotics_1_1BotModBase.html#af9071db7e38afecb4446006543898fc3',1,'superdex::robotics::BotModBase']]],
+  ['episodeseed_7',['episodeSeed',['../structsuperdex_1_1robotics_1_1SensorRandomParams.html#a617e779220d852ac470833536697bb48',1,'superdex::robotics::SensorRandomParams']]],
+  ['excludes_8',['excludes',['../structsuperdex_1_1robotics_1_1MjcfImportInfo.html#a1ca013b30af188e529be0294b381e3ef',1,'superdex::robotics::MjcfImportInfo']]]
 ];

@@ -1,6 +1,6 @@
 // @generated
 var searchData=
 [
-  ['botprefab_0',['BotPrefab',['../namespacesuperdex_1_1robotics.html#a171858753984e50df1c90fd6774506d2a620e4306839385f8a135c72b7e4acb98',1,'superdex::robotics']]],
-  ['box_1',['Box',['../namespacesuperdex_1_1robotics.html#a0eb33f2c2377c22f57055ea8d2e5e552a3cfce651e667ab85486dd42a8185f98a',1,'superdex::robotics']]]
+  ['azimuthalequalarea_0',['AzimuthalEqualArea',['../namespacesuperdex_1_1robotics.html#aae99ae8d1d8f3dfc48b8298b1afb3a1cafdc329682793b370a17bb8621cadb75e',1,'superdex::robotics']]],
+  ['azimuthalequidistant_1',['AzimuthalEquidistant',['../namespacesuperdex_1_1robotics.html#aae99ae8d1d8f3dfc48b8298b1afb3a1ca243896bc1b94971e5d3c5ad24db9250f',1,'superdex::robotics']]]
 ];

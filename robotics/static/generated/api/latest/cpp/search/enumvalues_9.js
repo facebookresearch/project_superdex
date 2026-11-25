@@ -1,5 +1,5 @@
 // @generated
 var searchData=
 [
-  ['zero_0',['Zero',['../namespacesuperdex_1_1robotics.html#a9d282e31b59e8ddf3adf70df4f8f5811ad7ed4ee1df437474d005188535f74875',1,'superdex::robotics']]]
+  ['octahedral_0',['Octahedral',['../namespacesuperdex_1_1robotics.html#aae99ae8d1d8f3dfc48b8298b1afb3a1ca73c93550679281add0a4fdf01cd6d218',1,'superdex::robotics']]]
 ];

@@ -18,7 +18,6 @@ var superdex__robotics_8h =
     [ "superdex::robotics::ModBotPrefab", "structsuperdex_1_1robotics_1_1ModBotPrefab.html", "structsuperdex_1_1robotics_1_1ModBotPrefab" ],
     [ "superdex::robotics::ReplaceLink", "structsuperdex_1_1robotics_1_1ReplaceLink.html", "structsuperdex_1_1robotics_1_1ReplaceLink" ],
     [ "superdex::robotics::ReplaceLinkWithBot", "structsuperdex_1_1robotics_1_1ReplaceLinkWithBot.html", "structsuperdex_1_1robotics_1_1ReplaceLinkWithBot" ],
-    [ "SUPERDEXROBOTICS_WITH_BOT_SCENE", "superdex__robotics_8h.html#a007d60affdd23692aa1618c120060e17", null ],
     [ "superdex::robotics::BotMod", "namespacesuperdex_1_1robotics.html#acafa3cc4fc94ecc59d04b4c28567ec4e", null ],
     [ "superdex::robotics::BotFileType", "namespacesuperdex_1_1robotics.html#a171858753984e50df1c90fd6774506d2", [
       [ "superdex::robotics::BotFileType::BotPrefab", "namespacesuperdex_1_1robotics.html#a171858753984e50df1c90fd6774506d2a620e4306839385f8a135c72b7e4acb98", null ],

@@ -1,0 +1,30 @@
+// @generated
+var classsuperdex_1_1robotics_1_1SensorBase =
+[
+    [ "SensorBase", "classsuperdex_1_1robotics_1_1SensorBase.html#a2f0751ff2836bb8a1fd9780a1b12851d", null ],
+    [ "SensorBase", "classsuperdex_1_1robotics_1_1SensorBase.html#a639dcfb1db641de2fa8b38305991e3f2", null ],
+    [ "~SensorBase", "classsuperdex_1_1robotics_1_1SensorBase.html#a7263eb6a8dc259b44dd4e511444c19d9", null ],
+    [ "ConfigureRecording", "classsuperdex_1_1robotics_1_1SensorBase.html#a091933759349d598910c2a1aafefc3c1", null ],
+    [ "CopyLatestValues", "classsuperdex_1_1robotics_1_1SensorBase.html#a4f7bdbc009851e39c19ac24def97725a", null ],
+    [ "EpisodeSeed", "classsuperdex_1_1robotics_1_1SensorBase.html#a865a8011e1a08d52ddbd5df8972e31d6", null ],
+    [ "GetFormat", "classsuperdex_1_1robotics_1_1SensorBase.html#a85d7c66cdf98af8e7311b75d45922f8e", null ],
+    [ "GetParentFromSensor", "classsuperdex_1_1robotics_1_1SensorBase.html#a6083047797a9c927f20ef619a0fd8a65", null ],
+    [ "GetPublicationFrequencyHzEstimate", "classsuperdex_1_1robotics_1_1SensorBase.html#a7d30a850df495257b89dc3febe10ad79", null ],
+    [ "GetWorldTransform", "classsuperdex_1_1robotics_1_1SensorBase.html#a9d8143f7280ea24d7c4f2462e1edfa16", null ],
+    [ "GraphName", "classsuperdex_1_1robotics_1_1SensorBase.html#a6f85882d4400a26c7df651e247e172ce", null ],
+    [ "Init", "classsuperdex_1_1robotics_1_1SensorBase.html#aa0c977c066ef2bfd5a561e63109c3b95", null ],
+    [ "InitSensor", "classsuperdex_1_1robotics_1_1SensorBase.html#a8bed4be05a09adbda2269cff425bacd8", null ],
+    [ "Inputs", "classsuperdex_1_1robotics_1_1SensorBase.html#af5c5f9835f1d41c375c3ef496a78b255", null ],
+    [ "Latest", "classsuperdex_1_1robotics_1_1SensorBase.html#a0b8f01937a0c1a64d97cd29aae4317c5", null ],
+    [ "PublishSample", "classsuperdex_1_1robotics_1_1SensorBase.html#a10d88f0ae5b75d99dfebcc39ebb8ac18", null ],
+    [ "Record", "classsuperdex_1_1robotics_1_1SensorBase.html#a0cec26b5691aef84264a9ce0aa23577d", null ],
+    [ "Reset", "classsuperdex_1_1robotics_1_1SensorBase.html#ade4ff3c288c709cdbf440758440125e6", null ],
+    [ "ResetSensor", "classsuperdex_1_1robotics_1_1SensorBase.html#aae5333b10f6fe82b13a105120dc54632", null ],
+    [ "SetEpisodeSeed", "classsuperdex_1_1robotics_1_1SensorBase.html#ae7f128fb4ef54da6c510c3e1140ce8d2", null ],
+    [ "SetParentFromSensor", "classsuperdex_1_1robotics_1_1SensorBase.html#a8421d7ca13266535ecaac0f76b78fed5", null ],
+    [ "Step", "classsuperdex_1_1robotics_1_1SensorBase.html#aa784fa8a4a7b51799e7dbb309f2c4a9e", null ],
+    [ "TryGetMetadata", "classsuperdex_1_1robotics_1_1SensorBase.html#a0eee96b4c8ebd441fbf0de1d87dc20f2", null ],
+    [ "RoboticsContext", "classsuperdex_1_1robotics_1_1SensorBase.html#a3658762695b0a64cebae5ec9d11b69a0", null ],
+    [ "SensorGraph", "classsuperdex_1_1robotics_1_1SensorBase.html#ab88ee6540b9d875603299d187abd1219", null ],
+    [ "_parentFromSensor", "classsuperdex_1_1robotics_1_1SensorBase.html#ae4ce371b7d033dd36fec48023fc685b1", null ]
+];

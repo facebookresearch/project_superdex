@@ -184,10 +184,20 @@ Inheritance diagram for superdex::robotics::ControllerBase:</div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-pub-methods" class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
+<tr class="memitem:ac617e68e134566900d75ef98d525a59d" id="r_ac617e68e134566900d75ef98d525a59d"><td class="memItemLeft">virtual void&#160;</td><td class="memItemRight"><a class="el" href="#ac617e68e134566900d75ef98d525a59d">ComputeOutputFromInput</a> (Span&lt; real const &gt; input, real dt, Span&lt; real &gt; efforts, superdex::Error &amp;error)</td></tr>
+<tr class="memdesc:ac617e68e134566900d75ef98d525a59d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Writes what the typed ComputeOutput gives for the input, from the live actor.  <br /></td></tr>
 <tr class="memitem:a826ed3d59158522c4fa094782565d8f7" id="r_a826ed3d59158522c4fa094782565d8f7"><td class="memItemLeft">virtual void&#160;</td><td class="memItemRight"><a class="el" href="#a826ed3d59158522c4fa094782565d8f7">ConfigureFromSceneEntry</a> (std::string_view paramArgs, std::string_view initArgs, superdex::Error &amp;error)=0</td></tr>
 <tr class="memdesc:a826ed3d59158522c4fa094782565d8f7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Configure this controller from serialized parameter and initialization arguments.  <br /></td></tr>
 <tr class="memitem:abb65b35ac076afddc3859f16d752203b" id="r_abb65b35ac076afddc3859f16d752203b"><td class="memItemLeft">virtual void&#160;</td><td class="memItemRight"><a class="el" href="#abb65b35ac076afddc3859f16d752203b">ConfigureRecording</a> (<a class="el" href="classsuperdex_1_1robotics_1_1ControllerRecordingSink.html">ControllerRecordingSink</a> &amp;sink, superdex::Error &amp;error) const</td></tr>
 <tr class="memitem:a9c7aa5922e66f4dbd5d538a49a5c77aa" id="r_a9c7aa5922e66f4dbd5d538a49a5c77aa"><td class="memItemLeft"><a class="el" href="structsuperdex_1_1robotics_1_1BotPrefab.html">BotPrefab</a> const *&#160;</td><td class="memItemRight"><a class="el" href="#a9c7aa5922e66f4dbd5d538a49a5c77aa">GetBotPrefab</a> () const</td></tr>
+<tr class="memitem:a91f4e795f24b003b467957c7d72f0d24" id="r_a91f4e795f24b003b467957c7d72f0d24"><td class="memItemLeft">virtual Span&lt; int const &gt;&#160;</td><td class="memItemRight"><a class="el" href="#a91f4e795f24b003b467957c7d72f0d24">GetControlledDofs</a> () const</td></tr>
+<tr class="memdesc:a91f4e795f24b003b467957c7d72f0d24"><td class="mdescLeft">&#160;</td><td class="mdescRight">The actor DOFs it drives, ascending.  <br /></td></tr>
+<tr class="memitem:ae73e36cd273b91085864792d9ce33231" id="r_ae73e36cd273b91085864792d9ce33231"><td class="memItemLeft">virtual void&#160;</td><td class="memItemRight"><a class="el" href="#ae73e36cd273b91085864792d9ce33231">GetCurrentInput</a> (Span&lt; real &gt; input, superdex::Error &amp;error)</td></tr>
+<tr class="memdesc:ae73e36cd273b91085864792d9ce33231"><td class="mdescLeft">&#160;</td><td class="mdescRight">Writes the input that holds the robot where it is now.  <br /></td></tr>
+<tr class="memitem:aec40a2491114675d01b62baa50a951ca" id="r_aec40a2491114675d01b62baa50a951ca"><td class="memItemLeft">virtual <a class="el" href="namespacesuperdex_1_1robotics.html#a370112a9ab19f458c2154f83f2f439f9">ControllerInputKind</a>&#160;</td><td class="memItemRight"><a class="el" href="#aec40a2491114675d01b62baa50a951ca">GetInputKind</a> () const</td></tr>
+<tr class="memdesc:aec40a2491114675d01b62baa50a951ca"><td class="mdescLeft">&#160;</td><td class="mdescRight">What those floats are.  <br /></td></tr>
+<tr class="memitem:a8dd8559e8ab7558212b66fbf217eef29" id="r_a8dd8559e8ab7558212b66fbf217eef29"><td class="memItemLeft">virtual int&#160;</td><td class="memItemRight"><a class="el" href="#a8dd8559e8ab7558212b66fbf217eef29">GetInputSize</a> () const</td></tr>
+<tr class="memdesc:a8dd8559e8ab7558212b66fbf217eef29"><td class="mdescLeft">&#160;</td><td class="mdescRight">How many floats ComputeOutputFromInput takes; 0 when floats cannot drive it.  <br /></td></tr>
 <tr class="memitem:a0b2c4a3e897c1eec979b040d13299588" id="r_a0b2c4a3e897c1eec979b040d13299588"><td class="memItemLeft">virtual void&#160;</td><td class="memItemRight"><a class="el" href="#a0b2c4a3e897c1eec979b040d13299588">Record</a> (<a class="el" href="classsuperdex_1_1robotics_1_1ControllerRecordingSink.html">ControllerRecordingSink</a> &amp;sink, superdex::Error &amp;error) const</td></tr>
 <tr class="memitem:a178e4e49cd2409faec081227e29502ab" id="r_a178e4e49cd2409faec081227e29502ab"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#a178e4e49cd2409faec081227e29502ab">Reset</a> () override=0</td></tr>
 <tr class="memdesc:a178e4e49cd2409faec081227e29502ab"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reset internal state without destroying the component.  <br /></td></tr>
@@ -209,7 +219,7 @@ Public Member Functions</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-pro-methods" class="groupheader"><a id="pro-methods" name="pro-methods"></a>
 Protected Member Functions</h2></td></tr>
-<tr class="memitem:a27315c2ef82b7f9fece85d9aae8eea6a" id="r_a27315c2ef82b7f9fece85d9aae8eea6a"><td class="memItemLeft">&#160;</td><td class="memItemRight"><a class="el" href="#a27315c2ef82b7f9fece85d9aae8eea6a">ControllerBase</a> (<a class="el" href="structsuperdex_1_1robotics_1_1BotPrefab.html">BotPrefab</a> const *prefab, Actor *actor, superdex::Error &amp;error)</td></tr>
+<tr class="memitem:a27315c2ef82b7f9fece85d9aae8eea6a" id="r_a27315c2ef82b7f9fece85d9aae8eea6a"><td class="memItemLeft">&#160;</td><td class="memItemRight"><a class="el" href="#a27315c2ef82b7f9fece85d9aae8eea6a">ControllerBase</a> (<a class="el" href="structsuperdex_1_1robotics_1_1BotPrefab.html">BotPrefab</a> const *<a class="el" href="namespacesuperdex_1_1prefab.html">prefab</a>, Actor *actor, superdex::Error &amp;error)</td></tr>
 <tr class="memitem:aedd06e6e36786527cc39cea44def0503" id="r_aedd06e6e36786527cc39cea44def0503"><td class="memItemLeft">std::string&#160;</td><td class="memItemRight"><a class="el" href="#aedd06e6e36786527cc39cea44def0503">QualifiedLinkName</a> (std::string_view linkName) const</td></tr>
 <tr class="inherit_header pro_methods_classsuperdex_1_1robotics_1_1ComponentBase"><td colspan="2" onclick="javascript:dynsection.toggleInherit('pro_methods_classsuperdex_1_1robotics_1_1ComponentBase')"><span class="dynarrow"><span class="arrowhead closed"></span></span>Protected Member Functions inherited from <a class="el" href="classsuperdex_1_1robotics_1_1ComponentBase.html">superdex::robotics::ComponentBase</a></td></tr>
 <tr class="memitem:a88b52234df641401cbb0eeefadce29bd inherit pro_methods_classsuperdex_1_1robotics_1_1ComponentBase" id="r_a88b52234df641401cbb0eeefadce29bd"><td class="memItemLeft">&#160;</td><td class="memItemRight"><a class="el" href="classsuperdex_1_1robotics_1_1ComponentBase.html#a88b52234df641401cbb0eeefadce29bd">ComponentBase</a> (Actor *actor)</td></tr>
@@ -231,7 +241,7 @@ Additional Inherited Members</h2></td></tr>
 <div class="textblock"><p>Base class for all controllers. </p>
 <p>Inherits common lifecycle from <a class="el" href="classsuperdex_1_1robotics_1_1ComponentBase.html" title="Base class for all bots components (controllers, sensors, actuators).">ComponentBase</a>. Controllers are identified by string names via <a class="el" href="classsuperdex_1_1robotics_1_1RoboticsContext.html" title="Resource owner for bots, controllers, sensors, and actuators.">RoboticsContext</a> registration, not enums. </p>
 
-<p class="definition">Definition at line <a class="el" href="controller__base_8h_source.html#l00033">33</a> of file <a class="el" href="controller__base_8h_source.html">controller_base.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="controller__base_8h_source.html#l00043">43</a> of file <a class="el" href="controller__base_8h_source.html">controller_base.h</a>.</p>
 </div><a name="doc-constructors" id="doc-constructors"></a><h2 id="header-doc-constructors" class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a27315c2ef82b7f9fece85d9aae8eea6a" name="a27315c2ef82b7f9fece85d9aae8eea6a"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a27315c2ef82b7f9fece85d9aae8eea6a">&#9670;&#160;</a></span>ControllerBase()</h2>
@@ -265,11 +275,63 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="controller__base_8h_source.html#l00075">75</a> of file <a class="el" href="controller__base_8h_source.html">controller_base.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="controller__base_8h_source.html#l00108">108</a> of file <a class="el" href="controller__base_8h_source.html">controller_base.h</a>.</p>
 
 </div>
 </div>
 <a name="doc-func-members" id="doc-func-members"></a><h2 id="header-doc-func-members" class="groupheader">Member Function Documentation</h2>
+<a id="ac617e68e134566900d75ef98d525a59d" name="ac617e68e134566900d75ef98d525a59d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac617e68e134566900d75ef98d525a59d">&#9670;&#160;</a></span>ComputeOutputFromInput()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">virtual void superdex::robotics::ControllerBase::ComputeOutputFromInput </td>
+          <td>(</td>
+          <td class="paramtype">Span&lt; real const &gt;</td>          <td class="paramname"><span class="paramname"><em>input</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">real</td>          <td class="paramname"><span class="paramname"><em>dt</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">Span&lt; real &gt;</td>          <td class="paramname"><span class="paramname"><em>efforts</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">superdex::Error &amp;</td>          <td class="paramname"><span class="paramname"><em>error</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel virtual">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Writes what the typed ComputeOutput gives for the input, from the live actor. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">input</td><td><a class="el" href="#a8dd8559e8ab7558212b66fbf217eef29" title="How many floats ComputeOutputFromInput takes; 0 when floats cannot drive it.">GetInputSize()</a> values. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">dt</td><td>Control step [s]. </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">efforts</td><td>One per actor DOF, zero on DOFs the controller does not control. </td></tr>
+    <tr><td class="paramdir">[in,out]</td><td class="paramname">error</td><td>Error status. Check Error::IsOK for success. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p>Reimplemented in <a class="el" href="classsuperdex_1_1robotics_1_1ControllerBasicJscPd.html#a334782db8a786eba5d6a57b057463b20">superdex::robotics::ControllerBasicJscPd</a>, and <a class="el" href="classsuperdex_1_1robotics_1_1ControllerBasicOscPd.html#a50a10cd6614c0f1cfc2b0b10c87a3c96">superdex::robotics::ControllerBasicOscPd</a>.</p>
+
+</div>
+</div>
 <a id="a826ed3d59158522c4fa094782565d8f7" name="a826ed3d59158522c4fa094782565d8f7"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a826ed3d59158522c4fa094782565d8f7">&#9670;&#160;</a></span>ConfigureFromSceneEntry()</h2>
 
@@ -372,7 +434,138 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="controller__base_8h_source.html#l00041">41</a> of file <a class="el" href="controller__base_8h_source.html">controller_base.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="controller__base_8h_source.html#l00051">51</a> of file <a class="el" href="controller__base_8h_source.html">controller_base.h</a>.</p>
+
+</div>
+</div>
+<a id="a91f4e795f24b003b467957c7d72f0d24" name="a91f4e795f24b003b467957c7d72f0d24"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a91f4e795f24b003b467957c7d72f0d24">&#9670;&#160;</a></span>GetControlledDofs()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">virtual Span&lt; int const  &gt; superdex::robotics::ControllerBase::GetControlledDofs </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span><span class="mlabel virtual">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>The actor DOFs it drives, ascending. </p>
+<p>A JointPositions input lists them, and ComputeOutputFromInput writes their efforts. Empty when unknown.</p>
+<dl class="section return"><dt>Returns</dt><dd>The controlled DOFs. </dd></dl>
+
+<p>Reimplemented in <a class="el" href="classsuperdex_1_1robotics_1_1ControllerBasicJscPd.html#a755a605df5e7bfd4d05c1a74677a2b49">superdex::robotics::ControllerBasicJscPd</a>, and <a class="el" href="classsuperdex_1_1robotics_1_1ControllerBasicOscPd.html#a3b5cc912699c40079dca0bf75cce354e">superdex::robotics::ControllerBasicOscPd</a>.</p>
+
+</div>
+</div>
+<a id="ae73e36cd273b91085864792d9ce33231" name="ae73e36cd273b91085864792d9ce33231"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae73e36cd273b91085864792d9ce33231">&#9670;&#160;</a></span>GetCurrentInput()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">virtual void superdex::robotics::ControllerBase::GetCurrentInput </td>
+          <td>(</td>
+          <td class="paramtype">Span&lt; real &gt;</td>          <td class="paramname"><span class="paramname"><em>input</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">superdex::Error &amp;</td>          <td class="paramname"><span class="paramname"><em>error</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel virtual">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Writes the input that holds the robot where it is now. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[out]</td><td class="paramname">input</td><td><a class="el" href="#a8dd8559e8ab7558212b66fbf217eef29" title="How many floats ComputeOutputFromInput takes; 0 when floats cannot drive it.">GetInputSize()</a> values. </td></tr>
+    <tr><td class="paramdir">[in,out]</td><td class="paramname">error</td><td>Error status. Check Error::IsOK for success. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p>Reimplemented in <a class="el" href="classsuperdex_1_1robotics_1_1ControllerBasicJscPd.html#a308d0a24d59b0425f0f878ad7f4b1dbb">superdex::robotics::ControllerBasicJscPd</a>, and <a class="el" href="classsuperdex_1_1robotics_1_1ControllerBasicOscPd.html#a97eb7ad5173b1d2b2c7e08009a1660c1">superdex::robotics::ControllerBasicOscPd</a>.</p>
+
+</div>
+</div>
+<a id="aec40a2491114675d01b62baa50a951ca" name="aec40a2491114675d01b62baa50a951ca"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aec40a2491114675d01b62baa50a951ca">&#9670;&#160;</a></span>GetInputKind()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">virtual <a class="el" href="namespacesuperdex_1_1robotics.html#a370112a9ab19f458c2154f83f2f439f9">ControllerInputKind</a> superdex::robotics::ControllerBase::GetInputKind </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span><span class="mlabel virtual">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>What those floats are. </p>
+<dl class="section return"><dt>Returns</dt><dd>The input kind. </dd></dl>
+
+<p>Reimplemented in <a class="el" href="classsuperdex_1_1robotics_1_1ControllerBasicJscPd.html#a83114aa5a302e95d8f8e46a7c3380f5f">superdex::robotics::ControllerBasicJscPd</a>, and <a class="el" href="classsuperdex_1_1robotics_1_1ControllerBasicOscPd.html#a5396556e3ee6b2e4e6a2af5f0b4673fc">superdex::robotics::ControllerBasicOscPd</a>.</p>
+
+</div>
+</div>
+<a id="a8dd8559e8ab7558212b66fbf217eef29" name="a8dd8559e8ab7558212b66fbf217eef29"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8dd8559e8ab7558212b66fbf217eef29">&#9670;&#160;</a></span>GetInputSize()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">virtual int superdex::robotics::ControllerBase::GetInputSize </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span><span class="mlabel virtual">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>How many floats ComputeOutputFromInput takes; 0 when floats cannot drive it. </p>
+<dl class="section return"><dt>Returns</dt><dd>The input size. </dd></dl>
+
+<p>Reimplemented in <a class="el" href="classsuperdex_1_1robotics_1_1ControllerBasicJscPd.html#a67d8c0f12701c2482a3dc04f76ad2298">superdex::robotics::ControllerBasicJscPd</a>, and <a class="el" href="classsuperdex_1_1robotics_1_1ControllerBasicOscPd.html#ad9984a2c68b3808702230812c8290151">superdex::robotics::ControllerBasicOscPd</a>.</p>
 
 </div>
 </div>
@@ -399,7 +592,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="controller__base_8h_source.html#l00085">85</a> of file <a class="el" href="controller__base_8h_source.html">controller_base.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="controller__base_8h_source.html#l00118">118</a> of file <a class="el" href="controller__base_8h_source.html">controller_base.h</a>.</p>
 
 </div>
 </div>
@@ -487,7 +680,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="controller__base_8h_source.html#l00093">93</a> of file <a class="el" href="controller__base_8h_source.html">controller_base.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="controller__base_8h_source.html#l00126">126</a> of file <a class="el" href="controller__base_8h_source.html">controller_base.h</a>.</p>
 
 </div>
 </div>

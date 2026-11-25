@@ -182,7 +182,7 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a44eefbae101743de84bd348cfdc0034a" id="r_a44eefbae101743de84bd348cfdc0034a"><td class="memItemLeft"><a class="el" href="structsuperdex_1_1robotics_1_1ActuatorHandle.html">ActuatorHandle</a>&#160;</td><td class="memItemRight"><a class="el" href="#a44eefbae101743de84bd348cfdc0034a">CreateActuator</a> (std::string_view typeName, Actor *linkActor, std::string_view name, std::string_view paramArgs, superdex::Error &amp;error)</td></tr>
 <tr class="memdesc:a44eefbae101743de84bd348cfdc0034a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Create an actuator of the given type on the given link actor.  <br /></td></tr>
 <tr class="memitem:adbe883c5ecc8bca275b18213e5dfcc7f" id="r_adbe883c5ecc8bca275b18213e5dfcc7f"><td class="memItemLeft"><a class="el" href="classsuperdex_1_1robotics_1_1Bot.html">Bot</a> *&#160;</td><td class="memItemRight"><a class="el" href="#adbe883c5ecc8bca275b18213e5dfcc7f">CreateBot</a> (Scene *scene, <a class="el" href="structsuperdex_1_1robotics_1_1BotPrefab.html">BotPrefab</a> const &amp;botPrefab, <a class="el" href="structsuperdex_1_1robotics_1_1IBotLoader.html">IBotLoader</a> const &amp;loader, superdex::Error &amp;error)</td></tr>
-<tr class="memitem:a91e51b2a37067991b385abdf61afb173" id="r_a91e51b2a37067991b385abdf61afb173"><td class="memItemLeft"><a class="el" href="structsuperdex_1_1robotics_1_1ControllerHandle.html">ControllerHandle</a>&#160;</td><td class="memItemRight"><a class="el" href="#a91e51b2a37067991b385abdf61afb173">CreateController</a> (std::string_view typeName, <a class="el" href="structsuperdex_1_1robotics_1_1BotPrefab.html">BotPrefab</a> const *prefab, Actor *robot, std::string_view name, superdex::Error &amp;error)</td></tr>
+<tr class="memitem:a91e51b2a37067991b385abdf61afb173" id="r_a91e51b2a37067991b385abdf61afb173"><td class="memItemLeft"><a class="el" href="structsuperdex_1_1robotics_1_1ControllerHandle.html">ControllerHandle</a>&#160;</td><td class="memItemRight"><a class="el" href="#a91e51b2a37067991b385abdf61afb173">CreateController</a> (std::string_view typeName, <a class="el" href="structsuperdex_1_1robotics_1_1BotPrefab.html">BotPrefab</a> const *<a class="el" href="namespacesuperdex_1_1prefab.html">prefab</a>, Actor *robot, std::string_view name, superdex::Error &amp;error)</td></tr>
 <tr class="memdesc:a91e51b2a37067991b385abdf61afb173"><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a controller of the given type for robot.  <br /></td></tr>
 <tr class="memitem:af784305ac3eddf5a087a6c48f653fb19" id="r_af784305ac3eddf5a087a6c48f653fb19"><td class="memItemLeft"><a class="el" href="structsuperdex_1_1robotics_1_1SensorHandle.html">SensorHandle</a>&#160;</td><td class="memItemRight"><a class="el" href="#af784305ac3eddf5a087a6c48f653fb19">CreateSensor</a> (std::string_view typeName, Actor *linkActor, std::string_view name, std::string_view paramArgs, superdex::Error &amp;error)</td></tr>
 <tr class="memdesc:af784305ac3eddf5a087a6c48f653fb19"><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a sensor of the given type on the given link actor.  <br /></td></tr>
@@ -304,8 +304,8 @@ Friends</h2></td></tr>
 </div><div class="memdoc">
 <b>Initial value:</b><div class="fragment"><div class="line"> </div>
 <div class="line">std::function&lt;<a class="code hl_class" href="classsuperdex_1_1robotics_1_1ControllerBase.html">ControllerBase</a>*(<a class="code hl_struct" href="structsuperdex_1_1robotics_1_1BotPrefab.html">BotPrefab</a> <span class="keyword">const</span>*, Actor*, superdex::Error&amp;)&gt;</div>
-<div class="ttc" id="aclasssuperdex_1_1robotics_1_1ControllerBase_html"><div class="ttname"><a href="classsuperdex_1_1robotics_1_1ControllerBase.html">superdex::robotics::ControllerBase</a></div><div class="ttdoc">Base class for all controllers.</div><div class="ttdef"><b>Definition</b> <a href="controller__base_8h_source.html#l00033">controller_base.h:33</a></div></div>
-<div class="ttc" id="astructsuperdex_1_1robotics_1_1BotPrefab_html"><div class="ttname"><a href="structsuperdex_1_1robotics_1_1BotPrefab.html">superdex::robotics::BotPrefab</a></div><div class="ttdoc">Complete parameter set for a bot.</div><div class="ttdef"><b>Definition</b> <a href="superdex__robotics_8h_source.html#l00296">superdex_robotics.h:296</a></div></div>
+<div class="ttc" id="aclasssuperdex_1_1robotics_1_1ControllerBase_html"><div class="ttname"><a href="classsuperdex_1_1robotics_1_1ControllerBase.html">superdex::robotics::ControllerBase</a></div><div class="ttdoc">Base class for all controllers.</div><div class="ttdef"><b>Definition</b> <a href="controller__base_8h_source.html#l00043">controller_base.h:43</a></div></div>
+<div class="ttc" id="astructsuperdex_1_1robotics_1_1BotPrefab_html"><div class="ttname"><a href="structsuperdex_1_1robotics_1_1BotPrefab.html">superdex::robotics::BotPrefab</a></div><div class="ttdoc">Complete parameter set for a bot.</div><div class="ttdef"><b>Definition</b> <a href="superdex__robotics_8h_source.html#l00295">superdex_robotics.h:295</a></div></div>
 </div><!-- fragment -->
 <p class="definition">Definition at line <a class="el" href="context_8h_source.html#l00196">196</a> of file <a class="el" href="context_8h_source.html">context.h</a>.</p>
 
@@ -324,7 +324,7 @@ Friends</h2></td></tr>
 </div><div class="memdoc">
 <b>Initial value:</b><div class="fragment"><div class="line"> </div>
 <div class="line">std::function&lt;<a class="code hl_class" href="classsuperdex_1_1robotics_1_1SensorBase.html">SensorBase</a>*(Actor*, std::string_view paramArgs, superdex::Error&amp;)&gt;</div>
-<div class="ttc" id="aclasssuperdex_1_1robotics_1_1SensorBase_html"><div class="ttname"><a href="classsuperdex_1_1robotics_1_1SensorBase.html">superdex::robotics::SensorBase</a></div><div class="ttdoc">Base class for robot sensors.</div><div class="ttdef"><b>Definition</b> <a href="sensor__base_8h_source.html#l00032">sensor_base.h:32</a></div></div>
+<div class="ttc" id="aclasssuperdex_1_1robotics_1_1SensorBase_html"><div class="ttname"><a href="classsuperdex_1_1robotics_1_1SensorBase.html">superdex::robotics::SensorBase</a></div><div class="ttdoc">Base class for graph-native robot sensors.</div><div class="ttdef"><b>Definition</b> <a href="sensor__base_8h_source.html#l00071">sensor_base.h:71</a></div></div>
 </div><!-- fragment -->
 <p class="definition">Definition at line <a class="el" href="context_8h_source.html#l00202">202</a> of file <a class="el" href="context_8h_source.html">context.h</a>.</p>
 
@@ -521,7 +521,7 @@ Friends</h2></td></tr>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">typeName</td><td>Registered controller type name. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">prefab</td><td>Optional borrowed robot-model description; may be None and must outlive the created controller. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname"><a class="el" href="namespacesuperdex_1_1prefab.html">prefab</a></td><td>Optional borrowed robot-model description; may be None and must outlive the created controller. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">robot</td><td>Articulated actor to control, or None for externally supplied observations. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">name</td><td>Instance name used by the name-based finders; need not be unique. </td></tr>
     <tr><td class="paramdir">[in,out]</td><td class="paramname">error</td><td>Error status. Check Error::IsOK for success. </td></tr>
@@ -711,7 +711,7 @@ Friends</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Handles of every match in creation order; empty if none. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="context_8h_source.html#l00553">553</a> of file <a class="el" href="context_8h_source.html">context.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="context_8h_source.html#l00551">551</a> of file <a class="el" href="context_8h_source.html">context.h</a>.</p>
 
 </div>
 </div>
@@ -777,7 +777,7 @@ Friends</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Handles of every match in creation order; empty if none. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="context_8h_source.html#l00567">567</a> of file <a class="el" href="context_8h_source.html">context.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="context_8h_source.html#l00565">565</a> of file <a class="el" href="context_8h_source.html">context.h</a>.</p>
 
 </div>
 </div>
@@ -878,7 +878,7 @@ Friends</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Handles of every match in creation order; empty if none. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="context_8h_source.html#l00332">332</a> of file <a class="el" href="context_8h_source.html">context.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="context_8h_source.html#l00329">329</a> of file <a class="el" href="context_8h_source.html">context.h</a>.</p>
 
 </div>
 </div>
@@ -944,7 +944,7 @@ Friends</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Handles of every match in creation order; empty if none. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="context_8h_source.html#l00346">346</a> of file <a class="el" href="context_8h_source.html">context.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="context_8h_source.html#l00343">343</a> of file <a class="el" href="context_8h_source.html">context.h</a>.</p>
 
 </div>
 </div>
@@ -1010,7 +1010,7 @@ Friends</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Handles of every match in creation order; empty if none. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="context_8h_source.html#l00455">455</a> of file <a class="el" href="context_8h_source.html">context.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="context_8h_source.html#l00453">453</a> of file <a class="el" href="context_8h_source.html">context.h</a>.</p>
 
 </div>
 </div>
@@ -1076,7 +1076,7 @@ Friends</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Handles of every match in creation order; empty if none. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="context_8h_source.html#l00469">469</a> of file <a class="el" href="context_8h_source.html">context.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="context_8h_source.html#l00467">467</a> of file <a class="el" href="context_8h_source.html">context.h</a>.</p>
 
 </div>
 </div>
@@ -1239,7 +1239,7 @@ Friends</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Get the sensor associated with the given handle. </p>
-<p>Returns None if invalid. Downcast to the concrete sensor type as needed (e.g. <span class="tt">static_cast&lt;CameraSensor*&gt;(GetSensor(handle))</span>).</p>
+<p>Returns None if invalid. Downcast to the concrete sensor type as needed (e.g. <span class="tt">static_cast&lt;SensorCamera*&gt;(GetSensor(handle))</span>).</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">handle</td><td>Sensor handle to resolve. </td></tr>
@@ -1533,7 +1533,7 @@ template&lt;typename ActuatorT&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="context_8h_source.html#l00482">482</a> of file <a class="el" href="context_8h_source.html">context.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="context_8h_source.html#l00480">480</a> of file <a class="el" href="context_8h_source.html">context.h</a>.</p>
 
 </div>
 </div>
@@ -1562,7 +1562,7 @@ template&lt;typename ActuatorT&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="context_8h_source.html#l00489">489</a> of file <a class="el" href="context_8h_source.html">context.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="context_8h_source.html#l00487">487</a> of file <a class="el" href="context_8h_source.html">context.h</a>.</p>
 
 </div>
 </div>
@@ -1612,7 +1612,7 @@ template&lt;typename ControllerT&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="context_8h_source.html#l00269">269</a> of file <a class="el" href="context_8h_source.html">context.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="context_8h_source.html#l00266">266</a> of file <a class="el" href="context_8h_source.html">context.h</a>.</p>
 
 </div>
 </div>
@@ -1641,7 +1641,7 @@ template&lt;typename ControllerT&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="context_8h_source.html#l00278">278</a> of file <a class="el" href="context_8h_source.html">context.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="context_8h_source.html#l00275">275</a> of file <a class="el" href="context_8h_source.html">context.h</a>.</p>
 
 </div>
 </div>
@@ -1716,7 +1716,7 @@ template&lt;typename SensorT&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="context_8h_source.html#l00382">382</a> of file <a class="el" href="context_8h_source.html">context.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="context_8h_source.html#l00379">379</a> of file <a class="el" href="context_8h_source.html">context.h</a>.</p>
 
 </div>
 </div>
@@ -1745,7 +1745,7 @@ template&lt;typename SensorT&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="context_8h_source.html#l00391">391</a> of file <a class="el" href="context_8h_source.html">context.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="context_8h_source.html#l00388">388</a> of file <a class="el" href="context_8h_source.html">context.h</a>.</p>
 
 </div>
 </div>
@@ -1791,7 +1791,7 @@ template&lt;typename SensorT&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="context_8h_source.html#l00589">589</a> of file <a class="el" href="context_8h_source.html">context.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="context_8h_source.html#l00587">587</a> of file <a class="el" href="context_8h_source.html">context.h</a>.</p>
 
 </div>
 </div>

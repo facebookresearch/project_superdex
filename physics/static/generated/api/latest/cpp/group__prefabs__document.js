@@ -6,6 +6,7 @@ var group__prefabs__document =
       [ "articulated", "structsuperdex_1_1prefab_1_1ActorLists.html#a55194c10c8b632c3b586b6cd802ed15a", null ],
       [ "comment", "structsuperdex_1_1prefab_1_1ActorLists.html#a67cc6ba1fe76b80d12015dfddea745ff", null ],
       [ "rigid", "structsuperdex_1_1prefab_1_1ActorLists.html#a72a974e1d899c07203d86d4dcc7f7cdb", null ],
+      [ "rod", "structsuperdex_1_1prefab_1_1ActorLists.html#a3e74c7914d3739e5b05ae902b91911e7", null ],
       [ "soft", "structsuperdex_1_1prefab_1_1ActorLists.html#a97e1cfd6862b7ca191ee3137630a55d4", null ],
       [ "softSkinned", "structsuperdex_1_1prefab_1_1ActorLists.html#ac3297fbe2ac59d5789e468afddeb4169", null ]
     ] ],
@@ -25,7 +26,9 @@ var group__prefabs__document =
       [ "rigidPivotRotation", "structsuperdex_1_1prefab_1_1ConstraintLists.html#ad5736189101b9ea128df194e3de48bef", null ],
       [ "rigidPivotToRigidTarget", "structsuperdex_1_1prefab_1_1ConstraintLists.html#a1ea06f26866487688bc0b4b6ef7fef40", null ],
       [ "rigidPrismaticJoint", "structsuperdex_1_1prefab_1_1ConstraintLists.html#a4b8c1072f1d4cacd55a83d1720ae3d6b", null ],
-      [ "rigidSphericalJoint", "structsuperdex_1_1prefab_1_1ConstraintLists.html#ab00440b64f95c57145992858345590ab", null ]
+      [ "rigidSphericalJoint", "structsuperdex_1_1prefab_1_1ConstraintLists.html#ab00440b64f95c57145992858345590ab", null ],
+      [ "rodElementRotation", "structsuperdex_1_1prefab_1_1ConstraintLists.html#aca21a5f97a17fa3c1a47c136d1bdd24f", null ],
+      [ "rodElementRotationToRigid", "structsuperdex_1_1prefab_1_1ConstraintLists.html#a634f887c0c4a227f900b55e43afe1fa7", null ]
     ] ],
     [ "superdex::prefab::PrefabReference", "structsuperdex_1_1prefab_1_1PrefabReference.html", [
       [ "operator==", "structsuperdex_1_1prefab_1_1PrefabReference.html#ac0b2f08cf1fc68dbe629d27e88985c07", null ],

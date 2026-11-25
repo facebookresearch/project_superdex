@@ -62,5 +62,14 @@ var group__prefabs__constraints =
       [ "operator==", "structsuperdex_1_1prefab_1_1RigidSphericalJointConstraintPrefab.html#a862dc490e2e475163bfe29db2cf5b39e", null ],
       [ "actorNameA", "structsuperdex_1_1prefab_1_1RigidSphericalJointConstraintPrefab.html#a91fd1e7f9c483a8020ed778060013001", null ],
       [ "actorNameB", "structsuperdex_1_1prefab_1_1RigidSphericalJointConstraintPrefab.html#aa3ba40f7ba3b08a7608f9f10ce75794b", null ]
+    ] ],
+    [ "superdex::prefab::RodElementRotationConstraintPrefab", "structsuperdex_1_1prefab_1_1RodElementRotationConstraintPrefab.html", [
+      [ "operator==", "structsuperdex_1_1prefab_1_1RodElementRotationConstraintPrefab.html#a03b2b23afe1f78361c2437cf214a2557", null ],
+      [ "actorName", "structsuperdex_1_1prefab_1_1RodElementRotationConstraintPrefab.html#a20100ac62e28dca4c99088d314d8d498", null ]
+    ] ],
+    [ "superdex::prefab::RodElementRotationToRigidConstraintPrefab", "structsuperdex_1_1prefab_1_1RodElementRotationToRigidConstraintPrefab.html", [
+      [ "operator==", "structsuperdex_1_1prefab_1_1RodElementRotationToRigidConstraintPrefab.html#a2d4bd30a184c3ae1df26c283abcca525", null ],
+      [ "rigidActorName", "structsuperdex_1_1prefab_1_1RodElementRotationToRigidConstraintPrefab.html#ad6dadfe4f0c4f7be2b219c8de657b831", null ],
+      [ "rodActorName", "structsuperdex_1_1prefab_1_1RodElementRotationToRigidConstraintPrefab.html#aa16fd6ee48d201334a131528ed4fab7a", null ]
     ] ]
 ];

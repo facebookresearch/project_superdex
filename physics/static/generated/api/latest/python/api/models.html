@@ -134,6 +134,7 @@
 <li class="toctree-l2"><a class="reference internal" href="prefab.html#instantiation">Instantiation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="prefab.html#serialization-export">Serialization &amp; Export</a></li>
 <li class="toctree-l2"><a class="reference internal" href="prefab.html#containers">Containers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="prefab.html#not-yet-categorized">Not Yet Categorized</a></li>
 </ul>
 </li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Models &amp; Meshes</a><ul>
@@ -737,6 +738,36 @@ original file.</p>
 <dd></dd></dl>
 
 <dl class="py class">
+<dt class="sig sig-object py" id="superdex.physics.mesh.ConstrainedTetrahedralizationParams">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">ConstrainedTetrahedralizationParams</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#superdex.physics.mesh.ConstrainedTetrahedralizationParams" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py property">
+<dt class="sig sig-object py" id="superdex.physics.mesh.ConstrainedTetrahedralizationParams.edge_size">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">edge_size</span></span><a class="headerlink" href="#superdex.physics.mesh.ConstrainedTetrahedralizationParams.edge_size" title="Permalink to this definition"></a></dt>
+<dd><p>(self) -&gt; float</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="superdex.physics.mesh.ConstrainedTetrahedralizationParams.iterations">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">iterations</span></span><a class="headerlink" href="#superdex.physics.mesh.ConstrainedTetrahedralizationParams.iterations" title="Permalink to this definition"></a></dt>
+<dd><p>(self) -&gt; int</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="superdex.physics.mesh.ConstrainedTetrahedralizationParams.relative_to_mesh_size">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">relative_to_mesh_size</span></span><a class="headerlink" href="#superdex.physics.mesh.ConstrainedTetrahedralizationParams.relative_to_mesh_size" title="Permalink to this definition"></a></dt>
+<dd><p>(self) -&gt; bool</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="superdex.physics.mesh.ConstrainedTetrahedralizationParams.strict">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">strict</span></span><a class="headerlink" href="#superdex.physics.mesh.ConstrainedTetrahedralizationParams.strict" title="Permalink to this definition"></a></dt>
+<dd><p>(self) -&gt; bool</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
 <dt class="sig sig-object py" id="superdex.physics.mesh.DistributionStatistics">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">DistributionStatistics</span></span><a class="headerlink" href="#superdex.physics.mesh.DistributionStatistics" title="Permalink to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
@@ -821,7 +852,7 @@ original file.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="superdex.physics.mesh.RemeshMethod">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">RemeshMethod</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">_not_given</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">values</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">module</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">qualname</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">boundary</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#superdex.physics.mesh.RemeshMethod" title="Permalink to this definition"></a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">RemeshMethod</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">values</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#superdex.physics.mesh.RemeshMethod" title="Permalink to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">IntEnum</span></code></p>
 </dd></dl>
 
@@ -968,6 +999,72 @@ original file.</p>
 
 </dd></dl>
 
+<dl class="py class">
+<dt class="sig sig-object py" id="superdex.physics.mesh.TetrahedralizationParams">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">TetrahedralizationParams</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#superdex.physics.mesh.TetrahedralizationParams" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py property">
+<dt class="sig sig-object py" id="superdex.physics.mesh.TetrahedralizationParams.cell_radius_edge_ratio">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">cell_radius_edge_ratio</span></span><a class="headerlink" href="#superdex.physics.mesh.TetrahedralizationParams.cell_radius_edge_ratio" title="Permalink to this definition"></a></dt>
+<dd><p>(self) -&gt; float</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="superdex.physics.mesh.TetrahedralizationParams.detect_features">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">detect_features</span></span><a class="headerlink" href="#superdex.physics.mesh.TetrahedralizationParams.detect_features" title="Permalink to this definition"></a></dt>
+<dd><p>(self) -&gt; bool</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="superdex.physics.mesh.TetrahedralizationParams.edge_size">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">edge_size</span></span><a class="headerlink" href="#superdex.physics.mesh.TetrahedralizationParams.edge_size" title="Permalink to this definition"></a></dt>
+<dd><p>(self) -&gt; float</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="superdex.physics.mesh.TetrahedralizationParams.exude">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">exude</span></span><a class="headerlink" href="#superdex.physics.mesh.TetrahedralizationParams.exude" title="Permalink to this definition"></a></dt>
+<dd><p>(self) -&gt; bool</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="superdex.physics.mesh.TetrahedralizationParams.facet_angle_bound">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">facet_angle_bound</span></span><a class="headerlink" href="#superdex.physics.mesh.TetrahedralizationParams.facet_angle_bound" title="Permalink to this definition"></a></dt>
+<dd><p>(self) -&gt; float</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="superdex.physics.mesh.TetrahedralizationParams.facet_distance_bound">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">facet_distance_bound</span></span><a class="headerlink" href="#superdex.physics.mesh.TetrahedralizationParams.facet_distance_bound" title="Permalink to this definition"></a></dt>
+<dd><p>(self) -&gt; float</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="superdex.physics.mesh.TetrahedralizationParams.odt">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">odt</span></span><a class="headerlink" href="#superdex.physics.mesh.TetrahedralizationParams.odt" title="Permalink to this definition"></a></dt>
+<dd><p>(self) -&gt; bool</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="superdex.physics.mesh.TetrahedralizationParams.perturb">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">perturb</span></span><a class="headerlink" href="#superdex.physics.mesh.TetrahedralizationParams.perturb" title="Permalink to this definition"></a></dt>
+<dd><p>(self) -&gt; bool</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="superdex.physics.mesh.TetrahedralizationParams.relative_to_mesh_size">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">relative_to_mesh_size</span></span><a class="headerlink" href="#superdex.physics.mesh.TetrahedralizationParams.relative_to_mesh_size" title="Permalink to this definition"></a></dt>
+<dd><p>(self) -&gt; bool</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="superdex.physics.mesh.TetrahedralizationParams.sharp_feature_angle">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">sharp_feature_angle</span></span><a class="headerlink" href="#superdex.physics.mesh.TetrahedralizationParams.sharp_feature_angle" title="Permalink to this definition"></a></dt>
+<dd><p>(self) -&gt; float</p>
+</dd></dl>
+
+</dd></dl>
+
 <dl class="py data">
 <dt class="sig sig-object py" id="superdex.physics.mesh.compute_mesh_statistics">
 <span class="sig-name descname"><span class="pre">compute_mesh_statistics</span></span><a class="headerlink" href="#superdex.physics.mesh.compute_mesh_statistics" title="Permalink to this definition"></a></dt>
@@ -1033,6 +1130,51 @@ original file.</p>
 </dd>
 <dt class="field-odd">Type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>remesh_surface(vertices</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="superdex.physics.mesh.tetrahedralize">
+<span class="sig-name descname"><span class="pre">tetrahedralize</span></span><a class="headerlink" href="#superdex.physics.mesh.tetrahedralize" title="Permalink to this definition"></a></dt>
+<dd><p>numpy.ndarray[dtype=float32, order=’C’, device=’cpu’, writable=False], faces: numpy.ndarray[dtype=int32, order=’C’, device=’cpu’, writable=False], params: superdex.physics.mesh.TetrahedralizationParams = &lt;superdex.physics.mesh.TetrahedralizationParams object&gt;) -&gt; tuple</p>
+<p>Generate a tetrahedral volume mesh from a closed triangle surface.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>vertices</strong> – (N, 3) array of vertex coordinates</p></li>
+<li><p><strong>faces</strong> – (M, 3) array of triangle vertex indices</p></li>
+<li><p><strong>params</strong> – TetrahedralizationParams</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Tuple of (vertices, tetrahedra) numpy arrays</p>
+</dd>
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tetrahedralize(vertices</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="superdex.physics.mesh.tetrahedralize_constrained">
+<span class="sig-name descname"><span class="pre">tetrahedralize_constrained</span></span><a class="headerlink" href="#superdex.physics.mesh.tetrahedralize_constrained" title="Permalink to this definition"></a></dt>
+<dd><p>numpy.ndarray[dtype=float32, order=’C’, device=’cpu’, writable=False], faces: numpy.ndarray[dtype=int32, order=’C’, device=’cpu’, writable=False], params: superdex.physics.mesh.ConstrainedTetrahedralizationParams = &lt;superdex.physics.mesh.ConstrainedTetrahedralizationParams object&gt;) -&gt; tuple</p>
+<p>Generate a tetrahedral volume mesh whose boundary is a closed triangle surface.</p>
+<p>The first output vertices are the input vertices, in input order.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>vertices</strong> – (N, 3) array of vertex coordinates</p></li>
+<li><p><strong>faces</strong> – (M, 3) array of triangle vertex indices</p></li>
+<li><p><strong>params</strong> – ConstrainedTetrahedralizationParams</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Tuple of (vertices, tetrahedra) numpy arrays</p>
+</dd>
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tetrahedralize_constrained(vertices</p>
 </dd>
 </dl>
 </dd></dl>

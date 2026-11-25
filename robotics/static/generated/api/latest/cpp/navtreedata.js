@@ -43,17 +43,13 @@ var NAVTREE =
       [ "Class Members", "functions.html", [
         [ "All", "functions.html", "functions_dup" ],
         [ "Functions", "functions_func.html", "functions_func" ],
-        [ "Variables", "functions_vars.html", null ],
+        [ "Variables", "functions_vars.html", "functions_vars" ],
         [ "Typedefs", "functions_type.html", null ],
         [ "Related Symbols", "functions_rela.html", null ]
       ] ]
     ] ],
     [ "Files", "files.html", [
-      [ "File List", "files.html", "files_dup" ],
-      [ "File Members", "globals.html", [
-        [ "All", "globals.html", null ],
-        [ "Macros", "globals_defs.html", null ]
-      ] ]
+      [ "File List", "files.html", "files_dup" ]
     ] ]
   ] ]
 ];
@@ -61,10 +57,14 @@ var NAVTREE =
 var NAVTREEINDEX =
 [
 "actuator__base_8h.html",
-"classsuperdex_1_1robotics_1_1ControllerBasicOscPd.html#acb7b1df75a076698dab8922924ab8255",
-"functions.html",
-"structsuperdex_1_1robotics_1_1BotActuatorPrefab.html",
-"structsuperdex_1_1robotics_1_1FileBotLoader.html"
+"classsuperdex_1_1robotics_1_1ControllerBasicJscPd.html#a293737ab316d824e2bab2aaadac282a3",
+"classsuperdex_1_1robotics_1_1RoboticsContext.html#a59fd4adafe0885ca51548a03e53d61c7",
+"classsuperdex_1_1robotics_1_1SensorSeedV1MLP.html#a8e9a95b5554e9154b011aca348908ecd",
+"namespacesuperdex_1_1robotics.html#a42e7f64827525ee9a1b9faacc0930347",
+"structsuperdex_1_1robotics_1_1AttachSkin.html#a13139d55e00a63b4b80f433fbe3932a1",
+"structsuperdex_1_1robotics_1_1ControllerBasicOscPdParams.html#ac4bac79ca25bfe6019a18577d0ee92c6",
+"structsuperdex_1_1robotics_1_1RoboticsHandle.html#aee2a0a55574d137a454e3abde66e3f92",
+"structsuperdex_1_1robotics_1_1TactileAggregateWrench.html#a5c36dbf9d20259794b53c81c0e794f6f"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronization';

@@ -2,8 +2,8 @@
 var searchData=
 [
   ['mass_0',['mass',['../structsuperdex_1_1RigidActorParams.html#a47020b23ea29d745e1d249e6b6e37477',1,'superdex::RigidActorParams::mass'],['../structsuperdex_1_1ArticulatedLinkParams.html#ad4caa77847dd4bbb8e9111749c61cdc0',1,'superdex::ArticulatedLinkParams::mass']]],
-  ['massdampingcoefficient_1',['massDampingCoefficient',['../structsuperdex_1_1SoftMaterialParams.html#ae0116089220ad800d21958e7b38d66d9',1,'superdex::SoftMaterialParams']]],
-  ['material_2',['material',['../structsuperdex_1_1SoftActorParams.html#a0f3c1688c3107bf1cbb8b81f2bc8038d',1,'superdex::SoftActorParams::material'],['../structsuperdex_1_1ModelData.html#ac8110dcf899326af48c232def25142d2',1,'superdex::ModelData::material'],['../structsuperdex_1_1ModelDataView.html#ac0bcc50f5c5c2ab8d113bc50aaa69fa8',1,'superdex::ModelDataView::material']]],
+  ['massdampingcoefficient_1',['massDampingCoefficient',['../structsuperdex_1_1RodMaterialParams.html#a7d8d870ea4f4176476585bf01117be8e',1,'superdex::RodMaterialParams::massDampingCoefficient'],['../structsuperdex_1_1SoftMaterialParams.html#ae0116089220ad800d21958e7b38d66d9',1,'superdex::SoftMaterialParams::massDampingCoefficient']]],
+  ['material_2',['material',['../structsuperdex_1_1SoftActorParams.html#a0f3c1688c3107bf1cbb8b81f2bc8038d',1,'superdex::SoftActorParams::material'],['../structsuperdex_1_1RodActorParams.html#a04775aa35454c9facba0faf7ead2ce90',1,'superdex::RodActorParams::material'],['../structsuperdex_1_1ModelData.html#ac8110dcf899326af48c232def25142d2',1,'superdex::ModelData::material'],['../structsuperdex_1_1ModelDataView.html#ac0bcc50f5c5c2ab8d113bc50aaa69fa8',1,'superdex::ModelDataView::material']]],
   ['max_3',['Max',['../classsuperdex_1_1Simd_3_01T_00_01N_01_4.html#a6ffc3d595723c1a8b9b3913f7bb023e2',1,'superdex::Simd&lt; T, N &gt;']]],
   ['max_4',['max',['../structsuperdex_1_1RigidPrismaticJointConstraintParams.html#aea8256a3659f5a830f39402d8846ba10',1,'superdex::RigidPrismaticJointConstraintParams']]],
   ['maxalignmentnormals_5',['maxAlignmentNormals',['../structsuperdex_1_1ContactParams.html#a04d520cdbda2dcf27894ea0007cca63f',1,'superdex::ContactParams']]],

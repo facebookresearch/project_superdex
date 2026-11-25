@@ -49,6 +49,7 @@ var mochi__enums_8h =
       [ "superdex::ConstraintType::DeformableNodeToRigid", "namespacesuperdex.html#ab92ef8aafce41557fa7fe97e7aad73a9af85eb3a5bbe4902f470e87324ffd5a22", null ],
       [ "superdex::ConstraintType::DeformableNodeToDeformableNode", "namespacesuperdex.html#ab92ef8aafce41557fa7fe97e7aad73a9af7936e01fede49fb95cfdcf8e1246906", null ],
       [ "superdex::ConstraintType::RodElementRotationToRigid", "namespacesuperdex.html#ab92ef8aafce41557fa7fe97e7aad73a9a9c6131738a6e450a290a1ae2b6035e65", null ],
+      [ "superdex::ConstraintType::RodElementRotation", "namespacesuperdex.html#ab92ef8aafce41557fa7fe97e7aad73a9a6c592856198594c3addd2c6a36575329", null ],
       [ "superdex::ConstraintType::Count", "namespacesuperdex.html#ab92ef8aafce41557fa7fe97e7aad73a9ae93f994f01c537c4e2f7d8528c3eb5e9", null ]
     ] ],
     [ "superdex::IncludeNestedActors", "namespacesuperdex.html#a44eb6e17b89d2d95697c0488e578f352", [

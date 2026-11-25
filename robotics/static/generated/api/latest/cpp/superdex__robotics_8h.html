@@ -164,11 +164,11 @@ $(function(){initNavTree('superdex__robotics_8h.html','',''); });
   <div class="headertitle"><div class="title">superdex_robotics.h File Reference</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><code>#include &lt;superdex_physics.h&gt;</code><br />
-<code>#include &lt;<a class="el" href="context_8h_source.html">superdex_robotics/core/context.h</a>&gt;</code><br />
-<code>#include &lt;mochi_physics/mochi_physics.h&gt;</code><br />
+<div class="textblock"><code>#include &lt;mochi_physics/mochi_physics.h&gt;</code><br />
 <code>#include &lt;mochi_physics/mochi_physics_experimental.h&gt;</code><br />
 <code>#include &lt;mochi_physics/utils/mochi_prefab.h&gt;</code><br />
+<code>#include &lt;superdex_physics.h&gt;</code><br />
+<code>#include &lt;<a class="el" href="context_8h_source.html">superdex_robotics/core/context.h</a>&gt;</code><br />
 <code>#include &lt;variant&gt;</code><br />
 </div>
 <p><a href="superdex__robotics_8h_source.html">Go to the source code of this file.</a></p>
@@ -215,10 +215,6 @@ Namespaces</h2></td></tr>
 <tr class="memitem:superdex" id="r_superdex"><td class="memItemLeft">namespace &#160;</td><td class="memItemRight"><a class="el" href="namespacesuperdex.html">superdex</a></td></tr>
 <tr class="memitem:superdex_3A_3Arobotics" id="r_superdex_3A_3Arobotics"><td class="memItemLeft">namespace &#160;</td><td class="memItemRight"><a class="el" href="namespacesuperdex_1_1robotics.html">superdex::robotics</a></td></tr>
 </table><table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 id="header-define-members" class="groupheader"><a id="define-members" name="define-members"></a>
-Macros</h2></td></tr>
-<tr class="memitem:a007d60affdd23692aa1618c120060e17" id="r_a007d60affdd23692aa1618c120060e17"><td class="memItemLeft">#define&#160;</td><td class="memItemRight"><a class="el" href="#a007d60affdd23692aa1618c120060e17">SUPERDEXROBOTICS_WITH_BOT_SCENE</a>&#160;&#160;&#160;MOCHI_INTERNAL</td></tr>
-</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-typedef-members" class="groupheader"><a id="typedef-members" name="typedef-members"></a>
 Typedefs</h2></td></tr>
 <tr class="memitem:acafa3cc4fc94ecc59d04b4c28567ec4e" id="r_acafa3cc4fc94ecc59d04b4c28567ec4e"><td class="memItemLeft">using&#160;</td><td class="memItemRight"><a class="el" href="namespacesuperdex_1_1robotics.html#acafa3cc4fc94ecc59d04b4c28567ec4e">superdex::robotics::BotMod</a> = std::variant&lt;<a class="el" href="structsuperdex_1_1robotics_1_1AttachBot.html">AttachBot</a>, <a class="el" href="structsuperdex_1_1robotics_1_1AttachLink.html">AttachLink</a>, <a class="el" href="structsuperdex_1_1robotics_1_1ReplaceLink.html">ReplaceLink</a>, <a class="el" href="structsuperdex_1_1robotics_1_1ReplaceLinkWithBot.html">ReplaceLinkWithBot</a>, <a class="el" href="structsuperdex_1_1robotics_1_1AttachSkin.html">AttachSkin</a>&gt;</td></tr>
@@ -257,23 +253,6 @@ Variables</h2></td></tr>
 <tr class="memitem:a5d5db01ee2d486f531d7e33de6044856" id="r_a5d5db01ee2d486f531d7e33de6044856"><td class="memItemLeft">constexpr int&#160;</td><td class="memItemRight"><a class="el" href="namespacesuperdex_1_1robotics.html#a5d5db01ee2d486f531d7e33de6044856">superdex::robotics::kIndexNone</a></td></tr>
 <tr class="memdesc:a5d5db01ee2d486f531d7e33de6044856"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sentinel value indicating no valid index (e.g., a root link with no parent).  <br /></td></tr>
 </table>
-<a name="doc-define-members" id="doc-define-members"></a><h2 id="header-doc-define-members" class="groupheader">Macro Definition Documentation</h2>
-<a id="a007d60affdd23692aa1618c120060e17" name="a007d60affdd23692aa1618c120060e17"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a007d60affdd23692aa1618c120060e17">&#9670;&#160;</a></span>SUPERDEXROBOTICS_WITH_BOT_SCENE</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define SUPERDEXROBOTICS_WITH_BOT_SCENE&#160;&#160;&#160;MOCHI_INTERNAL</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="superdex__robotics_8h_source.html#l00029">29</a> of file <a class="el" href="superdex__robotics_8h_source.html">superdex_robotics.h</a>.</p>
-
-</div>
-</div>
 </div><!-- contents -->
 </div><!-- doc-content -->
 <div id="page-nav" class="page-nav-panel">

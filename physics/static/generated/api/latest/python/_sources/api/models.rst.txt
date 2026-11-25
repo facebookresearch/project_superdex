@@ -58,6 +58,10 @@ superdex.physics.mesh
 .. autodata:: superdex.physics.mesh.ALPHA_WRAP
    :no-value:
 
+.. autoclass:: superdex.physics.mesh.ConstrainedTetrahedralizationParams
+   :members:
+   :show-inheritance:
+
 .. autoclass:: superdex.physics.mesh.DistributionStatistics
    :members:
    :show-inheritance:
@@ -84,6 +88,10 @@ superdex.physics.mesh
    :members:
    :show-inheritance:
 
+.. autoclass:: superdex.physics.mesh.TetrahedralizationParams
+   :members:
+   :show-inheritance:
+
 .. autodata:: superdex.physics.mesh.compute_mesh_statistics
    :no-value:
 
@@ -91,5 +99,11 @@ superdex.physics.mesh
    :no-value:
 
 .. autodata:: superdex.physics.mesh.remesh_surface
+   :no-value:
+
+.. autodata:: superdex.physics.mesh.tetrahedralize
+   :no-value:
+
+.. autodata:: superdex.physics.mesh.tetrahedralize_constrained
    :no-value:
 

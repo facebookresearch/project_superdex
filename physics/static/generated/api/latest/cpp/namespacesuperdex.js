@@ -37,6 +37,7 @@ var namespacesuperdex =
       [ "EmbedInTetrahedralMesh", "namespacesuperdex_1_1model__utils.html#a7ab031a60b3680d4130679f583a72373", null ],
       [ "FlipWindingOrder", "namespacesuperdex_1_1model__utils.html#ade7cc38698e7346d4b7bfac325347b53", null ],
       [ "FlipWindingOrder", "namespacesuperdex_1_1model__utils.html#a08d696c7c28b176f378065765976c6f9", null ],
+      [ "GenerateMissingPolylineFrameAxes", "namespacesuperdex_1_1model__utils.html#a0aab661db1b2de0dcd07d5843d242c28", null ],
       [ "LoadFromBytes", "namespacesuperdex_1_1model__utils.html#aad88163bc06d2a20051cfed639a69af7", null ],
       [ "LoadFromBytes", "namespacesuperdex_1_1model__utils.html#a3171b1465be2cb37c9f2fb88b476495f", null ],
       [ "LoadFromBytesUnchecked", "namespacesuperdex_1_1model__utils.html#ad4a77ae9d6917687683b7ab5f85184a5", null ],
@@ -128,6 +129,7 @@ var namespacesuperdex =
     [ "PerElementSoftMaterialDataView", "structsuperdex_1_1PerElementSoftMaterialDataView.html", "structsuperdex_1_1PerElementSoftMaterialDataView" ],
     [ "PerformanceStats", "structsuperdex_1_1PerformanceStats.html", "structsuperdex_1_1PerformanceStats" ],
     [ "Plane", "classsuperdex_1_1Plane.html", "classsuperdex_1_1Plane" ],
+    [ "PointCloudColliderParams", "structsuperdex_1_1PointCloudColliderParams.html", "structsuperdex_1_1PointCloudColliderParams" ],
     [ "PoseConstraintInfo", "structsuperdex_1_1PoseConstraintInfo.html", "structsuperdex_1_1PoseConstraintInfo" ],
     [ "PoseControllerParams", "structsuperdex_1_1PoseControllerParams.html", "structsuperdex_1_1PoseControllerParams" ],
     [ "PoseTrackingParams", "structsuperdex_1_1PoseTrackingParams.html", "structsuperdex_1_1PoseTrackingParams" ],
@@ -141,7 +143,10 @@ var namespacesuperdex =
     [ "RigidPivotToRigidTargetConstraintParams", "structsuperdex_1_1RigidPivotToRigidTargetConstraintParams.html", "structsuperdex_1_1RigidPivotToRigidTargetConstraintParams" ],
     [ "RigidPrismaticJointConstraintParams", "structsuperdex_1_1RigidPrismaticJointConstraintParams.html", "structsuperdex_1_1RigidPrismaticJointConstraintParams" ],
     [ "RigidSphericalJointConstraintParams", "structsuperdex_1_1RigidSphericalJointConstraintParams.html", "structsuperdex_1_1RigidSphericalJointConstraintParams" ],
+    [ "RodActorParams", "structsuperdex_1_1RodActorParams.html", "structsuperdex_1_1RodActorParams" ],
+    [ "RodElementRotationConstraintParams", "structsuperdex_1_1RodElementRotationConstraintParams.html", "structsuperdex_1_1RodElementRotationConstraintParams" ],
     [ "RodElementRotationToRigidConstraintParams", "structsuperdex_1_1RodElementRotationToRigidConstraintParams.html", "structsuperdex_1_1RodElementRotationToRigidConstraintParams" ],
+    [ "RodMaterialParams", "structsuperdex_1_1RodMaterialParams.html", "structsuperdex_1_1RodMaterialParams" ],
     [ "RoutingElement", "structsuperdex_1_1RoutingElement.html", "structsuperdex_1_1RoutingElement" ],
     [ "SaturationHessianParams", "structsuperdex_1_1SaturationHessianParams.html", "structsuperdex_1_1SaturationHessianParams" ],
     [ "Scene", "classsuperdex_1_1Scene.html", "classsuperdex_1_1Scene" ],
@@ -332,6 +337,7 @@ var namespacesuperdex =
       [ "DeformableNodeToRigid", "namespacesuperdex.html#ab92ef8aafce41557fa7fe97e7aad73a9af85eb3a5bbe4902f470e87324ffd5a22", null ],
       [ "DeformableNodeToDeformableNode", "namespacesuperdex.html#ab92ef8aafce41557fa7fe97e7aad73a9af7936e01fede49fb95cfdcf8e1246906", null ],
       [ "RodElementRotationToRigid", "namespacesuperdex.html#ab92ef8aafce41557fa7fe97e7aad73a9a9c6131738a6e450a290a1ae2b6035e65", null ],
+      [ "RodElementRotation", "namespacesuperdex.html#ab92ef8aafce41557fa7fe97e7aad73a9a6c592856198594c3addd2c6a36575329", null ],
       [ "Count", "namespacesuperdex.html#ab92ef8aafce41557fa7fe97e7aad73a9ae93f994f01c537c4e2f7d8528c3eb5e9", null ]
     ] ],
     [ "ConvergenceStatus", "namespacesuperdex.html#a38f8f32d5dc7f9828210a4ea756f592c", [
@@ -398,12 +404,6 @@ var namespacesuperdex =
       [ "BDL", "namespacesuperdex.html#a569effbbe9b57cc9efb15352ac1d06e6a46187049a76c83031dd5abad6290a90f", null ],
       [ "Default", "namespacesuperdex.html#a569effbbe9b57cc9efb15352ac1d06e6a7a1920d61156abc05a60135aefe8bc67", null ]
     ] ],
-    [ "CoulombFrictionModel", "namespacesuperdex.html#a9f8a3d687efc70f39dc37317897ff3a5", [
-      [ "C1Regularized", "namespacesuperdex.html#a9f8a3d687efc70f39dc37317897ff3a5a7bf70c58b26a7486d3071a2e289d89fa", null ],
-      [ "CinfRegularized", "namespacesuperdex.html#a9f8a3d687efc70f39dc37317897ff3a5a6ea7e2fb9ad7c4d08f60d3b8baa7201b", null ],
-      [ "Count", "namespacesuperdex.html#a9f8a3d687efc70f39dc37317897ff3a5ae93f994f01c537c4e2f7d8528c3eb5e9", null ],
-      [ "Default", "namespacesuperdex.html#a9f8a3d687efc70f39dc37317897ff3a5a7a1920d61156abc05a60135aefe8bc67", null ]
-    ] ],
     [ "FileFormat", "namespacesuperdex.html#a04004929e2e3497a3bc9f24b1a5f1c69", [
       [ "JSON", "namespacesuperdex.html#a04004929e2e3497a3bc9f24b1a5f1c69a0ecd11c1d7a287401d148a23bbd7a2f8", null ],
       [ "H5", "namespacesuperdex.html#a04004929e2e3497a3bc9f24b1a5f1c69a830652084dda69b6b957e2c3a7bd9b18", null ],
@@ -440,6 +440,7 @@ var namespacesuperdex =
       [ "ResidualL2", "namespacesuperdex.html#ab6f7ba911e492877e344a2746b534475af10d3841937e235028013a273d01daa8", null ],
       [ "PreconditionedResidualL2", "namespacesuperdex.html#ab6f7ba911e492877e344a2746b534475a51eb21828c1f2d295ba2863be81a2e1b", null ],
       [ "ResidualPreconditionerInduced", "namespacesuperdex.html#ab6f7ba911e492877e344a2746b534475a2b65e31e52c57f47d022a5ea077f600d", null ],
+      [ "ResidualPerActorWeighted", "namespacesuperdex.html#ab6f7ba911e492877e344a2746b534475ac6b36aaadfb2f0e67b6571943ecc7f09", null ],
       [ "Count", "namespacesuperdex.html#ab6f7ba911e492877e344a2746b534475ae93f994f01c537c4e2f7d8528c3eb5e9", null ],
       [ "Default", "namespacesuperdex.html#ab6f7ba911e492877e344a2746b534475a7a1920d61156abc05a60135aefe8bc67", null ]
     ] ],
@@ -536,6 +537,7 @@ var namespacesuperdex =
       [ "IC0", "namespacesuperdex.html#a890116b675be9355dcb3e543553c658ca89f22291d9fd6c080c2a7aa9a81f74b3", null ],
       [ "PerActor", "namespacesuperdex.html#a890116b675be9355dcb3e543553c658cac7b81f67b3752744f1e4b6a1c732a950", null ],
       [ "ColoredSSOR", "namespacesuperdex.html#a890116b675be9355dcb3e543553c658ca281be2892104a191d717c7724cb44307", null ],
+      [ "AdaptivePerActor", "namespacesuperdex.html#a890116b675be9355dcb3e543553c658ca781faa41a98ea3890513f60f641a5670", null ],
       [ "Count", "namespacesuperdex.html#a890116b675be9355dcb3e543553c658cae93f994f01c537c4e2f7d8528c3eb5e9", null ],
       [ "Default", "namespacesuperdex.html#a890116b675be9355dcb3e543553c658ca7a1920d61156abc05a60135aefe8bc67", null ]
     ] ],
@@ -902,8 +904,8 @@ var namespacesuperdex =
     [ "OuterSym3", "namespacesuperdex.html#a8e580ea5bbb425cdb0c32ce8ab0a2416", null ],
     [ "Pow", "namespacesuperdex.html#add0cd41e44fa73164be01b7841bc1218", null ],
     [ "Prod", "namespacesuperdex.html#ad081769f22a72e787c7085432806d968", null ],
-    [ "QuaternionFromMatrix", "namespacesuperdex.html#a641ebe3e9082fd93c2b6446028de0b5d", null ],
-    [ "QuaternionFromMatrix", "namespacesuperdex.html#aedf0508fc4bdfdcc910888a78cca9842", null ],
+    [ "QuaternionFromMatrix", "namespacesuperdex.html#a83343d78e9f927448205ad0a04a4966d", null ],
+    [ "QuaternionFromMatrix", "namespacesuperdex.html#aebc602aaf3e8348248af4fe183e3e966", null ],
     [ "Rcp", "namespacesuperdex.html#ae7f68a6efad75caea7d92ab2ea2aae42", null ],
     [ "RcpApprox", "namespacesuperdex.html#ad7dcd23eff8b3f1be0626b638d63370f", null ],
     [ "RcpApprox", "namespacesuperdex.html#ad476542a0dc14e9fea9f039a4e4ea854", null ],
@@ -1065,6 +1067,7 @@ var namespacesuperdex =
     [ "kIouterI", "namespacesuperdex.html#a92aec8788a6d1aea29d0015e33e2afa8", null ],
     [ "kIsNdArray", "namespacesuperdex.html#ae859b90da9dea656297bb3bf16d3bb3b", null ],
     [ "kIsResizeNoInitSafe", "namespacesuperdex.html#a79a4869815126b97b38e94a7354a5185", null ],
+    [ "kLn2", "namespacesuperdex.html#a53449cbdea755dac2c3503aa2c8dc56f", null ],
     [ "kMeshDataSpaceDim", "namespacesuperdex.html#a5c70fe954e91005cae0aa52d26e20d9e", null ],
     [ "kMinus2PiPlus2Pi", "namespacesuperdex.html#aa6e595895794d2b3be9bb01788415aa0", null ],
     [ "kMinusOne", "namespacesuperdex.html#a8839890b3f6ad933a60f4ed9c461f85f", null ],

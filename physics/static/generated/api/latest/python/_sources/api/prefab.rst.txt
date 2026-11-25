@@ -45,6 +45,14 @@ Actor descriptions.
    :members:
    :show-inheritance:
 
+.. autoclass:: superdex.physics.prefab.RodActorPrefab
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.prefab.RodPose
+   :members:
+   :show-inheritance:
+
 .. autoclass:: superdex.physics.prefab.SoftActorPrefab
    :members:
    :show-inheritance:
@@ -132,6 +140,14 @@ Authoring records for constraints that bind actors by name.
    :show-inheritance:
 
 .. autoclass:: superdex.physics.prefab.RigidSphericalJointConstraintPrefab
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.prefab.RodElementRotationConstraintPrefab
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.prefab.RodElementRotationToRigidConstraintPrefab
    :members:
    :show-inheritance:
 
@@ -319,6 +335,18 @@ Owning array containers that carry prefab records across the native API.
    :members:
    :show-inheritance:
 
+.. autoclass:: superdex.physics.prefab.DynamicArrayRodActorPrefab
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.prefab.DynamicArrayRodElementRotationConstraintPrefab
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.prefab.DynamicArrayRodElementRotationToRigidConstraintPrefab
+   :members:
+   :show-inheritance:
+
 .. autoclass:: superdex.physics.prefab.DynamicArraySoftActorPrefab
    :members:
    :show-inheritance:
@@ -326,4 +354,12 @@ Owning array containers that carry prefab records across the native API.
 .. autoclass:: superdex.physics.prefab.DynamicArraySoftSkinnedActorPrefab
    :members:
    :show-inheritance:
+
+Not Yet Categorized
+-------------------
+
+Public symbols that are not yet grouped into a section above.
+
+.. autodata:: superdex.physics.prefab.scale_articulated_actor_params
+   :no-value:
 

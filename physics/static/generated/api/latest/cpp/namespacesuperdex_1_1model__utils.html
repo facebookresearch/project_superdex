@@ -176,6 +176,7 @@ Functions</h2></td></tr>
 <tr class="memitem:a7ab031a60b3680d4130679f583a72373" id="r_a7ab031a60b3680d4130679f583a72373"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#a7ab031a60b3680d4130679f583a72373">EmbedInTetrahedralMesh</a> (<a class="el" href="structsuperdex_1_1MeshDataView.html">MeshDataView</a> const &amp;tetMesh, <a class="el" href="structsuperdex_1_1MeshData.html">MeshData</a> &amp;outMesh, <a class="el" href="classsuperdex_1_1Error.html">Error</a> &amp;error)</td></tr>
 <tr class="memitem:ade7cc38698e7346d4b7bfac325347b53" id="r_ade7cc38698e7346d4b7bfac325347b53"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#ade7cc38698e7346d4b7bfac325347b53">FlipWindingOrder</a> (<a class="el" href="structsuperdex_1_1MeshData.html">MeshData</a> &amp;data, <a class="el" href="classsuperdex_1_1Error.html">Error</a> &amp;error)</td></tr>
 <tr class="memitem:a08d696c7c28b176f378065765976c6f9" id="r_a08d696c7c28b176f378065765976c6f9"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#a08d696c7c28b176f378065765976c6f9">FlipWindingOrder</a> (<a class="el" href="structsuperdex_1_1ModelData.html">ModelData</a> &amp;data, <a class="el" href="classsuperdex_1_1Error.html">Error</a> &amp;error)</td></tr>
+<tr class="memitem:a0aab661db1b2de0dcd07d5843d242c28" id="r_a0aab661db1b2de0dcd07d5843d242c28"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#a0aab661db1b2de0dcd07d5843d242c28">GenerateMissingPolylineFrameAxes</a> (<a class="el" href="structsuperdex_1_1ModelData.html">ModelData</a> &amp;model, <a class="el" href="classsuperdex_1_1Error.html">Error</a> &amp;error)</td></tr>
 <tr class="memitem:aad88163bc06d2a20051cfed639a69af7" id="r_aad88163bc06d2a20051cfed639a69af7"><td class="memItemLeft"><a class="el" href="structsuperdex_1_1ModelData.html">ModelData</a>&#160;</td><td class="memItemRight"><a class="el" href="#aad88163bc06d2a20051cfed639a69af7">LoadFromBytes</a> (<a class="el" href="classsuperdex_1_1Span.html">Span</a>&lt; char const &gt; data, <a class="el" href="classsuperdex_1_1Error.html">Error</a> &amp;error)</td></tr>
 <tr class="memitem:a3171b1465be2cb37c9f2fb88b476495f" id="r_a3171b1465be2cb37c9f2fb88b476495f"><td class="memItemLeft"><a class="el" href="structsuperdex_1_1ModelData.html">ModelData</a>&#160;</td><td class="memItemRight"><a class="el" href="#a3171b1465be2cb37c9f2fb88b476495f">LoadFromBytes</a> (<a class="el" href="classsuperdex_1_1Span.html">Span</a>&lt; char const &gt; data, <a class="el" href="namespacesuperdex.html#a7d2ed7f5d2a22c0f2e66f1dda95c4db2">MeshFileType</a> format, <a class="el" href="classsuperdex_1_1Error.html">Error</a> &amp;error)</td></tr>
 <tr class="memitem:ad4a77ae9d6917687683b7ab5f85184a5" id="r_ad4a77ae9d6917687683b7ab5f85184a5"><td class="memItemLeft"><a class="el" href="structsuperdex_1_1ModelData.html">ModelData</a>&#160;</td><td class="memItemRight"><a class="el" href="#ad4a77ae9d6917687683b7ab5f85184a5">LoadFromBytesUnchecked</a> (<a class="el" href="classsuperdex_1_1Span.html">Span</a>&lt; char const &gt; data, <a class="el" href="classsuperdex_1_1Error.html">Error</a> &amp;error)</td></tr>
@@ -421,6 +422,27 @@ Functions</h2></td></tr>
           <td class="memname">void superdex::model_utils::FlipWindingOrder </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="structsuperdex_1_1ModelData.html">ModelData</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>data</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="classsuperdex_1_1Error.html">Error</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>error</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a0aab661db1b2de0dcd07d5843d242c28" name="a0aab661db1b2de0dcd07d5843d242c28"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0aab661db1b2de0dcd07d5843d242c28">&#9670;&#160;</a></span>GenerateMissingPolylineFrameAxes()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void superdex::model_utils::GenerateMissingPolylineFrameAxes </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="structsuperdex_1_1ModelData.html">ModelData</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>model</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>

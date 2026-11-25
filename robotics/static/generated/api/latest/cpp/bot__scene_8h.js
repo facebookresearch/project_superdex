@@ -1,0 +1,30 @@
+// @generated
+var bot__scene_8h =
+[
+    [ "superdex::robotics::ActorRenderModel", "structsuperdex_1_1robotics_1_1ActorRenderModel.html", "structsuperdex_1_1robotics_1_1ActorRenderModel" ],
+    [ "superdex::robotics::ActorSkinRenderModel", "structsuperdex_1_1robotics_1_1ActorSkinRenderModel.html", "structsuperdex_1_1robotics_1_1ActorSkinRenderModel" ],
+    [ "superdex::robotics::BaseSceneParams", "structsuperdex_1_1robotics_1_1BaseSceneParams.html", "structsuperdex_1_1robotics_1_1BaseSceneParams" ],
+    [ "superdex::robotics::BotEntry", "structsuperdex_1_1robotics_1_1BotEntry.html", "structsuperdex_1_1robotics_1_1BotEntry" ],
+    [ "superdex::robotics::BotScene", "classsuperdex_1_1robotics_1_1BotScene.html", "classsuperdex_1_1robotics_1_1BotScene" ],
+    [ "superdex::robotics::BotSceneMetadata", "structsuperdex_1_1robotics_1_1BotSceneMetadata.html", "structsuperdex_1_1robotics_1_1BotSceneMetadata" ],
+    [ "superdex::robotics::BotScenePrefab", "structsuperdex_1_1robotics_1_1BotScenePrefab.html", "structsuperdex_1_1robotics_1_1BotScenePrefab" ],
+    [ "superdex::robotics::ControllerEntry", "structsuperdex_1_1robotics_1_1ControllerEntry.html", "structsuperdex_1_1robotics_1_1ControllerEntry" ],
+    [ "superdex::robotics::PrefabEntry", "structsuperdex_1_1robotics_1_1PrefabEntry.html", "structsuperdex_1_1robotics_1_1PrefabEntry" ],
+    [ "superdex::robotics::SceneSensorEntry", "structsuperdex_1_1robotics_1_1SceneSensorEntry.html", "structsuperdex_1_1robotics_1_1SceneSensorEntry" ],
+    [ "superdex::robotics::SlotEntry", "structsuperdex_1_1robotics_1_1SlotEntry.html", "structsuperdex_1_1robotics_1_1SlotEntry" ],
+    [ "superdex::robotics::TaskObjectPose", "structsuperdex_1_1robotics_1_1TaskObjectPose.html", "structsuperdex_1_1robotics_1_1TaskObjectPose" ],
+    [ "superdex::robotics::BotPrefabEdit", "namespacesuperdex_1_1robotics.html#af7af8832d1c8f1f665dbe979b460a337", null ],
+    [ "superdex::robotics::BotPrefabLookup", "namespacesuperdex_1_1robotics.html#a0d8faf9f2fd7965e09097beb000cef7d", null ],
+    [ "superdex::robotics::SpawnPrefabEdit", "namespacesuperdex_1_1robotics.html#ac1b024cafec55cab2f8e5abe3e7f8ff5", null ],
+    [ "superdex::robotics::DiffPrefab", "namespacesuperdex_1_1robotics.html#ad6a0bbc3864ac880bdfb8cd2f84175c6", null ],
+    [ "superdex::robotics::DiffPrefab", "namespacesuperdex_1_1robotics.html#ad4cbe8803dbf536013f6b45acebf24b0", null ],
+    [ "superdex::robotics::LoadBotScene", "namespacesuperdex_1_1robotics.html#a2af4dd769b24e6def9062e1cd1d5f56e", null ],
+    [ "superdex::robotics::LoadBotScene", "namespacesuperdex_1_1robotics.html#a993df2f0216122953f0c1bb15ce6e0f2", null ],
+    [ "superdex::robotics::LoadBotScene", "namespacesuperdex_1_1robotics.html#a8e5fc9b49c2fa1fe537b9f903707c09d", null ],
+    [ "superdex::robotics::LoadBotScene", "namespacesuperdex_1_1robotics.html#aaea4c6db82a000bc3a04358a69e36d24", null ],
+    [ "superdex::robotics::LoadBotScene", "namespacesuperdex_1_1robotics.html#a0f6c021fc2420ad4c53276c26fa56705", null ],
+    [ "superdex::robotics::LoadBotScene", "namespacesuperdex_1_1robotics.html#a8ad46774ff47cd4e85cb3037acfa3ae7", null ],
+    [ "superdex::robotics::LoadBotScene", "namespacesuperdex_1_1robotics.html#aeed775c1099d47299b913ae0d551a018", null ],
+    [ "superdex::robotics::LoadBotScene", "namespacesuperdex_1_1robotics.html#acf100745cb3e99a3a40d9dea62eb3bf6", null ],
+    [ "superdex::robotics::LoadBotScenePrefabFromFile", "namespacesuperdex_1_1robotics.html#ac8a668dc859f35fcc813c19a78fb8a55", null ]
+];

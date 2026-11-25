@@ -5,6 +5,7 @@ var linear__solver__params_8h =
       [ "superdex::LinearSolverConvergenceNorm::ResidualL2", "namespacesuperdex.html#ab6f7ba911e492877e344a2746b534475af10d3841937e235028013a273d01daa8", null ],
       [ "superdex::LinearSolverConvergenceNorm::PreconditionedResidualL2", "namespacesuperdex.html#ab6f7ba911e492877e344a2746b534475a51eb21828c1f2d295ba2863be81a2e1b", null ],
       [ "superdex::LinearSolverConvergenceNorm::ResidualPreconditionerInduced", "namespacesuperdex.html#ab6f7ba911e492877e344a2746b534475a2b65e31e52c57f47d022a5ea077f600d", null ],
+      [ "superdex::LinearSolverConvergenceNorm::ResidualPerActorWeighted", "namespacesuperdex.html#ab6f7ba911e492877e344a2746b534475ac6b36aaadfb2f0e67b6571943ecc7f09", null ],
       [ "superdex::LinearSolverConvergenceNorm::Count", "namespacesuperdex.html#ab6f7ba911e492877e344a2746b534475ae93f994f01c537c4e2f7d8528c3eb5e9", null ],
       [ "superdex::LinearSolverConvergenceNorm::Default", "namespacesuperdex.html#ab6f7ba911e492877e344a2746b534475a7a1920d61156abc05a60135aefe8bc67", null ]
     ] ],
@@ -40,6 +41,7 @@ var linear__solver__params_8h =
       [ "superdex::PreconditionerType::IC0", "namespacesuperdex.html#a890116b675be9355dcb3e543553c658ca89f22291d9fd6c080c2a7aa9a81f74b3", null ],
       [ "superdex::PreconditionerType::PerActor", "namespacesuperdex.html#a890116b675be9355dcb3e543553c658cac7b81f67b3752744f1e4b6a1c732a950", null ],
       [ "superdex::PreconditionerType::ColoredSSOR", "namespacesuperdex.html#a890116b675be9355dcb3e543553c658ca281be2892104a191d717c7724cb44307", null ],
+      [ "superdex::PreconditionerType::AdaptivePerActor", "namespacesuperdex.html#a890116b675be9355dcb3e543553c658ca781faa41a98ea3890513f60f641a5670", null ],
       [ "superdex::PreconditionerType::Count", "namespacesuperdex.html#a890116b675be9355dcb3e543553c658cae93f994f01c537c4e2f7d8528c3eb5e9", null ],
       [ "superdex::PreconditionerType::Default", "namespacesuperdex.html#a890116b675be9355dcb3e543553c658ca7a1920d61156abc05a60135aefe8bc67", null ]
     ] ],

@@ -175,12 +175,12 @@ Public Attributes</h2></td></tr>
 <tr class="memitem:a5df37a5178f739ca188ebbcd986c7551" id="r_a5df37a5178f739ca188ebbcd986c7551"><td class="memItemLeft"><a class="el" href="classsuperdex_1_1DynamicArray.html">DynamicArray</a>&lt; <a class="el" href="structsuperdex_1_1ActorHandle.html">ActorHandle</a> &gt;&#160;</td><td class="memItemRight"><a class="el" href="#a5df37a5178f739ca188ebbcd986c7551">excludeActors</a> {}</td></tr>
 <tr class="memdesc:a5df37a5178f739ca188ebbcd986c7551"><td class="mdescLeft">&#160;</td><td class="mdescRight">Handles of actors that <a class="el" href="namespacesuperdex_1_1prefab.html#af2a5267dfb7adb0052a1db59dd7cc535" title="superdex::prefab::ExportScene">ExportScene</a> should not export.  <br /></td></tr>
 <tr class="memitem:ac894d93e723a92687703b955a3f2c6f7" id="r_ac894d93e723a92687703b955a3f2c6f7"><td class="memItemLeft">bool&#160;</td><td class="memItemRight"><a class="el" href="#ac894d93e723a92687703b955a3f2c6f7">exportCurrentPose</a> = false</td></tr>
-<tr class="memdesc:ac894d93e723a92687703b955a3f2c6f7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Whether to export the current pose of soft and articulated actors.  <br /></td></tr>
+<tr class="memdesc:ac894d93e723a92687703b955a3f2c6f7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Whether to export the current pose of soft, articulated, and rod actors.  <br /></td></tr>
 </table>
 <a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Options for <a class="el" href="namespacesuperdex_1_1prefab.html#af2a5267dfb7adb0052a1db59dd7cc535" title="superdex::prefab::ExportScene">ExportScene</a> and <a class="el" href="namespacesuperdex_1_1prefab.html#ad7b596413f7e797040f1d6faf3584164" title="superdex::prefab::ExportActor">ExportActor</a>. </p>
 
-<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00486">486</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00539">539</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
 </div><a name="doc-variable-members" id="doc-variable-members"></a><h2 id="header-doc-variable-members" class="groupheader">Member Data Documentation</h2>
 <a id="a5df37a5178f739ca188ebbcd986c7551" name="a5df37a5178f739ca188ebbcd986c7551"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a5df37a5178f739ca188ebbcd986c7551">&#9670;&#160;</a></span>excludeActors</h2>
@@ -200,7 +200,7 @@ Public Attributes</h2></td></tr>
 <dd>
 Ignored by <a class="el" href="namespacesuperdex_1_1prefab.html#ad7b596413f7e797040f1d6faf3584164" title="superdex::prefab::ExportActor">ExportActor</a>. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00487">487</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00540">540</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
 
 </div>
 </div>
@@ -216,17 +216,17 @@ Ignored by <a class="el" href="namespacesuperdex_1_1prefab.html#ad7b596413f7e797
       </table>
 </div><div class="memdoc">
 
-<p>Whether to export the current pose of soft and articulated actors. </p>
-<p>When true, the current elastic displacements of soft actors (including nested soft actors of soft-skinned actors) are written to <a class="el" href="structsuperdex_1_1prefab_1_1SoftActorPrefab.html#a0bc2647e763a5080ba13fe724d41f42c" title="superdex::prefab::SoftActorPrefab::nodeDisplacements">SoftActorPrefab::nodeDisplacements</a>, and the current joint pose of articulated actors (including soft-skinned skeletons) is written to <a class="el" href="structsuperdex_1_1prefab_1_1ArticulatedActorPrefab.html#a84bc206000f3f989b8c8c676e22ca6a8" title="superdex::prefab::ArticulatedActorPrefab::jointPose">ArticulatedActorPrefab::jointPose</a>. Adding the exported prefab to a scene then restores that pose. Actors exactly at rest omit these fields.</p>
-<dl class="section note"><dt>Note</dt><dd>When false (the default), soft displacement and articulated joint pose fields are omitted. <a class="el" href="classsuperdex_1_1Actor.html" title="Represents a simulated body (actor) in a scene.">Actor</a> transforms are exported regardless of this option. </dd>
+<p>Whether to export the current pose of soft, articulated, and rod actors. </p>
+<p>When true, the current elastic displacements of soft actors (including nested soft actors of soft-skinned actors) are written to <a class="el" href="structsuperdex_1_1prefab_1_1SoftActorPrefab.html#a0bc2647e763a5080ba13fe724d41f42c" title="superdex::prefab::SoftActorPrefab::nodeDisplacements">SoftActorPrefab::nodeDisplacements</a>, the current joint pose of articulated actors (including soft-skinned skeletons) is written to <a class="el" href="structsuperdex_1_1prefab_1_1ArticulatedActorPrefab.html#a84bc206000f3f989b8c8c676e22ca6a8" title="superdex::prefab::ArticulatedActorPrefab::jointPose">ArticulatedActorPrefab::jointPose</a>, and the current node displacements and element frame axes of rod actors are written to <a class="el" href="structsuperdex_1_1prefab_1_1RodActorPrefab.html#a2d017f987c205cea864e43de55cfee8c" title="superdex::prefab::RodActorPrefab::pose">RodActorPrefab::pose</a>. Adding the exported prefab to a scene then restores that pose. Actors exactly at rest omit these fields.</p>
+<dl class="section note"><dt>Note</dt><dd>When false (the default), soft displacement, articulated joint pose, and rod pose fields are omitted. <a class="el" href="classsuperdex_1_1Actor.html" title="Represents a simulated body (actor) in a scene.">Actor</a> transforms are exported regardless of this option. </dd>
 <dd>
 Displacements of ROM soft actors are never exported. </dd>
 <dd>
-Velocities (soft nodal and articulated joint) are never exported. </dd>
+Velocities (soft nodal, articulated joint, and rod) are never exported. </dd>
 <dd>
 A prefab with exported soft displacements cannot be added to a scene with <span class="tt">experimental::RomParams</span>. Set this to false to export a prefab for that use. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00488">488</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00541">541</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
 
 </div>
 </div>

@@ -1,0 +1,30 @@
+// @generated
+var searchData=
+[
+  ['validate_0',['Validate',['../structsuperdex_1_1CoordinateSpace.html#abf0b32307b1c2a3b44c405938d0bac60',1,'superdex::CoordinateSpace::Validate()'],['../namespacesuperdex_1_1model__utils.html#a76b58056d3f7def3e60a6d3de0787e69',1,'superdex::model_utils::Validate()']]],
+  ['vdet3x3_1',['VDet3x3',['../namespacesuperdex.html#af9e4588f135e0e6887f99ed47014fbe5',1,'superdex']]],
+  ['vdiagonalmatrix_2',['VDiagonalMatrix',['../namespacesuperdex.html#ae1b8cfa1d14b0629accbb8f230600e60',1,'superdex::VDiagonalMatrix(T valueOnDiagonal)'],['../namespacesuperdex.html#a837fdfc0f461da2e5d686dcf45347b63',1,'superdex::VDiagonalMatrix(Simd&lt; T, 4 &gt; const &amp;diagonalVector)']]],
+  ['vdot_3',['VDot',['../namespacesuperdex.html#a2c13d5a2015ba50b917e3133787f6772',1,'superdex']]],
+  ['vdskew3_4',['VDSkew3',['../namespacesuperdex.html#a364e4bf113639055ffb3fe8a4cef5f97',1,'superdex']]],
+  ['vequal_5',['VEqual',['../namespacesuperdex.html#a3aecc49a9909fae8f553bdf6015ae4b4',1,'superdex']]],
+  ['veye_6',['VEye',['../namespacesuperdex.html#ad316fc68a0906cd9c13854c74a1cbe1c',1,'superdex']]],
+  ['vgetcenter_7',['VGetCenter',['../classsuperdex_1_1Aabb.html#a2f38cee36c65358dc7075c69eb0367b8',1,'superdex::Aabb::VGetCenter()'],['../classsuperdex_1_1Obb.html#a5655e5972997225d06afa089616b6971',1,'superdex::Obb::VGetCenter()'],['../classsuperdex_1_1Sphere.html#a8ef6f1d463ac7f7fb3c657963a92627e',1,'superdex::Sphere::VGetCenter()']]],
+  ['vgetcorner_8',['VGetCorner',['../classsuperdex_1_1Obb.html#a502e76d51a7afd0aa293782205cf5079',1,'superdex::Obb']]],
+  ['vgetcorners_9',['VGetCorners',['../classsuperdex_1_1Obb.html#af9429a1f1cca13d8da8b743a3fe5ff43',1,'superdex::Obb']]],
+  ['vgethalfextents_10',['VGetHalfExtents',['../classsuperdex_1_1Aabb.html#a86e508a0511a94fd35ecdff4e216e4ab',1,'superdex::Aabb::VGetHalfExtents()'],['../classsuperdex_1_1Obb.html#a8220db4ee41ddcbf0fefadb3ddfb5de9',1,'superdex::Obb::VGetHalfExtents()']]],
+  ['vgetmax_11',['VGetMax',['../classsuperdex_1_1Aabb.html#aa8e2bd118cc66f17bedd8306c99685d4',1,'superdex::Aabb']]],
+  ['vgetmin_12',['VGetMin',['../classsuperdex_1_1Aabb.html#ae931b9a333506c95aab6f14931382446',1,'superdex::Aabb']]],
+  ['vgetnormal_13',['VGetNormal',['../classsuperdex_1_1Plane.html#ad5630837860e1bf877793addd72c390d',1,'superdex::Plane']]],
+  ['vgetpacked_14',['VGetPacked',['../classsuperdex_1_1Sphere.html#af5d0a13993c17ef8b2b058320ce4eaf8',1,'superdex::Sphere::VGetPacked()'],['../classsuperdex_1_1Plane.html#a485594992e02af103ba3497fb57ad548',1,'superdex::Plane::VGetPacked()']]],
+  ['vgetrotation_15',['VGetRotation',['../classsuperdex_1_1Obb.html#a283640fe0185827c9b88b3d9566a2b6c',1,'superdex::Obb::VGetRotation()'],['../classsuperdex_1_1MatrixTransformRT.html#acb3d0fae56681681d8723585deba8553',1,'superdex::MatrixTransformRT::VGetRotation()']]],
+  ['vgetrotationmatrix_16',['VGetRotationMatrix',['../namespacesuperdex.html#a6e112ea727dda6e2c58a27aedc56105b',1,'superdex']]],
+  ['vgetsize_17',['VGetSize',['../classsuperdex_1_1Aabb.html#a150a1622b0b0be777e7ee62a9dba75e8',1,'superdex::Aabb::VGetSize()'],['../classsuperdex_1_1Obb.html#af2ddb6af6c8fbac7135959619754cbc0',1,'superdex::Obb::VGetSize()']]],
+  ['vgettranslation_18',['VGetTranslation',['../classsuperdex_1_1TransformRT.html#a384a098b5476e40301d89df0bfc8ef8d',1,'superdex::TransformRT::VGetTranslation()'],['../classsuperdex_1_1MatrixTransformRT.html#ad421a6048e84ddc219e33e59fd096475',1,'superdex::MatrixTransformRT::VGetTranslation()']]],
+  ['visfinite_19',['VIsFinite',['../namespacesuperdex.html#a05967c71da2a34c0247bd5d8a81c4cbd',1,'superdex::VIsFinite(Simd&lt; T, N &gt; a)'],['../namespacesuperdex.html#a273dc2f42f6e68abbb7ff578a8cffb31',1,'superdex::VIsFinite(Quaternion const &amp;q)'],['../namespacesuperdex.html#a8f1c90430d6235a18d85afcb8e4f4acf',1,'superdex::VIsFinite(NdArray&lt; Simd&lt; T, DN &gt;, D0, DIMS... &gt; const &amp;a)'],['../namespacesuperdex.html#ac2e247c2cfcd6fa82c92c0a6d54fd832',1,'superdex::VIsFinite(TransformRT const &amp;a)']]],
+  ['vnearequal_20',['VNearEqual',['../namespacesuperdex.html#a52ac8454b3fadb22935603476014b192',1,'superdex::VNearEqual(V a, V b, V epsilon)'],['../namespacesuperdex.html#add3e4cc5410de6ad6bde1133f23b8619',1,'superdex::VNearEqual(NdArray&lt; Simd&lt; T, D1 &gt;, D0 &gt; const &amp;a, NdArray&lt; Simd&lt; T, D1 &gt;, D0 &gt; const &amp;b, Simd&lt; T, D1 &gt; epsilon=kDefaultNearEqualEpsilon&lt; T &gt;)']]],
+  ['vnearzero_21',['VNearZero',['../namespacesuperdex.html#adbb8feed2c743b46a8a077b5edf35e6a',1,'superdex']]],
+  ['vnorm_22',['VNorm',['../namespacesuperdex.html#ac1caf64fa71251dcc596d5b724e0ce2e',1,'superdex']]],
+  ['vnormsqr_23',['VNormSqr',['../namespacesuperdex.html#a5ba549ed7324c7e997554e5475ae61a1',1,'superdex']]],
+  ['vnotequal_24',['VNotEqual',['../namespacesuperdex.html#a5dc3e8a92787d2d8f9c8d8e444ddd851',1,'superdex']]],
+  ['vtorotationvector_25',['VToRotationVector',['../classsuperdex_1_1Quaternion.html#accdc8cce7e93a74684d0fc0a91148781',1,'superdex::Quaternion']]]
+];

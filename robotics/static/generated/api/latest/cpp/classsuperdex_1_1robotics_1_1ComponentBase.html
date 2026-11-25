@@ -177,11 +177,18 @@ Inheritance diagram for superdex::robotics::ComponentBase:</div>
   <map id="superdex_3A_3Arobotics_3A_3AComponentBase_map" name="superdex_3A_3Arobotics_3A_3AComponentBase_map">
 <area href="classsuperdex_1_1robotics_1_1ActuatorBase.html" title="Base class for robot actuators." alt="superdex::robotics::ActuatorBase" shape="rect" coords="0,56,301,80"/>
 <area href="classsuperdex_1_1robotics_1_1ControllerBase.html" title="Base class for all controllers." alt="superdex::robotics::ControllerBase" shape="rect" coords="311,56,612,80"/>
-<area href="classsuperdex_1_1robotics_1_1SensorBase.html" title="Base class for robot sensors." alt="superdex::robotics::SensorBase" shape="rect" coords="933,56,1234,80"/>
-<area href="classsuperdex_1_1robotics_1_1ControllerBasicJscPd.html" title="A simple PD controller written in joint space." alt="superdex::robotics::ControllerBasicJscPd" shape="rect" coords="0,112,301,136"/>
-<area href="classsuperdex_1_1robotics_1_1ControllerBasicOscPd.html" title="Basic operational-space PD (impedance) controller for robotic arms." alt="superdex::robotics::ControllerBasicOscPd" shape="rect" coords="311,112,612,136"/>
-<area href="classsuperdex_1_1robotics_1_1ControllerMochiArticulatedPose.html" title="ControllerMochiArticulatedPose – drives a mochi ArticulatedPoseController via either per-link LocalTo..." alt="superdex::robotics::ControllerMochiArticulatedPose" shape="rect" coords="622,112,923,136"/>
-<area href="classsuperdex_1_1robotics_1_1CameraSensor.html" title="Camera sensor runtime object." alt="superdex::robotics::CameraSensor" shape="rect" coords="933,112,1234,136"/>
+<area href="classsuperdex_1_1robotics_1_1SensorBase.html" title="Base class for graph-native robot sensors." alt="superdex::robotics::SensorBase" shape="rect" coords="933,56,1234,80"/>
+<area href="classsuperdex_1_1robotics_1_1ControllerBasicJscPd.html" title="A simple PD controller written in joint space." alt="superdex::robotics::ControllerBasicJscPd" shape="rect" coords="622,112,923,136"/>
+<area href="classsuperdex_1_1robotics_1_1ControllerBasicOscPd.html" title="Basic operational-space PD (impedance) controller for robotic arms." alt="superdex::robotics::ControllerBasicOscPd" shape="rect" coords="622,168,923,192"/>
+<area href="classsuperdex_1_1robotics_1_1ControllerMochiArticulatedPose.html" title="ControllerMochiArticulatedPose – drives a mochi ArticulatedPoseController via either per-link LocalTo..." alt="superdex::robotics::ControllerMochiArticulatedPose" shape="rect" coords="622,224,923,248"/>
+<area href="classsuperdex_1_1robotics_1_1SensorCamera.html" title="Camera sensor runtime object." alt="superdex::robotics::SensorCamera" shape="rect" coords="1244,112,1545,136"/>
+<area href="classsuperdex_1_1robotics_1_1SensorConcat.html" title="Stack equally formatted inputs, holding each input&#39;s latest reading." alt="superdex::robotics::SensorConcat" shape="rect" coords="1244,168,1545,192"/>
+<area href="classsuperdex_1_1robotics_1_1SensorDelayLine.html" title="Time-domain delay over one fixed CPU sensor output, with optional seeded jitter that keeps the sample..." alt="superdex::robotics::SensorDelayLine" shape="rect" coords="1244,224,1545,248"/>
+<area href="classsuperdex_1_1robotics_1_1SensorOutlierInjection.html" title="Replaces whole input samples by outliers with a fixed probability." alt="superdex::robotics::SensorOutlierInjection" shape="rect" coords="1244,280,1545,304"/>
+<area href="classsuperdex_1_1robotics_1_1SensorSeedRectMap.html" title="Image-like force map derived from one vertex-force point-cloud sensor." alt="superdex::robotics::SensorSeedRectMap" shape="rect" coords="1244,336,1545,360"/>
+<area href="classsuperdex_1_1robotics_1_1SensorSeedV1MLP.html" title="SEED tactile sensor using Mochi-native MLP inference." alt="superdex::robotics::SensorSeedV1MLP" shape="rect" coords="1244,392,1545,416"/>
+<area href="classsuperdex_1_1robotics_1_1SensorTemporalWindow.html" title="Fixed oldest-first rolling window over one native-rate CPU float sensor." alt="superdex::robotics::SensorTemporalWindow" shape="rect" coords="1244,448,1545,472"/>
+<area href="classsuperdex_1_1robotics_1_1SensorUniformNoise.html" title="Independent additive uniform noise on new input publications." alt="superdex::robotics::SensorUniformNoise" shape="rect" coords="1244,504,1545,528"/>
   </map>
 </div></div>
 <table class="memberdecls">
@@ -405,7 +412,7 @@ Friends</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="component__base_8h_source.html#l00114">114</a> of file <a class="el" href="component__base_8h_source.html">component_base.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="component__base_8h_source.html#l00111">111</a> of file <a class="el" href="component__base_8h_source.html">component_base.h</a>.</p>
 
 </div>
 </div>
@@ -436,7 +443,7 @@ Friends</h2></td></tr>
 <p>Names are NOT required to be unique, so name-based lookups (FindByName) may return multiple matches.</p>
 <dl class="section return"><dt>Returns</dt><dd>Instance name; empty if unnamed. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="component__base_8h_source.html#l00077">77</a> of file <a class="el" href="component__base_8h_source.html">component_base.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="component__base_8h_source.html#l00074">74</a> of file <a class="el" href="component__base_8h_source.html">component_base.h</a>.</p>
 
 </div>
 </div>
@@ -467,7 +474,7 @@ Friends</h2></td></tr>
 <p>a scene-level sensor or a controller built on a raw articulation. Used to scope FindByName / FindByType to a single bot and to drive DestroyBot's component cascade. Borrowed: the owning bot is owned by the <a class="el" href="classsuperdex_1_1robotics_1_1RoboticsContext.html" title="Resource owner for bots, controllers, sensors, and actuators.">RoboticsContext</a>, which destroys a bot's components before the bot itself, so this never dangles. Held as a raw pointer (not a handle) because a bot is not scene-owned, so the stale-safety the actor handles provide is unnecessary here.</p>
 <dl class="section return"><dt>Returns</dt><dd>Owning bot, or None if this component has no owning bot. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="component__base_8h_source.html#l00070">70</a> of file <a class="el" href="component__base_8h_source.html">component_base.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="component__base_8h_source.html#l00067">67</a> of file <a class="el" href="component__base_8h_source.html">component_base.h</a>.</p>
 
 </div>
 </div>
@@ -523,7 +530,7 @@ Friends</h2></td></tr>
 <p>"BASIC_OSC_PD", "SENSOR_CAMERA"), reported polymorphically. Declared here so controllers, sensors, and actuators can be searched by type uniformly (FindByType); each component kind implements it.</p>
 <dl class="section return"><dt>Returns</dt><dd>Registered component type name. </dd></dl>
 
-<p>Implemented in <a class="el" href="classsuperdex_1_1robotics_1_1CameraSensor.html#a72e4c16d38da7495e112ae3642153c69">superdex::robotics::CameraSensor</a>, <a class="el" href="classsuperdex_1_1robotics_1_1ControllerBasicJscPd.html#a7a672d99f879e67fd29849ad2ee8cfc5">superdex::robotics::ControllerBasicJscPd</a>, <a class="el" href="classsuperdex_1_1robotics_1_1ControllerBasicOscPd.html#afa5eb4fe0e5f4a43aed7f29456ff9680">superdex::robotics::ControllerBasicOscPd</a>, and <a class="el" href="classsuperdex_1_1robotics_1_1ControllerMochiArticulatedPose.html#ae755c7d1e11e778fe94afb947a7fd83c">superdex::robotics::ControllerMochiArticulatedPose</a>.</p>
+<p>Implemented in <a class="el" href="classsuperdex_1_1robotics_1_1ControllerBasicJscPd.html#a7a672d99f879e67fd29849ad2ee8cfc5">superdex::robotics::ControllerBasicJscPd</a>, <a class="el" href="classsuperdex_1_1robotics_1_1ControllerBasicOscPd.html#afa5eb4fe0e5f4a43aed7f29456ff9680">superdex::robotics::ControllerBasicOscPd</a>, <a class="el" href="classsuperdex_1_1robotics_1_1ControllerMochiArticulatedPose.html#ae755c7d1e11e778fe94afb947a7fd83c">superdex::robotics::ControllerMochiArticulatedPose</a>, <a class="el" href="classsuperdex_1_1robotics_1_1SensorCamera.html#a8b92ab5801a4e95a96db56430c1727d1">superdex::robotics::SensorCamera</a>, <a class="el" href="classsuperdex_1_1robotics_1_1SensorConcat.html#a6f7fef466694f6909b990af6cbb757b5">superdex::robotics::SensorConcat</a>, <a class="el" href="classsuperdex_1_1robotics_1_1SensorDelayLine.html#a6e7042222a9ae335145e7f85e4a57660">superdex::robotics::SensorDelayLine</a>, <a class="el" href="classsuperdex_1_1robotics_1_1SensorOutlierInjection.html#acf3e6e8512eaf7d0a2fc407f144d0c04">superdex::robotics::SensorOutlierInjection</a>, <a class="el" href="classsuperdex_1_1robotics_1_1SensorSeedRectMap.html#a3bc7c665c72d749330991fa44929b2b1">superdex::robotics::SensorSeedRectMap</a>, <a class="el" href="classsuperdex_1_1robotics_1_1SensorSeedV1MLP.html#a8790142617d16cd292e4e8d9b9fa0727">superdex::robotics::SensorSeedV1MLP</a>, <a class="el" href="classsuperdex_1_1robotics_1_1SensorTemporalWindow.html#a1f745d1d4e0ff587e7cf7aed2652f95a">superdex::robotics::SensorTemporalWindow</a>, and <a class="el" href="classsuperdex_1_1robotics_1_1SensorUniformNoise.html#a25d0fcc1c422fcb7e0b149d4f56206e3">superdex::robotics::SensorUniformNoise</a>.</p>
 
 </div>
 </div>
@@ -554,7 +561,7 @@ Friends</h2></td></tr>
 <p>Returns false after its owning <a class="el" href="classsuperdex_1_1robotics_1_1RoboticsContext.html" title="superdex::robotics::RoboticsContext">RoboticsContext</a> destroys it.</p>
 <dl class="section return"><dt>Returns</dt><dd>True while the component is live. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="component__base_8h_source.html#l00053">53</a> of file <a class="el" href="component__base_8h_source.html">component_base.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="component__base_8h_source.html#l00050">50</a> of file <a class="el" href="component__base_8h_source.html">component_base.h</a>.</p>
 
 </div>
 </div>
@@ -634,7 +641,7 @@ Friends</h2></td></tr>
 <p>Reset internal state without destroying the component. </p>
 <p>Parameters are preserved. Use between episodes to clear stale state (e.g., derivative tracking, timing diagnostics). </p>
 
-<p>Implemented in <a class="el" href="classsuperdex_1_1robotics_1_1ActuatorBase.html#a8ff0e76e847735df779f388f5806219b">superdex::robotics::ActuatorBase</a>, <a class="el" href="classsuperdex_1_1robotics_1_1CameraSensor.html#a071756714083674e9c5ac0c7d0a37f85">superdex::robotics::CameraSensor</a>, <a class="el" href="classsuperdex_1_1robotics_1_1ControllerBase.html#a178e4e49cd2409faec081227e29502ab">superdex::robotics::ControllerBase</a>, <a class="el" href="classsuperdex_1_1robotics_1_1ControllerBasicJscPd.html#aaca28dc26d0d1a52873c67dd4b760d83">superdex::robotics::ControllerBasicJscPd</a>, <a class="el" href="classsuperdex_1_1robotics_1_1ControllerBasicOscPd.html#aa76e20f01a3a81baed3fe22afff8e830">superdex::robotics::ControllerBasicOscPd</a>, <a class="el" href="classsuperdex_1_1robotics_1_1ControllerMochiArticulatedPose.html#a64b5b081bdd302ea919f7a074cce1c2d">superdex::robotics::ControllerMochiArticulatedPose</a>, and <a class="el" href="classsuperdex_1_1robotics_1_1SensorBase.html#a2552f11a93d7aa64e47afe91b4127be7">superdex::robotics::SensorBase</a>.</p>
+<p>Implemented in <a class="el" href="classsuperdex_1_1robotics_1_1ActuatorBase.html#a8ff0e76e847735df779f388f5806219b">superdex::robotics::ActuatorBase</a>, <a class="el" href="classsuperdex_1_1robotics_1_1ControllerBase.html#a178e4e49cd2409faec081227e29502ab">superdex::robotics::ControllerBase</a>, <a class="el" href="classsuperdex_1_1robotics_1_1ControllerBasicJscPd.html#aaca28dc26d0d1a52873c67dd4b760d83">superdex::robotics::ControllerBasicJscPd</a>, <a class="el" href="classsuperdex_1_1robotics_1_1ControllerBasicOscPd.html#aa76e20f01a3a81baed3fe22afff8e830">superdex::robotics::ControllerBasicOscPd</a>, <a class="el" href="classsuperdex_1_1robotics_1_1ControllerMochiArticulatedPose.html#a64b5b081bdd302ea919f7a074cce1c2d">superdex::robotics::ControllerMochiArticulatedPose</a>, and <a class="el" href="classsuperdex_1_1robotics_1_1SensorBase.html#ade4ff3c288c709cdbf440758440125e6">superdex::robotics::SensorBase</a>.</p>
 
 </div>
 </div>
@@ -661,7 +668,7 @@ Friends</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="component__base_8h_source.html#l00105">105</a> of file <a class="el" href="component__base_8h_source.html">component_base.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="component__base_8h_source.html#l00102">102</a> of file <a class="el" href="component__base_8h_source.html">component_base.h</a>.</p>
 
 </div>
 </div>
@@ -686,7 +693,7 @@ Friends</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="component__base_8h_source.html#l00128">128</a> of file <a class="el" href="component__base_8h_source.html">component_base.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="component__base_8h_source.html#l00125">125</a> of file <a class="el" href="component__base_8h_source.html">component_base.h</a>.</p>
 
 </div>
 </div>

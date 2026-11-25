@@ -131,6 +131,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../../../../api/prefab.html#instantiation">Instantiation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../../api/prefab.html#serialization-export">Serialization &amp; Export</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../../api/prefab.html#containers">Containers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/prefab.html#not-yet-categorized">Not Yet Categorized</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../../../../api/models.html">Models &amp; Meshes</a><ul>
@@ -305,14 +306,14 @@
     <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">bots_ctx</span><span class="p">:</span> <span class="n">sdr</span><span class="o">.</span><span class="n">RoboticsContext</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">sdr</span><span class="o">.</span><span class="n">BotScene</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Load a .mochi_bot_scene file and instantiate all scene objects.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Load a .superdex_scene file and instantiate all scene objects.</span>
 
 <span class="sd">    Creates the physics scene from the base_scene, instantiates all bots with</span>
 <span class="sd">    placement and initial pose, and creates controllers via the provided</span>
 <span class="sd">    RoboticsContext.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        path: File path to the .mochi_bot_scene file.</span>
+<span class="sd">        path: File path to the .superdex_scene file.</span>
 <span class="sd">        bots_ctx: RoboticsContext for controller lifetime management. The caller</span>
 <span class="sd">            owns this — create before loading, destroy after all scenes are</span>
 <span class="sd">            closed.</span>
@@ -331,7 +332,7 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">load_bot_scene_prefab</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>  <span class="c1"># noqa: ANN201</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Parse a .mochi_bot_scene file into a BotScenePrefab (no scene instantiation).</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Parse a .superdex_scene file into a BotScenePrefab (no scene instantiation).</span>
 
 <span class="sd">    Unlike load_bot_scene, this only deserializes and validates the file; it does</span>
 <span class="sd">    not require SuperDex Physics to be initialized and creates no physics scene. Useful for</span>
@@ -339,7 +340,7 @@
 <span class="sd">    unreal_blueprint_name.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        path: File path to the .mochi_bot_scene file.</span>
+<span class="sd">        path: File path to the .superdex_scene file.</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        The parsed BotScenePrefab.</span>
@@ -350,13 +351,13 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">load_bot_task_prefab</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>  <span class="c1"># noqa: ANN201</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Parse a .mochi_bot_task file into a BotTaskPrefab.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Parse a .superdex_task file into a BotTaskPrefab.</span>
 
 <span class="sd">    Deserializes and validates the task file (spawn names non-empty/unique,</span>
 <span class="sd">    prefab names non-empty). Does not require SuperDex Physics to be initialized.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        path: File path to the .mochi_bot_task file.</span>
+<span class="sd">        path: File path to the .superdex_task file.</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        The parsed BotTaskPrefab, whose `spawns` declare the named object</span>
@@ -365,6 +366,38 @@
     <span class="kn">import</span><span class="w"> </span><span class="nn">superdex.robotics</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sdr</span>  <span class="c1"># @manual</span>
 
     <span class="k">return</span> <span class="n">sdr</span><span class="o">.</span><span class="n">load_bot_task_prefab_from_file</span><span class="p">(</span><span class="n">_strip_win_extended_prefix</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
+
+
+<div class="viewcode-block" id="apply_asset_snapshot"><a class="viewcode-back" href="../../../../api/scene_setup.html#superdex.physics.utils.scene_helpers.apply_asset_snapshot">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">apply_asset_snapshot</span><span class="p">(</span><span class="n">snapshot_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">asset_root</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Pin every file in a .superdex_scene_snapshot for the rest of the process.</span>
+
+<span class="sd">    Afterwards, loading the snapshot&#39;s scene (or a task, or a bot) loads every file it references</span>
+<span class="sd">    from the version the snapshot pins instead of the tip, however deeply nested. A file under the</span>
+<span class="sd">    snapshot&#39;s roots that it does not pin fails to load rather than loading its tip. Replaces any</span>
+<span class="sd">    snapshot already applied. Don&#39;t save assets while a snapshot is applied: they would record the</span>
+<span class="sd">    pinned paths.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        snapshot_path: The .superdex_scene_snapshot file.</span>
+<span class="sd">        asset_root: Directory containing the .superdex_root the snapshot&#39;s paths are relative to,</span>
+<span class="sd">            wherever that asset tree is mounted. Every pinned version must exist under it.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Path of the snapshot&#39;s scene, to pass to `load_bot_scene` as usual.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">superdex.robotics</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sdr</span>  <span class="c1"># @manual</span>
+
+    <span class="n">snapshot</span> <span class="o">=</span> <span class="n">sdr</span><span class="o">.</span><span class="n">load_asset_snapshot</span><span class="p">(</span><span class="n">_strip_win_extended_prefix</span><span class="p">(</span><span class="n">snapshot_path</span><span class="p">))</span>
+    <span class="k">return</span> <span class="nb">str</span><span class="p">(</span>
+        <span class="n">sdr</span><span class="o">.</span><span class="n">apply_asset_snapshot</span><span class="p">(</span><span class="n">snapshot</span><span class="p">,</span> <span class="n">_strip_win_extended_prefix</span><span class="p">(</span><span class="n">asset_root</span><span class="p">))</span>
+    <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="clear_asset_snapshot"><a class="viewcode-back" href="../../../../api/scene_setup.html#superdex.physics.utils.scene_helpers.clear_asset_snapshot">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">clear_asset_snapshot</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Stop applying the snapshot `apply_asset_snapshot` applied, so files load from their tips.&quot;&quot;&quot;</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">superdex.robotics</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sdr</span>  <span class="c1"># @manual</span>
+
+    <span class="n">sdr</span><span class="o">.</span><span class="n">clear_asset_snapshot</span><span class="p">()</span></div>
 
 
 <div class="viewcode-block" id="create_scene_from_prefab"><a class="viewcode-back" href="../../../../api/scene_setup.html#superdex.physics.utils.scene_helpers.create_scene_from_prefab">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">create_scene_from_prefab</span><span class="p">(</span>

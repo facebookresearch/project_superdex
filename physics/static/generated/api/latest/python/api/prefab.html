@@ -134,6 +134,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#instantiation">Instantiation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#serialization-export">Serialization &amp; Export</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#containers">Containers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#not-yet-categorized">Not Yet Categorized</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="models.html">Models &amp; Meshes</a><ul>
@@ -228,6 +229,12 @@
 <dt class="sig sig-object py" id="superdex.physics.prefab.ActorLists.rigid">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">rigid</span></span><a class="headerlink" href="#superdex.physics.prefab.ActorLists.rigid" title="Permalink to this definition"></a></dt>
 <dd><p>Rigid actors.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="superdex.physics.prefab.ActorLists.rod">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">rod</span></span><a class="headerlink" href="#superdex.physics.prefab.ActorLists.rod" title="Permalink to this definition"></a></dt>
+<dd><p>Rod actors.</p>
 </dd></dl>
 
 <dl class="py property">
@@ -337,6 +344,18 @@
 <dt class="sig sig-object py" id="superdex.physics.prefab.ConstraintLists.rigid_spherical_joint">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">rigid_spherical_joint</span></span><a class="headerlink" href="#superdex.physics.prefab.ConstraintLists.rigid_spherical_joint" title="Permalink to this definition"></a></dt>
 <dd><p>Spherical joint constraints between two rigid actors.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="superdex.physics.prefab.ConstraintLists.rod_element_rotation">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">rod_element_rotation</span></span><a class="headerlink" href="#superdex.physics.prefab.ConstraintLists.rod_element_rotation" title="Permalink to this definition"></a></dt>
+<dd><p>World-rotation tracking constraints on rod elements.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="superdex.physics.prefab.ConstraintLists.rod_element_rotation_to_rigid">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">rod_element_rotation_to_rigid</span></span><a class="headerlink" href="#superdex.physics.prefab.ConstraintLists.rod_element_rotation_to_rigid" title="Permalink to this definition"></a></dt>
+<dd><p>Relative-rotation tracking constraints between rod elements and rigid actors.</p>
 </dd></dl>
 
 </dd></dl>
@@ -840,6 +859,204 @@ world-from-local translation.</p>
 </dd></dl>
 
 <dl class="py class">
+<dt class="sig sig-object py" id="superdex.physics.prefab.RodActorPrefab">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">RodActorPrefab</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#superdex.physics.prefab.RodActorPrefab" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="physics.html#superdex.physics.RodActorParams" title="superdex.physics.RodActorParams"><code class="xref py py-class docutils literal notranslate"><span class="pre">RodActorParams</span></code></a></p>
+<p>Prefab parameters for a rod actor.</p>
+<p>Extends <a class="reference internal" href="physics.html#superdex.physics.RodActorParams" title="superdex.physics.RodActorParams"><code class="xref py py-class docutils literal notranslate"><span class="pre">RodActorParams</span></code></a>. The inherited
+<a class="reference internal" href="physics.html#superdex.physics.RodActorParams.world_from_local" title="superdex.physics.RodActorParams.world_from_local"><code class="xref py py-attr docutils literal notranslate"><span class="pre">world_from_local</span></code></a> is replaced by the
+prefab-relative <a class="reference internal" href="#superdex.physics.prefab.RodActorPrefab.rotation" title="superdex.physics.prefab.RodActorPrefab.rotation"><code class="xref py py-attr docutils literal notranslate"><span class="pre">rotation</span></code></a> and <a class="reference internal" href="#superdex.physics.prefab.RodActorPrefab.translation" title="superdex.physics.prefab.RodActorPrefab.translation"><code class="xref py py-attr docutils literal notranslate"><span class="pre">translation</span></code></a> fields, and the
+inherited <a class="reference internal" href="physics.html#superdex.physics.RodActorParams.shape" title="superdex.physics.RodActorParams.shape"><code class="xref py py-attr docutils literal notranslate"><span class="pre">shape</span></code></a> (a runtime
+<a class="reference internal" href="physics.html#superdex.physics.ShapeHandle" title="superdex.physics.ShapeHandle"><code class="xref py py-class docutils literal notranslate"><span class="pre">ShapeHandle</span></code></a>) is replaced by <a class="reference internal" href="#superdex.physics.prefab.RodActorPrefab.shape_file" title="superdex.physics.prefab.RodActorPrefab.shape_file"><code class="xref py py-attr docutils literal notranslate"><span class="pre">shape_file</span></code></a> (a
+path serialized to JSON. The shape is loaded at instantiation time).</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The rod is created in its rest configuration, then <a class="reference internal" href="#superdex.physics.prefab.RodActorPrefab.pose" title="superdex.physics.prefab.RodActorPrefab.pose"><code class="xref py py-attr docutils literal notranslate"><span class="pre">pose</span></code></a> is applied
+if set. Use <a class="reference internal" href="physics.html#superdex.physics.Actor.set_recentering_params" title="superdex.physics.Actor.set_recentering_params"><code class="xref py py-meth docutils literal notranslate"><span class="pre">set_recentering_params()</span></code></a> after
+instantiation to change recentering.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The inherited <a class="reference internal" href="physics.html#superdex.physics.RodActorParams.name" title="superdex.physics.RodActorParams.name"><code class="xref py py-attr docutils literal notranslate"><span class="pre">name</span></code></a> field need not
+be unique, but a name shared by more than one actor cannot be used by
+name-based prefab references.</p>
+</div>
+<dl class="py property">
+<dt class="sig sig-object py" id="superdex.physics.prefab.RodActorPrefab.comment">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">comment</span></span><a class="headerlink" href="#superdex.physics.prefab.RodActorPrefab.comment" title="Permalink to this definition"></a></dt>
+<dd><p>Optional serialized comment.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="superdex.physics.prefab.RodActorPrefab.pose">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">pose</span></span><a class="headerlink" href="#superdex.physics.prefab.RodActorPrefab.pose" title="Permalink to this definition"></a></dt>
+<dd><p>Optional initial pose. Applied right after the actor is created, see
+<a class="reference internal" href="physics.html#superdex.physics.Actor.set_rod_pose" title="superdex.physics.Actor.set_rod_pose"><code class="xref py py-meth docutils literal notranslate"><span class="pre">set_rod_pose()</span></code></a>.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="superdex.physics.prefab.RodActorPrefab.render_model_file">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">render_model_file</span></span><a class="headerlink" href="#superdex.physics.prefab.RodActorPrefab.render_model_file" title="Permalink to this definition"></a></dt>
+<dd><p>Optional path to a render model file (e.g. .glb) for visualization.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Reserved visualization metadata. SuperDex Physics does not use it for
+simulation. Ignored if empty.</p>
+</div>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="superdex.physics.prefab.RodActorPrefab.render_model_rotation">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">render_model_rotation</span></span><a class="headerlink" href="#superdex.physics.prefab.RodActorPrefab.render_model_rotation" title="Permalink to this definition"></a></dt>
+<dd><p>Rotation quaternion [x, y, z, w] to apply to the render model.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Ignored if <a class="reference internal" href="#superdex.physics.prefab.RodActorPrefab.render_model_file" title="superdex.physics.prefab.RodActorPrefab.render_model_file"><code class="xref py py-attr docutils literal notranslate"><span class="pre">render_model_file</span></code></a>
+is empty.</p>
+</div>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="superdex.physics.prefab.RodActorPrefab.render_model_scale">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">render_model_scale</span></span><a class="headerlink" href="#superdex.physics.prefab.RodActorPrefab.render_model_scale" title="Permalink to this definition"></a></dt>
+<dd><p>Scale [x, y, z] to apply to the render model.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Ignored if <a class="reference internal" href="#superdex.physics.prefab.RodActorPrefab.render_model_file" title="superdex.physics.prefab.RodActorPrefab.render_model_file"><code class="xref py py-attr docutils literal notranslate"><span class="pre">render_model_file</span></code></a>
+is empty.</p>
+</div>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="superdex.physics.prefab.RodActorPrefab.render_model_translation">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">render_model_translation</span></span><a class="headerlink" href="#superdex.physics.prefab.RodActorPrefab.render_model_translation" title="Permalink to this definition"></a></dt>
+<dd><p>Translation [x, y, z] to apply to the render model.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Ignored if <a class="reference internal" href="#superdex.physics.prefab.RodActorPrefab.render_model_file" title="superdex.physics.prefab.RodActorPrefab.render_model_file"><code class="xref py py-attr docutils literal notranslate"><span class="pre">render_model_file</span></code></a>
+is empty.</p>
+</div>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="superdex.physics.prefab.RodActorPrefab.rotation">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">rotation</span></span><a class="headerlink" href="#superdex.physics.prefab.RodActorPrefab.rotation" title="Permalink to this definition"></a></dt>
+<dd><p>Actor rotation quaternion [x, y, z, w] relative to the prefab’s local frame
+(i.e., the prefab-from-local rotation). Composes with
+<a class="reference internal" href="#superdex.physics.prefab.PrefabParams.rotation" title="superdex.physics.prefab.PrefabParams.rotation"><code class="xref py py-attr docutils literal notranslate"><span class="pre">rotation</span></code></a> to produce the final
+world-from-local rotation.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Must be finite and non-zero.</p>
+</div>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="superdex.physics.prefab.RodActorPrefab.scale">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">scale</span></span><a class="headerlink" href="#superdex.physics.prefab.RodActorPrefab.scale" title="Permalink to this definition"></a></dt>
+<dd><p>Scale [x, y, z] to bake into the shape file.</p>
+<p>Applies to the rod geometry: node positions, element frame axes (transformed by
+the inverse transpose and renormalized), and the visual and contact-skin meshes.
+Also applies to <a class="reference internal" href="physics.html#superdex.physics.PointCloudColliderParams.radius" title="superdex.physics.PointCloudColliderParams.radius"><code class="xref py py-attr docutils literal notranslate"><span class="pre">radius</span></code></a>, which
+is authored for the unscaled shape and is multiplied by the absolute value of
+the uniform scale. Does not apply to
+<a class="reference internal" href="physics.html#superdex.physics.RodActorParams.material" title="superdex.physics.RodActorParams.material"><code class="xref py py-attr docutils literal notranslate"><span class="pre">material</span></code></a>,
+<a class="reference internal" href="physics.html#superdex.physics.RodActorParams.contact" title="superdex.physics.RodActorParams.contact"><code class="xref py py-attr docutils literal notranslate"><span class="pre">contact</span></code></a>, or the other
+<a class="reference internal" href="physics.html#superdex.physics.RodActorParams.point_cloud_collider" title="superdex.physics.RodActorParams.point_cloud_collider"><code class="xref py py-attr docutils literal notranslate"><span class="pre">point_cloud_collider</span></code></a> parameters.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>All components must be non-zero and finite. Negative components mirror the
+corresponding model-space axes.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Must be uniform by absolute value when the rod has a point-cloud collider
+(see <a class="reference internal" href="physics.html#superdex.physics.RodActorParams.collider_type" title="superdex.physics.RodActorParams.collider_type"><code class="xref py py-attr docutils literal notranslate"><span class="pre">collider_type</span></code></a>).</p>
+</div>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a class="reference internal" href="#superdex.physics.prefab.PrefabParams.scale" title="superdex.physics.prefab.PrefabParams.scale"><code class="xref py py-attr docutils literal notranslate"><span class="pre">scale</span></code></a></p>
+</div>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="superdex.physics.prefab.RodActorPrefab.shape_file">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">shape_file</span></span><a class="headerlink" href="#superdex.physics.prefab.RodActorPrefab.shape_file" title="Permalink to this definition"></a></dt>
+<dd><p>Path to a polyline model file that will be loaded and referenced via
+<a class="reference internal" href="physics.html#superdex.physics.ShapeHandle" title="superdex.physics.ShapeHandle"><code class="xref py py-class docutils literal notranslate"><span class="pre">ShapeHandle</span></code></a>.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="superdex.physics.prefab.RodActorPrefab.shape_rotation">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">shape_rotation</span></span><a class="headerlink" href="#superdex.physics.prefab.RodActorPrefab.shape_rotation" title="Permalink to this definition"></a></dt>
+<dd><p>Rotation quaternion [x, y, z, w] to bake into the shape file.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="superdex.physics.prefab.RodActorPrefab.shape_translation">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">shape_translation</span></span><a class="headerlink" href="#superdex.physics.prefab.RodActorPrefab.shape_translation" title="Permalink to this definition"></a></dt>
+<dd><p>Translation [x, y, z] to bake into the shape file.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="superdex.physics.prefab.RodActorPrefab.translation">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">translation</span></span><a class="headerlink" href="#superdex.physics.prefab.RodActorPrefab.translation" title="Permalink to this definition"></a></dt>
+<dd><p>Actor translation [x, y, z] relative to the prefab’s local frame (i.e., the
+prefab-from-local translation). Composes with
+<a class="reference internal" href="#superdex.physics.prefab.PrefabParams.scale" title="superdex.physics.prefab.PrefabParams.scale"><code class="xref py py-attr docutils literal notranslate"><span class="pre">scale</span></code></a>,
+<a class="reference internal" href="#superdex.physics.prefab.PrefabParams.rotation" title="superdex.physics.prefab.PrefabParams.rotation"><code class="xref py py-attr docutils literal notranslate"><span class="pre">rotation</span></code></a>, and
+<a class="reference internal" href="#superdex.physics.prefab.PrefabParams.translation" title="superdex.physics.prefab.PrefabParams.translation"><code class="xref py py-attr docutils literal notranslate"><span class="pre">translation</span></code></a> to produce the final
+world-from-local translation.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Must be finite.</p>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="superdex.physics.prefab.RodPose">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">RodPose</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#superdex.physics.prefab.RodPose" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A rod pose: node displacements and element frame axes.</p>
+<p>Values are expressed in the model frame of
+<a class="reference internal" href="#superdex.physics.prefab.RodActorPrefab.shape_file" title="superdex.physics.prefab.RodActorPrefab.shape_file"><code class="xref py py-attr docutils literal notranslate"><span class="pre">shape_file</span></code></a>, the same frame as
+its node positions and rest frame axes. The model transform baked into the shape
+(<a class="reference internal" href="#superdex.physics.prefab.RodActorPrefab.scale" title="superdex.physics.prefab.RodActorPrefab.scale"><code class="xref py py-attr docutils literal notranslate"><span class="pre">scale</span></code></a>,
+<a class="reference internal" href="#superdex.physics.prefab.RodActorPrefab.shape_rotation" title="superdex.physics.prefab.RodActorPrefab.shape_rotation"><code class="xref py py-attr docutils literal notranslate"><span class="pre">shape_rotation</span></code></a>, and the
+effective prefab scale) is applied to the pose too: displacements like node
+positions, and frame axes like the rest frame axes (by the inverse transpose,
+then renormalized).
+<a class="reference internal" href="#superdex.physics.prefab.RodActorPrefab.shape_translation" title="superdex.physics.prefab.RodActorPrefab.shape_translation"><code class="xref py py-attr docutils literal notranslate"><span class="pre">shape_translation</span></code></a> does not
+affect them. When <a class="reference internal" href="#superdex.physics.prefab.RodActorPrefab.shape_file" title="superdex.physics.prefab.RodActorPrefab.shape_file"><code class="xref py py-attr docutils literal notranslate"><span class="pre">shape_file</span></code></a> is
+empty (a preset <a class="reference internal" href="physics.html#superdex.physics.RodActorParams.shape" title="superdex.physics.RodActorParams.shape"><code class="xref py py-attr docutils literal notranslate"><span class="pre">shape</span></code></a>), the pose is
+applied unchanged.</p>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a class="reference internal" href="physics.html#superdex.physics.Actor.get_rod_pose" title="superdex.physics.Actor.get_rod_pose"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_rod_pose()</span></code></a>,
+<a class="reference internal" href="physics.html#superdex.physics.Actor.set_rod_pose" title="superdex.physics.Actor.set_rod_pose"><code class="xref py py-meth docutils literal notranslate"><span class="pre">set_rod_pose()</span></code></a></p>
+</div>
+<dl class="py property">
+<dt class="sig sig-object py" id="superdex.physics.prefab.RodPose.element_frame_axes">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">element_frame_axes</span></span><a class="headerlink" href="#superdex.physics.prefab.RodPose.element_frame_axes" title="Permalink to this definition"></a></dt>
+<dd><p>Element frame axes, flattened as [x0, y0, z0, x1, y1, z1, …]. Must contain 3
+finite values per element. After the model transform is applied, each axis is
+expected to be a unit vector orthogonal to its deformed element, within a
+tolerance of 1e-3. Geometry violations emit warnings; the supplied pose is still
+applied.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="superdex.physics.prefab.RodPose.node_displacements">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">node_displacements</span></span><a class="headerlink" href="#superdex.physics.prefab.RodPose.node_displacements" title="Permalink to this definition"></a></dt>
+<dd><p>Node displacements relative to the rest node positions, flattened as [x0, y0,
+z0, x1, y1, z1, …]. Must contain 3 finite values per node.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
 <dt class="sig sig-object py" id="superdex.physics.prefab.SoftActorPrefab">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">SoftActorPrefab</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#superdex.physics.prefab.SoftActorPrefab" title="Permalink to this definition"></a></dt>
 <dd><p>Bases: <a class="reference internal" href="physics.html#superdex.physics.SoftActorParams" title="superdex.physics.SoftActorParams"><code class="xref py py-class docutils literal notranslate"><span class="pre">SoftActorParams</span></code></a></p>
@@ -865,6 +1082,11 @@ references.</p>
 <p class="admonition-title">Note</p>
 <p>Determines how OTHER actors detect contact with this actor. It does not
 affect how this actor detects contact with other actors.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Only <a class="reference internal" href="physics.html#superdex.physics.ColliderType" title="superdex.physics.ColliderType"><code class="xref py py-class docutils literal notranslate"><span class="pre">NONE</span></code></a> is supported when used in
+<a class="reference internal" href="#superdex.physics.prefab.SoftSkinnedActorPrefab.soft_params" title="superdex.physics.prefab.SoftSkinnedActorPrefab.soft_params"><code class="xref py py-attr docutils literal notranslate"><span class="pre">soft_params</span></code></a>.</p>
 </div>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
@@ -1355,6 +1577,31 @@ is empty.</p>
 <a class="reference internal" href="physics.html#superdex.physics.ArticulatedSkinParams.shape" title="superdex.physics.ArticulatedSkinParams.shape"><code class="xref py py-attr docutils literal notranslate"><span class="pre">shape</span></code></a> (a runtime
 <a class="reference internal" href="physics.html#superdex.physics.ShapeHandle" title="superdex.physics.ShapeHandle"><code class="xref py py-class docutils literal notranslate"><span class="pre">ShapeHandle</span></code></a>) is replaced by <a class="reference internal" href="#superdex.physics.prefab.ArticulatedSkinPrefab.shape_file" title="superdex.physics.prefab.ArticulatedSkinPrefab.shape_file"><code class="xref py py-attr docutils literal notranslate"><span class="pre">shape_file</span></code></a> (a
 path serialized to JSON. The shape is loaded at instantiation time).</p>
+<dl class="py property">
+<dt class="sig sig-object py" id="superdex.physics.prefab.ArticulatedSkinPrefab.hidden_links">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">hidden_links</span></span><a class="headerlink" href="#superdex.physics.prefab.ArticulatedSkinPrefab.hidden_links" title="Permalink to this definition"></a></dt>
+<dd><p>Local names of links whose render models the skin’s render model stands in for.</p>
+<p>Visualization tools hide the render models of the listed links wherever they
+draw the skin’s render model.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Unset means the skin’s render model stands in for every link, while an empty
+list means every link keeps its render model. Names that match no link are
+ignored.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Independent of
+<a class="reference internal" href="physics.html#superdex.physics.ArticulatedSkinParams.non_colliding_links" title="superdex.physics.ArticulatedSkinParams.non_colliding_links"><code class="xref py py-attr docutils literal notranslate"><span class="pre">non_colliding_links</span></code></a>.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Ignored if
+<a class="reference internal" href="#superdex.physics.prefab.ArticulatedSkinPrefab.render_model_file" title="superdex.physics.prefab.ArticulatedSkinPrefab.render_model_file"><code class="xref py py-attr docutils literal notranslate"><span class="pre">render_model_file</span></code></a> is
+empty.</p>
+</div>
+</dd></dl>
+
 <dl class="py property">
 <dt class="sig sig-object py" id="superdex.physics.prefab.ArticulatedSkinPrefab.render_model_file">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">render_model_file</span></span><a class="headerlink" href="#superdex.physics.prefab.ArticulatedSkinPrefab.render_model_file" title="Permalink to this definition"></a></dt>
@@ -1888,6 +2135,79 @@ actor, or a name that matches no actor, is invalid and rejected at
 <dt class="sig sig-object py" id="superdex.physics.prefab.RigidSphericalJointConstraintPrefab.actor_name_b">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">actor_name_b</span></span><a class="headerlink" href="#superdex.physics.prefab.RigidSphericalJointConstraintPrefab.actor_name_b" title="Permalink to this definition"></a></dt>
 <dd><p>Name or hierarchy path identifying rigid actor B.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="superdex.physics.prefab.RodElementRotationConstraintPrefab">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">RodElementRotationConstraintPrefab</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#superdex.physics.prefab.RodElementRotationConstraintPrefab" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="physics.html#superdex.physics.RodElementRotationConstraintParams" title="superdex.physics.RodElementRotationConstraintParams"><code class="xref py py-class docutils literal notranslate"><span class="pre">RodElementRotationConstraintParams</span></code></a></p>
+<p>Prefab parameters for a
+<a class="reference internal" href="physics.html#superdex.physics.RodElementRotationConstraintParams" title="superdex.physics.RodElementRotationConstraintParams"><code class="xref py py-class docutils literal notranslate"><span class="pre">RodElementRotationConstraintParams</span></code></a>.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Actor name fields use the same naming convention as
+<a class="reference internal" href="#superdex.physics.prefab.PoseControllerPrefab" title="superdex.physics.prefab.PoseControllerPrefab"><code class="xref py py-class docutils literal notranslate"><span class="pre">PoseControllerPrefab</span></code></a>. “myActor” refers to
+an actor in this prefab. “myPrefab/myActor” refers to an actor in a nested
+prefab.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>A referenced actor name must identify exactly one existing actor. Actor
+names need not be unique, but referencing a name shared by more than one
+actor, or a name that matches no actor, is invalid and rejected at
+<a class="reference internal" href="#superdex.physics.prefab.add_to_scene" title="superdex.physics.prefab.add_to_scene"><code class="xref py py-func docutils literal notranslate"><span class="pre">add_to_scene()</span></code></a>.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><a class="reference internal" href="physics.html#superdex.physics.RodElementRotationConstraintParams.ref_frame_rot_vec" title="superdex.physics.RodElementRotationConstraintParams.ref_frame_rot_vec"><code class="xref py py-attr docutils literal notranslate"><span class="pre">ref_frame_rot_vec</span></code></a>
+is relative to the target rotation, which already includes the prefab
+placement, so the prefab transform does not change it.</p>
+</div>
+<dl class="py property">
+<dt class="sig sig-object py" id="superdex.physics.prefab.RodElementRotationConstraintPrefab.actor_name">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">actor_name</span></span><a class="headerlink" href="#superdex.physics.prefab.RodElementRotationConstraintPrefab.actor_name" title="Permalink to this definition"></a></dt>
+<dd><p>Name or hierarchy path identifying the rod actor.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="superdex.physics.prefab.RodElementRotationToRigidConstraintPrefab">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">RodElementRotationToRigidConstraintPrefab</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#superdex.physics.prefab.RodElementRotationToRigidConstraintPrefab" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="physics.html#superdex.physics.RodElementRotationToRigidConstraintParams" title="superdex.physics.RodElementRotationToRigidConstraintParams"><code class="xref py py-class docutils literal notranslate"><span class="pre">RodElementRotationToRigidConstraintParams</span></code></a></p>
+<p>Prefab parameters for a
+<a class="reference internal" href="physics.html#superdex.physics.RodElementRotationToRigidConstraintParams" title="superdex.physics.RodElementRotationToRigidConstraintParams"><code class="xref py py-class docutils literal notranslate"><span class="pre">RodElementRotationToRigidConstraintParams</span></code></a>.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Actor name fields use the same naming convention as
+<a class="reference internal" href="#superdex.physics.prefab.PoseControllerPrefab" title="superdex.physics.prefab.PoseControllerPrefab"><code class="xref py py-class docutils literal notranslate"><span class="pre">PoseControllerPrefab</span></code></a>. “myActor” refers to
+an actor in this prefab. “myPrefab/myActor” refers to an actor in a nested
+prefab.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>A referenced actor name must identify exactly one existing actor. Actor
+names need not be unique, but referencing a name shared by more than one
+actor, or a name that matches no actor, is invalid and rejected at
+<a class="reference internal" href="#superdex.physics.prefab.add_to_scene" title="superdex.physics.prefab.add_to_scene"><code class="xref py py-func docutils literal notranslate"><span class="pre">add_to_scene()</span></code></a>.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><a class="reference internal" href="physics.html#superdex.physics.RodElementRotationToRigidConstraintParams.ref_frame_rot_vec" title="superdex.physics.RodElementRotationToRigidConstraintParams.ref_frame_rot_vec"><code class="xref py py-attr docutils literal notranslate"><span class="pre">ref_frame_rot_vec</span></code></a>
+is authored in the prefab frame and rotated into world coordinates.</p>
+</div>
+<dl class="py property">
+<dt class="sig sig-object py" id="superdex.physics.prefab.RodElementRotationToRigidConstraintPrefab.rigid_actor_name">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">rigid_actor_name</span></span><a class="headerlink" href="#superdex.physics.prefab.RodElementRotationToRigidConstraintPrefab.rigid_actor_name" title="Permalink to this definition"></a></dt>
+<dd><p>Name or hierarchy path identifying the rigid actor.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="superdex.physics.prefab.RodElementRotationToRigidConstraintPrefab.rod_actor_name">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">rod_actor_name</span></span><a class="headerlink" href="#superdex.physics.prefab.RodElementRotationToRigidConstraintPrefab.rod_actor_name" title="Permalink to this definition"></a></dt>
+<dd><p>Name or hierarchy path identifying the rod actor.</p>
 </dd></dl>
 
 </dd></dl>
@@ -2793,11 +3113,20 @@ cumulative “effective scale” baked into each actor when the prefab is
 instantiated.</p>
 <p>The effective scale is applied to:</p>
 <ul>
-<li><p>Mesh geometry (link / actor shapes are loaded at the cumulative scale)</p></li>
+<li><p>Mesh geometry (link / actor shapes are loaded at the cumulative scale),
+including rod nodes, element frame axes (inverse transpose, then
+renormalized), and rod visual and contact-skin meshes</p></li>
+<li><p>The rod point-cloud collider
+<a class="reference internal" href="physics.html#superdex.physics.PointCloudColliderParams.radius" title="superdex.physics.PointCloudColliderParams.radius"><code class="xref py py-attr docutils literal notranslate"><span class="pre">radius</span></code></a>, by the absolute
+value of the effective scale, which must be uniform for rods with a
+point-cloud collider</p></li>
 <li><p>Joint and link translations, cycle joint anchors</p></li>
 <li><p>Prismatic joint position limits (Real3, in meters)</p></li>
-<li><p>Soft actor <a class="reference internal" href="#superdex.physics.prefab.SoftActorPrefab.node_displacements" title="superdex.physics.prefab.SoftActorPrefab.node_displacements"><code class="xref py py-attr docutils literal notranslate"><span class="pre">node_displacements</span></code></a>
-and translational DoFs of
+<li><p>Soft actor
+<a class="reference internal" href="#superdex.physics.prefab.SoftActorPrefab.node_displacements" title="superdex.physics.prefab.SoftActorPrefab.node_displacements"><code class="xref py py-attr docutils literal notranslate"><span class="pre">node_displacements</span></code></a>, rod actor
+<a class="reference internal" href="#superdex.physics.prefab.RodPose.node_displacements" title="superdex.physics.prefab.RodPose.node_displacements"><code class="xref py py-attr docutils literal notranslate"><span class="pre">node_displacements</span></code></a> (with
+<a class="reference internal" href="#superdex.physics.prefab.RodPose.element_frame_axes" title="superdex.physics.prefab.RodPose.element_frame_axes"><code class="xref py py-attr docutils literal notranslate"><span class="pre">element_frame_axes</span></code></a> transformed like
+the rest frame axes), and translational DoFs of
 <a class="reference internal" href="#superdex.physics.prefab.ArticulatedActorPrefab.joint_pose" title="superdex.physics.prefab.ArticulatedActorPrefab.joint_pose"><code class="xref py py-attr docutils literal notranslate"><span class="pre">joint_pose</span></code></a></p></li>
 <li><p>Constraint geometric target and limit distances [m], including rigid prismatic
 joint limits, world-space position targets, rigid actor-local pivot/joint
@@ -2837,6 +3166,11 @@ from <a class="reference internal" href="physics.html#superdex.physics.Constrain
 constraint’s response, not just geometry: different goals (preserving material
 behavior, damping ratio, actuator limits, or closed-loop response) imply
 different scale laws, so prefab scaling preserves authored values.</p></li>
+<li><p>Rod material and contact parameters
+(<a class="reference internal" href="physics.html#superdex.physics.RodActorParams.material" title="superdex.physics.RodActorParams.material"><code class="xref py py-attr docutils literal notranslate"><span class="pre">material</span></code></a> and
+<a class="reference internal" href="physics.html#superdex.physics.RodActorParams.contact" title="superdex.physics.RodActorParams.contact"><code class="xref py py-attr docutils literal notranslate"><span class="pre">contact</span></code></a>), and the other point-cloud
+collider parameters in
+<a class="reference internal" href="physics.html#superdex.physics.RodActorParams.point_cloud_collider" title="superdex.physics.RodActorParams.point_cloud_collider"><code class="xref py py-attr docutils literal notranslate"><span class="pre">point_cloud_collider</span></code></a></p></li>
 <li><p>Joint inertia, friction, limit stiffness/damping, cycle joint stiffness
 (characterized actuator / tuned-penalty parameters; bring your own actuator
 model when scaling a robot)</p></li>
@@ -3099,18 +3433,20 @@ articulated or soft-skinned actor handle instead.</p>
 <dl class="py property">
 <dt class="sig sig-object py" id="superdex.physics.prefab.ExportParams.export_current_pose">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">export_current_pose</span></span><a class="headerlink" href="#superdex.physics.prefab.ExportParams.export_current_pose" title="Permalink to this definition"></a></dt>
-<dd><p>Whether to export the current pose of soft and articulated actors.</p>
+<dd><p>Whether to export the current pose of soft, articulated, and rod actors.</p>
 <p>When true, the current elastic displacements of soft actors (including nested
 soft actors of soft-skinned actors) are written to
-<a class="reference internal" href="#superdex.physics.prefab.SoftActorPrefab.node_displacements" title="superdex.physics.prefab.SoftActorPrefab.node_displacements"><code class="xref py py-attr docutils literal notranslate"><span class="pre">node_displacements</span></code></a>, and the
-current joint pose of articulated actors (including soft-skinned skeletons) is
-written to <a class="reference internal" href="#superdex.physics.prefab.ArticulatedActorPrefab.joint_pose" title="superdex.physics.prefab.ArticulatedActorPrefab.joint_pose"><code class="xref py py-attr docutils literal notranslate"><span class="pre">joint_pose</span></code></a>.
-Adding the exported prefab to a scene then restores that pose. Actors exactly at
-rest omit these fields.</p>
+<a class="reference internal" href="#superdex.physics.prefab.SoftActorPrefab.node_displacements" title="superdex.physics.prefab.SoftActorPrefab.node_displacements"><code class="xref py py-attr docutils literal notranslate"><span class="pre">node_displacements</span></code></a>, the current
+joint pose of articulated actors (including soft-skinned skeletons) is written
+to <a class="reference internal" href="#superdex.physics.prefab.ArticulatedActorPrefab.joint_pose" title="superdex.physics.prefab.ArticulatedActorPrefab.joint_pose"><code class="xref py py-attr docutils literal notranslate"><span class="pre">joint_pose</span></code></a>, and the
+current node displacements and element frame axes of rod actors are written to
+<a class="reference internal" href="#superdex.physics.prefab.RodActorPrefab.pose" title="superdex.physics.prefab.RodActorPrefab.pose"><code class="xref py py-attr docutils literal notranslate"><span class="pre">pose</span></code></a>. Adding the exported prefab
+to a scene then restores that pose. Actors exactly at rest omit these fields.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>When false (the default), soft displacement and articulated joint pose
-fields are omitted. Actor transforms are exported regardless of this option.</p>
+<p>When false (the default), soft displacement, articulated joint pose, and rod
+pose fields are omitted. Actor transforms are exported regardless of this
+option.</p>
 </div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
@@ -3118,7 +3454,7 @@ fields are omitted. Actor transforms are exported regardless of this option.</p>
 </div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>Velocities (soft nodal and articulated joint) are never exported.</p>
+<p>Velocities (soft nodal, articulated joint, and rod) are never exported.</p>
 </div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
@@ -3185,8 +3521,8 @@ referenced from the prefab using “./generated_assets/” paths.</p>
 </div>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
-<p>Only supported for standalone rigid actors, standalone soft actors, and
-articulated actors. Soft-skinned actors are not supported.</p>
+<p>Only supported for standalone rigid actors, standalone soft actors,
+articulated actors, and rod actors. Soft-skinned actors are not supported.</p>
 </div>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
@@ -3279,14 +3615,14 @@ trip of any prefab used to create the scene.</p>
 </div>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
-<p>Currently exports only rigid, soft, articulated, and soft-skinned actors.
-Constraints, pose controllers, shell, rod actors, and implicit (non-mesh)
+<p>Currently exports only rigid, soft, articulated, soft-skinned, and rod
+actors. Constraints, pose controllers, shell actors, and implicit (non-mesh)
 shapes are NOT exported.</p>
 </div>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
-<p>Velocities are NOT exported. Soft actor displacements and articulated joint
-poses are exported only when
+<p>Velocities are NOT exported. Soft actor displacements, articulated joint
+poses, and rod poses are exported only when
 <a class="reference internal" href="#superdex.physics.prefab.ExportParams.export_current_pose" title="superdex.physics.prefab.ExportParams.export_current_pose"><code class="xref py py-attr docutils literal notranslate"><span class="pre">export_current_pose</span></code></a> is true.</p>
 </div>
 <div class="admonition warning">
@@ -4717,6 +5053,177 @@ external synchronization if any access mutates the array or its exported storage
 </dd></dl>
 
 <dl class="py class">
+<dt class="sig sig-object py" id="superdex.physics.prefab.DynamicArrayRodActorPrefab">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">DynamicArrayRodActorPrefab</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#superdex.physics.prefab.DynamicArrayRodActorPrefab" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A resizable array with contiguous storage.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Instances are not thread-safe. Concurrent access to the same instance requires
+external synchronization if any access mutates the array or its exported storage.</p>
+</div>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.physics.prefab.DynamicArrayRodActorPrefab.append">
+<span class="sig-name descname"><span class="pre">append</span></span><a class="headerlink" href="#superdex.physics.prefab.DynamicArrayRodActorPrefab.append" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.physics.prefab.DynamicArrayRodActorPrefab.capacity">
+<span class="sig-name descname"><span class="pre">capacity</span></span><a class="headerlink" href="#superdex.physics.prefab.DynamicArrayRodActorPrefab.capacity" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.physics.prefab.DynamicArrayRodActorPrefab.clear">
+<span class="sig-name descname"><span class="pre">clear</span></span><a class="headerlink" href="#superdex.physics.prefab.DynamicArrayRodActorPrefab.clear" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.physics.prefab.DynamicArrayRodActorPrefab.empty">
+<span class="sig-name descname"><span class="pre">empty</span></span><a class="headerlink" href="#superdex.physics.prefab.DynamicArrayRodActorPrefab.empty" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.physics.prefab.DynamicArrayRodActorPrefab.extend">
+<span class="sig-name descname"><span class="pre">extend</span></span><a class="headerlink" href="#superdex.physics.prefab.DynamicArrayRodActorPrefab.extend" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.physics.prefab.DynamicArrayRodActorPrefab.reserve">
+<span class="sig-name descname"><span class="pre">reserve</span></span><a class="headerlink" href="#superdex.physics.prefab.DynamicArrayRodActorPrefab.reserve" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.physics.prefab.DynamicArrayRodActorPrefab.resize">
+<span class="sig-name descname"><span class="pre">resize</span></span><a class="headerlink" href="#superdex.physics.prefab.DynamicArrayRodActorPrefab.resize" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.physics.prefab.DynamicArrayRodActorPrefab.size">
+<span class="sig-name descname"><span class="pre">size</span></span><a class="headerlink" href="#superdex.physics.prefab.DynamicArrayRodActorPrefab.size" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.physics.prefab.DynamicArrayRodActorPrefab.tolist">
+<span class="sig-name descname"><span class="pre">tolist</span></span><a class="headerlink" href="#superdex.physics.prefab.DynamicArrayRodActorPrefab.tolist" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="superdex.physics.prefab.DynamicArrayRodElementRotationConstraintPrefab">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">DynamicArrayRodElementRotationConstraintPrefab</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#superdex.physics.prefab.DynamicArrayRodElementRotationConstraintPrefab" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A resizable array with contiguous storage.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Instances are not thread-safe. Concurrent access to the same instance requires
+external synchronization if any access mutates the array or its exported storage.</p>
+</div>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.physics.prefab.DynamicArrayRodElementRotationConstraintPrefab.append">
+<span class="sig-name descname"><span class="pre">append</span></span><a class="headerlink" href="#superdex.physics.prefab.DynamicArrayRodElementRotationConstraintPrefab.append" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.physics.prefab.DynamicArrayRodElementRotationConstraintPrefab.capacity">
+<span class="sig-name descname"><span class="pre">capacity</span></span><a class="headerlink" href="#superdex.physics.prefab.DynamicArrayRodElementRotationConstraintPrefab.capacity" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.physics.prefab.DynamicArrayRodElementRotationConstraintPrefab.clear">
+<span class="sig-name descname"><span class="pre">clear</span></span><a class="headerlink" href="#superdex.physics.prefab.DynamicArrayRodElementRotationConstraintPrefab.clear" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.physics.prefab.DynamicArrayRodElementRotationConstraintPrefab.empty">
+<span class="sig-name descname"><span class="pre">empty</span></span><a class="headerlink" href="#superdex.physics.prefab.DynamicArrayRodElementRotationConstraintPrefab.empty" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.physics.prefab.DynamicArrayRodElementRotationConstraintPrefab.extend">
+<span class="sig-name descname"><span class="pre">extend</span></span><a class="headerlink" href="#superdex.physics.prefab.DynamicArrayRodElementRotationConstraintPrefab.extend" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.physics.prefab.DynamicArrayRodElementRotationConstraintPrefab.reserve">
+<span class="sig-name descname"><span class="pre">reserve</span></span><a class="headerlink" href="#superdex.physics.prefab.DynamicArrayRodElementRotationConstraintPrefab.reserve" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.physics.prefab.DynamicArrayRodElementRotationConstraintPrefab.resize">
+<span class="sig-name descname"><span class="pre">resize</span></span><a class="headerlink" href="#superdex.physics.prefab.DynamicArrayRodElementRotationConstraintPrefab.resize" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.physics.prefab.DynamicArrayRodElementRotationConstraintPrefab.size">
+<span class="sig-name descname"><span class="pre">size</span></span><a class="headerlink" href="#superdex.physics.prefab.DynamicArrayRodElementRotationConstraintPrefab.size" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.physics.prefab.DynamicArrayRodElementRotationConstraintPrefab.tolist">
+<span class="sig-name descname"><span class="pre">tolist</span></span><a class="headerlink" href="#superdex.physics.prefab.DynamicArrayRodElementRotationConstraintPrefab.tolist" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="superdex.physics.prefab.DynamicArrayRodElementRotationToRigidConstraintPrefab">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">DynamicArrayRodElementRotationToRigidConstraintPrefab</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#superdex.physics.prefab.DynamicArrayRodElementRotationToRigidConstraintPrefab" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A resizable array with contiguous storage.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Instances are not thread-safe. Concurrent access to the same instance requires
+external synchronization if any access mutates the array or its exported storage.</p>
+</div>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.physics.prefab.DynamicArrayRodElementRotationToRigidConstraintPrefab.append">
+<span class="sig-name descname"><span class="pre">append</span></span><a class="headerlink" href="#superdex.physics.prefab.DynamicArrayRodElementRotationToRigidConstraintPrefab.append" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.physics.prefab.DynamicArrayRodElementRotationToRigidConstraintPrefab.capacity">
+<span class="sig-name descname"><span class="pre">capacity</span></span><a class="headerlink" href="#superdex.physics.prefab.DynamicArrayRodElementRotationToRigidConstraintPrefab.capacity" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.physics.prefab.DynamicArrayRodElementRotationToRigidConstraintPrefab.clear">
+<span class="sig-name descname"><span class="pre">clear</span></span><a class="headerlink" href="#superdex.physics.prefab.DynamicArrayRodElementRotationToRigidConstraintPrefab.clear" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.physics.prefab.DynamicArrayRodElementRotationToRigidConstraintPrefab.empty">
+<span class="sig-name descname"><span class="pre">empty</span></span><a class="headerlink" href="#superdex.physics.prefab.DynamicArrayRodElementRotationToRigidConstraintPrefab.empty" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.physics.prefab.DynamicArrayRodElementRotationToRigidConstraintPrefab.extend">
+<span class="sig-name descname"><span class="pre">extend</span></span><a class="headerlink" href="#superdex.physics.prefab.DynamicArrayRodElementRotationToRigidConstraintPrefab.extend" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.physics.prefab.DynamicArrayRodElementRotationToRigidConstraintPrefab.reserve">
+<span class="sig-name descname"><span class="pre">reserve</span></span><a class="headerlink" href="#superdex.physics.prefab.DynamicArrayRodElementRotationToRigidConstraintPrefab.reserve" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.physics.prefab.DynamicArrayRodElementRotationToRigidConstraintPrefab.resize">
+<span class="sig-name descname"><span class="pre">resize</span></span><a class="headerlink" href="#superdex.physics.prefab.DynamicArrayRodElementRotationToRigidConstraintPrefab.resize" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.physics.prefab.DynamicArrayRodElementRotationToRigidConstraintPrefab.size">
+<span class="sig-name descname"><span class="pre">size</span></span><a class="headerlink" href="#superdex.physics.prefab.DynamicArrayRodElementRotationToRigidConstraintPrefab.size" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.physics.prefab.DynamicArrayRodElementRotationToRigidConstraintPrefab.tolist">
+<span class="sig-name descname"><span class="pre">tolist</span></span><a class="headerlink" href="#superdex.physics.prefab.DynamicArrayRodElementRotationToRigidConstraintPrefab.tolist" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
 <dt class="sig sig-object py" id="superdex.physics.prefab.DynamicArraySoftActorPrefab">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">DynamicArraySoftActorPrefab</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#superdex.physics.prefab.DynamicArraySoftActorPrefab" title="Permalink to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
@@ -4828,6 +5335,57 @@ external synchronization if any access mutates the array or its exported storage
 <span class="sig-name descname"><span class="pre">tolist</span></span><a class="headerlink" href="#superdex.physics.prefab.DynamicArraySoftSkinnedActorPrefab.tolist" title="Permalink to this definition"></a></dt>
 <dd></dd></dl>
 
+</dd></dl>
+
+</section>
+<section id="not-yet-categorized">
+<h2>Not Yet Categorized<a class="headerlink" href="#not-yet-categorized" title="Permalink to this heading"></a></h2>
+<p>Public symbols that are not yet grouped into a section above.</p>
+<dl class="py data">
+<dt class="sig sig-object py" id="superdex.physics.prefab.scale_articulated_actor_params">
+<span class="sig-name descname"><span class="pre">scale_articulated_actor_params</span></span><a class="headerlink" href="#superdex.physics.prefab.scale_articulated_actor_params" title="Permalink to this definition"></a></dt>
+<dd><p>superdex.physics.ArticulatedActorParams, scale: float) -&gt; None</p>
+<p>Uniformly scale the geometry of articulated actor params in place, as
+instantiating an <a class="reference internal" href="#superdex.physics.prefab.ArticulatedActorPrefab" title="superdex.physics.prefab.ArticulatedActorPrefab"><code class="xref py py-class docutils literal notranslate"><span class="pre">ArticulatedActorPrefab</span></code></a> at a
+uniform <a class="reference internal" href="#superdex.physics.prefab.ArticulatedActorPrefab.scale" title="superdex.physics.prefab.ArticulatedActorPrefab.scale"><code class="xref py py-attr docutils literal notranslate"><span class="pre">scale</span></code></a> does.</p>
+<p>Scales the translations of
+<a class="reference internal" href="physics.html#superdex.physics.ArticulatedJointParams.parent_link_from_joint" title="superdex.physics.ArticulatedJointParams.parent_link_from_joint"><code class="xref py py-attr docutils literal notranslate"><span class="pre">parent_link_from_joint</span></code></a>,
+<a class="reference internal" href="physics.html#superdex.physics.ArticulatedLinkParams.parent_joint_from_link" title="superdex.physics.ArticulatedLinkParams.parent_joint_from_link"><code class="xref py py-attr docutils literal notranslate"><span class="pre">parent_joint_from_link</span></code></a> and
+<a class="reference internal" href="physics.html#superdex.physics.ArticulatedCycleJointParams.joint_from_child_link" title="superdex.physics.ArticulatedCycleJointParams.joint_from_child_link"><code class="xref py py-attr docutils literal notranslate"><span class="pre">joint_from_child_link</span></code></a>, and
+the limits of prismatic joints. Explicit link inertia scales as a solid of
+constant density: <a class="reference internal" href="physics.html#superdex.physics.ArticulatedLinkParams.center_of_mass" title="superdex.physics.ArticulatedLinkParams.center_of_mass"><code class="xref py py-attr docutils literal notranslate"><span class="pre">center_of_mass</span></code></a>
+by scale, <a class="reference internal" href="physics.html#superdex.physics.ArticulatedLinkParams.mass" title="superdex.physics.ArticulatedLinkParams.mass"><code class="xref py py-attr docutils literal notranslate"><span class="pre">mass</span></code></a> by scale^3 and
+<a class="reference internal" href="physics.html#superdex.physics.ArticulatedLinkParams.moment_of_inertia" title="superdex.physics.ArticulatedLinkParams.moment_of_inertia"><code class="xref py py-attr docutils literal notranslate"><span class="pre">moment_of_inertia</span></code></a> by scale^5.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>params</strong> (<a class="reference internal" href="physics.html#superdex.physics.ArticulatedActorParams" title="superdex.physics.ArticulatedActorParams"><em>ArticulatedActorParams</em></a>) – The params to scale.</p></li>
+<li><p><strong>scale</strong> (<em>float</em>) – The uniform scale factor. Must be strictly positive and
+finite.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="physics.html#superdex.physics.Error" title="superdex.physics.Error"><strong>Error</strong></a> – If an error occurs.</p>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Shapes are not modified: bake the scale into the link and skin shapes when
+creating them. Rotations, joint limits of rotational joints, gains,
+friction, stiffnesses and joint inertia
+(<a class="reference internal" href="physics.html#superdex.physics.ArticulatedJointParams.inertia" title="superdex.physics.ArticulatedJointParams.inertia"><code class="xref py py-attr docutils literal notranslate"><span class="pre">inertia</span></code></a>) are unchanged.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><a class="reference internal" href="physics.html#superdex.physics.ArticulatedActorParams.joint_velocities" title="superdex.physics.ArticulatedActorParams.joint_velocities"><code class="xref py py-attr docutils literal notranslate"><span class="pre">joint_velocities</span></code></a> is not
+modified either, so the translational DoFs of the initial velocities stay in
+unscaled units.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>scale_articulated_actor_params(params</p>
+</dd>
+</dl>
 </dd></dl>
 
 </section>

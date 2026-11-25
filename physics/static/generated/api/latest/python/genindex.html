@@ -131,6 +131,7 @@
 <li class="toctree-l2"><a class="reference internal" href="api/prefab.html#instantiation">Instantiation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="api/prefab.html#serialization-export">Serialization &amp; Export</a></li>
 <li class="toctree-l2"><a class="reference internal" href="api/prefab.html#containers">Containers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/prefab.html#not-yet-categorized">Not Yet Categorized</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="api/models.html">Models &amp; Meshes</a><ul>
@@ -283,6 +284,8 @@
 </li>
         <li><a href="api/physics.html#superdex.physics.RigidPivotToRigidTargetConstraintParams.actor">(RigidPivotToRigidTargetConstraintParams property)</a>
 </li>
+        <li><a href="api/physics.html#superdex.physics.RodElementRotationConstraintParams.actor">(RodElementRotationConstraintParams property)</a>
+</li>
       </ul></li>
       <li><a href="api/physics.html#superdex.physics.ContactPoint.actor_a">actor_a (ContactPoint property)</a>
 
@@ -332,6 +335,8 @@
         <li><a href="api/prefab.html#superdex.physics.prefab.RigidPivotRotationConstraintPrefab.actor_name">(RigidPivotRotationConstraintPrefab property)</a>
 </li>
         <li><a href="api/prefab.html#superdex.physics.prefab.RigidPivotToRigidTargetConstraintPrefab.actor_name">(RigidPivotToRigidTargetConstraintPrefab property)</a>
+</li>
+        <li><a href="api/prefab.html#superdex.physics.prefab.RodElementRotationConstraintPrefab.actor_name">(RodElementRotationConstraintPrefab property)</a>
 </li>
       </ul></li>
       <li><a href="api/prefab.html#superdex.physics.prefab.DeformableNodeToDeformableNodeConstraintPrefab.actor_name_a">actor_name_a (DeformableNodeToDeformableNodeConstraintPrefab property)</a>
@@ -386,6 +391,8 @@
 </li>
       <li><a href="api/models.html#superdex.physics.mesh.SurfaceRemeshingParams.acvd_gradation_factor">acvd_gradation_factor (SurfaceRemeshingParams property)</a>
 </li>
+      <li><a href="api/physics.html#superdex.physics.PreconditionerType.ADAPTIVE_PER_ACTOR">ADAPTIVE_PER_ACTOR (PreconditionerType attribute)</a>
+</li>
       <li><a href="api/models.html#superdex.physics.mesh.SurfaceRemeshingParams.adaptive_sizing_tolerance">adaptive_sizing_tolerance (SurfaceRemeshingParams property)</a>
 </li>
       <li><a href="api/viewer.html#superdex.physics.viewer.utils.AnimationWriter.add">add() (AnimationWriter method)</a>
@@ -429,6 +436,8 @@
       <li><a href="api/viewer.html#superdex.physics.viewer.Viewer.add_ui_tab">add_ui_tab() (Viewer method)</a>
 </li>
       <li><a href="api/prefab.html#superdex.physics.prefab.AddToSceneResult">AddToSceneResult (class in superdex.physics.prefab)</a>
+</li>
+      <li><a href="api/physics.html#superdex.physics.ContactParams.alignment_smoothing_fraction">alignment_smoothing_fraction (ContactParams property)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.SaturationHessianParams.all">all (SaturationHessianParams attribute)</a>
 </li>
@@ -486,8 +495,6 @@
         <li><a href="api/physics.html#superdex.physics.PerElementSoftMaterialDataView.aniso_theta">(PerElementSoftMaterialDataView property)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/physics.html#superdex.physics.DynamicArrayActor.append">append (DynamicArrayActor attribute)</a>
 
       <ul>
@@ -547,6 +554,8 @@
 </li>
         <li><a href="api/physics.html#superdex.physics.DynamicArrayInt.append">(DynamicArrayInt attribute)</a>
 </li>
+        <li><a href="api/physics.html#superdex.physics.DynamicArrayInt64.append">(DynamicArrayInt64 attribute)</a>
+</li>
         <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayJointRotationRangeConstraintPrefab.append">(DynamicArrayJointRotationRangeConstraintPrefab attribute)</a>
 </li>
         <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayJointRotationTrackingConstraintPrefab.append">(DynamicArrayJointRotationTrackingConstraintPrefab attribute)</a>
@@ -581,6 +590,12 @@
 </li>
         <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayRigidSphericalJointConstraintPrefab.append">(DynamicArrayRigidSphericalJointConstraintPrefab attribute)</a>
 </li>
+        <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayRodActorPrefab.append">(DynamicArrayRodActorPrefab attribute)</a>
+</li>
+        <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayRodElementRotationConstraintPrefab.append">(DynamicArrayRodElementRotationConstraintPrefab attribute)</a>
+</li>
+        <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayRodElementRotationToRigidConstraintPrefab.append">(DynamicArrayRodElementRotationToRigidConstraintPrefab attribute)</a>
+</li>
         <li><a href="api/physics.html#superdex.physics.DynamicArrayRoutingElement.append">(DynamicArrayRoutingElement attribute)</a>
 </li>
         <li><a href="api/physics.html#superdex.physics.DynamicArraySoftActorParams.append">(DynamicArraySoftActorParams attribute)</a>
@@ -596,7 +611,11 @@
         <li><a href="api/physics.html#superdex.physics.DynamicArrayUint8.append">(DynamicArrayUint8 attribute)</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/utilities.html#superdex.physics.utils.transformations.apply_affine_transform">apply_affine_transform() (in module superdex.physics.utils.transformations)</a>
+</li>
+      <li><a href="api/scene_setup.html#superdex.physics.utils.scene_helpers.apply_asset_snapshot">apply_asset_snapshot() (in module superdex.physics.utils.scene_helpers)</a>
 </li>
       <li><a href="api/utilities.html#superdex.physics.utils.transformations.apply_linear_map">apply_linear_map() (in module superdex.physics.utils.transformations)</a>
 </li>
@@ -720,6 +739,10 @@
 </li>
       <li><a href="api/viewer.html#superdex.physics.viewer.renderers.AxesRenderer">AxesRenderer (class in superdex.physics.viewer.renderers)</a>
 </li>
+      <li><a href="api/physics.html#superdex.physics.RodMaterialParams.axial_collapse_barrier_scale">axial_collapse_barrier_scale (RodMaterialParams property)</a>
+</li>
+      <li><a href="api/physics.html#superdex.physics.RodMaterialParams.axial_stiffness">axial_stiffness (RodMaterialParams property)</a>
+</li>
       <li><a href="api/physics.html#superdex.physics.ArticulatedJointParams.axis">axis (ArticulatedJointParams property)</a>
 </li>
       <li><a href="api/utilities.html#superdex.physics.utils.coordinate_systems.Axis">Axis (class in superdex.physics.utils.coordinate_systems)</a>
@@ -830,8 +853,6 @@
 <h2 id="C">C</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api/physics.html#superdex.physics.CoulombFrictionModel.C1_REGULARIZED">C1_REGULARIZED (CoulombFrictionModel attribute)</a>
-</li>
       <li><a href="api/physics.html#superdex.physics.CallbackHandle">CallbackHandle (class in superdex.physics)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.Scene.cancel_callback">cancel_callback (Scene attribute)</a>
@@ -903,6 +924,8 @@
 </li>
         <li><a href="api/physics.html#superdex.physics.DynamicArrayInt.capacity">(DynamicArrayInt attribute)</a>
 </li>
+        <li><a href="api/physics.html#superdex.physics.DynamicArrayInt64.capacity">(DynamicArrayInt64 attribute)</a>
+</li>
         <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayJointRotationRangeConstraintPrefab.capacity">(DynamicArrayJointRotationRangeConstraintPrefab attribute)</a>
 </li>
         <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayJointRotationTrackingConstraintPrefab.capacity">(DynamicArrayJointRotationTrackingConstraintPrefab attribute)</a>
@@ -937,6 +960,12 @@
 </li>
         <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayRigidSphericalJointConstraintPrefab.capacity">(DynamicArrayRigidSphericalJointConstraintPrefab attribute)</a>
 </li>
+        <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayRodActorPrefab.capacity">(DynamicArrayRodActorPrefab attribute)</a>
+</li>
+        <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayRodElementRotationConstraintPrefab.capacity">(DynamicArrayRodElementRotationConstraintPrefab attribute)</a>
+</li>
+        <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayRodElementRotationToRigidConstraintPrefab.capacity">(DynamicArrayRodElementRotationToRigidConstraintPrefab attribute)</a>
+</li>
         <li><a href="api/physics.html#superdex.physics.DynamicArrayRoutingElement.capacity">(DynamicArrayRoutingElement attribute)</a>
 </li>
         <li><a href="api/physics.html#superdex.physics.DynamicArraySoftActorParams.capacity">(DynamicArraySoftActorParams attribute)</a>
@@ -957,6 +986,8 @@
       <li><a href="api/physics.html#superdex.physics.Scene.capture_state_to_bytes">capture_state_to_bytes (Scene attribute)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.Scene.capture_state_to_file">capture_state_to_file (Scene attribute)</a>
+</li>
+      <li><a href="api/models.html#superdex.physics.mesh.TetrahedralizationParams.cell_radius_edge_ratio">cell_radius_edge_ratio (TetrahedralizationParams property)</a>
 </li>
       <li><a href="api/viewer.html#superdex.physics.viewer.utils.AABB.center">center (AABB property)</a>
 
@@ -979,8 +1010,6 @@
       <li><a href="api/physics.html#superdex.physics.ArticulatedCycleJoint.child">child (ArticulatedCycleJoint property)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.ArticulatedCycleJointParams.child_link">child_link (ArticulatedCycleJointParams property)</a>
-</li>
-      <li><a href="api/physics.html#superdex.physics.CoulombFrictionModel.CINF_REGULARIZED">CINF_REGULARIZED (CoulombFrictionModel attribute)</a>
 </li>
       <li><a href="api/viewer.html#superdex.physics.viewer.renderers.MeshRenderer.Material.CLAY">CLAY (MeshRenderer.Material attribute)</a>
 </li>
@@ -1043,6 +1072,8 @@
 </li>
         <li><a href="api/physics.html#superdex.physics.DynamicArrayInt.clear">(DynamicArrayInt attribute)</a>
 </li>
+        <li><a href="api/physics.html#superdex.physics.DynamicArrayInt64.clear">(DynamicArrayInt64 attribute)</a>
+</li>
         <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayJointRotationRangeConstraintPrefab.clear">(DynamicArrayJointRotationRangeConstraintPrefab attribute)</a>
 </li>
         <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayJointRotationTrackingConstraintPrefab.clear">(DynamicArrayJointRotationTrackingConstraintPrefab attribute)</a>
@@ -1077,6 +1108,12 @@
 </li>
         <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayRigidSphericalJointConstraintPrefab.clear">(DynamicArrayRigidSphericalJointConstraintPrefab attribute)</a>
 </li>
+        <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayRodActorPrefab.clear">(DynamicArrayRodActorPrefab attribute)</a>
+</li>
+        <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayRodElementRotationConstraintPrefab.clear">(DynamicArrayRodElementRotationConstraintPrefab attribute)</a>
+</li>
+        <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayRodElementRotationToRigidConstraintPrefab.clear">(DynamicArrayRodElementRotationToRigidConstraintPrefab attribute)</a>
+</li>
         <li><a href="api/physics.html#superdex.physics.DynamicArrayRoutingElement.clear">(DynamicArrayRoutingElement attribute)</a>
 </li>
         <li><a href="api/physics.html#superdex.physics.DynamicArraySoftActorParams.clear">(DynamicArraySoftActorParams attribute)</a>
@@ -1092,6 +1129,8 @@
         <li><a href="api/physics.html#superdex.physics.DynamicArrayUint8.clear">(DynamicArrayUint8 attribute)</a>
 </li>
       </ul></li>
+      <li><a href="api/scene_setup.html#superdex.physics.utils.scene_helpers.clear_asset_snapshot">clear_asset_snapshot() (in module superdex.physics.utils.scene_helpers)</a>
+</li>
       <li><a href="api/physics.html#superdex.physics.Actor.clear_boundary_conditions">clear_boundary_conditions (Actor attribute)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.Scene.clear_contact_pair_params_override">clear_contact_pair_params_override (Scene attribute)</a>
@@ -1110,19 +1149,27 @@
 </li>
       <li><a href="api/physics.html#superdex.physics.RoutingElement.coefficient">coefficient (RoutingElement property)</a>
 </li>
+      <li><a href="api/physics.html#superdex.physics.PointCloudColliderParams.collider_segment_element_type">collider_segment_element_type (PointCloudColliderParams property)</a>
+</li>
+      <li><a href="api/physics.html#superdex.physics.PointCloudColliderParams.collider_triangle_element_type">collider_triangle_element_type (PointCloudColliderParams property)</a>
+</li>
       <li><a href="api/physics.html#superdex.physics.ArticulatedLinkParams.collider_type">collider_type (ArticulatedLinkParams property)</a>
 
       <ul>
         <li><a href="api/physics.html#superdex.physics.RigidActorParams.collider_type">(RigidActorParams property)</a>
 </li>
+        <li><a href="api/physics.html#superdex.physics.RodActorParams.collider_type">(RodActorParams property)</a>
+</li>
         <li><a href="api/prefab.html#superdex.physics.prefab.SoftActorPrefab.collider_type">(SoftActorPrefab property)</a>
 </li>
       </ul></li>
-      <li><a href="api/physics.html#superdex.physics.ColliderType">ColliderType (class in superdex.physics)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/physics.html#superdex.physics.ColliderType">ColliderType (class in superdex.physics)</a>
+</li>
       <li><a href="api/physics.html#superdex.physics.ContactParams.colliding_penalty_length_scale">colliding_penalty_length_scale (ContactParams property)</a>
+</li>
+      <li><a href="api/physics.html#superdex.physics.ContactParams.colliding_penalty_threshold_padding">colliding_penalty_threshold_padding (ContactParams property)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.Color">Color (class in superdex.physics)</a>
 </li>
@@ -1150,6 +1197,8 @@
         <li><a href="api/prefab.html#superdex.physics.prefab.PrefabReference.comment">(PrefabReference property)</a>
 </li>
         <li><a href="api/prefab.html#superdex.physics.prefab.RigidActorPrefab.comment">(RigidActorPrefab property)</a>
+</li>
+        <li><a href="api/prefab.html#superdex.physics.prefab.RodActorPrefab.comment">(RodActorPrefab property)</a>
 </li>
         <li><a href="api/prefab.html#superdex.physics.prefab.SceneParams.comment">(SceneParams property)</a>
 </li>
@@ -1194,6 +1243,8 @@
         <li><a href="api/physics.html#superdex.physics.ModelDataView.constrained_nodes">(ModelDataView property)</a>
 </li>
       </ul></li>
+      <li><a href="api/models.html#superdex.physics.mesh.ConstrainedTetrahedralizationParams">ConstrainedTetrahedralizationParams (class in superdex.physics.mesh)</a>
+</li>
       <li><a href="api/physics.html#superdex.physics.Constraint">Constraint (class in superdex.physics)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.QueryType.CONSTRAINT_FORCE">CONSTRAINT_FORCE (QueryType attribute)</a>
@@ -1221,9 +1272,13 @@
 </li>
         <li><a href="api/physics.html#superdex.physics.RigidActorParams.contact">(RigidActorParams property)</a>
 </li>
+        <li><a href="api/physics.html#superdex.physics.RodActorParams.contact">(RodActorParams property)</a>
+</li>
         <li><a href="api/physics.html#superdex.physics.SoftActorParams.contact">(SoftActorParams property)</a>
 </li>
       </ul></li>
+      <li><a href="api/physics.html#superdex.physics.RodActorParams.contact_element_type">contact_element_type (RodActorParams property)</a>
+</li>
       <li><a href="api/prefab.html#superdex.physics.prefab.ScenePrefab.contact_filter">contact_filter (ScenePrefab property)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.SaturationHessianParams.contact_friction">contact_friction (SaturationHessianParams property)</a>
@@ -1231,6 +1286,8 @@
       <li><a href="api/prefab.html#superdex.physics.prefab.ScenePrefab.contact_pair_params_overrides">contact_pair_params_overrides (ScenePrefab property)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.QueryType.CONTACT_POINTS">CONTACT_POINTS (QueryType attribute)</a>
+</li>
+      <li><a href="api/physics.html#superdex.physics.RodActorParams.contact_skin_element_type">contact_skin_element_type (RodActorParams property)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.ModelData.contact_skin_mesh">contact_skin_mesh (ModelData property)</a>
 
@@ -1294,8 +1351,6 @@
         <li><a href="api/physics.html#superdex.physics.ContactParams.coulomb_friction_coefficient">(ContactParams property)</a>
 </li>
       </ul></li>
-      <li><a href="api/physics.html#superdex.physics.CoulombFrictionModel">CoulombFrictionModel (class in superdex.physics)</a>
-</li>
       <li><a href="api/physics.html#superdex.physics.ActorBoundaryElementType.COUNT">COUNT (ActorBoundaryElementType attribute)</a>
 
       <ul>
@@ -1310,8 +1365,6 @@
         <li><a href="api/physics.html#superdex.physics.ConstraintType.COUNT">(ConstraintType attribute)</a>
 </li>
         <li><a href="api/physics.html#superdex.physics.ConvergenceStatus.COUNT">(ConvergenceStatus attribute)</a>
-</li>
-        <li><a href="api/physics.html#superdex.physics.CoulombFrictionModel.COUNT">(CoulombFrictionModel attribute)</a>
 </li>
         <li><a href="api/physics.html#superdex.physics.GridSdfResolutionMode.COUNT">(GridSdfResolutionMode attribute)</a>
 </li>
@@ -1389,6 +1442,10 @@
       <li><a href="api/physics.html#superdex.physics.Scene.create_rigid_prismatic_joint_constraint">create_rigid_prismatic_joint_constraint (Scene attribute)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.Scene.create_rigid_spherical_joint_constraint">create_rigid_spherical_joint_constraint (Scene attribute)</a>
+</li>
+      <li><a href="api/physics.html#superdex.physics.Scene.create_rod_actor">create_rod_actor (Scene attribute)</a>
+</li>
+      <li><a href="api/physics.html#superdex.physics.Scene.create_rod_element_rotation_constraint">create_rod_element_rotation_constraint (Scene attribute)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.Scene.create_rod_element_rotation_to_rigid_constraint">create_rod_element_rotation_to_rigid_constraint (Scene attribute)</a>
 </li>
@@ -1471,8 +1528,6 @@
       <li><a href="api/physics.html#superdex.physics.CoordinateSpaceAxes.DEFAULT">DEFAULT (CoordinateSpaceAxes attribute)</a>
 
       <ul>
-        <li><a href="api/physics.html#superdex.physics.CoulombFrictionModel.DEFAULT">(CoulombFrictionModel attribute)</a>
-</li>
         <li><a href="api/physics.html#superdex.physics.IntegrationMethod.DEFAULT">(IntegrationMethod attribute)</a>
 </li>
         <li><a href="api/physics.html#superdex.physics.LinearSolverConvergenceNorm.DEFAULT">(LinearSolverConvergenceNorm attribute)</a>
@@ -1557,7 +1612,11 @@
       <li><a href="api/physics.html#superdex.physics.destroy_scene">destroy_scene (in module superdex.physics)</a>
 </li>
       <li><a href="api/models.html#superdex.physics.mesh.SurfaceRemeshingParams.detect_features">detect_features (SurfaceRemeshingParams property)</a>
+
+      <ul>
+        <li><a href="api/models.html#superdex.physics.mesh.TetrahedralizationParams.detect_features">(TetrahedralizationParams property)</a>
 </li>
+      </ul></li>
       <li><a href="api/physics.html#superdex.physics.CoordinateSpaceAxes.DFL">DFL (CoordinateSpaceAxes attribute)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.CoordinateSpaceAxes.DFR">DFR (CoordinateSpaceAxes attribute)</a>
@@ -1578,14 +1637,14 @@
 </li>
       <li><a href="api/physics.html#superdex.physics.IntegrationMethod.DIRK33">DIRK33 (IntegrationMethod attribute)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/physics.html#superdex.physics.ContactPoint.distance">distance (ContactPoint property)</a>
 
       <ul>
         <li><a href="api/physics.html#superdex.physics.Plane.distance">(Plane property)</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/physics.html#superdex.physics.ContactParams.distance_error_bound">distance_error_bound (ContactParams property)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.SdfDistances.distance_grads">distance_grads (SdfDistances property)</a>
@@ -1668,7 +1727,11 @@
 </li>
       <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayDeformableNodeToRigidConstraintPrefab">DynamicArrayDeformableNodeToRigidConstraintPrefab (class in superdex.physics.prefab)</a>
 </li>
+      <li><a href="api/physics.html#superdex.physics.DynamicArrayDynamicString">DynamicArrayDynamicString (in module superdex.physics)</a>
+</li>
       <li><a href="api/physics.html#superdex.physics.DynamicArrayInt">DynamicArrayInt (class in superdex.physics)</a>
+</li>
+      <li><a href="api/physics.html#superdex.physics.DynamicArrayInt64">DynamicArrayInt64 (class in superdex.physics)</a>
 </li>
       <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayJointRotationRangeConstraintPrefab">DynamicArrayJointRotationRangeConstraintPrefab (class in superdex.physics.prefab)</a>
 </li>
@@ -1704,6 +1767,12 @@
 </li>
       <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayRigidSphericalJointConstraintPrefab">DynamicArrayRigidSphericalJointConstraintPrefab (class in superdex.physics.prefab)</a>
 </li>
+      <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayRodActorPrefab">DynamicArrayRodActorPrefab (class in superdex.physics.prefab)</a>
+</li>
+      <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayRodElementRotationConstraintPrefab">DynamicArrayRodElementRotationConstraintPrefab (class in superdex.physics.prefab)</a>
+</li>
+      <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayRodElementRotationToRigidConstraintPrefab">DynamicArrayRodElementRotationToRigidConstraintPrefab (class in superdex.physics.prefab)</a>
+</li>
       <li><a href="api/physics.html#superdex.physics.DynamicArrayRoutingElement">DynamicArrayRoutingElement (class in superdex.physics)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.DynamicArraySoftActorParams">DynamicArraySoftActorParams (class in superdex.physics)</a>
@@ -1726,8 +1795,14 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/models.html#superdex.physics.mesh.MeshStatistics.edge_lengths">edge_lengths (MeshStatistics property)</a>
 </li>
-      <li><a href="api/models.html#superdex.physics.mesh.SurfaceRemeshingParams.edge_size">edge_size (SurfaceRemeshingParams property)</a>
+      <li><a href="api/models.html#superdex.physics.mesh.ConstrainedTetrahedralizationParams.edge_size">edge_size (ConstrainedTetrahedralizationParams property)</a>
+
+      <ul>
+        <li><a href="api/models.html#superdex.physics.mesh.SurfaceRemeshingParams.edge_size">(SurfaceRemeshingParams property)</a>
 </li>
+        <li><a href="api/models.html#superdex.physics.mesh.TetrahedralizationParams.edge_size">(TetrahedralizationParams property)</a>
+</li>
+      </ul></li>
       <li><a href="api/physics.html#superdex.physics.LinearToleranceStrategy.EISENSTAT_WALKER1">EISENSTAT_WALKER1 (LinearToleranceStrategy attribute)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.LinearToleranceStrategy.EISENSTAT_WALKER2">EISENSTAT_WALKER2 (LinearToleranceStrategy attribute)</a>
@@ -1739,10 +1814,14 @@
       <ul>
         <li><a href="api/physics.html#superdex.physics.ModelDataView.element_frame_axes">(ModelDataView property)</a>
 </li>
+        <li><a href="api/prefab.html#superdex.physics.prefab.RodPose.element_frame_axes">(RodPose property)</a>
+</li>
       </ul></li>
       <li><a href="api/physics.html#superdex.physics.ContactPoint.element_index">element_index (ContactPoint property)</a>
 
       <ul>
+        <li><a href="api/physics.html#superdex.physics.RodElementRotationConstraintParams.element_index">(RodElementRotationConstraintParams property)</a>
+</li>
         <li><a href="api/physics.html#superdex.physics.RodElementRotationToRigidConstraintParams.element_index">(RodElementRotationToRigidConstraintParams property)</a>
 </li>
       </ul></li>
@@ -1807,6 +1886,8 @@
 </li>
         <li><a href="api/physics.html#superdex.physics.DynamicArrayInt.empty">(DynamicArrayInt attribute)</a>
 </li>
+        <li><a href="api/physics.html#superdex.physics.DynamicArrayInt64.empty">(DynamicArrayInt64 attribute)</a>
+</li>
         <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayJointRotationRangeConstraintPrefab.empty">(DynamicArrayJointRotationRangeConstraintPrefab attribute)</a>
 </li>
         <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayJointRotationTrackingConstraintPrefab.empty">(DynamicArrayJointRotationTrackingConstraintPrefab attribute)</a>
@@ -1840,6 +1921,12 @@
         <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayRigidPrismaticJointConstraintPrefab.empty">(DynamicArrayRigidPrismaticJointConstraintPrefab attribute)</a>
 </li>
         <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayRigidSphericalJointConstraintPrefab.empty">(DynamicArrayRigidSphericalJointConstraintPrefab attribute)</a>
+</li>
+        <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayRodActorPrefab.empty">(DynamicArrayRodActorPrefab attribute)</a>
+</li>
+        <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayRodElementRotationConstraintPrefab.empty">(DynamicArrayRodElementRotationConstraintPrefab attribute)</a>
+</li>
+        <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayRodElementRotationToRigidConstraintPrefab.empty">(DynamicArrayRodElementRotationToRigidConstraintPrefab attribute)</a>
 </li>
         <li><a href="api/physics.html#superdex.physics.DynamicArrayRoutingElement.empty">(DynamicArrayRoutingElement attribute)</a>
 </li>
@@ -1888,10 +1975,10 @@
 </li>
       <li><a href="api/physics.html#superdex.physics.enable_log_channel">enable_log_channel (in module superdex.physics)</a>
 </li>
-      <li><a href="api/utilities.html#superdex.physics.utils.profiling.Profiler.enabled">enabled (Profiler attribute)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/utilities.html#superdex.physics.utils.profiling.Profiler.enabled">enabled (Profiler attribute)</a>
+</li>
       <li><a href="api/utilities.html#superdex.physics.utils.coordinate_systems.CoordinateTransform.encodes_reflection">encodes_reflection (CoordinateTransform property)</a>
 </li>
       <li><a href="api/prefab.html#superdex.physics.prefab.ensure_fully_loaded">ensure_fully_loaded (in module superdex.physics.prefab)</a>
@@ -2001,6 +2088,8 @@
 </li>
         <li><a href="api/physics.html#superdex.physics.DynamicArrayInt.extend">(DynamicArrayInt attribute)</a>
 </li>
+        <li><a href="api/physics.html#superdex.physics.DynamicArrayInt64.extend">(DynamicArrayInt64 attribute)</a>
+</li>
         <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayJointRotationRangeConstraintPrefab.extend">(DynamicArrayJointRotationRangeConstraintPrefab attribute)</a>
 </li>
         <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayJointRotationTrackingConstraintPrefab.extend">(DynamicArrayJointRotationTrackingConstraintPrefab attribute)</a>
@@ -2035,6 +2124,12 @@
 </li>
         <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayRigidSphericalJointConstraintPrefab.extend">(DynamicArrayRigidSphericalJointConstraintPrefab attribute)</a>
 </li>
+        <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayRodActorPrefab.extend">(DynamicArrayRodActorPrefab attribute)</a>
+</li>
+        <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayRodElementRotationConstraintPrefab.extend">(DynamicArrayRodElementRotationConstraintPrefab attribute)</a>
+</li>
+        <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayRodElementRotationToRigidConstraintPrefab.extend">(DynamicArrayRodElementRotationToRigidConstraintPrefab attribute)</a>
+</li>
         <li><a href="api/physics.html#superdex.physics.DynamicArrayRoutingElement.extend">(DynamicArrayRoutingElement attribute)</a>
 </li>
         <li><a href="api/physics.html#superdex.physics.DynamicArraySoftActorParams.extend">(DynamicArraySoftActorParams attribute)</a>
@@ -2054,6 +2149,8 @@
 </li>
       <li><a href="api/viewer.html#superdex.physics.viewer.utils.AABB.extents">extents (AABB property)</a>
 </li>
+      <li><a href="api/models.html#superdex.physics.mesh.TetrahedralizationParams.exude">exude (TetrahedralizationParams property)</a>
+</li>
   </ul></td>
 </tr></table>
 
@@ -2061,9 +2158,17 @@
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/models.html#superdex.physics.mesh.SurfaceRemeshingParams.facet_angle_bound">facet_angle_bound (SurfaceRemeshingParams property)</a>
+
+      <ul>
+        <li><a href="api/models.html#superdex.physics.mesh.TetrahedralizationParams.facet_angle_bound">(TetrahedralizationParams property)</a>
 </li>
+      </ul></li>
       <li><a href="api/models.html#superdex.physics.mesh.SurfaceRemeshingParams.facet_distance_bound">facet_distance_bound (SurfaceRemeshingParams property)</a>
+
+      <ul>
+        <li><a href="api/models.html#superdex.physics.mesh.TetrahedralizationParams.facet_distance_bound">(TetrahedralizationParams property)</a>
 </li>
+      </ul></li>
       <li><a href="api/physics.html#superdex.physics.ExperimentalEvalParams.fade_friction">fade_friction (ExperimentalEvalParams property)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.ArticulatedJointFrictionParams.falloff_vel">falloff_vel (ArticulatedJointFrictionParams property)</a>
@@ -2098,6 +2203,8 @@
 </li>
       <li><a href="api/physics.html#superdex.physics.CoordinateSpaceAxes.FLD">FLD (CoordinateSpaceAxes attribute)</a>
 </li>
+      <li><a href="api/physics.html#superdex.physics.RodMaterialParams.flexural_stiffness">flexural_stiffness (RodMaterialParams property)</a>
+</li>
       <li><a href="api/models.html#superdex.physics.model.flip_winding_order">flip_winding_order (in module superdex.physics.model)</a>
 </li>
       <li><a href="api/prefab.html#superdex.physics.prefab.SoftActorPrefab.flow">flow (SoftActorPrefab property)</a>
@@ -2106,12 +2213,12 @@
 </li>
       <li><a href="api/physics.html#superdex.physics.CoordinateSpaceAxes.FLU">FLU (CoordinateSpaceAxes attribute)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/viewer.html#superdex.physics.viewer.utils.AnimationWriter.flush">flush() (AnimationWriter method)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.Scene.for_each_actor">for_each_actor (Scene attribute)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/physics.html#superdex.physics.Scene.for_each_constraint">for_each_constraint (Scene attribute)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.ContactPoint.force">force (ContactPoint property)</a>
@@ -2146,8 +2253,6 @@
         <li><a href="api/physics.html#superdex.physics.ContactParams.friction_falloff_vel">(ContactParams property)</a>
 </li>
       </ul></li>
-      <li><a href="api/physics.html#superdex.physics.ExperimentalEvalParams.friction_model">friction_model (ExperimentalEvalParams property)</a>
-</li>
       <li><a href="api/physics.html#superdex.physics.ContactParams.friction_with_collider_normal">friction_with_collider_normal (ContactParams property)</a>
 </li>
       <li><a href="api/viewer.html#superdex.physics.viewer.utils.AABB.from_aabbs">from_aabbs() (AABB static method)</a>
@@ -2422,12 +2527,12 @@
 </li>
       <li><a href="api/physics.html#superdex.physics.Actor.get_mesh">get_mesh (Actor attribute)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/viewer.html#superdex.physics.viewer.Viewer.get_mesh">get_mesh() (Viewer method)</a>
 </li>
       <li><a href="api/viewer.html#superdex.physics.viewer.Viewer.get_meshes">get_meshes() (Viewer method)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/physics.html#superdex.physics.Actor.get_name">get_name (Actor attribute)</a>
 
       <ul>
@@ -2455,6 +2560,8 @@
       <li><a href="api/viewer.html#superdex.physics.viewer.renderers.CurveNetworkRenderer.get_node_radii">get_node_radii() (CurveNetworkRenderer method)</a>
 </li>
       <li><a href="api/viewer.html#superdex.physics.viewer.renderers.MeshRenderer.get_node_radius">get_node_radius() (MeshRenderer method)</a>
+</li>
+      <li><a href="api/physics.html#superdex.physics.Actor.get_node_velocities_local">get_node_velocities_local (Actor attribute)</a>
 </li>
       <li><a href="api/viewer.html#superdex.physics.viewer.renderers.CurveNetworkRenderer.get_nodes">get_nodes() (CurveNetworkRenderer method)</a>
 </li>
@@ -2548,6 +2655,8 @@
 </li>
       <li><a href="api/physics.html#superdex.physics.Actor.get_rigid_moment_of_inertia_local">get_rigid_moment_of_inertia_local (Actor attribute)</a>
 </li>
+      <li><a href="api/physics.html#superdex.physics.Actor.get_rod_pose">get_rod_pose (Actor attribute)</a>
+</li>
       <li><a href="api/physics.html#superdex.physics.Actor.get_root_transform">get_root_transform (Actor attribute)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.ArticulatedDofInfo.get_rot_offset">get_rot_offset (ArticulatedDofInfo attribute)</a>
@@ -2569,6 +2678,8 @@
       <li><a href="api/physics.html#superdex.physics.get_shape_aabb">get_shape_aabb (in module superdex.physics)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.get_shape_contact_skin_mesh">get_shape_contact_skin_mesh (in module superdex.physics)</a>
+</li>
+      <li><a href="api/physics.html#superdex.physics.get_shape_element_frame_axes">get_shape_element_frame_axes (in module superdex.physics)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.get_shape_mesh">get_shape_mesh (in module superdex.physics)</a>
 </li>
@@ -2721,6 +2832,8 @@
       <ul>
         <li><a href="api/physics.html#superdex.physics.RigidActorParams.has_gravity">(RigidActorParams property)</a>
 </li>
+        <li><a href="api/physics.html#superdex.physics.RodActorParams.has_gravity">(RodActorParams property)</a>
+</li>
         <li><a href="api/physics.html#superdex.physics.SoftActorParams.has_gravity">(SoftActorParams property)</a>
 </li>
         <li><a href="api/physics.html#superdex.physics.SoftSkinnedActorParams.has_gravity">(SoftSkinnedActorParams property)</a>
@@ -2751,6 +2864,8 @@
 </li>
       </ul></li>
       <li><a href="api/models.html#superdex.physics.mesh.MeshStatistics.hausdorff_distance">hausdorff_distance (MeshStatistics property)</a>
+</li>
+      <li><a href="api/prefab.html#superdex.physics.prefab.ArticulatedSkinPrefab.hidden_links">hidden_links (ArticulatedSkinPrefab property)</a>
 </li>
       <li><a href="api/utilities.html#superdex.physics.utils.profiling.ProfilerSection.history">history (ProfilerSection attribute)</a>
 </li>
@@ -2908,6 +3023,10 @@
 </li>
       <li><a href="api/physics.html#superdex.physics.is_valid_scene">is_valid_scene (in module superdex.physics)</a>
 </li>
+      <li><a href="api/scene_setup.html#superdex.physics.environment.ISA_ENV_VAR">ISA_ENV_VAR (in module superdex.physics.environment)</a>
+</li>
+      <li><a href="api/models.html#superdex.physics.mesh.ConstrainedTetrahedralizationParams.iterations">iterations (ConstrainedTetrahedralizationParams property)</a>
+</li>
   </ul></td>
 </tr></table>
 
@@ -3009,6 +3128,8 @@
 </li>
         <li><a href="api/physics.html#superdex.physics.RigidActorParams.layer">(RigidActorParams property)</a>
 </li>
+        <li><a href="api/physics.html#superdex.physics.RodActorParams.layer">(RodActorParams property)</a>
+</li>
         <li><a href="api/physics.html#superdex.physics.SoftActorParams.layer">(SoftActorParams property)</a>
 </li>
       </ul></li>
@@ -3041,6 +3162,8 @@
       <li><a href="api/scene_setup.html#superdex.physics.environment.LEGACY_ASSETS_PATH_ENV_VAR">LEGACY_ASSETS_PATH_ENV_VAR (in module superdex.physics.environment)</a>
 </li>
       <li><a href="api/scene_setup.html#superdex.physics.environment.LEGACY_DEBUGGER_PATH_ENV_VAR">LEGACY_DEBUGGER_PATH_ENV_VAR (in module superdex.physics.environment)</a>
+</li>
+      <li><a href="api/scene_setup.html#superdex.physics.environment.LEGACY_ISA_ENV_VAR">LEGACY_ISA_ENV_VAR (in module superdex.physics.environment)</a>
 </li>
       <li><a href="api/scene_setup.html#superdex.physics.environment.LEGACY_LOG_LEVEL_ENV_VAR">LEGACY_LOG_LEVEL_ENV_VAR (in module superdex.physics.environment)</a>
 </li>
@@ -3078,16 +3201,20 @@
 </li>
       <li><a href="api/viewer.html#superdex.physics.viewer.renderers.MeshRenderer.TextureFilter.LINEAR">LINEAR (MeshRenderer.TextureFilter attribute)</a>
 </li>
+      <li><a href="api/physics.html#superdex.physics.RodMaterialParams.linear_density">linear_density (RodMaterialParams property)</a>
+</li>
       <li><a href="api/physics.html#superdex.physics.SoftMaterialParams.linear_elastic">linear_elastic (SoftMaterialParams property)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.SoftMaterialType.LINEAR_ELASTIC">LINEAR_ELASTIC (SoftMaterialType attribute)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.RoutingElementType.LINEAR_JOINT">LINEAR_JOINT (RoutingElementType attribute)</a>
 </li>
-      <li><a href="api/physics.html#superdex.physics.SolverParams.linear_solver">linear_solver (SolverParams property)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/physics.html#superdex.physics.RodMaterialParams.linear_rotational_inertia">linear_rotational_inertia (RodMaterialParams property)</a>
+</li>
+      <li><a href="api/physics.html#superdex.physics.SolverParams.linear_solver">linear_solver (SolverParams property)</a>
+</li>
       <li><a href="api/physics.html#superdex.physics.NonLinearSolverParams.linear_tolerance_strategy">linear_tolerance_strategy (NonLinearSolverParams property)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.RigidActorParams.linear_velocity">linear_velocity (RigidActorParams property)</a>
@@ -3210,14 +3337,20 @@
         <li><a href="api/physics.html#superdex.physics.RigidActorParams.mass">(RigidActorParams property)</a>
 </li>
       </ul></li>
-      <li><a href="api/physics.html#superdex.physics.SoftMaterialParams.mass_damping_coefficient">mass_damping_coefficient (SoftMaterialParams property)</a>
+      <li><a href="api/physics.html#superdex.physics.RodMaterialParams.mass_damping_coefficient">mass_damping_coefficient (RodMaterialParams property)</a>
+
+      <ul>
+        <li><a href="api/physics.html#superdex.physics.SoftMaterialParams.mass_damping_coefficient">(SoftMaterialParams property)</a>
 </li>
+      </ul></li>
       <li><a href="api/viewer.html#superdex.physics.viewer.Viewer.match_plot">match_plot() (Viewer method)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.ModelData.material">material (ModelData property)</a>
 
       <ul>
         <li><a href="api/physics.html#superdex.physics.ModelDataView.material">(ModelDataView property)</a>
+</li>
+        <li><a href="api/physics.html#superdex.physics.RodActorParams.material">(RodActorParams property)</a>
 </li>
         <li><a href="api/physics.html#superdex.physics.SoftActorParams.material">(SoftActorParams property)</a>
 </li>
@@ -3294,10 +3427,10 @@
 </li>
       <li><a href="api/viewer.html#superdex.physics.viewer.renderers.MeshRenderer.Material">MeshRenderer.Material (class in superdex.physics.viewer.renderers)</a>
 </li>
-      <li><a href="api/viewer.html#superdex.physics.viewer.renderers.MeshRenderer.TextureFilter">MeshRenderer.TextureFilter (class in superdex.physics.viewer.renderers)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/viewer.html#superdex.physics.viewer.renderers.MeshRenderer.TextureFilter">MeshRenderer.TextureFilter (class in superdex.physics.viewer.renderers)</a>
+</li>
       <li><a href="api/viewer.html#superdex.physics.viewer.renderers.MeshRenderer.TextureOrigin">MeshRenderer.TextureOrigin (class in superdex.physics.viewer.renderers)</a>
 </li>
       <li><a href="api/models.html#superdex.physics.mesh.MeshStatistics">MeshStatistics (class in superdex.physics.mesh)</a>
@@ -3422,6 +3555,8 @@
 </li>
         <li><a href="api/physics.html#superdex.physics.RigidActorParams.name">(RigidActorParams property)</a>
 </li>
+        <li><a href="api/physics.html#superdex.physics.RodActorParams.name">(RodActorParams property)</a>
+</li>
         <li><a href="api/physics.html#superdex.physics.SoftActorParams.name">(SoftActorParams property)</a>
 </li>
       </ul></li>
@@ -3455,12 +3590,16 @@
 </li>
       <li><a href="api/physics.html#superdex.physics.QueryType.NODE_CONTACT_FORCES">NODE_CONTACT_FORCES (QueryType attribute)</a>
 </li>
-      <li><a href="api/prefab.html#superdex.physics.prefab.SoftActorPrefab.node_displacements">node_displacements (SoftActorPrefab property)</a>
+      <li><a href="api/prefab.html#superdex.physics.prefab.RodPose.node_displacements">node_displacements (RodPose property)</a>
+
+      <ul>
+        <li><a href="api/prefab.html#superdex.physics.prefab.SoftActorPrefab.node_displacements">(SoftActorPrefab property)</a>
 </li>
-      <li><a href="api/physics.html#superdex.physics.DeformableNodePositionConstraintParams.node_index">node_index (DeformableNodePositionConstraintParams property)</a>
-</li>
+      </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/physics.html#superdex.physics.DeformableNodePositionConstraintParams.node_index">node_index (DeformableNodePositionConstraintParams property)</a>
+</li>
       <li><a href="api/physics.html#superdex.physics.DeformableNodeToDeformableNodeConstraintParams.node_index_a">node_index_a (DeformableNodeToDeformableNodeConstraintParams property)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.DeformableNodeToDeformableNodeConstraintParams.node_index_b">node_index_b (DeformableNodeToDeformableNodeConstraintParams property)</a>
@@ -3534,6 +3673,8 @@
       <li><a href="api/physics.html#superdex.physics.MeshFileType.OBJ">OBJ (MeshFileType attribute)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.ContactParams.obj_scale">obj_scale (ContactParams property)</a>
+</li>
+      <li><a href="api/models.html#superdex.physics.mesh.TetrahedralizationParams.odt">odt (TetrahedralizationParams property)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.MeshFileType.OFF">OFF (MeshFileType attribute)</a>
 </li>
@@ -3627,6 +3768,8 @@
 </li>
       <li><a href="api/physics.html#superdex.physics.PerformanceStats">PerformanceStats (class in superdex.physics)</a>
 </li>
+      <li><a href="api/models.html#superdex.physics.mesh.TetrahedralizationParams.perturb">perturb (TetrahedralizationParams property)</a>
+</li>
       <li><a href="api/viewer.html#superdex.physics.viewer.renderers.MeshRenderer.Colormap.PHASE">PHASE (MeshRenderer.Colormap attribute)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.Plane">Plane (class in superdex.physics)</a>
@@ -3649,9 +3792,13 @@
 </li>
       <li><a href="api/physics.html#superdex.physics.ColliderType.POINT_CLOUD">POINT_CLOUD (ColliderType attribute)</a>
 </li>
+      <li><a href="api/physics.html#superdex.physics.RodActorParams.point_cloud_collider">point_cloud_collider (RodActorParams property)</a>
+</li>
       <li><a href="api/physics.html#superdex.physics.ContactPoint.point_velocity_a">point_velocity_a (ContactPoint property)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.ContactPoint.point_velocity_b">point_velocity_b (ContactPoint property)</a>
+</li>
+      <li><a href="api/physics.html#superdex.physics.PointCloudColliderParams">PointCloudColliderParams (class in superdex.physics)</a>
 </li>
       <li><a href="api/viewer.html#superdex.physics.viewer.renderers.PointCloudRenderer">PointCloudRenderer (class in superdex.physics.viewer.renderers)</a>
 </li>
@@ -3691,8 +3838,6 @@
 </li>
       <li><a href="api/viewer.html#superdex.physics.viewer.renderers.MeshRenderer.pop_node_radius">pop_node_radius() (MeshRenderer method)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/viewer.html#superdex.physics.viewer.renderers.MeshRenderer.pop_smooth_shading">pop_smooth_shading() (MeshRenderer method)</a>
 </li>
       <li><a href="api/viewer.html#superdex.physics.viewer.renderers.CurveNetworkRenderer.pop_transparency">pop_transparency() (CurveNetworkRenderer method)</a>
@@ -3703,6 +3848,8 @@
         <li><a href="api/viewer.html#superdex.physics.viewer.renderers.PointCloudRenderer.pop_transparency">(PointCloudRenderer method)</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/physics.html#superdex.physics.ContactPoint.pos_a">pos_a (ContactPoint property)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.ContactPoint.pos_b">pos_b (ContactPoint property)</a>
@@ -3712,6 +3859,8 @@
       <li><a href="api/utilities.html#superdex.physics.utils.coordinate_systems.Axis.POS_Y">POS_Y (Axis attribute)</a>, <a href="api/viewer.html#superdex.physics.viewer.Axis.POS_Y">[1]</a>
 </li>
       <li><a href="api/utilities.html#superdex.physics.utils.coordinate_systems.Axis.POS_Z">POS_Z (Axis attribute)</a>, <a href="api/viewer.html#superdex.physics.viewer.Axis.POS_Z">[1]</a>
+</li>
+      <li><a href="api/prefab.html#superdex.physics.prefab.RodActorPrefab.pose">pose (RodActorPrefab property)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.PoseConstraintInfo">PoseConstraintInfo (class in superdex.physics)</a>
 </li>
@@ -3753,6 +3902,20 @@
 </li>
       <li><a href="api/prefab.html#superdex.physics.prefab.ScenePrefab.prefabs">prefabs (ScenePrefab property)</a>
 </li>
+      <li><a href="api/physics.html#superdex.physics.ContactPairParamsOverride.prefer_elasto_plastic_friction">prefer_elasto_plastic_friction (ContactPairParamsOverride property)</a>
+
+      <ul>
+        <li><a href="api/physics.html#superdex.physics.ContactParams.prefer_elasto_plastic_friction">(ContactParams property)</a>
+</li>
+      </ul></li>
+      <li><a href="api/physics.html#superdex.physics.ArticulatedJointFrictionParams.presliding_displacement">presliding_displacement (ArticulatedJointFrictionParams property)</a>
+
+      <ul>
+        <li><a href="api/physics.html#superdex.physics.ContactPairParamsOverride.presliding_displacement">(ContactPairParamsOverride property)</a>
+</li>
+        <li><a href="api/physics.html#superdex.physics.ContactParams.presliding_displacement">(ContactParams property)</a>
+</li>
+      </ul></li>
       <li><a href="api/utilities.html#superdex.physics.utils.profiling.Profiler.print_summary">print_summary() (Profiler method)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.ArticulatedJointType.PRISMATIC">PRISMATIC (ArticulatedJointType attribute)</a>
@@ -3847,8 +4010,12 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/physics.html#superdex.physics.DebugDrawSpheres.radii">radii (DebugDrawSpheres property)</a>
 </li>
-      <li><a href="api/physics.html#superdex.physics.Sphere.radius">radius (Sphere property)</a>
+      <li><a href="api/physics.html#superdex.physics.PointCloudColliderParams.radius">radius (PointCloudColliderParams property)</a>
+
+      <ul>
+        <li><a href="api/physics.html#superdex.physics.Sphere.radius">(Sphere property)</a>
 </li>
+      </ul></li>
       <li><a href="api/viewer.html#superdex.physics.viewer.renderers.MeshRenderer.Colormap.RAINBOW">RAINBOW (MeshRenderer.Colormap attribute)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.JointRotationRangeConstraintParams.range_around_rest">range_around_rest (JointRotationRangeConstraintParams property)</a>
@@ -3894,6 +4061,8 @@
       <ul>
         <li><a href="api/physics.html#superdex.physics.JointRotationTrackingConstraintParams.ref_frame_rot_vec">(JointRotationTrackingConstraintParams property)</a>
 </li>
+        <li><a href="api/physics.html#superdex.physics.RodElementRotationConstraintParams.ref_frame_rot_vec">(RodElementRotationConstraintParams property)</a>
+</li>
         <li><a href="api/physics.html#superdex.physics.RodElementRotationToRigidConstraintParams.ref_frame_rot_vec">(RodElementRotationToRigidConstraintParams property)</a>
 </li>
       </ul></li>
@@ -3925,8 +4094,14 @@
         <li><a href="api/physics.html#superdex.physics.NonLinearSolverParams.rel_tol">(NonLinearSolverParams property)</a>
 </li>
       </ul></li>
-      <li><a href="api/models.html#superdex.physics.mesh.SurfaceRemeshingParams.relative_to_mesh_size">relative_to_mesh_size (SurfaceRemeshingParams property)</a>
+      <li><a href="api/models.html#superdex.physics.mesh.ConstrainedTetrahedralizationParams.relative_to_mesh_size">relative_to_mesh_size (ConstrainedTetrahedralizationParams property)</a>
+
+      <ul>
+        <li><a href="api/models.html#superdex.physics.mesh.SurfaceRemeshingParams.relative_to_mesh_size">(SurfaceRemeshingParams property)</a>
 </li>
+        <li><a href="api/models.html#superdex.physics.mesh.TetrahedralizationParams.relative_to_mesh_size">(TetrahedralizationParams property)</a>
+</li>
+      </ul></li>
       <li><a href="api/models.html#superdex.physics.mesh.SurfaceRemeshingParams.relax_constraints">relax_constraints (SurfaceRemeshingParams property)</a>
 </li>
       <li><a href="api/models.html#superdex.physics.mesh.SurfaceRemeshingParams.relaxation_steps_per_iteration">relaxation_steps_per_iteration (SurfaceRemeshingParams property)</a>
@@ -3978,6 +4153,8 @@
 </li>
         <li><a href="api/prefab.html#superdex.physics.prefab.RigidActorPrefab.render_model_file">(RigidActorPrefab property)</a>
 </li>
+        <li><a href="api/prefab.html#superdex.physics.prefab.RodActorPrefab.render_model_file">(RodActorPrefab property)</a>
+</li>
         <li><a href="api/prefab.html#superdex.physics.prefab.SoftActorPrefab.render_model_file">(SoftActorPrefab property)</a>
 </li>
       </ul></li>
@@ -3987,6 +4164,8 @@
         <li><a href="api/prefab.html#superdex.physics.prefab.ArticulatedSkinPrefab.render_model_rotation">(ArticulatedSkinPrefab property)</a>
 </li>
         <li><a href="api/prefab.html#superdex.physics.prefab.RigidActorPrefab.render_model_rotation">(RigidActorPrefab property)</a>
+</li>
+        <li><a href="api/prefab.html#superdex.physics.prefab.RodActorPrefab.render_model_rotation">(RodActorPrefab property)</a>
 </li>
         <li><a href="api/prefab.html#superdex.physics.prefab.SoftActorPrefab.render_model_rotation">(SoftActorPrefab property)</a>
 </li>
@@ -3998,6 +4177,8 @@
 </li>
         <li><a href="api/prefab.html#superdex.physics.prefab.RigidActorPrefab.render_model_scale">(RigidActorPrefab property)</a>
 </li>
+        <li><a href="api/prefab.html#superdex.physics.prefab.RodActorPrefab.render_model_scale">(RodActorPrefab property)</a>
+</li>
         <li><a href="api/prefab.html#superdex.physics.prefab.SoftActorPrefab.render_model_scale">(SoftActorPrefab property)</a>
 </li>
       </ul></li>
@@ -4007,6 +4188,8 @@
         <li><a href="api/prefab.html#superdex.physics.prefab.ArticulatedSkinPrefab.render_model_translation">(ArticulatedSkinPrefab property)</a>
 </li>
         <li><a href="api/prefab.html#superdex.physics.prefab.RigidActorPrefab.render_model_translation">(RigidActorPrefab property)</a>
+</li>
+        <li><a href="api/prefab.html#superdex.physics.prefab.RodActorPrefab.render_model_translation">(RodActorPrefab property)</a>
 </li>
         <li><a href="api/prefab.html#superdex.physics.prefab.SoftActorPrefab.render_model_translation">(SoftActorPrefab property)</a>
 </li>
@@ -4080,6 +4263,8 @@
 </li>
         <li><a href="api/physics.html#superdex.physics.DynamicArrayInt.reserve">(DynamicArrayInt attribute)</a>
 </li>
+        <li><a href="api/physics.html#superdex.physics.DynamicArrayInt64.reserve">(DynamicArrayInt64 attribute)</a>
+</li>
         <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayJointRotationRangeConstraintPrefab.reserve">(DynamicArrayJointRotationRangeConstraintPrefab attribute)</a>
 </li>
         <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayJointRotationTrackingConstraintPrefab.reserve">(DynamicArrayJointRotationTrackingConstraintPrefab attribute)</a>
@@ -4114,6 +4299,12 @@
 </li>
         <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayRigidSphericalJointConstraintPrefab.reserve">(DynamicArrayRigidSphericalJointConstraintPrefab attribute)</a>
 </li>
+        <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayRodActorPrefab.reserve">(DynamicArrayRodActorPrefab attribute)</a>
+</li>
+        <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayRodElementRotationConstraintPrefab.reserve">(DynamicArrayRodElementRotationConstraintPrefab attribute)</a>
+</li>
+        <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayRodElementRotationToRigidConstraintPrefab.reserve">(DynamicArrayRodElementRotationToRigidConstraintPrefab attribute)</a>
+</li>
         <li><a href="api/physics.html#superdex.physics.DynamicArrayRoutingElement.reserve">(DynamicArrayRoutingElement attribute)</a>
 </li>
         <li><a href="api/physics.html#superdex.physics.DynamicArraySoftActorParams.reserve">(DynamicArraySoftActorParams attribute)</a>
@@ -4129,14 +4320,14 @@
         <li><a href="api/physics.html#superdex.physics.DynamicArrayUint8.reserve">(DynamicArrayUint8 attribute)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/viewer.html#superdex.physics.viewer.renderers.DebugDrawRenderer.reset">reset() (DebugDrawRenderer method)</a>
 
       <ul>
         <li><a href="api/utilities.html#superdex.physics.utils.profiling.Profiler.reset">(Profiler method)</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/physics.html#superdex.physics.Actor.reset_articulated_target_link_transforms">reset_articulated_target_link_transforms (Actor attribute)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.Actor.reset_articulated_target_pose">reset_articulated_target_pose (Actor attribute)</a>
@@ -4146,6 +4337,8 @@
       <li><a href="api/physics.html#superdex.physics.LineSearchType.RESIDUAL_NORM">RESIDUAL_NORM (LineSearchType attribute)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.SolverStats.residual_norm">residual_norm (SolverStats property)</a>
+</li>
+      <li><a href="api/physics.html#superdex.physics.LinearSolverConvergenceNorm.RESIDUAL_PER_ACTOR_WEIGHTED">RESIDUAL_PER_ACTOR_WEIGHTED (LinearSolverConvergenceNorm attribute)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.LinearSolverConvergenceNorm.RESIDUAL_PRECONDITIONER_INDUCED">RESIDUAL_PRECONDITIONER_INDUCED (LinearSolverConvergenceNorm attribute)</a>
 </li>
@@ -4208,6 +4401,8 @@
 </li>
         <li><a href="api/physics.html#superdex.physics.DynamicArrayInt.resize">(DynamicArrayInt attribute)</a>
 </li>
+        <li><a href="api/physics.html#superdex.physics.DynamicArrayInt64.resize">(DynamicArrayInt64 attribute)</a>
+</li>
         <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayJointRotationRangeConstraintPrefab.resize">(DynamicArrayJointRotationRangeConstraintPrefab attribute)</a>
 </li>
         <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayJointRotationTrackingConstraintPrefab.resize">(DynamicArrayJointRotationTrackingConstraintPrefab attribute)</a>
@@ -4241,6 +4436,12 @@
         <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayRigidPrismaticJointConstraintPrefab.resize">(DynamicArrayRigidPrismaticJointConstraintPrefab attribute)</a>
 </li>
         <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayRigidSphericalJointConstraintPrefab.resize">(DynamicArrayRigidSphericalJointConstraintPrefab attribute)</a>
+</li>
+        <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayRodActorPrefab.resize">(DynamicArrayRodActorPrefab attribute)</a>
+</li>
+        <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayRodElementRotationConstraintPrefab.resize">(DynamicArrayRodElementRotationConstraintPrefab attribute)</a>
+</li>
+        <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayRodElementRotationToRigidConstraintPrefab.resize">(DynamicArrayRodElementRotationToRigidConstraintPrefab attribute)</a>
 </li>
         <li><a href="api/physics.html#superdex.physics.DynamicArrayRoutingElement.resize">(DynamicArrayRoutingElement attribute)</a>
 </li>
@@ -4292,7 +4493,11 @@
 </li>
       </ul></li>
       <li><a href="api/prefab.html#superdex.physics.prefab.DeformableNodeToRigidConstraintPrefab.rigid_actor_name">rigid_actor_name (DeformableNodeToRigidConstraintPrefab property)</a>
+
+      <ul>
+        <li><a href="api/prefab.html#superdex.physics.prefab.RodElementRotationToRigidConstraintPrefab.rigid_actor_name">(RodElementRotationToRigidConstraintPrefab property)</a>
 </li>
+      </ul></li>
       <li><a href="api/physics.html#superdex.physics.DeformableNodeToRigidConstraintParams.rigid_local_pos">rigid_local_pos (DeformableNodeToRigidConstraintParams property)</a>
 </li>
       <li><a href="api/prefab.html#superdex.physics.prefab.ConstraintLists.rigid_pivot_position">rigid_pivot_position (ConstraintLists property)</a>
@@ -4339,13 +4544,37 @@
 </li>
       <li><a href="api/prefab.html#superdex.physics.prefab.RigidSphericalJointConstraintPrefab">RigidSphericalJointConstraintPrefab (class in superdex.physics.prefab)</a>
 </li>
+      <li><a href="api/prefab.html#superdex.physics.prefab.ActorLists.rod">rod (ActorLists property)</a>
+</li>
       <li><a href="api/physics.html#superdex.physics.ActorType.ROD">ROD (ActorType attribute)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.RodElementRotationToRigidConstraintParams.rod_actor">rod_actor (RodElementRotationToRigidConstraintParams property)</a>
 </li>
+      <li><a href="api/prefab.html#superdex.physics.prefab.RodElementRotationToRigidConstraintPrefab.rod_actor_name">rod_actor_name (RodElementRotationToRigidConstraintPrefab property)</a>
+</li>
+      <li><a href="api/prefab.html#superdex.physics.prefab.ConstraintLists.rod_element_rotation">rod_element_rotation (ConstraintLists property)</a>
+</li>
+      <li><a href="api/physics.html#superdex.physics.ConstraintType.ROD_ELEMENT_ROTATION">ROD_ELEMENT_ROTATION (ConstraintType attribute)</a>
+</li>
+      <li><a href="api/prefab.html#superdex.physics.prefab.ConstraintLists.rod_element_rotation_to_rigid">rod_element_rotation_to_rigid (ConstraintLists property)</a>
+</li>
       <li><a href="api/physics.html#superdex.physics.ConstraintType.ROD_ELEMENT_ROTATION_TO_RIGID">ROD_ELEMENT_ROTATION_TO_RIGID (ConstraintType attribute)</a>
 </li>
+      <li><a href="api/physics.html#superdex.physics.RodActorParams">RodActorParams (class in superdex.physics)</a>
+</li>
+      <li><a href="api/prefab.html#superdex.physics.prefab.RodActorPrefab">RodActorPrefab (class in superdex.physics.prefab)</a>
+</li>
+      <li><a href="api/physics.html#superdex.physics.RodElementRotationConstraintParams">RodElementRotationConstraintParams (class in superdex.physics)</a>
+</li>
+      <li><a href="api/prefab.html#superdex.physics.prefab.RodElementRotationConstraintPrefab">RodElementRotationConstraintPrefab (class in superdex.physics.prefab)</a>
+</li>
       <li><a href="api/physics.html#superdex.physics.RodElementRotationToRigidConstraintParams">RodElementRotationToRigidConstraintParams (class in superdex.physics)</a>
+</li>
+      <li><a href="api/prefab.html#superdex.physics.prefab.RodElementRotationToRigidConstraintPrefab">RodElementRotationToRigidConstraintPrefab (class in superdex.physics.prefab)</a>
+</li>
+      <li><a href="api/physics.html#superdex.physics.RodMaterialParams">RodMaterialParams (class in superdex.physics)</a>
+</li>
+      <li><a href="api/prefab.html#superdex.physics.prefab.RodPose">RodPose (class in superdex.physics.prefab)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.ArticulatedShapeInfo.root_from_links_at_rest">root_from_links_at_rest (ArticulatedShapeInfo property)</a>
 </li>
@@ -4365,6 +4594,8 @@
         <li><a href="api/prefab.html#superdex.physics.prefab.PrefabReference.rotation">(PrefabReference property)</a>
 </li>
         <li><a href="api/prefab.html#superdex.physics.prefab.RigidActorPrefab.rotation">(RigidActorPrefab property)</a>
+</li>
+        <li><a href="api/prefab.html#superdex.physics.prefab.RodActorPrefab.rotation">(RodActorPrefab property)</a>
 </li>
         <li><a href="api/prefab.html#superdex.physics.prefab.SoftActorPrefab.rotation">(SoftActorPrefab property)</a>
 </li>
@@ -4436,9 +4667,13 @@
 </li>
         <li><a href="api/prefab.html#superdex.physics.prefab.RigidActorPrefab.scale">(RigidActorPrefab property)</a>
 </li>
+        <li><a href="api/prefab.html#superdex.physics.prefab.RodActorPrefab.scale">(RodActorPrefab property)</a>
+</li>
         <li><a href="api/prefab.html#superdex.physics.prefab.SoftActorPrefab.scale">(SoftActorPrefab property)</a>
 </li>
       </ul></li>
+      <li><a href="api/prefab.html#superdex.physics.prefab.scale_articulated_actor_params">scale_articulated_actor_params (in module superdex.physics.prefab)</a>
+</li>
       <li><a href="api/physics.html#superdex.physics.Scene">Scene (class in superdex.physics)</a>
 </li>
       <li><a href="api/prefab.html#superdex.physics.prefab.ScenePrefab.scene">scene (ScenePrefab property)</a>
@@ -4472,6 +4707,10 @@
       <li><a href="api/utilities.html#superdex.physics.utils.profiling.ProfilerStackEntry.section">section (ProfilerStackEntry attribute)</a>
 </li>
       <li><a href="api/utilities.html#superdex.physics.utils.profiling.Profiler.sections">sections (Profiler attribute)</a>
+</li>
+      <li><a href="api/physics.html#superdex.physics.PointCloudColliderParams.self_contact">self_contact (PointCloudColliderParams property)</a>
+</li>
+      <li><a href="api/physics.html#superdex.physics.PointCloudColliderParams.self_contact_exclusion_ratio">self_contact_exclusion_ratio (PointCloudColliderParams property)</a>
 </li>
       <li><a href="api/viewer.html#superdex.physics.viewer.Viewer.set_active_tab">set_active_tab() (Viewer method)</a>
 </li>
@@ -4635,6 +4874,8 @@
 </li>
       <li><a href="api/physics.html#superdex.physics.Constraint.set_ref_relative_rotation">set_ref_relative_rotation (Constraint attribute)</a>
 </li>
+      <li><a href="api/physics.html#superdex.physics.Actor.set_rod_pose">set_rod_pose (Actor attribute)</a>
+</li>
       <li><a href="api/physics.html#superdex.physics.Actor.set_root_transform">set_root_transform (Actor attribute)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.Constraint.set_saturation">set_saturation (Constraint attribute)</a>
@@ -4714,6 +4955,8 @@
 </li>
         <li><a href="api/physics.html#superdex.physics.RigidActorParams.shape">(RigidActorParams property)</a>
 </li>
+        <li><a href="api/physics.html#superdex.physics.RodActorParams.shape">(RodActorParams property)</a>
+</li>
         <li><a href="api/physics.html#superdex.physics.SoftActorParams.shape">(SoftActorParams property)</a>
 </li>
       </ul></li>
@@ -4724,6 +4967,8 @@
 </li>
         <li><a href="api/prefab.html#superdex.physics.prefab.RigidActorPrefab.shape_file">(RigidActorPrefab property)</a>
 </li>
+        <li><a href="api/prefab.html#superdex.physics.prefab.RodActorPrefab.shape_file">(RodActorPrefab property)</a>
+</li>
         <li><a href="api/prefab.html#superdex.physics.prefab.SoftActorPrefab.shape_file">(SoftActorPrefab property)</a>
 </li>
       </ul></li>
@@ -4731,6 +4976,8 @@
 
       <ul>
         <li><a href="api/prefab.html#superdex.physics.prefab.RigidActorPrefab.shape_rotation">(RigidActorPrefab property)</a>
+</li>
+        <li><a href="api/prefab.html#superdex.physics.prefab.RodActorPrefab.shape_rotation">(RodActorPrefab property)</a>
 </li>
         <li><a href="api/prefab.html#superdex.physics.prefab.SoftActorPrefab.shape_rotation">(SoftActorPrefab property)</a>
 </li>
@@ -4750,13 +4997,19 @@
       <ul>
         <li><a href="api/prefab.html#superdex.physics.prefab.RigidActorPrefab.shape_translation">(RigidActorPrefab property)</a>
 </li>
+        <li><a href="api/prefab.html#superdex.physics.prefab.RodActorPrefab.shape_translation">(RodActorPrefab property)</a>
+</li>
         <li><a href="api/prefab.html#superdex.physics.prefab.SoftActorPrefab.shape_translation">(SoftActorPrefab property)</a>
 </li>
       </ul></li>
       <li><a href="api/physics.html#superdex.physics.ShapeHandle">ShapeHandle (class in superdex.physics)</a>
 </li>
       <li><a href="api/models.html#superdex.physics.mesh.SurfaceRemeshingParams.sharp_feature_angle">sharp_feature_angle (SurfaceRemeshingParams property)</a>
+
+      <ul>
+        <li><a href="api/models.html#superdex.physics.mesh.TetrahedralizationParams.sharp_feature_angle">(TetrahedralizationParams property)</a>
 </li>
+      </ul></li>
       <li><a href="api/physics.html#superdex.physics.ActorType.SHELL">SHELL (ActorType attribute)</a>
 </li>
       <li><a href="api/viewer.html#superdex.physics.viewer.Viewer.show_logger_window">show_logger_window() (Viewer method)</a>
@@ -4826,6 +5079,8 @@
 </li>
         <li><a href="api/physics.html#superdex.physics.DynamicArrayInt.size">(DynamicArrayInt attribute)</a>
 </li>
+        <li><a href="api/physics.html#superdex.physics.DynamicArrayInt64.size">(DynamicArrayInt64 attribute)</a>
+</li>
         <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayJointRotationRangeConstraintPrefab.size">(DynamicArrayJointRotationRangeConstraintPrefab attribute)</a>
 </li>
         <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayJointRotationTrackingConstraintPrefab.size">(DynamicArrayJointRotationTrackingConstraintPrefab attribute)</a>
@@ -4859,6 +5114,12 @@
         <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayRigidPrismaticJointConstraintPrefab.size">(DynamicArrayRigidPrismaticJointConstraintPrefab attribute)</a>
 </li>
         <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayRigidSphericalJointConstraintPrefab.size">(DynamicArrayRigidSphericalJointConstraintPrefab attribute)</a>
+</li>
+        <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayRodActorPrefab.size">(DynamicArrayRodActorPrefab attribute)</a>
+</li>
+        <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayRodElementRotationConstraintPrefab.size">(DynamicArrayRodElementRotationConstraintPrefab attribute)</a>
+</li>
+        <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayRodElementRotationToRigidConstraintPrefab.size">(DynamicArrayRodElementRotationToRigidConstraintPrefab attribute)</a>
 </li>
         <li><a href="api/physics.html#superdex.physics.DynamicArrayRoutingElement.size">(DynamicArrayRoutingElement attribute)</a>
 </li>
@@ -4989,7 +5250,11 @@
 </li>
       <li><a href="api/physics.html#superdex.physics.SpanConstContactPoint">SpanConstContactPoint (class in superdex.physics)</a>
 </li>
+      <li><a href="api/physics.html#superdex.physics.SpanConstDynamicString">SpanConstDynamicString (in module superdex.physics)</a>
+</li>
       <li><a href="api/physics.html#superdex.physics.SpanConstInt">SpanConstInt (class in superdex.physics)</a>
+</li>
+      <li><a href="api/physics.html#superdex.physics.SpanConstInt64">SpanConstInt64 (class in superdex.physics)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.SpanConstNodeContactForce">SpanConstNodeContactForce (class in superdex.physics)</a>
 </li>
@@ -5014,6 +5279,8 @@
       <li><a href="api/physics.html#superdex.physics.SpanReal3">SpanReal3 (class in superdex.physics)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.SpanTransformRT">SpanTransformRT (class in superdex.physics)</a>
+</li>
+      <li><a href="api/physics.html#superdex.physics.PointCloudColliderParams.spatial_hash_load_factor">spatial_hash_load_factor (PointCloudColliderParams property)</a>
 </li>
       <li><a href="api/viewer.html#superdex.physics.viewer.renderers.MeshRenderer.Colormap.SPECTRAL">SPECTRAL (MeshRenderer.Colormap attribute)</a>
 </li>
@@ -5073,8 +5340,12 @@
         <li><a href="api/physics.html#superdex.physics.PoseTrackingParams.stiffness">(PoseTrackingParams property)</a>
 </li>
       </ul></li>
-      <li><a href="api/physics.html#superdex.physics.SoftMaterialParams.stiffness_damping_coefficient">stiffness_damping_coefficient (SoftMaterialParams property)</a>
+      <li><a href="api/physics.html#superdex.physics.RodMaterialParams.stiffness_damping_coefficient">stiffness_damping_coefficient (RodMaterialParams property)</a>
+
+      <ul>
+        <li><a href="api/physics.html#superdex.physics.SoftMaterialParams.stiffness_damping_coefficient">(SoftMaterialParams property)</a>
 </li>
+      </ul></li>
       <li><a href="api/physics.html#superdex.physics.SoftMaterialParams.stiffness_damping_include_geometric_term">stiffness_damping_include_geometric_term (SoftMaterialParams property)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.MeshFileType.STL">STL (MeshFileType attribute)</a>
@@ -5088,6 +5359,8 @@
       <li><a href="api/physics.html#superdex.physics.BoundarySubsamplingParams.strategy">strategy (BoundarySubsamplingParams property)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.ArticulatedJointFrictionParams.stribeck_vel">stribeck_vel (ArticulatedJointFrictionParams property)</a>
+</li>
+      <li><a href="api/models.html#superdex.physics.mesh.ConstrainedTetrahedralizationParams.strict">strict (ConstrainedTetrahedralizationParams property)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.StVenantKirchhoffMaterialParams">StVenantKirchhoffMaterialParams (class in superdex.physics)</a>
 </li>
@@ -5296,6 +5569,12 @@
 </li>
       <li><a href="api/testing.html#superdex.physics.utils.testing.testcases.MochiContextTestCase.tearDownClass">tearDownClass() (MochiContextTestCase class method)</a>
 </li>
+      <li><a href="api/models.html#superdex.physics.mesh.TetrahedralizationParams">TetrahedralizationParams (class in superdex.physics.mesh)</a>
+</li>
+      <li><a href="api/models.html#superdex.physics.mesh.tetrahedralize">tetrahedralize (in module superdex.physics.mesh)</a>
+</li>
+      <li><a href="api/models.html#superdex.physics.mesh.tetrahedralize_constrained">tetrahedralize_constrained (in module superdex.physics.mesh)</a>
+</li>
       <li><a href="api/physics.html#superdex.physics.StepInfo.time_step_sec">time_step_sec (StepInfo property)</a>
 </li>
       <li><a href="api/utilities.html#superdex.physics.utils.profiling.Profiler.to_dict">to_dict() (Profiler method)</a>
@@ -5369,6 +5648,8 @@
 </li>
         <li><a href="api/physics.html#superdex.physics.DynamicArrayInt.tolist">(DynamicArrayInt attribute)</a>
 </li>
+        <li><a href="api/physics.html#superdex.physics.DynamicArrayInt64.tolist">(DynamicArrayInt64 attribute)</a>
+</li>
         <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayJointRotationRangeConstraintPrefab.tolist">(DynamicArrayJointRotationRangeConstraintPrefab attribute)</a>
 </li>
         <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayJointRotationTrackingConstraintPrefab.tolist">(DynamicArrayJointRotationTrackingConstraintPrefab attribute)</a>
@@ -5402,6 +5683,12 @@
         <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayRigidPrismaticJointConstraintPrefab.tolist">(DynamicArrayRigidPrismaticJointConstraintPrefab attribute)</a>
 </li>
         <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayRigidSphericalJointConstraintPrefab.tolist">(DynamicArrayRigidSphericalJointConstraintPrefab attribute)</a>
+</li>
+        <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayRodActorPrefab.tolist">(DynamicArrayRodActorPrefab attribute)</a>
+</li>
+        <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayRodElementRotationConstraintPrefab.tolist">(DynamicArrayRodElementRotationConstraintPrefab attribute)</a>
+</li>
+        <li><a href="api/prefab.html#superdex.physics.prefab.DynamicArrayRodElementRotationToRigidConstraintPrefab.tolist">(DynamicArrayRodElementRotationToRigidConstraintPrefab attribute)</a>
 </li>
         <li><a href="api/physics.html#superdex.physics.DynamicArrayRoutingElement.tolist">(DynamicArrayRoutingElement attribute)</a>
 </li>
@@ -5451,6 +5738,8 @@
 </li>
         <li><a href="api/physics.html#superdex.physics.SpanConstInt.tolist">(SpanConstInt attribute)</a>
 </li>
+        <li><a href="api/physics.html#superdex.physics.SpanConstInt64.tolist">(SpanConstInt64 attribute)</a>
+</li>
         <li><a href="api/physics.html#superdex.physics.SpanConstNodeContactForce.tolist">(SpanConstNodeContactForce attribute)</a>
 </li>
         <li><a href="api/physics.html#superdex.physics.SpanConstPoseConstraintInfo.tolist">(SpanConstPoseConstraintInfo attribute)</a>
@@ -5478,6 +5767,8 @@
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/physics.html#superdex.physics.RodMaterialParams.torsional_stiffness">torsional_stiffness (RodMaterialParams property)</a>
+</li>
       <li><a href="api/utilities.html#superdex.physics.utils.profiling.ProfilerSection.total">total (ProfilerSection attribute)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.QueryType.TOTAL_CONTACT_FORCE">TOTAL_CONTACT_FORCE (QueryType attribute)</a>
@@ -5504,6 +5795,8 @@
         <li><a href="api/prefab.html#superdex.physics.prefab.PrefabReference.translation">(PrefabReference property)</a>
 </li>
         <li><a href="api/prefab.html#superdex.physics.prefab.RigidActorPrefab.translation">(RigidActorPrefab property)</a>
+</li>
+        <li><a href="api/prefab.html#superdex.physics.prefab.RodActorPrefab.translation">(RodActorPrefab property)</a>
 </li>
         <li><a href="api/prefab.html#superdex.physics.prefab.SoftActorPrefab.translation">(SoftActorPrefab property)</a>
 </li>
@@ -5588,6 +5881,8 @@
 </li>
       <li><a href="api/physics.html#superdex.physics.Constraint.update_old_target">update_old_target (Constraint attribute)</a>
 </li>
+      <li><a href="api/physics.html#superdex.physics.Scene.update_queries">update_queries (Scene attribute)</a>
+</li>
       <li><a href="api/viewer.html#superdex.physics.viewer.PlotState.upper">upper (PlotState attribute)</a>
 </li>
       <li><a href="api/viewer.html#superdex.physics.viewer.renderers.MeshRenderer.TextureOrigin.UPPER_LEFT">UPPER_LEFT (MeshRenderer.TextureOrigin attribute)</a>
@@ -5598,8 +5893,12 @@
 </li>
       <li><a href="api/models.html#superdex.physics.mesh.SurfaceRemeshingParams.use_adaptive_sizing">use_adaptive_sizing (SurfaceRemeshingParams property)</a>
 </li>
-      <li><a href="api/physics.html#superdex.physics.SoftActorParams.use_contact_skin">use_contact_skin (SoftActorParams property)</a>
+      <li><a href="api/physics.html#superdex.physics.RodActorParams.use_contact_skin">use_contact_skin (RodActorParams property)</a>
+
+      <ul>
+        <li><a href="api/physics.html#superdex.physics.SoftActorParams.use_contact_skin">(SoftActorParams property)</a>
 </li>
+      </ul></li>
       <li><a href="api/scene_setup.html#superdex.physics.loader.USE_DOUBLE_PRECISION">USE_DOUBLE_PRECISION (in module superdex.physics.loader)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.RecenteringParams.use_recentering">use_recentering (RecenteringParams property)</a>
@@ -5717,6 +6016,8 @@
       <li><a href="api/physics.html#superdex.physics.RigidActorParams.world_from_local">world_from_local (RigidActorParams property)</a>
 
       <ul>
+        <li><a href="api/physics.html#superdex.physics.RodActorParams.world_from_local">(RodActorParams property)</a>
+</li>
         <li><a href="api/physics.html#superdex.physics.SoftActorParams.world_from_local">(SoftActorParams property)</a>
 </li>
       </ul></li>

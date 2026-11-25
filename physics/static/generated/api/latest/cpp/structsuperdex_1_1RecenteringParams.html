@@ -165,7 +165,7 @@ $(function(){initNavTree('structsuperdex_1_1RecenteringParams.html','','structsu
 </div><!--header-->
 <div class="contents">
 
-<p>Parameters controlling recentering behavior for standalone soft actors.  
+<p>Parameters controlling recentering behavior for standalone soft, shell, and rod actors.  
  <a href="#details">More...</a></p>
 
 <p><code>#include &lt;<a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>&gt;</code></p>
@@ -184,14 +184,17 @@ Public Attributes</h2></td></tr>
 <tr class="memdesc:a7264484a429cd297762bd92499c92fdd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Whether recentering is enabled.  <br /></td></tr>
 </table>
 <a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>Parameters controlling recentering behavior for standalone soft actors. </p>
-<p>Recentering automatically updates the root transform as the actor's "rigid pivot" (typically near the center of mass) moves, with corresponding adjustments to local-space coordinates.</p>
-<dl class="section note"><dt>Note</dt><dd>When recentering is disabled, local-space displacement values can become very large if the actor moves far from its starting position. This may be problematic due to finite-precision arithmetic. </dd>
+<div class="textblock"><p>Parameters controlling recentering behavior for standalone soft, shell, and rod actors. </p>
+<p>Recentering transfers bulk motion from local simulation coordinates into the actor's root transform. This makes the root transform approximately follow the actor while keeping local displacements small, even when the actor travels far from its initial position. Keeping local values near the scale of the actor reduces floating-point roundoff and loss of precision.</p>
+<p>Soft actors recenter both translation and rotation around a rigid pivot, typically near the center of mass. Shell and rod actors use a pivot node near the centroid of the reference mesh. Because that pivot carries no rotation, they recenter translation only and <a class="el" href="#abf193ba93053a83ef2b7e0e9a656dd3e" title="superdex::RecenteringParams::rotationEpsilonDeg">rotationEpsilonDeg</a> has no effect.</p>
+<dl class="section note"><dt>Note</dt><dd>World-space boundary condition targets remain valid under recentering. Targets recomputed from the current root transform (e.g. by re-adding <a class="el" href="classsuperdex_1_1Actor.html#ab3746163fbc7213e8c3ec9218b5a8999" title="superdex::Actor::AddBoundaryConditionConstrainedNodesAtRest">Actor::AddBoundaryConditionConstrainedNodesAtRest</a> after the actor has moved) follow the recentered frame instead of staying fixed in world space. </dd>
 <dd>
-When recentering is enabled, the root transform rotates and translates to follow the actor, and local-space displacements reflect only deformation, not global rotation or translation.</dd></dl>
+When recentering is disabled, local-space displacement values can become very large if the actor moves far from its starting position. This may be problematic due to finite-precision arithmetic. </dd>
+<dd>
+When recentering is enabled, the root transform follows the actor, and local-space data (displacements, DoF values, and node positions) are expressed relative to it. For soft actors it rotates and translates, so local-space displacements reflect only deformation. For shell and rod actors it only translates, so local-space displacements still include global rotation.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="classsuperdex_1_1Actor.html#a4d0cabdd973b4f9209426c220051cd2f" title="superdex::Actor::GetRecenteringParams">Actor::GetRecenteringParams</a>, <a class="el" href="classsuperdex_1_1Actor.html#a70e78b594b500871ba816452d7628386" title="superdex::Actor::SetRecenteringParams">Actor::SetRecenteringParams</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00084">84</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00088">88</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 </div><a name="doc-func-members" id="doc-func-members"></a><h2 id="header-doc-func-members" class="groupheader">Member Function Documentation</h2>
 <a id="a5fafa48862bd0541e3c047acaf56d4eb" name="a5fafa48862bd0541e3c047acaf56d4eb"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a5fafa48862bd0541e3c047acaf56d4eb">&#9670;&#160;</a></span>operator==()</h2>
@@ -234,7 +237,7 @@ When recentering is enabled, the root transform rotates and translates to follow
 <p>Minimum rotation threshold [degrees] to apply recentering. </p>
 <dl class="section note"><dt>Note</dt><dd>Recentering is applied if either rotation or translation change more than their respective thresholds. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00087">87</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00091">91</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -253,7 +256,7 @@ When recentering is enabled, the root transform rotates and translates to follow
 <p>Minimum translation threshold [m] to apply recentering. </p>
 <dl class="section note"><dt>Note</dt><dd>Recentering is applied if either rotation or translation change more than their respective thresholds. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00089">89</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00093">93</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -271,7 +274,7 @@ When recentering is enabled, the root transform rotates and translates to follow
 
 <p>Whether recentering is enabled. </p>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00085">85</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00089">89</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>

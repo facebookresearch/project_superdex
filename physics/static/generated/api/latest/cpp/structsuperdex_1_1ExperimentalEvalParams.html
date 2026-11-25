@@ -186,8 +186,6 @@ Public Attributes</h2></td></tr>
 <tr class="memdesc:a4458d9daf32a42d671ef3cf6125a34d8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Fade friction coefficient based on normal alignment.  <br /></td></tr>
 <tr class="memitem:a53e3a4a7808df0a4287e5e36f3557712" id="r_a53e3a4a7808df0a4287e5e36f3557712"><td class="memItemLeft"><a class="el" href="structsuperdex_1_1SaturationHessianParams.html">SaturationHessianParams</a>&#160;</td><td class="memItemRight"><a class="el" href="#a53e3a4a7808df0a4287e5e36f3557712">fittedSaturationHessian</a></td></tr>
 <tr class="memdesc:a53e3a4a7808df0a4287e5e36f3557712"><td class="mdescLeft">&#160;</td><td class="mdescRight">Controls whether force-saturation terms use a fitted quadratic Hessian (more stable) or the exact analytical Hessian (faster convergence but less stable), independently for each saturation pathway.  <br /></td></tr>
-<tr class="memitem:a010022ac739c74e44315da4fa35e08aa" id="r_a010022ac739c74e44315da4fa35e08aa"><td class="memItemLeft"><a class="el" href="namespacesuperdex.html#a9f8a3d687efc70f39dc37317897ff3a5">CoulombFrictionModel</a>&#160;</td><td class="memItemRight"><a class="el" href="#a010022ac739c74e44315da4fa35e08aa">frictionModel</a> = <a class="el" href="namespacesuperdex.html#a9f8a3d687efc70f39dc37317897ff3a5a7a1920d61156abc05a60135aefe8bc67">CoulombFrictionModel::Default</a></td></tr>
-<tr class="memdesc:a010022ac739c74e44315da4fa35e08aa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Selects which Coulomb friction smoothing model to use.  <br /></td></tr>
 <tr class="memitem:a2f157e4452a1f4996b414b80608874a2" id="r_a2f157e4452a1f4996b414b80608874a2"><td class="memItemLeft">bool&#160;</td><td class="memItemRight"><a class="el" href="#a2f157e4452a1f4996b414b80608874a2">implicitNormalForceForDissipation</a> = false</td></tr>
 <tr class="memdesc:a2f157e4452a1f4996b414b80608874a2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Treat the normal contact force implicitly (if true) or explicitly (if false) for dissipative contact terms.  <br /></td></tr>
 </table>
@@ -196,7 +194,7 @@ Public Attributes</h2></td></tr>
 <p>They tune the evaluation of internal models (contact, constraints, etc).</p>
 <dl class="section warning"><dt>Warning</dt><dd>This is an experimental feature. It may be changed or removed in the future. Use at your own risk. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="eval__params_8h_source.html#l00073">73</a> of file <a class="el" href="eval__params_8h_source.html">eval_params.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="eval__params_8h_source.html#l00075">75</a> of file <a class="el" href="eval__params_8h_source.html">eval_params.h</a>.</p>
 </div><a name="doc-func-members" id="doc-func-members"></a><h2 id="header-doc-func-members" class="groupheader">Member Function Documentation</h2>
 <a id="a8237464f40235f40cb7506c91f7a8e2d" name="a8237464f40235f40cb7506c91f7a8e2d"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a8237464f40235f40cb7506c91f7a8e2d">&#9670;&#160;</a></span>operator==()</h2>
@@ -239,7 +237,7 @@ Public Attributes</h2></td></tr>
 <p>Validate that the residual is the gradient of the objective by a directional finite-difference consistency check. </p>
 <dl class="section note"><dt>Note</dt><dd>This operation is expensive and should only be used for debugging. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="eval__params_8h_source.html#l00145">145</a> of file <a class="el" href="eval__params_8h_source.html">eval_params.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="eval__params_8h_source.html#l00142">142</a> of file <a class="el" href="eval__params_8h_source.html">eval_params.h</a>.</p>
 
 </div>
 </div>
@@ -257,7 +255,7 @@ Public Attributes</h2></td></tr>
 
 <p>Step size for finite-difference consistency check. </p>
 
-<p class="definition">Definition at line <a class="el" href="eval__params_8h_source.html#l00150">150</a> of file <a class="el" href="eval__params_8h_source.html">eval_params.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="eval__params_8h_source.html#l00147">147</a> of file <a class="el" href="eval__params_8h_source.html">eval_params.h</a>.</p>
 
 </div>
 </div>
@@ -281,7 +279,7 @@ explicitNormals = true and implicitNormalForceForDissipation = false produces co
 <dd>
 A differentiable scene requires explicitNormals = true. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="eval__params_8h_source.html#l00087">87</a> of file <a class="el" href="eval__params_8h_source.html">eval_params.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="eval__params_8h_source.html#l00089">89</a> of file <a class="el" href="eval__params_8h_source.html">eval_params.h</a>.</p>
 
 </div>
 </div>
@@ -298,13 +296,13 @@ A differentiable scene requires explicitNormals = true. </dd></dl>
 </div><div class="memdoc">
 
 <p>Fade friction coefficient based on normal alignment. </p>
-<p>When enabled, friction is scaled by (maxAlignmentNormals - alignment) / (maxAlignmentNormals + 1), where "alignment" is defined as the dot product between colliding and collider normals.</p>
+<p>When enabled, friction is scaled by (c - alignment) / (c + 1), where "alignment" is defined as the dot product between colliding and collider normals, and c is the alignment at which contact is disabled: <a class="el" href="structsuperdex_1_1ContactParams.html#a04d520cdbda2dcf27894ea0007cca63f" title="ContactParams::maxAlignmentNormals">ContactParams::maxAlignmentNormals</a>, or the top of its smoothing band (see <a class="el" href="structsuperdex_1_1ContactParams.html#a02d254298cf345a01dc3c4f555663601" title="ContactParams::alignmentSmoothingFraction">ContactParams::alignmentSmoothingFraction</a>).</p>
 <dl class="section note"><dt>Note</dt><dd>For co-dimensional colliding actors with ambiguous normals, friction fading is disabled regardless of fadeFriction (normal alignment cannot be computed). </dd>
 <dd>
 fadeFriction = true adds a non-integrable term to the residual unless <a class="el" href="#a5a0705dc697b7dccdc8457d1b9d04548" title="explicitNormals">explicitNormals</a> = true.</dd></dl>
-<dl class="section see"><dt>See also</dt><dd><a class="el" href="structsuperdex_1_1ContactParams.html#a04d520cdbda2dcf27894ea0007cca63f" title="Maximum normal alignment threshold.">ContactParams::maxAlignmentNormals</a> </dd></dl>
+<dl class="section see"><dt>See also</dt><dd><a class="el" href="structsuperdex_1_1ContactParams.html#a04d520cdbda2dcf27894ea0007cca63f" title="[Experimental] Maximum normal alignment threshold.">ContactParams::maxAlignmentNormals</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="eval__params_8h_source.html#l00103">103</a> of file <a class="el" href="eval__params_8h_source.html">eval_params.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="eval__params_8h_source.html#l00106">106</a> of file <a class="el" href="eval__params_8h_source.html">eval_params.h</a>.</p>
 
 </div>
 </div>
@@ -321,28 +319,9 @@ fadeFriction = true adds a non-integrable term to the residual unless <a class="
 </div><div class="memdoc">
 
 <p>Controls whether force-saturation terms use a fitted quadratic Hessian (more stable) or the exact analytical Hessian (faster convergence but less stable), independently for each saturation pathway. </p>
-<dl class="section note"><dt>Note</dt><dd>For any flag set to false, the solver will try first with the true Hessian. If it fails, it will retry with the fitted Hessian. </dd></dl>
+<dl class="section note"><dt>Note</dt><dd>For any flag set to false, the solver will try first with the true Hessian. See <a class="el" href="structsuperdex_1_1SaturationHessianParams.html" title="SaturationHessianParams">SaturationHessianParams</a> for when it switches to fitted Hessians. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="eval__params_8h_source.html#l00129">129</a> of file <a class="el" href="eval__params_8h_source.html">eval_params.h</a>.</p>
-
-</div>
-</div>
-<a id="a010022ac739c74e44315da4fa35e08aa" name="a010022ac739c74e44315da4fa35e08aa"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a010022ac739c74e44315da4fa35e08aa">&#9670;&#160;</a></span>frictionModel</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="namespacesuperdex.html#a9f8a3d687efc70f39dc37317897ff3a5">CoulombFrictionModel</a> superdex::ExperimentalEvalParams::frictionModel = <a class="el" href="namespacesuperdex.html#a9f8a3d687efc70f39dc37317897ff3a5a7a1920d61156abc05a60135aefe8bc67">CoulombFrictionModel::Default</a></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Selects which Coulomb friction smoothing model to use. </p>
-<p>C1Regularized (default) preserves existing behavior exactly. CinfRegularized is an additional model that can be selected at runtime without affecting C1Regularized users. </p>
-
-<p class="definition">Definition at line <a class="el" href="eval__params_8h_source.html#l00137">137</a> of file <a class="el" href="eval__params_8h_source.html">eval_params.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="eval__params_8h_source.html#l00134">134</a> of file <a class="el" href="eval__params_8h_source.html">eval_params.h</a>.</p>
 
 </div>
 </div>
@@ -359,11 +338,13 @@ fadeFriction = true adds a non-integrable term to the residual unless <a class="
 </div><div class="memdoc">
 
 <p>Treat the normal contact force implicitly (if true) or explicitly (if false) for dissipative contact terms. </p>
-<dl class="section note"><dt>Note</dt><dd>Implicit treatment improves stability (especially with high-order time integrators) but the resulting dissipative force is not integrable, hence it cannot be derived from an objective function. This (a) may hurt convergence with an objective-based line search, and (b) makes the force dresidual non-symmetric (a symmetric approximation is used). With implicitNormalForceForDissipation = false, the distance used for the explicit normal force is approximate with <a class="el" href="#a5a0705dc697b7dccdc8457d1b9d04548" title="explicitNormals">explicitNormals</a> = false, but accurate with explicitNormals = true. </dd>
+<dl class="section note"><dt>Note</dt><dd>Implicit treatment improves stability (especially with high-order time integrators) but the resulting dissipative force is not integrable, hence it cannot be derived from an objective function. Merit-based line searches therefore count its work along each step instead of an energy (see <a class="el" href="namespacesuperdex.html#ab1e65537a0c9a09ecf7db46f01977326" title="LineSearchType">LineSearchType</a>), and its force dresidual is non-symmetric (a symmetric approximation is used). With implicitNormalForceForDissipation = false, the distance used for the explicit normal force is approximate with <a class="el" href="#a5a0705dc697b7dccdc8457d1b9d04548" title="explicitNormals">explicitNormals</a> = false, but accurate with <a class="el" href="#a5a0705dc697b7dccdc8457d1b9d04548" title="explicitNormals">explicitNormals</a> = true. </dd>
 <dd>
-Dissipative contact terms include Coulomb friction, viscous friction, and normal viscous damping. Using an implicit normal force for normal damping can improve the accuracy of the effective coefficient of restitution at a given time step size. </dd></dl>
+Dissipative contact terms include Coulomb friction, viscous friction, and normal viscous damping. Using an implicit normal force for normal damping can improve the accuracy of the effective coefficient of restitution at a given time step size. </dd>
+<dd>
+A differentiable scene requires implicitNormalForceForDissipation = false. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="eval__params_8h_source.html#l00119">119</a> of file <a class="el" href="eval__params_8h_source.html">eval_params.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="eval__params_8h_source.html#l00124">124</a> of file <a class="el" href="eval__params_8h_source.html">eval_params.h</a>.</p>
 
 </div>
 </div>

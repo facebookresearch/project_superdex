@@ -31,6 +31,10 @@ var namespacesuperdex_1_1prefab =
     [ "RigidPivotToRigidTargetConstraintPrefab", "structsuperdex_1_1prefab_1_1RigidPivotToRigidTargetConstraintPrefab.html", "structsuperdex_1_1prefab_1_1RigidPivotToRigidTargetConstraintPrefab" ],
     [ "RigidPrismaticJointConstraintPrefab", "structsuperdex_1_1prefab_1_1RigidPrismaticJointConstraintPrefab.html", "structsuperdex_1_1prefab_1_1RigidPrismaticJointConstraintPrefab" ],
     [ "RigidSphericalJointConstraintPrefab", "structsuperdex_1_1prefab_1_1RigidSphericalJointConstraintPrefab.html", "structsuperdex_1_1prefab_1_1RigidSphericalJointConstraintPrefab" ],
+    [ "RodActorPrefab", "structsuperdex_1_1prefab_1_1RodActorPrefab.html", "structsuperdex_1_1prefab_1_1RodActorPrefab" ],
+    [ "RodElementRotationConstraintPrefab", "structsuperdex_1_1prefab_1_1RodElementRotationConstraintPrefab.html", "structsuperdex_1_1prefab_1_1RodElementRotationConstraintPrefab" ],
+    [ "RodElementRotationToRigidConstraintPrefab", "structsuperdex_1_1prefab_1_1RodElementRotationToRigidConstraintPrefab.html", "structsuperdex_1_1prefab_1_1RodElementRotationToRigidConstraintPrefab" ],
+    [ "RodPose", "structsuperdex_1_1prefab_1_1RodPose.html", "structsuperdex_1_1prefab_1_1RodPose" ],
     [ "SceneParams", "structsuperdex_1_1prefab_1_1SceneParams.html", "structsuperdex_1_1prefab_1_1SceneParams" ],
     [ "ScenePrefab", "structsuperdex_1_1prefab_1_1ScenePrefab.html", "structsuperdex_1_1prefab_1_1ScenePrefab" ],
     [ "SoftActorPrefab", "structsuperdex_1_1prefab_1_1SoftActorPrefab.html", "structsuperdex_1_1prefab_1_1SoftActorPrefab" ],
@@ -51,6 +55,7 @@ var namespacesuperdex_1_1prefab =
     [ "LoadShapes", "namespacesuperdex_1_1prefab.html#a7b29f644cfd6d0f3d1c7ca628cc72308", null ],
     [ "SaveToJsonFile", "namespacesuperdex_1_1prefab.html#a93f2fb4da14e0021c4b9dac9a21a062d", null ],
     [ "SaveToJsonString", "namespacesuperdex_1_1prefab.html#a4f5e6d41b625f39801e5470a0b2ade90", null ],
+    [ "ScaleArticulatedActorParams", "namespacesuperdex_1_1prefab.html#a0e9323fca7ee3d129cb32b2fe72de28f", null ],
     [ "ShallowLoadFromFile", "namespacesuperdex_1_1prefab.html#aa880abc96718e240ee240c72e7c133cd", null ],
     [ "ShallowLoadFromJsonString", "namespacesuperdex_1_1prefab.html#a5c34c8bb44bb3dca60c7b428824aab15", null ]
 ];

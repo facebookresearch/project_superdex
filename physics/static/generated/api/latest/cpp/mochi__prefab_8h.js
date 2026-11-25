@@ -18,6 +18,7 @@ var mochi__prefab_8h =
     [ "superdex::prefab::LoadShapes", "namespacesuperdex_1_1prefab.html#a7b29f644cfd6d0f3d1c7ca628cc72308", null ],
     [ "superdex::prefab::SaveToJsonFile", "namespacesuperdex_1_1prefab.html#a93f2fb4da14e0021c4b9dac9a21a062d", null ],
     [ "superdex::prefab::SaveToJsonString", "namespacesuperdex_1_1prefab.html#a4f5e6d41b625f39801e5470a0b2ade90", null ],
+    [ "superdex::prefab::ScaleArticulatedActorParams", "namespacesuperdex_1_1prefab.html#a0e9323fca7ee3d129cb32b2fe72de28f", null ],
     [ "superdex::prefab::ShallowLoadFromFile", "namespacesuperdex_1_1prefab.html#aa880abc96718e240ee240c72e7c133cd", null ],
     [ "superdex::prefab::ShallowLoadFromJsonString", "namespacesuperdex_1_1prefab.html#a5c34c8bb44bb3dca60c7b428824aab15", null ]
 ];

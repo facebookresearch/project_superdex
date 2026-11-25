@@ -1,6 +1,6 @@
 // @generated
 var searchData=
 [
-  ['sensorbase_0',['SensorBase',['../classsuperdex_1_1robotics_1_1SensorBase.html',1,'superdex::robotics']]],
-  ['sensorhandle_1',['SensorHandle',['../structsuperdex_1_1robotics_1_1SensorHandle.html',1,'superdex::robotics']]]
+  ['parsedrootfile_0',['ParsedRootFile',['../structsuperdex_1_1robotics_1_1ParsedRootFile.html',1,'superdex::robotics']]],
+  ['prefabentry_1',['PrefabEntry',['../structsuperdex_1_1robotics_1_1PrefabEntry.html',1,'superdex::robotics']]]
 ];

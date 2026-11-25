@@ -331,7 +331,7 @@ $(function(){initNavTree('log_8h_source.html','',''); });
 <div class="foldopen" id="foldopen00164" data-start="{" data-end="}">
 <div class="line"><a id="l00164" name="l00164"></a><span class="lineno"><a class="line" href="namespacesuperdex.html#aca60b7a31a6b09bc63d57f65e52710b5">  164</a></span><span class="keyword">inline</span> <a class="code hl_typedef" href="namespacesuperdex.html#a501db5b53012eb2d8d538fd21b76aece">LogFn</a> <a class="code hl_function" href="namespacesuperdex.html#aca60b7a31a6b09bc63d57f65e52710b5">GetLogCallback</a>() {</div>
 <div class="line"><a id="l00165" name="l00165"></a><span class="lineno">  165</span><span class="preprocessor">#if MOCHI_ARCH_CPU</span></div>
-<div class="line"><a id="l00166" name="l00166"></a><span class="lineno">  166</span>  std::lock_guard&lt;std::recursive_mutex&gt; lock(log_impl::GetLogMutexRef());</div>
+<div class="line"><a id="l00166" name="l00166"></a><span class="lineno">  166</span>  std::scoped_lock lock(log_impl::GetLogMutexRef());</div>
 <div class="line"><a id="l00167" name="l00167"></a><span class="lineno">  167</span>  <span class="keyword">auto</span> <span class="keyword">const</span>&amp; logFn = log_impl::GetLogFnRef();</div>
 <div class="line"><a id="l00168" name="l00168"></a><span class="lineno">  168</span>  <span class="keywordflow">return</span> logFn ? logFn : <a class="code hl_typedef" href="namespacesuperdex.html#a501db5b53012eb2d8d538fd21b76aece">LogFn</a>{&amp;log_impl::DefaultLogFn};</div>
 <div class="line"><a id="l00169" name="l00169"></a><span class="lineno">  169</span><span class="preprocessor">#else</span></div>
@@ -343,7 +343,7 @@ $(function(){initNavTree('log_8h_source.html','',''); });
 <div class="foldopen" id="foldopen00174" data-start="{" data-end="}">
 <div class="line"><a id="l00174" name="l00174"></a><span class="lineno"><a class="line" href="namespacesuperdex.html#a745845a81211295e9f87c11b3c86a64d">  174</a></span><span class="keyword">inline</span> <span class="keywordtype">void</span> <a class="code hl_function" href="namespacesuperdex.html#a745845a81211295e9f87c11b3c86a64d">SetLogCallback</a>([[maybe_unused]] <a class="code hl_typedef" href="namespacesuperdex.html#a501db5b53012eb2d8d538fd21b76aece">LogFn</a> fn) {</div>
 <div class="line"><a id="l00175" name="l00175"></a><span class="lineno">  175</span><span class="preprocessor">#if MOCHI_ARCH_CPU</span></div>
-<div class="line"><a id="l00176" name="l00176"></a><span class="lineno">  176</span>  std::lock_guard&lt;std::recursive_mutex&gt; lock(log_impl::GetLogMutexRef());</div>
+<div class="line"><a id="l00176" name="l00176"></a><span class="lineno">  176</span>  std::scoped_lock lock(log_impl::GetLogMutexRef());</div>
 <div class="line"><a id="l00177" name="l00177"></a><span class="lineno">  177</span>  <span class="keyword">auto</span>&amp; logFn = log_impl::GetLogFnRef();</div>
 <div class="line"><a id="l00178" name="l00178"></a><span class="lineno">  178</span>  logFn = fn ? fn : <a class="code hl_typedef" href="namespacesuperdex.html#a501db5b53012eb2d8d538fd21b76aece">LogFn</a>{&amp;log_impl::DefaultLogFn};</div>
 <div class="line"><a id="l00179" name="l00179"></a><span class="lineno">  179</span><span class="preprocessor">#endif</span></div>
@@ -357,7 +357,7 @@ $(function(){initNavTree('log_8h_source.html','',''); });
 <div class="line"><a id="l00185" name="l00185"></a><span class="lineno">  185</span>    <span class="keywordflow">return</span>;</div>
 <div class="line"><a id="l00186" name="l00186"></a><span class="lineno">  186</span>  }</div>
 <div class="line"><a id="l00187" name="l00187"></a><span class="lineno">  187</span><span class="preprocessor">#if MOCHI_ARCH_CPU</span></div>
-<div class="line"><a id="l00188" name="l00188"></a><span class="lineno">  188</span>  std::lock_guard&lt;std::recursive_mutex&gt; lock(log_impl::GetLogMutexRef());</div>
+<div class="line"><a id="l00188" name="l00188"></a><span class="lineno">  188</span>  std::scoped_lock lock(log_impl::GetLogMutexRef());</div>
 <div class="line"><a id="l00189" name="l00189"></a><span class="lineno">  189</span>  log_impl::GetLogChannelsDisabledArrayRef()[(size_t)channel] = !enable;</div>
 <div class="line"><a id="l00190" name="l00190"></a><span class="lineno">  190</span><span class="preprocessor">#endif</span></div>
 <div class="line"><a id="l00191" name="l00191"></a><span class="lineno">  191</span>}</div>
@@ -369,7 +369,7 @@ $(function(){initNavTree('log_8h_source.html','',''); });
 <div class="line"><a id="l00195" name="l00195"></a><span class="lineno">  195</span>    <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
 <div class="line"><a id="l00196" name="l00196"></a><span class="lineno">  196</span>  }</div>
 <div class="line"><a id="l00197" name="l00197"></a><span class="lineno">  197</span><span class="preprocessor">#if MOCHI_ARCH_CPU</span></div>
-<div class="line"><a id="l00198" name="l00198"></a><span class="lineno">  198</span>  std::lock_guard&lt;std::recursive_mutex&gt; lock(log_impl::GetLogMutexRef());</div>
+<div class="line"><a id="l00198" name="l00198"></a><span class="lineno">  198</span>  std::scoped_lock lock(log_impl::GetLogMutexRef());</div>
 <div class="line"><a id="l00199" name="l00199"></a><span class="lineno">  199</span>  <span class="keyword">auto</span> <span class="keyword">const</span>&amp; isChannelDisabled = log_impl::GetLogChannelsDisabledArrayRef();</div>
 <div class="line"><a id="l00200" name="l00200"></a><span class="lineno">  200</span>  <span class="keywordflow">return</span> !isChannelDisabled[(size_t)channel];</div>
 <div class="line"><a id="l00201" name="l00201"></a><span class="lineno">  201</span><span class="preprocessor">#else</span></div>
@@ -391,8 +391,8 @@ $(function(){initNavTree('log_8h_source.html','',''); });
 <div class="ttc" id="aclasssuperdex_1_1Error_html"><div class="ttname"><a href="classsuperdex_1_1Error.html">superdex::Error</a></div><div class="ttdef"><b>Definition</b> <a href="error_8h_source.html#l00065">error.h:65</a></div></div>
 <div class="ttc" id="alog_8h_html_a371cd1f9fe5303e934f87f15cd90b1b0"><div class="ttname"><a href="log_8h.html#a371cd1f9fe5303e934f87f15cd90b1b0">MOCHI_LOG_WARNING</a></div><div class="ttdeci">#define MOCHI_LOG_WARNING(...)</div><div class="ttdef"><b>Definition</b> <a href="#l00043">log.h:43</a></div></div>
 <div class="ttc" id="amochi__config_8h_html"><div class="ttname"><a href="mochi__config_8h.html">mochi_config.h</a></div></div>
-<div class="ttc" id="amochi__platform_8h_html_a0a9b35f5fd941aeea6decfc221538249"><div class="ttname"><a href="mochi__platform_8h.html#a0a9b35f5fd941aeea6decfc221538249">MOCHI_UNLIKELY</a></div><div class="ttdeci">#define MOCHI_UNLIKELY</div><div class="ttdef"><b>Definition</b> <a href="mochi__platform_8h_source.html#l00830">mochi_platform.h:830</a></div></div>
-<div class="ttc" id="amochi__platform_8h_html_ae6b4671919cb1875086f9be62d945132"><div class="ttname"><a href="mochi__platform_8h.html#ae6b4671919cb1875086f9be62d945132">MOCHI_LIKELY</a></div><div class="ttdeci">#define MOCHI_LIKELY</div><div class="ttdef"><b>Definition</b> <a href="mochi__platform_8h_source.html#l00829">mochi_platform.h:829</a></div></div>
+<div class="ttc" id="amochi__platform_8h_html_a0a9b35f5fd941aeea6decfc221538249"><div class="ttname"><a href="mochi__platform_8h.html#a0a9b35f5fd941aeea6decfc221538249">MOCHI_UNLIKELY</a></div><div class="ttdeci">#define MOCHI_UNLIKELY</div><div class="ttdef"><b>Definition</b> <a href="mochi__platform_8h_source.html#l00837">mochi_platform.h:837</a></div></div>
+<div class="ttc" id="amochi__platform_8h_html_ae6b4671919cb1875086f9be62d945132"><div class="ttname"><a href="mochi__platform_8h.html#ae6b4671919cb1875086f9be62d945132">MOCHI_LIKELY</a></div><div class="ttdeci">#define MOCHI_LIKELY</div><div class="ttdef"><b>Definition</b> <a href="mochi__platform_8h_source.html#l00836">mochi_platform.h:836</a></div></div>
 <div class="ttc" id="anamespacesuperdex_html"><div class="ttname"><a href="namespacesuperdex.html">superdex</a></div><div class="ttdef"><b>Definition</b> <a href="mochi__prefab_8h_source.html#l00033">mochi_prefab.h:33</a></div></div>
 <div class="ttc" id="anamespacesuperdex_html_a501db5b53012eb2d8d538fd21b76aece"><div class="ttname"><a href="namespacesuperdex.html#a501db5b53012eb2d8d538fd21b76aece">superdex::LogFn</a></div><div class="ttdeci">std::function&lt; void(LogChannel, char const  *message, char const  *file, int line)&gt; LogFn</div><div class="ttdoc">Signature of a logging callback function.</div><div class="ttdef"><b>Definition</b> <a href="#l00065">log.h:65</a></div></div>
 <div class="ttc" id="anamespacesuperdex_html_a6a447d3f822e61e77de30e662589384e"><div class="ttname"><a href="namespacesuperdex.html#a6a447d3f822e61e77de30e662589384e">superdex::LogChannel</a></div><div class="ttdeci">LogChannel</div><div class="ttdef"><b>Definition</b> <a href="#l00037">log.h:37</a></div></div>

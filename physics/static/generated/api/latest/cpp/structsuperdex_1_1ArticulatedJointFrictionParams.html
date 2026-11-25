@@ -178,12 +178,14 @@ Public Member Functions</h2></td></tr>
 Public Attributes</h2></td></tr>
 <tr class="memitem:a7a2e37772e4541b9eff04dc0e36a1c27" id="r_a7a2e37772e4541b9eff04dc0e36a1c27"><td class="memItemLeft"><a class="el" href="namespacesuperdex.html#ab1cf40739516aea925c8ebe213131a5d">real</a>&#160;</td><td class="memItemRight"><a class="el" href="#a7a2e37772e4541b9eff04dc0e36a1c27">coulomb</a> = 0_r</td></tr>
 <tr class="memdesc:a7a2e37772e4541b9eff04dc0e36a1c27"><td class="mdescLeft">&#160;</td><td class="mdescRight">Coulomb friction coefficient [N or N·m].  <br /></td></tr>
-<tr class="memitem:a763704d95b1549f63f23a083bcbe3124" id="r_a763704d95b1549f63f23a083bcbe3124"><td class="memItemLeft"><a class="el" href="namespacesuperdex.html#ab1cf40739516aea925c8ebe213131a5d">real</a>&#160;</td><td class="memItemRight"><a class="el" href="#a763704d95b1549f63f23a083bcbe3124">falloffVel</a> = 1e-3_r</td></tr>
-<tr class="memdesc:a763704d95b1549f63f23a083bcbe3124"><td class="mdescLeft">&#160;</td><td class="mdescRight">Velocity threshold for dry friction smoothing [m/s or rad/s].  <br /></td></tr>
+<tr class="memitem:a9ec83f27634a9dfe6e667bcfae60fa74" id="r_a9ec83f27634a9dfe6e667bcfae60fa74"><td class="memItemLeft">std::optional&lt; <a class="el" href="namespacesuperdex.html#ab1cf40739516aea925c8ebe213131a5d">real</a> &gt;&#160;</td><td class="memItemRight"><a class="el" href="#a9ec83f27634a9dfe6e667bcfae60fa74">falloffVel</a> = std::nullopt</td></tr>
+<tr class="memdesc:a9ec83f27634a9dfe6e667bcfae60fa74"><td class="mdescLeft">&#160;</td><td class="mdescRight">[Deprecated] Ignored.  <br /></td></tr>
+<tr class="memitem:a739551eeb9c1f85aa65d7611da51f819" id="r_a739551eeb9c1f85aa65d7611da51f819"><td class="memItemLeft"><a class="el" href="namespacesuperdex.html#ab1cf40739516aea925c8ebe213131a5d">real</a>&#160;</td><td class="memItemRight"><a class="el" href="#a739551eeb9c1f85aa65d7611da51f819">preslidingDisplacement</a> = 1e-4_r</td></tr>
+<tr class="memdesc:a739551eeb9c1f85aa65d7611da51f819"><td class="mdescLeft">&#160;</td><td class="mdescRight">Displacement of a joint from its friction anchor [m or rad] at which dry friction reaches its static peak.  <br /></td></tr>
 <tr class="memitem:a2aa1d8f6ae60cf6defa8c06a7325909b" id="r_a2aa1d8f6ae60cf6defa8c06a7325909b"><td class="memItemLeft"><a class="el" href="namespacesuperdex.html#ab1cf40739516aea925c8ebe213131a5d">real</a>&#160;</td><td class="memItemRight"><a class="el" href="#a2aa1d8f6ae60cf6defa8c06a7325909b">stictionExtra</a> = 0_r</td></tr>
 <tr class="memdesc:a2aa1d8f6ae60cf6defa8c06a7325909b"><td class="mdescLeft">&#160;</td><td class="mdescRight">[Experimental] Extra stiction force/torque [N or N·m] representing the difference between static and dynamic friction.  <br /></td></tr>
 <tr class="memitem:afe1d1daa8de2f89993c02e0db4bb84dc" id="r_afe1d1daa8de2f89993c02e0db4bb84dc"><td class="memItemLeft"><a class="el" href="namespacesuperdex.html#ab1cf40739516aea925c8ebe213131a5d">real</a>&#160;</td><td class="memItemRight"><a class="el" href="#afe1d1daa8de2f89993c02e0db4bb84dc">stribeckVel</a> = 0_r</td></tr>
-<tr class="memdesc:afe1d1daa8de2f89993c02e0db4bb84dc"><td class="mdescLeft">&#160;</td><td class="mdescRight">[Experimental] Stribeck velocity [m/s or rad/s] governing how sharply friction transitions from static to dynamic coefficients as velocity increases.  <br /></td></tr>
+<tr class="memdesc:afe1d1daa8de2f89993c02e0db4bb84dc"><td class="mdescLeft">&#160;</td><td class="mdescRight">[Experimental] Stribeck velocity [m/s or rad/s] governing how sharply friction transitions from static to dynamic coefficients as the sliding velocity increases.  <br /></td></tr>
 <tr class="memitem:a40b1a758f14361f66506002da225990d" id="r_a40b1a758f14361f66506002da225990d"><td class="memItemLeft"><a class="el" href="namespacesuperdex.html#ab1cf40739516aea925c8ebe213131a5d">real</a>&#160;</td><td class="memItemRight"><a class="el" href="#a40b1a758f14361f66506002da225990d">viscous</a> = 0_r</td></tr>
 <tr class="memdesc:a40b1a758f14361f66506002da225990d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Viscous friction coefficient [N·s/m or N·m·s/rad].  <br /></td></tr>
 </table>
@@ -191,11 +193,14 @@ Public Attributes</h2></td></tr>
 <div class="textblock"><p>Per-joint friction parameters for articulated bodies. </p>
 <p>Viscous and dry friction force/torque contributions are added together.</p><ul>
 <li>Viscous friction force/torque is proportional to velocity with coefficient <a class="el" href="#a40b1a758f14361f66506002da225990d" title="viscous">viscous</a>.</li>
-<li>The static-friction peak/breakaway force/torque is given by <a class="el" href="#a7a2e37772e4541b9eff04dc0e36a1c27" title="coulomb">coulomb</a> + <a class="el" href="#a2aa1d8f6ae60cf6defa8c06a7325909b" title="stictionExtra">stictionExtra</a>. Static friction is regularized to allow slight slippage at speeds of up to <a class="el" href="#a763704d95b1549f63f23a083bcbe3124" title="falloffVel">falloffVel</a>.</li>
-<li>Above the smoothing threshold |v| &gt; <a class="el" href="#a763704d95b1549f63f23a083bcbe3124" title="falloffVel">falloffVel</a>, dynamic dry friction force/torque (excluding additional viscous friction) has magnitude <a class="el" href="#a7a2e37772e4541b9eff04dc0e36a1c27" title="coulomb">coulomb</a> + <a class="el" href="#a2aa1d8f6ae60cf6defa8c06a7325909b" title="stictionExtra">stictionExtra</a> * exp(-pow((|v| - <a class="el" href="#a763704d95b1549f63f23a083bcbe3124" title="falloffVel">falloffVel</a>) / <a class="el" href="#afe1d1daa8de2f89993c02e0db4bb84dc" title="stribeckVel">stribeckVel</a>, 2)) when <a class="el" href="#afe1d1daa8de2f89993c02e0db4bb84dc" title="stribeckVel">stribeckVel</a> &gt; 0. If <a class="el" href="#afe1d1daa8de2f89993c02e0db4bb84dc" title="stribeckVel">stribeckVel</a> = 0, the Stribeck term is omitted and the magnitude is <a class="el" href="#a7a2e37772e4541b9eff04dc0e36a1c27" title="coulomb">coulomb</a>. Here |v| is the magnitude of the relative (linear or angular) velocity. This causes friction to decrease smoothly from the peak static value to <a class="el" href="#a7a2e37772e4541b9eff04dc0e36a1c27" title="coulomb">coulomb</a> at high velocities. </li>
+<li>Dry friction is elasto-plastic. Each joint keeps a friction anchor, and its dry friction force/torque grows with the (linear or angular) displacement of the joint from the anchor, up to the static peak <a class="el" href="#a7a2e37772e4541b9eff04dc0e36a1c27" title="coulomb">coulomb</a> + <a class="el" href="#a2aa1d8f6ae60cf6defa8c06a7325909b" title="stictionExtra">stictionExtra</a> at <a class="el" href="#a739551eeb9c1f85aa65d7611da51f819" title="preslidingDisplacement">preslidingDisplacement</a>. A load below the static peak is held at the displacement from the anchor that balances it. Beyond the presliding displacement, the joint slides, and its anchor follows it.</li>
+<li>While the joint slides, dry friction force/torque (excluding additional viscous friction) has magnitude <a class="el" href="#a7a2e37772e4541b9eff04dc0e36a1c27" title="coulomb">coulomb</a> + <a class="el" href="#a2aa1d8f6ae60cf6defa8c06a7325909b" title="stictionExtra">stictionExtra</a> * exp(-pow(|v| / <a class="el" href="#afe1d1daa8de2f89993c02e0db4bb84dc" title="stribeckVel">stribeckVel</a>, 2)) when <a class="el" href="#afe1d1daa8de2f89993c02e0db4bb84dc" title="stribeckVel">stribeckVel</a> &gt; 0, with |v| the magnitude of the (linear or angular) sliding velocity. If <a class="el" href="#afe1d1daa8de2f89993c02e0db4bb84dc" title="stribeckVel">stribeckVel</a> = 0, the Stribeck term is omitted and the magnitude is <a class="el" href="#a7a2e37772e4541b9eff04dc0e36a1c27" title="coulomb">coulomb</a>. This causes friction to decrease smoothly from the peak static value to <a class="el" href="#a7a2e37772e4541b9eff04dc0e36a1c27" title="coulomb">coulomb</a> at high velocities.</li>
 </ul>
+<dl class="section note"><dt>Note</dt><dd>The friction anchors are part of the actor history. Setting the joint positions resets them; other setters keep them. </dd>
+<dd>
+Units are [N] and [m] for translation DoFs (prismatic joints), and [N·m] and [rad] for rotation DoFs (revolute and spherical joints). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="articulated__body__params_8h_source.html#l00139">139</a> of file <a class="el" href="articulated__body__params_8h_source.html">articulated_body_params.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="articulated__body__params_8h_source.html#l00148">148</a> of file <a class="el" href="articulated__body__params_8h_source.html">articulated_body_params.h</a>.</p>
 </div><a name="doc-func-members" id="doc-func-members"></a><h2 id="header-doc-func-members" class="groupheader">Member Function Documentation</h2>
 <a id="acace37403722c895263f16aef6e220c7" name="acace37403722c895263f16aef6e220c7"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#acace37403722c895263f16aef6e220c7">&#9670;&#160;</a></span>operator==()</h2>
@@ -238,27 +243,49 @@ Public Attributes</h2></td></tr>
 <p>Coulomb friction coefficient [N or N·m]. </p>
 <dl class="section note"><dt>Note</dt><dd>Default is zero (no Coulomb friction). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="articulated__body__params_8h_source.html#l00152">152</a> of file <a class="el" href="articulated__body__params_8h_source.html">articulated_body_params.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="articulated__body__params_8h_source.html#l00161">161</a> of file <a class="el" href="articulated__body__params_8h_source.html">articulated_body_params.h</a>.</p>
 
 </div>
 </div>
-<a id="a763704d95b1549f63f23a083bcbe3124" name="a763704d95b1549f63f23a083bcbe3124"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a763704d95b1549f63f23a083bcbe3124">&#9670;&#160;</a></span>falloffVel</h2>
+<a id="a9ec83f27634a9dfe6e667bcfae60fa74" name="a9ec83f27634a9dfe6e667bcfae60fa74"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9ec83f27634a9dfe6e667bcfae60fa74">&#9670;&#160;</a></span>falloffVel</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="namespacesuperdex.html#ab1cf40739516aea925c8ebe213131a5d">real</a> superdex::ArticulatedJointFrictionParams::falloffVel = 1e-3_r</td>
+          <td class="memname">std::optional&lt;<a class="el" href="namespacesuperdex.html#ab1cf40739516aea925c8ebe213131a5d">real</a>&gt; superdex::ArticulatedJointFrictionParams::falloffVel = std::nullopt</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
-<p>Velocity threshold for dry friction smoothing [m/s or rad/s]. </p>
-<p>The dry friction force/torque smoothly transitions from 0 to the peak value as (linear or angular) velocity increases from 0 to <a class="el" href="#a763704d95b1549f63f23a083bcbe3124" title="falloffVel">falloffVel</a>.</p>
-<dl class="section note"><dt>Note</dt><dd>Smaller velocity thresholds improve physical accuracy but may degrade stability. </dd></dl>
+<p>[Deprecated] Ignored. </p>
+<p>Dry friction no longer uses a velocity threshold: it is elasto-plastic, with <a class="el" href="#a739551eeb9c1f85aa65d7611da51f819" title="preslidingDisplacement">preslidingDisplacement</a>.</p>
+<dl class="section warning"><dt>Warning</dt><dd>Deprecated: will be removed in a future release. Setting it logs a warning. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="articulated__body__params_8h_source.html#l00162">162</a> of file <a class="el" href="articulated__body__params_8h_source.html">articulated_body_params.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="articulated__body__params_8h_source.html#l00183">183</a> of file <a class="el" href="articulated__body__params_8h_source.html">articulated_body_params.h</a>.</p>
+
+</div>
+</div>
+<a id="a739551eeb9c1f85aa65d7611da51f819" name="a739551eeb9c1f85aa65d7611da51f819"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a739551eeb9c1f85aa65d7611da51f819">&#9670;&#160;</a></span>preslidingDisplacement</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="namespacesuperdex.html#ab1cf40739516aea925c8ebe213131a5d">real</a> superdex::ArticulatedJointFrictionParams::preslidingDisplacement = 1e-4_r</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Displacement of a joint from its friction anchor [m or rad] at which dry friction reaches its static peak. </p>
+<p>Below it, dry friction force/torque grows smoothly from zero with the displacement, which is elastic: the joint returns towards its anchor when the load drops. Beyond it, the joint slides.</p>
+<dl class="section note"><dt>Note</dt><dd>Must be positive. Smaller values hold loads more stiffly, but may degrade convergence. </dd>
+<dd>
+Below it, dry friction adds no damping. A held joint is damped only by <a class="el" href="#a40b1a758f14361f66506002da225990d" title="viscous">viscous</a> (zero by default) and by the time integration. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="articulated__body__params_8h_source.html#l00175">175</a> of file <a class="el" href="articulated__body__params_8h_source.html">articulated_body_params.h</a>.</p>
 
 </div>
 </div>
@@ -284,7 +311,7 @@ Nonzero extra stiction with zero Stribeck velocity results in a nonsmooth force.
 <dd>
 Defaults to zero (no difference between static and dynamic friction). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="articulated__body__params_8h_source.html#l00177">177</a> of file <a class="el" href="articulated__body__params_8h_source.html">articulated_body_params.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="articulated__body__params_8h_source.html#l00198">198</a> of file <a class="el" href="articulated__body__params_8h_source.html">articulated_body_params.h</a>.</p>
 
 </div>
 </div>
@@ -300,7 +327,7 @@ Defaults to zero (no difference between static and dynamic friction). </dd></dl>
       </table>
 </div><div class="memdoc">
 
-<p>[Experimental] Stribeck velocity [m/s or rad/s] governing how sharply friction transitions from static to dynamic coefficients as velocity increases. </p>
+<p>[Experimental] Stribeck velocity [m/s or rad/s] governing how sharply friction transitions from static to dynamic coefficients as the sliding velocity increases. </p>
 <dl class="section warning"><dt>Warning</dt><dd>This is an experimental feature. It may be changed or removed in the future. Use at your own risk. </dd>
 <dd>
 Nonzero values may harm convergence. </dd>
@@ -310,9 +337,11 @@ Nonzero extra stiction with zero Stribeck velocity results in a nonsmooth force.
 <dd>
 Defaults to zero. </dd>
 <dd>
-This has no effect if <a class="el" href="#a2aa1d8f6ae60cf6defa8c06a7325909b" title="stictionExtra">stictionExtra</a> is zero. </dd></dl>
+This has no effect if <a class="el" href="#a2aa1d8f6ae60cf6defa8c06a7325909b" title="stictionExtra">stictionExtra</a> is zero. </dd>
+<dd>
+The sliding velocity is the slip since the start of the step divided by the time since then, so higher-order integrators may be only first-order accurate while the joint slides. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="articulated__body__params_8h_source.html#l00192">192</a> of file <a class="el" href="articulated__body__params_8h_source.html">articulated_body_params.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="articulated__body__params_8h_source.html#l00215">215</a> of file <a class="el" href="articulated__body__params_8h_source.html">articulated_body_params.h</a>.</p>
 
 </div>
 </div>
@@ -331,7 +360,7 @@ This has no effect if <a class="el" href="#a2aa1d8f6ae60cf6defa8c06a7325909b" ti
 <p>Viscous friction coefficient [N·s/m or N·m·s/rad]. </p>
 <dl class="section note"><dt>Note</dt><dd>Default is zero (no viscous friction). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="articulated__body__params_8h_source.html#l00145">145</a> of file <a class="el" href="articulated__body__params_8h_source.html">articulated_body_params.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="articulated__body__params_8h_source.html#l00154">154</a> of file <a class="el" href="articulated__body__params_8h_source.html">articulated_body_params.h</a>.</p>
 
 </div>
 </div>

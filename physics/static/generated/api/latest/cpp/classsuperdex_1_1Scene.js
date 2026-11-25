@@ -23,6 +23,8 @@ var classsuperdex_1_1Scene =
     [ "CreateRigidPivotToRigidTargetConstraint", "classsuperdex_1_1Scene.html#a21135392ae33877e6bc56ceb0a78dc1b", null ],
     [ "CreateRigidPrismaticJointConstraint", "classsuperdex_1_1Scene.html#a1ec46debcbafae94618e3fcbd524d999", null ],
     [ "CreateRigidSphericalJointConstraint", "classsuperdex_1_1Scene.html#a1603e86c501c9c6fb924c86fd771d287", null ],
+    [ "CreateRodActor", "classsuperdex_1_1Scene.html#a689bbbf8d8644b0e4709695059999481", null ],
+    [ "CreateRodElementRotationConstraint", "classsuperdex_1_1Scene.html#ae1738e3236d3fada0311dd56e14ee049", null ],
     [ "CreateRodElementRotationToRigidConstraint", "classsuperdex_1_1Scene.html#a19dc600ae42e38b5d015081016c5b14a", null ],
     [ "CreateSoftActor", "classsuperdex_1_1Scene.html#ae9b87e33f5df12295ffda916d846f4e3", null ],
     [ "CreateSoftSkinnedActor", "classsuperdex_1_1Scene.html#a739c302d8b5d9f90f7ad98f46eab6791", null ],
@@ -77,5 +79,6 @@ var classsuperdex_1_1Scene =
     [ "SetSolverParams", "classsuperdex_1_1Scene.html#a77f5be34e91e952ec7df3820d0a364f6", null ],
     [ "Step", "classsuperdex_1_1Scene.html#ab2ebf00d9b282dd85bc1ed59747471c4", null ],
     [ "UpdateDebugger", "classsuperdex_1_1Scene.html#a900e7417d699fe9569e3383ac614b681", null ],
+    [ "UpdateQueries", "classsuperdex_1_1Scene.html#ad3f3875b26a256b70b597a6e0b359e84", null ],
     [ "kDefaultCallbackPriority", "classsuperdex_1_1Scene.html#ac1400d748f580e1e97dbb9aa37b78b8f", null ]
 ];

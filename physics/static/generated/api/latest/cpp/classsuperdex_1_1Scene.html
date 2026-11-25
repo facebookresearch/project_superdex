@@ -214,6 +214,10 @@ Public Member Functions</h2></td></tr>
 <tr class="memdesc:a1ec46debcbafae94618e3fcbd524d999"><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a prismatic joint constraint between two rigid actors.  <br /></td></tr>
 <tr class="memitem:a1603e86c501c9c6fb924c86fd771d287" id="r_a1603e86c501c9c6fb924c86fd771d287"><td class="memItemLeft">virtual <a class="el" href="classsuperdex_1_1Constraint.html">Constraint</a> *&#160;</td><td class="memItemRight"><a class="el" href="#a1603e86c501c9c6fb924c86fd771d287">CreateRigidSphericalJointConstraint</a> (<a class="el" href="structsuperdex_1_1RigidSphericalJointConstraintParams.html">RigidSphericalJointConstraintParams</a> const &amp;params, <a class="el" href="classsuperdex_1_1Error.html">Error</a> &amp;error)=0</td></tr>
 <tr class="memdesc:a1603e86c501c9c6fb924c86fd771d287"><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a spherical joint constraint between two rigid actors.  <br /></td></tr>
+<tr class="memitem:a689bbbf8d8644b0e4709695059999481" id="r_a689bbbf8d8644b0e4709695059999481"><td class="memItemLeft">virtual <a class="el" href="classsuperdex_1_1Actor.html">Actor</a> *&#160;</td><td class="memItemRight"><a class="el" href="#a689bbbf8d8644b0e4709695059999481">CreateRodActor</a> (<a class="el" href="structsuperdex_1_1RodActorParams.html">RodActorParams</a> const &amp;params, <a class="el" href="classsuperdex_1_1Error.html">Error</a> &amp;error)=0</td></tr>
+<tr class="memdesc:a689bbbf8d8644b0e4709695059999481"><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a rod actor.  <br /></td></tr>
+<tr class="memitem:ae1738e3236d3fada0311dd56e14ee049" id="r_ae1738e3236d3fada0311dd56e14ee049"><td class="memItemLeft">virtual <a class="el" href="classsuperdex_1_1Constraint.html">Constraint</a> *&#160;</td><td class="memItemRight"><a class="el" href="#ae1738e3236d3fada0311dd56e14ee049">CreateRodElementRotationConstraint</a> (<a class="el" href="structsuperdex_1_1RodElementRotationConstraintParams.html">RodElementRotationConstraintParams</a> const &amp;params, <a class="el" href="classsuperdex_1_1Error.html">Error</a> &amp;error)=0</td></tr>
+<tr class="memdesc:ae1738e3236d3fada0311dd56e14ee049"><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a rotation constraint on a rod element.  <br /></td></tr>
 <tr class="memitem:a19dc600ae42e38b5d015081016c5b14a" id="r_a19dc600ae42e38b5d015081016c5b14a"><td class="memItemLeft">virtual <a class="el" href="classsuperdex_1_1Constraint.html">Constraint</a> *&#160;</td><td class="memItemRight"><a class="el" href="#a19dc600ae42e38b5d015081016c5b14a">CreateRodElementRotationToRigidConstraint</a> (<a class="el" href="structsuperdex_1_1RodElementRotationToRigidConstraintParams.html">RodElementRotationToRigidConstraintParams</a> const &amp;params, <a class="el" href="classsuperdex_1_1Error.html">Error</a> &amp;error)=0</td></tr>
 <tr class="memdesc:a19dc600ae42e38b5d015081016c5b14a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a rotation constraint between a rigid actor and a rod element.  <br /></td></tr>
 <tr class="memitem:ae9b87e33f5df12295ffda916d846f4e3" id="r_ae9b87e33f5df12295ffda916d846f4e3"><td class="memItemLeft">virtual <a class="el" href="classsuperdex_1_1Actor.html">Actor</a> *&#160;</td><td class="memItemRight"><a class="el" href="#ae9b87e33f5df12295ffda916d846f4e3">CreateSoftActor</a> (<a class="el" href="structsuperdex_1_1SoftActorParams.html">SoftActorParams</a> const &amp;params, <a class="el" href="classsuperdex_1_1Error.html">Error</a> &amp;error)=0</td></tr>
@@ -322,6 +326,8 @@ Public Member Functions</h2></td></tr>
 <tr class="memdesc:ab2ebf00d9b282dd85bc1ed59747471c4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Advance the simulation of the <a class="el" href="classsuperdex_1_1Scene.html" title="superdex::Scene">Scene</a> one step.  <br /></td></tr>
 <tr class="memitem:a900e7417d699fe9569e3383ac614b681" id="r_a900e7417d699fe9569e3383ac614b681"><td class="memItemLeft">virtual void&#160;</td><td class="memItemRight"><a class="el" href="#a900e7417d699fe9569e3383ac614b681">UpdateDebugger</a> ()=0</td></tr>
 <tr class="memdesc:a900e7417d699fe9569e3383ac614b681"><td class="mdescLeft">&#160;</td><td class="mdescRight">This gives the debugger a chance to process messages that require reading or writing scene state.  <br /></td></tr>
+<tr class="memitem:ad3f3875b26a256b70b597a6e0b359e84" id="r_ad3f3875b26a256b70b597a6e0b359e84"><td class="memItemLeft">virtual void&#160;</td><td class="memItemRight"><a class="el" href="#ad3f3875b26a256b70b597a6e0b359e84">UpdateQueries</a> (<a class="el" href="classsuperdex_1_1Error.html">Error</a> &amp;error)=0</td></tr>
+<tr class="memdesc:ad3f3875b26a256b70b597a6e0b359e84"><td class="mdescLeft">&#160;</td><td class="mdescRight">Refresh registered queries without advancing the simulation.  <br /></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-pub-static-attribs" class="groupheader"><a id="pub-static-attribs" name="pub-static-attribs"></a>
 Static Public Attributes</h2></td></tr>
@@ -812,6 +818,7 @@ The binary representation uses an internal capture format. It is intended only f
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Pointer to the created <a class="el" href="classsuperdex_1_1Constraint.html" title="superdex::Constraint">Constraint</a>, or nullptr on error.</dd></dl>
+<dl class="section note"><dt>Note</dt><dd>Not supported on nested soft actors (see <a class="el" href="classsuperdex_1_1Actor.html#a89a379d527fbda67ac45b97969ae2e82" title="superdex::Actor::GetNestedSoftActors">Actor::GetNestedSoftActors</a>).</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="namespacesuperdex.html#ab92ef8aafce41557fa7fe97e7aad73a9a87539ee345279c8b651e3450aa1fb040" title="superdex::ConstraintType::DeformableNodePosition">ConstraintType::DeformableNodePosition</a>, <a class="el" href="structsuperdex_1_1DeformableNodePositionConstraintParams.html" title="superdex::DeformableNodePositionConstraintParams">DeformableNodePositionConstraintParams</a>, <a class="el" href="#a8c3f66142f477208ed5dbbf1dbdea9b4" title="superdex::Scene::DestroyConstraint">DestroyConstraint</a> </dd></dl>
 
 </div>
@@ -852,6 +859,7 @@ The binary representation uses an internal capture format. It is intended only f
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Pointer to the created <a class="el" href="classsuperdex_1_1Constraint.html" title="superdex::Constraint">Constraint</a>, or nullptr on error.</dd></dl>
+<dl class="section note"><dt>Note</dt><dd>Not supported on nested soft actors (see <a class="el" href="classsuperdex_1_1Actor.html#a89a379d527fbda67ac45b97969ae2e82" title="superdex::Actor::GetNestedSoftActors">Actor::GetNestedSoftActors</a>).</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="namespacesuperdex.html#ab92ef8aafce41557fa7fe97e7aad73a9af7936e01fede49fb95cfdcf8e1246906" title="superdex::ConstraintType::DeformableNodeToDeformableNode">ConstraintType::DeformableNodeToDeformableNode</a>, <a class="el" href="structsuperdex_1_1DeformableNodeToDeformableNodeConstraintParams.html" title="superdex::DeformableNodeToDeformableNodeConstraintParams">DeformableNodeToDeformableNodeConstraintParams</a>, <a class="el" href="#a8c3f66142f477208ed5dbbf1dbdea9b4" title="superdex::Scene::DestroyConstraint">DestroyConstraint</a> </dd></dl>
 
 </div>
@@ -892,6 +900,7 @@ The binary representation uses an internal capture format. It is intended only f
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Pointer to the created <a class="el" href="classsuperdex_1_1Constraint.html" title="superdex::Constraint">Constraint</a>, or nullptr on error.</dd></dl>
+<dl class="section note"><dt>Note</dt><dd>Not supported on nested soft actors (see <a class="el" href="classsuperdex_1_1Actor.html#a89a379d527fbda67ac45b97969ae2e82" title="superdex::Actor::GetNestedSoftActors">Actor::GetNestedSoftActors</a>).</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="namespacesuperdex.html#ab92ef8aafce41557fa7fe97e7aad73a9af85eb3a5bbe4902f470e87324ffd5a22" title="superdex::ConstraintType::DeformableNodeToRigid">ConstraintType::DeformableNodeToRigid</a>, <a class="el" href="structsuperdex_1_1DeformableNodeToRigidConstraintParams.html" title="superdex::DeformableNodeToRigidConstraintParams">DeformableNodeToRigidConstraintParams</a>, <a class="el" href="#a8c3f66142f477208ed5dbbf1dbdea9b4" title="superdex::Scene::DestroyConstraint">DestroyConstraint</a> </dd></dl>
 
 </div>
@@ -1213,6 +1222,86 @@ The binary representation uses an internal capture format. It is intended only f
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Pointer to the created <a class="el" href="classsuperdex_1_1Constraint.html" title="superdex::Constraint">Constraint</a>, or nullptr on error.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="namespacesuperdex.html#ab92ef8aafce41557fa7fe97e7aad73a9af54dc925ca1c98cc603a9d3279f93ee2" title="superdex::ConstraintType::RigidSphericalJoint">ConstraintType::RigidSphericalJoint</a>, <a class="el" href="structsuperdex_1_1RigidSphericalJointConstraintParams.html" title="superdex::RigidSphericalJointConstraintParams">RigidSphericalJointConstraintParams</a>, <a class="el" href="#a8c3f66142f477208ed5dbbf1dbdea9b4" title="superdex::Scene::DestroyConstraint">DestroyConstraint</a> </dd></dl>
+
+</div>
+</div>
+<a id="a689bbbf8d8644b0e4709695059999481" name="a689bbbf8d8644b0e4709695059999481"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a689bbbf8d8644b0e4709695059999481">&#9670;&#160;</a></span>CreateRodActor()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">virtual <a class="el" href="classsuperdex_1_1Actor.html">Actor</a> * superdex::Scene::CreateRodActor </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="structsuperdex_1_1RodActorParams.html">RodActorParams</a> const &amp;</td>          <td class="paramname"><span class="paramname"><em>params</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="classsuperdex_1_1Error.html">Error</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>error</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel pure-virtual">pure virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Create a rod actor. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">params</td><td>Parameters defining the rod actor. </td></tr>
+    <tr><td class="paramdir">[in,out]</td><td class="paramname">error</td><td><a class="el" href="classsuperdex_1_1Error.html">Error</a> status. Check <a class="el" href="classsuperdex_1_1Error.html#a463cb4f3428a7a2dd779a2f6c5d153b2" title="superdex::Error::IsOK">Error::IsOK</a> for success. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Pointer to the created <a class="el" href="classsuperdex_1_1Actor.html" title="superdex::Actor">Actor</a>, or nullptr on error.</dd></dl>
+<dl class="section see"><dt>See also</dt><dd><a class="el" href="structsuperdex_1_1RodActorParams.html" title="superdex::RodActorParams">RodActorParams</a>, <a class="el" href="#af70d0fb9dab4579e7b9e1d4666e7f54f" title="superdex::Scene::DestroyActor">DestroyActor</a> </dd></dl>
+
+</div>
+</div>
+<a id="ae1738e3236d3fada0311dd56e14ee049" name="ae1738e3236d3fada0311dd56e14ee049"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae1738e3236d3fada0311dd56e14ee049">&#9670;&#160;</a></span>CreateRodElementRotationConstraint()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">virtual <a class="el" href="classsuperdex_1_1Constraint.html">Constraint</a> * superdex::Scene::CreateRodElementRotationConstraint </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="structsuperdex_1_1RodElementRotationConstraintParams.html">RodElementRotationConstraintParams</a> const &amp;</td>          <td class="paramname"><span class="paramname"><em>params</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="classsuperdex_1_1Error.html">Error</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>error</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel pure-virtual">pure virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Create a rotation constraint on a rod element. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">params</td><td>Parameters defining the rod element rotation constraint. </td></tr>
+    <tr><td class="paramdir">[in,out]</td><td class="paramname">error</td><td><a class="el" href="classsuperdex_1_1Error.html">Error</a> status. Check <a class="el" href="classsuperdex_1_1Error.html#a463cb4f3428a7a2dd779a2f6c5d153b2" title="superdex::Error::IsOK">Error::IsOK</a> for success. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Pointer to the created <a class="el" href="classsuperdex_1_1Constraint.html" title="superdex::Constraint">Constraint</a>, or nullptr on error.</dd></dl>
+<dl class="section see"><dt>See also</dt><dd><a class="el" href="namespacesuperdex.html#ab92ef8aafce41557fa7fe97e7aad73a9a6c592856198594c3addd2c6a36575329" title="superdex::ConstraintType::RodElementRotation">ConstraintType::RodElementRotation</a>, <a class="el" href="structsuperdex_1_1RodElementRotationConstraintParams.html" title="superdex::RodElementRotationConstraintParams">RodElementRotationConstraintParams</a>, <a class="el" href="#a8c3f66142f477208ed5dbbf1dbdea9b4" title="superdex::Scene::DestroyConstraint">DestroyConstraint</a> </dd></dl>
 
 </div>
 </div>
@@ -2827,7 +2916,9 @@ The relative order of callbacks registered with equal priority is unspecified. A
 <dd>
 Callbacks must be thread-safe if they access shared state. </dd>
 <dd>
-Callbacks should not modify scene structure (add/remove actors/constraints).</dd></dl>
+Callbacks should not modify scene structure (add/remove actors/constraints). </dd>
+<dd>
+Callbacks also run on <a class="el" href="#ab2ebf00d9b282dd85bc1ed59747471c4" title="superdex::Scene::Step">Step</a> with a zero time step, after queries are refreshed. Their changes persist. See <a class="el" href="#ab2ebf00d9b282dd85bc1ed59747471c4" title="superdex::Scene::Step">Step</a>.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="#aac769d6e9028903a995e1db130faa327" title="superdex::Scene::CancelCallback">CancelCallback</a>, <a class="el" href="#a41c34347811c93811dfe45415f3dbd4a" title="superdex::Scene::RegisterPreStepCallback">RegisterPreStepCallback</a> </dd></dl>
 
 </div>
@@ -2880,7 +2971,9 @@ The relative order of callbacks registered with equal priority is unspecified. A
 <dd>
 Callbacks must be thread-safe if they access shared state. </dd>
 <dd>
-Callbacks should not modify scene structure (add/remove actors/constraints).</dd></dl>
+Callbacks should not modify scene structure (add/remove actors/constraints). </dd>
+<dd>
+Callbacks also run on <a class="el" href="#ab2ebf00d9b282dd85bc1ed59747471c4" title="superdex::Scene::Step">Step</a> with a zero time step, before queries are refreshed. Their changes persist. See <a class="el" href="#ab2ebf00d9b282dd85bc1ed59747471c4" title="superdex::Scene::Step">Step</a>.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="#aac769d6e9028903a995e1db130faa327" title="superdex::Scene::CancelCallback">CancelCallback</a>, <a class="el" href="#a30444a5ca79f67a2344a5609d37e5176" title="superdex::Scene::RegisterPostStepCallback">RegisterPostStepCallback</a> </dd></dl>
 
 </div>
@@ -2994,7 +3087,9 @@ Callbacks should not modify scene structure (add/remove actors/constraints).</dd
 The scene composition (actors, constraints) must be the same as when the state was captured.</dd></dl>
 <dl class="section warning"><dt>Warning</dt><dd>Does not create or destroy actors or constraints, or restore shapes, materials, or scene parameters. Captured mutable state on existing actors, including static actor transforms, is restored; if topology or persistent configuration changes, simulation results may differ. </dd>
 <dd>
-Restoration is not transactional. If restoration fails, the scene may be partially modified. Restore a known-good checkpoint or recreate the scene before continuing.</dd></dl>
+Restoration is not transactional. If restoration fails, the scene may be partially modified. Restore a known-good checkpoint or recreate the scene before continuing. </dd>
+<dd>
+Not supported for scenes with ROM actors.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="#a3654e221ae68565d515443ada434123d" title="superdex::Scene::CaptureState">CaptureState</a>, <a class="el" href="#a03b70a144be939176c49931ea3cb6a9b" title="superdex::Scene::ReleaseState">ReleaseState</a>, <a class="el" href="#a282246e53d85a9092331bc8427eaf67f" title="superdex::Scene::ReleaseAllStates">ReleaseAllStates</a>, <a class="el" href="#a67b850067bf115d2a53f645105732b3d" title="superdex::Scene::RestoreStateFromBytes">RestoreStateFromBytes</a> </dd></dl>
 
 </div>
@@ -3039,7 +3134,7 @@ Restoration is not transactional. If restoration fails, the scene may be partial
 The capture and restore scenes must use the same SuperDex Physics build. </dd>
 <dd>
 The restore requirements from <a class="el" href="#a284f00c019d3a6bef7f2924203cd4241" title="superdex::Scene::RestoreState">RestoreState</a> apply, including scene composition (actors, constraints) being the same as when the state was captured.</dd></dl>
-<dl class="section warning"><dt>Warning</dt><dd>Has the same restore scope and non-transactional failure behavior as <a class="el" href="#a284f00c019d3a6bef7f2924203cd4241" title="superdex::Scene::RestoreState">RestoreState</a>.</dd></dl>
+<dl class="section warning"><dt>Warning</dt><dd>Has the same restore scope, non-transactional failure behavior, and lack of support for scenes with ROM actors as <a class="el" href="#a284f00c019d3a6bef7f2924203cd4241" title="superdex::Scene::RestoreState">RestoreState</a>.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="#a9062904147952090acf10f3313769530" title="superdex::Scene::CaptureStateToBytes">CaptureStateToBytes</a>, <a class="el" href="#a284f00c019d3a6bef7f2924203cd4241" title="superdex::Scene::RestoreState">RestoreState</a> </dd></dl>
 
 </div>
@@ -3242,10 +3337,12 @@ The exact actors are used; nested actors are not included automatically.</dd></d
 <dd>
 It is OK to use a different time step each time. </dd>
 <dd>
-If the time step is zero, then the state of the simulation will not change, but pre-step and post-step callbacks will still be called, and queries will be updated. </dd>
+With a zero time step, the simulation does not advance. Pre-step callbacks run first, then queries are refreshed as by <a class="el" href="#ad3f3875b26a256b70b597a6e0b359e84" title="superdex::Scene::UpdateQueries">UpdateQueries</a>, then post-step callbacks run. If some queries cannot be updated, then it will log a one-time warning. To update queries without invoking callbacks, call <a class="el" href="#ad3f3875b26a256b70b597a6e0b359e84" title="superdex::Scene::UpdateQueries">UpdateQueries</a> instead. </dd>
 <dd>
-If the time step is negative or NaN, no step is taken and an error is logged.</dd></dl>
-<dl class="section see"><dt>See also</dt><dd><a class="el" href="namespacesuperdex.html#aba7db404f336978480a0790044d1f900" title="superdex::IntegrationMethod">IntegrationMethod</a> </dd></dl>
+If the time step is negative or NaN, no step is taken and an error is logged. </dd>
+<dd>
+After the step, the actor state (e.g. transforms, velocities and node positions) and the queries derived from it are at the end of the time step. Queries evaluated during force assembly (<a class="el" href="namespacesuperdex.html#aed26e55b2a9ac698fffe268c8cd9f5ebaa5a95a45154fa9633bfe9c1653de6fe2" title="superdex::QueryType::ContactPoints">QueryType::ContactPoints</a>, <a class="el" href="namespacesuperdex.html#aed26e55b2a9ac698fffe268c8cd9f5eba4354a9bb146f7cb3eb3eb8bb55e88725" title="superdex::QueryType::NodeContactForces">QueryType::NodeContactForces</a>, <a class="el" href="namespacesuperdex.html#aed26e55b2a9ac698fffe268c8cd9f5ebae656ca9b2086c6d01d1728811c7c14ba" title="superdex::QueryType::SdfDistances">QueryType::SdfDistances</a>, <a class="el" href="namespacesuperdex.html#aed26e55b2a9ac698fffe268c8cd9f5ebaf21cc073aaf161fd697dfc97593ca3a9" title="superdex::QueryType::TotalContactForce">QueryType::TotalContactForce</a>, <a class="el" href="namespacesuperdex.html#aed26e55b2a9ac698fffe268c8cd9f5eba61e3caaffbc21859e5de8e188a9fa7d6" title="superdex::QueryType::ConstraintForce">QueryType::ConstraintForce</a> and <a class="el" href="namespacesuperdex.html#aed26e55b2a9ac698fffe268c8cd9f5eba24d76e3116fa55b3e7a483af855bec89" title="superdex::QueryType::ArticulatedJointWrenches">QueryType::ArticulatedJointWrenches</a>) correspond to the last stage of the time integrator instead. For integration methods whose step does not end at their last stage (<a class="el" href="namespacesuperdex.html#aba7db404f336978480a0790044d1f900a41a24d9f84acb189f64f1fdec5be6178" title="superdex::IntegrationMethod::DIRK23">IntegrationMethod::DIRK23</a>, <a class="el" href="namespacesuperdex.html#aba7db404f336978480a0790044d1f900a53cd2918343236914369b2efec79a77b" title="superdex::IntegrationMethod::SymplecticDIRK12">IntegrationMethod::SymplecticDIRK12</a> and <a class="el" href="namespacesuperdex.html#aba7db404f336978480a0790044d1f900a989bf7ccf1461736bfa0a337bdb7b992" title="superdex::IntegrationMethod::SymplecticDIRK22">IntegrationMethod::SymplecticDIRK22</a>), the two differ and should not be combined, e.g. contact points should not be expressed in the frame returned by <a class="el" href="classsuperdex_1_1Actor.html#a39d4ab5ed8a534693247388a519152aa" title="superdex::Actor::GetRootTransform">Actor::GetRootTransform</a>. To evaluate these queries at the end-of-step state instead, call <a class="el" href="#ad3f3875b26a256b70b597a6e0b359e84" title="superdex::Scene::UpdateQueries">UpdateQueries</a>.</dd></dl>
+<dl class="section see"><dt>See also</dt><dd><a class="el" href="namespacesuperdex.html#aba7db404f336978480a0790044d1f900" title="superdex::IntegrationMethod">IntegrationMethod</a>, <a class="el" href="#ad3f3875b26a256b70b597a6e0b359e84" title="superdex::Scene::UpdateQueries">UpdateQueries</a> </dd></dl>
 
 </div>
 </div>
@@ -3278,6 +3375,57 @@ If the time step is negative or NaN, no step is taken and an error is logged.</d
 
 </div>
 </div>
+<a id="ad3f3875b26a256b70b597a6e0b359e84" name="ad3f3875b26a256b70b597a6e0b359e84"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad3f3875b26a256b70b597a6e0b359e84">&#9670;&#160;</a></span>UpdateQueries()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">virtual void superdex::Scene::UpdateQueries </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classsuperdex_1_1Error.html">Error</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>error</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel pure-virtual">pure virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Refresh registered queries without advancing the simulation. </p>
+<p>The scene state is unchanged, step callbacks are not invoked, the step counter is not incremented, and no island is woken during the call.</p>
+<p>If no registered query requires contact detection or force evaluation (see <a class="el" href="namespacesuperdex.html#aed26e55b2a9ac698fffe268c8cd9f5eb" title="superdex::QueryType">QueryType</a>), queries are recomputed from the current state. Otherwise, contacts and forces are first evaluated for the current state, and all queries are refreshed from that evaluation. If some query requires contact detection or force evaluation, but this is not supported, queries that don't require it are still recomputed, those that do are left unchanged, and an error is reported.</p>
+<p>When forces are evaluated, the time discretization depends on the available history:</p>
+<ul>
+<li>In initial conditions, i.e., before the first step, in a state captured before it, or for actors without usable history, e.g., created or reset after the last step, the previous pose is extrapolated at constant velocity. The time step is that of the last step, or a default 10 ms if there was no step or it was quasistatic.</li>
+<li>Otherwise, i.e., after a step or in a restored state captured after one, forces are evaluated with the time step of the last step, and the result depends on the active integration method:</li>
+<li>Backward Euler, BDF2 and BDF3: if the scene has not been modified since the last step, its forces are reproduced exactly.</li>
+<li>DIRK and symplectic DIRK methods: intermediate stage states are not available, so forces are evaluated with a single-stage Backward Euler discretization and a constant-velocity previous pose.</li>
+</ul>
+<p>After a quasistatic step, Backward Euler and BDF methods evaluate forces quasistatically, while DIRK and symplectic DIRK methods use the default 10 ms time step.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in,out]</td><td class="paramname">error</td><td><a class="el" href="classsuperdex_1_1Error.html">Error</a> status. Check <a class="el" href="classsuperdex_1_1Error.html#a463cb4f3428a7a2dd779a2f6c5d153b2" title="superdex::Error::IsOK">Error::IsOK</a> for success.</td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section note"><dt>Note</dt><dd>When forces are evaluated, prescribed inputs set since the last step (static actor poses and velocities, controller and constraint targets, boundary condition targets) are applied as the next step would apply them, and remain pending for it. All refreshed queries describe this evaluated configuration, which differs from the scene state while boundary condition targets are pending (see <a class="el" href="classsuperdex_1_1Actor.html#a6cb472c6f16b92d61b21d05cf60dd7d9" title="superdex::Actor::AddBoundaryConditionDofsWorld">Actor::AddBoundaryConditionDofsWorld</a>). </dd>
+<dd>
+Force evaluation costs a state capture, a solve-free assembly of all islands, and a state restore. It requires state capture support, which ROM actors and ROM/FOM switching currently prevent. </dd>
+<dd>
+Forces are not evaluated for islands whose last step diverged (see <a class="el" href="classsuperdex_1_1Actor.html#af15c889d60a02d6faf4bf57c21c9a70d" title="superdex::Actor::GetConvergenceStatus">Actor::GetConvergenceStatus</a>), since the divergence reset their actors instead of solving them. Their queries keep the values of the diverged step. </dd>
+<dd>
+Force evaluation may merge or split islands, e.g., if actors moved into potential contact. The islands whose composition changes, including sleeping ones, wake at the next step.</dd></dl>
+<dl class="section see"><dt>See also</dt><dd><a class="el" href="#ab2ebf00d9b282dd85bc1ed59747471c4" title="superdex::Scene::Step">Step</a>, <a class="el" href="classsuperdex_1_1Actor.html#ae14afba92874f6489d293460662bcd73" title="superdex::Actor::RegisterQuery">Actor::RegisterQuery</a> </dd></dl>
+
+</div>
+</div>
 <a name="doc-variable-members" id="doc-variable-members"></a><h2 id="header-doc-variable-members" class="groupheader">Member Data Documentation</h2>
 <a id="ac1400d748f580e1e97dbb9aa37b78b8f" name="ac1400d748f580e1e97dbb9aa37b78b8f"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ac1400d748f580e1e97dbb9aa37b78b8f">&#9670;&#160;</a></span>kDefaultCallbackPriority</h2>
@@ -3302,7 +3450,7 @@ If the time step is negative or NaN, no step is taken and an error is logged.</d
 <p>Default priority for callback ordering. </p>
 <p>Lower values execute earlier (higher priority). </p>
 
-<p class="definition">Definition at line <a class="el" href="mochi__scene_8h_source.html#l00260">260</a> of file <a class="el" href="mochi__scene_8h_source.html">mochi_scene.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__scene_8h_source.html#l00268">268</a> of file <a class="el" href="mochi__scene_8h_source.html">mochi_scene.h</a>.</p>
 
 </div>
 </div>

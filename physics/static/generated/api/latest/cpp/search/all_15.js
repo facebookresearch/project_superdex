@@ -15,9 +15,10 @@ var searchData=
   ['up_11',['Up',['../namespacesuperdex.html#a569effbbe9b57cc9efb15352ac1d06e6a258f49887ef8d14ac268c92b02503aaa',1,'superdex']]],
   ['updatedebugger_12',['UpdateDebugger',['../classsuperdex_1_1Scene.html#a900e7417d699fe9569e3383ac614b681',1,'superdex::Scene']]],
   ['updateoldtarget_13',['UpdateOldTarget',['../classsuperdex_1_1Constraint.html#aeb08066f548af4fb712e24a22d9461e3',1,'superdex::Constraint']]],
-  ['urb_14',['URB',['../namespacesuperdex.html#a569effbbe9b57cc9efb15352ac1d06e6aee731e1f1e2c2ae4ac4d91c9b1667210',1,'superdex']]],
-  ['urf_15',['URF',['../namespacesuperdex.html#a569effbbe9b57cc9efb15352ac1d06e6a3e7628100f1ffe31e6eaa3c167e437fa',1,'superdex']]],
-  ['usecontactskin_16',['useContactSkin',['../structsuperdex_1_1SoftActorParams.html#aa21d85e608390a3c1564f581478a1878',1,'superdex::SoftActorParams']]],
-  ['usefixedtimestep_17',['useFixedTimeStep',['../structsuperdex_1_1AsyncStepParams.html#aa909fab7f74626bc2ca6a148aab718c6',1,'superdex::AsyncStepParams']]],
-  ['userecentering_18',['useRecentering',['../structsuperdex_1_1prefab_1_1SoftActorPrefab.html#a721db1d14add3dccdd121a09391a8c5e',1,'superdex::prefab::SoftActorPrefab::useRecentering'],['../structsuperdex_1_1RecenteringParams.html#a7264484a429cd297762bd92499c92fdd',1,'superdex::RecenteringParams::useRecentering']]]
+  ['updatequeries_14',['UpdateQueries',['../classsuperdex_1_1Scene.html#ad3f3875b26a256b70b597a6e0b359e84',1,'superdex::Scene']]],
+  ['urb_15',['URB',['../namespacesuperdex.html#a569effbbe9b57cc9efb15352ac1d06e6aee731e1f1e2c2ae4ac4d91c9b1667210',1,'superdex']]],
+  ['urf_16',['URF',['../namespacesuperdex.html#a569effbbe9b57cc9efb15352ac1d06e6a3e7628100f1ffe31e6eaa3c167e437fa',1,'superdex']]],
+  ['usecontactskin_17',['useContactSkin',['../structsuperdex_1_1SoftActorParams.html#aa21d85e608390a3c1564f581478a1878',1,'superdex::SoftActorParams::useContactSkin'],['../structsuperdex_1_1RodActorParams.html#a1fe348d17eb9b7d8837531fa9625ae1d',1,'superdex::RodActorParams::useContactSkin']]],
+  ['usefixedtimestep_18',['useFixedTimeStep',['../structsuperdex_1_1AsyncStepParams.html#aa909fab7f74626bc2ca6a148aab718c6',1,'superdex::AsyncStepParams']]],
+  ['userecentering_19',['useRecentering',['../structsuperdex_1_1prefab_1_1SoftActorPrefab.html#a721db1d14add3dccdd121a09391a8c5e',1,'superdex::prefab::SoftActorPrefab::useRecentering'],['../structsuperdex_1_1RecenteringParams.html#a7264484a429cd297762bd92499c92fdd',1,'superdex::RecenteringParams::useRecentering']]]
 ];

@@ -32,6 +32,7 @@ var classsuperdex_1_1Context =
     [ "GetScene", "classsuperdex_1_1Context.html#a8d9bd9a4c457f22e021fccfdca0874db", null ],
     [ "GetShapeAabb", "classsuperdex_1_1Context.html#a9a1a4b431e3351c61ef32881d25dfbf3", null ],
     [ "GetShapeContactSkinMesh", "classsuperdex_1_1Context.html#afcda64ddc543cea1e8032518b3af6c42", null ],
+    [ "GetShapeElementFrameAxes", "classsuperdex_1_1Context.html#ac127830c63cdb17f769b043e53fbc171", null ],
     [ "GetShapeMesh", "classsuperdex_1_1Context.html#a1bd416296006cc1efd1346472308bcb7", null ],
     [ "GetShapeSurfaceMesh", "classsuperdex_1_1Context.html#a130f5883bf2318cb3d4500493dab6a46", null ],
     [ "GetShapeVisualMesh", "classsuperdex_1_1Context.html#ae28bb3db015766d22dc677100d24c6e7", null ],

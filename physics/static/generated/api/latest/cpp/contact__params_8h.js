@@ -11,11 +11,5 @@ var contact__params_8h =
       [ "superdex::ColliderType::Sdf", "namespacesuperdex.html#adb4f68ea1e9bbc8eb3dab90ea51f3dbaa8112f5cfd81b80c1dc999d51ec3b1c24", null ],
       [ "superdex::ColliderType::PointCloud", "namespacesuperdex.html#adb4f68ea1e9bbc8eb3dab90ea51f3dbaaee9349b5cdfd717c7e1234edce6b72fa", null ],
       [ "superdex::ColliderType::Count", "namespacesuperdex.html#adb4f68ea1e9bbc8eb3dab90ea51f3dbaae93f994f01c537c4e2f7d8528c3eb5e9", null ]
-    ] ],
-    [ "superdex::CoulombFrictionModel", "namespacesuperdex.html#a9f8a3d687efc70f39dc37317897ff3a5", [
-      [ "superdex::CoulombFrictionModel::C1Regularized", "namespacesuperdex.html#a9f8a3d687efc70f39dc37317897ff3a5a7bf70c58b26a7486d3071a2e289d89fa", null ],
-      [ "superdex::CoulombFrictionModel::CinfRegularized", "namespacesuperdex.html#a9f8a3d687efc70f39dc37317897ff3a5a6ea7e2fb9ad7c4d08f60d3b8baa7201b", null ],
-      [ "superdex::CoulombFrictionModel::Count", "namespacesuperdex.html#a9f8a3d687efc70f39dc37317897ff3a5ae93f994f01c537c4e2f7d8528c3eb5e9", null ],
-      [ "superdex::CoulombFrictionModel::Default", "namespacesuperdex.html#a9f8a3d687efc70f39dc37317897ff3a5a7a1920d61156abc05a60135aefe8bc67", null ]
     ] ]
 ];

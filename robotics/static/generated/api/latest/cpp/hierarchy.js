@@ -1,6 +1,8 @@
 // @generated
 var hierarchy =
 [
+    [ "superdex::robotics::ActorRenderModel", "structsuperdex_1_1robotics_1_1ActorRenderModel.html", null ],
+    [ "superdex::robotics::ActorSkinRenderModel", "structsuperdex_1_1robotics_1_1ActorSkinRenderModel.html", null ],
     [ "superdex::robotics::ArchiveParams", "structsuperdex_1_1robotics_1_1ArchiveParams.html", null ],
     [ "superdex::prefab::ArticulatedJointPrefab", null, [
       [ "superdex::robotics::BotJointPrefab", "structsuperdex_1_1robotics_1_1BotJointPrefab.html", null ]
@@ -9,10 +11,14 @@ var hierarchy =
     [ "superdex::prefab::ArticulatedLinkPrefab", null, [
       [ "superdex::robotics::BotLinkPrefab", "structsuperdex_1_1robotics_1_1BotLinkPrefab.html", null ]
     ] ],
+    [ "AssetSnapshot", "structsuperdex_1_1robotics_1_1AssetSnapshot.html", null ],
+    [ "AssetSnapshotEntry", "structsuperdex_1_1robotics_1_1AssetSnapshotEntry.html", null ],
+    [ "superdex::robotics::BaseSceneParams", "structsuperdex_1_1robotics_1_1BaseSceneParams.html", null ],
     [ "superdex::robotics::Bot", "classsuperdex_1_1robotics_1_1Bot.html", null ],
     [ "superdex::robotics::BotActuatorPrefab", "structsuperdex_1_1robotics_1_1BotActuatorPrefab.html", null ],
     [ "superdex::robotics::BotArchiveMetadata", "structsuperdex_1_1robotics_1_1BotArchiveMetadata.html", null ],
     [ "superdex::robotics::BotContactOverride", "structsuperdex_1_1robotics_1_1BotContactOverride.html", null ],
+    [ "superdex::robotics::BotEntry", "structsuperdex_1_1robotics_1_1BotEntry.html", null ],
     [ "superdex::robotics::BotModBase", "structsuperdex_1_1robotics_1_1BotModBase.html", [
       [ "superdex::robotics::AttachBot", "structsuperdex_1_1robotics_1_1AttachBot.html", null ],
       [ "superdex::robotics::AttachLink", "structsuperdex_1_1robotics_1_1AttachLink.html", null ],
@@ -21,8 +27,12 @@ var hierarchy =
       [ "superdex::robotics::ReplaceLinkWithBot", "structsuperdex_1_1robotics_1_1ReplaceLinkWithBot.html", null ]
     ] ],
     [ "superdex::robotics::BotPrefab", "structsuperdex_1_1robotics_1_1BotPrefab.html", null ],
+    [ "superdex::robotics::BotScene", "classsuperdex_1_1robotics_1_1BotScene.html", null ],
+    [ "superdex::robotics::BotSceneArchiveMetadata", "structsuperdex_1_1robotics_1_1BotSceneArchiveMetadata.html", null ],
+    [ "superdex::robotics::BotSceneMetadata", "structsuperdex_1_1robotics_1_1BotSceneMetadata.html", null ],
+    [ "superdex::robotics::BotScenePrefab", "structsuperdex_1_1robotics_1_1BotScenePrefab.html", null ],
     [ "superdex::robotics::BotSensorPrefab", "structsuperdex_1_1robotics_1_1BotSensorPrefab.html", null ],
-    [ "superdex::robotics::CameraSensorParams", "structsuperdex_1_1robotics_1_1CameraSensorParams.html", null ],
+    [ "BotTaskPrefab", "structsuperdex_1_1robotics_1_1BotTaskPrefab.html", null ],
     [ "superdex::robotics::ComponentBase", "classsuperdex_1_1robotics_1_1ComponentBase.html", [
       [ "superdex::robotics::ActuatorBase", "classsuperdex_1_1robotics_1_1ActuatorBase.html", null ],
       [ "superdex::robotics::ControllerBase", "classsuperdex_1_1robotics_1_1ControllerBase.html", [
@@ -31,7 +41,14 @@ var hierarchy =
         [ "superdex::robotics::ControllerMochiArticulatedPose", "classsuperdex_1_1robotics_1_1ControllerMochiArticulatedPose.html", null ]
       ] ],
       [ "superdex::robotics::SensorBase", "classsuperdex_1_1robotics_1_1SensorBase.html", [
-        [ "superdex::robotics::CameraSensor", "classsuperdex_1_1robotics_1_1CameraSensor.html", null ]
+        [ "superdex::robotics::SensorCamera", "classsuperdex_1_1robotics_1_1SensorCamera.html", null ],
+        [ "superdex::robotics::SensorConcat", "classsuperdex_1_1robotics_1_1SensorConcat.html", null ],
+        [ "superdex::robotics::SensorDelayLine", "classsuperdex_1_1robotics_1_1SensorDelayLine.html", null ],
+        [ "superdex::robotics::SensorOutlierInjection", "classsuperdex_1_1robotics_1_1SensorOutlierInjection.html", null ],
+        [ "superdex::robotics::SensorSeedRectMap", "classsuperdex_1_1robotics_1_1SensorSeedRectMap.html", null ],
+        [ "superdex::robotics::SensorSeedV1MLP", "classsuperdex_1_1robotics_1_1SensorSeedV1MLP.html", null ],
+        [ "superdex::robotics::SensorTemporalWindow", "classsuperdex_1_1robotics_1_1SensorTemporalWindow.html", null ],
+        [ "superdex::robotics::SensorUniformNoise", "classsuperdex_1_1robotics_1_1SensorUniformNoise.html", null ]
       ] ]
     ] ],
     [ "superdex::robotics::ControllerBasicJscPdObsv", "structsuperdex_1_1robotics_1_1ControllerBasicJscPdObsv.html", null ],
@@ -41,6 +58,7 @@ var hierarchy =
     [ "superdex::robotics::ControllerBasicOscPdObsv", "structsuperdex_1_1robotics_1_1ControllerBasicOscPdObsv.html", null ],
     [ "superdex::robotics::ControllerBasicOscPdParams", "structsuperdex_1_1robotics_1_1ControllerBasicOscPdParams.html", null ],
     [ "superdex::robotics::ControllerBasicOscPdTarget", "structsuperdex_1_1robotics_1_1ControllerBasicOscPdTarget.html", null ],
+    [ "superdex::robotics::ControllerEntry", "structsuperdex_1_1robotics_1_1ControllerEntry.html", null ],
     [ "superdex::robotics::ControllerMochiArticulatedPoseObsv", "structsuperdex_1_1robotics_1_1ControllerMochiArticulatedPoseObsv.html", null ],
     [ "superdex::robotics::ControllerMochiArticulatedPoseParams", "structsuperdex_1_1robotics_1_1ControllerMochiArticulatedPoseParams.html", null ],
     [ "superdex::robotics::ControllerMochiArticulatedPoseTarget", "structsuperdex_1_1robotics_1_1ControllerMochiArticulatedPoseTarget.html", null ],
@@ -52,6 +70,9 @@ var hierarchy =
         [ "superdex::robotics::BotSpatialTendonPrefab", "structsuperdex_1_1robotics_1_1BotSpatialTendonPrefab.html", null ]
       ] ]
     ] ],
+    [ "DREpisode", "structsuperdex_1_1robotics_1_1DREpisode.html", null ],
+    [ "DREpisodeEntry", "structsuperdex_1_1robotics_1_1DREpisodeEntry.html", null ],
+    [ "DREpisodeList", "structsuperdex_1_1robotics_1_1DREpisodeList.html", null ],
     [ "superdex::robotics::GeomReference", "structsuperdex_1_1robotics_1_1GeomReference.html", null ],
     [ "std::hash&lt; superdex::robotics::ActuatorHandle &gt;", "structstd_1_1hash_3_01superdex_1_1robotics_1_1ActuatorHandle_01_4.html", null ],
     [ "std::hash&lt; superdex::robotics::BotHandle &gt;", "structstd_1_1hash_3_01superdex_1_1robotics_1_1BotHandle_01_4.html", null ],
@@ -61,11 +82,16 @@ var hierarchy =
     [ "superdex::robotics::IBotLoader", "structsuperdex_1_1robotics_1_1IBotLoader.html", [
       [ "superdex::robotics::FileBotLoader", "structsuperdex_1_1robotics_1_1FileBotLoader.html", null ]
     ] ],
+    [ "superdex::robotics::LinkPoseResidual", "structsuperdex_1_1robotics_1_1LinkPoseResidual.html", null ],
     [ "superdex::robotics::MjcfBodyPair", "structsuperdex_1_1robotics_1_1MjcfBodyPair.html", null ],
     [ "superdex::robotics::MjcfBodyReference", "structsuperdex_1_1robotics_1_1MjcfBodyReference.html", null ],
     [ "superdex::robotics::MjcfImportInfo", "structsuperdex_1_1robotics_1_1MjcfImportInfo.html", null ],
+    [ "superdex::ai::Mlp&lt; T &gt;", "classsuperdex_1_1ai_1_1Mlp.html", null ],
     [ "superdex::robotics::ModBotPrefab", "structsuperdex_1_1robotics_1_1ModBotPrefab.html", null ],
     [ "superdex::robotics::ParsedRootFile", "structsuperdex_1_1robotics_1_1ParsedRootFile.html", null ],
+    [ "superdex::robotics::PrefabEntry", "structsuperdex_1_1robotics_1_1PrefabEntry.html", null ],
+    [ "superdex::robotics::RectMapMeta", "structsuperdex_1_1robotics_1_1RectMapMeta.html", null ],
+    [ "ResolvedSpawn", "structsuperdex_1_1robotics_1_1ResolvedSpawn.html", null ],
     [ "superdex::robotics::RoboticsContext", "classsuperdex_1_1robotics_1_1RoboticsContext.html", null ],
     [ "superdex::robotics::RoboticsHandle", "structsuperdex_1_1robotics_1_1RoboticsHandle.html", [
       [ "superdex::robotics::ActuatorHandle", "structsuperdex_1_1robotics_1_1ActuatorHandle.html", null ],
@@ -74,6 +100,52 @@ var hierarchy =
       [ "superdex::robotics::RoboticsContextCallbackHandle", "structsuperdex_1_1robotics_1_1RoboticsContextCallbackHandle.html", null ],
       [ "superdex::robotics::SensorHandle", "structsuperdex_1_1robotics_1_1SensorHandle.html", null ]
     ] ],
+    [ "superdex::robotics::SceneSensorEntry", "structsuperdex_1_1robotics_1_1SceneSensorEntry.html", null ],
+    [ "superdex::robotics::SceneUrdfJointVelocityLimit", "structsuperdex_1_1robotics_1_1SceneUrdfJointVelocityLimit.html", null ],
+    [ "superdex::robotics::SceneUrdfLinkAlias", "structsuperdex_1_1robotics_1_1SceneUrdfLinkAlias.html", null ],
+    [ "superdex::robotics::SceneUrdfMesh", "structsuperdex_1_1robotics_1_1SceneUrdfMesh.html", null ],
+    [ "superdex::robotics::SceneUrdfOptions", "structsuperdex_1_1robotics_1_1SceneUrdfOptions.html", null ],
+    [ "SensorAggregateForce", "classsuperdex_1_1robotics_1_1SensorAggregateForce.html", null ],
+    [ "SensorAggregateForceParams", "structsuperdex_1_1robotics_1_1SensorAggregateForceParams.html", null ],
+    [ "SensorArticulatedJointWrench", "classsuperdex_1_1robotics_1_1SensorArticulatedJointWrench.html", null ],
+    [ "superdex::robotics::SensorAxis", "structsuperdex_1_1robotics_1_1SensorAxis.html", null ],
+    [ "superdex::robotics::SensorCameraParams", "structsuperdex_1_1robotics_1_1SensorCameraParams.html", null ],
+    [ "superdex::robotics::SensorConcatParams", "structsuperdex_1_1robotics_1_1SensorConcatParams.html", null ],
+    [ "superdex::robotics::SensorDelayLineParams", "structsuperdex_1_1robotics_1_1SensorDelayLineParams.html", null ],
+    [ "superdex::robotics::SensorFormat", "structsuperdex_1_1robotics_1_1SensorFormat.html", null ],
+    [ "SensorFunction", "classsuperdex_1_1robotics_1_1SensorFunction.html", null ],
+    [ "SensorGaussianNoise", "classsuperdex_1_1robotics_1_1SensorGaussianNoise.html", null ],
+    [ "SensorGaussianNoiseParams", "structsuperdex_1_1robotics_1_1SensorGaussianNoiseParams.html", null ],
+    [ "SensorGraphNodeView", "structsuperdex_1_1robotics_1_1SensorGraphNodeView.html", null ],
+    [ "SensorJointEncoder", "classsuperdex_1_1robotics_1_1SensorJointEncoder.html", null ],
+    [ "SensorJointEncoderParams", "structsuperdex_1_1robotics_1_1SensorJointEncoderParams.html", null ],
+    [ "SensorLinkContactForce", "classsuperdex_1_1robotics_1_1SensorLinkContactForce.html", null ],
+    [ "SensorLinkContactForceParams", "structsuperdex_1_1robotics_1_1SensorLinkContactForceParams.html", null ],
+    [ "SensorLinkVertexForce", "classsuperdex_1_1robotics_1_1SensorLinkVertexForce.html", null ],
+    [ "SensorLinkVertexForceParams", "structsuperdex_1_1robotics_1_1SensorLinkVertexForceParams.html", null ],
+    [ "superdex::robotics::SensorMetadataKey&lt; T &gt;", "structsuperdex_1_1robotics_1_1SensorMetadataKey.html", null ],
+    [ "superdex::robotics::SensorMetadataKey&lt; RectMapMeta &gt;", "structsuperdex_1_1robotics_1_1SensorMetadataKey_3_01RectMapMeta_01_4.html", null ],
+    [ "superdex::robotics::SensorOutlierInjectionParams", "structsuperdex_1_1robotics_1_1SensorOutlierInjectionParams.html", null ],
+    [ "superdex::robotics::SensorRandomParams", "structsuperdex_1_1robotics_1_1SensorRandomParams.html", null ],
+    [ "superdex::robotics::SensorSample", "structsuperdex_1_1robotics_1_1SensorSample.html", null ],
+    [ "superdex::robotics::SensorScope", "structsuperdex_1_1robotics_1_1SensorScope.html", null ],
+    [ "superdex::robotics::SensorSeedRectMapParams", "structsuperdex_1_1robotics_1_1SensorSeedRectMapParams.html", null ],
+    [ "superdex::robotics::SensorSeedV1MLPParams", "structsuperdex_1_1robotics_1_1SensorSeedV1MLPParams.html", null ],
+    [ "superdex::robotics::SensorSeedV1MLPResult", "structsuperdex_1_1robotics_1_1SensorSeedV1MLPResult.html", null ],
+    [ "superdex::robotics::SensorTemporalWindowParams", "structsuperdex_1_1robotics_1_1SensorTemporalWindowParams.html", null ],
+    [ "superdex::robotics::SensorUniformNoiseParams", "structsuperdex_1_1robotics_1_1SensorUniformNoiseParams.html", null ],
+    [ "superdex::robotics::SlotEntry", "structsuperdex_1_1robotics_1_1SlotEntry.html", null ],
+    [ "SpawnEntry", "structsuperdex_1_1robotics_1_1SpawnEntry.html", null ],
+    [ "superdex::robotics::StepTime", "structsuperdex_1_1robotics_1_1StepTime.html", null ],
+    [ "superdex::robotics::TactileAggregateForce", "structsuperdex_1_1robotics_1_1TactileAggregateForce.html", null ],
+    [ "superdex::robotics::TactileAggregateWrench", "structsuperdex_1_1robotics_1_1TactileAggregateWrench.html", null ],
+    [ "superdex::robotics::TactileForceGrid", "structsuperdex_1_1robotics_1_1TactileForceGrid.html", null ],
+    [ "superdex::robotics::TactileHemisphereRectParams", "structsuperdex_1_1robotics_1_1TactileHemisphereRectParams.html", null ],
+    [ "superdex::robotics::TactileRectProjectionMap", "structsuperdex_1_1robotics_1_1TactileRectProjectionMap.html", null ],
+    [ "superdex::robotics::TactileTaxelForces", "structsuperdex_1_1robotics_1_1TactileTaxelForces.html", null ],
+    [ "superdex::robotics::TactileTaxelLayout", "structsuperdex_1_1robotics_1_1TactileTaxelLayout.html", null ],
+    [ "superdex::robotics::TaskObjectPose", "structsuperdex_1_1robotics_1_1TaskObjectPose.html", null ],
+    [ "TerminationOutcome", "structsuperdex_1_1robotics_1_1TerminationOutcome.html", null ],
     [ "superdex::robotics::UrdfImportInfo", "structsuperdex_1_1robotics_1_1UrdfImportInfo.html", null ],
     [ "superdex::robotics::UrdfLinkReference", "structsuperdex_1_1robotics_1_1UrdfLinkReference.html", null ],
     [ "superdex::robotics::ValidateResults", "structsuperdex_1_1robotics_1_1ValidateResults.html", null ]

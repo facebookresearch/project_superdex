@@ -201,7 +201,7 @@ Public Attributes</h2></td></tr>
 <div class="textblock"><p>Parameters describing a single linear transmission attached to a bot. </p>
 <p>Mirrors superdex::experimental::LinearTransmissionParams with an added display <a class="el" href="structsuperdex_1_1robotics_1_1BotTransmissionPrefab.html#a7f55ae9b72d4b58e71ec4a4598c19bd3" title="name">name</a> field and SReflect markup so it can live inside <a class="el" href="structsuperdex_1_1robotics_1_1BotPrefab.html" title="BotPrefab">BotPrefab</a> and round-trip through the bot's JSON serialization. The three joint arrays (<a class="el" href="#ab66d3d496f47a78a03b4ae668bacc85d" title="jointIndices">jointIndices</a>, <a class="el" href="#a2efd6185d93035c5c7f9b5c62a062aa5" title="jointCoefficients">jointCoefficients</a>, <a class="el" href="#a6eea7f4d1f458abccc6022d8d0c11277" title="jointAxisDisps">jointAxisDisps</a>) must always be the same length, with one entry per joint the transmission traverses. The remaining fields are inherited from <a class="el" href="structsuperdex_1_1robotics_1_1BotTransmissionPrefab.html" title="BotTransmissionPrefab">BotTransmissionPrefab</a> which inherits superdex::experimental::DisplacementControlActuatorParams so that one displacement-control actuator can be configured alongside each transmission. </p>
 
-<p class="definition">Definition at line <a class="el" href="superdex__robotics_8h_source.html#l00239">239</a> of file <a class="el" href="superdex__robotics_8h_source.html">superdex_robotics.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="superdex__robotics_8h_source.html#l00238">238</a> of file <a class="el" href="superdex__robotics_8h_source.html">superdex_robotics.h</a>.</p>
 </div><a name="doc-func-members" id="doc-func-members"></a><h2 id="header-doc-func-members" class="groupheader">Member Function Documentation</h2>
 <a id="a6fcdcf88b4ed80bcbb15cbe694f603e2" name="a6fcdcf88b4ed80bcbb15cbe694f603e2"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a6fcdcf88b4ed80bcbb15cbe694f603e2">&#9670;&#160;</a></span>operator==()</h2>
@@ -244,7 +244,7 @@ Public Attributes</h2></td></tr>
 <p>Displacement along the joint axis [m] for the transmission attachment point at each joint. </p>
 <p>This allows the transmission to be offset from the joint origin along the axis. </p>
 
-<p class="definition">Definition at line <a class="el" href="superdex__robotics_8h_source.html#l00253">253</a> of file <a class="el" href="superdex__robotics_8h_source.html">superdex_robotics.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="superdex__robotics_8h_source.html#l00252">252</a> of file <a class="el" href="superdex__robotics_8h_source.html">superdex_robotics.h</a>.</p>
 
 </div>
 </div>
@@ -263,7 +263,7 @@ Public Attributes</h2></td></tr>
 <p>Transmission Jacobian entry at each joint [m / joint-DoF units for a tendon, dimensionless for a gearbox]. </p>
 <p>Sign encodes direction: positive if the transmission displacement increases with the joint DoF, negative if it decreases. </p>
 
-<p class="definition">Definition at line <a class="el" href="superdex__robotics_8h_source.html#l00248">248</a> of file <a class="el" href="superdex__robotics_8h_source.html">superdex_robotics.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="superdex__robotics_8h_source.html#l00247">247</a> of file <a class="el" href="superdex__robotics_8h_source.html">superdex_robotics.h</a>.</p>
 
 </div>
 </div>
@@ -281,7 +281,7 @@ Public Attributes</h2></td></tr>
 
 <p>Indices into <a class="el" href="structsuperdex_1_1robotics_1_1BotPrefab.html#a83a805116ea6b7fde2050422b73946af" title="superdex::robotics::BotPrefab::joints">BotPrefab::joints</a> identifying which joints the transmission traverses. </p>
 
-<p class="definition">Definition at line <a class="el" href="superdex__robotics_8h_source.html#l00242">242</a> of file <a class="el" href="superdex__robotics_8h_source.html">superdex_robotics.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="superdex__robotics_8h_source.html#l00241">241</a> of file <a class="el" href="superdex__robotics_8h_source.html">superdex_robotics.h</a>.</p>
 
 </div>
 </div>
