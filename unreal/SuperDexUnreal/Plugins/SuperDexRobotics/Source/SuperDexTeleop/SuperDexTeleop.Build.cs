@@ -25,6 +25,8 @@ public class SuperDexTeleop : ModuleRules
         PublicDependencyModuleNames.AddRange(new string[] {
             "Core",
             "DeveloperSettings",
+            "InputCore",
+            "Slate",
             "SuperDexPose",
             "SuperDexPhysics",
             "SuperDexRobotics",
@@ -41,7 +43,7 @@ public class SuperDexTeleop : ModuleRules
         if (Target.bBuildEditor)
         {
             // Only this module's own .cpp files use them, so they don't propagate to dependents.
-            PrivateDependencyModuleNames.AddRange(new string[] { "Kismet", "Slate", "UnrealEd", });
+            PrivateDependencyModuleNames.AddRange(new string[] { "Kismet", "UnrealEd", });
 
             // NOTE: The skeleton-rebase utility (UTeleopSkeletonUtils::ClearReferenceRootBoneRotation)
             // is disabled by default and its editor-only module dependencies have been removed. To
@@ -49,6 +51,14 @@ public class SuperDexTeleop : ModuleRules
             // these back here:
             //   "MeshDescription", "StaticMeshDescription", "SkeletalMeshDescription"
         }
+
+        // SuperDexRuntimeSceneLoadExample records through SuperDexRecorder, which is Win64-only.
+        bool bWithRecorder = Target.Platform == UnrealTargetPlatform.Win64;
+        if (bWithRecorder)
+        {
+            PrivateDependencyModuleNames.Add("SuperDexRecorder");
+        }
+        PrivateDefinitions.Add("WITH_SUPERDEX_RECORDER=" + (bWithRecorder ? "1" : "0"));
 
         // superdex_robotics controller headers include mochi_core, which throws (std::bad_alloc, ...).
         // MSVC tolerates throw with exceptions disabled; Android clang does not.
