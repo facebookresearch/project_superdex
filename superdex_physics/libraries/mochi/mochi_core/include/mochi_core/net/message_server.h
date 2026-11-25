@@ -60,6 +60,9 @@ class MessageServer {
    * @brief Set the UDP discovery port used on the next @ref Start.
    *
    * @details Must be called before @ref Start / @ref StartInProc or after @ref Stop.
+   * A server started with `allowRemoteConnection` shares this port with other servers. Otherwise,
+   * the server binds its own loopback port from a small range just below this one. If every port in
+   * that range is taken, the server is still connectable by TCP port but is undiscoverable.
    *
    * @param[in] discoveryPort UDP discovery port. 0 disables discovery.
    */
@@ -74,10 +77,16 @@ class MessageServer {
    * @param[in] preferredPort Preferred TCP port. Actual port may differ if already in use.
    * @param[in] maxClients Maximum number of simultaneous client connections.
    * @param[in] label Human-readable label identifying the server.
+   * @param[in] allowRemoteConnection Allow clients on other machines to connect and discover the
+   * server. By default, only same-machine clients can do so.
    *
    * @see GetPort
    */
-  void Start(uint16_t preferredPort, int maxClients, std::string_view label);
+  void Start(
+      uint16_t preferredPort,
+      int maxClients,
+      std::string_view label,
+      bool allowRemoteConnection = false);
 
   /**
    * @brief Start the server in the local process, without a true network socket.

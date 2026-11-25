@@ -59,7 +59,9 @@ class _FakeServer:
     def has_started(self) -> bool:
         return self.started
 
-    def start(self, preferred_port: int) -> None:
+    def start(self, preferred_port: int, *, allow_remote_connection: bool) -> None:
+        if allow_remote_connection:
+            raise AssertionError("attach must start a local-only debug server")
         self.started = True
         self.started_ports.append(preferred_port)
 

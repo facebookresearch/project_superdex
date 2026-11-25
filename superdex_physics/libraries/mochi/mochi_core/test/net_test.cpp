@@ -24,6 +24,7 @@
 
 #include <gtest/gtest.h>
 
+#include <array>
 #include <atomic>
 #include <chrono>
 #include <cstdint>
@@ -1327,13 +1328,94 @@ struct SuppressErrorLogs {
 // allocates an ephemeral port, avoiding cross-process collisions under parallel test runs.
 static constexpr uint16_t kTestPort = 19876;
 static constexpr uint16_t kTestDiscoveryPort = 17331;
-static constexpr uint16_t kOtherTestDiscoveryPort = 17332;
+static constexpr uint16_t kOtherTestDiscoveryPort = 17363;
+static constexpr uint16_t kMixedTestDiscoveryPort = 17395;
+static constexpr uint16_t kFullTestDiscoveryPort = 17427;
 
 // Connect a real-socket client to `port` and wait for the TCP handshake to complete.
 static void ConnectReal(ClientSocket& client, uint16_t port, Sink& sink) {
   client.SetReceiveCallback([&sink](void const* data, size_t size) { sink.Append(0, data, size); });
   client.Connect("127.0.0.1", port);
   EXPECT_TRUE(PollUntil([&] { return client.GetStatus() == SocketStatus::Connected; }));
+}
+
+TEST(Net, ListenerConnectionScope) {
+  for (bool const allowRemoteConnection : {false, true}) {
+    ServerSocket server;
+    server.SetDiscoveryPort(0);
+    server.Start(0, 4, "ConnectionScope", allowRemoteConnection);
+    ASSERT_NE(server.GetPort(), 0);
+
+    for (char const* address : {"127.0.0.1", "127.0.0.2"}) {
+#if MOCHI_PLATFORM_MACOS
+      if (std::strcmp(address, "127.0.0.2") == 0) {
+        continue;
+      }
+#endif
+      SCOPED_TRACE(::testing::Message() << allowRemoteConnection << " " << address);
+      ClientSocket client;
+      client.Connect(address, server.GetPort());
+      bool const shouldConnect = allowRemoteConnection || std::strcmp(address, "127.0.0.1") == 0;
+      EXPECT_EQ(
+          PollUntil(
+              [&] { return client.GetStatus() == SocketStatus::Connected; },
+              shouldConnect ? 60.0f : 1.0f),
+          shouldConnect);
+    }
+  }
+}
+
+TEST(Net, LocalAndRemoteDiscovery) {
+  std::array<ServerSocket, 3> servers;
+  char const* const labels[] = {"LocalA", "LocalB", "Remote"};
+  for (size_t i = 0; i < servers.size(); ++i) {
+    servers[i].SetDiscoveryPort(kMixedTestDiscoveryPort);
+    servers[i].Start(0, 4, labels[i], /*allowRemoteConnection*/ i == 2);
+    ASSERT_NE(servers[i].GetPort(), 0);
+  }
+
+  ServerList list(kMixedTestDiscoveryPort);
+  list.Refresh();
+  EXPECT_TRUE(PollUntil([&] {
+    DynamicArray<ServerInfo> discovered;
+    list.GetServers(discovered);
+    for (size_t i = 0; i < servers.size(); ++i) {
+      bool found = false;
+      for (auto const& info : discovered) {
+        if (info.port == servers[i].GetPort() && info.label == labels[i]) {
+          found = true;
+        }
+      }
+      if (!found) {
+        return false;
+      }
+    }
+    return true;
+  }));
+}
+
+TEST(Net, FullLocalDiscoveryRangeStillAcceptsConnections) {
+  std::array<ServerSocket, 17> servers;
+  for (auto& server : servers) {
+    server.SetDiscoveryPort(kFullTestDiscoveryPort);
+    server.Start(0, 4, "FullLocalRange");
+    ASSERT_NE(server.GetPort(), 0);
+  }
+
+  ClientSocket client;
+  client.Connect("127.0.0.1", servers.back().GetPort());
+  EXPECT_TRUE(PollUntil([&] { return client.GetStatus() == SocketStatus::Connected; }));
+
+  ServerList list(kFullTestDiscoveryPort);
+  list.Refresh();
+  DynamicArray<ServerInfo> discovered;
+  EXPECT_TRUE(PollUntil([&] {
+    list.GetServers(discovered);
+    return discovered.size() == servers.size() - 1;
+  }));
+  for (auto const& info : discovered) {
+    EXPECT_NE(info.port, servers.back().GetPort());
+  }
 }
 
 // Disconnect interrupts a pending TCP connect to a blackholed target instead of waiting for the OS
@@ -1576,8 +1658,8 @@ TEST(Net, ServerList) {
   serverA.SetVersion(123);
   serverB.SetVersion(456);
   hiddenServer.SetVersion(789);
-  serverA.Start(/*port*/ 0, /*maxClients*/ 2, "DiscoveryA");
-  serverB.Start(/*port*/ 0, /*maxClients*/ 3, "DiscoveryB");
+  serverA.Start(/*port*/ 0, /*maxClients*/ 2, "DiscoveryA", /*allowRemoteConnection*/ true);
+  serverB.Start(/*port*/ 0, /*maxClients*/ 3, "DiscoveryB", /*allowRemoteConnection*/ true);
   hiddenServer.Start(/*port*/ 0, /*maxClients*/ 1, "HiddenDiscovery");
   uint16_t const portA = serverA.GetPort();
   uint16_t const portB = serverB.GetPort();

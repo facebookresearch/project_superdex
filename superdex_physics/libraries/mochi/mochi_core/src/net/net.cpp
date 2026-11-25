@@ -32,6 +32,12 @@
 #endif
 #include <winsock2.h>
 #include <ws2tcpip.h>
+
+#include <mstcpip.h>
+// The Windows SDK omits this control code for older target versions.
+#ifndef SIO_UDP_CONNRESET
+#define SIO_UDP_CONNRESET _WSAIOW(IOC_VENDOR, 12)
+#endif
 #endif
 
 #include <mochi_core/net/client_socket.h>
@@ -704,6 +710,7 @@ static constexpr auto kWindowsSendTimeout = std::chrono::seconds(30);
 // is endian-safe between hosts of different endianness.
 static constexpr uint32_t kDiscoveryMagic = 0x4D4F4348; // 'M','O','C','H'
 static constexpr size_t kDiscoveryBufferSize = 512;
+static constexpr int kLocalDiscoveryPortCount = 16;
 
 // Directed broadcast for the loopback subnet (127.255.255.255, host order). Same-host servers share
 // the discovery port via SO_REUSEADDR/SO_REUSEPORT; the kernel load-balances a loopback *unicast*
@@ -1008,7 +1015,8 @@ class TcpServerTransport final : public ServerTransport {
 
   // Bind, listen, and start the accept thread. Returns false (and hosts nothing) if no port could
   // be bound; the caller then leaves the server un-hosted.
-  bool Start(uint16_t preferredPort, int maxClients, DynamicString label) {
+  bool
+  Start(uint16_t preferredPort, int maxClients, DynamicString label, bool allowRemoteConnection) {
     // The accept thread blocks in select() and is woken for teardown only by the wake pipe; without
     // it Stop() would hang joining that thread. Refuse to host if the pipe is unavailable. Log on
     // the info channel to avoid failing CI tests where a server is started but no client connects.
@@ -1016,7 +1024,8 @@ class TcpServerTransport final : public ServerTransport {
       MOCHI_LOG("mochi::net: wake pipe unavailable; not hosting");
       return false;
     }
-    SocketHandle const listen = CreateListenSocket(preferredPort, maxClients);
+    SocketHandle const listen =
+        CreateListenSocket(preferredPort, maxClients, allowRemoteConnection);
     if (listen == kInvalidSocket) {
       return false;
     }
@@ -1034,11 +1043,9 @@ class TcpServerTransport final : public ServerTransport {
       s.port = port;
     });
 
-    // Best-effort UDP discovery responder, serviced by the accept thread. Multiple servers
-    // can share the configured discovery port via SO_REUSEADDR + SO_REUSEPORT; if the
-    // bind fails we simply skip discovery for this server.
     if (_discoveryPort != 0) {
-      _discoverySocket = CreateDiscoverySocket(_discoveryPort);
+      _discoverySocket = allowRemoteConnection ? CreateDiscoverySocket(_discoveryPort)
+                                               : CreateLocalDiscoverySocket(_discoveryPort);
     }
 
     _running.store(true);
@@ -1112,7 +1119,8 @@ class TcpServerTransport final : public ServerTransport {
   //
   // All failures here log on the info channel only (never warning/error) to avoid failing CI tests
   // when a server is started but no clients connect.
-  static SocketHandle CreateListenSocket(uint16_t preferredPort, int maxClients) {
+  static SocketHandle
+  CreateListenSocket(uint16_t preferredPort, int maxClients, bool allowRemoteConnection) {
     SocketHandle const s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (s == kInvalidSocket) {
       MOCHI_LOG("mochi::net: failed to create server socket; not hosting");
@@ -1122,7 +1130,7 @@ class TcpServerTransport final : public ServerTransport {
 
     sockaddr_in addr{};
     addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = INADDR_ANY;
+    addr.sin_addr.s_addr = htonl(allowRemoteConnection ? INADDR_ANY : INADDR_LOOPBACK);
 
     uint16_t port = preferredPort;
     constexpr int kMaxPortAttempts = 16;
@@ -1178,6 +1186,33 @@ class TcpServerTransport final : public ServerTransport {
     // multicast is unavailable, e.g. Linux, which uses the loopback broadcast instead).
     JoinDiscoveryMulticastGroup(udp);
     return Socket(udp);
+  }
+
+  // Create a loopback-only UDP discovery responder on the first free port in the range just below
+  // the shared discovery port, or an empty Socket if every port in that range is taken.
+  static Socket CreateLocalDiscoverySocket(uint16_t discoveryPort) {
+    SocketHandle const udp = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if (udp == kInvalidSocket) {
+      return Socket{};
+    }
+#if MOCHI_PLATFORM_WINDOWS
+    SetListenSocketExclusive(udp);
+#endif
+    sockaddr_in addr{};
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    for (int offset = 1; offset <= kLocalDiscoveryPortCount; ++offset) {
+      int const port = discoveryPort - offset;
+      if (port < 1) {
+        break;
+      }
+      addr.sin_port = htons(static_cast<uint16_t>(port));
+      if (bind(udp, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) == 0) {
+        return Socket(udp);
+      }
+    }
+    CloseSocket(udp);
+    return Socket{};
   }
 
   ClientId AllocateClientId() {
@@ -2114,12 +2149,20 @@ ServerSocket::~ServerSocket() {
   Stop();
 }
 
-void ServerSocket::Start(uint16_t preferredPort, int maxClients, std::string_view label) {
+void ServerSocket::Start(
+    uint16_t preferredPort,
+    int maxClients,
+    std::string_view label,
+    bool allowRemoteConnection) {
   Stop();
   PlatformInit();
   auto transport = std::make_shared<TcpServerTransport>(
       _impl->receiveHolder, _impl->eventHolder, _impl->version, _impl->discoveryPort);
-  if (transport->Start(preferredPort, maxClients, DynamicString(label.data(), label.size()))) {
+  if (transport->Start(
+          preferredPort,
+          maxClients,
+          DynamicString(label.data(), label.size()),
+          allowRemoteConnection)) {
     _impl->transport.Store(std::move(transport));
   }
 }
@@ -2538,6 +2581,26 @@ void ServerList::Refresh() {
   Socket sock(raw);
   SetSocketBroadcast(raw);
 
+#if MOCHI_PLATFORM_WINDOWS
+  // Unoccupied local discovery ports can return ICMP port-unreachable. Do not surface those as
+  // WSAECONNRESET on subsequent reads of replies from occupied ports.
+  BOOL udpConnReset = FALSE;
+  DWORD bytesReturned = 0;
+  if (WSAIoctl(
+          raw,
+          SIO_UDP_CONNRESET,
+          &udpConnReset,
+          sizeof(udpConnReset),
+          nullptr,
+          0,
+          &bytesReturned,
+          nullptr,
+          nullptr) != 0) {
+    MOCHI_LOG_WARNING(
+        "mochi::net: failed to disable UDP connection resets (error %d)", LastSocketError());
+  }
+#endif
+
   uint32_t const requestMagic = htonl(kDiscoveryMagic);
 
   // Send the discovery probe to several destinations, each best-effort and independent:
@@ -2555,14 +2618,18 @@ void ServerList::Refresh() {
   //                          not.
   //   * INADDR_LOOPBACK    - loopback unicast fallback for platforms that deliver neither loopback
   //                          fan-out mechanism; reaches at least one same-host server.
+  //   * local port range   - loopback unicast to each port just below the shared discovery port.
+  //                          Servers without allowRemoteConnection each own one of these ports
+  //                          (see CreateLocalDiscoverySocket) instead of sharing the discovery
+  //                          port.
   // Many hosts (e.g. devservers / containers) have no broadcast-capable route, so the LAN broadcast
-  // fails outright there; the loopback probes still reach same-host servers, which bind their
-  // discovery socket on INADDR_ANY. Duplicate replies (a server answering more than one probe) are
-  // deduplicated by the receiver.
-  auto sendProbe = [&](uint32_t address) {
+  // fails outright there. The loopback probes still reach same-host servers started with
+  // allowRemoteConnection, which bind their discovery socket on INADDR_ANY. Duplicate replies (a
+  // server answering more than one probe) are deduplicated by the receiver.
+  auto sendProbe = [&](uint32_t address, uint16_t port) {
     sockaddr_in addr{};
     addr.sin_family = AF_INET;
-    addr.sin_port = htons(_impl->discoveryPort);
+    addr.sin_port = htons(port);
     addr.sin_addr.s_addr = address;
     sendto(
         raw,
@@ -2572,14 +2639,22 @@ void ServerList::Refresh() {
         reinterpret_cast<sockaddr*>(&addr),
         sizeof(addr));
   };
-  sendProbe(INADDR_BROADCAST);
-  sendProbe(htonl(kLoopbackBroadcast));
+  sendProbe(INADDR_BROADCAST, _impl->discoveryPort);
+  sendProbe(htonl(kLoopbackBroadcast), _impl->discoveryPort);
   // Configure loopback multicast egress before the multicast probe so it goes over (and is looped
   // back on) the loopback interface. This only affects the multicast send below; the broadcast
   // sends above and the unicast fallback below route normally.
   SetMulticastLoopbackEgress(raw);
-  sendProbe(htonl(kDiscoveryMulticastGroup));
-  sendProbe(htonl(INADDR_LOOPBACK));
+  sendProbe(htonl(kDiscoveryMulticastGroup), _impl->discoveryPort);
+  sendProbe(htonl(INADDR_LOOPBACK), _impl->discoveryPort);
+
+  for (int offset = 1; offset <= kLocalDiscoveryPortCount; ++offset) {
+    int const port = _impl->discoveryPort - offset;
+    if (port < 1) {
+      break;
+    }
+    sendProbe(htonl(INADDR_LOOPBACK), static_cast<uint16_t>(port));
+  }
 
   if (!SetNonBlocking(raw)) {
     return;

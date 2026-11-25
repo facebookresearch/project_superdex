@@ -8562,13 +8562,14 @@
 /// @see @ref mochi::Context::GetDebugServer "Context::GetDebugServer"
 ///
 
-/// @fn void mochi::DebugServer::Start(uint16_t preferredPort)
+/// @fn void mochi::DebugServer::Start(uint16_t preferredPort, bool allowRemoteConnection)
 ///
 /// @brief Start accepting client connections on a TCP port.
 ///
 /// @param[in] preferredPort Preferred TCP port to listen on. If the port is already in use, the next available port is chosen automatically.
+/// @param[in] allowRemoteConnection When false, only clients on the same machine can connect to or discover the server.
 ///
-/// @note No-op if the server has already been started.
+/// @note No-op if the server has already been started. The first call's settings apply until @ref mochi::DebugServer::Stop "Stop".
 ///
 /// @see @ref mochi::DebugServer::Stop "Stop", @ref mochi::DebugServer::HasStarted "HasStarted", @ref mochi::DebugServer::GetPort "GetPort"
 ///

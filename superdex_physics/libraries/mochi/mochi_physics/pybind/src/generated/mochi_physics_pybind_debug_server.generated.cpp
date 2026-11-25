@@ -41,7 +41,8 @@ void mochi::DefineMochiPhysics_MochiPhysicsDebugServer([[maybe_unused]] nb::modu
   registry.GetClass<mochi::DebugServer>()
     .def("start", &mochi::DebugServer::Start
       , nb::arg("preferred_port") = int(7333)
-      , "Start accepting client connections on a TCP port.\n\nArgs:\n    preferred_port (int): Preferred TCP port to listen on. If the port is\n        already in use, the next available port is chosen automatically.\n\nNote:\n    No-op if the server has already been started.\n\nSee Also:\n    :meth:`~superdex.physics.DebugServer.stop`,\n    :meth:`~superdex.physics.DebugServer.has_started`,\n    :meth:`~superdex.physics.DebugServer.get_port`"
+      , nb::arg("allow_remote_connection") = bool(false)
+      , "Start accepting client connections on a TCP port.\n\nArgs:\n    preferred_port (int): Preferred TCP port to listen on. If the port is\n        already in use, the next available port is chosen automatically.\n    allow_remote_connection (bool): When false, only clients on the same machine\n        can connect to or discover the server.\n\nNote:\n    No-op if the server has already been started. The first call's settings\n    apply until :meth:`~superdex.physics.DebugServer.stop`.\n\nSee Also:\n    :meth:`~superdex.physics.DebugServer.stop`,\n    :meth:`~superdex.physics.DebugServer.has_started`,\n    :meth:`~superdex.physics.DebugServer.get_port`"
     )
     .def("stop", &mochi::DebugServer::Stop
       , "Stop the server and disconnect any connected client.\n\nNote:\n    No-op if the server has not started.\n\nSee Also:\n    :meth:`~superdex.physics.DebugServer.start`,\n    :meth:`~superdex.physics.DebugServer.has_started`"

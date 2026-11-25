@@ -57,7 +57,7 @@ class DebugServerImpl : public DebugServerInternal {
   ~DebugServerImpl() override;
 
   // DebugServer API
-  void Start(uint16_t preferredPort) override;
+  void Start(uint16_t preferredPort, bool allowRemoteConnection) override;
   void Stop() override;
   bool HasStarted() const override;
   bool HasConnection() const override;
@@ -102,7 +102,7 @@ class DebugServerImpl : public DebugServerInternal {
   };
 
  private:
-  void StartImpl(uint16_t preferredPort, bool inProc);
+  void StartImpl(uint16_t preferredPort, bool inProc, bool allowRemoteConnection);
   void OnClientEvent(net::ClientId client, net::ClientEvent event);
   void OnClientConnect(net::ClientId client);
   void OnClientDisconnect(net::ClientId client);
@@ -188,7 +188,7 @@ DebugServerImpl::~DebugServerImpl() {
   Stop();
 }
 
-void DebugServerImpl::StartImpl(uint16_t preferredPort, bool inProc) {
+void DebugServerImpl::StartImpl(uint16_t preferredPort, bool inProc, bool allowRemoteConnection) {
   _state.Mutate([&](auto& state) {
     // Register message types before we start hosting for the first time.
     if (!state.hasRegistered) {
@@ -218,7 +218,7 @@ void DebugServerImpl::StartImpl(uint16_t preferredPort, bool inProc) {
       _server.StartInProc(kMaxClients, label);
     } else {
       _server.SetDiscoveryPort(kDiscoveryPort);
-      _server.Start(preferredPort, kMaxClients, label);
+      _server.Start(preferredPort, kMaxClients, label, allowRemoteConnection);
     }
 
     // Set a log callback so that we can broadcast LogMessage to the clients.
@@ -239,12 +239,12 @@ void DebugServerImpl::StartImpl(uint16_t preferredPort, bool inProc) {
   });
 }
 
-void DebugServerImpl::Start(uint16_t preferredPort) {
-  StartImpl(preferredPort, /*inProc*/ false);
+void DebugServerImpl::Start(uint16_t preferredPort, bool allowRemoteConnection) {
+  StartImpl(preferredPort, /*inProc*/ false, allowRemoteConnection);
 }
 
 void DebugServerImpl::StartInProc() {
-  StartImpl(/*preferredPort*/ 0, /*inProc*/ true);
+  StartImpl(/*preferredPort*/ 0, /*inProc*/ true, /*allowRemoteConnection*/ false);
 }
 
 void DebugServerImpl::SetConsoleRoot_ForTestingOnly(

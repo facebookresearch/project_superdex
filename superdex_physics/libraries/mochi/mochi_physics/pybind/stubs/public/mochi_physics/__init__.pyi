@@ -16055,15 +16055,22 @@ class DebugServer:
     See Also:
         :func:`~superdex.physics.get_debug_server`
     """
-    def start(self, preferred_port: int = ...) -> None:
+    def start(
+        self,
+        preferred_port: int = ...,
+        allow_remote_connection: bool = ...,
+    ) -> None:
         """Start accepting client connections on a TCP port.
 
         Args:
             preferred_port (int): Preferred TCP port to listen on. If the port is
                 already in use, the next available port is chosen automatically.
+            allow_remote_connection (bool): When false, only clients on the same machine
+                can connect to or discover the server.
 
         Note:
-            No-op if the server has already been started.
+            No-op if the server has already been started. The first call's settings
+            apply until :meth:`~superdex.physics.DebugServer.stop`.
 
         See Also:
             :meth:`~superdex.physics.DebugServer.stop`,

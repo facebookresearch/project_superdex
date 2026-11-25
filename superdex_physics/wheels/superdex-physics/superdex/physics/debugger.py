@@ -400,7 +400,7 @@ def attach(timeout_seconds: float = 5.0) -> bool:
     server = physics.get_debug_server()
     started_server = False
     if not server.has_started():
-        server.start(0)  # Zero means "pick a free port"
+        server.start(0, allow_remote_connection=False)  # Zero means "pick a free port"
         started_server = True
 
     # Only stop the server on failure if we were the ones that started it.

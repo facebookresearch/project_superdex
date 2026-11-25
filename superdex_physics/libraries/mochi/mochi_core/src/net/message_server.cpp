@@ -41,8 +41,12 @@ void MessageServer::SetDiscoveryPort(uint16_t discoveryPort) {
   _socket.SetDiscoveryPort(discoveryPort);
 }
 
-void MessageServer::Start(uint16_t preferredPort, int maxClients, std::string_view label) {
-  _socket.Start(preferredPort, maxClients, label);
+void MessageServer::Start(
+    uint16_t preferredPort,
+    int maxClients,
+    std::string_view label,
+    bool allowRemoteConnection) {
+  _socket.Start(preferredPort, maxClients, label, allowRemoteConnection);
 }
 
 void MessageServer::StartInProc(int maxClients, std::string_view label) {

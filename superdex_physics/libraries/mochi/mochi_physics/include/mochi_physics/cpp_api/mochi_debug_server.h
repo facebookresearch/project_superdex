@@ -24,7 +24,7 @@ struct CoordinateSpace;
 
 class DebugServer {
  public:
-  virtual void Start(uint16_t preferredPort = 7333) = 0;
+  virtual void Start(uint16_t preferredPort = 7333, bool allowRemoteConnection = false) = 0;
   virtual void Stop() = 0;
   virtual bool HasStarted() const = 0;
   virtual bool HasConnection() const = 0;
