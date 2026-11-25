@@ -463,6 +463,40 @@ void EmbedInTetrahedralMesh(MeshDataView const& tetMesh, MeshData& outMesh, Erro
 [[nodiscard]] real MaxAuxiliaryMeshExtrapolation(SkinningDataView const& skinning);
 
 /**
+ * @brief Compute linear skinning of a mesh to a polyline's elements, filling @p outMesh 's
+ * @ref MeshData::skinning.
+ *
+ * @details Blends the elements nearest each node of @p outMesh, measured by squared distance to
+ * each element's segment, with a smooth kernel of compact support. The weights are nonnegative, sum
+ * to 1, and vary continuously with node position, except where a node is equally far from more
+ * than @p maxWeightsPerNode elements, e.g. on the axis of a circular arc. The skinning's
+ * weightsPerNode is the largest number of elements any node binds to. Overwrites any existing
+ * skinning. Logs a warning if nodes bind to @p maxWeightsPerNode elements, as near a bend's center
+ * of curvature, where weights vary steeply, or to elements that are not consecutive, where the mesh
+ * can tear. The polyline and @p outMesh must already share the same reference coordinate frame
+ * and units.
+ *
+ * @param[in] nodes Polyline centerline node positions [m] in the reference configuration. Must pass
+ *            @ref ValidatePolylineGeometry.
+ * @param[in] isClosedLoop If true, the last element wraps around to the first node.
+ * @param[in] nominalWeightsPerNode Most elements a node binds to where the polyline is straight or
+ *            gently curved. With 1, two neighboring elements still blend around a joint. Larger
+ *            values blend more widely, with more volume loss at bends. Must be at least 1.
+ * @param[in] maxWeightsPerNode Most elements any node binds to, e.g. near a bend's center of
+ *            curvature. Must exceed @p nominalWeightsPerNode.
+ * @param[in,out] outMesh Mesh to skin; must have coordinates. On success, its skinning is
+ *                populated, with indices referring to polyline elements.
+ * @param[in,out] error Set if any input is invalid or a point-to-element distance is not finite.
+ */
+void ComputePolylineSkinning(
+    Span<Real3 const> nodes,
+    bool isClosedLoop,
+    int nominalWeightsPerNode,
+    int maxWeightsPerNode,
+    MeshData& outMesh,
+    Error& error);
+
+/**
  * @brief Flip mesh winding order by swapping the connectivity indices within each element.
  *
  * @param[in,out] data @ref MeshData to modify.

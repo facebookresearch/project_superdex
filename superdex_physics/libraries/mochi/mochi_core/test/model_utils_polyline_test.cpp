@@ -20,10 +20,12 @@
 #include <mochi_core/test/mochi_test_helpers.h>
 #include <mochi_core/utils/array_utils.h>
 #include <mochi_core/utils/basic_utils.h>
+#include <mochi_core/utils/log.h>
 #include <mochi_core/utils/math_utils.h>
 #include <mochi_core/utils/nd_array_utils.h>
 #include <mochi_core/utils/quaternion.h>
 #include <mochi_core/utils/rand_utils.h>
+#include <mochi_core/utils/task_scheduler.h>
 #include <mochi_core/utils/vmatrix.h>
 
 #include <gtest/gtest.h>
@@ -31,6 +33,8 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <string>
+#include <string_view>
 
 using namespace mochi;
 
@@ -181,6 +185,112 @@ void ExpectTubeAroundPolyline(
   model.contactSkinMesh = tube;
   model.visualMesh = tube;
   model::Validate(model, test::ExpectOK{});
+}
+
+// Nodes of a straight polyline along x with the given element lengths, starting at the origin.
+DynamicArray<Real3> StraightNodes(Span<real const> lengths) {
+  DynamicArray<Real3> nodes = {Real3{}};
+  for (real const length : lengths) {
+    nodes.push_back(nodes.back() + Real3{length, 0_r, 0_r});
+  }
+  return nodes;
+}
+
+// A triangle mesh with nodes at @p points (at least 3), joined by a fan so that it passes
+// validation.
+MeshData FanMesh(Span<Real3 const> points) {
+  MeshData mesh;
+  mesh.nodesPerElement = 3;
+  mesh.coordinates = Flatten(points);
+  for (int i = 1; i + 1 < isize(points); ++i) {
+    Int3 const triangle{0, i, i + 1};
+    mesh.connectivity.append(MakeConstSpan(triangle));
+  }
+  return mesh;
+}
+
+int constexpr kNominalWeightsPerNode = 2;
+int constexpr kMaxWeightsPerNode = 4;
+
+// Records the warnings logged during its lifetime, instead of failing the test.
+class CapturedWarnings {
+ public:
+  CapturedWarnings() : _prevLogFn(GetLogCallback()) {
+    SetLogCallback([this](LogChannel channel, char const* message, char const* file, int line) {
+      if (channel == LogChannel::Warning) {
+        _messages.emplace_back(message);
+      } else {
+        _prevLogFn(channel, message, file, line);
+      }
+    });
+  }
+  CapturedWarnings(CapturedWarnings const&) = delete;
+  CapturedWarnings& operator=(CapturedWarnings const&) = delete;
+  ~CapturedWarnings() {
+    SetLogCallback(_prevLogFn);
+  }
+
+  [[nodiscard]] int Count() const {
+    return isize(_messages);
+  }
+  // Whether a warning starts with @p prefix.
+  [[nodiscard]] bool Contains(std::string_view prefix) const {
+    return std::ranges::any_of(
+        _messages, [&](std::string const& message) { return message.starts_with(prefix); });
+  }
+
+ private:
+  LogFn _prevLogFn;
+  DynamicArray<std::string> _messages;
+};
+
+// Skins a mesh with nodes at @p points to the polyline, and checks the invariants every skinning
+// satisfies: at most maxWeightsPerNode weights per node, nonnegative and summing to 1.
+MeshData SkinPoints(
+    Span<Real3 const> nodes,
+    bool isClosedLoop,
+    Span<Real3 const> points,
+    int nominalWeightsPerNode = kNominalWeightsPerNode,
+    int maxWeightsPerNode = kMaxWeightsPerNode) {
+  MeshData mesh = FanMesh(points);
+  model::ComputePolylineSkinning(
+      nodes, isClosedLoop, nominalWeightsPerNode, maxWeightsPerNode, mesh, test::ExpectOK{});
+  SkinningData const& skinning = mesh.skinning.value();
+  int const numElements = isClosedLoop ? isize(nodes) : isize(nodes) - 1;
+  model::ValidateSkinning(skinning, isize(points), numElements, test::ExpectOK{});
+  EXPECT_LE(skinning.weightsPerNode, maxWeightsPerNode);
+  EXPECT_TRUE(std::ranges::all_of(skinning.weights, [](real w) { return w >= 0_r; }));
+  return mesh;
+}
+
+// The weight node @p i of @p mesh puts on each of the polyline's @p numElements elements.
+DynamicArray<real> ElementWeights(MeshData const& mesh, int i, int numElements) {
+  SkinningData const& skinning = mesh.skinning.value();
+  DynamicArray<real> weights(numElements, 0_r);
+  for (int m = 0; m < skinning.weightsPerNode; ++m) {
+    int const slot = i * skinning.weightsPerNode + m;
+    weights[skinning.indices[slot]] += skinning.weights[slot];
+  }
+  return weights;
+}
+
+real MaxWeightDifference(Span<real const> a, Span<real const> b) {
+  real difference = 0_r;
+  for (int e = 0; e < isize(a); ++e) {
+    difference = Max(difference, Abs(a[e] - b[e]));
+  }
+  return difference;
+}
+
+// Nodes on a planar circular arc of radius 1 around the origin, with numElements equal elements
+// spanning @p arcAngle.
+DynamicArray<Real3> CircularArcNodes(int numElements, real arcAngle) {
+  DynamicArray<Real3> nodes;
+  for (int i = 0; i <= numElements; ++i) {
+    real const angle = arcAngle * static_cast<real>(i) / static_cast<real>(numElements);
+    nodes.push_back(Real3{Cos(angle), Sin(angle), 0_r});
+  }
+  return nodes;
 }
 
 } // namespace
@@ -552,4 +662,365 @@ TEST(GenerateTubularSkinMesh, NonFiniteGeneratedCoordinatesError) {
         model::GenerateTubularSkinMesh(nodes, axes, false, radius, 4, test::ExpectNotOK{})
             .coordinates.empty());
   }
+}
+
+TEST(ComputePolylineSkinning, StraightPolylineWeightsIgnoreDistanceFromAxis) {
+  real constexpr kTolerance = MOCHI_USE_DOUBLE_PRECISION ? 1e-10_r : 1e-4_r;
+  int constexpr kNumElements = 5;
+  DynamicArray<Real3> const nodes = StraightNodes(DynamicArray<real>(kNumElements, 1_r));
+  DynamicArray<real> const axialPositions = {0.3_r, 1_r, 1.5_r, 2.2_r, 3.7_r, 4.9_r};
+  DynamicArray<Real3> const radialOffsets = {
+      Real3{}, Real3{0_r, 0.1_r, 0_r}, Real3{0_r, -0.6_r, 0.8_r}, Real3{0_r, 0_r, 3_r}};
+  DynamicArray<Real3> points;
+  for (real const s : axialPositions) {
+    for (Real3 const& offset : radialOffsets) {
+      points.push_back(Real3{s, 0_r, 0_r} + offset);
+    }
+  }
+  int const numOffsets = isize(radialOffsets);
+
+  for (int const nominalWeightsPerNode : {2, 3}) {
+    MeshData const mesh = SkinPoints(
+        nodes, /*isClosedLoop=*/false, points, nominalWeightsPerNode, nominalWeightsPerNode + 2);
+    EXPECT_EQ(mesh.skinning->weightsPerNode, nominalWeightsPerNode);
+    for (int a = 0; a < isize(axialPositions); ++a) {
+      DynamicArray<real> const onAxis = ElementWeights(mesh, a * numOffsets, kNumElements);
+      for (int r = 1; r < numOffsets; ++r) {
+        EXPECT_LT(
+            MaxWeightDifference(ElementWeights(mesh, a * numOffsets + r, kNumElements), onAxis),
+            kTolerance)
+            << "nominal " << nominalWeightsPerNode << " position " << axialPositions[a]
+            << " offset " << r;
+      }
+    }
+  }
+}
+
+TEST(ComputePolylineSkinning, UniformStraightPolylineOwnsMidpointsAndSplitsJoints) {
+  // Points beside each element's midpoint (nodes 0 to 3), then beside each joint (nodes 4 to 6).
+  int constexpr kNumElements = 4;
+  DynamicArray<Real3> const nodes = StraightNodes(DynamicArray<real>(kNumElements, 1_r));
+  Real3 const offset{0_r, 0.3_r, 0_r};
+  DynamicArray<Real3> points;
+  for (int e = 0; e < kNumElements; ++e) {
+    points.push_back(0.5_r * (nodes[e] + nodes[e + 1]) + offset);
+  }
+  for (int joint = 1; joint < kNumElements; ++joint) {
+    points.push_back(nodes[joint] + offset);
+  }
+
+  MeshData const mesh = SkinPoints(nodes, /*isClosedLoop=*/false, points);
+  for (int e = 1; e + 1 < kNumElements; ++e) {
+    DynamicArray<real> expected(kNumElements, 0_r);
+    expected[e] = 1_r;
+    EXPECT_LT(MaxWeightDifference(ElementWeights(mesh, e, kNumElements), expected), 1e-6_r)
+        << "midpoint of element " << e;
+  }
+  // An end element's only neighbor is nearer than the next element, so it shares the midpoint.
+  EXPECT_GT(ElementWeights(mesh, 0, kNumElements)[1], 0_r);
+  EXPECT_GT(ElementWeights(mesh, kNumElements - 1, kNumElements)[kNumElements - 2], 0_r);
+  for (int joint = 1; joint < kNumElements; ++joint) {
+    DynamicArray<real> expected(kNumElements, 0_r);
+    expected[joint - 1] = 0.5_r;
+    expected[joint] = 0.5_r;
+    EXPECT_LT(
+        MaxWeightDifference(ElementWeights(mesh, kNumElements + joint - 1, kNumElements), expected),
+        1e-6_r)
+        << "joint " << joint;
+  }
+}
+
+TEST(ComputePolylineSkinning, NonuniformElementLengthsSplitJointsEvenly) {
+  DynamicArray<real> const lengths = {1_r, 0.1_r, 2_r, 0.5_r};
+  int const numElements = isize(lengths);
+  DynamicArray<Real3> const nodes = StraightNodes(lengths);
+  Real3 const offset{0_r, 0_r, 0.2_r};
+  DynamicArray<Real3> points;
+  for (int joint = 1; joint < numElements; ++joint) {
+    points.push_back(nodes[joint] + offset);
+  }
+
+  MeshData const mesh = SkinPoints(nodes, /*isClosedLoop=*/false, points);
+  for (int joint = 1; joint < numElements; ++joint) {
+    DynamicArray<real> expected(numElements, 0_r);
+    expected[joint - 1] = 0.5_r;
+    expected[joint] = 0.5_r;
+    EXPECT_LT(MaxWeightDifference(ElementWeights(mesh, joint - 1, numElements), expected), 1e-6_r)
+        << "joint " << joint;
+  }
+}
+
+TEST(ComputePolylineSkinning, ClosedLoopSplitsWrapAroundJoint) {
+  // Beyond the corner of a square loop, on the convex side, both elements meeting there are nearest
+  // at the corner node itself, including at the joint between the last element and the first.
+  DynamicArray<Real3> const nodes = {
+      Real3{0_r, 0_r, 0_r}, Real3{1_r, 0_r, 0_r}, Real3{1_r, 1_r, 0_r}, Real3{0_r, 1_r, 0_r}};
+  int const numElements = isize(nodes);
+  DynamicArray<Real3> points;
+  for (Real3 const& corner : nodes) {
+    points.push_back(corner + 0.2_r * (corner - Real3{0.5_r, 0.5_r, 0_r}));
+  }
+
+  MeshData const mesh = SkinPoints(nodes, /*isClosedLoop=*/true, points);
+  for (int corner = 0; corner < numElements; ++corner) {
+    DynamicArray<real> expected(numElements, 0_r);
+    expected[(corner + numElements - 1) % numElements] = 0.5_r;
+    expected[corner] = 0.5_r;
+    EXPECT_LT(MaxWeightDifference(ElementWeights(mesh, corner, numElements), expected), 1e-6_r)
+        << "corner " << corner;
+  }
+}
+
+TEST(ComputePolylineSkinning, WeightsAreContinuousAroundBentPolyline) {
+  // Weight changes shrink in proportion to small displacements of the nodes, across all the points
+  // where elements enter or leave the blend. Enough points to split the work across tasks.
+  TaskScheduler scheduler;
+  int constexpr kNumPoints = 400;
+  DynamicArray<Real3> const nodes = ArcNodes(9, 1.5_r * kPI);
+  int const numElements = isize(nodes) - 1;
+  mochi_default_random_engine rng = RandomGenerator(7);
+  DynamicArray<Real3> points;
+  DynamicArray<Real3> directions;
+  for (int i = 0; i < kNumPoints; ++i) {
+    int const e = RandomUniformValue(rng, 0, numElements - 1);
+    real const s = RandomUniformValue(rng, 0_r, 1_r);
+    Real3 offset;
+    SetRandom(rng, -0.2_r, 0.2_r, offset);
+    points.push_back(Lerp(nodes[e], nodes[e + 1], s) + offset);
+    Real3 direction;
+    SetRandom(rng, -1_r, 1_r, direction);
+    directions.push_back(Normalize(direction));
+  }
+
+  MeshData const skinned = SkinPoints(nodes, /*isClosedLoop=*/false, points);
+  auto const maxChange = [&](real displacement) {
+    DynamicArray<Real3> displaced = points;
+    for (int i = 0; i < kNumPoints; ++i) {
+      displaced[i] = displaced[i] + displacement * directions[i];
+    }
+    MeshData const moved = SkinPoints(nodes, /*isClosedLoop=*/false, displaced);
+    real change = 0_r;
+    for (int i = 0; i < kNumPoints; ++i) {
+      change =
+          Max(change,
+              MaxWeightDifference(
+                  ElementWeights(skinned, i, numElements), ElementWeights(moved, i, numElements)));
+    }
+    return change;
+  };
+  real const coarseChange = maxChange(1e-3_r);
+  real const fineChange = maxChange(1e-4_r);
+  EXPECT_LT(coarseChange, 0.1_r);
+  EXPECT_LT(fineChange, 0.2_r * coarseChange + 1e-5_r);
+}
+
+TEST(ComputePolylineSkinning, ConcaveSideOfJointIsContinuousAcrossBisector) {
+  // Closest-point projection jumps from one element to the other across the inner bisector of a
+  // bend. Squared segment distances tie on it instead, so the weights pass through 50/50 smoothly.
+  DynamicArray<Real3> const nodes = {
+      Real3{-1_r, 0_r, 0_r},
+      Real3{0_r, 0_r, 0_r},
+      Real3{1_r, 0_r, 0_r},
+      Real3{1_r, 1_r, 0_r},
+      Real3{1_r, 2_r, 0_r}};
+  int const numElements = isize(nodes) - 1;
+  Real3 const bisector = Normalize(Real3{-1_r, 1_r, 0_r});
+  Real3 const across = Normalize(Real3{1_r, 1_r, 0_r});
+  int constexpr kNumSteps = 100;
+  real constexpr kStep = 1e-3_r;
+  DynamicArray<Real3> points;
+  for (int j = -kNumSteps / 2; j <= kNumSteps / 2; ++j) {
+    points.push_back(nodes[2] + 0.3_r * bisector + (kStep * static_cast<real>(j)) * across);
+  }
+
+  MeshData const mesh = SkinPoints(nodes, /*isClosedLoop=*/false, points);
+  DynamicArray<real> const onBisector = ElementWeights(mesh, kNumSteps / 2, numElements);
+  EXPECT_NEAR(onBisector[1], 0.5_r, 1e-5_r);
+  EXPECT_NEAR(onBisector[2], 0.5_r, 1e-5_r);
+  for (int i = 0; i + 1 < isize(points); ++i) {
+    EXPECT_LT(
+        MaxWeightDifference(
+            ElementWeights(mesh, i, numElements), ElementWeights(mesh, i + 1, numElements)),
+        0.01_r)
+        << "step " << i;
+  }
+}
+
+TEST(ComputePolylineSkinning, ExactTieFallsBackToEqualWeights) {
+  // A path along the edges of a unit cube, whose center is exactly equally far from every element,
+  // so the center binds equally to as many elements as allowed, the lowest-indexed ones.
+  DynamicArray<Real3> const nodes = {
+      Real3{0_r, 0_r, 0_r},
+      Real3{1_r, 0_r, 0_r},
+      Real3{1_r, 1_r, 0_r},
+      Real3{0_r, 1_r, 0_r},
+      Real3{0_r, 1_r, 1_r},
+      Real3{1_r, 1_r, 1_r},
+      Real3{1_r, 0_r, 1_r},
+      Real3{0_r, 0_r, 1_r}};
+  int const numElements = isize(nodes) - 1;
+  // The other two points, beside the first two elements, only complete the mesh's triangle.
+  DynamicArray<Real3> const points = {
+      Real3{0.5_r, 0.5_r, 0.5_r}, Real3{0.5_r, -0.3_r, 0_r}, Real3{1.3_r, 0.5_r, 0_r}};
+
+  CapturedWarnings const warnings;
+  MeshData const mesh = SkinPoints(nodes, /*isClosedLoop=*/false, points);
+  EXPECT_EQ(warnings.Count(), 1);
+  EXPECT_TRUE(warnings.Contains("1 skinned nodes bind to the maximum"));
+  DynamicArray<real> expected(numElements, 0_r);
+  for (int e = 0; e < kMaxWeightsPerNode; ++e) {
+    expected[e] = 1_r / static_cast<real>(kMaxWeightsPerNode);
+  }
+  EXPECT_EQ(MaxWeightDifference(ElementWeights(mesh, 0, numElements), expected), 0_r);
+}
+
+TEST(ComputePolylineSkinning, NearTieOnCircularArcAxisIsValid) {
+  // Every element of a circular arc is equally far from a point on its axis, up to rounding, which
+  // decides the elements a point binds to.
+  DynamicArray<Real3> const nodes = CircularArcNodes(6, 0.75_r * kPI);
+  DynamicArray<Real3> const points = {
+      Real3{0_r, 0_r, 0_r}, Real3{0_r, 0_r, 0.3_r}, Real3{0_r, 0_r, -0.5_r}};
+
+  // Rounding also decides how many points bind to the maximum number of elements, and so warn.
+  CapturedWarnings const warnings;
+  SkinPoints(nodes, /*isClosedLoop=*/false, points);
+}
+
+TEST(ComputePolylineSkinning, NearCenterOfTightBendWidensThenCapsBlend) {
+  // Near a circular arc's center, many elements are nearly equally far away: the floor widens the
+  // blend beyond nominal, and the cap then narrows it to maxWeightsPerNode elements.
+  DynamicArray<Real3> const nodes = CircularArcNodes(12, 1.5_r * kPI);
+  DynamicArray<Real3> const points = {
+      Real3{0.005_r, 0_r, 0_r}, Real3{0_r, 0.005_r, 0_r}, Real3{-0.0035_r, -0.0035_r, 0_r}};
+
+  CapturedWarnings const warnings;
+  MeshData const mesh = SkinPoints(nodes, /*isClosedLoop=*/false, points);
+  EXPECT_EQ(warnings.Count(), 1);
+  EXPECT_TRUE(warnings.Contains("3 skinned nodes bind to the maximum"));
+  EXPECT_GT(mesh.skinning->weightsPerNode, kNominalWeightsPerNode);
+}
+
+TEST(ComputePolylineSkinning, FewerElementsThanNominalBlendAll) {
+  // With fewer elements than nominalWeightsPerNode + 1, the kernel reaches past all of them.
+  for (int const numElements : {1, 2}) {
+    DynamicArray<Real3> const nodes = StraightNodes(DynamicArray<real>(numElements, 1_r));
+    DynamicArray<Real3> const points = {
+        Real3{0.1_r, 0.2_r, 0_r}, Real3{0.5_r, 0_r, 1_r}, Real3{-0.3_r, 0_r, 0_r}};
+
+    for (int const maxWeightsPerNode : {kMaxWeightsPerNode, std::numeric_limits<int>::max()}) {
+      MeshData const mesh = SkinPoints(
+          nodes, /*isClosedLoop=*/false, points, kNominalWeightsPerNode, maxWeightsPerNode);
+      EXPECT_EQ(mesh.skinning->weightsPerNode, numElements);
+      for (int i = 0; i < isize(points); ++i) {
+        DynamicArray<real> const weights = ElementWeights(mesh, i, numElements);
+        EXPECT_TRUE(std::ranges::all_of(weights, [](real w) { return w > 0_r; })) << "point " << i;
+      }
+    }
+  }
+}
+
+TEST(ComputePolylineSkinning, NonFiniteDistancesPreserveExistingSkinning) {
+  TaskScheduler scheduler;
+  real const max = std::numeric_limits<real>::max();
+  int constexpr kNumPoints = 400;
+  for (bool const overflowSubtraction : {false, true}) {
+    real const x = overflowSubtraction ? max : 0_r;
+    DynamicArray<Real3> const nodes = {Real3{x, 0_r, 0_r}, Real3{x, 0_r, 1_r}, Real3{x, 0_r, 2_r}};
+    DynamicArray<Real3> points;
+    for (int i = 0; i < kNumPoints; ++i) {
+      points.push_back(Real3{x, i % 2 == 0 ? 0.1_r : 0.2_r, 2_r * i / kNumPoints});
+    }
+    MeshData mesh = SkinPoints(nodes, /*isClosedLoop=*/false, points);
+    SkinningData const original = *mesh.skinning;
+    points[kNumPoints / 2] = overflowSubtraction ? Real3{-max, 0_r, 1_r} : Real3{0_r, max, 1_r};
+    mesh.coordinates = Flatten(MakeConstSpan(points));
+    model::ComputePolylineSkinning(
+        nodes, false, kNominalWeightsPerNode, kMaxWeightsPerNode, mesh, test::ExpectNotOK{});
+    EXPECT_EQ(mesh.skinning->weightsPerNode, original.weightsPerNode);
+    EXPECT_SPAN_EQ(mesh.skinning->indices, original.indices);
+    EXPECT_SPAN_EQ(mesh.skinning->weights, original.weights);
+  }
+}
+
+TEST(ComputePolylineSkinning, CoiledPolylineWarnsOfSelfProximity) {
+  // Between two turns of a tight helix, a point binds to elements a whole turn apart.
+  int constexpr kElementsPerTurn = 16;
+  real constexpr kPitch = 0.2_r;
+  DynamicArray<Real3> nodes;
+  for (int i = 0; i <= 2 * kElementsPerTurn; ++i) {
+    real const angle = 2_r * kPI * static_cast<real>(i) / kElementsPerTurn;
+    nodes.push_back(Real3{Cos(angle), Sin(angle), kPitch * angle / (2_r * kPI)});
+  }
+  DynamicArray<Real3> const betweenTurns = {
+      Real3{1_r, 0_r, 0.5_r * kPitch}, Real3{0_r, 1_r, 0.75_r * kPitch}, Real3{-1_r, 0_r, kPitch}};
+  {
+    CapturedWarnings const warnings;
+    SkinPoints(nodes, /*isClosedLoop=*/false, betweenTurns);
+    EXPECT_TRUE(warnings.Contains("3 skinned nodes bind to polyline elements that are not"));
+  }
+
+  // Beside the middles of first-turn elements, outside and below the turn, the nearest
+  // second-turn element is farther than the first turn's next element, so it gets no weight, and
+  // nothing is logged.
+  DynamicArray<Real3> outsideFirstTurn;
+  for (int const e : {0, 4, 8}) {
+    real const angle = 2_r * kPI * (static_cast<real>(e) + 0.5_r) / kElementsPerTurn;
+    outsideFirstTurn.push_back(
+        Real3{1.05_r * Cos(angle), 1.05_r * Sin(angle), kPitch * angle / (2_r * kPI) - 0.05_r});
+  }
+  SkinPoints(nodes, /*isClosedLoop=*/false, outsideFirstTurn);
+}
+
+TEST(ComputePolylineSkinning, ValidatesAsPolylineAuxiliaryMeshes) {
+  DynamicArray<Real3> const nodes = ArcNodes(6, kPI);
+  bool constexpr kIsClosedLoop = false;
+  MeshData const tube = model::GenerateTubularSkinMesh(
+      nodes,
+      model::GenerateDiscreteBishopFrame(nodes, kIsClosedLoop),
+      kIsClosedLoop,
+      0.1_r,
+      8,
+      test::ExpectOK{});
+  MeshData skinned = tube;
+  skinned.skinning->weightsPerNode = 3; // stale skinning, which ComputePolylineSkinning replaces
+  model::ComputePolylineSkinning(
+      nodes, kIsClosedLoop, kNominalWeightsPerNode, kMaxWeightsPerNode, skinned, test::ExpectOK{});
+
+  ModelData model;
+  model.mesh.emplace();
+  model.mesh->nodesPerElement = 2;
+  model.mesh->coordinates = Flatten(MakeConstSpan(nodes));
+  model.mesh->connectivity = MakeSequentialPolylineConnectivity(isize(nodes), kIsClosedLoop);
+  model.contactSkinMesh = skinned;
+  model.visualMesh = skinned;
+  model::AutoCorrect(model, test::ExpectOK{});
+  model::Validate(model, test::ExpectOK{});
+}
+
+TEST(ComputePolylineSkinning, InvalidInputsError) {
+  DynamicArray<Real3> const nodes = StraightNodes(DynamicArray<real>(3, 1_r));
+  DynamicArray<Real3> const points = {Real3{}, Real3{1_r, 1_r, 0_r}, Real3{2_r, 0_r, 1_r}};
+  auto const expectError = [&](Span<Real3 const> polyline,
+                               bool isClosedLoop,
+                               int nominalWeightsPerNode,
+                               int maxWeightsPerNode,
+                               MeshData mesh) {
+    model::ComputePolylineSkinning(
+        polyline,
+        isClosedLoop,
+        nominalWeightsPerNode,
+        maxWeightsPerNode,
+        mesh,
+        test::ExpectNotOK{});
+    EXPECT_FALSE(mesh.skinning.has_value());
+  };
+  expectError(nodes, false, 0, kMaxWeightsPerNode, FanMesh(points));
+  expectError(nodes, false, 2, 2, FanMesh(points));
+  DynamicArray<Real3> const coincident = {nodes[0], nodes[0], nodes[1]};
+  expectError(coincident, false, kNominalWeightsPerNode, kMaxWeightsPerNode, FanMesh(points));
+  DynamicArray<Real3> const twoNodeLoop = {nodes[0], nodes[1]};
+  expectError(twoNodeLoop, true, kNominalWeightsPerNode, kMaxWeightsPerNode, FanMesh(points));
+  MeshData noCoordinates;
+  noCoordinates.nodesPerElement = 3;
+  expectError(nodes, false, kNominalWeightsPerNode, kMaxWeightsPerNode, noCoordinates);
 }

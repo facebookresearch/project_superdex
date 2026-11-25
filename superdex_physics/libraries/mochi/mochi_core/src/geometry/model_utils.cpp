@@ -49,6 +49,7 @@
 #include <climits>
 #include <cstdint>
 #include <filesystem>
+#include <limits>
 #include <memory>
 
 using namespace mochi;
@@ -1652,6 +1653,219 @@ real mochi::model::MaxAuxiliaryMeshExtrapolation(SkinningDataView const& skinnin
     largest = Max(largest, -w);
   }
   return largest;
+}
+
+namespace {
+// A node's squared distance to a polyline element, ordered nearest first and then by element index.
+// No two elements compare equal, so sorting is deterministic, and exact ties select the
+// lowest-indexed elements.
+struct ElementDistance {
+  real distanceSqr;
+  int element;
+
+  bool operator<(ElementDistance const& other) const {
+    return distanceSqr < other.distanceSqr ||
+        (distanceSqr == other.distanceSqr && element < other.element);
+  }
+};
+} // namespace
+
+// Squared distance from p to the segment from a to b, which must have nonzero length. Beyond either
+// end it is the distance to that end node itself, so two elements meeting at a joint tie exactly.
+static real DistanceSqrPointSegment(Real3 const& p, Real3 const& a, Real3 const& b) {
+  Real3 const ab = b - a;
+  real const s = Dot(p - a, ab) / NormSqr(ab);
+  if (s <= 0_r) {
+    return NormSqr(p - a);
+  }
+  if (s >= 1_r) {
+    return NormSqr(p - b);
+  }
+  return NormSqr(p - a - s * ab);
+}
+
+// Smoothstep kernel φ(t) = (1 - t)²(1 + 2t) on [0, 1), and 0 beyond. φ'(0) = φ'(1) = 0 makes the
+// usual changes in which elements are nearest smooth.
+static real SmoothstepKernel(real t) {
+  return t < 1_r ? Sqr(1_r - t) * (1_r + 2_r * t) : 0_r;
+}
+
+// Whether @p elements form a single run of consecutive elements along the polyline.
+static bool IsConsecutiveRun(Span<int const> elements, int numElements, bool isClosedLoop) {
+  // A run has exactly one element whose successor is not in it, or none if it is a whole loop.
+  int numRunEnds = 0;
+  for (int const e : elements) {
+    int const next = isClosedLoop ? (e + 1) % numElements : e + 1;
+    numRunEnds += Contains(elements, next) ? 0 : 1;
+  }
+  return numRunEnds <= 1;
+}
+
+// The weights follow modified Shepard weighting with a k-nearest-neighbor kernel width, applied to
+// squared point-to-segment distances q_i. With k = nominalWeightsPerNode + 1 and
+// K = maxWeightsPerNode, each node's kernel width is
+//   h = min(max(q_(k) - q_min, floor), q_(K+1) - q_min),
+// where q_(j) is the j-th smallest distance, and w_i ∝ φ((q_i - q_min) / h).
+// - Elements of rank k and beyond have t ≥ 1 unless the floor is active, so nominally a node binds
+//   to at most k - 1 elements. The (K+1)-th always has t ≥ 1, which caps the stencil at K.
+// - Differences of squared distances to the segments of a straight run do not depend on the
+//   distance from it, so the weights are constant across its cross-sections. They also tie exactly
+//   at joints, whatever the element lengths, and agree on either side of a bend's bisector.
+// - The order statistics, and so h, vary continuously with position. The floor keeps h positive
+//   where the nearest k elements tie, and φ(1) = 0 lets elements enter and leave the stencil
+//   smoothly. Only an exact tie among the nearest K + 1, where symmetry demands more than K equal
+//   weights, is discontinuous. There h = 0, and the K lowest-indexed tied elements bind equally.
+// - The nearest element has t = 0 and so weight 1, which keeps the normalization away from 0/0.
+void mochi::model::ComputePolylineSkinning(
+    Span<Real3 const> nodes,
+    bool isClosedLoop,
+    int nominalWeightsPerNode,
+    int maxWeightsPerNode,
+    MeshData& outMesh,
+    Error& error) {
+  MOCHI_ERROR_RETURN(error);
+  MOCHI_ERROR_IF(
+      nominalWeightsPerNode < 1,
+      error,
+      "Polyline skinning must bind each node to at least one element.");
+  MOCHI_ERROR_IF(
+      maxWeightsPerNode <= nominalWeightsPerNode,
+      error,
+      "Polyline skinning's maximum weights per node must exceed its nominal weights per node.");
+  ValidatePolylineGeometry(nodes, isClosedLoop, error);
+  // Any existing skinning is about to be replaced, so it need not match the current nodes.
+  MeshDataView meshWithoutSkinning = outMesh;
+  meshWithoutSkinning.skinning.reset();
+  ValidateMesh(meshWithoutSkinning, /* numSkinningSources */ INT_MAX, error);
+  MOCHI_ERROR_RETURN(error);
+
+  int const numNodes = isize(nodes);
+  int const numElements = isClosedLoop ? numNodes : numNodes - 1;
+  auto const elementEnd = [&](int e) { return nodes[(e + 1) % numNodes]; };
+
+  // The floor is a fraction of the shortest element's squared length ℓ², the same for every node.
+  // With nominalWeightsPerNode >= 2, q_(k) - q_min ≥ ℓ²/4 on a straight polyline, so the floor
+  // never engages there. With nominal 1, it blends the two elements around a joint.
+  real minLengthSqr = NormSqr(elementEnd(0) - nodes[0]);
+  for (int e = 1; e < numElements; ++e) {
+    minLengthSqr = Min(minLengthSqr, NormSqr(elementEnd(e) - nodes[e]));
+  }
+  real constexpr kFloorFraction = 0.125_r;
+  real const minKernelWidth = kFloorFraction * minLengthSqr;
+
+  int const nominalRank = nominalWeightsPerNode + 1;
+  int const numNearest = Min(maxWeightsPerNode, numElements - 1) + 1;
+  int const numCandidates = Min(maxWeightsPerNode, numElements);
+
+  auto const meshNodes = Unflatten<Real3 const>(outMesh.coordinates);
+  int const numMeshNodes = isize(meshNodes);
+  // Each node's elements and weights, nearest first, in numCandidates slots padded with zero
+  // weights.
+  size_t const numSlots = static_cast<size_t>(numMeshNodes) * numCandidates;
+  MOCHI_ERROR_IF(numSlots >= INT_MAX, error, "Polyline skinning has too many weights.");
+  MOCHI_ERROR_RETURN(error);
+  DynamicArray<int> slotElements;
+  slotElements.resize_noinit(numSlots);
+  DynamicArray<real> slotWeights;
+  slotWeights.resize_noinit(numSlots);
+  DynamicArray<int> stencilSizes;
+  stencilSizes.resize_noinit(numMeshNodes);
+
+  ParallelForRange(
+      "ComputePolylineSkinning", 0, numMeshNodes, 256, INT_MAX, [&](int rangeBegin, int rangeEnd) {
+        DynamicArray<ElementDistance> distances(numElements);
+        for (int i = rangeBegin; i < rangeEnd; ++i) {
+          bool finiteDistances = true;
+          for (int e = 0; e < numElements; ++e) {
+            distances[e] = {
+                .distanceSqr = DistanceSqrPointSegment(meshNodes[i], nodes[e], elementEnd(e)),
+                .element = e};
+            finiteDistances &= IsFinite(distances[e].distanceSqr);
+          }
+          if (!finiteDistances) {
+            stencilSizes[i] = 0;
+            continue;
+          }
+          std::partial_sort(distances.begin(), distances.begin() + numNearest, distances.end());
+
+          real const qMin = distances[0].distanceSqr;
+          // With fewer than k elements, the kernel reaches past all of them.
+          real const nominalGap = numElements >= nominalRank
+              ? distances[nominalRank - 1].distanceSqr - qMin
+              : distances[numNearest - 1].distanceSqr - qMin + minKernelWidth;
+          real const nominalWidth = Max(nominalGap, minKernelWidth);
+          real const kernelWidth = numElements > maxWeightsPerNode
+              ? Min(nominalWidth, distances[maxWeightsPerNode].distanceSqr - qMin)
+              : nominalWidth;
+
+          size_t const base = static_cast<size_t>(i) * numCandidates;
+          int stencilSize = 0;
+          real weightSum = 0_r;
+          for (int m = 0; m < numCandidates; ++m) {
+            // Dividing, rather than multiplying by a reciprocal, gives the element that sets the
+            // kernel width t = 1 exactly, and so weight 0.
+            real const t =
+                kernelWidth > 0_r ? (distances[m].distanceSqr - qMin) / kernelWidth : 0_r;
+            real const weight = SmoothstepKernel(t);
+            if (weight > 0_r) {
+              slotElements[base + stencilSize] = distances[m].element;
+              slotWeights[base + stencilSize] = weight;
+              weightSum += weight;
+              ++stencilSize;
+            }
+          }
+          real const invWeightSum = 1_r / weightSum;
+          for (int m = 0; m < stencilSize; ++m) {
+            slotWeights[base + m] *= invWeightSum;
+          }
+          for (int m = stencilSize; m < numCandidates; ++m) {
+            slotElements[base + m] = distances[0].element;
+            slotWeights[base + m] = 0_r;
+          }
+          stencilSizes[i] = stencilSize;
+        }
+      });
+
+  // Keep only as many slots per node as the largest stencil uses.
+  auto const [minWeightsPerNode, weightsPerNode] = MinMax(MakeConstSpan(stencilSizes));
+  MOCHI_ERROR_IF(
+      minWeightsPerNode == 0,
+      error,
+      "Polyline skinning's point-to-element distances must be finite.");
+  MOCHI_ERROR_RETURN(error);
+  SkinningData skinning;
+  skinning.weightsPerNode = weightsPerNode;
+  skinning.indices.resize_noinit(static_cast<size_t>(numMeshNodes) * weightsPerNode);
+  skinning.weights.resize_noinit(static_cast<size_t>(numMeshNodes) * weightsPerNode);
+  int numMaxedNodes = 0;
+  int numSelfProximateNodes = 0;
+  for (int i = 0; i < numMeshNodes; ++i) {
+    size_t const base = static_cast<size_t>(i) * numCandidates;
+    for (int m = 0; m < weightsPerNode; ++m) {
+      size_t const out = static_cast<size_t>(i) * weightsPerNode + m;
+      skinning.indices[out] = slotElements[base + m];
+      skinning.weights[out] = slotWeights[base + m];
+    }
+    numMaxedNodes += stencilSizes[i] == maxWeightsPerNode ? 1 : 0;
+    bool const isConsecutive = IsConsecutiveRun(
+        MakeConstSpan(slotElements).subspan(base, stencilSizes[i]), numElements, isClosedLoop);
+    numSelfProximateNodes += isConsecutive ? 0 : 1;
+  }
+  outMesh.skinning = std::move(skinning);
+
+  if (numMaxedNodes > 0) {
+    MOCHI_LOG_WARNING(
+        "%d skinned nodes bind to the maximum of %d polyline elements, so their weights may vary "
+        "steeply. The mesh may reach toward a bend's center of curvature.",
+        numMaxedNodes,
+        maxWeightsPerNode);
+  }
+  if (numSelfProximateNodes > 0) {
+    MOCHI_LOG_WARNING(
+        "%d skinned nodes bind to polyline elements that are not consecutive, where the polyline "
+        "comes close to itself. The mesh may tear where those parts move apart.",
+        numSelfProximateNodes);
+  }
 }
 
 void model::FlipWindingOrder(MeshData& data, Error& error) {
