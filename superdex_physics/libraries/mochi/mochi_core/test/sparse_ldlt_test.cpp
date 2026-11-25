@@ -205,7 +205,7 @@ TEST(SparseLDLt, ParameterizedConfigs) {
  * sequential fallbacks and multiple roots.
  */
 
-// With four workers, the 3-DoF block Laplacian gets a thread budget of 3.
+// With at least two workers, the block Laplacian's root is factorized in parallel.
 template <int kBlockSize>
 static auto ParallelLaplacian() {
   return test::Create2dLaplacianMatrix<real, kBlockSize>(24, 24);
@@ -227,7 +227,7 @@ static void TestSparseLDLtWithAndWithoutScheduler(Matrix<real> const& A, unsigne
   ASSERT_EQ(nullptr, TaskScheduler::TryGet());
   TestSparseLDLtSolve<kBlockSize, true>(A, seed);
 
-  TaskScheduler scheduler(4);
+  TaskScheduler scheduler(Min(TaskScheduler::GetNumSupportedLogicalProcessors(), 4));
   TestSparseLDLtSolve<kBlockSize, true>(A, seed);
 }
 
@@ -267,7 +267,7 @@ static auto ShiftedLaplacian(real shift) {
 TEST(SparseLDLt, RefactorizeAcrossSchedulerModes) {
   ASSERT_EQ(nullptr, TaskScheduler::TryGet());
 
-  TaskScheduler scheduler(4);
+  TaskScheduler scheduler(Min(TaskScheduler::GetNumSupportedLogicalProcessors(), 4));
   auto const initial = ShiftedLaplacian(0_r);
 
   // Initialize with parallel branch picks.
@@ -303,7 +303,7 @@ TEST(SparseLDLt, RefactorizeAfterSchedulerDestroyed) {
   auto const initial = ShiftedLaplacian(0_r);
   int info = 0;
   auto ldlt = [&] {
-    TaskScheduler scheduler(4);
+    TaskScheduler scheduler(Min(TaskScheduler::GetNumSupportedLogicalProcessors(), 4));
     return krylov::SparseLDLt(initial, info);
   }();
   EXPECT_EQ(info, 0);
@@ -316,7 +316,7 @@ TEST(SparseLDLt, RefactorizeAfterSchedulerDestroyed) {
 TEST(SparseLDLt, FactorizeFromWorkers) {
   ASSERT_EQ(nullptr, TaskScheduler::TryGet());
 
-  TaskScheduler scheduler(4);
+  TaskScheduler scheduler(Min(TaskScheduler::GetNumSupportedLogicalProcessors(), 4));
   auto const initial = ShiftedLaplacian(0_r);
   auto const shifted = ShiftedLaplacian(1_r);
   TaskSemaphore done;
@@ -384,7 +384,7 @@ TEST(SparseLDLt, ReportsUnusablePivots) {
           DynamicArray<real>{std::numeric_limits<real>::infinity()}));
 
   // A NaN diagonal entry gives a NaN pivot, also when the root is factorized in parallel.
-  TaskScheduler scheduler(4);
+  TaskScheduler scheduler(Min(TaskScheduler::GetNumSupportedLogicalProcessors(), 4));
   auto withNaN = ParallelLaplacian<3>();
   withNaN(0, 0) = std::numeric_limits<real>::quiet_NaN();
   expectUnusablePivots(ToBlockSparseMatrix<3>(withNaN, /*pruneZeros*/ true));
