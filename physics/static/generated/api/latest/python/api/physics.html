@@ -208,11 +208,10 @@
 <span class="target" id="module-superdex.physics"></span><section id="engine-lifecycle">
 <h2>Engine Lifecycle<a class="headerlink" href="#engine-lifecycle" title="Permalink to this heading"></a></h2>
 <p>Initialize and shut down the engine, and inspect whether it is running.</p>
-<dl class="py data">
+<dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.initialize">
-<span class="sig-name descname"><span class="pre">initialize</span></span><a class="headerlink" href="#superdex.physics.initialize" title="Permalink to this definition"></a></dt>
-<dd><p>int) -&gt; None</p>
-<p>Initialize SuperDex Physics by creating the process-wide context.</p>
+<span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num_worker_threads</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#superdex.physics.initialize" title="Permalink to this definition"></a></dt>
+<dd><p>Initialize SuperDex Physics by creating the process-wide context.</p>
 <p>Only one context is needed for the entire process. It can be used to load shapes and create any
 number of scenes. Call shutdown() to clean everything up when you are done.</p>
 <dl class="field-list simple">
@@ -232,24 +231,19 @@ using a small number of threads, or even single-threaded execution, may be faste
 <dt class="field-odd">Raises<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>RuntimeError</strong> – If SuperDex Physics is already initialized.</p>
 </dd>
-<dt class="field-even">Type<span class="colon">:</span></dt>
-<dd class="field-even"><p>initialize(num_worker_threads</p>
-</dd>
 </dl>
 </dd></dl>
 
-<dl class="py data">
+<dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.is_initialized">
-<span class="sig-name descname"><span class="pre">is_initialized</span></span><a class="headerlink" href="#superdex.physics.is_initialized" title="Permalink to this definition"></a></dt>
-<dd><p>is_initialized() -&gt; bool</p>
-<p>Return whether SuperDex Physics is currently initialized.</p>
+<span class="sig-name descname"><span class="pre">is_initialized</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#superdex.physics.is_initialized" title="Permalink to this definition"></a></dt>
+<dd><p>Return whether SuperDex Physics is currently initialized.</p>
 </dd></dl>
 
-<dl class="py data">
+<dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.shutdown">
-<span class="sig-name descname"><span class="pre">shutdown</span></span><a class="headerlink" href="#superdex.physics.shutdown" title="Permalink to this definition"></a></dt>
-<dd><p>shutdown() -&gt; None</p>
-<p>Shut down SuperDex Physics by destroying the process-wide context.</p>
+<span class="sig-name descname"><span class="pre">shutdown</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#superdex.physics.shutdown" title="Permalink to this definition"></a></dt>
+<dd><p>Shut down SuperDex Physics by destroying the process-wide context.</p>
 <p>Any remaining state is immediately destroyed, including all scenes, actors, and constraints.
 Registered dependent contexts are destroyed first.</p>
 <div class="admonition warning">
@@ -267,11 +261,10 @@ Registered dependent contexts are destroyed first.</p>
 <section id="execution-threading">
 <h2>Execution &amp; Threading<a class="headerlink" href="#execution-threading" title="Permalink to this heading"></a></h2>
 <p>Inspect worker capacity and choose worker-pool or single-threaded execution.</p>
-<dl class="py data">
+<dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.get_num_threads">
-<span class="sig-name descname"><span class="pre">get_num_threads</span></span><a class="headerlink" href="#superdex.physics.get_num_threads" title="Permalink to this definition"></a></dt>
-<dd><p>get_num_threads() -&gt; int</p>
-<p>Return the number of worker threads available to execute asynchronous tasks.</p>
+<span class="sig-name descname"><span class="pre">get_num_threads</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#superdex.physics.get_num_threads" title="Permalink to this definition"></a></dt>
+<dd><p>Return the number of worker threads available to execute asynchronous tasks.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p>The configured worker-thread count (see <code class="docutils literal notranslate"><span class="pre">superdex::CreateContext</span></code>), or zero
@@ -294,11 +287,10 @@ in Python: <code class="docutils literal notranslate"><span class="pre">superdex
 </div>
 </dd></dl>
 
-<dl class="py data">
+<dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.is_single_threaded">
-<span class="sig-name descname"><span class="pre">is_single_threaded</span></span><a class="headerlink" href="#superdex.physics.is_single_threaded" title="Permalink to this definition"></a></dt>
-<dd><p>is_single_threaded() -&gt; bool</p>
-<p>Return true if running in single-threaded mode.</p>
+<span class="sig-name descname"><span class="pre">is_single_threaded</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#superdex.physics.is_single_threaded" title="Permalink to this definition"></a></dt>
+<dd><p>Return true if running in single-threaded mode.</p>
 <p>Returns true when the Mochi context was created with zero worker threads (see
 <code class="docutils literal notranslate"><span class="pre">superdex::CreateContext</span></code>) or when single-threaded mode has been explicitly
 enabled via <a class="reference internal" href="#superdex.physics.set_is_single_threaded" title="superdex.physics.set_is_single_threaded"><code class="xref py py-func docutils literal notranslate"><span class="pre">set_is_single_threaded()</span></code></a>.</p>
@@ -322,11 +314,10 @@ in Python: <code class="docutils literal notranslate"><span class="pre">superdex
 </div>
 </dd></dl>
 
-<dl class="py data">
+<dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.set_is_single_threaded">
-<span class="sig-name descname"><span class="pre">set_is_single_threaded</span></span><a class="headerlink" href="#superdex.physics.set_is_single_threaded" title="Permalink to this definition"></a></dt>
-<dd><p>bool) -&gt; None</p>
-<p>Enable or disable single-threaded mode.</p>
+<span class="sig-name descname"><span class="pre">set_is_single_threaded</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">is_single_threaded</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#superdex.physics.set_is_single_threaded" title="Permalink to this definition"></a></dt>
+<dd><p>Enable or disable single-threaded mode.</p>
 <p>In single-threaded mode, each new task will be executed on the calling thread,
 even if other threads are available. This may hurt performance, but it is useful
 for debugging and batch simulation.</p>
@@ -353,11 +344,6 @@ in Python: <code class="docutils literal notranslate"><span class="pre">superdex
 <p class="admonition-title">See also</p>
 <p><a class="reference internal" href="#superdex.physics.is_single_threaded" title="superdex.physics.is_single_threaded"><code class="xref py py-func docutils literal notranslate"><span class="pre">is_single_threaded()</span></code></a></p>
 </div>
-<dl class="field-list simple">
-<dt class="field-odd">Type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>set_is_single_threaded(is_single_threaded</p>
-</dd>
-</dl>
 </dd></dl>
 
 </section>
@@ -1825,6 +1811,46 @@ step.</p>
 </dd></dl>
 
 <dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.physics.Scene.is_contact_enabled">
+<span class="sig-name descname"><span class="pre">is_contact_enabled</span></span><a class="headerlink" href="#superdex.physics.Scene.is_contact_enabled" title="Permalink to this definition"></a></dt>
+<dd><p>Check if the contact filters allow collision detection for an ordered pair of
+actors. Order matters: refers only to the specified direction (colliding actor
+checking against collider actor).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>colliding</strong> (<a class="reference internal" href="#superdex.physics.ActorHandle" title="superdex.physics.ActorHandle"><em>ActorHandle</em></a>) – Handle of the colliding actor.</p></li>
+<li><p><strong>collider</strong> (<a class="reference internal" href="#superdex.physics.ActorHandle" title="superdex.physics.ActorHandle"><em>ActorHandle</em></a>) – Handle of the collider actor.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>True if both the layer-to-layer filter (for the contact layers of the two
+actors) and the actor-to-actor filter allow contact for this ordered pair.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#superdex.physics.Error" title="superdex.physics.Error"><strong>Error</strong></a> – If an error occurs.</p>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This only checks the contact filters. It does not tell whether the actors
+can collide otherwise, e.g., whether the collider has a
+<a class="reference internal" href="#superdex.physics.ColliderType" title="superdex.physics.ColliderType"><code class="xref py py-class docutils literal notranslate"><span class="pre">ColliderType</span></code></a>.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Pass nested actors (links, nested soft actors) directly. A parent actor’s
+result does not describe its nested actors.</p>
+</div>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a class="reference internal" href="#superdex.physics.Scene.is_layer_contact_enabled" title="superdex.physics.Scene.is_layer_contact_enabled"><code class="xref py py-meth docutils literal notranslate"><span class="pre">is_layer_contact_enabled()</span></code></a>,
+<a class="reference internal" href="#superdex.physics.Scene.enable_actor_contact_asymmetric" title="superdex.physics.Scene.enable_actor_contact_asymmetric"><code class="xref py py-meth docutils literal notranslate"><span class="pre">enable_actor_contact_asymmetric()</span></code></a>,
+<a class="reference internal" href="#superdex.physics.Scene.enable_layer_contact_asymmetric" title="superdex.physics.Scene.enable_layer_contact_asymmetric"><code class="xref py py-meth docutils literal notranslate"><span class="pre">enable_layer_contact_asymmetric()</span></code></a></p>
+</div>
+</dd></dl>
+
+<dl class="py attribute">
 <dt class="sig sig-object py" id="superdex.physics.Scene.is_equal_state">
 <span class="sig-name descname"><span class="pre">is_equal_state</span></span><a class="headerlink" href="#superdex.physics.Scene.is_equal_state" title="Permalink to this definition"></a></dt>
 <dd><p>Return true if both StateHandles are valid and refer to identical state
@@ -1874,12 +1900,15 @@ unless overridden via
 <p>This only checks the layer filter. Actor-to-actor contact can still be
 disabled with
 <a class="reference internal" href="#superdex.physics.Scene.enable_actor_contact_asymmetric" title="superdex.physics.Scene.enable_actor_contact_asymmetric"><code class="xref py py-meth docutils literal notranslate"><span class="pre">enable_actor_contact_asymmetric()</span></code></a> or
-<a class="reference internal" href="#superdex.physics.Scene.enable_actor_contact_symmetric" title="superdex.physics.Scene.enable_actor_contact_symmetric"><code class="xref py py-meth docutils literal notranslate"><span class="pre">enable_actor_contact_symmetric()</span></code></a>.</p>
+<a class="reference internal" href="#superdex.physics.Scene.enable_actor_contact_symmetric" title="superdex.physics.Scene.enable_actor_contact_symmetric"><code class="xref py py-meth docutils literal notranslate"><span class="pre">enable_actor_contact_symmetric()</span></code></a>.
+<a class="reference internal" href="#superdex.physics.Scene.is_contact_enabled" title="superdex.physics.Scene.is_contact_enabled"><code class="xref py py-meth docutils literal notranslate"><span class="pre">is_contact_enabled()</span></code></a> checks both filters for a
+pair of actors.</p>
 </div>
 <div class="admonition seealso">
 <p class="admonition-title">See also</p>
 <p><a class="reference internal" href="#superdex.physics.Scene.enable_layer_contact_asymmetric" title="superdex.physics.Scene.enable_layer_contact_asymmetric"><code class="xref py py-meth docutils literal notranslate"><span class="pre">enable_layer_contact_asymmetric()</span></code></a>,
-<a class="reference internal" href="#superdex.physics.Scene.enable_layer_contact_symmetric" title="superdex.physics.Scene.enable_layer_contact_symmetric"><code class="xref py py-meth docutils literal notranslate"><span class="pre">enable_layer_contact_symmetric()</span></code></a></p>
+<a class="reference internal" href="#superdex.physics.Scene.enable_layer_contact_symmetric" title="superdex.physics.Scene.enable_layer_contact_symmetric"><code class="xref py py-meth docutils literal notranslate"><span class="pre">enable_layer_contact_symmetric()</span></code></a>,
+<a class="reference internal" href="#superdex.physics.Scene.is_contact_enabled" title="superdex.physics.Scene.is_contact_enabled"><code class="xref py py-meth docutils literal notranslate"><span class="pre">is_contact_enabled()</span></code></a></p>
 </div>
 </dd></dl>
 
@@ -2376,11 +2405,10 @@ ones, wake at the next step.</p>
 
 </dd></dl>
 
-<dl class="py data">
+<dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.create_scene">
-<span class="sig-name descname"><span class="pre">create_scene</span></span><a class="headerlink" href="#superdex.physics.create_scene" title="Permalink to this definition"></a></dt>
-<dd><p>str) -&gt; superdex.physics.Scene</p>
-<p>Create a new <a class="reference internal" href="#superdex.physics.Scene" title="superdex.physics.Scene"><code class="xref py py-class docutils literal notranslate"><span class="pre">Scene</span></code></a>.</p>
+<span class="sig-name descname"><span class="pre">create_scene</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.physics.Scene" title="superdex.physics.Scene"><span class="pre">Scene</span></a></span></span><a class="headerlink" href="#superdex.physics.create_scene" title="Permalink to this definition"></a></dt>
+<dd><p>Create a new <a class="reference internal" href="#superdex.physics.Scene" title="superdex.physics.Scene"><code class="xref py py-class docutils literal notranslate"><span class="pre">Scene</span></code></a>.</p>
 <p>A scene is a collection of actors and constraints, which can be stepped to
 advance the simulation. Each scene is independent. Actors from one scene cannot
 affect another scene.</p>
@@ -2411,18 +2439,12 @@ more fails an assertion.</p>
 <p class="admonition-title">See also</p>
 <p><a class="reference internal" href="#superdex.physics.destroy_scene" title="superdex.physics.destroy_scene"><code class="xref py py-func docutils literal notranslate"><span class="pre">destroy_scene()</span></code></a></p>
 </div>
-<dl class="field-list simple">
-<dt class="field-odd">Type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>create_scene(name</p>
-</dd>
-</dl>
 </dd></dl>
 
-<dl class="py data">
+<dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.destroy_scene">
-<span class="sig-name descname"><span class="pre">destroy_scene</span></span><a class="headerlink" href="#superdex.physics.destroy_scene" title="Permalink to this definition"></a></dt>
-<dd><p>superdex.physics.Scene | None) -&gt; None</p>
-<p>Immediately destroy a scene and all its actors and constraints.</p>
+<span class="sig-name descname"><span class="pre">destroy_scene</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scene</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.Scene" title="superdex.physics.Scene"><span class="pre">Scene</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#superdex.physics.destroy_scene" title="Permalink to this definition"></a></dt>
+<dd><p>Immediately destroy a scene and all its actors and constraints.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>scene</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="#superdex.physics.Scene" title="superdex.physics.Scene"><em>Scene</em></a><em>]</em>) – Pointer to the scene to destroy.</p>
@@ -2466,18 +2488,12 @@ warning is logged). Call <code class="docutils literal notranslate"><span class=
 <p><a class="reference internal" href="#superdex.physics.create_scene" title="superdex.physics.create_scene"><code class="xref py py-func docutils literal notranslate"><span class="pre">create_scene()</span></code></a>,
 <code class="docutils literal notranslate"><span class="pre">superdex::Context::DestroyAsyncScene</span></code></p>
 </div>
-<dl class="field-list simple">
-<dt class="field-odd">Type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>destroy_scene(scene</p>
-</dd>
-</dl>
 </dd></dl>
 
-<dl class="py data">
+<dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.get_scene">
-<span class="sig-name descname"><span class="pre">get_scene</span></span><a class="headerlink" href="#superdex.physics.get_scene" title="Permalink to this definition"></a></dt>
-<dd><p>superdex.physics.SceneHandle) -&gt; superdex.physics.Scene</p>
-<p>Get a pointer to a scene by its handle.</p>
+<span class="sig-name descname"><span class="pre">get_scene</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">handle</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.SceneHandle" title="superdex.physics.SceneHandle"><span class="pre">SceneHandle</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.physics.Scene" title="superdex.physics.Scene"><span class="pre">Scene</span></a></span></span><a class="headerlink" href="#superdex.physics.get_scene" title="Permalink to this definition"></a></dt>
+<dd><p>Get a pointer to a scene by its handle.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>handle</strong> (<a class="reference internal" href="#superdex.physics.SceneHandle" title="superdex.physics.SceneHandle"><em>SceneHandle</em></a>) – Handle to the scene.</p>
@@ -2490,18 +2506,12 @@ warning is logged). Call <code class="docutils literal notranslate"><span class=
 <p class="admonition-title">Note</p>
 <p>Call on any thread. Never blocks.</p>
 </div>
-<dl class="field-list simple">
-<dt class="field-odd">Type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>get_scene(handle</p>
-</dd>
-</dl>
 </dd></dl>
 
-<dl class="py data">
+<dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.is_valid_scene">
-<span class="sig-name descname"><span class="pre">is_valid_scene</span></span><a class="headerlink" href="#superdex.physics.is_valid_scene" title="Permalink to this definition"></a></dt>
-<dd><p>superdex.physics.Scene | None) -&gt; bool</p>
-<p>Check if a scene is valid (not destroyed), and belongs to this Mochi context.</p>
+<span class="sig-name descname"><span class="pre">is_valid_scene</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scene</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.Scene" title="superdex.physics.Scene"><span class="pre">Scene</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#superdex.physics.is_valid_scene" title="Permalink to this definition"></a></dt>
+<dd><p>Check if a scene is valid (not destroyed), and belongs to this Mochi context.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>scene</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="#superdex.physics.Scene" title="superdex.physics.Scene"><em>Scene</em></a><em>]</em>) – Pointer to the scene to check.</p>
@@ -2519,11 +2529,6 @@ warning is logged). Call <code class="docutils literal notranslate"><span class=
 <p><a class="reference internal" href="#superdex.physics.create_scene" title="superdex.physics.create_scene"><code class="xref py py-func docutils literal notranslate"><span class="pre">create_scene()</span></code></a>,
 <a class="reference internal" href="#superdex.physics.destroy_scene" title="superdex.physics.destroy_scene"><code class="xref py py-func docutils literal notranslate"><span class="pre">destroy_scene()</span></code></a></p>
 </div>
-<dl class="field-list simple">
-<dt class="field-odd">Type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>is_valid_scene(scene</p>
-</dd>
-</dl>
 </dd></dl>
 
 </section>
@@ -3595,11 +3600,10 @@ element’s tangent. Only valid when the mesh is a polyline with
 
 </dd></dl>
 
-<dl class="py data">
+<dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.clear_file_cache">
-<span class="sig-name descname"><span class="pre">clear_file_cache</span></span><a class="headerlink" href="#superdex.physics.clear_file_cache" title="Permalink to this definition"></a></dt>
-<dd><p>clear_file_cache() -&gt; None</p>
-<p>Release all shapes that are being preserved by the file cache (if any).</p>
+<span class="sig-name descname"><span class="pre">clear_file_cache</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#superdex.physics.clear_file_cache" title="Permalink to this definition"></a></dt>
+<dd><p>Release all shapes that are being preserved by the file cache (if any).</p>
 <p>Use this to free up memory, or to force subsequent file requests to be loaded
 from disk, in case those files had been modified.</p>
 <div class="admonition note">
@@ -3613,11 +3617,10 @@ from disk, in case those files had been modified.</p>
 </div>
 </dd></dl>
 
-<dl class="py data">
+<dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.clear_file_from_cache">
-<span class="sig-name descname"><span class="pre">clear_file_from_cache</span></span><a class="headerlink" href="#superdex.physics.clear_file_from_cache" title="Permalink to this definition"></a></dt>
-<dd><p>str) -&gt; None</p>
-<p>Release all cached entries for a given shape file.</p>
+<span class="sig-name descname"><span class="pre">clear_file_from_cache</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#superdex.physics.clear_file_from_cache" title="Permalink to this definition"></a></dt>
+<dd><p>Release all cached entries for a given shape file.</p>
 <p>Use this to free up memory, or to force the next file request to be loaded from
 disk, in case the file had been modified. All entries for <code class="docutils literal notranslate"><span class="pre">file_path</span></code> are
 removed, including every variant produced by different bake scale/transform
@@ -3639,20 +3642,16 @@ case-sensitive.</p>
 <p><a class="reference internal" href="#superdex.physics.is_file_cache_enabled" title="superdex.physics.is_file_cache_enabled"><code class="xref py py-func docutils literal notranslate"><span class="pre">is_file_cache_enabled()</span></code></a>,
 <a class="reference internal" href="#superdex.physics.clear_file_cache" title="superdex.physics.clear_file_cache"><code class="xref py py-func docutils literal notranslate"><span class="pre">clear_file_cache()</span></code></a></p>
 </div>
-<dl class="field-list simple">
-<dt class="field-odd">Type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>clear_file_from_cache(file_path</p>
-</dd>
-</dl>
 </dd></dl>
 
-<dl class="py data">
+<dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.create_mesh_shape">
-<span class="sig-name descname"><span class="pre">create_mesh_shape</span></span><a class="headerlink" href="#superdex.physics.create_mesh_shape" title="Permalink to this definition"></a></dt>
-<dd><p>superdex.physics.MeshData) -&gt; superdex.physics.ShapeHandle
-create_mesh_shape(*, nodes_per_element: object = 0, coordinates: object = …, connectivity: object = …, skinning: object | None = …) -&gt; superdex.physics.ShapeHandle
-create_mesh_shape(mesh: superdex.physics.MeshDataView) -&gt; superdex.physics.ShapeHandle</p>
-<p>Overloaded function.</p>
+<span class="sig-name descname"><span class="pre">create_mesh_shape</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mesh</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.MeshData" title="superdex.physics.MeshData"><span class="pre">MeshData</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.physics.ShapeHandle" title="superdex.physics.ShapeHandle"><span class="pre">ShapeHandle</span></a></span></span><a class="headerlink" href="#superdex.physics.create_mesh_shape" title="Permalink to this definition"></a></dt>
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">create_mesh_shape</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nodes_per_element</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">object</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coordinates</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">object</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">...</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">connectivity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">object</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">...</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">skinning</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">object</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">...</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.physics.ShapeHandle" title="superdex.physics.ShapeHandle"><span class="pre">ShapeHandle</span></a></span></span></dt>
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">create_mesh_shape</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mesh</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.MeshDataView" title="superdex.physics.MeshDataView"><span class="pre">MeshDataView</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.physics.ShapeHandle" title="superdex.physics.ShapeHandle"><span class="pre">ShapeHandle</span></a></span></span></dt>
+<dd><p>Overloaded function.</p>
 <ol class="arabic simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">create_mesh_shape(mesh:</span> <span class="pre">superdex.physics.MeshData)</span> <span class="pre">-&gt;</span> <span class="pre">superdex.physics.ShapeHandle</span></code></p></li>
 </ol>
@@ -3765,20 +3764,16 @@ on the value of <a class="reference internal" href="#superdex.physics.MeshDataVi
 <p><a class="reference internal" href="#superdex.physics.ShapeHandle" title="superdex.physics.ShapeHandle"><code class="xref py py-class docutils literal notranslate"><span class="pre">ShapeHandle</span></code></a>,
 <a class="reference internal" href="#superdex.physics.release_shape" title="superdex.physics.release_shape"><code class="xref py py-func docutils literal notranslate"><span class="pre">release_shape()</span></code></a></p>
 </div>
-<dl class="field-list simple">
-<dt class="field-odd">Type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>create_mesh_shape(mesh</p>
-</dd>
-</dl>
 </dd></dl>
 
-<dl class="py data">
+<dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.create_model_shape">
-<span class="sig-name descname"><span class="pre">create_model_shape</span></span><a class="headerlink" href="#superdex.physics.create_model_shape" title="Permalink to this definition"></a></dt>
-<dd><p>superdex.physics.ModelData) -&gt; superdex.physics.ShapeHandle
-create_model_shape(*, mesh: object | None = …, visual_mesh: object | None = …, contact_skin_mesh: object | None = …, blending: object | None = …, constrained_nodes: object | None = …, element_frame_axes: object | None = …, box: object | None = …, plane: object | None = …, sphere: object | None = …, sdf: object | None = …, material: object | None = …) -&gt; superdex.physics.ShapeHandle
-create_model_shape(model: superdex.physics.ModelDataView) -&gt; superdex.physics.ShapeHandle</p>
-<p>Overloaded function.</p>
+<span class="sig-name descname"><span class="pre">create_model_shape</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.ModelData" title="superdex.physics.ModelData"><span class="pre">ModelData</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.physics.ShapeHandle" title="superdex.physics.ShapeHandle"><span class="pre">ShapeHandle</span></a></span></span><a class="headerlink" href="#superdex.physics.create_model_shape" title="Permalink to this definition"></a></dt>
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">create_model_shape</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">object</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">...</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">visual_mesh</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">object</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">...</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">contact_skin_mesh</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">object</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">...</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">blending</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">object</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">...</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">constrained_nodes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">object</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">...</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">element_frame_axes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">object</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">...</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">box</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">object</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">...</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plane</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">object</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">...</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sphere</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">object</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">...</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sdf</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">object</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">...</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">material</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">object</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">...</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.physics.ShapeHandle" title="superdex.physics.ShapeHandle"><span class="pre">ShapeHandle</span></a></span></span></dt>
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">create_model_shape</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.ModelDataView" title="superdex.physics.ModelDataView"><span class="pre">ModelDataView</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.physics.ShapeHandle" title="superdex.physics.ShapeHandle"><span class="pre">ShapeHandle</span></a></span></span></dt>
+<dd><p>Overloaded function.</p>
 <ol class="arabic simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">create_model_shape(model:</span> <span class="pre">superdex.physics.ModelData)</span> <span class="pre">-&gt;</span> <span class="pre">superdex.physics.ShapeHandle</span></code></p></li>
 </ol>
@@ -3888,18 +3883,12 @@ optional, since <a class="reference internal" href="#superdex.physics.ShapeHandl
 <p><a class="reference internal" href="#superdex.physics.ShapeHandle" title="superdex.physics.ShapeHandle"><code class="xref py py-class docutils literal notranslate"><span class="pre">ShapeHandle</span></code></a>,
 <a class="reference internal" href="#superdex.physics.release_shape" title="superdex.physics.release_shape"><code class="xref py py-func docutils literal notranslate"><span class="pre">release_shape()</span></code></a></p>
 </div>
-<dl class="field-list simple">
-<dt class="field-odd">Type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>create_model_shape(model</p>
-</dd>
-</dl>
 </dd></dl>
 
-<dl class="py data">
+<dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.create_plane_shape">
-<span class="sig-name descname"><span class="pre">create_plane_shape</span></span><a class="headerlink" href="#superdex.physics.create_plane_shape" title="Permalink to this definition"></a></dt>
-<dd><p>superdex.physics.Real3, distance: float) -&gt; superdex.physics.ShapeHandle</p>
-<p>Create an implicit plane with infinite extents.</p>
+<span class="sig-name descname"><span class="pre">create_plane_shape</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">normal</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.Real3" title="superdex.physics.Real3"><span class="pre">Real3</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">distance</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.physics.ShapeHandle" title="superdex.physics.ShapeHandle"><span class="pre">ShapeHandle</span></a></span></span><a class="headerlink" href="#superdex.physics.create_plane_shape" title="Permalink to this definition"></a></dt>
+<dd><p>Create an implicit plane with infinite extents.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -3934,18 +3923,12 @@ optional, since <a class="reference internal" href="#superdex.physics.ShapeHandl
 <p><a class="reference internal" href="#superdex.physics.ShapeHandle" title="superdex.physics.ShapeHandle"><code class="xref py py-class docutils literal notranslate"><span class="pre">ShapeHandle</span></code></a>,
 <a class="reference internal" href="#superdex.physics.release_shape" title="superdex.physics.release_shape"><code class="xref py py-func docutils literal notranslate"><span class="pre">release_shape()</span></code></a></p>
 </div>
-<dl class="field-list simple">
-<dt class="field-odd">Type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>create_plane_shape(normal</p>
-</dd>
-</dl>
 </dd></dl>
 
-<dl class="py data">
+<dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.create_sphere_shape">
-<span class="sig-name descname"><span class="pre">create_sphere_shape</span></span><a class="headerlink" href="#superdex.physics.create_sphere_shape" title="Permalink to this definition"></a></dt>
-<dd><p>superdex.physics.Real3, radius: float) -&gt; superdex.physics.ShapeHandle</p>
-<p>Create an implicit sphere shape.</p>
+<span class="sig-name descname"><span class="pre">create_sphere_shape</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">center</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.Real3" title="superdex.physics.Real3"><span class="pre">Real3</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">radius</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.physics.ShapeHandle" title="superdex.physics.ShapeHandle"><span class="pre">ShapeHandle</span></a></span></span><a class="headerlink" href="#superdex.physics.create_sphere_shape" title="Permalink to this definition"></a></dt>
+<dd><p>Create an implicit sphere shape.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -3977,18 +3960,12 @@ optional, since <a class="reference internal" href="#superdex.physics.ShapeHandl
 <p><a class="reference internal" href="#superdex.physics.ShapeHandle" title="superdex.physics.ShapeHandle"><code class="xref py py-class docutils literal notranslate"><span class="pre">ShapeHandle</span></code></a>,
 <a class="reference internal" href="#superdex.physics.release_shape" title="superdex.physics.release_shape"><code class="xref py py-func docutils literal notranslate"><span class="pre">release_shape()</span></code></a></p>
 </div>
-<dl class="field-list simple">
-<dt class="field-odd">Type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>create_sphere_shape(center</p>
-</dd>
-</dl>
 </dd></dl>
 
-<dl class="py data">
+<dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.create_tet_mesh_shape">
-<span class="sig-name descname"><span class="pre">create_tet_mesh_shape</span></span><a class="headerlink" href="#superdex.physics.create_tet_mesh_shape" title="Permalink to this definition"></a></dt>
-<dd><p>Span[float], connectivity: Span[int]) -&gt; superdex.physics.ShapeHandle</p>
-<p>Create a tetrahedral mesh shape using in-memory data.</p>
+<span class="sig-name descname"><span class="pre">create_tet_mesh_shape</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">coordinates</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Span</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">connectivity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Span</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.physics.ShapeHandle" title="superdex.physics.ShapeHandle"><span class="pre">ShapeHandle</span></a></span></span><a class="headerlink" href="#superdex.physics.create_tet_mesh_shape" title="Permalink to this definition"></a></dt>
+<dd><p>Create a tetrahedral mesh shape using in-memory data.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -4023,18 +4000,12 @@ optional, since <a class="reference internal" href="#superdex.physics.ShapeHandl
 <p><a class="reference internal" href="#superdex.physics.ShapeHandle" title="superdex.physics.ShapeHandle"><code class="xref py py-class docutils literal notranslate"><span class="pre">ShapeHandle</span></code></a>,
 <a class="reference internal" href="#superdex.physics.release_shape" title="superdex.physics.release_shape"><code class="xref py py-func docutils literal notranslate"><span class="pre">release_shape()</span></code></a></p>
 </div>
-<dl class="field-list simple">
-<dt class="field-odd">Type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>create_tet_mesh_shape(coordinates</p>
-</dd>
-</dl>
 </dd></dl>
 
-<dl class="py data">
+<dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.create_tri_mesh_shape">
-<span class="sig-name descname"><span class="pre">create_tri_mesh_shape</span></span><a class="headerlink" href="#superdex.physics.create_tri_mesh_shape" title="Permalink to this definition"></a></dt>
-<dd><p>Span[float], connectivity: Span[int]) -&gt; superdex.physics.ShapeHandle</p>
-<p>Create a triangle mesh shape using in-memory data.</p>
+<span class="sig-name descname"><span class="pre">create_tri_mesh_shape</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">coordinates</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Span</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">connectivity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Span</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.physics.ShapeHandle" title="superdex.physics.ShapeHandle"><span class="pre">ShapeHandle</span></a></span></span><a class="headerlink" href="#superdex.physics.create_tri_mesh_shape" title="Permalink to this definition"></a></dt>
+<dd><p>Create a triangle mesh shape using in-memory data.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -4069,18 +4040,12 @@ optional, since <a class="reference internal" href="#superdex.physics.ShapeHandl
 <p><a class="reference internal" href="#superdex.physics.ShapeHandle" title="superdex.physics.ShapeHandle"><code class="xref py py-class docutils literal notranslate"><span class="pre">ShapeHandle</span></code></a>,
 <a class="reference internal" href="#superdex.physics.release_shape" title="superdex.physics.release_shape"><code class="xref py py-func docutils literal notranslate"><span class="pre">release_shape()</span></code></a></p>
 </div>
-<dl class="field-list simple">
-<dt class="field-odd">Type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>create_tri_mesh_shape(coordinates</p>
-</dd>
-</dl>
 </dd></dl>
 
-<dl class="py data">
+<dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.enable_file_cache">
-<span class="sig-name descname"><span class="pre">enable_file_cache</span></span><a class="headerlink" href="#superdex.physics.enable_file_cache" title="Permalink to this definition"></a></dt>
-<dd><p>bool) -&gt; None</p>
-<p>Enable or disable the file cache.</p>
+<span class="sig-name descname"><span class="pre">enable_file_cache</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">enable</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#superdex.physics.enable_file_cache" title="Permalink to this definition"></a></dt>
+<dd><p>Enable or disable the file cache.</p>
 <p>When enabled, shape memory will be preserved even after the
 <a class="reference internal" href="#superdex.physics.ShapeHandle" title="superdex.physics.ShapeHandle"><code class="xref py py-class docutils literal notranslate"><span class="pre">ShapeHandle</span></code></a> has been released. Subsequent requests
 for the same file (with the same baked-in scale and transform) will be fast
@@ -4108,18 +4073,12 @@ cached shapes, equivalent to calling
 <a class="reference internal" href="#superdex.physics.clear_file_cache" title="superdex.physics.clear_file_cache"><code class="xref py py-func docutils literal notranslate"><span class="pre">clear_file_cache()</span></code></a>,
 <a class="reference internal" href="#superdex.physics.clear_file_from_cache" title="superdex.physics.clear_file_from_cache"><code class="xref py py-func docutils literal notranslate"><span class="pre">clear_file_from_cache()</span></code></a></p>
 </div>
-<dl class="field-list simple">
-<dt class="field-odd">Type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>enable_file_cache(enable</p>
-</dd>
-</dl>
 </dd></dl>
 
-<dl class="py data">
+<dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.get_num_shapes">
-<span class="sig-name descname"><span class="pre">get_num_shapes</span></span><a class="headerlink" href="#superdex.physics.get_num_shapes" title="Permalink to this definition"></a></dt>
-<dd><p>get_num_shapes() -&gt; int</p>
-<p>Get the number of shape handles that have been created/loaded and have not yet
+<span class="sig-name descname"><span class="pre">get_num_shapes</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#superdex.physics.get_num_shapes" title="Permalink to this definition"></a></dt>
+<dd><p>Get the number of shape handles that have been created/loaded and have not yet
 been released.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
@@ -4140,11 +4099,10 @@ been released.</p>
 </div>
 </dd></dl>
 
-<dl class="py data">
+<dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.get_shape_aabb">
-<span class="sig-name descname"><span class="pre">get_shape_aabb</span></span><a class="headerlink" href="#superdex.physics.get_shape_aabb" title="Permalink to this definition"></a></dt>
-<dd><p>superdex.physics.ShapeHandle) -&gt; superdex.physics.Aabb</p>
-<p>Get an axis-aligned bounding box (AABB) that contains the shape, in its local
+<span class="sig-name descname"><span class="pre">get_shape_aabb</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shape</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.ShapeHandle" title="superdex.physics.ShapeHandle"><span class="pre">ShapeHandle</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.physics.Aabb" title="superdex.physics.Aabb"><span class="pre">Aabb</span></a></span></span><a class="headerlink" href="#superdex.physics.get_shape_aabb" title="Permalink to this definition"></a></dt>
+<dd><p>Get an axis-aligned bounding box (AABB) that contains the shape, in its local
 coordinate frame.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -4166,18 +4124,12 @@ coordinate frame.</p>
 <p>Sets an error for shapes that do not have a bounding volume (e.g.,
 articulated shapes — query their link shapes individually instead).</p>
 </div>
-<dl class="field-list simple">
-<dt class="field-odd">Type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>get_shape_aabb(shape</p>
-</dd>
-</dl>
 </dd></dl>
 
-<dl class="py data">
+<dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.get_shape_mesh">
-<span class="sig-name descname"><span class="pre">get_shape_mesh</span></span><a class="headerlink" href="#superdex.physics.get_shape_mesh" title="Permalink to this definition"></a></dt>
-<dd><p>superdex.physics.ShapeHandle) -&gt; superdex.physics.MeshDataView</p>
-<p>Get a view of the shape’s main mesh data.</p>
+<span class="sig-name descname"><span class="pre">get_shape_mesh</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shape</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.ShapeHandle" title="superdex.physics.ShapeHandle"><span class="pre">ShapeHandle</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.physics.MeshDataView" title="superdex.physics.MeshDataView"><span class="pre">MeshDataView</span></a></span></span><a class="headerlink" href="#superdex.physics.get_shape_mesh" title="Permalink to this definition"></a></dt>
+<dd><p>Get a view of the shape’s main mesh data.</p>
 <p>For tetrahedral mesh shapes, returns the tetrahedral mesh (4 nodes per element).
 For triangular mesh shapes, returns the triangle mesh (3 nodes per element). For
 polyline shapes, returns the polyline mesh (2 nodes per element). For shapes
@@ -4210,18 +4162,12 @@ shape has no mesh.</p>
 <a class="reference internal" href="#superdex.physics.get_shape_visual_mesh" title="superdex.physics.get_shape_visual_mesh"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_shape_visual_mesh()</span></code></a>,
 <a class="reference internal" href="#superdex.physics.Actor.get_mesh" title="superdex.physics.Actor.get_mesh"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_mesh()</span></code></a></p>
 </div>
-<dl class="field-list simple">
-<dt class="field-odd">Type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>get_shape_mesh(shape</p>
-</dd>
-</dl>
 </dd></dl>
 
-<dl class="py data">
+<dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.get_shape_surface_mesh">
-<span class="sig-name descname"><span class="pre">get_shape_surface_mesh</span></span><a class="headerlink" href="#superdex.physics.get_shape_surface_mesh" title="Permalink to this definition"></a></dt>
-<dd><p>superdex.physics.ShapeHandle) -&gt; superdex.physics.MeshDataView</p>
-<p>Get a view of the shape’s surface mesh data.</p>
+<span class="sig-name descname"><span class="pre">get_shape_surface_mesh</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shape</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.ShapeHandle" title="superdex.physics.ShapeHandle"><span class="pre">ShapeHandle</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.physics.MeshDataView" title="superdex.physics.MeshDataView"><span class="pre">MeshDataView</span></a></span></span><a class="headerlink" href="#superdex.physics.get_shape_surface_mesh" title="Permalink to this definition"></a></dt>
+<dd><p>Get a view of the shape’s surface mesh data.</p>
 <p>Returns a triangle mesh (3 nodes per element) representing the shape’s surface.
 The coordinate array contains exactly the surface nodes referenced by the
 returned connectivity; nodes present in the underlying main mesh but not
@@ -4263,18 +4209,12 @@ boundary surface of the volume mesh, with non-boundary volume nodes omitted.</p>
 <a class="reference internal" href="#superdex.physics.get_shape_visual_mesh" title="superdex.physics.get_shape_visual_mesh"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_shape_visual_mesh()</span></code></a>,
 <a class="reference internal" href="#superdex.physics.Actor.get_surface_mesh" title="superdex.physics.Actor.get_surface_mesh"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_surface_mesh()</span></code></a></p>
 </div>
-<dl class="field-list simple">
-<dt class="field-odd">Type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>get_shape_surface_mesh(shape</p>
-</dd>
-</dl>
 </dd></dl>
 
-<dl class="py data">
+<dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.get_shape_visual_mesh">
-<span class="sig-name descname"><span class="pre">get_shape_visual_mesh</span></span><a class="headerlink" href="#superdex.physics.get_shape_visual_mesh" title="Permalink to this definition"></a></dt>
-<dd><p>superdex.physics.ShapeHandle) -&gt; superdex.physics.MeshDataView</p>
-<p>Get a view of the shape’s visual mesh data, including skinning data if
+<span class="sig-name descname"><span class="pre">get_shape_visual_mesh</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shape</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.ShapeHandle" title="superdex.physics.ShapeHandle"><span class="pre">ShapeHandle</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.physics.MeshDataView" title="superdex.physics.MeshDataView"><span class="pre">MeshDataView</span></a></span></span><a class="headerlink" href="#superdex.physics.get_shape_visual_mesh" title="Permalink to this definition"></a></dt>
+<dd><p>Get a view of the shape’s visual mesh data, including skinning data if
 available.</p>
 <p>Returns a triangle mesh (3 nodes per element) intended for visual rendering.
 Coordinates and connectivity are returned in visual-mesh node-index space,
@@ -4316,18 +4256,12 @@ skinning indices refer to polyline elements.</p>
 <a class="reference internal" href="#superdex.physics.get_shape_surface_mesh" title="superdex.physics.get_shape_surface_mesh"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_shape_surface_mesh()</span></code></a>,
 <a class="reference internal" href="#superdex.physics.Actor.get_visual_mesh" title="superdex.physics.Actor.get_visual_mesh"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_visual_mesh()</span></code></a></p>
 </div>
-<dl class="field-list simple">
-<dt class="field-odd">Type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>get_shape_visual_mesh(shape</p>
-</dd>
-</dl>
 </dd></dl>
 
-<dl class="py data">
+<dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.is_file_cache_enabled">
-<span class="sig-name descname"><span class="pre">is_file_cache_enabled</span></span><a class="headerlink" href="#superdex.physics.is_file_cache_enabled" title="Permalink to this definition"></a></dt>
-<dd><p>is_file_cache_enabled() -&gt; bool</p>
-<p>Return true if the file cache feature is enabled.</p>
+<span class="sig-name descname"><span class="pre">is_file_cache_enabled</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#superdex.physics.is_file_cache_enabled" title="Permalink to this definition"></a></dt>
+<dd><p>Return true if the file cache feature is enabled.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p>True if the file cache is enabled, false otherwise.</p>
@@ -4339,18 +4273,24 @@ skinning indices refer to polyline elements.</p>
 </div>
 </dd></dl>
 
-<dl class="py data">
+<dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.load_shape_from_bytes">
-<span class="sig-name descname"><span class="pre">load_shape_from_bytes</span></span><a class="headerlink" href="#superdex.physics.load_shape_from_bytes" title="Permalink to this definition"></a></dt>
-<dd><p>Span[str]) -&gt; superdex.physics.ShapeHandle
-load_shape_from_bytes(file_data: Span[str], bake_scale: superdex.physics.Real3) -&gt; superdex.physics.ShapeHandle
-load_shape_from_bytes(file_data: Span[str], bake_transform: superdex.physics.TransformRT) -&gt; superdex.physics.ShapeHandle
-load_shape_from_bytes(file_data: Span[str], bake_scale: superdex.physics.Real3, bake_transform: superdex.physics.TransformRT) -&gt; superdex.physics.ShapeHandle
-load_shape_from_bytes(file_data: Span[str], format: superdex.physics.MeshFileType) -&gt; superdex.physics.ShapeHandle
-load_shape_from_bytes(file_data: Span[str], format: superdex.physics.MeshFileType, bake_scale: superdex.physics.Real3) -&gt; superdex.physics.ShapeHandle
-load_shape_from_bytes(file_data: Span[str], format: superdex.physics.MeshFileType, bake_transform: superdex.physics.TransformRT) -&gt; superdex.physics.ShapeHandle
-load_shape_from_bytes(file_data: Span[str], format: superdex.physics.MeshFileType, bake_scale: superdex.physics.Real3, bake_transform: superdex.physics.TransformRT) -&gt; superdex.physics.ShapeHandle</p>
-<p>Overloaded function.</p>
+<span class="sig-name descname"><span class="pre">load_shape_from_bytes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Span</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.physics.ShapeHandle" title="superdex.physics.ShapeHandle"><span class="pre">ShapeHandle</span></a></span></span><a class="headerlink" href="#superdex.physics.load_shape_from_bytes" title="Permalink to this definition"></a></dt>
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">load_shape_from_bytes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Span</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bake_scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.Real3" title="superdex.physics.Real3"><span class="pre">Real3</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.physics.ShapeHandle" title="superdex.physics.ShapeHandle"><span class="pre">ShapeHandle</span></a></span></span></dt>
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">load_shape_from_bytes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Span</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bake_transform</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.TransformRT" title="superdex.physics.TransformRT"><span class="pre">TransformRT</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.physics.ShapeHandle" title="superdex.physics.ShapeHandle"><span class="pre">ShapeHandle</span></a></span></span></dt>
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">load_shape_from_bytes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Span</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bake_scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.Real3" title="superdex.physics.Real3"><span class="pre">Real3</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">bake_transform</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.TransformRT" title="superdex.physics.TransformRT"><span class="pre">TransformRT</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.physics.ShapeHandle" title="superdex.physics.ShapeHandle"><span class="pre">ShapeHandle</span></a></span></span></dt>
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">load_shape_from_bytes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Span</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">format</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.MeshFileType" title="superdex.physics.MeshFileType"><span class="pre">MeshFileType</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.physics.ShapeHandle" title="superdex.physics.ShapeHandle"><span class="pre">ShapeHandle</span></a></span></span></dt>
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">load_shape_from_bytes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Span</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">format</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.MeshFileType" title="superdex.physics.MeshFileType"><span class="pre">MeshFileType</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">bake_scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.Real3" title="superdex.physics.Real3"><span class="pre">Real3</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.physics.ShapeHandle" title="superdex.physics.ShapeHandle"><span class="pre">ShapeHandle</span></a></span></span></dt>
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">load_shape_from_bytes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Span</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">format</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.MeshFileType" title="superdex.physics.MeshFileType"><span class="pre">MeshFileType</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">bake_transform</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.TransformRT" title="superdex.physics.TransformRT"><span class="pre">TransformRT</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.physics.ShapeHandle" title="superdex.physics.ShapeHandle"><span class="pre">ShapeHandle</span></a></span></span></dt>
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">load_shape_from_bytes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Span</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">format</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.MeshFileType" title="superdex.physics.MeshFileType"><span class="pre">MeshFileType</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">bake_scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.Real3" title="superdex.physics.Real3"><span class="pre">Real3</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">bake_transform</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.TransformRT" title="superdex.physics.TransformRT"><span class="pre">TransformRT</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.physics.ShapeHandle" title="superdex.physics.ShapeHandle"><span class="pre">ShapeHandle</span></a></span></span></dt>
+<dd><p>Overloaded function.</p>
 <ol class="arabic simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">load_shape_from_bytes(file_data:</span> <span class="pre">Span[str])</span> <span class="pre">-&gt;</span> <span class="pre">superdex.physics.ShapeHandle</span></code></p></li>
 </ol>
@@ -4803,21 +4743,18 @@ same way.</p>
 <a class="reference internal" href="#superdex.physics.release_shape" title="superdex.physics.release_shape"><code class="xref py py-func docutils literal notranslate"><span class="pre">release_shape()</span></code></a>,
 <a class="reference internal" href="#superdex.physics.load_shape_from_file" title="superdex.physics.load_shape_from_file"><code class="xref py py-func docutils literal notranslate"><span class="pre">load_shape_from_file()</span></code></a></p>
 </div>
-<dl class="field-list simple">
-<dt class="field-odd">Type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>load_shape_from_bytes(file_data</p>
-</dd>
-</dl>
 </dd></dl>
 
-<dl class="py data">
+<dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.load_shape_from_file">
-<span class="sig-name descname"><span class="pre">load_shape_from_file</span></span><a class="headerlink" href="#superdex.physics.load_shape_from_file" title="Permalink to this definition"></a></dt>
-<dd><p>str) -&gt; superdex.physics.ShapeHandle
-load_shape_from_file(file_path: str, bake_scale: superdex.physics.Real3) -&gt; superdex.physics.ShapeHandle
-load_shape_from_file(file_path: str, bake_transform: superdex.physics.TransformRT) -&gt; superdex.physics.ShapeHandle
-load_shape_from_file(file_path: str, bake_scale: superdex.physics.Real3, bake_transform: superdex.physics.TransformRT) -&gt; superdex.physics.ShapeHandle</p>
-<p>Overloaded function.</p>
+<span class="sig-name descname"><span class="pre">load_shape_from_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.physics.ShapeHandle" title="superdex.physics.ShapeHandle"><span class="pre">ShapeHandle</span></a></span></span><a class="headerlink" href="#superdex.physics.load_shape_from_file" title="Permalink to this definition"></a></dt>
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">load_shape_from_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bake_scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.Real3" title="superdex.physics.Real3"><span class="pre">Real3</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.physics.ShapeHandle" title="superdex.physics.ShapeHandle"><span class="pre">ShapeHandle</span></a></span></span></dt>
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">load_shape_from_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bake_transform</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.TransformRT" title="superdex.physics.TransformRT"><span class="pre">TransformRT</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.physics.ShapeHandle" title="superdex.physics.ShapeHandle"><span class="pre">ShapeHandle</span></a></span></span></dt>
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">load_shape_from_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bake_scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.Real3" title="superdex.physics.Real3"><span class="pre">Real3</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">bake_transform</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.TransformRT" title="superdex.physics.TransformRT"><span class="pre">TransformRT</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.physics.ShapeHandle" title="superdex.physics.ShapeHandle"><span class="pre">ShapeHandle</span></a></span></span></dt>
+<dd><p>Overloaded function.</p>
 <ol class="arabic simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">load_shape_from_file(file_path:</span> <span class="pre">str)</span> <span class="pre">-&gt;</span> <span class="pre">superdex.physics.ShapeHandle</span></code></p></li>
 </ol>
@@ -5038,19 +4975,14 @@ same way.</p>
 <a class="reference internal" href="#superdex.physics.release_shape" title="superdex.physics.release_shape"><code class="xref py py-func docutils literal notranslate"><span class="pre">release_shape()</span></code></a>,
 <a class="reference internal" href="#superdex.physics.load_shape_from_bytes" title="superdex.physics.load_shape_from_bytes"><code class="xref py py-func docutils literal notranslate"><span class="pre">load_shape_from_bytes()</span></code></a></p>
 </div>
-<dl class="field-list simple">
-<dt class="field-odd">Type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>load_shape_from_file(file_path</p>
-</dd>
-</dl>
 </dd></dl>
 
-<dl class="py data">
+<dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.release_shape">
-<span class="sig-name descname"><span class="pre">release_shape</span></span><a class="headerlink" href="#superdex.physics.release_shape" title="Permalink to this definition"></a></dt>
-<dd><p>superdex.physics.ShapeHandle) -&gt; None
-release_shape(shape: superdex.physics.ShapeHandle | None) -&gt; None</p>
-<p>Overloaded function.</p>
+<span class="sig-name descname"><span class="pre">release_shape</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shape</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.ShapeHandle" title="superdex.physics.ShapeHandle"><span class="pre">ShapeHandle</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#superdex.physics.release_shape" title="Permalink to this definition"></a></dt>
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">release_shape</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shape</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.ShapeHandle" title="superdex.physics.ShapeHandle"><span class="pre">ShapeHandle</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span></dt>
+<dd><p>Overloaded function.</p>
 <ol class="arabic simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">release_shape(shape:</span> <span class="pre">superdex.physics.ShapeHandle)</span> <span class="pre">-&gt;</span> <span class="pre">None</span></code></p></li>
 </ol>
@@ -5081,11 +5013,6 @@ no longer referenced by any handle, actor, or file cache entry.</p>
 <ol class="arabic simple" start="2">
 <li><p><code class="docutils literal notranslate"><span class="pre">release_shape(shape:</span> <span class="pre">superdex.physics.ShapeHandle</span> <span class="pre">|</span> <span class="pre">None)</span> <span class="pre">-&gt;</span> <span class="pre">None</span></code></p></li>
 </ol>
-<dl class="field-list simple">
-<dt class="field-odd">Type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>release_shape(shape</p>
-</dd>
-</dl>
 </dd></dl>
 
 </section>
@@ -11674,11 +11601,10 @@ positively blended vertex’s rest position and ordered skinning data.</p>
 
 </dd></dl>
 
-<dl class="py data">
+<dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.get_articulated_shape_info">
-<span class="sig-name descname"><span class="pre">get_articulated_shape_info</span></span><a class="headerlink" href="#superdex.physics.get_articulated_shape_info" title="Permalink to this definition"></a></dt>
-<dd><p>superdex.physics.ShapeHandle) -&gt; superdex.physics.ArticulatedShapeInfo</p>
-<p>Get information about an articulated shape.</p>
+<span class="sig-name descname"><span class="pre">get_articulated_shape_info</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shape</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.ShapeHandle" title="superdex.physics.ShapeHandle"><span class="pre">ShapeHandle</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.physics.ArticulatedShapeInfo" title="superdex.physics.ArticulatedShapeInfo"><span class="pre">ArticulatedShapeInfo</span></a></span></span><a class="headerlink" href="#superdex.physics.get_articulated_shape_info" title="Permalink to this definition"></a></dt>
+<dd><p>Get information about an articulated shape.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>shape</strong> (<a class="reference internal" href="#superdex.physics.ShapeHandle" title="superdex.physics.ShapeHandle"><em>ShapeHandle</em></a>) – Handle to an articulated shape.</p>
@@ -11708,11 +11634,6 @@ released.</p>
 <p><a class="reference internal" href="#superdex.physics.ArticulatedShapeInfo" title="superdex.physics.ArticulatedShapeInfo"><code class="xref py py-class docutils literal notranslate"><span class="pre">ArticulatedShapeInfo</span></code></a>,
 <a class="reference internal" href="#superdex.physics.Actor.get_articulated_shape_info" title="superdex.physics.Actor.get_articulated_shape_info"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_articulated_shape_info()</span></code></a></p>
 </div>
-<dl class="field-list simple">
-<dt class="field-odd">Type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>get_articulated_shape_info(shape</p>
-</dd>
-</dl>
 </dd></dl>
 
 </section>
@@ -16916,13 +16837,18 @@ application’s scenes.</p>
 <dd><p>Start accepting client connections on a TCP port.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>preferred_port</strong> (<em>int</em>) – Preferred TCP port to listen on. If the port is
-already in use, the next available port is chosen automatically.</p>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>preferred_port</strong> (<em>int</em>) – Preferred TCP port to listen on. If the port is
+already in use, the next available port is chosen automatically.</p></li>
+<li><p><strong>allow_remote_connection</strong> (<em>bool</em>) – When false, only clients on the same machine
+can connect to or discover the server.</p></li>
+</ul>
 </dd>
 </dl>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>No-op if the server has already been started.</p>
+<p>No-op if the server has already been started. The first call’s settings
+apply until <a class="reference internal" href="#superdex.physics.DebugServer.stop" title="superdex.physics.DebugServer.stop"><code class="xref py py-meth docutils literal notranslate"><span class="pre">stop()</span></code></a>.</p>
 </div>
 <div class="admonition seealso">
 <p class="admonition-title">See also</p>
@@ -17022,11 +16948,10 @@ debugger.</p>
 
 </dd></dl>
 
-<dl class="py data">
+<dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.enable_log_channel">
-<span class="sig-name descname"><span class="pre">enable_log_channel</span></span><a class="headerlink" href="#superdex.physics.enable_log_channel" title="Permalink to this definition"></a></dt>
-<dd><p>superdex.physics.LogChannel, enable: bool) -&gt; None</p>
-<p>Enable or disable log messages on the specified channel.</p>
+<span class="sig-name descname"><span class="pre">enable_log_channel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">channel</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.LogChannel" title="superdex.physics.LogChannel"><span class="pre">LogChannel</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">enable</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#superdex.physics.enable_log_channel" title="Permalink to this definition"></a></dt>
+<dd><p>Enable or disable log messages on the specified channel.</p>
 <p>When a channel is disabled, messages on that channel are discarded before
 reaching the logging callback (see <a class="reference internal" href="#superdex.physics.set_log_callback" title="superdex.physics.set_log_callback"><code class="xref py py-func docutils literal notranslate"><span class="pre">set_log_callback()</span></code></a>).</p>
 <dl class="field-list simple">
@@ -17050,18 +16975,12 @@ reaching the logging callback (see <a class="reference internal" href="#superdex
 <p><a class="reference internal" href="#superdex.physics.is_log_channel_enabled" title="superdex.physics.is_log_channel_enabled"><code class="xref py py-func docutils literal notranslate"><span class="pre">is_log_channel_enabled()</span></code></a>,
 <a class="reference internal" href="#superdex.physics.set_log_callback" title="superdex.physics.set_log_callback"><code class="xref py py-func docutils literal notranslate"><span class="pre">set_log_callback()</span></code></a></p>
 </div>
-<dl class="field-list simple">
-<dt class="field-odd">Type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>enable_log_channel(channel</p>
-</dd>
-</dl>
 </dd></dl>
 
-<dl class="py data">
+<dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.get_debug_server">
-<span class="sig-name descname"><span class="pre">get_debug_server</span></span><a class="headerlink" href="#superdex.physics.get_debug_server" title="Permalink to this definition"></a></dt>
-<dd><p>get_debug_server() -&gt; superdex.physics.DebugServer</p>
-<p>Get the debug server for this context.</p>
+<span class="sig-name descname"><span class="pre">get_debug_server</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.physics.DebugServer" title="superdex.physics.DebugServer"><span class="pre">DebugServer</span></a></span></span><a class="headerlink" href="#superdex.physics.get_debug_server" title="Permalink to this definition"></a></dt>
+<dd><p>Get the debug server for this context.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p>Reference to the <a class="reference internal" href="#superdex.physics.DebugServer" title="superdex.physics.DebugServer"><code class="xref py py-class docutils literal notranslate"><span class="pre">DebugServer</span></code></a>, which accepts
@@ -17074,11 +16993,10 @@ connections from external debug tools.</p>
 </div>
 </dd></dl>
 
-<dl class="py data">
+<dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.is_log_channel_enabled">
-<span class="sig-name descname"><span class="pre">is_log_channel_enabled</span></span><a class="headerlink" href="#superdex.physics.is_log_channel_enabled" title="Permalink to this definition"></a></dt>
-<dd><p>superdex.physics.LogChannel) -&gt; bool</p>
-<p>Return true if messages on the specified log channel are enabled.</p>
+<span class="sig-name descname"><span class="pre">is_log_channel_enabled</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">channel</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.LogChannel" title="superdex.physics.LogChannel"><span class="pre">LogChannel</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#superdex.physics.is_log_channel_enabled" title="Permalink to this definition"></a></dt>
+<dd><p>Return true if messages on the specified log channel are enabled.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>channel</strong> (<a class="reference internal" href="#superdex.physics.LogChannel" title="superdex.physics.LogChannel"><em>LogChannel</em></a><em> | </em><em>int</em>) – The log channel to query.</p>
@@ -17095,29 +17013,17 @@ connections from external debug tools.</p>
 <p class="admonition-title">See also</p>
 <p><a class="reference internal" href="#superdex.physics.enable_log_channel" title="superdex.physics.enable_log_channel"><code class="xref py py-func docutils literal notranslate"><span class="pre">enable_log_channel()</span></code></a></p>
 </div>
-<dl class="field-list simple">
-<dt class="field-odd">Type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>is_log_channel_enabled(channel</p>
-</dd>
-</dl>
 </dd></dl>
 
-<dl class="py data">
+<dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.log">
-<span class="sig-name descname"><span class="pre">log</span></span><a class="headerlink" href="#superdex.physics.log" title="Permalink to this definition"></a></dt>
-<dd><p>str, channel: superdex.physics.LogChannel = LogChannel.INFO) -&gt; None</p>
-<dl class="field-list simple">
-<dt class="field-odd">Type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>log(message</p>
-</dd>
-</dl>
-</dd></dl>
+<span class="sig-name descname"><span class="pre">log</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">message</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channel</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.LogChannel" title="superdex.physics.LogChannel"><span class="pre">LogChannel</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">LogChannel.INFO</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#superdex.physics.log" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
 
-<dl class="py data">
+<dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.set_log_callback">
-<span class="sig-name descname"><span class="pre">set_log_callback</span></span><a class="headerlink" href="#superdex.physics.set_log_callback" title="Permalink to this definition"></a></dt>
-<dd><p>collections.abc.Callable[[superdex.physics.LogChannel, str, str, int], None] | None) -&gt; None</p>
-<p>Optionally provide a callback function to redirect SuperDex Physics logging. The
+<span class="sig-name descname"><span class="pre">set_log_callback</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">callback</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">collections.abc.Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#superdex.physics.LogChannel" title="superdex.physics.LogChannel"><span class="pre">LogChannel</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">None</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#superdex.physics.set_log_callback" title="Permalink to this definition"></a></dt>
+<dd><p>Optionally provide a callback function to redirect SuperDex Physics logging. The
 default function outputs to stdout and to the debugger (if attached).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -17142,36 +17048,28 @@ in Python: <code class="docutils literal notranslate"><span class="pre">superdex
 <p class="admonition-title">See also</p>
 <p><code class="docutils literal notranslate"><span class="pre">superdex::Context::GetLogCallback</span></code></p>
 </div>
-<dl class="field-list simple">
-<dt class="field-odd">Type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>set_log_callback(callback</p>
-</dd>
-</dl>
 </dd></dl>
 
 </section>
 <section id="build-information">
 <h2>Build Information<a class="headerlink" href="#build-information" title="Permalink to this heading"></a></h2>
 <p>Native library build information.</p>
-<dl class="py data">
+<dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.is_debug">
-<span class="sig-name descname"><span class="pre">is_debug</span></span><a class="headerlink" href="#superdex.physics.is_debug" title="Permalink to this definition"></a></dt>
-<dd><p>is_debug() -&gt; bool</p>
-<p>Return whether the loaded native library is a debug build.</p>
+<span class="sig-name descname"><span class="pre">is_debug</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#superdex.physics.is_debug" title="Permalink to this definition"></a></dt>
+<dd><p>Return whether the loaded native library is a debug build.</p>
 </dd></dl>
 
-<dl class="py data">
+<dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.uses_double_precision">
-<span class="sig-name descname"><span class="pre">uses_double_precision</span></span><a class="headerlink" href="#superdex.physics.uses_double_precision" title="Permalink to this definition"></a></dt>
-<dd><p>uses_double_precision() -&gt; bool</p>
-<p>Return whether the loaded native library uses double-precision floating-point (FP64) values.</p>
+<span class="sig-name descname"><span class="pre">uses_double_precision</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#superdex.physics.uses_double_precision" title="Permalink to this definition"></a></dt>
+<dd><p>Return whether the loaded native library uses double-precision floating-point (FP64) values.</p>
 </dd></dl>
 
-<dl class="py data">
+<dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.uses_hdf5">
-<span class="sig-name descname"><span class="pre">uses_hdf5</span></span><a class="headerlink" href="#superdex.physics.uses_hdf5" title="Permalink to this definition"></a></dt>
-<dd><p>uses_hdf5() -&gt; bool</p>
-<p>Return whether the loaded native library includes HDF5 support.</p>
+<span class="sig-name descname"><span class="pre">uses_hdf5</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#superdex.physics.uses_hdf5" title="Permalink to this definition"></a></dt>
+<dd><p>Return whether the loaded native library includes HDF5 support.</p>
 </dd></dl>
 
 </section>
@@ -17747,13 +17645,14 @@ and positive Z, respectively. For example, <a class="reference internal" href="#
 
 </dd></dl>
 
-<dl class="py data">
+<dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.normalize">
-<span class="sig-name descname"><span class="pre">normalize</span></span><a class="headerlink" href="#superdex.physics.normalize" title="Permalink to this definition"></a></dt>
-<dd><p>superdex.physics.Real2) -&gt; superdex.physics.Real2
-normalize(v: superdex.physics.Real3) -&gt; superdex.physics.Real3
-normalize(q: superdex.physics.Quaternion) -&gt; superdex.physics.Quaternion</p>
-<p>Overloaded function.</p>
+<span class="sig-name descname"><span class="pre">normalize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">v</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.Real2" title="superdex.physics.Real2"><span class="pre">Real2</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.physics.Real2" title="superdex.physics.Real2"><span class="pre">Real2</span></a></span></span><a class="headerlink" href="#superdex.physics.normalize" title="Permalink to this definition"></a></dt>
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">normalize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">v</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.Real3" title="superdex.physics.Real3"><span class="pre">Real3</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.physics.Real3" title="superdex.physics.Real3"><span class="pre">Real3</span></a></span></span></dt>
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">normalize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">q</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.Quaternion" title="superdex.physics.Quaternion"><span class="pre">Quaternion</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.physics.Quaternion" title="superdex.physics.Quaternion"><span class="pre">Quaternion</span></a></span></span></dt>
+<dd><p>Overloaded function.</p>
 <ol class="arabic simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">normalize(v:</span> <span class="pre">superdex.physics.Real2)</span> <span class="pre">-&gt;</span> <span class="pre">superdex.physics.Real2</span></code></p></li>
 </ol>
@@ -17766,11 +17665,6 @@ normalize(q: superdex.physics.Quaternion) -&gt; superdex.physics.Quaternion</p>
 <li><p><code class="docutils literal notranslate"><span class="pre">normalize(q:</span> <span class="pre">superdex.physics.Quaternion)</span> <span class="pre">-&gt;</span> <span class="pre">superdex.physics.Quaternion</span></code></p></li>
 </ol>
 <p>Return a unit-length copy of the quaternion. A zero quaternion remains zero.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>normalize(v</p>
-</dd>
-</dl>
 </dd></dl>
 
 </section>
@@ -19902,11 +19796,10 @@ spatial tendon.</p>
 <dd><p>The unit interval [0, 1].</p>
 </dd></dl>
 
-<dl class="py data">
+<dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.get_shape_contact_skin_mesh">
-<span class="sig-name descname"><span class="pre">get_shape_contact_skin_mesh</span></span><a class="headerlink" href="#superdex.physics.get_shape_contact_skin_mesh" title="Permalink to this definition"></a></dt>
-<dd><p>superdex.physics.ShapeHandle) -&gt; superdex.physics.MeshDataView</p>
-<p>Get a view of the shape’s contact-skin mesh data, including its skinning data.</p>
+<span class="sig-name descname"><span class="pre">get_shape_contact_skin_mesh</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shape</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.ShapeHandle" title="superdex.physics.ShapeHandle"><span class="pre">ShapeHandle</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.physics.MeshDataView" title="superdex.physics.MeshDataView"><span class="pre">MeshDataView</span></a></span></span><a class="headerlink" href="#superdex.physics.get_shape_contact_skin_mesh" title="Permalink to this definition"></a></dt>
+<dd><p>Get a view of the shape’s contact-skin mesh data, including its skinning data.</p>
 <p>Returns a triangle mesh (3 nodes per element). Every contact-skin node is
 referenced by the contact-skin connectivity, so
 <a class="reference internal" href="#superdex.physics.Actor.get_contact_skin_mesh" title="superdex.physics.Actor.get_contact_skin_mesh"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_contact_skin_mesh()</span></code></a> has the same node
@@ -19949,18 +19842,12 @@ skinning indices refer to polyline elements.</p>
 <a class="reference internal" href="#superdex.physics.get_shape_visual_mesh" title="superdex.physics.get_shape_visual_mesh"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_shape_visual_mesh()</span></code></a>,
 <a class="reference internal" href="#superdex.physics.Actor.get_contact_skin_mesh" title="superdex.physics.Actor.get_contact_skin_mesh"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_contact_skin_mesh()</span></code></a></p>
 </div>
-<dl class="field-list simple">
-<dt class="field-odd">Type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>get_shape_contact_skin_mesh(shape</p>
-</dd>
-</dl>
 </dd></dl>
 
-<dl class="py data">
+<dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.get_shape_element_frame_axes">
-<span class="sig-name descname"><span class="pre">get_shape_element_frame_axes</span></span><a class="headerlink" href="#superdex.physics.get_shape_element_frame_axes" title="Permalink to this definition"></a></dt>
-<dd><p>superdex.physics.ShapeHandle) -&gt; Span[float]</p>
-<p>Get the per-element frame axes of a polyline shape.</p>
+<span class="sig-name descname"><span class="pre">get_shape_element_frame_axes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shape</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.ShapeHandle" title="superdex.physics.ShapeHandle"><span class="pre">ShapeHandle</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Span</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#superdex.physics.get_shape_element_frame_axes" title="Permalink to this definition"></a></dt>
+<dd><p>Get the per-element frame axes of a polyline shape.</p>
 <p>Returns reference frame axes in the same local coordinate frame as
 <a class="reference internal" href="#superdex.physics.get_shape_mesh" title="superdex.physics.get_shape_mesh"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_shape_mesh()</span></code></a>, in the format of
 <a class="reference internal" href="#superdex.physics.ModelData.element_frame_axes" title="superdex.physics.ModelData.element_frame_axes"><code class="xref py py-attr docutils literal notranslate"><span class="pre">element_frame_axes</span></code></a>. XYZ triple e is a unit
@@ -19999,11 +19886,6 @@ shape was created or loaded.</p>
 <a class="reference internal" href="#superdex.physics.Actor.get_rod_pose" title="superdex.physics.Actor.get_rod_pose"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_rod_pose()</span></code></a>,
 <a class="reference internal" href="#superdex.physics.RodActorParams" title="superdex.physics.RodActorParams"><code class="xref py py-class docutils literal notranslate"><span class="pre">RodActorParams</span></code></a></p>
 </div>
-<dl class="field-list simple">
-<dt class="field-odd">Type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>get_shape_element_frame_axes(shape</p>
-</dd>
-</dl>
 </dd></dl>
 
 </section>

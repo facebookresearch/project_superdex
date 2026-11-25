@@ -205,6 +205,11 @@
 <h1>Prefabs<a class="headerlink" href="#prefabs" title="Permalink to this heading"></a></h1>
 <p><strong>Module:</strong> <code class="docutils literal notranslate"><span class="pre">superdex.physics.prefab</span></code></p>
 <p>Declarative physics scene descriptions.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Import <code class="docutils literal notranslate"><span class="pre">superdex.physics</span></code> and access its <code class="docutils literal notranslate"><span class="pre">prefab</span></code> attribute.
+<code class="docutils literal notranslate"><span class="pre">superdex.physics.prefab</span></code> is not a separately importable submodule.</p>
+</div>
 <section id="scene-description">
 <h2>Scene Description<a class="headerlink" href="#scene-description" title="Permalink to this heading"></a></h2>
 <p>The root document and records that organize scene settings, actors, constraints, and nested prefabs.</p>
@@ -2357,22 +2362,16 @@ actor-vs-actor or layer-vs-layer filter table.</p>
 </div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>Exporting a scene stores disabled pairs from the effective contact-filter
-state, not the exact JSON representation originally used to author it.
-Exporting may emit a canonical representation whose contact-filter category
-differs from the original JSON. For example, self-contact may be emitted as
-<a class="reference internal" href="#superdex.physics.prefab.ContactFilter.actor_contact_symmetric" title="superdex.physics.prefab.ContactFilter.actor_contact_symmetric"><code class="xref py py-attr docutils literal notranslate"><span class="pre">actor_contact_symmetric</span></code></a> because the forward and reverse resolved
-actor pair are the same. Entry order and duplicate, redundant, or overridden
-entries from the source prefab are not preserved.</p>
-</div>
-<div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>Scene export does not record explicit settings that enable contact between
-actor pairs. If such a setting enables contact between adjacent links of an
-articulated or soft-skinned actor, adding the exported prefab to a scene
-applies automatic adjacent-link filtering and disables contact for that pair
-again. To preserve this behavior, add an equivalent enabling entry to the
-exported prefab or re-enable the pair after adding the prefab to a scene.</p>
+<p>Exporting a scene stores the effective contact-filter state, not the exact
+JSON representation originally used to author it. It omits the actor pairs
+whose contact is disabled when an articulated or soft-skinned actor is
+created, and writes enabling entries for those pairs whose contact was
+enabled after creation. Exporting may emit a canonical representation whose
+contact-filter category differs from the original JSON. For example,
+self-contact may be emitted as <a class="reference internal" href="#superdex.physics.prefab.ContactFilter.actor_contact_symmetric" title="superdex.physics.prefab.ContactFilter.actor_contact_symmetric"><code class="xref py py-attr docutils literal notranslate"><span class="pre">actor_contact_symmetric</span></code></a> because the
+forward and reverse resolved actor pair are the same. Entry order and
+duplicate, redundant, or overridden entries from the source prefab are not
+preserved.</p>
 </div>
 <div class="admonition seealso">
 <p class="admonition-title">See also</p>
@@ -2552,11 +2551,10 @@ actors within the same layer.</p>
 <section id="loading-dependencies">
 <h2>Loading &amp; Dependencies<a class="headerlink" href="#loading-dependencies" title="Permalink to this heading"></a></h2>
 <p>Load prefab documents and resolve nested prefabs and shape assets.</p>
-<dl class="py data">
+<dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.prefab.ensure_fully_loaded">
-<span class="sig-name descname"><span class="pre">ensure_fully_loaded</span></span><a class="headerlink" href="#superdex.physics.prefab.ensure_fully_loaded" title="Permalink to this definition"></a></dt>
-<dd><p>superdex.physics.prefab.ScenePrefab, root_path: str) -&gt; None</p>
-<p>Ensure that all nested prefabs and shape files are loaded, skipping any that are
+<span class="sig-name descname"><span class="pre">ensure_fully_loaded</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">prefab</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.prefab.ScenePrefab" title="superdex.physics.prefab.ScenePrefab"><span class="pre">ScenePrefab</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">root_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#superdex.physics.prefab.ensure_fully_loaded" title="Permalink to this definition"></a></dt>
+<dd><p>Ensure that all nested prefabs and shape files are loaded, skipping any that are
 already loaded.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -2609,18 +2607,12 @@ if its file or any prefab nested within it fails to load.</p>
 <a class="reference internal" href="#superdex.physics.prefab.load_shapes" title="superdex.physics.prefab.load_shapes"><code class="xref py py-func docutils literal notranslate"><span class="pre">load_shapes()</span></code></a>,
 <a class="reference internal" href="#superdex.physics.prefab.add_to_scene" title="superdex.physics.prefab.add_to_scene"><code class="xref py py-func docutils literal notranslate"><span class="pre">add_to_scene()</span></code></a></p>
 </div>
-<dl class="field-list simple">
-<dt class="field-odd">Type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>ensure_fully_loaded(prefab</p>
-</dd>
-</dl>
 </dd></dl>
 
-<dl class="py data">
+<dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.prefab.get_prefab_full_path">
-<span class="sig-name descname"><span class="pre">get_prefab_full_path</span></span><a class="headerlink" href="#superdex.physics.prefab.get_prefab_full_path" title="Permalink to this definition"></a></dt>
-<dd><p>str, root_for_relative_path: str, prefab_file_path: str) -&gt; str</p>
-<p>Resolve a path referenced inside a prefab to a full path.</p>
+<span class="sig-name descname"><span class="pre">get_prefab_full_path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">root_for_relative_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prefab_file_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#superdex.physics.prefab.get_prefab_full_path" title="Permalink to this definition"></a></dt>
+<dd><p>Resolve a path referenced inside a prefab to a full path.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -2642,18 +2634,12 @@ used to resolve “./”-prefixed paths relative to its location.</p></li>
 relative to the directory containing <code class="docutils literal notranslate"><span class="pre">prefab_file_path</span></code> when provided.
 Other relative paths are resolved against <code class="docutils literal notranslate"><span class="pre">root_for_relative_path</span></code>.</p>
 </div>
-<dl class="field-list simple">
-<dt class="field-odd">Type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>get_prefab_full_path(input_path</p>
-</dd>
-</dl>
 </dd></dl>
 
-<dl class="py data">
+<dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.prefab.load_from_file">
-<span class="sig-name descname"><span class="pre">load_from_file</span></span><a class="headerlink" href="#superdex.physics.prefab.load_from_file" title="Permalink to this definition"></a></dt>
-<dd><p>str, root_path: str) -&gt; superdex.physics.prefab.ScenePrefab</p>
-<p>Fully load a <a class="reference internal" href="#superdex.physics.prefab.ScenePrefab" title="superdex.physics.prefab.ScenePrefab"><code class="xref py py-class docutils literal notranslate"><span class="pre">ScenePrefab</span></code></a> from a file,
+<span class="sig-name descname"><span class="pre">load_from_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">prefab_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">root_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.physics.prefab.ScenePrefab" title="superdex.physics.prefab.ScenePrefab"><span class="pre">ScenePrefab</span></a></span></span><a class="headerlink" href="#superdex.physics.prefab.load_from_file" title="Permalink to this definition"></a></dt>
+<dd><p>Fully load a <a class="reference internal" href="#superdex.physics.prefab.ScenePrefab" title="superdex.physics.prefab.ScenePrefab"><code class="xref py py-class docutils literal notranslate"><span class="pre">ScenePrefab</span></code></a> from a file,
 including all nested prefabs and shapes.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -2685,18 +2671,12 @@ default-constructed <a class="reference internal" href="#superdex.physics.prefab
 <a class="reference internal" href="#superdex.physics.prefab.shallow_load_from_file" title="superdex.physics.prefab.shallow_load_from_file"><code class="xref py py-func docutils literal notranslate"><span class="pre">shallow_load_from_file()</span></code></a>,
 <a class="reference internal" href="#superdex.physics.prefab.shallow_load_from_json_string" title="superdex.physics.prefab.shallow_load_from_json_string"><code class="xref py py-func docutils literal notranslate"><span class="pre">shallow_load_from_json_string()</span></code></a></p>
 </div>
-<dl class="field-list simple">
-<dt class="field-odd">Type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>load_from_file(prefab_path</p>
-</dd>
-</dl>
 </dd></dl>
 
-<dl class="py data">
+<dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.prefab.load_from_json_string">
-<span class="sig-name descname"><span class="pre">load_from_json_string</span></span><a class="headerlink" href="#superdex.physics.prefab.load_from_json_string" title="Permalink to this definition"></a></dt>
-<dd><p>str, root_path: str) -&gt; superdex.physics.prefab.ScenePrefab</p>
-<p>Fully load a <a class="reference internal" href="#superdex.physics.prefab.ScenePrefab" title="superdex.physics.prefab.ScenePrefab"><code class="xref py py-class docutils literal notranslate"><span class="pre">ScenePrefab</span></code></a> from a JSON string,
+<span class="sig-name descname"><span class="pre">load_from_json_string</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">json</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">root_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.physics.prefab.ScenePrefab" title="superdex.physics.prefab.ScenePrefab"><span class="pre">ScenePrefab</span></a></span></span><a class="headerlink" href="#superdex.physics.prefab.load_from_json_string" title="Permalink to this definition"></a></dt>
+<dd><p>Fully load a <a class="reference internal" href="#superdex.physics.prefab.ScenePrefab" title="superdex.physics.prefab.ScenePrefab"><code class="xref py py-class docutils literal notranslate"><span class="pre">ScenePrefab</span></code></a> from a JSON string,
 including all nested prefabs and shapes.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -2734,18 +2714,12 @@ resolution at the top level.</p>
 <a class="reference internal" href="#superdex.physics.prefab.shallow_load_from_file" title="superdex.physics.prefab.shallow_load_from_file"><code class="xref py py-func docutils literal notranslate"><span class="pre">shallow_load_from_file()</span></code></a>,
 <a class="reference internal" href="#superdex.physics.prefab.shallow_load_from_json_string" title="superdex.physics.prefab.shallow_load_from_json_string"><code class="xref py py-func docutils literal notranslate"><span class="pre">shallow_load_from_json_string()</span></code></a></p>
 </div>
-<dl class="field-list simple">
-<dt class="field-odd">Type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>load_from_json_string(json</p>
-</dd>
-</dl>
 </dd></dl>
 
-<dl class="py data">
+<dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.prefab.load_nested_prefabs">
-<span class="sig-name descname"><span class="pre">load_nested_prefabs</span></span><a class="headerlink" href="#superdex.physics.prefab.load_nested_prefabs" title="Permalink to this definition"></a></dt>
-<dd><p>superdex.physics.prefab.ScenePrefab, root_path: str) -&gt; None</p>
-<p>Load nested prefab files recursively.</p>
+<span class="sig-name descname"><span class="pre">load_nested_prefabs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">prefab</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.prefab.ScenePrefab" title="superdex.physics.prefab.ScenePrefab"><span class="pre">ScenePrefab</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">root_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#superdex.physics.prefab.load_nested_prefabs" title="Permalink to this definition"></a></dt>
+<dd><p>Load nested prefab files recursively.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -2798,18 +2772,12 @@ loaded prefab, it remains unloaded.</p>
 <p><a class="reference internal" href="#superdex.physics.prefab.ensure_fully_loaded" title="superdex.physics.prefab.ensure_fully_loaded"><code class="xref py py-func docutils literal notranslate"><span class="pre">ensure_fully_loaded()</span></code></a>,
 <a class="reference internal" href="#superdex.physics.prefab.load_shapes" title="superdex.physics.prefab.load_shapes"><code class="xref py py-func docutils literal notranslate"><span class="pre">load_shapes()</span></code></a></p>
 </div>
-<dl class="field-list simple">
-<dt class="field-odd">Type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>load_nested_prefabs(prefab</p>
-</dd>
-</dl>
 </dd></dl>
 
-<dl class="py data">
+<dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.prefab.load_shapes">
-<span class="sig-name descname"><span class="pre">load_shapes</span></span><a class="headerlink" href="#superdex.physics.prefab.load_shapes" title="Permalink to this definition"></a></dt>
-<dd><p>superdex.physics.prefab.ScenePrefab, root_path: str) -&gt; None</p>
-<p>Load shape files referenced by <code class="docutils literal notranslate"><span class="pre">prefab</span></code> and its loaded nested prefabs.</p>
+<span class="sig-name descname"><span class="pre">load_shapes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">prefab</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.prefab.ScenePrefab" title="superdex.physics.prefab.ScenePrefab"><span class="pre">ScenePrefab</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">root_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#superdex.physics.prefab.load_shapes" title="Permalink to this definition"></a></dt>
+<dd><p>Load shape files referenced by <code class="docutils literal notranslate"><span class="pre">prefab</span></code> and its loaded nested prefabs.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -2861,18 +2829,12 @@ nested prefabs may be unloaded.</p>
 <a class="reference internal" href="#superdex.physics.prefab.load_nested_prefabs" title="superdex.physics.prefab.load_nested_prefabs"><code class="xref py py-func docutils literal notranslate"><span class="pre">load_nested_prefabs()</span></code></a>,
 <a class="reference internal" href="#superdex.physics.prefab.add_to_scene" title="superdex.physics.prefab.add_to_scene"><code class="xref py py-func docutils literal notranslate"><span class="pre">add_to_scene()</span></code></a></p>
 </div>
-<dl class="field-list simple">
-<dt class="field-odd">Type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>load_shapes(prefab</p>
-</dd>
-</dl>
 </dd></dl>
 
-<dl class="py data">
+<dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.prefab.shallow_load_from_file">
-<span class="sig-name descname"><span class="pre">shallow_load_from_file</span></span><a class="headerlink" href="#superdex.physics.prefab.shallow_load_from_file" title="Permalink to this definition"></a></dt>
-<dd><p>str) -&gt; superdex.physics.prefab.ScenePrefab</p>
-<p>Deserialize a single <a class="reference internal" href="#superdex.physics.prefab.ScenePrefab" title="superdex.physics.prefab.ScenePrefab"><code class="xref py py-class docutils literal notranslate"><span class="pre">ScenePrefab</span></code></a> from a file,
+<span class="sig-name descname"><span class="pre">shallow_load_from_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.physics.prefab.ScenePrefab" title="superdex.physics.prefab.ScenePrefab"><span class="pre">ScenePrefab</span></a></span></span><a class="headerlink" href="#superdex.physics.prefab.shallow_load_from_file" title="Permalink to this definition"></a></dt>
+<dd><p>Deserialize a single <a class="reference internal" href="#superdex.physics.prefab.ScenePrefab" title="superdex.physics.prefab.ScenePrefab"><code class="xref py py-class docutils literal notranslate"><span class="pre">ScenePrefab</span></code></a> from a file,
 without loading any nested files.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -2905,18 +2867,12 @@ prefabs and shapes first.</p>
 <a class="reference internal" href="#superdex.physics.prefab.load_shapes" title="superdex.physics.prefab.load_shapes"><code class="xref py py-func docutils literal notranslate"><span class="pre">load_shapes()</span></code></a>,
 <a class="reference internal" href="#superdex.physics.prefab.shallow_load_from_json_string" title="superdex.physics.prefab.shallow_load_from_json_string"><code class="xref py py-func docutils literal notranslate"><span class="pre">shallow_load_from_json_string()</span></code></a></p>
 </div>
-<dl class="field-list simple">
-<dt class="field-odd">Type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>shallow_load_from_file(path</p>
-</dd>
-</dl>
 </dd></dl>
 
-<dl class="py data">
+<dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.prefab.shallow_load_from_json_string">
-<span class="sig-name descname"><span class="pre">shallow_load_from_json_string</span></span><a class="headerlink" href="#superdex.physics.prefab.shallow_load_from_json_string" title="Permalink to this definition"></a></dt>
-<dd><p>str) -&gt; superdex.physics.prefab.ScenePrefab</p>
-<p>Deserialize a single <a class="reference internal" href="#superdex.physics.prefab.ScenePrefab" title="superdex.physics.prefab.ScenePrefab"><code class="xref py py-class docutils literal notranslate"><span class="pre">ScenePrefab</span></code></a> from a JSON
+<span class="sig-name descname"><span class="pre">shallow_load_from_json_string</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">json</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.physics.prefab.ScenePrefab" title="superdex.physics.prefab.ScenePrefab"><span class="pre">ScenePrefab</span></a></span></span><a class="headerlink" href="#superdex.physics.prefab.shallow_load_from_json_string" title="Permalink to this definition"></a></dt>
+<dd><p>Deserialize a single <a class="reference internal" href="#superdex.physics.prefab.ScenePrefab" title="superdex.physics.prefab.ScenePrefab"><code class="xref py py-class docutils literal notranslate"><span class="pre">ScenePrefab</span></code></a> from a JSON
 string, without loading any nested files.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -2950,11 +2906,6 @@ directory as the root path to preserve prefab-relative resolution.</p>
 <p><a class="reference internal" href="#superdex.physics.prefab.shallow_load_from_file" title="superdex.physics.prefab.shallow_load_from_file"><code class="xref py py-func docutils literal notranslate"><span class="pre">shallow_load_from_file()</span></code></a>,
 <a class="reference internal" href="#superdex.physics.prefab.load_from_json_string" title="superdex.physics.prefab.load_from_json_string"><code class="xref py py-func docutils literal notranslate"><span class="pre">load_from_json_string()</span></code></a></p>
 </div>
-<dl class="field-list simple">
-<dt class="field-odd">Type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>shallow_load_from_json_string(json</p>
-</dd>
-</dl>
 </dd></dl>
 
 </section>
@@ -3218,14 +3169,16 @@ that does NOT scale with the prefab, set the mass at runtime via
 
 </dd></dl>
 
-<dl class="py data">
+<dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.prefab.add_to_scene">
-<span class="sig-name descname"><span class="pre">add_to_scene</span></span><a class="headerlink" href="#superdex.physics.prefab.add_to_scene" title="Permalink to this definition"></a></dt>
-<dd><p>superdex.physics.prefab.ScenePrefab, scene: superdex.physics.Scene | None, params: superdex.physics.prefab.PrefabParams) -&gt; superdex.physics.prefab.AddToSceneResult
-add_to_scene(prefab: superdex.physics.prefab.ScenePrefab, scene: superdex.physics.Scene | None) -&gt; superdex.physics.prefab.AddToSceneResult
-add_to_scene(prefab_path: str, root_path: str, scene: superdex.physics.Scene | None, params: superdex.physics.prefab.PrefabParams) -&gt; superdex.physics.prefab.AddToSceneResult
-add_to_scene(prefab_path: str, root_path: str, scene: superdex.physics.Scene | None) -&gt; superdex.physics.prefab.AddToSceneResult</p>
-<p>Overloaded function.</p>
+<span class="sig-name descname"><span class="pre">add_to_scene</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">prefab</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.prefab.ScenePrefab" title="superdex.physics.prefab.ScenePrefab"><span class="pre">ScenePrefab</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">scene</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="physics.html#superdex.physics.Scene" title="superdex.physics.Scene"><span class="pre">Scene</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.prefab.PrefabParams" title="superdex.physics.prefab.PrefabParams"><span class="pre">PrefabParams</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.physics.prefab.AddToSceneResult" title="superdex.physics.prefab.AddToSceneResult"><span class="pre">AddToSceneResult</span></a></span></span><a class="headerlink" href="#superdex.physics.prefab.add_to_scene" title="Permalink to this definition"></a></dt>
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">add_to_scene</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">prefab</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.prefab.ScenePrefab" title="superdex.physics.prefab.ScenePrefab"><span class="pre">ScenePrefab</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">scene</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="physics.html#superdex.physics.Scene" title="superdex.physics.Scene"><span class="pre">Scene</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.physics.prefab.AddToSceneResult" title="superdex.physics.prefab.AddToSceneResult"><span class="pre">AddToSceneResult</span></a></span></span></dt>
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">add_to_scene</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">prefab_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">root_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scene</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="physics.html#superdex.physics.Scene" title="superdex.physics.Scene"><span class="pre">Scene</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.prefab.PrefabParams" title="superdex.physics.prefab.PrefabParams"><span class="pre">PrefabParams</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.physics.prefab.AddToSceneResult" title="superdex.physics.prefab.AddToSceneResult"><span class="pre">AddToSceneResult</span></a></span></span></dt>
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">add_to_scene</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">prefab_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">root_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scene</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="physics.html#superdex.physics.Scene" title="superdex.physics.Scene"><span class="pre">Scene</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.physics.prefab.AddToSceneResult" title="superdex.physics.prefab.AddToSceneResult"><span class="pre">AddToSceneResult</span></a></span></span></dt>
+<dd><p>Overloaded function.</p>
 <ol class="arabic simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">add_to_scene(prefab:</span> <span class="pre">superdex.physics.prefab.ScenePrefab,</span> <span class="pre">scene:</span> <span class="pre">superdex.physics.Scene</span> <span class="pre">|</span> <span class="pre">None,</span> <span class="pre">params:</span> <span class="pre">superdex.physics.prefab.PrefabParams)</span> <span class="pre">-&gt;</span> <span class="pre">superdex.physics.prefab.AddToSceneResult</span></code></p></li>
 </ol>
@@ -3393,11 +3346,6 @@ have been partially instantiated in the scene.</p>
 <p class="admonition-title">See also</p>
 <p><a class="reference internal" href="#superdex.physics.prefab.add_to_scene" title="superdex.physics.prefab.add_to_scene"><code class="xref py py-func docutils literal notranslate"><span class="pre">add_to_scene()</span></code></a></p>
 </div>
-<dl class="field-list simple">
-<dt class="field-odd">Type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>add_to_scene(prefab</p>
-</dd>
-</dl>
 </dd></dl>
 
 </section>
@@ -3471,12 +3419,12 @@ in Python: <code class="docutils literal notranslate"><span class="pre">superdex
 
 </dd></dl>
 
-<dl class="py data">
+<dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.prefab.export_actor">
-<span class="sig-name descname"><span class="pre">export_actor</span></span><a class="headerlink" href="#superdex.physics.prefab.export_actor" title="Permalink to this definition"></a></dt>
-<dd><p>superdex.physics.Actor | None, export_name: str, output_dir: str, params: superdex.physics.prefab.ExportParams) -&gt; None
-export_actor(actor: superdex.physics.Actor | None, export_name: str, output_dir: str) -&gt; None</p>
-<p>Overloaded function.</p>
+<span class="sig-name descname"><span class="pre">export_actor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">actor</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="physics.html#superdex.physics.Actor" title="superdex.physics.Actor"><span class="pre">Actor</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">export_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.prefab.ExportParams" title="superdex.physics.prefab.ExportParams"><span class="pre">ExportParams</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#superdex.physics.prefab.export_actor" title="Permalink to this definition"></a></dt>
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">export_actor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">actor</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="physics.html#superdex.physics.Actor" title="superdex.physics.Actor"><span class="pre">Actor</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">export_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span></dt>
+<dd><p>Overloaded function.</p>
 <ol class="arabic simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">export_actor(actor:</span> <span class="pre">superdex.physics.Actor</span> <span class="pre">|</span> <span class="pre">None,</span> <span class="pre">export_name:</span> <span class="pre">str,</span> <span class="pre">output_dir:</span> <span class="pre">str,</span> <span class="pre">params:</span> <span class="pre">superdex.physics.prefab.ExportParams)</span> <span class="pre">-&gt;</span> <span class="pre">None</span></code></p></li>
 </ol>
@@ -3560,19 +3508,14 @@ and the prefab filename.</p></li>
 <p class="admonition-title">See also</p>
 <p><a class="reference internal" href="#superdex.physics.prefab.export_actor" title="superdex.physics.prefab.export_actor"><code class="xref py py-func docutils literal notranslate"><span class="pre">export_actor()</span></code></a></p>
 </div>
-<dl class="field-list simple">
-<dt class="field-odd">Type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>export_actor(actor</p>
-</dd>
-</dl>
 </dd></dl>
 
-<dl class="py data">
+<dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.prefab.export_scene">
-<span class="sig-name descname"><span class="pre">export_scene</span></span><a class="headerlink" href="#superdex.physics.prefab.export_scene" title="Permalink to this definition"></a></dt>
-<dd><p>superdex.physics.Scene | None, export_name: str, output_dir: str, params: superdex.physics.prefab.ExportParams) -&gt; None
-export_scene(scene: superdex.physics.Scene | None, export_name: str, output_dir: str) -&gt; None</p>
-<p>Overloaded function.</p>
+<span class="sig-name descname"><span class="pre">export_scene</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scene</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="physics.html#superdex.physics.Scene" title="superdex.physics.Scene"><span class="pre">Scene</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">export_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.prefab.ExportParams" title="superdex.physics.prefab.ExportParams"><span class="pre">ExportParams</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#superdex.physics.prefab.export_scene" title="Permalink to this definition"></a></dt>
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">export_scene</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scene</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="physics.html#superdex.physics.Scene" title="superdex.physics.Scene"><span class="pre">Scene</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">export_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span></dt>
+<dd><p>Overloaded function.</p>
 <ol class="arabic simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">export_scene(scene:</span> <span class="pre">superdex.physics.Scene</span> <span class="pre">|</span> <span class="pre">None,</span> <span class="pre">export_name:</span> <span class="pre">str,</span> <span class="pre">output_dir:</span> <span class="pre">str,</span> <span class="pre">params:</span> <span class="pre">superdex.physics.prefab.ExportParams)</span> <span class="pre">-&gt;</span> <span class="pre">None</span></code></p></li>
 </ol>
@@ -3603,6 +3546,13 @@ referenced from the prefab using “./generated_assets/” paths.</p>
 </div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
+<p>The actor contact filter omits the pairs whose contact is disabled when an
+articulated or soft-skinned actor is created, as adding the prefab to a
+scene disables them again. Such pairs whose contact was enabled after
+creation are exported as enabling entries.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
 <p>Exported actor names are made unique: when two actors share a name, later
 ones receive a numeric suffix (e.g. “box”, “box1”), so an exported name may
 differ from the runtime name.</p>
@@ -3617,22 +3567,15 @@ trip of any prefab used to create the scene.</p>
 <p class="admonition-title">Warning</p>
 <p>Currently exports only rigid, soft, articulated, soft-skinned, and rod
 actors. Constraints, pose controllers, shell actors, and implicit (non-mesh)
-shapes are NOT exported.</p>
+shapes are NOT exported. A link with an implicit shape is exported without a
+shape, so its articulated actor may get different default contact filtering
+when the prefab is added to a scene.</p>
 </div>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
 <p>Velocities are NOT exported. Soft actor displacements, articulated joint
 poses, and rod poses are exported only when
 <a class="reference internal" href="#superdex.physics.prefab.ExportParams.export_current_pose" title="superdex.physics.prefab.ExportParams.export_current_pose"><code class="xref py py-attr docutils literal notranslate"><span class="pre">export_current_pose</span></code></a> is true.</p>
-</div>
-<div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>Scene export does not record explicit settings that enable contact between
-actor pairs. If such a setting enables contact between adjacent links of an
-articulated or soft-skinned actor, adding the exported prefab to a scene
-applies automatic adjacent-link filtering and disables contact for that pair
-again. To preserve this behavior, add an equivalent enabling entry to the
-exported prefab or re-enable the pair after adding the prefab to a scene.</p>
 </div>
 <div class="admonition seealso">
 <p class="admonition-title">See also</p>
@@ -3660,18 +3603,12 @@ exported prefab or re-enable the pair after adding the prefab to a scene.</p>
 <p class="admonition-title">See also</p>
 <p><a class="reference internal" href="#superdex.physics.prefab.export_scene" title="superdex.physics.prefab.export_scene"><code class="xref py py-func docutils literal notranslate"><span class="pre">export_scene()</span></code></a></p>
 </div>
-<dl class="field-list simple">
-<dt class="field-odd">Type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>export_scene(scene</p>
-</dd>
-</dl>
 </dd></dl>
 
-<dl class="py data">
+<dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.prefab.save_to_json_file">
-<span class="sig-name descname"><span class="pre">save_to_json_file</span></span><a class="headerlink" href="#superdex.physics.prefab.save_to_json_file" title="Permalink to this definition"></a></dt>
-<dd><p>superdex.physics.prefab.ScenePrefab, path: str) -&gt; None</p>
-<p>Serialize a <a class="reference internal" href="#superdex.physics.prefab.ScenePrefab" title="superdex.physics.prefab.ScenePrefab"><code class="xref py py-class docutils literal notranslate"><span class="pre">ScenePrefab</span></code></a> to a JSON file.</p>
+<span class="sig-name descname"><span class="pre">save_to_json_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">prefab</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.prefab.ScenePrefab" title="superdex.physics.prefab.ScenePrefab"><span class="pre">ScenePrefab</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#superdex.physics.prefab.save_to_json_file" title="Permalink to this definition"></a></dt>
+<dd><p>Serialize a <a class="reference internal" href="#superdex.physics.prefab.ScenePrefab" title="superdex.physics.prefab.ScenePrefab"><code class="xref py py-class docutils literal notranslate"><span class="pre">ScenePrefab</span></code></a> to a JSON file.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -3697,18 +3634,12 @@ written.</p>
 <p class="admonition-title">See also</p>
 <p><a class="reference internal" href="#superdex.physics.prefab.save_to_json_string" title="superdex.physics.prefab.save_to_json_string"><code class="xref py py-func docutils literal notranslate"><span class="pre">save_to_json_string()</span></code></a></p>
 </div>
-<dl class="field-list simple">
-<dt class="field-odd">Type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>save_to_json_file(prefab</p>
-</dd>
-</dl>
 </dd></dl>
 
-<dl class="py data">
+<dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.prefab.save_to_json_string">
-<span class="sig-name descname"><span class="pre">save_to_json_string</span></span><a class="headerlink" href="#superdex.physics.prefab.save_to_json_string" title="Permalink to this definition"></a></dt>
-<dd><p>superdex.physics.prefab.ScenePrefab) -&gt; str</p>
-<p>Serialize a <a class="reference internal" href="#superdex.physics.prefab.ScenePrefab" title="superdex.physics.prefab.ScenePrefab"><code class="xref py py-class docutils literal notranslate"><span class="pre">ScenePrefab</span></code></a> to a JSON string.</p>
+<span class="sig-name descname"><span class="pre">save_to_json_string</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">prefab</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.prefab.ScenePrefab" title="superdex.physics.prefab.ScenePrefab"><span class="pre">ScenePrefab</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#superdex.physics.prefab.save_to_json_string" title="Permalink to this definition"></a></dt>
+<dd><p>Serialize a <a class="reference internal" href="#superdex.physics.prefab.ScenePrefab" title="superdex.physics.prefab.ScenePrefab"><code class="xref py py-class docutils literal notranslate"><span class="pre">ScenePrefab</span></code></a> to a JSON string.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>prefab</strong> (<a class="reference internal" href="#superdex.physics.prefab.ScenePrefab" title="superdex.physics.prefab.ScenePrefab"><em>ScenePrefab</em></a>) – The <a class="reference internal" href="#superdex.physics.prefab.ScenePrefab" title="superdex.physics.prefab.ScenePrefab"><code class="xref py py-class docutils literal notranslate"><span class="pre">ScenePrefab</span></code></a> to
@@ -3730,11 +3661,6 @@ written.</p>
 <p class="admonition-title">See also</p>
 <p><a class="reference internal" href="#superdex.physics.prefab.save_to_json_file" title="superdex.physics.prefab.save_to_json_file"><code class="xref py py-func docutils literal notranslate"><span class="pre">save_to_json_file()</span></code></a></p>
 </div>
-<dl class="field-list simple">
-<dt class="field-odd">Type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>save_to_json_string(prefab</p>
-</dd>
-</dl>
 </dd></dl>
 
 </section>
@@ -5341,11 +5267,10 @@ external synchronization if any access mutates the array or its exported storage
 <section id="not-yet-categorized">
 <h2>Not Yet Categorized<a class="headerlink" href="#not-yet-categorized" title="Permalink to this heading"></a></h2>
 <p>Public symbols that are not yet grouped into a section above.</p>
-<dl class="py data">
+<dl class="py function">
 <dt class="sig sig-object py" id="superdex.physics.prefab.scale_articulated_actor_params">
-<span class="sig-name descname"><span class="pre">scale_articulated_actor_params</span></span><a class="headerlink" href="#superdex.physics.prefab.scale_articulated_actor_params" title="Permalink to this definition"></a></dt>
-<dd><p>superdex.physics.ArticulatedActorParams, scale: float) -&gt; None</p>
-<p>Uniformly scale the geometry of articulated actor params in place, as
+<span class="sig-name descname"><span class="pre">scale_articulated_actor_params</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="physics.html#superdex.physics.ArticulatedActorParams" title="superdex.physics.ArticulatedActorParams"><span class="pre">ArticulatedActorParams</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#superdex.physics.prefab.scale_articulated_actor_params" title="Permalink to this definition"></a></dt>
+<dd><p>Uniformly scale the geometry of articulated actor params in place, as
 instantiating an <a class="reference internal" href="#superdex.physics.prefab.ArticulatedActorPrefab" title="superdex.physics.prefab.ArticulatedActorPrefab"><code class="xref py py-class docutils literal notranslate"><span class="pre">ArticulatedActorPrefab</span></code></a> at a
 uniform <a class="reference internal" href="#superdex.physics.prefab.ArticulatedActorPrefab.scale" title="superdex.physics.prefab.ArticulatedActorPrefab.scale"><code class="xref py py-attr docutils literal notranslate"><span class="pre">scale</span></code></a> does.</p>
 <p>Scales the translations of
@@ -5381,11 +5306,6 @@ friction, stiffnesses and joint inertia
 modified either, so the translational DoFs of the initial velocities stay in
 unscaled units.</p>
 </div>
-<dl class="field-list simple">
-<dt class="field-odd">Type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>scale_articulated_actor_params(params</p>
-</dd>
-</dl>
 </dd></dl>
 
 </section>

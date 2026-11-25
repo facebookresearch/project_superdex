@@ -10,41 +10,34 @@ Prepare geometry before it reaches the engine.
 superdex.physics.model
 ----------------------
 
-.. autodata:: superdex.physics.model.auto_correct
-   :no-value:
+.. note::
 
-.. autodata:: superdex.physics.model.bake_coordinate_space_transform
-   :no-value:
+   Import ``superdex.physics`` and access its ``model`` attribute.
+   ``superdex.physics.model`` is not a separately importable submodule.
 
-.. autodata:: superdex.physics.model.bake_sdf
-   :no-value:
+.. autofunction:: superdex.physics.model.auto_correct
 
-.. autodata:: superdex.physics.model.bake_transform
-   :no-value:
+.. autofunction:: superdex.physics.model.bake_coordinate_space_transform
 
-.. autodata:: superdex.physics.model.flip_winding_order
-   :no-value:
+.. autofunction:: superdex.physics.model.bake_sdf
 
-.. autodata:: superdex.physics.model.load_from_bytes
-   :no-value:
+.. autofunction:: superdex.physics.model.bake_transform
 
-.. autodata:: superdex.physics.model.load_from_bytes_unchecked
-   :no-value:
+.. autofunction:: superdex.physics.model.flip_winding_order
 
-.. autodata:: superdex.physics.model.load_from_file
-   :no-value:
+.. autofunction:: superdex.physics.model.load_from_bytes
 
-.. autodata:: superdex.physics.model.load_from_file_unchecked
-   :no-value:
+.. autofunction:: superdex.physics.model.load_from_bytes_unchecked
 
-.. autodata:: superdex.physics.model.save_to_file
-   :no-value:
+.. autofunction:: superdex.physics.model.load_from_file
 
-.. autodata:: superdex.physics.model.save_to_json_string
-   :no-value:
+.. autofunction:: superdex.physics.model.load_from_file_unchecked
 
-.. autodata:: superdex.physics.model.validate
-   :no-value:
+.. autofunction:: superdex.physics.model.save_to_file
+
+.. autofunction:: superdex.physics.model.save_to_json_string
+
+.. autofunction:: superdex.physics.model.validate
 
 superdex.physics.mesh
 ---------------------
@@ -92,18 +85,13 @@ superdex.physics.mesh
    :members:
    :show-inheritance:
 
-.. autodata:: superdex.physics.mesh.compute_mesh_statistics
-   :no-value:
+.. autofunction:: superdex.physics.mesh.compute_mesh_statistics
 
-.. autodata:: superdex.physics.mesh.reconstruct_surface_from_sdf
-   :no-value:
+.. autofunction:: superdex.physics.mesh.reconstruct_surface_from_sdf
 
-.. autodata:: superdex.physics.mesh.remesh_surface
-   :no-value:
+.. autofunction:: superdex.physics.mesh.remesh_surface
 
-.. autodata:: superdex.physics.mesh.tetrahedralize
-   :no-value:
+.. autofunction:: superdex.physics.mesh.tetrahedralize
 
-.. autodata:: superdex.physics.mesh.tetrahedralize_constrained
-   :no-value:
+.. autofunction:: superdex.physics.mesh.tetrahedralize_constrained
 

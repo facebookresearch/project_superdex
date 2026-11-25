@@ -15,28 +15,22 @@ Engine Lifecycle
 
 Initialize and shut down the engine, and inspect whether it is running.
 
-.. autodata:: superdex.physics.initialize
-   :no-value:
+.. autofunction:: superdex.physics.initialize
 
-.. autodata:: superdex.physics.is_initialized
-   :no-value:
+.. autofunction:: superdex.physics.is_initialized
 
-.. autodata:: superdex.physics.shutdown
-   :no-value:
+.. autofunction:: superdex.physics.shutdown
 
 Execution & Threading
 ---------------------
 
 Inspect worker capacity and choose worker-pool or single-threaded execution.
 
-.. autodata:: superdex.physics.get_num_threads
-   :no-value:
+.. autofunction:: superdex.physics.get_num_threads
 
-.. autodata:: superdex.physics.is_single_threaded
-   :no-value:
+.. autofunction:: superdex.physics.is_single_threaded
 
-.. autodata:: superdex.physics.set_is_single_threaded
-   :no-value:
+.. autofunction:: superdex.physics.set_is_single_threaded
 
 Scene
 -----
@@ -54,17 +48,13 @@ Simulation scenes.
    :members:
    :show-inheritance:
 
-.. autodata:: superdex.physics.create_scene
-   :no-value:
+.. autofunction:: superdex.physics.create_scene
 
-.. autodata:: superdex.physics.destroy_scene
-   :no-value:
+.. autofunction:: superdex.physics.destroy_scene
 
-.. autodata:: superdex.physics.get_scene
-   :no-value:
+.. autofunction:: superdex.physics.get_scene
 
-.. autodata:: superdex.physics.is_valid_scene
-   :no-value:
+.. autofunction:: superdex.physics.is_valid_scene
 
 Handles
 -------
@@ -185,59 +175,41 @@ Geometry data and registered shapes.
    :members:
    :show-inheritance:
 
-.. autodata:: superdex.physics.clear_file_cache
-   :no-value:
+.. autofunction:: superdex.physics.clear_file_cache
 
-.. autodata:: superdex.physics.clear_file_from_cache
-   :no-value:
+.. autofunction:: superdex.physics.clear_file_from_cache
 
-.. autodata:: superdex.physics.create_mesh_shape
-   :no-value:
+.. autofunction:: superdex.physics.create_mesh_shape
 
-.. autodata:: superdex.physics.create_model_shape
-   :no-value:
+.. autofunction:: superdex.physics.create_model_shape
 
-.. autodata:: superdex.physics.create_plane_shape
-   :no-value:
+.. autofunction:: superdex.physics.create_plane_shape
 
-.. autodata:: superdex.physics.create_sphere_shape
-   :no-value:
+.. autofunction:: superdex.physics.create_sphere_shape
 
-.. autodata:: superdex.physics.create_tet_mesh_shape
-   :no-value:
+.. autofunction:: superdex.physics.create_tet_mesh_shape
 
-.. autodata:: superdex.physics.create_tri_mesh_shape
-   :no-value:
+.. autofunction:: superdex.physics.create_tri_mesh_shape
 
-.. autodata:: superdex.physics.enable_file_cache
-   :no-value:
+.. autofunction:: superdex.physics.enable_file_cache
 
-.. autodata:: superdex.physics.get_num_shapes
-   :no-value:
+.. autofunction:: superdex.physics.get_num_shapes
 
-.. autodata:: superdex.physics.get_shape_aabb
-   :no-value:
+.. autofunction:: superdex.physics.get_shape_aabb
 
-.. autodata:: superdex.physics.get_shape_mesh
-   :no-value:
+.. autofunction:: superdex.physics.get_shape_mesh
 
-.. autodata:: superdex.physics.get_shape_surface_mesh
-   :no-value:
+.. autofunction:: superdex.physics.get_shape_surface_mesh
 
-.. autodata:: superdex.physics.get_shape_visual_mesh
-   :no-value:
+.. autofunction:: superdex.physics.get_shape_visual_mesh
 
-.. autodata:: superdex.physics.is_file_cache_enabled
-   :no-value:
+.. autofunction:: superdex.physics.is_file_cache_enabled
 
-.. autodata:: superdex.physics.load_shape_from_bytes
-   :no-value:
+.. autofunction:: superdex.physics.load_shape_from_bytes
 
-.. autodata:: superdex.physics.load_shape_from_file
-   :no-value:
+.. autofunction:: superdex.physics.load_shape_from_file
 
-.. autodata:: superdex.physics.release_shape
-   :no-value:
+.. autofunction:: superdex.physics.release_shape
 
 Actors
 ------
@@ -335,8 +307,7 @@ Runtime physical bodies.
    :members:
    :show-inheritance:
 
-.. autodata:: superdex.physics.get_articulated_shape_info
-   :no-value:
+.. autofunction:: superdex.physics.get_articulated_shape_info
 
 Soft Materials
 --------------
@@ -645,34 +616,26 @@ Simulation debugging and diagnostics.
    :members:
    :show-inheritance:
 
-.. autodata:: superdex.physics.enable_log_channel
-   :no-value:
+.. autofunction:: superdex.physics.enable_log_channel
 
-.. autodata:: superdex.physics.get_debug_server
-   :no-value:
+.. autofunction:: superdex.physics.get_debug_server
 
-.. autodata:: superdex.physics.is_log_channel_enabled
-   :no-value:
+.. autofunction:: superdex.physics.is_log_channel_enabled
 
-.. autodata:: superdex.physics.log
-   :no-value:
+.. autofunction:: superdex.physics.log
 
-.. autodata:: superdex.physics.set_log_callback
-   :no-value:
+.. autofunction:: superdex.physics.set_log_callback
 
 Build Information
 -----------------
 
 Native library build information.
 
-.. autodata:: superdex.physics.is_debug
-   :no-value:
+.. autofunction:: superdex.physics.is_debug
 
-.. autodata:: superdex.physics.uses_double_precision
-   :no-value:
+.. autofunction:: superdex.physics.uses_double_precision
 
-.. autodata:: superdex.physics.uses_hdf5
-   :no-value:
+.. autofunction:: superdex.physics.uses_hdf5
 
 Core Value & Spatial Types
 --------------------------
@@ -732,8 +695,7 @@ Numeric and spatial types, constants, and operations.
    :members:
    :show-inheritance:
 
-.. autodata:: superdex.physics.normalize
-   :no-value:
+.. autofunction:: superdex.physics.normalize
 
 Error Handling
 --------------
@@ -1002,9 +964,7 @@ Public symbols that are not yet grouped into a section above.
 .. autodata:: superdex.physics.UNIT_INTERVAL
    :no-value:
 
-.. autodata:: superdex.physics.get_shape_contact_skin_mesh
-   :no-value:
+.. autofunction:: superdex.physics.get_shape_contact_skin_mesh
 
-.. autodata:: superdex.physics.get_shape_element_frame_axes
-   :no-value:
+.. autofunction:: superdex.physics.get_shape_element_frame_axes
 

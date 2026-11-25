@@ -7,6 +7,11 @@ Prefabs
 
 Declarative physics scene descriptions.
 
+.. note::
+
+   Import ``superdex.physics`` and access its ``prefab`` attribute.
+   ``superdex.physics.prefab`` is not a separately importable submodule.
+
 Scene Description
 -----------------
 
@@ -177,29 +182,21 @@ Loading & Dependencies
 
 Load prefab documents and resolve nested prefabs and shape assets.
 
-.. autodata:: superdex.physics.prefab.ensure_fully_loaded
-   :no-value:
+.. autofunction:: superdex.physics.prefab.ensure_fully_loaded
 
-.. autodata:: superdex.physics.prefab.get_prefab_full_path
-   :no-value:
+.. autofunction:: superdex.physics.prefab.get_prefab_full_path
 
-.. autodata:: superdex.physics.prefab.load_from_file
-   :no-value:
+.. autofunction:: superdex.physics.prefab.load_from_file
 
-.. autodata:: superdex.physics.prefab.load_from_json_string
-   :no-value:
+.. autofunction:: superdex.physics.prefab.load_from_json_string
 
-.. autodata:: superdex.physics.prefab.load_nested_prefabs
-   :no-value:
+.. autofunction:: superdex.physics.prefab.load_nested_prefabs
 
-.. autodata:: superdex.physics.prefab.load_shapes
-   :no-value:
+.. autofunction:: superdex.physics.prefab.load_shapes
 
-.. autodata:: superdex.physics.prefab.shallow_load_from_file
-   :no-value:
+.. autofunction:: superdex.physics.prefab.shallow_load_from_file
 
-.. autodata:: superdex.physics.prefab.shallow_load_from_json_string
-   :no-value:
+.. autofunction:: superdex.physics.prefab.shallow_load_from_json_string
 
 Instantiation
 -------------
@@ -214,8 +211,7 @@ Instantiate a loaded prefab in a scene and inspect the created objects.
    :members:
    :show-inheritance:
 
-.. autodata:: superdex.physics.prefab.add_to_scene
-   :no-value:
+.. autofunction:: superdex.physics.prefab.add_to_scene
 
 Serialization & Export
 ----------------------
@@ -226,17 +222,13 @@ Serialize prefab documents and export live scenes or actors.
    :members:
    :show-inheritance:
 
-.. autodata:: superdex.physics.prefab.export_actor
-   :no-value:
+.. autofunction:: superdex.physics.prefab.export_actor
 
-.. autodata:: superdex.physics.prefab.export_scene
-   :no-value:
+.. autofunction:: superdex.physics.prefab.export_scene
 
-.. autodata:: superdex.physics.prefab.save_to_json_file
-   :no-value:
+.. autofunction:: superdex.physics.prefab.save_to_json_file
 
-.. autodata:: superdex.physics.prefab.save_to_json_string
-   :no-value:
+.. autofunction:: superdex.physics.prefab.save_to_json_string
 
 Containers
 ----------
@@ -360,6 +352,5 @@ Not Yet Categorized
 
 Public symbols that are not yet grouped into a section above.
 
-.. autodata:: superdex.physics.prefab.scale_articulated_actor_params
-   :no-value:
+.. autofunction:: superdex.physics.prefab.scale_articulated_actor_params
 
