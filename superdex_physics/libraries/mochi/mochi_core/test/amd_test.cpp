@@ -149,8 +149,10 @@ static DynamicArray<int> ExactMinimumDegreeOrder(Graph<int, int> const& graph) {
   return order;
 }
 
-TEST(Amd, OrdersGridsAsWellAsExactMinimumDegree) {
-  // Ties make the fill of smaller grids vary by up to 20% with any minimum degree variant.
+TEST(Amd, OrdersGridsBetterThanExactMinimumDegree) {
+  // Supervariable detection and degree ties make AMD need at least 5% fewer operations than exact
+  // minimum degree on these grids. Ties make the fill of smaller grids vary by up to 20% with any
+  // minimum degree variant, so a tie-breaking change must re-check this bound.
   for (bool const diagonals : {false, true}) {
     for (int const m : {13, 17, 25, 33}) {
       auto const graph = MakeGridGraph(m, diagonals);
@@ -160,7 +162,7 @@ TEST(Amd, OrdersGridsAsWellAsExactMinimumDegree) {
       ASSERT_TRUE(IsPermutation(perm, graph.size()));
       EXPECT_LE(
           Metrics(graph, perm).opCount,
-          1.05 * Metrics(graph, ExactMinimumDegreeOrder(graph)).opCount);
+          0.95 * Metrics(graph, ExactMinimumDegreeOrder(graph)).opCount);
     }
   }
 }
@@ -168,13 +170,26 @@ TEST(Amd, OrdersGridsAsWellAsExactMinimumDegree) {
 TEST(Amd, MatchesExactMinimumDegreeFill) {
   // Every elimination order fills a cycle C_n with n - 3 entries, so the cycles check validity,
   // and the long ones storage compaction, not ordering quality. The star and trees check ordering
-  // (zero fill) and reach aggressive absorption. The seven-vertex graph's fill depends on degree
-  // ties: its numbering was picked so that AMD needs aggressive absorption to reach the minimum
-  // fill of 2, so a tie-breaking change must re-check it.
+  // (zero fill) and reach aggressive absorption. The eight-vertex graph's fill depends on degree
+  // ties: its numbering was picked so that AMD needs aggressive absorption and mass elimination to
+  // reach the minimum fill of 3, so a tie-breaking change must re-check it.
   DynamicArray<Graph<int, int>> graphs;
   graphs.push_back(MakeGraph(4, {{0, 1}, {0, 2}, {0, 3}}));
   graphs.push_back(MakeGraph(
-      7, {{0, 1}, {0, 3}, {0, 4}, {0, 5}, {0, 6}, {1, 2}, {1, 6}, {2, 3}, {2, 4}, {3, 6}, {4, 6}}));
+      8,
+      {{0, 1},
+       {0, 2},
+       {0, 4},
+       {0, 5},
+       {0, 6},
+       {1, 6},
+       {1, 7},
+       {2, 3},
+       {2, 6},
+       {3, 4},
+       {3, 7},
+       {4, 6},
+       {6, 7}}));
   for (int const n : {4, 50, 500}) {
     graphs.push_back(MakeCycle(n));
     for (unsigned const seed : {1u, 2u, 3u}) {
@@ -194,14 +209,17 @@ TEST(Amd, ProducesValidPermutations) {
   EXPECT_TRUE(RenumberByAMD(Graph<int, int>{}).empty());
 
   // An isolated vertex, two pairs and a triangle. In K2,4 and the next graph, a pivot without and
-  // with elements, respectively, still lists a merged variable. The random graph compacts storage
-  // twice.
+  // with elements, respectively, still lists a merged variable. In the seven-vertex graph, a degree
+  // drops below the last pivot's. The random graph compacts storage twice, and its approximate
+  // degrees would reach n, past the degree lists, if not bounded by the number of remaining
+  // variables.
   DynamicArray<Graph<int, int>> graphs;
   graphs.push_back(MakeGraph(8, {{1, 2}, {3, 4}, {5, 6}, {5, 7}, {6, 7}}));
   graphs.push_back(MakeGraph(6, {{0, 1}, {0, 2}, {0, 3}, {0, 4}, {5, 1}, {5, 2}, {5, 3}, {5, 4}}));
   graphs.push_back(MakeGraph(
       8, {{0, 4}, {1, 5}, {1, 6}, {2, 5}, {2, 6}, {3, 7}, {4, 5}, {4, 6}, {5, 7}, {6, 7}}));
-  graphs.push_back(MakeRandomGraph(/*n=*/300, /*numEdges=*/1000, /*seed=*/1));
+  graphs.push_back(MakeGraph(7, {{0, 2}, {0, 5}, {0, 6}, {1, 2}, {1, 4}, {2, 3}, {2, 4}, {5, 6}}));
+  graphs.push_back(MakeRandomGraph(/*n=*/300, /*numEdges=*/2000, /*seed=*/1));
 
   for (auto const& graph : graphs) {
     EXPECT_TRUE(IsPermutation(RenumberByAMD(graph), graph.size()));
