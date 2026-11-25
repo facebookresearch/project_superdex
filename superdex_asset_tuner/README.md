@@ -4,12 +4,18 @@ SuperDex Asset Tuner is a physics workbench of sorts that is used primarily for 
 
 For a more illustrative example: if we have an ethernet port and jack pair, and we have measured that it requires 7 Newtons of force to plug in an ethernet jack, we can set up a prefab scene containing both assets and a 7 N ramp of force pressing in the jack. Then we dial in the contact parameters and latch’s spring stiffness by observing how far the jack enters the port. This can be done by hand in SuperDex Studio, or via an agent using the accompanying CLI. Asset Tuner also produces signal plots that can be used for further analysis and live plots in Studio.
 
+A tuner can also run a scene (`.superdex_scene`: a base physics scene with bots and their controllers) and script its robots through their controllers, optionally against a task's success and failure criteria; see [Scenes and tasks](#scenes-and-tasks).
+
+> [!WARNING]
+> Support for scenes are experimental, their fields and behavior may change between releases.
+
 The following is supported:
 
-- **Loads**: forces and torques on rigid bodies or articulated links, joint efforts and pose paths (implicit PD controller dragging body/link), each with a time profile
+- **Loads**: forces and torques on rigid bodies or articulated links, joint efforts and pose paths (implicit PD controller dragging body/link), each with a time profile, and controller inputs (a robot controller's tool or end-effector pose waypoints or joint-position keys)
 - **Probes**: body pose, velocity, contact force, joint state, solver stats and wall-clock solve time, sampled every step
 - **Prefab overrides**: temporary parameter changes applied to the prefab for each run
 - **Stop conditions**: end the run early when a body leaves or enters a bounding box, or a probe’s channel crosses a threshold
+- **Tasks**: a `.superdex_task` sets up a scene tuner's objects, and its success and failure criteria for the run
 
 This guide is primarily for the CLI which is more useful for agents or after scenes have been set up in Studio, please refer to the documentation under SuperDex Studio for using Asset Tuner in Studio.
 
@@ -22,7 +28,7 @@ superdex_asset_tuner describe <file.superdex_tuner | file.mochi_scene>
 
 ### describe
 
-Lists everything loads, probes and stop conditions can target, after prefab overrides: rigid actors (with mass and whether they are static), articulated actors with their links and joints (with DoF offsets and counts), and the ground height the run will use.
+Lists everything loads, probes and stop conditions can target, after prefab overrides: rigid actors (with mass and whether they are static), articulated actors with their links and joints (with DoF offsets and counts), and the ground height the run will use. For a scene tuner it also lists the built bots' controllers that take a float input; see [Scenes and tasks](#scenes-and-tasks).
 
 Run this first on any new prefab. **Names in nested prefabs are paths**: an actor `brick` inside a nested prefab named `mobile` is `mobile/brick`; a link `link2` of articulated actor `arm` is `arm/link2`.
 
@@ -57,6 +63,9 @@ Simulates for `run.duration` (or until a stop condition triggers), prints `summa
 | `ok` | ran the full duration | 0 |
 | `stopped` | a stop condition ended the run; `stopCondition` and `message` say which and why | 0 |
 | `diverged` | the state became non-finite | 2 |
+| `succeeded` | the task succeeded | 0 |
+| `failed` | the task failed, or had not succeeded when the run ended | 3 |
+| `error` | a robot controller failed to compute its efforts; `message` says which and why | 1 |
 
 Setup problems (missing file, bad JSON, unknown target, missing channel) will print a message to stderr and exit 1\. Messages about unknown names list the available ones.
 
@@ -87,7 +96,10 @@ All quantities are assumed SI: m, s, kg, N, N m, rad. Fields left out will use d
 
 | field | description |
 | :---- | :---- |
-| `prefab` | The prefab to simulate. `./`\-prefixed paths are relative to the tuner file, others to the assets root. |
+| `prefab` | The prefab to simulate. `./`\-prefixed paths are relative to the tuner file, others to the assets root. A tuner must have either a `prefab` or a `scene`, not both. |
+| `scene` | Instead of a `prefab`, a scene (`.superdex_scene`) to simulate: its base scene, bots and controllers. Same path rules. |
+| `bots` | The scene's bots to build. Empty: all of them. |
+| `task` | A task (`.superdex_task`) on the scene, for the tuner to solve. Same path rules. |
 | `assetsRoot` | Root for asset-relative paths. Empty: the nearest `.superdex_root` marker above the prefab (as in Studio), else `$SUPERDEX_ASSETS_PATH`, else the tuner file's folder. |
 | `prefabOverrides` | `[{ "path", "value" }]`: JSON paths into the prefab, applied in order. |
 | `solverOverrides` | `[{ "path", "value" }]`: JSON paths into the scene's SuperDex Physics `SolverParams` (e.g. `nonLinearSolver.lineSearchType`, `"ResidualNorm"`), applied in order after the prefab's own settings, which they override. An unknown field fails the run. |
@@ -106,15 +118,29 @@ Paths use the same syntax as `--set`, into the prefab's JSON. `prefabs[name=X].`
 
 The simulated prefab does change, so `describe` reflects the overrides.
 
+### Scenes and tasks
+
+With a `scene`, every controller of its bots that takes a float input is stepped every physics step, and its efforts are added to the bot's joints. Controllers without a [`ControllerInput`](#controller-inputs) load hold the input they start with, so a robot holds its initial pose. Set `run.groundPlane` false when the base scene has a floor or table. `solverOverrides` applies to the base scene.
+
+`describe` lists each controller's `bot/controller` name, type, `inputKind` (`JointPositions`, `Pose` or `Custom`), the input it starts with, the bot's root pose (`rootPosition`, `rootRotation`: the frame of a `Pose` input) and, for joint positions, each entry's joint with its type and limits (`inputJoints`; equal limits mean none).
+
+Bot actors are named after their bot file, not after the scene's bot entry (`describe` lists them): probes target their links as `<bot actor>/<link>`.
+
+A `task` is used to probe the response of the bot's actions:
+
+- Its `resetState` spawns the task's objects (spawnable prefabs its scene declares) as named instances. Probes target their actors as `<spawn>/<actor>`. `prefabOverrides` change each object's prefab: every one of them, so each path must fit every object.
+- Its `terminationCriteria` decide the run. The run ends at the first outcome: `summary.json`'s `status` is `succeeded`, or `failed` (exit code 3). A task with success criteria that has not succeeded when the run ends (at `run.duration`, or at the task's `timeLimitS` if sooner, or by a stop condition) fails too. Studio's Scene editor edits the criteria (Task Preview).
+- `run.dt` sets the step; the task's `physicsHz` is not used.
+
 ### Loads
 
 | Field | Description |
 | :---- | :---- |
 | `name` | Unique. Its magnitude is the channel `load.<name>.mag`. |
 | `enabled` | Disabled loads are skipped |
-| `type` | `Force`, `Torque`, `JointEffort` or `PosePath` (below). |
-| `target` | A dynamic rigid body or `actor/link` (`Force`, `Torque`, `PosePath`), or `actor/joint` (`JointEffort`). |
-| `frame` | `World`: the direction is fixed in the world and the point rides on the body (a string tied to the body, pulled in a fixed direction). `Local`: the direction turns with the body. `WorldPoint` (forces only): the direction and `pointWorld` are both fixed in the world, so the line of action stays put while the body moves under it, even once the body has left it. |
+| `type` | `Force`, `Torque`, `JointEffort`, `PosePath` or `ControllerInput` (below). |
+| `target` | A dynamic rigid body or `actor/link` (`Force`, `Torque`, `PosePath`), `actor/joint` (`JointEffort`), or `bot/controller` (`ControllerInput`). |
+| `frame` | `World`: the direction is fixed in the world and the point rides on the body (a string tied to the body, pulled in a fixed direction). `Local`: the direction turns with the body. `WorldPoint` (forces only): the direction and `pointWorld` are both fixed in the world, so the line of action stays put while the body moves under it, even once the body has left it. |
 | `direction` | Force or torque direction, normalized when applied. For `JointEffort`, per-DoF weights (not normalized). |
 | `pointLocal` | Application point in the body or link frame (forces in `World` and `Local`). Off-center-of-mass points also apply the resulting torque. |
 | `pointWorld` | Application point in world space (forces in `WorldPoint`). The torque is taken about the body's current center of mass. |
@@ -175,6 +201,24 @@ A `PosePath` load pulls `pointLocal` on its target (a dynamic rigid body or `act
 | `drive.rotResponseHz`, `drive.rotDampingRatio`, `drive.maxAngularAcceleration` | The same for orientation, scaled by the body's inertia. Defaults 4 Hz, 1, 30 rad/s². |
 
 Its channels are `load.<name>.mag` (the drive's force \[N\]), `load.<name>.error` (distance from the path \[m\]), `load.<name>.angleError` (angle from the path's orientation \[rad\]) and `load.<name>.drive` (0 released, 1 position driven, 2 position and orientation driven). The errors read 0 for what the drive leaves free.
+
+#### Controller inputs
+
+A `ControllerInput` load moves one controller's input over time in a scene tuner. Its `target` is `bot/controller`: the scene's bot and controller names, as `describe` lists them. One enabled load per controller.
+
+- A **pose** input (`inputKind` `Pose`, e.g. an operational-space controller) follows `waypoints`: the tool pose in the bot's root frame, `position` \[m\] and `rotation` (a rotation vector \[rad\]).
+- A **joint-position** input follows `inputKeys`: `{ "time", "values", "interpolation" }`, with one value per entry of `joints` (joint names of the bot, each one DoF the controller drives), or one per input value without `joints`. The other joints hold their start.
+
+Before the first waypoint or key, the input starts where the controller is: a first waypoint or key after time 0 is approached from it, as its `interpolation` says.
+
+```json
+{ "name": "reach", "type": "ControllerInput", "target": "arm/osc",
+  "waypoints": [ { "time": 1, "position": [0.5, 0.0, 0.3], "rotation": [3.1416, 0, 0] } ] },
+{ "name": "grip", "type": "ControllerInput", "target": "arm/hand",
+  "joints": ["finger_joint"], "inputKeys": [ { "time": 2, "values": [0.6] } ] }
+```
+
+Its channels are `load.<name>.mag` (the norm of the controller's efforts \[N or N m\]), `load.<name>.error` (distance from the tool to the input's pose \[m\], or the largest joint error \[m or rad\]) and `load.<name>.angleError` (angle from the input's orientation \[rad\]).
 
 ### Probes and channels
 
