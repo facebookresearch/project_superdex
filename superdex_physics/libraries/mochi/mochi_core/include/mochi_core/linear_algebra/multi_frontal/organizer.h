@@ -126,8 +126,8 @@ class FrontalOrganizer {
    * @param rootNode The root node for which to pick branches.
    * @param numThreads Number of threads to balance the branches across and to cap panel tasks.
    * @param minTaskTime Positive minimum estimated time of a panel task.
-   * @return std::pair<DynamicArray<int>, int> Picked supernode indices and the number of nodes in
-   * the truncated tree
+   * @return std::pair<DynamicArray<int>, int> Picked supernode indices in increasing order and the
+   * number of nodes in the truncated tree
    */
   [[nodiscard]] std::pair<DynamicArray<int>, int> PickBranches(
       SymbolicEliminationTree const& tree,

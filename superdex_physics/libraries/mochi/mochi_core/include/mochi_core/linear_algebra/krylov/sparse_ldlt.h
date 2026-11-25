@@ -16,8 +16,6 @@
 
 #pragma once
 
-#include <mochi_core/async/executor.h>
-#include <mochi_core/async/root_task.h>
 #include <mochi_core/linear_algebra/block_sparse_matrix.h>
 #include <mochi_core/linear_algebra/matrix.h>
 #include <mochi_core/linear_algebra/multi_frontal/assembly_helper.h>
@@ -38,18 +36,8 @@
 #include <memory>
 #include <numeric>
 #include <type_traits>
-#include <utility>
 
 namespace mochi::krylov {
-
-namespace details {
-
-template <typename Exec, int kDofsPerNode, typename Scalar, size_t kBlockSize>
-RootTask FactorTree(Exec& dispatch, FactorData<kDofsPerNode, Scalar, kBlockSize>& data, int root) {
-  co_await FactorBranch(dispatch, data, root);
-}
-
-} // namespace details
 
 /// @brief LDL^T factorization of sparse and block sparse symmetric matrices using multi-frontal
 /// algorithm.
@@ -61,10 +49,11 @@ RootTask FactorTree(Exec& dispatch, FactorData<kDofsPerNode, Scalar, kBlockSize>
 /// @note Only supported for sparse and block sparse matrices.
 /// @note The matrix must be symmetric, and so must its stored pattern, explicit zeros included.
 /// Entries at the same position are summed.
-/// @note If a @ref TaskScheduler with at least two workers is available and in multi-threaded mode
-/// (both global and thread-local), both at construction and at each factorization, each
-/// elimination-tree root with enough work is factorized in parallel, unless its tree is a single
-/// supernode or a chain in which no supernode above the leaf gets at least two panel tasks.
+/// @note If the calling thread's @ref TaskScheduler is in multi-threaded mode (both global and
+/// thread-local) and has a worker besides the calling thread, construction splits each
+/// elimination-tree root with enough work into tasks where its tree allows: branches and trunk
+/// supernodes' panels. Factorizations under the same conditions run these tasks on the calling
+/// thread, with help from any idle workers.
 /// @note Performance for kBlockSize_ == 1 (e.g. @ref SparseMatrix) has not been optimized.
 template <typename Scalar_, int kBlockSize_, typename Index = int>
 class SparseLDLt {
@@ -307,15 +296,14 @@ void SparseLDLt<Scalar_, kBlockSize_, Index>::Initialize(
   // Build frontal organizer.
   _organizer = std::make_unique<FrontalOrganizer>(*_elimData, kLDLtBlockSize, kBlockSize);
 
-  // Precompute root plans using the thread budget available during initialization. Only workers
-  // run the tasks of planned roots, so plans need at least two workers. A solver initialized
-  // without them remains sequential if workers are enabled later. Plans computed with workers
-  // remain valid if single-threaded mode is enabled later.
-  auto* scheduler = TaskScheduler::TryGet();
-  if (scheduler && scheduler->GetNumThreads() > 1) {
+  // Precompute root plans for the threads available during initialization: the calling thread and
+  // those it can hand tasks to. A solver initialized without other threads remains sequential if
+  // they become available later. Plans remain valid if single-threaded mode is enabled later.
+  int const numOtherThreads = TaskScheduler::StaticGetNumOtherThreads();
+  if (numOtherThreads > 0) {
     auto const& eTree = *_elimData;
     auto const& organizer = *_organizer;
-    int const numWorkers = Max(1, scheduler->GetNumThreads());
+    int const maxThreads = numOtherThreads + 1;
     double constexpr kMinRootTime = FrontalOrganizer::kBranchesPerThread * kMinTaskTime;
     auto const roots = eTree.Roots();
     _rootFactorizationPlans.reserve(roots.size());
@@ -328,7 +316,7 @@ void SparseLDLt<Scalar_, kBlockSize_, Index>::Initialize(
       }
 
       auto const numThreads = static_cast<int>(
-          Clamp(Floor(rootTime / kMinRootTime), 1.0, static_cast<double>(numWorkers)));
+          Clamp(Floor(rootTime / kMinRootTime), 1.0, static_cast<double>(maxThreads)));
       _rootFactorizationPlans.push_back(
           {.root = root,
            .numThreads = numThreads,
@@ -360,8 +348,7 @@ int SparseLDLt<Scalar_, kBlockSize_, Index>::Factorize(
   // Zero out L and perform factorization.
   _lMatrix->SetZero();
 
-  auto* scheduler = TaskScheduler::TryGet();
-  if (_rootFactorizationPlans.empty() || !scheduler || scheduler->GetNumOtherThreads() == 0) {
+  if (_rootFactorizationPlans.empty() || TaskScheduler::StaticGetNumOtherThreads() == 0) {
     // Factor all roots. Handles disconnected sparsity graphs.
     for (int root : _elimData->Roots()) {
       FactorSubtree<kBlockSize, Scalar, kLDLtBlockSize>(
@@ -371,9 +358,6 @@ int SparseLDLt<Scalar_, kBlockSize_, Index>::Factorize(
     MOCHI_ASSERT_VERBOSE(
         _rootFactorizationPlans.size() == _elimData->Roots().size(),
         "Factorization plans must match elimination-tree roots.");
-
-    Executor executor(*scheduler);
-    auto dispatch = [executor]<typename F>(F&& f) { executor.schedule(std::forward<F>(f)); };
 
     // Concurrent roots may improve utilization, but increase peak frontal-buffer memory and cache
     // contention. Process roots sequentially for now. TODO: benchmark this trade-off.
@@ -386,15 +370,8 @@ int SparseLDLt<Scalar_, kBlockSize_, Index>::Factorize(
       }
 
       FactorData<kBlockSize, Scalar, kLDLtBlockSize> data(
-          *_elimData,
-          *_organizer,
-          *_assemblyHelper,
-          A,
-          *_lMatrix,
-          plan.pickedBranches,
-          plan.numThreads,
-          kMinTaskTime);
-      details::FactorTree(dispatch, data, plan.root).RunAndWait(*scheduler, "Factor tree");
+          *_elimData, *_organizer, *_assemblyHelper, A, *_lMatrix, plan.numThreads, kMinTaskTime);
+      FactorTree(data, plan.root, plan.pickedBranches);
     }
   }
 

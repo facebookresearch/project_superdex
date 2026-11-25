@@ -18,6 +18,8 @@
 #include <mochi_core/linear_algebra/multi_frontal/organizer.h>
 #include <mochi_core/utils/graph_utils.h>
 
+#include <algorithm>
+
 namespace mochi {
 
 namespace {
@@ -198,6 +200,9 @@ std::pair<DynamicArray<int>, int> FrontalOrganizer::PickBranches(
     }
   }
 
+  // The stack emits each subtree's picks together, in decreasing order. Increasing order has tasks
+  // claim sibling subtrees as the elimination tree orders them, largest column first.
+  std::ranges::sort(pickedBranches);
   return {pickedBranches, trunkCount};
 }
 

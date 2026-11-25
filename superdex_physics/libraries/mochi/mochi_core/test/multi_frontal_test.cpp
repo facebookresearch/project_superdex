@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-#include <mochi_core/async/root_task.h>
 #include <mochi_core/linear_algebra/block_sparse_matrix.h>
 #include <mochi_core/linear_algebra/matrix.h>
 #include <mochi_core/linear_algebra/multi_frontal/assembly_helper.h>
@@ -33,6 +32,7 @@
 #include <mochi_core/test/mochi_test_helpers.h>
 #include <mochi_core/utils/array_utils.h>
 #include <mochi_core/utils/graph_utils.h>
+#include <mochi_core/utils/task_scheduler.h>
 
 #include <gtest/gtest.h>
 
@@ -123,17 +123,22 @@ auto MakeMFStructure(int elemsPerSide) {
 
 } // namespace
 
-/// @brief Make the elimination tree of a star whose numArms arms are chains of armLength nodes,
-/// joined under a chain of stemLength nodes.
-static auto MakeStemmedStar(int numArms, int armLength, int stemLength) {
-  // Number nodes in elimination order: each arm from its free end, then the joint and the stem.
-  // Each node's parent is the next node, except that the arms' last nodes join the joint.
+/// @brief Make the elimination forest of numTrees stars whose numArms arms are chains of armLength
+/// nodes, joined under a chain of stemLength nodes.
+static auto MakeStemmedStar(int numArms, int armLength, int stemLength, int numTrees = 1) {
+  // Number nodes in elimination order, one tree after another: each arm from its free end, then the
+  // joint and the stem. Each node's parent is the next node of its tree, except that the arms' last
+  // nodes join the joint.
   int const joint = numArms * armLength;
-  int const numNodes = joint + 1 + stemLength;
-  GraphBuilder<int, int> gb(numNodes - 1, 2 * (numNodes - 1));
-  for (int node = 0; node + 1 < numNodes; ++node) {
-    std::array const edge{node, node < joint && (node + 1) % armLength == 0 ? joint : node + 1};
-    gb.append(edge);
+  int const treeSize = joint + 1 + stemLength;
+  int const numNodes = numTrees * treeSize;
+  GraphBuilder<int, int> gb(numNodes - numTrees, 2 * (numNodes - numTrees));
+  for (int treeStart = 0; treeStart < numNodes; treeStart += treeSize) {
+    for (int node = 0; node + 1 < treeSize; ++node) {
+      int const parent = node < joint && (node + 1) % armLength == 0 ? joint : node + 1;
+      std::array const edge{treeStart + node, treeStart + parent};
+      gb.append(edge);
+    }
   }
   auto const eToN = gb.Build();
   auto graph = Traverse(Reverse(eToN), eToN);
@@ -720,25 +725,10 @@ void TestPanelBasedWork(
   }
 }
 
-template <typename Exec, int kDofsPerNode, typename Scalar, size_t kBlockSize>
-RootTask Factor(Exec executor, FactorData<kDofsPerNode, Scalar, kBlockSize>& data, int treeRoot) {
-  auto fData = co_await FactorBranch(executor, data, treeRoot);
-  EXPECT_EQ(fData.size(), 0);
-  co_return;
-}
-
-/// @brief Task submissions of a factorization with tasks.
-struct Dispatch {
-  int numThreads; ///< The scheduler's number of threads, the factorization's thread budget.
-  int numSubmissions; ///< Branch and panel helper tasks dispatched, excluding each root's task.
-};
-
-/// @brief Factor with tasks planned and run with the scheduler's threads and minTaskTime, and
-/// compare with Lref.
-///
-/// @return The threads and the tasks submitted, counted once the scheduler has run them all.
+/// @brief Factor with tasks planned with minTaskTime for the calling thread and the ones it can
+/// hand tasks to, and compare with Lref.
 template <int kDofsPerNode, typename Scalar, size_t kBlockSize>
-Dispatch TestFullCoroutineSystem(
+void TestFactorTree(
     SymbolicEliminationTree const& eTree,
     FrontalOrganizer const& organizer,
     AssemblyHelper& helper,
@@ -748,24 +738,13 @@ Dispatch TestFullCoroutineSystem(
   Scalar epsilon = Sqrt(std::numeric_limits<Scalar>::epsilon());
   LMatrix<Scalar, kBlockSize> L(eTree, kDofsPerNode);
   L.SetZero();
-  int numThreads = 0;
-  std::atomic<int> numSubmissions = 0;
-  {
-    // Helper tasks may still be submitting when the factorization ends. The scheduler's destructor
-    // waits for them, so the count is read after this scope.
-    TaskScheduler scheduler(Min<int>(std::thread::hardware_concurrency(), 8));
-    numThreads = scheduler.GetNumThreads();
-    for (auto root : eTree.Roots()) {
-      auto [picked, trunkCount] = organizer.PickBranches(eTree, root, numThreads, minTaskTime);
-      FactorData<kDofsPerNode, Scalar, kBlockSize> data(
-          eTree, organizer, helper, A, L, picked, numThreads, minTaskTime);
-      Executor executor(scheduler);
-      auto dispatch = [executor, &numSubmissions]<typename F>(F&& f) {
-        ++numSubmissions;
-        executor.schedule(std::forward<F>(f));
-      };
-      Factor(dispatch, data, root).RunAndWait(scheduler, "Factor tree");
-    }
+  TaskScheduler scheduler(Min(TaskScheduler::GetNumSupportedLogicalProcessors(), 8));
+  int const numThreads = scheduler.GetNumOtherThreads() + 1;
+
+  FactorData<kDofsPerNode, Scalar, kBlockSize> data(
+      eTree, organizer, helper, A, L, numThreads, minTaskTime);
+  for (auto root : eTree.Roots()) {
+    FactorTree(data, root, organizer.PickBranches(eTree, root, numThreads, minTaskTime).first);
   }
 
   // Compare L data with reference
@@ -778,7 +757,6 @@ Dispatch TestFullCoroutineSystem(
     nrmSqLref += lRefData[i] * lRefData[i];
   }
   EXPECT_LE(diffSqNrm, epsilon * nrmSqLref);
-  return {.numThreads = numThreads, .numSubmissions = numSubmissions.load()};
 }
 
 /// @brief Test all factorizations of a matrix with the structure's graph and elimination tree.
@@ -786,10 +764,8 @@ Dispatch TestFullCoroutineSystem(
 /// @param structure The graph, order, position and elimination tree.
 /// @param size Problem size that scales the tolerance.
 /// @param minTaskTimes Minimum estimated times of a panel task, one factorization with tasks each.
-/// @return The dispatch of each factorization with tasks.
 template <typename Scalar, size_t kColumnBlock, size_t kNodeSize>
-DynamicArray<Dispatch>
-TestFullSystem(auto const& structure, int size, std::initializer_list<double> minTaskTimes) {
+void TestFullSystem(auto const& structure, int size, std::initializer_list<double> minTaskTimes) {
   auto kEps = Sqrt(size * std::numeric_limits<Scalar>::epsilon());
   auto& [graph, order, position, eTree] = structure;
   FrontalOrganizer organizer(eTree, kColumnBlock, kNodeSize);
@@ -820,7 +796,9 @@ TestFullSystem(auto const& structure, int size, std::initializer_list<double> mi
   auto cIndices =
       Graph<int const, size_t const, Span>(superIndices.GetPointers(), superIndices.GetTargets());
   AssemblyHelper helper(cGraph, cIndices, eTree.SuperBounds(), order, position);
-  FactorSubtree<kNodeSize>(eTree, organizer, L, A, helper, numSuperNodes - 1);
+  for (int root : eTree.Roots()) {
+    FactorSubtree<kNodeSize>(eTree, organizer, L, A, helper, root);
+  }
 
   auto AFull = Matrix<Scalar>::Zero(kNodeSize * numNodes, kNodeSize * numNodes);
   for (int ir = 0; ir < numNodes; ++ir) {
@@ -887,15 +865,14 @@ TestFullSystem(auto const& structure, int size, std::initializer_list<double> mi
   b -= sol;
   EXPECT_LE(b.Norm(), kEps * sol.Norm());
 
-  TestRootedFactor<kNodeSize, Scalar, kColumnBlock>(eTree, organizer, helper, A, L);
-  TestPanelBasedWork<kNodeSize, Scalar, kColumnBlock>(eTree, organizer, helper, A, L);
-  DynamicArray<Dispatch> dispatches;
-  for (double minTaskTime : minTaskTimes) {
-    dispatches.push_back(
-        TestFullCoroutineSystem<kNodeSize, Scalar, kColumnBlock>(
-            eTree, organizer, helper, A, L, minTaskTime));
+  // These factor the first tree and compare the whole factor, so they need a single tree.
+  if (eTree.Roots().size() == 1) {
+    TestRootedFactor<kNodeSize, Scalar, kColumnBlock>(eTree, organizer, helper, A, L);
+    TestPanelBasedWork<kNodeSize, Scalar, kColumnBlock>(eTree, organizer, helper, A, L);
   }
-  return dispatches;
+  for (double minTaskTime : minTaskTimes) {
+    TestFactorTree<kNodeSize, Scalar, kColumnBlock>(eTree, organizer, helper, A, L, minTaskTime);
+  }
 }
 
 template <typename Scalar, size_t kColumnBlock, size_t kNodeSize>
@@ -914,17 +891,21 @@ TEST(MultifrontalNumerical, FullFactor) {
   TestFullSystem<double, 96, 3>(14);
   TestFullSystem<float, 96, 3>(14);
 
-  // A stemmed Y's trunk is its joint and stem, walked by one coroutine. At the joint's own time,
-  // each trunk supernode runs as one task, the top one for lack of panels, so the arms are the only
-  // submissions. At half of it, the joint, which assembles two fronts, also submits a helper if
-  // there are threads for it.
+  // A stemmed Y's trunk is its joint and stem, walked by the task that factors the last arm. At
+  // the joint's own time, each trunk supernode runs its panels in one task. At half of it, the
+  // organizer allows the joint, which assembles two fronts, a second panel task.
   auto const stemmedY = MakeStemmedStar(2, 20, 5);
   auto const& yTree = std::get<3>(stemmedY);
-  double const jointTime = FrontalOrganizer(yTree, 6, 3).GetCosts(StemmedStarJoint(yTree)).ownTime;
-  auto const dispatches =
-      TestFullSystem<double, 6, 3>(stemmedY, yTree.NumNodes(), {jointTime, jointTime / 2});
-  EXPECT_EQ(dispatches[0].numSubmissions, 2);
-  EXPECT_EQ(dispatches[1].numSubmissions, 1 + Min(dispatches[1].numThreads, 2));
+  FrontalOrganizer const yOrganizer(yTree, 6, 3);
+  int const joint = StemmedStarJoint(yTree);
+  double const jointTime = yOrganizer.GetCosts(joint).ownTime;
+  EXPECT_EQ(yOrganizer.NumPanelTasks(joint, jointTime, /*maxTasks=*/2), 1);
+  EXPECT_EQ(yOrganizer.NumPanelTasks(joint, jointTime / 2, /*maxTasks=*/2), 2);
+  TestFullSystem<double, 6, 3>(stemmedY, yTree.NumNodes(), {jointTime, jointTime / 2});
+
+  // In a forest of two stemmed Ys, the second Y's tree and trunk don't start at supernode 0.
+  auto const stemmedYs = MakeStemmedStar(2, 20, 5, /*numTrees=*/2);
+  TestFullSystem<double, 6, 3>(stemmedYs, 2 * yTree.NumNodes(), {jointTime});
 }
 
 TEST(MultifrontalNumerical, LFactor) {
@@ -960,6 +941,7 @@ static void TestPickBranches(
   auto [picked, trunkCount] = organizer.PickBranches(eTree, root, numThreads, minTaskTime);
 
   EXPECT_FALSE(picked.empty());
+  EXPECT_TRUE(std::ranges::is_sorted(picked));
 
   // The branches and the trunk tile the root's tree.
   auto const rootTree = eTree.SubtreeRange(root);

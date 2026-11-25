@@ -212,14 +212,8 @@
 #endif
 #if defined(__clang__)
 #define MOCHI_COMPILER_CLANG 1
-#if (__clang_major__ < 19)
-#define MOCHI_CLANG_AWAIT_SUSPEND_BUG 1
-#else
-#define MOCHI_CLANG_AWAIT_SUSPEND_BUG 0
-#endif
 #else
 #define MOCHI_COMPILER_CLANG 0
-#define MOCHI_CLANG_AWAIT_SUSPEND_BUG 0
 #endif
 
 #if defined(__CUDA_ARCH__) // CUDA GPU

@@ -205,7 +205,8 @@ TEST(SparseLDLt, ParameterizedConfigs) {
  * sequential fallbacks and multiple roots.
  */
 
-// With at least two workers, the block Laplacian's root is factorized in parallel.
+// For block sizes 3 and 4, the block Laplacian's root gets a split plan when built with a worker
+// besides the calling thread.
 template <int kBlockSize>
 static auto ParallelLaplacian() {
   return test::Create2dLaplacianMatrix<real, kBlockSize>(24, 24);
@@ -221,14 +222,17 @@ static Matrix<real> CreateBlockDiagonal(Matrix<real> const& A, Matrix<real> cons
   return C;
 }
 
-/// @brief Test factorization, solves and refactorization without a scheduler, then with one.
+/// @brief Test factorization, solves and refactorization without a scheduler, then with worker
+/// requests of one and four, each capped at the supported logical processor count.
 template <int kBlockSize>
 static void TestSparseLDLtWithAndWithoutScheduler(Matrix<real> const& A, unsigned int seed) {
   ASSERT_EQ(nullptr, TaskScheduler::TryGet());
   TestSparseLDLtSolve<kBlockSize, true>(A, seed);
 
-  TaskScheduler scheduler(Min(TaskScheduler::GetNumSupportedLogicalProcessors(), 4));
-  TestSparseLDLtSolve<kBlockSize, true>(A, seed);
+  for (int numWorkers : {1, 4}) {
+    TaskScheduler scheduler(Min(TaskScheduler::GetNumSupportedLogicalProcessors(), numWorkers));
+    TestSparseLDLtSolve<kBlockSize, true>(A, seed);
+  }
 }
 
 TEST(SparseLDLt, WithAndWithoutScheduler) {

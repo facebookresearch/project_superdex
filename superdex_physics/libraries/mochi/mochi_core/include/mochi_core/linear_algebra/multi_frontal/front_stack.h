@@ -15,7 +15,6 @@
  */
 
 #pragma once
-#include <mochi_core/async/generator.h>
 #include <mochi_core/linear_algebra/matrix.h>
 #include <mochi_core/linear_algebra/multi_frontal/elim_tree.h>
 #include <mochi_core/linear_algebra/multi_frontal/front_matrix.h>

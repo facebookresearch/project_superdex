@@ -146,9 +146,8 @@ class TrunkWork {
   /// @param panelIndex Index of the panel to work on.
   /// @param A The block-sparse input matrix.
   /// @param uBuffer Scratch buffer of size >= source.Cols() * target.Cols().
-  /// @return True if the last panel was completed.
   template <int kDofsPerNode>
-  bool WorkOnPanel(
+  void WorkOnPanel(
       int panelIndex,
       BlockSparseMatrixView<Scalar const, kDofsPerNode> const& A,
       Span<Scalar> uBuffer);
@@ -390,7 +389,7 @@ void TrunkWork<Scalar, kColumnBlock>::EliminatePanel(
 
 template <typename Scalar, size_t kColumnBlock>
 template <int kDofsPerNode>
-bool TrunkWork<Scalar, kColumnBlock>::WorkOnPanel(
+void TrunkWork<Scalar, kColumnBlock>::WorkOnPanel(
     int panelIndex,
     BlockSparseMatrixView<Scalar const, kDofsPerNode> const& A,
     Span<Scalar> uBuffer) {
@@ -399,7 +398,7 @@ bool TrunkWork<Scalar, kColumnBlock>::WorkOnPanel(
   auto state = panel.updateState.fetch_or(Panel<Scalar>::kAcquired);
   auto level = state & Panel<Scalar>::kMaskLevel;
   if ((state & Panel<Scalar>::kAcquired) || (level > panelIndex)) {
-    return false; // This panel is already being worked on or is done
+    return; // This panel is already being worked on or is done
   }
   if ((state & Panel<Scalar>::kAssembled) == 0) {
     if (panelIndex < numPanelsInL) {
@@ -419,19 +418,16 @@ bool TrunkWork<Scalar, kColumnBlock>::WorkOnPanel(
     ++level;
   }
 
-  bool completesWork = false;
   if (level == panelIndex || level == numPanelsInL) {
     if (panelIndex < numPanelsInL) {
       FactorPanel(panelIndex);
     }
-    auto completed = this->completedPanelCount.fetch_add(1) + 1;
-    completesWork = completed == isize(panels);
+    this->completedPanelCount.fetch_add(1);
     // Update the level if this panel is complete.
     level = panelIndex + 1;
   }
   // Record the new panel level and clear the acquired flag.
   panel.updateState.store(level | Panel<Scalar>::kAssembled, std::memory_order_release);
-  return completesWork; // True if the last panel was completed
 }
 
 } // namespace mochi

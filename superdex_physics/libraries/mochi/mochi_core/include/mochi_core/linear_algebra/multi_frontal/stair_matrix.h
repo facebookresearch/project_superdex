@@ -15,10 +15,10 @@
  */
 
 #pragma once
-#include <mochi_core/async/generator.h>
 #include <mochi_core/linear_algebra/base_tools.h>
 #include <mochi_core/linear_algebra/matrix_fwd.h>
 #include <mochi_core/linear_algebra/multi_frontal/stair_iterator.h>
+#include <mochi_core/utils/generator.h>
 #include <mochi_core/utils/range_by_iterators.h>
 
 namespace mochi {
