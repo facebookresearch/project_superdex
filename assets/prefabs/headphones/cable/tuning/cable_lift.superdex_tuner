@@ -1,0 +1,112 @@
+{
+  "comment": "Lift plug A by its barrel to 1.2 m over 2 s and hold it there for 2 s: the cable hangs straight down from it, the other plug swinging clear of the ground and settling about 1 m below.",
+  "prefab": "./../cable.superdex_prefab",
+  "loads": [
+    {
+      "name": "hand",
+      "enabled": true,
+      "type": "PosePath",
+      "target": "plug_a/plug",
+      "frame": "World",
+      "pointLocal": [
+        0,
+        0,
+        -0.02
+      ],
+      "waypoints": [
+        {
+          "time": 0.0,
+          "position": [
+            -0.042,
+            0,
+            0.00635
+          ],
+          "rotation": [
+            0,
+            -1.5707963267948966,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 2.0,
+          "position": [
+            -0.042,
+            0,
+            1.2
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 5.0,
+          "position": [
+            -0.042,
+            0,
+            1.2
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        }
+      ],
+      "drive": {
+        "responseHz": 20,
+        "dampingRatio": 1,
+        "maxAcceleration": 0,
+        "rotation": true,
+        "rotResponseHz": 20,
+        "rotDampingRatio": 1,
+        "maxAngularAcceleration": 0
+      }
+    }
+  ],
+  "probes": [
+    {
+      "kind": "SolverStats",
+      "target": ""
+    },
+    {
+      "kind": "Performance",
+      "target": ""
+    },
+    {
+      "kind": "BodyPose",
+      "target": "plug_a/plug"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "plug_b/plug"
+    }
+  ],
+  "stopConditions": [],
+  "run": {
+    "singleThreaded": true,
+    "dt": 0.005,
+    "duration": 5.0,
+    "groundPlane": true,
+    "record": {
+      "enabled": false,
+      "contactPoints": false,
+      "staticActors": false
+    }
+  },
+  "plots": [
+    {
+      "channels": [
+        "plug_b/plug.pos.z"
+      ],
+      "height": 160
+    }
+  ]
+}

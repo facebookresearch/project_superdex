@@ -1,0 +1,74 @@
+{
+  "editorState": {
+    "cadRotation": [
+      0,
+      0,
+      0,
+      1
+    ],
+    "cadScale": [
+      1,
+      1,
+      1
+    ],
+    "cadTranslation": [
+      0,
+      0,
+      0
+    ]
+  },
+  "modifiers": [
+    {
+      "collapsed": false,
+      "enabled": true,
+      "method": "From Model Viewer",
+      "modifier": "Source from CAD Model",
+      "properties": {
+        "allowPartialFailure": false,
+        "angularDeflection": 0.25,
+        "backend": "Isotropic",
+        "combineTouchingSolids": true,
+        "edgeSampling": "Uniform",
+        "linearDeflection": 0.05,
+        "targetEdgeLength": 4.0,
+        "targetEdgeLengthFraction": 0,
+        "faceColorSizing": []
+      }
+    },
+    {
+      "collapsed": true,
+      "enabled": true,
+      "method": "Make Manifold",
+      "modifier": "Refine Mesh",
+      "properties": {
+        "thenMakeWatertight": true
+      }
+    },
+    {
+      "collapsed": false,
+      "enabled": true,
+      "method": "Incremental Isotropic Remesh",
+      "modifier": "Remesh",
+      "properties": {
+        "edgeSize": 0.004,
+        "relativeToMeshSize": false,
+        "detectFeatures": true,
+        "sharpFeatureAngle": 60.0,
+        "smoothingIterations": 3,
+        "relaxationStepsPerIteration": 3
+      }
+    },
+    {
+      "collapsed": false,
+      "enabled": true,
+      "method": "SDF",
+      "modifier": "Export Mochi Model",
+      "properties": {
+        "bakeSdf": false,
+        "exportPath": "hp_band_pad.mochi.h5"
+      }
+    }
+  ],
+  "referenceModels": [],
+  "version": 1
+}

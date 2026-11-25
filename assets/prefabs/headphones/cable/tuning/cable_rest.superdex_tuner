@@ -1,0 +1,44 @@
+{
+  "comment": "The cable lying straight on the ground for 2 s: it should settle without moving.",
+  "prefab": "./../cable.superdex_prefab",
+  "loads": [],
+  "probes": [
+    {
+      "kind": "SolverStats",
+      "target": ""
+    },
+    {
+      "kind": "Performance",
+      "target": ""
+    },
+    {
+      "kind": "BodyPose",
+      "target": "plug_a/plug"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "plug_b/plug"
+    }
+  ],
+  "stopConditions": [],
+  "run": {
+    "singleThreaded": true,
+    "dt": 0.005,
+    "duration": 2.0,
+    "groundPlane": true,
+    "record": {
+      "enabled": false,
+      "contactPoints": false,
+      "staticActors": false
+    }
+  },
+  "plots": [
+    {
+      "channels": [
+        "plug_a/plug.pos.x",
+        "plug_b/plug.pos.x"
+      ],
+      "height": 160
+    }
+  ]
+}

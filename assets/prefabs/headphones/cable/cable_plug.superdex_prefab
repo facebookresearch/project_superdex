@@ -1,0 +1,32 @@
+{
+  "actors": {
+    "rigid": [
+      {
+        "name": "plug",
+        "shape": "./collision/cable_plug.mochi.h5",
+        "colliderType": "Sdf",
+        "renderModel": "./render/cable_plug.glb",
+        "boundaryElementType": "P1Q1",
+        "mass": 0.03,
+        "layer": "audio_plug",
+        "contact": {
+          "penaltyCoefficient": 5500000000.0,
+          "coulombFrictionCoefficient": 0.3,
+          "penaltyThresholdDefault": 5e-05,
+          "penaltySmoothingHalfDistance": 5e-05
+        }
+      }
+    ]
+  },
+  "contactFilter": {
+    "layerContactAsymmetric": [
+      {
+        "layers": [
+          "jack_socket",
+          "audio_plug"
+        ],
+        "enable": false
+      }
+    ]
+  }
+}

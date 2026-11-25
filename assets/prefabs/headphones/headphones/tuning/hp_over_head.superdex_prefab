@@ -1,0 +1,34 @@
+{
+  "prefabs": [
+    {
+      "name": "",
+      "path": "./../headphones.superdex_prefab",
+      "translation": [
+        -0.0003,
+        -0.043905003648095645,
+        0.28224414551703864
+      ],
+      "rotation": [
+        -0.7880367608841435,
+        0.0,
+        0.0,
+        0.6156281860792496
+      ]
+    }
+  ],
+  "actors": {
+    "rigid": [
+      {
+        "name": "head",
+        "shape": "./../collision/head_proxy.mochi.h5",
+        "renderModel": "./../render/head_proxy.glb",
+        "colliderType": "Sdf",
+        "isStatic": true,
+        "contact": {
+          "coulombFrictionCoefficient": 0.5,
+          "penaltyCoefficient": 10000000000.0
+        }
+      }
+    ]
+  }
+}

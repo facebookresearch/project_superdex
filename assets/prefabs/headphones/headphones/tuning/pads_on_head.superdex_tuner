@@ -1,0 +1,126 @@
+{
+  "comment": "Lower the headphones by their apex from just above a 150 mm wide head (its crown 190 mm up) until the band rests on the crown (2.5 s), then let go of them at 3.5 s. The pads meet the sides of the head and push the band open (band_joint.q0 about -0.15, the cups about 25 mm further apart) as they slide down, and squash where they press; let go, the headphones stay on, held by the clamp of the band and the pads (band_l.pos.z stays near 0.2). There is no ground: worn on this head, the cups reach below its base.",
+  "prefab": "./hp_over_head.superdex_prefab",
+  "loads": [
+    {
+      "name": "hold",
+      "enabled": true,
+      "type": "PosePath",
+      "target": "headphones/band_l",
+      "frame": "World",
+      "pointLocal": [
+        0,
+        0,
+        0
+      ],
+      "waypoints": [
+        {
+          "time": 0.0,
+          "position": [
+            0,
+            0,
+            0.4
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 2.5,
+          "position": [
+            0,
+            0,
+            0.198
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 3.5,
+          "position": [
+            0,
+            0,
+            0.198
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        }
+      ],
+      "drive": {
+        "responseHz": 10,
+        "dampingRatio": 1,
+        "maxAcceleration": 0,
+        "rotation": true,
+        "rotResponseHz": 10,
+        "rotDampingRatio": 1,
+        "maxAngularAcceleration": 0
+      }
+    }
+  ],
+  "probes": [
+    {
+      "kind": "SolverStats",
+      "target": ""
+    },
+    {
+      "kind": "Performance",
+      "target": ""
+    },
+    {
+      "kind": "JointState",
+      "target": "headphones/band_joint"
+    },
+    {
+      "kind": "JointState",
+      "target": "headphones/swivel_l"
+    },
+    {
+      "kind": "JointState",
+      "target": "headphones/swivel_r"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "headphones/band_l"
+    }
+  ],
+  "stopConditions": [],
+  "run": {
+    "singleThreaded": true,
+    "dt": 0.005,
+    "duration": 5.5,
+    "groundPlane": false,
+    "record": {
+      "enabled": false,
+      "contactPoints": false,
+      "staticActors": false
+    }
+  },
+  "plots": [
+    {
+      "channels": [
+        "headphones/band_l.pos.z"
+      ],
+      "height": 160
+    },
+    {
+      "channels": [
+        "headphones/band_joint.q0"
+      ],
+      "height": 160
+    }
+  ]
+}

@@ -1,0 +1,154 @@
+{
+  "comment": "Hold the headphones up by the left cup and pull the seated plug A straight down with a force rising from 0 to 30 N over 5 s (on top of the hanging cable). It holds until about 21 N (load.pull.mag), then comes out; the run stops once it is 10 mm out.",
+  "prefab": "./hp_cable_seated.superdex_prefab",
+  "loads": [
+    {
+      "name": "hold",
+      "enabled": true,
+      "type": "PosePath",
+      "target": "headphones/cup_l",
+      "frame": "World",
+      "pointLocal": [
+        0,
+        0,
+        0
+      ],
+      "waypoints": [
+        {
+          "time": 0.0,
+          "position": [
+            -0.098,
+            0.0,
+            1.131
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 8.0,
+          "position": [
+            -0.098,
+            0.0,
+            1.131
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        }
+      ],
+      "drive": {
+        "responseHz": 200,
+        "dampingRatio": 1,
+        "maxAcceleration": 0,
+        "rotation": true,
+        "rotResponseHz": 200,
+        "rotDampingRatio": 1,
+        "maxAngularAcceleration": 0
+      }
+    },
+    {
+      "name": "pull",
+      "enabled": true,
+      "type": "Force",
+      "target": "cable/plug_a/plug",
+      "frame": "World",
+      "direction": [
+        0,
+        0,
+        -1
+      ],
+      "pointLocal": [
+        0,
+        0,
+        -0.02
+      ],
+      "profile": {
+        "kind": "Envelope",
+        "magnitude": 30.0,
+        "start": 0.5,
+        "end": 6.0,
+        "riseTime": 5.0,
+        "fallTime": 0.0
+      }
+    }
+  ],
+  "probes": [
+    {
+      "kind": "SolverStats",
+      "target": ""
+    },
+    {
+      "kind": "Performance",
+      "target": ""
+    },
+    {
+      "kind": "BodyPose",
+      "target": "cable/plug_a/plug"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "headphones/cup_l"
+    },
+    {
+      "kind": "ContactForce",
+      "target": "cable/plug_a/plug"
+    }
+  ],
+  "stopConditions": [
+    {
+      "name": "out",
+      "enabled": true,
+      "kind": "ChannelThreshold",
+      "start": 0.0,
+      "holdTime": 0.0,
+      "target": "",
+      "boxMin": [
+        -1,
+        -1,
+        -1
+      ],
+      "boxMax": [
+        1,
+        1,
+        1
+      ],
+      "channel": "cable/plug_a/plug.pos.z",
+      "comparison": "Below",
+      "threshold": 1.0130000000000001
+    }
+  ],
+  "run": {
+    "singleThreaded": true,
+    "dt": 0.002,
+    "duration": 6.0,
+    "groundPlane": true,
+    "record": {
+      "enabled": false,
+      "contactPoints": false,
+      "staticActors": false
+    }
+  },
+  "plots": [
+    {
+      "channels": [
+        "cable/plug_a/plug.pos.z"
+      ],
+      "height": 160
+    },
+    {
+      "channels": [
+        "load.pull.mag"
+      ],
+      "height": 160
+    }
+  ]
+}

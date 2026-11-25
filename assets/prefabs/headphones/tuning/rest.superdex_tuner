@@ -1,0 +1,60 @@
+{
+  "comment": "The headphones set left alone on the table for 2 s: the headphones stay on their back beside the head, the cable lies still in front of it, and nothing moves.",
+  "prefab": "./../headphones_set.superdex_prefab",
+  "loads": [],
+  "probes": [
+    {
+      "kind": "SolverStats",
+      "target": ""
+    },
+    {
+      "kind": "Performance",
+      "target": ""
+    },
+    {
+      "kind": "BodyPose",
+      "target": "headphones/headphones/band_l"
+    },
+    {
+      "kind": "JointState",
+      "target": "headphones/headphones/band_joint"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "cable/plug_a/plug"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "cable/plug_b/plug"
+    }
+  ],
+  "stopConditions": [],
+  "run": {
+    "singleThreaded": true,
+    "dt": 0.005,
+    "duration": 2.0,
+    "groundPlane": true,
+    "groundHeight": 0.0,
+    "record": {
+      "enabled": false,
+      "contactPoints": false,
+      "staticActors": false
+    }
+  },
+  "plots": [
+    {
+      "channels": [
+        "headphones/headphones/band_l.pos.z",
+        "cable/plug_a/plug.pos.y",
+        "cable/plug_b/plug.pos.y"
+      ],
+      "height": 160
+    },
+    {
+      "channels": [
+        "headphones/headphones/band_joint.q0"
+      ],
+      "height": 160
+    }
+  ]
+}

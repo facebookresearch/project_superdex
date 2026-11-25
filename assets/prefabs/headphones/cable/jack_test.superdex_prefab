@@ -1,0 +1,112 @@
+{
+  "actors": {
+    "articulated": [
+      {
+        "name": "jack_block",
+        "translation": [
+          0,
+          0,
+          0.044
+        ],
+        "rotation": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "joints": [
+          {
+            "name": "root",
+            "type": "Hard"
+          },
+          {
+            "name": "bore_joint",
+            "type": "Hard"
+          },
+          {
+            "name": "detent_joint",
+            "type": "Hard"
+          }
+        ],
+        "links": [
+          {
+            "name": "block",
+            "parentLink": -1,
+            "mass": 0.45,
+            "colliderType": "Sdf",
+            "shape": "./collision/jack_test_block.mochi.h5",
+            "renderModel": "./render/jack_test_block.glb",
+            "contact": {
+              "penaltyCoefficient": 5500000000.0,
+              "coulombFrictionCoefficient": 0.5,
+              "penaltyThresholdDefault": 0.0001,
+              "penaltySmoothingHalfDistance": 0.0001
+            }
+          },
+          {
+            "name": "bore",
+            "parentLink": 0,
+            "mass": 0.002,
+            "colliderType": "Sdf",
+            "layer": "jack_socket",
+            "shape": "./collision/jack_socket_bore.mochi.h5",
+            "contact": {
+              "penaltyCoefficient": 5500000000.0,
+              "coulombFrictionCoefficient": 0.1,
+              "penaltyThresholdDefault": 5e-05,
+              "penaltySmoothingHalfDistance": 5e-05
+            },
+            "boundarySubsampling": {
+              "subsamplingDensity": 0.0
+            }
+          },
+          {
+            "name": "detent",
+            "parentLink": 0,
+            "mass": 0.001,
+            "colliderType": "Sdf",
+            "layer": "jack_socket",
+            "shape": "./collision/jack_socket_detent.mochi.h5",
+            "contact": {
+              "penaltyCoefficient": 5500000000.0,
+              "coulombFrictionCoefficient": 0.02,
+              "penaltyThresholdDefault": 0.0003,
+              "penaltySmoothingHalfDistance": 0.0002
+            },
+            "boundarySubsampling": {
+              "subsamplingDensity": 0.0
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "prefabs": [
+    {
+      "name": "plug",
+      "path": "./cable_plug.superdex_prefab",
+      "translation": [
+        0.05,
+        0.0,
+        0.00635
+      ],
+      "rotation": [
+        0.0,
+        0.7071067811865475,
+        0.0,
+        0.7071067811865476
+      ]
+    }
+  ],
+  "contactFilter": {
+    "layerContactAsymmetric": [
+      {
+        "layers": [
+          "jack_socket",
+          "audio_plug"
+        ],
+        "enable": false
+      }
+    ]
+  }
+}

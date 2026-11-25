@@ -1,0 +1,122 @@
+{
+  "comment": "The headphones lying on the table with the cable plugged in. Pick up the far plug (B), lift it to 1.4 m over 3 s and hold it there for 4 s: the cable straightens and lifts the headphones off the table by their jack, and they hang and swing from it without the plug coming out (headphones/cup_l.pos.z ends well above the ground, about 0.4 m, and cable/plug_a/plug stays at the jack).",
+  "prefab": "./hp_cable_lying.superdex_prefab",
+  "loads": [
+    {
+      "name": "hand",
+      "enabled": true,
+      "type": "PosePath",
+      "target": "cable/plug_b/plug",
+      "frame": "World",
+      "pointLocal": [
+        0,
+        0,
+        -0.02
+      ],
+      "waypoints": [
+        {
+          "time": 0.0,
+          "position": [
+            -0.09769999999999984,
+            1.024915392420765,
+            0.2173852292599951
+          ],
+          "rotation": [
+            5.231802747012949e-16,
+            2.029981357329207,
+            2.397661379341385
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 3.0,
+          "position": [
+            -0.09769999999999984,
+            1.024915392420765,
+            1.4
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 7.0,
+          "position": [
+            -0.09769999999999984,
+            1.024915392420765,
+            1.4
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        }
+      ],
+      "drive": {
+        "responseHz": 20,
+        "dampingRatio": 1,
+        "maxAcceleration": 0,
+        "rotation": true,
+        "rotResponseHz": 20,
+        "rotDampingRatio": 1,
+        "maxAngularAcceleration": 0
+      }
+    }
+  ],
+  "probes": [
+    {
+      "kind": "SolverStats",
+      "target": ""
+    },
+    {
+      "kind": "Performance",
+      "target": ""
+    },
+    {
+      "kind": "BodyPose",
+      "target": "cable/plug_a/plug"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "headphones/cup_l"
+    },
+    {
+      "kind": "ContactForce",
+      "target": "cable/plug_a/plug"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "cable/plug_b/plug"
+    }
+  ],
+  "stopConditions": [],
+  "run": {
+    "singleThreaded": true,
+    "dt": 0.002,
+    "duration": 7.0,
+    "groundPlane": true,
+    "groundHeight": 0.0,
+    "record": {
+      "enabled": false,
+      "contactPoints": false,
+      "staticActors": false
+    }
+  },
+  "plots": [
+    {
+      "channels": [
+        "headphones/cup_l.pos.z",
+        "cable/plug_b/plug.pos.z"
+      ],
+      "height": 160
+    }
+  ]
+}

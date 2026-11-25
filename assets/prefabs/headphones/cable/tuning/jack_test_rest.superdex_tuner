@@ -1,0 +1,43 @@
+{
+  "comment": "The seated plug rests in the jack for 2 s: it should not move.",
+  "prefab": "./jack_test_seated.superdex_prefab",
+  "loads": [],
+  "probes": [
+    {
+      "kind": "SolverStats",
+      "target": ""
+    },
+    {
+      "kind": "Performance",
+      "target": ""
+    },
+    {
+      "kind": "BodyPose",
+      "target": "plug/plug"
+    },
+    {
+      "kind": "ContactForce",
+      "target": "plug/plug"
+    }
+  ],
+  "stopConditions": [],
+  "run": {
+    "singleThreaded": true,
+    "dt": 0.002,
+    "duration": 2.0,
+    "groundPlane": true,
+    "record": {
+      "enabled": false,
+      "contactPoints": false,
+      "staticActors": false
+    }
+  },
+  "plots": [
+    {
+      "channels": [
+        "plug/plug.pos.z"
+      ],
+      "height": 160
+    }
+  ]
+}

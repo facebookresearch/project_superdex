@@ -1,0 +1,97 @@
+{
+  "comment": "Pull the seated plug straight up with a force rising from 0 to 30 N over 5 s. It holds until about 22 N (load.pull.mag), about 1.6 times the push-in force, then comes out; the run stops once it is 10 mm up.",
+  "prefab": "./jack_test_seated.superdex_prefab",
+  "loads": [
+    {
+      "name": "pull",
+      "enabled": true,
+      "type": "Force",
+      "target": "plug/plug",
+      "frame": "World",
+      "direction": [
+        0,
+        0,
+        1
+      ],
+      "pointLocal": [
+        0,
+        0,
+        -0.02
+      ],
+      "profile": {
+        "kind": "Envelope",
+        "magnitude": 30.0,
+        "start": 0.5,
+        "end": 6.0,
+        "riseTime": 5.0,
+        "fallTime": 0.0
+      }
+    }
+  ],
+  "probes": [
+    {
+      "kind": "SolverStats",
+      "target": ""
+    },
+    {
+      "kind": "Performance",
+      "target": ""
+    },
+    {
+      "kind": "BodyPose",
+      "target": "plug/plug"
+    },
+    {
+      "kind": "ContactForce",
+      "target": "plug/plug"
+    }
+  ],
+  "stopConditions": [
+    {
+      "name": "out",
+      "enabled": true,
+      "kind": "ChannelThreshold",
+      "start": 0.0,
+      "holdTime": 0.0,
+      "target": "",
+      "boxMin": [
+        -1,
+        -1,
+        -1
+      ],
+      "boxMax": [
+        1,
+        1,
+        1
+      ],
+      "channel": "plug/plug.pos.z",
+      "comparison": "Above",
+      "threshold": 0.054
+    }
+  ],
+  "run": {
+    "singleThreaded": true,
+    "dt": 0.002,
+    "duration": 6.0,
+    "groundPlane": true,
+    "record": {
+      "enabled": false,
+      "contactPoints": false,
+      "staticActors": false
+    }
+  },
+  "plots": [
+    {
+      "channels": [
+        "plug/plug.pos.z"
+      ],
+      "height": 160
+    },
+    {
+      "channels": [
+        "load.pull.mag"
+      ],
+      "height": 160
+    }
+  ]
+}

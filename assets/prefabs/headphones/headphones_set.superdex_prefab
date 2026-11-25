@@ -1,0 +1,50 @@
+{
+  "_comment": "The headphones set: the headphones and the 1/4 in cable on a table beside a wooden display head. The origin is on the table at the head's base; the cable lies in front of the head (+X), the headphones on their back to its left (+Y).",
+  "prefabs": [
+    {
+      "name": "headphones",
+      "path": "./headphones/headphones.superdex_prefab",
+      "translation": [
+        -0.03,
+        0.28,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        -0.7071067811865476,
+        0.7071067811865476
+      ]
+    },
+    {
+      "name": "cable",
+      "path": "./cable/cable.superdex_prefab",
+      "translation": [
+        0.2,
+        -0.43,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.7071067811865476,
+        0.7071067811865476
+      ]
+    }
+  ],
+  "actors": {
+    "rigid": [
+      {
+        "name": "head",
+        "shape": "./headphones/collision/head_proxy.mochi.h5",
+        "renderModel": "./headphones/render/head_proxy.glb",
+        "colliderType": "Sdf",
+        "isStatic": true,
+        "contact": {
+          "coulombFrictionCoefficient": 0.5,
+          "penaltyCoefficient": 10000000000.0
+        }
+      }
+    ]
+  }
+}

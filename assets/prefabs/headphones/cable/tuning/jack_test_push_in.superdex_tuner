@@ -1,0 +1,97 @@
+{
+  "comment": "Push the plug, aligned 5 mm above the jack, straight down with a force rising from 0 to 25 N over 5 s. It holds at the detent until about 13 N (load.push.mag), then snaps in (plug.pos.z drops to 44 mm).",
+  "prefab": "./jack_test_aligned.superdex_prefab",
+  "loads": [
+    {
+      "name": "push",
+      "enabled": true,
+      "type": "Force",
+      "target": "plug/plug",
+      "frame": "World",
+      "direction": [
+        0,
+        0,
+        -1
+      ],
+      "pointLocal": [
+        0,
+        0,
+        -0.02
+      ],
+      "profile": {
+        "kind": "Envelope",
+        "magnitude": 25.0,
+        "start": 0.5,
+        "end": 6.0,
+        "riseTime": 5.0,
+        "fallTime": 0.0
+      }
+    }
+  ],
+  "probes": [
+    {
+      "kind": "SolverStats",
+      "target": ""
+    },
+    {
+      "kind": "Performance",
+      "target": ""
+    },
+    {
+      "kind": "BodyPose",
+      "target": "plug/plug"
+    },
+    {
+      "kind": "ContactForce",
+      "target": "plug/plug"
+    }
+  ],
+  "stopConditions": [
+    {
+      "name": "seated",
+      "enabled": true,
+      "kind": "ChannelThreshold",
+      "start": 0.5,
+      "holdTime": 0.2,
+      "target": "",
+      "boxMin": [
+        -1,
+        -1,
+        -1
+      ],
+      "boxMax": [
+        1,
+        1,
+        1
+      ],
+      "channel": "plug/plug.pos.z",
+      "comparison": "Below",
+      "threshold": 0.0445
+    }
+  ],
+  "run": {
+    "singleThreaded": true,
+    "dt": 0.002,
+    "duration": 6.0,
+    "groundPlane": true,
+    "record": {
+      "enabled": false,
+      "contactPoints": false,
+      "staticActors": false
+    }
+  },
+  "plots": [
+    {
+      "channels": [
+        "plug/plug.pos.z"
+      ],
+      "height": 160
+    },
+    {
+      "channels": [
+        "load.push.mag"
+      ],
+      "height": 160
+    }
+  ]
+}

@@ -1,0 +1,123 @@
+{
+  "actors": {
+    "rod": [
+      {
+        "name": "cable",
+        "shape": "./collision/cable.mochi.h5",
+        "renderModel": "./render/cable.glb",
+        "translation": [
+          0.0,
+          0.0,
+          0.00635
+        ],
+        "material": {
+          "linearDensity": 0.04,
+          "linearRotationalInertia": 1.8e-07,
+          "axialStiffness": 2000.0,
+          "torsionalStiffness": 0.0015,
+          "flexuralStiffness": [
+            0.002,
+            0.002
+          ],
+          "massDampingCoefficient": 0.5,
+          "stiffnessDampingCoefficient": 0.01
+        },
+        "useContactSkin": true,
+        "contact": {
+          "penaltyCoefficient": 1000000000.0,
+          "coulombFrictionCoefficient": 0.6,
+          "penaltyThresholdDefault": 0.0002,
+          "penaltySmoothingHalfDistance": 0.0002
+        }
+      }
+    ]
+  },
+  "prefabs": [
+    {
+      "name": "plug_a",
+      "path": "./cable_plug.superdex_prefab",
+      "translation": [
+        -0.042,
+        0.0,
+        0.00635
+      ],
+      "rotation": [
+        -0.0,
+        -0.7071067811865475,
+        -0.0,
+        0.7071067811865476
+      ]
+    },
+    {
+      "name": "plug_b",
+      "path": "./cable_plug.superdex_prefab",
+      "translation": [
+        0.8973,
+        0.0,
+        0.00635
+      ],
+      "rotation": [
+        0.0,
+        0.7071067811865475,
+        0.0,
+        0.7071067811865476
+      ]
+    }
+  ],
+  "constraints": {
+    "deformableNodeToRigid": [
+      {
+        "deformableActor": "cable",
+        "rigidActor": "plug_a/plug",
+        "deformableNodeIndex": 0,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 50000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "cable",
+        "rigidActor": "plug_b/plug",
+        "deformableNodeIndex": 86,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 50000.0,
+        "damping": 5.0
+      }
+    ],
+    "rodElementRotationToRigid": [
+      {
+        "rodActor": "cable",
+        "rigidActor": "plug_a/plug",
+        "elementIndex": 0,
+        "stiffness": 2.0,
+        "damping": 0.01
+      },
+      {
+        "rodActor": "cable",
+        "rigidActor": "plug_b/plug",
+        "elementIndex": 85,
+        "stiffness": 2.0,
+        "damping": 0.01
+      }
+    ]
+  },
+  "contactFilter": {
+    "actorContactSymmetric": [
+      {
+        "actors": [
+          "cable",
+          "plug_a/plug"
+        ],
+        "enable": false
+      },
+      {
+        "actors": [
+          "cable",
+          "plug_b/plug"
+        ],
+        "enable": false
+      }
+    ]
+  }
+}

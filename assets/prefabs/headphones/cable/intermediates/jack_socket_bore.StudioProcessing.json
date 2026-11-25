@@ -1,0 +1,74 @@
+{
+  "editorState": {
+    "cadRotation": [
+      0,
+      0,
+      0,
+      1
+    ],
+    "cadScale": [
+      1,
+      1,
+      1
+    ],
+    "cadTranslation": [
+      0,
+      0,
+      0
+    ]
+  },
+  "modifiers": [
+    {
+      "collapsed": false,
+      "enabled": true,
+      "method": "From Model Viewer",
+      "modifier": "Source from CAD Model",
+      "properties": {
+        "allowPartialFailure": false,
+        "angularDeflection": 0.25,
+        "backend": "Isotropic",
+        "combineTouchingSolids": true,
+        "edgeSampling": "Uniform",
+        "linearDeflection": 0.05,
+        "targetEdgeLength": 0.6,
+        "targetEdgeLengthFraction": 0,
+        "faceColorSizing": []
+      }
+    },
+    {
+      "collapsed": true,
+      "enabled": true,
+      "method": "Make Manifold",
+      "modifier": "Refine Mesh",
+      "properties": {
+        "thenMakeWatertight": true
+      }
+    },
+    {
+      "collapsed": false,
+      "enabled": true,
+      "method": "SDF",
+      "modifier": "Export Mochi Model",
+      "properties": {
+        "bakeSdf": true,
+        "exportPath": "../collision/jack_socket_bore.mochi.h5",
+        "sdf": {
+          "boundaryPaddingDist": 0.003,
+          "minGridResolution": [
+            6,
+            6,
+            6
+          ],
+          "resolutionDelta": [
+            0.00025,
+            0.00025,
+            0.00025
+          ],
+          "resolutionMode": "Explicit"
+        }
+      }
+    }
+  ],
+  "referenceModels": [],
+  "version": 1
+}

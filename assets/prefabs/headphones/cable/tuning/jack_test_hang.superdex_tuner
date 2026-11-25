@@ -1,0 +1,75 @@
+{
+  "comment": "The jack turned face down (like the headphones), the plug seated in it from below with 3 N (about the headphones' weight) hanging on it from 0.5 s: it should stay in (plug.pos.z within a fraction of a mm).",
+  "prefab": "./jack_test_hanging.superdex_prefab",
+  "loads": [
+    {
+      "name": "hang",
+      "enabled": true,
+      "type": "Force",
+      "target": "plug/plug",
+      "frame": "World",
+      "direction": [
+        0,
+        0,
+        -1
+      ],
+      "pointLocal": [
+        0,
+        0,
+        -0.02
+      ],
+      "profile": {
+        "kind": "Envelope",
+        "magnitude": 3.0,
+        "start": 0.5,
+        "end": 3.0,
+        "riseTime": 0.5,
+        "fallTime": 0.0
+      }
+    }
+  ],
+  "probes": [
+    {
+      "kind": "SolverStats",
+      "target": ""
+    },
+    {
+      "kind": "Performance",
+      "target": ""
+    },
+    {
+      "kind": "BodyPose",
+      "target": "plug/plug"
+    },
+    {
+      "kind": "ContactForce",
+      "target": "plug/plug"
+    }
+  ],
+  "stopConditions": [],
+  "run": {
+    "singleThreaded": true,
+    "dt": 0.002,
+    "duration": 3.0,
+    "groundPlane": true,
+    "record": {
+      "enabled": false,
+      "contactPoints": false,
+      "staticActors": false
+    }
+  },
+  "plots": [
+    {
+      "channels": [
+        "plug/plug.pos.z"
+      ],
+      "height": 160
+    },
+    {
+      "channels": [
+        "load.hang.mag"
+      ],
+      "height": 160
+    }
+  ]
+}

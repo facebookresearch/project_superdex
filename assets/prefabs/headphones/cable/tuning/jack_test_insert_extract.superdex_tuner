@@ -1,0 +1,148 @@
+{
+  "comment": "Push the plug straight into the jack at 15 mm/s, hold it, and pull it back out. The contact force along Z on the plug (plug.contactForce.z) peaks at about +16 N going in, as the tip passes the detent, and about -22 N coming out (a little higher than the slow push and pull tuners, 13 and 22 N).",
+  "prefab": "./jack_test_aligned.superdex_prefab",
+  "loads": [
+    {
+      "name": "hand",
+      "enabled": true,
+      "type": "PosePath",
+      "target": "plug/plug",
+      "frame": "World",
+      "pointLocal": [
+        0,
+        0,
+        0
+      ],
+      "waypoints": [
+        {
+          "time": 0.0,
+          "position": [
+            0,
+            0,
+            0.07934
+          ],
+          "rotation": [
+            3.141592653589793,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 0.2,
+          "position": [
+            0,
+            0,
+            0.07934
+          ],
+          "rotation": [
+            3.141592653589793,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 2.5893333333333333,
+          "position": [
+            0,
+            0,
+            0.0435
+          ],
+          "rotation": [
+            3.141592653589793,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 3.0893333333333333,
+          "position": [
+            0,
+            0,
+            0.0435
+          ],
+          "rotation": [
+            3.141592653589793,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 5.789333333333333,
+          "position": [
+            0,
+            0,
+            0.08399999999999999
+          ],
+          "rotation": [
+            3.141592653589793,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        }
+      ],
+      "drive": {
+        "responseHz": 80,
+        "dampingRatio": 1,
+        "maxAcceleration": 0,
+        "rotation": true,
+        "rotResponseHz": 80,
+        "rotDampingRatio": 1,
+        "maxAngularAcceleration": 0
+      }
+    }
+  ],
+  "probes": [
+    {
+      "kind": "SolverStats",
+      "target": ""
+    },
+    {
+      "kind": "Performance",
+      "target": ""
+    },
+    {
+      "kind": "BodyPose",
+      "target": "plug/plug"
+    },
+    {
+      "kind": "ContactForce",
+      "target": "plug/plug"
+    }
+  ],
+  "stopConditions": [],
+  "run": {
+    "singleThreaded": true,
+    "dt": 0.002,
+    "duration": 5.989333333333333,
+    "groundPlane": true,
+    "record": {
+      "enabled": false,
+      "contactPoints": false,
+      "staticActors": false
+    }
+  },
+  "plots": [
+    {
+      "channels": [
+        "plug/plug.pos.z"
+      ],
+      "height": 160
+    },
+    {
+      "channels": [
+        "plug/plug.contactForce.z"
+      ],
+      "height": 160
+    }
+  ]
+}

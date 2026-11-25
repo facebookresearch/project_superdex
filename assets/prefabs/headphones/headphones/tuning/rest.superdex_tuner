@@ -1,0 +1,60 @@
+{
+  "comment": "The headphones lying on their back for 2 s: nothing should move (the band stays on its stop, band_joint.q0 = 0).",
+  "prefab": "./hp_lying.superdex_prefab",
+  "loads": [],
+  "probes": [
+    {
+      "kind": "SolverStats",
+      "target": ""
+    },
+    {
+      "kind": "Performance",
+      "target": ""
+    },
+    {
+      "kind": "BodyPose",
+      "target": "headphones/band_l"
+    },
+    {
+      "kind": "JointState",
+      "target": "headphones/band_joint"
+    },
+    {
+      "kind": "JointState",
+      "target": "headphones/swivel_l"
+    },
+    {
+      "kind": "JointState",
+      "target": "headphones/swivel_r"
+    }
+  ],
+  "stopConditions": [],
+  "run": {
+    "singleThreaded": true,
+    "dt": 0.005,
+    "duration": 2.0,
+    "groundPlane": true,
+    "groundHeight": 0.0,
+    "record": {
+      "enabled": false,
+      "contactPoints": false,
+      "staticActors": false
+    }
+  },
+  "plots": [
+    {
+      "channels": [
+        "headphones/band_l.pos.z"
+      ],
+      "height": 160
+    },
+    {
+      "channels": [
+        "headphones/band_joint.q0",
+        "headphones/swivel_l.q0",
+        "headphones/swivel_r.q0"
+      ],
+      "height": 160
+    }
+  ]
+}

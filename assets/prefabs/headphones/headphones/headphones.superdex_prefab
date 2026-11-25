@@ -1,0 +1,963 @@
+{
+  "actors": {
+    "articulated": [
+      {
+        "name": "headphones",
+        "translation": [
+          0.0003,
+          -0.124880776,
+          0.014102567
+        ],
+        "rotation": [
+          0.7880367608841435,
+          0.0,
+          0.0,
+          0.6156281860792496
+        ],
+        "joints": [
+          {
+            "name": "root",
+            "type": "Free"
+          },
+          {
+            "name": "band_joint",
+            "type": "Revolute",
+            "axis": [
+              0,
+              1,
+              0
+            ],
+            "minLimit": [
+              -0.0,
+              -0.6,
+              -0.0
+            ],
+            "maxLimit": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                0,
+                0,
+                0
+              ]
+            },
+            "limitStiffness": 1000.0,
+            "limitDamping": 1.0,
+            "friction": {
+              "viscous": 0.002,
+              "coulomb": 0.0
+            }
+          },
+          {
+            "name": "swivel_l",
+            "type": "Revolute",
+            "axis": [
+              0,
+              0,
+              1
+            ],
+            "minLimit": [
+              -0.0,
+              -0.0,
+              -1.5707963267948966
+            ],
+            "maxLimit": [
+              0.0,
+              0.0,
+              1.5707963267948966
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                -0.098,
+                0.0,
+                -0.119
+              ]
+            },
+            "limitStiffness": 1000.0,
+            "limitDamping": 1.0,
+            "friction": {
+              "viscous": 0.004,
+              "coulomb": 0.008
+            }
+          },
+          {
+            "name": "swivel_r",
+            "type": "Revolute",
+            "axis": [
+              0,
+              0,
+              1
+            ],
+            "minLimit": [
+              -0.0,
+              -0.0,
+              -1.5707963267948966
+            ],
+            "maxLimit": [
+              0.0,
+              0.0,
+              1.5707963267948966
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                0.098,
+                0.0,
+                -0.119
+              ]
+            },
+            "limitStiffness": 1000.0,
+            "limitDamping": 1.0,
+            "friction": {
+              "viscous": 0.004,
+              "coulomb": 0.008
+            }
+          },
+          {
+            "name": "jack_bore_joint",
+            "type": "Hard",
+            "parentLinkFromJoint": {
+              "translation": [
+                0.0,
+                0.014,
+                -0.108
+              ]
+            }
+          },
+          {
+            "name": "jack_detent_joint",
+            "type": "Hard",
+            "parentLinkFromJoint": {
+              "translation": [
+                0.0,
+                0.014,
+                -0.108
+              ]
+            }
+          }
+        ],
+        "links": [
+          {
+            "name": "band_l",
+            "colliderType": "Sdf",
+            "mass": 0.05,
+            "shape": "./collision/hp_band_left.mochi.h5",
+            "renderModel": "./render/hp_band_left.glb",
+            "contact": {
+              "coulombFrictionCoefficient": 0.6,
+              "penaltyCoefficient": 5500000000.0
+            }
+          },
+          {
+            "name": "band_r",
+            "colliderType": "Sdf",
+            "mass": 0.05,
+            "shape": "./collision/hp_band_right.mochi.h5",
+            "renderModel": "./render/hp_band_right.glb",
+            "contact": {
+              "coulombFrictionCoefficient": 0.6,
+              "penaltyCoefficient": 5500000000.0
+            },
+            "parentLink": 0
+          },
+          {
+            "name": "cup_l",
+            "colliderType": "Sdf",
+            "mass": 0.075,
+            "shape": "./collision/hp_cup_left.mochi.h5",
+            "renderModel": "./render/hp_cup_left.glb",
+            "contact": {
+              "coulombFrictionCoefficient": 0.6,
+              "penaltyCoefficient": 5500000000.0
+            },
+            "parentLink": 0
+          },
+          {
+            "name": "cup_r",
+            "colliderType": "Sdf",
+            "mass": 0.075,
+            "shape": "./collision/hp_cup_right.mochi.h5",
+            "renderModel": "./render/hp_cup_right.glb",
+            "contact": {
+              "coulombFrictionCoefficient": 0.6,
+              "penaltyCoefficient": 5500000000.0
+            },
+            "parentLink": 1,
+            "parentJointFromLink": {
+              "rotation": [
+                0.0,
+                0.0,
+                1.0,
+                0.0
+              ]
+            }
+          },
+          {
+            "name": "jack_bore",
+            "parentLink": 2,
+            "mass": 0.002,
+            "colliderType": "Sdf",
+            "layer": "jack_socket",
+            "shape": "./../cable/collision/jack_socket_bore.mochi.h5",
+            "renderModel": "./../cable/render/jack_socket.glb",
+            "contact": {
+              "penaltyCoefficient": 5500000000.0,
+              "coulombFrictionCoefficient": 0.1,
+              "penaltyThresholdDefault": 5e-05,
+              "penaltySmoothingHalfDistance": 5e-05
+            }
+          },
+          {
+            "name": "jack_detent",
+            "parentLink": 2,
+            "mass": 0.001,
+            "colliderType": "Sdf",
+            "layer": "jack_socket",
+            "shape": "./../cable/collision/jack_socket_detent.mochi.h5",
+            "contact": {
+              "penaltyCoefficient": 5500000000.0,
+              "coulombFrictionCoefficient": 0.02,
+              "penaltyThresholdDefault": 0.0003,
+              "penaltySmoothingHalfDistance": 0.0002
+            }
+          }
+        ],
+        "skin": {
+          "shape": "./collision/hp_band_skin.mochi.h5",
+          "renderModel": "./render/hp_band_skin.glb",
+          "hiddenLinks": [],
+          "nonCollidingLinks": [
+            "jack_bore",
+            "jack_detent"
+          ],
+          "boundaryElementType": "P1Q1",
+          "contact": {
+            "coulombFrictionCoefficient": 0.9,
+            "penaltyCoefficient": 1000000000.0,
+            "penaltyThresholdDefault": 0.001,
+            "penaltySmoothingHalfDistance": 0.001
+          }
+        }
+      }
+    ],
+    "soft": [
+      {
+        "name": "pad_l",
+        "shape": "./collision/hp_pad.mochi.h5",
+        "renderModel": "./render/hp_pad.glb",
+        "translation": [
+          -0.09770000000000001,
+          -0.0094180172832843,
+          0.04290102788813595
+        ],
+        "rotation": [
+          0.7880367608841435,
+          0.0,
+          0.0,
+          0.6156281860792496
+        ],
+        "material": {
+          "neoHookean": {
+            "youngsModulus": 30000.0,
+            "poissonRatio": 0.3
+          },
+          "density": 120.0,
+          "stiffnessDampingCoefficient": 0.01
+        },
+        "contact": {
+          "coulombFrictionCoefficient": 0.9,
+          "penaltyCoefficient": 10000000000.0
+        }
+      },
+      {
+        "name": "pad_r",
+        "shape": "./collision/hp_pad.mochi.h5",
+        "renderModel": "./render/hp_pad.glb",
+        "translation": [
+          0.0983,
+          -0.0094180172832843,
+          0.04290102788813595
+        ],
+        "rotation": [
+          0.0,
+          -0.7880367608841435,
+          0.6156281860792496,
+          0.0
+        ],
+        "material": {
+          "neoHookean": {
+            "youngsModulus": 30000.0,
+            "poissonRatio": 0.3
+          },
+          "density": 120.0,
+          "stiffnessDampingCoefficient": 0.01
+        },
+        "contact": {
+          "coulombFrictionCoefficient": 0.9,
+          "penaltyCoefficient": 10000000000.0
+        }
+      }
+    ]
+  },
+  "constraints": {
+    "articulatedSingleDofTarget": [
+      {
+        "actor": "headphones",
+        "jointIndex": 1,
+        "dofIndex": 0,
+        "targetValue": 0.12,
+        "stiffness": 1.2,
+        "damping": 0.02
+      }
+    ],
+    "deformableNodeToRigid": [
+      {
+        "deformableActor": "pad_l",
+        "rigidActor": "headphones/cup_l",
+        "deformableNodeIndex": 13,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_l",
+        "rigidActor": "headphones/cup_l",
+        "deformableNodeIndex": 17,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_l",
+        "rigidActor": "headphones/cup_l",
+        "deformableNodeIndex": 28,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_l",
+        "rigidActor": "headphones/cup_l",
+        "deformableNodeIndex": 31,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_l",
+        "rigidActor": "headphones/cup_l",
+        "deformableNodeIndex": 37,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_l",
+        "rigidActor": "headphones/cup_l",
+        "deformableNodeIndex": 38,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_l",
+        "rigidActor": "headphones/cup_l",
+        "deformableNodeIndex": 45,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_l",
+        "rigidActor": "headphones/cup_l",
+        "deformableNodeIndex": 48,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_l",
+        "rigidActor": "headphones/cup_l",
+        "deformableNodeIndex": 52,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_l",
+        "rigidActor": "headphones/cup_l",
+        "deformableNodeIndex": 53,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_l",
+        "rigidActor": "headphones/cup_l",
+        "deformableNodeIndex": 60,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_l",
+        "rigidActor": "headphones/cup_l",
+        "deformableNodeIndex": 68,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_l",
+        "rigidActor": "headphones/cup_l",
+        "deformableNodeIndex": 74,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_l",
+        "rigidActor": "headphones/cup_l",
+        "deformableNodeIndex": 76,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_l",
+        "rigidActor": "headphones/cup_l",
+        "deformableNodeIndex": 77,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_l",
+        "rigidActor": "headphones/cup_l",
+        "deformableNodeIndex": 78,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_l",
+        "rigidActor": "headphones/cup_l",
+        "deformableNodeIndex": 83,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_l",
+        "rigidActor": "headphones/cup_l",
+        "deformableNodeIndex": 89,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_l",
+        "rigidActor": "headphones/cup_l",
+        "deformableNodeIndex": 90,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_l",
+        "rigidActor": "headphones/cup_l",
+        "deformableNodeIndex": 92,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_l",
+        "rigidActor": "headphones/cup_l",
+        "deformableNodeIndex": 94,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_l",
+        "rigidActor": "headphones/cup_l",
+        "deformableNodeIndex": 98,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_l",
+        "rigidActor": "headphones/cup_l",
+        "deformableNodeIndex": 99,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_l",
+        "rigidActor": "headphones/cup_l",
+        "deformableNodeIndex": 102,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_l",
+        "rigidActor": "headphones/cup_l",
+        "deformableNodeIndex": 107,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_l",
+        "rigidActor": "headphones/cup_l",
+        "deformableNodeIndex": 108,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_l",
+        "rigidActor": "headphones/cup_l",
+        "deformableNodeIndex": 109,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_l",
+        "rigidActor": "headphones/cup_l",
+        "deformableNodeIndex": 110,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_l",
+        "rigidActor": "headphones/cup_l",
+        "deformableNodeIndex": 118,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_l",
+        "rigidActor": "headphones/cup_l",
+        "deformableNodeIndex": 124,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_l",
+        "rigidActor": "headphones/cup_l",
+        "deformableNodeIndex": 131,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_l",
+        "rigidActor": "headphones/cup_l",
+        "deformableNodeIndex": 133,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_r",
+        "rigidActor": "headphones/cup_r",
+        "deformableNodeIndex": 13,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_r",
+        "rigidActor": "headphones/cup_r",
+        "deformableNodeIndex": 17,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_r",
+        "rigidActor": "headphones/cup_r",
+        "deformableNodeIndex": 28,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_r",
+        "rigidActor": "headphones/cup_r",
+        "deformableNodeIndex": 31,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_r",
+        "rigidActor": "headphones/cup_r",
+        "deformableNodeIndex": 37,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_r",
+        "rigidActor": "headphones/cup_r",
+        "deformableNodeIndex": 38,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_r",
+        "rigidActor": "headphones/cup_r",
+        "deformableNodeIndex": 45,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_r",
+        "rigidActor": "headphones/cup_r",
+        "deformableNodeIndex": 48,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_r",
+        "rigidActor": "headphones/cup_r",
+        "deformableNodeIndex": 52,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_r",
+        "rigidActor": "headphones/cup_r",
+        "deformableNodeIndex": 53,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_r",
+        "rigidActor": "headphones/cup_r",
+        "deformableNodeIndex": 60,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_r",
+        "rigidActor": "headphones/cup_r",
+        "deformableNodeIndex": 68,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_r",
+        "rigidActor": "headphones/cup_r",
+        "deformableNodeIndex": 74,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_r",
+        "rigidActor": "headphones/cup_r",
+        "deformableNodeIndex": 76,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_r",
+        "rigidActor": "headphones/cup_r",
+        "deformableNodeIndex": 77,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_r",
+        "rigidActor": "headphones/cup_r",
+        "deformableNodeIndex": 78,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_r",
+        "rigidActor": "headphones/cup_r",
+        "deformableNodeIndex": 83,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_r",
+        "rigidActor": "headphones/cup_r",
+        "deformableNodeIndex": 89,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_r",
+        "rigidActor": "headphones/cup_r",
+        "deformableNodeIndex": 90,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_r",
+        "rigidActor": "headphones/cup_r",
+        "deformableNodeIndex": 92,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_r",
+        "rigidActor": "headphones/cup_r",
+        "deformableNodeIndex": 94,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_r",
+        "rigidActor": "headphones/cup_r",
+        "deformableNodeIndex": 98,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_r",
+        "rigidActor": "headphones/cup_r",
+        "deformableNodeIndex": 99,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_r",
+        "rigidActor": "headphones/cup_r",
+        "deformableNodeIndex": 102,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_r",
+        "rigidActor": "headphones/cup_r",
+        "deformableNodeIndex": 107,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_r",
+        "rigidActor": "headphones/cup_r",
+        "deformableNodeIndex": 108,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_r",
+        "rigidActor": "headphones/cup_r",
+        "deformableNodeIndex": 109,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_r",
+        "rigidActor": "headphones/cup_r",
+        "deformableNodeIndex": 110,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_r",
+        "rigidActor": "headphones/cup_r",
+        "deformableNodeIndex": 118,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_r",
+        "rigidActor": "headphones/cup_r",
+        "deformableNodeIndex": 124,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_r",
+        "rigidActor": "headphones/cup_r",
+        "deformableNodeIndex": 131,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      },
+      {
+        "deformableActor": "pad_r",
+        "rigidActor": "headphones/cup_r",
+        "deformableNodeIndex": 133,
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "stiffness": 5000.0,
+        "damping": 5.0
+      }
+    ]
+  },
+  "contactFilter": {
+    "layerContactAsymmetric": [
+      {
+        "layers": [
+          "jack_socket",
+          "audio_plug"
+        ],
+        "enable": false
+      }
+    ],
+    "actorContactSymmetric": [
+      {
+        "actors": [
+          "headphones/band_l",
+          "headphones/band_r"
+        ],
+        "enable": false
+      },
+      {
+        "actors": [
+          "headphones/band_l",
+          "headphones/cup_l"
+        ],
+        "enable": false
+      },
+      {
+        "actors": [
+          "headphones/band_r",
+          "headphones/cup_r"
+        ],
+        "enable": false
+      },
+      {
+        "actors": [
+          "headphones/cup_l",
+          "headphones/jack_bore"
+        ],
+        "enable": false
+      },
+      {
+        "actors": [
+          "headphones/cup_l",
+          "headphones/jack_detent"
+        ],
+        "enable": false
+      },
+      {
+        "actors": [
+          "headphones/jack_bore",
+          "headphones/jack_detent"
+        ],
+        "enable": false
+      },
+      {
+        "actors": [
+          "pad_l",
+          "headphones/cup_l"
+        ],
+        "enable": false
+      },
+      {
+        "actors": [
+          "pad_r",
+          "headphones/cup_r"
+        ],
+        "enable": false
+      }
+    ]
+  }
+}

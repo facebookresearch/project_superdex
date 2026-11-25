@@ -1,0 +1,148 @@
+{
+  "comment": "Hold the band by its apex and twist the left cup with 0.03 N m one way (0.5 to 2.5 s), then the other (3 to 5 s): it swivels to its hard stops at +90 and -90 deg (swivel_l.q0 = +-1.571) and stays there while pushed; the right cup and the band stay put.",
+  "prefab": "./hp_held.superdex_prefab",
+  "loads": [
+    {
+      "name": "hold",
+      "enabled": true,
+      "type": "PosePath",
+      "target": "headphones/band_l",
+      "frame": "World",
+      "pointLocal": [
+        0,
+        0,
+        0
+      ],
+      "waypoints": [
+        {
+          "time": 0.0,
+          "position": [
+            0.0,
+            0.0,
+            0.4
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 6.0,
+          "position": [
+            0.0,
+            0.0,
+            0.4
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        }
+      ],
+      "drive": {
+        "responseHz": 200,
+        "dampingRatio": 1,
+        "maxAcceleration": 0,
+        "rotation": true,
+        "rotResponseHz": 200,
+        "rotDampingRatio": 1,
+        "maxAngularAcceleration": 0
+      }
+    },
+    {
+      "name": "twist_pos",
+      "enabled": true,
+      "type": "JointEffort",
+      "target": "headphones/swivel_l",
+      "frame": "World",
+      "direction": [
+        1,
+        0,
+        0
+      ],
+      "profile": {
+        "kind": "Envelope",
+        "magnitude": 0.03,
+        "start": 0.5,
+        "end": 2.5,
+        "riseTime": 0.2,
+        "fallTime": 0.2
+      }
+    },
+    {
+      "name": "twist_neg",
+      "enabled": true,
+      "type": "JointEffort",
+      "target": "headphones/swivel_l",
+      "frame": "World",
+      "direction": [
+        1,
+        0,
+        0
+      ],
+      "profile": {
+        "kind": "Envelope",
+        "magnitude": -0.03,
+        "start": 3.0,
+        "end": 5.0,
+        "riseTime": 0.2,
+        "fallTime": 0.2
+      }
+    }
+  ],
+  "probes": [
+    {
+      "kind": "SolverStats",
+      "target": ""
+    },
+    {
+      "kind": "Performance",
+      "target": ""
+    },
+    {
+      "kind": "JointState",
+      "target": "headphones/band_joint"
+    },
+    {
+      "kind": "JointState",
+      "target": "headphones/swivel_l"
+    },
+    {
+      "kind": "JointState",
+      "target": "headphones/swivel_r"
+    }
+  ],
+  "stopConditions": [],
+  "run": {
+    "singleThreaded": true,
+    "dt": 0.005,
+    "duration": 6.0,
+    "groundPlane": true,
+    "record": {
+      "enabled": false,
+      "contactPoints": false,
+      "staticActors": false
+    }
+  },
+  "plots": [
+    {
+      "channels": [
+        "headphones/swivel_l.q0",
+        "headphones/swivel_r.q0"
+      ],
+      "height": 160
+    },
+    {
+      "channels": [
+        "headphones/band_joint.q0"
+      ],
+      "height": 160
+    }
+  ]
+}
