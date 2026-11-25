@@ -182,9 +182,10 @@ read time as a substitute for either timestamp.
 A graph can model the observation path as well as the physical sensor. Each
 transform below takes one fixed Float32 input:
 
-- **`SensorGaussianNoise`** adds noise once per new **capture**, not per policy
-  read. `std` is a one-element broadcast or one standard deviation per flattened
-  input element, in that element's units. Values must be finite and nonnegative.
+- **`SensorGaussianNoise`** adds noise once per new input **publication**, not
+  per policy read. `std` is a one-element broadcast or one standard deviation
+  per flattened input element, in that element's units. Values must be finite
+  and nonnegative.
 - **`SensorUniformNoise`** adds independent uniform noise, likewise drawn once
   per input publication.
 - **`SensorOutlierInjection`** replaces whole input samples with outliers at a
@@ -216,10 +217,10 @@ For example, add a noise node after the `map` declared above, then select
 ```
 
 `random.processKey` must be nonempty and stable. Noise is derived from the
-**episode seed, process key and source capture step**, so repeated reads do not
-redraw it. Supply the next episode's parameters before resetting the graph;
-resetting alone does not choose a new seed. Retain these parameters with the
-experiment when comparing observations.
+**episode seed, process key and input publication step**, so repeated reads
+do not redraw it. Supply the next episode's parameters before resetting the
+graph; resetting alone does not choose a new seed. Retain these parameters with
+the experiment when comparing observations.
 
 Delay storage is sized at initialization from `bufferMs` and the input's
 publication-frequency estimate. If that estimate is unknown,

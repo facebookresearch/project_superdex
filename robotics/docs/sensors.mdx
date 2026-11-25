@@ -54,8 +54,8 @@ for the ownership of bots and their components.
 | `SENSOR_JOINT_ENCODER` | [Joint Pose and Wrench](./joint_pose_and_wrench.mdx) | Positions and velocities of a bot's articulated links. |
 | `SENSOR_ARTICULATED_JOINT_WRENCH` | [Joint Pose and Wrench](./joint_pose_and_wrench.mdx) | Force and torque through each joint of an articulation. |
 | `SENSOR_CONCAT` | [Signal processing](./sensor_graphs.mdx#combining-outputs) | Several equally shaped outputs stacked into one. |
-| `SENSOR_GAUSSIAN_NOISE` | [Signal processing](./sensor_graphs.mdx#noise-delay-and-history) | Zero-mean Gaussian noise, drawn once per capture. |
-| `SENSOR_UNIFORM_NOISE` | [Signal processing](./sensor_graphs.mdx#noise-delay-and-history) | Additive uniform noise, drawn once per capture. |
+| `SENSOR_GAUSSIAN_NOISE` | [Signal processing](./sensor_graphs.mdx#noise-delay-and-history) | Zero-mean Gaussian noise, drawn once per input publication. |
+| `SENSOR_UNIFORM_NOISE` | [Signal processing](./sensor_graphs.mdx#noise-delay-and-history) | Additive uniform noise, drawn once per input publication. |
 | `SENSOR_OUTLIER_INJECTION` | [Signal processing](./sensor_graphs.mdx#noise-delay-and-history) | Whole samples replaced by outliers at a fixed probability. |
 | `SENSOR_DELAY_LINE` | [Signal processing](./sensor_graphs.mdx#noise-delay-and-history) | Its input, released after a fixed delay. |
 | `SENSOR_TEMPORAL_WINDOW` | [Signal processing](./sensor_graphs.mdx#noise-delay-and-history) | A rolling history of its input; C++ registration required. |

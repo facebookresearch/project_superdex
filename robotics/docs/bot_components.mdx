@@ -164,7 +164,7 @@ exceed your robot's effort limits.
 | `SENSOR_ARTICULATED_JOINT_WRENCH` | Sensor | Solver-backed articulated-joint force/torque observations, with explicit row identities. |
 | `SENSOR_SEED_RECT_MAP` | Sensor transform | Maps vertex forces to a rectangular tactile tensor. |
 | `SENSOR_SEED_V1_MLP` | Sensor | Experimental SEED contact-force response with optional learned weights. |
-| `SENSOR_GAUSSIAN_NOISE` | Sensor transform | Adds keyed, reproducible Gaussian noise once per new input capture. |
+| `SENSOR_GAUSSIAN_NOISE` | Sensor transform | Adds keyed, reproducible Gaussian noise once per new input publication. |
 
 See [Sensor Graphs](./sensor_graphs.mdx) for wiring, timing and acquisition limits,
 including the public delay/history transforms that require C++ creation or
