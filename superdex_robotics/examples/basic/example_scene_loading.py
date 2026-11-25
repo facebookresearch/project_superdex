@@ -36,7 +36,7 @@ from typing import NamedTuple
 
 import superdex.physics as sdp
 import superdex.robotics as sdr
-from superdex.physics.paths import get_assets_root, resolve_asset
+from superdex.physics.paths import resolve_asset, resolve_asset_root
 
 
 class BotPlacement(NamedTuple):
@@ -136,7 +136,7 @@ POSE_DAMPING = 1.0e2
 
 def main() -> None:
     """Load two bots and a task prefab into one scene."""
-    assets_root = str(get_assets_root())
+    assets_root = str(resolve_asset_root(TASK_PREFAB))
 
     # Initialize the physics engine before creating scenes or actors.
     # num_worker_threads=0 runs single-threaded; pass -1 to auto-select.

@@ -50,7 +50,7 @@ from pathlib import Path
 import numpy as np
 import superdex.physics as sdp
 import superdex.robotics as sdr
-from superdex.physics.paths import get_assets_root, resolve_asset
+from superdex.physics.paths import resolve_asset, resolve_asset_root
 
 # The build's `real` type. Arrays handed to or filled by the engine must match it,
 # or the bindings convert element by element -- and reject out-parameters outright.
@@ -398,7 +398,7 @@ def main() -> None:
     # A static prop for the arm to touch.
     sdp.prefab.add_to_scene(
         prefab_path=str(resolve_asset(DUCK_LAMP_ASSET)),
-        root_path=str(get_assets_root()),
+        root_path=str(resolve_asset_root(DUCK_LAMP_ASSET)),
         scene=scene,
         params=sdp.prefab.PrefabParams(name="duck_lamp"),
     )
