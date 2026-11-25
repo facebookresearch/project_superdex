@@ -34,6 +34,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
     TSubclassOf<USuperDexPoseSource>,
     PoseSource);
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSetDebugVizVisibility, bool, bIsVisible);
+
 /**
  * Actor for poseable objects in SuperDexPose.
  *
@@ -74,6 +76,11 @@ class SUPERDEXPOSE_API ASuperDexPoseableActor : public AActor {
   /** If false, always return false and early out when GetPose() is called */
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex Robotics|Poseable Actor")
   bool bEnableGetPose = true;
+
+  /** Intended to be implemented in Blueprint for external callers setting
+   * whatever the PoseableActor deems a debug visualization (e.g. a tracked hand) */
+  UPROPERTY(BlueprintAssignable, BlueprintCallable, Category = "SuperDex Robotics|Poseable Actor")
+  FOnSetDebugVizVisibility OnSetDebugVizVisibility;
 
  public:
   ASuperDexPoseableActor();
