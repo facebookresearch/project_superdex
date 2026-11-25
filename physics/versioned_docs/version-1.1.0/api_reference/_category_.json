@@ -1,0 +1,8 @@
+{
+  "label": "API Documentation",
+  "position": 4,
+  "link": {
+    "type": "generated-index",
+    "description": "Comprehensive API reference for SuperDex Physics simulation library."
+  }
+}

@@ -1,0 +1,5 @@
+[
+  "superdex_gym/envs/ant",
+  "superdex_gym/envs/cart_pole",
+  "superdex_gym/envs/half_cheetah"
+]
