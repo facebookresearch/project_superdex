@@ -8,6 +8,7 @@ plugins. It needs those plugins and SuperDexAssets.
 | Level | Contents |
 | --- | --- |
 | `Content/Sampler/L_Sampler` | A table on which `BP_Sampler_PrefabSpawner` spawns the SuperDexAssets task prefabs one at a time, for trying them in SuperDex Physics |
+| `Content/RuntimeSceneLoad/L_RuntimeSceneLoad` | `L_Sampler`'s lighting around the [runtime_scene_load SuperDex scene](https://github.com/facebookresearch/project_superdex/tree/main/assets/scenes/runtime_scene_load), teleoperated through `ASuperDexRuntimeSceneLoadExample`; the scene's README says how to run it |
 
 The levels and Blueprints are the original work of Meta Platforms, Inc. and affiliates. The levels
 also use content that ships with Unreal Engine (basic shapes, sky, and template materials); that

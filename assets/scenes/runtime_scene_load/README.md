@@ -4,6 +4,14 @@ The scene of SuperDex Unreal's sampler level (`SuperDexExamples/Content/Sampler/
 workbench, the arms and proxy hands the level's roboperator spawner offers each hand, and the
 prefabs its prefab spawner places on the table that make a task.
 
+SuperDex Unreal's `SuperDexExamples/Content/RuntimeSceneLoad/L_RuntimeSceneLoad` runs it. In the
+editor the level reads the scene and `tasks/` from this repository's `assets/`, two folders above
+the SuperDex Unreal project, and B/N step through the tasks. A packaged build takes them as absolute paths:
+
+```
+SuperDexUnreal.exe /SuperDexExamples/RuntimeSceneLoad/L_RuntimeSceneLoad -SuperDexSceneFile=<repo>/assets/scenes/runtime_scene_load/runtime_scene_load.superdex_scene -SuperDexTaskFolder=<repo>/assets/scenes/runtime_scene_load/tasks
+```
+
 | File | What |
 |---|---|
 | `runtime_scene_load.superdex_scene` | The bots and their controllers (parameters in each bot's `control/` folder), the `left` and `right` slots, the spawnable prefabs and the task root |
