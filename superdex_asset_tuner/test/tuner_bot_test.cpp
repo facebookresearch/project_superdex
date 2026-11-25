@@ -197,7 +197,7 @@ TEST_F(TunerBotTest, AControllerInputEditedMidRunMovesItsJoint) {
     }
   };
   auto const names = session.GetChannelNames();
-  size_t const joint4 = static_cast<size_t>(
+  auto const joint4 = static_cast<size_t>(
       std::find(names.begin(), names.end(), "fr3/fr3_joint4.q0") - names.begin());
   ASSERT_LT(joint4, names.size());
 
