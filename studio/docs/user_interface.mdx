@@ -145,10 +145,9 @@ Clicking on the badge will show all hidden meshes.
 ### View Modes
 
 The **Show** button at the top-left of the viewport opens the visualization
-menu. Three of its entries are mutually exclusive stage modes; **Mochi Debug
-Draw** overlays the physics representation on top of whichever is active. They
-are the fastest way to see the difference between what you are rendering and
-what you are simulating.
+menu. The geometry modes are mutually exclusive; **Physics Debug Draw**
+overlays the physics representation on top of whichever is active. Use them
+to compare what you render with what you simulate.
 
 <Figure
   src="../../img/user_interface/show_menu.webp"
@@ -162,13 +161,17 @@ what you are simulating.
 | Render Only | `1` | Render meshes only. |
 | Collision Only | `2` | Collision geometry only. |
 | Render (Collision Fallback) | `3` | Render meshes, falling back to the collision model where no render mesh exists. |
-| SDF (Collision Fallback) | `4` | The surface of each collision model's SDF, falling back to the collision model where it has no SDF. |
+| Collider (Collision Fallback) | `4` | Show a reconstructed SDF surface or a rod's point-cloud collider, when available. Otherwise show the collision geometry. |
 | Physics Debug Draw | `P` | The physics debug overlay, on top of the current mode. |
 
-The menu's contents depend on the editor. The Bot Editor adds toggles for the
-grid, joint limits, link transforms, inertia, and center of mass; the Prefab
-Editor adds the grid, the measure tool, and **Constraints** (`C`); the Model
-Editor registers none, so the Show button does not appear there at all.
+The menu's contents depend on the editor. Every viewport's menu has **Grid**
+(`G`) and **Measure Tool** (`Ctrl+M`, see [Measuring](#measuring)). The Bot
+Editor adds toggles for joint limits, transmissions, link transforms, inertia,
+center of mass, and skin-covered links; the Prefab Editor adds **Constraints**
+(`C`) and **Rod Frame Axes**; the IK Editor adds **IK Constraint Frames** (`T`).
+The IK Editor and the Asset Tuner offer only the first three geometry modes.
+The Model Editor draws its models through the [Model Viewer](./model_editor.mdx#model-viewer)
+instead.
 
 <FigureRow cols={3}>
   <Figure
@@ -187,6 +190,33 @@ Editor registers none, so the Show button does not appear there at all.
     caption={<><FigureLabel>Physics Debug Draw</FigureLabel>Physics overlaid on the current mode.</>}
   />
 </FigureRow>
+
+### Measuring
+
+The **Measure** tool reads distances, angles, and areas straight off the
+geometry in the viewport. Press `Ctrl+M`, or tick **Show → Measure Tool**, then
+click geometry; `Ctrl` or `Shift`-click adds to or removes from the selection.
+Open **Window → Measure** for its settings and results:
+
+- **Pick** a **Vertex**, a **Triangle**, or a **Facet**, the flat group of
+  triangles around the one under the cursor.
+- **Target** the **Render** or **Collision** model, or both. Only what the
+  viewport currently shows can be picked, so switch the
+  [view mode](#view-modes) to measure a collision model.
+- **Result** reports what the selection allows: a point's position; a facet's
+  area, normal, and extents; the distance between two picks; and the angle and
+  gap between two faces. **Record** keeps a measurement to return to later, and
+  each result can be copied as text.
+
+The tool is unavailable while a simulation runs; pause it to measure.
+
+:::info Screenshot placeholder — Measuring
+Open `assets/prefabs/shape_box/shape_box.mochi_prefab` in the Prefab Editor,
+press `Ctrl+M`, set **Pick** to **Facet**, and click two parallel faces, such
+as the tops of two walls of the box. Capture the viewport with both facets
+highlighted and the measurement drawn between them, beside **Window → Measure**
+showing the **Result**.
+:::
 
 ### Selecting and Transforming
 
@@ -243,8 +273,7 @@ run physics, so a Model Editor tab never shows one.
 
 While the simulation runs you can reach into it. `Left-click` and drag any
 physics-enabled body to pull it around, and `Scroll` while dragging to push it
-further away or draw it closer. It works on rigid bodies, articulated links,
-and soft bodies alike, which makes it the fastest way to sanity-check a joint
+further away or draw it closer. It works on rigid bodies, articulated links, soft bodies, and rods, which makes it the fastest way to sanity-check a joint
 limit, a contact, or a mass that feels wrong before you go back to editing
 numbers. Editing is locked while the simulation runs: the hierarchy and details
 panels go read-only and undo is unavailable, so stop the simulation before you
@@ -267,9 +296,9 @@ the import wizard. The mouse's back and forward buttons navigate folder history.
   caption="The task_board_1 folder with no filter applied: four subfolders and three prefabs."
 />
 
-The roots of that tree are your workspace. **File → Open Folder…** replaces
-them, **File → Add Folder to Workspace…** adds another alongside, and
-`Right-click` a root for **Remove from Workspace**. Roots persist between
+The roots of that tree are your workspace. **File → Add Folder to
+Workspace…** adds a folder as another root, and `Right-click` a root for
+**Remove from Workspace**. Roots persist between
 sessions, and opening a bot walks up to its enclosing `.superdex_root` and adds
 that folder for you.
 
@@ -281,7 +310,11 @@ It recognizes the formats Studio works with, and color-codes them:
 | CAD Model | `.step` `.stp` `.stl` |
 | Collision Model | `.mochi.h5` |
 | Prefab | `.superdex_prefab` `.mochi_prefab` `.mochi_scene` |
-| Bot | `.superdex_bot` |
+| Bot | `.superdex_bot` `.superdex_bot_archive` |
+| Bot Scene | `.superdex_scene` `.superdex_scene_archive` |
+| Task | `.superdex_task` |
+| Asset Tuner | `.superdex_tuner` |
+| IK Configuration | `.superdex_ik` |
 
 Clicking a type filter reveals every matching file in the current folder *and
 its subfolders*, hiding folders while it is active. It is the quickest way to
@@ -381,9 +414,9 @@ viewport in both directions.
 |  | Bot Hierarchy | Prefab Hierarchy |
 |--|---------------|------------------|
 | Columns | Link · Joint | Name · Type |
-| Structure | The link tree (or a flat list, via the cog) | A flat list of rigid, soft, articulated, and nested-prefab actors; articulated actors expand |
+| Structure | The link tree (or a flat list, via the cog) | Rigid actors, soft actors, rods, articulated actors, and nested prefabs; articulated actors expand |
 | Selection | Single | Multiple, with `Ctrl` and `Shift` |
-| Add | **Add Child Link**, from the `Right-click` menu | **Create Rigid / Soft / Articulated / Nested Prefab**, by `Right-click` on empty space |
+| Add | **Add Child Link**, from the `Right-click` menu | **Create Rigid / Soft / Rod / Articulated / Nested Prefab**, by `Right-click` on empty space |
 | While simulating | Disabled | Read-only, but selection still works |
 
 The Bot Hierarchy flags validation problems with a warning badge on the offending
@@ -417,7 +450,7 @@ fight for the same space.
 | **Bot Details** | The whole bot | Name, world transform, cycle joints, default pose. For a Mod Bot, the base bot and its modification list instead. |
 | **Bot Link Details** | The selected link | Its parent, its inbound joint, and the link's own mass, inertia, and model slots. |
 | **Prefab Details** | The whole prefab | Scene settings: gravity, solver, and friends. |
-| **Details** | The selected actor or constraint | Sections that change with what is selected: a rigid, soft, articulated, or nested prefab actor, or a constraint. |
+| **Details** | The selected actor or constraint | Sections that change with what is selected: a rigid, soft, rod, articulated, or nested prefab actor, or a constraint. |
 
 The field-by-field reference lives in the [Bot Editor](./bot_editor/index.mdx) and
 [Prefab Editor](./prefab_editor.mdx) guides.
@@ -452,11 +485,15 @@ Opening an asset launches the editor registered for its type:
 | Asset | File | Editor |
 |-------|------|--------|
 | Bot | `.superdex_bot` | [Bot Editor](./bot_editor/index.mdx) |
+| IK Configuration | `.superdex_ik` | [IK Editor](./ik_editor.mdx) |
 | Prefab | `.superdex_prefab`, `.mochi_prefab`, `.mochi_scene` | [Prefab Editor](./prefab_editor.mdx) |
+| Asset Tuner | `.superdex_tuner` | [Asset Tuner](./asset_tuner.mdx) |
+| Bot Scene | `.superdex_scene`, `.superdex_scene_archive` | [Bot Scene Editor](./bot_scene_editor.mdx) |
 | CAD / Render / Collision model | `STEP`, `.glb`, `.mochi.h5` | [Model Editor](./model_editor.mdx) |
 
 Read-only `_archive` variants of the bot formats open in the Bot Editor with
-editing disabled.
+editing disabled. A task (`.superdex_task`) has no editor of its own: it opens
+in the [Task Preview](./bot_scene_editor.mdx#tasks) of the active bot scene.
 
 ## See also
 

@@ -52,7 +52,7 @@ it references as a single self-contained snapshot.
 There are two ways to create a Mod Bot. The first starts from an existing bot:
 right-click its tile in the Asset Browser and choose **Create Mod Bot...**, which
 makes a new Mod Bot with that bot already set as its base. The second starts from
-the Asset Browser itself: right-click empty space and choose **Create > Mod
+the Asset Browser itself: right-click empty space and choose **Create → Mod
 Bot...**, which starts a Mod Bot with no base yet that you choose afterwards.
 
 <Figure
@@ -66,7 +66,7 @@ Bot...**, which starts a Mod Bot with no base yet that you choose afterwards.
   src="../../../img/bot_editor/create_mod_bot_from_browser.webp"
   alt="The Asset Browser right-click menu with Create expanded and Mod Bot... highlighted."
   maxWidth={257}
-  caption="Create > Mod Bot... starts a Mod Bot with no base."
+  caption="Create → Mod Bot... starts a Mod Bot with no base."
 />
 
 Either way, Studio adds a new `.superdex_bot` Mod Bot to the current folder and
@@ -103,7 +103,7 @@ the stack, ready for you to configure.
   caption="Choose a type from New Mod Type, then click Add Modification."
 />
 
-Studio supports four modification types:
+Studio supports five modification types:
 
 | Modification | Purpose | Key fields |
 |--------------|---------|------------|
@@ -111,6 +111,7 @@ Studio supports four modification types:
 | `AttachLink` | Attach a single new inline link to a parent link, joined by a new `joint`. Like `AttachBot`, but for one hand-authored link rather than a referenced bot file. Useful for small adapters, such as a camera mount or a mount plate, between the base bot and an attached bot. | `parentLinkName`, `joint`, `link` |
 | `ReplaceLink` | Swap an existing link (and its descendants) for a new inline link, preserving the original connecting joint. Useful for retrofitting a single link, such as a sensorized fingertip. | `linkToReplace`, `link` |
 | `ReplaceLinkWithBot` | Swap an existing link (and its descendants) for an external bot, preserving the original connecting joint. The replacement's names may be `prefix`ed, for example replacing an arm's end-effector stub with a gripper bot. | `linkToReplace`, `prefix`, `path` |
+| `AttachSkin` | Add a [skin](./skinning.mdx) over the built bot's links. Edited in the **Bot Skin** window. | `skin` |
 
 Here are two examples. The first uses the `ReplaceLink` operation to swap a target
 link for a new one: you choose the **Link to Replace**, then author the
@@ -171,7 +172,7 @@ for each finger, a `ReplaceLink` swaps the fingertip for a mount link, then an
 A Mod Bot can hold any number of modifications. They are applied serially, each
 building on the result of the one before it, so you can add as many as you like as
 long as every subsequent mod still builds. The video below assembles all five
-fingers of the seed hand this way, then walks the stack backward and forward by
+fingers of the SEED hand this way, then walks the stack backward and forward by
 toggling mods on and off. Each mod's row has an **enable checkbox** to disable it
 without removing it, and a **trash** button to delete it.
 

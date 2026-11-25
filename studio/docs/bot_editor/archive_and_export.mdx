@@ -28,7 +28,7 @@ want while iterating, but sometimes you want the opposite: a frozen snapshot tha
 will not shift underneath you, so a result stays reproducible no matter what
 changes upstream.
 
-**Bot > Archive**, from the main menu, does this. It zips the bot together with
+**Bot → Archive**, from the main menu, does this. It zips the bot together with
 every asset it depends on, following its references transitively (base bots,
 attached bots, referenced models, and so on), and writes a single
 **`.superdex_bot_archive`** file. The archive is fully self-contained and loads
@@ -44,7 +44,7 @@ will build the same way later.
 
 ## Prefab Export
 
-**Bot > Export Prefab** exports just the articulation side of a bot as a
+**Bot → Export Prefab** exports just the articulation side of a bot as a
 **`.superdex_prefab`**. This is useful when something was modeled as a bot but you
 later decide it should be a plain articulation, with none of the extra bot baggage.
 You are left with the articulated structure on its own.
@@ -56,9 +56,23 @@ You are left with the articulated structure on its own.
   caption="A bot and the prefab exported from it. Bot-only information is dropped in the process, such as the default pose, so the prefab spawns in a different configuration."
 />
 
+## Simulation Prefab Export
+
+**Bot → Export Simulation Prefab** is available while the simulation runs. It
+exports the bot as a prefab in its **current simulated state**, pose included,
+into a folder you choose. Use it to capture a configuration you reached by
+driving or dragging the bot, for example to start a prefab from a grasp.
+
+## Skeletal GLB Export
+
+**Bot → Export Skeletal GLB...** writes the bot as a `.glb` with a skeleton
+following its links, optionally with its render and collision meshes bound to
+it. It is the starting point for authoring a [skin](./skinning.mdx#authoring-the-render-model)
+in a tool such as Blender.
+
 ## URDF Export (XML only)
 
-**Bot > Export URDF** writes the bot's structure back out as a **`.urdf`** file.
+**Bot → Export URDF** writes the bot's structure back out as a **`.urdf`** file.
 This is an XML-only export: the mesh references are not converted to the formats
 URDF tooling usually expects, DAE for visual meshes and STL for collision. They
 keep pointing at whatever files the bot already uses, so if you plan to simulate
@@ -67,3 +81,10 @@ the exported URDF, you will need to convert those meshes offline first.
 The XML still has real value for interoperating with software that expects URDF,
 such as ROS or Pinocchio, so SuperDex Studio remains a useful authoring tool for
 teams who would rather run their robots in a tool they already use.
+
+## Copying the Bot Definition
+
+**Bot → Copy BotPrefab** copies the bot's JSON definition to the clipboard. For
+a Mod Bot it reads **Copy BotPrefab (Flattened)** and copies the built result,
+with every modification applied; **Copy ModBotPrefab** copies the Mod Bot's own
+base and modification list instead.

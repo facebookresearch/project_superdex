@@ -33,8 +33,9 @@ buck2 run fbsource//arvr/projects/superdex/ci:preview_website
 
 ## Structure
 
-- `docs/` — the Docs tab: `overview` + five guides (User Interface, Bot Editor,
-  Prefab Editor, Model Editor, SuperDex CAD Exporter).
+- `docs/` — the Docs tab: `overview` + the guides (User Interface, Bot Editor,
+  IK Editor, Prefab Editor, Asset Tuner, Bot Scene Editor, Model Editor,
+  SuperDex CAD Exporter).
 - `src/pages/index.mdx` — the landing page.
 - `src/css/custom.css` — theme (white/black, DM Sans + Instrument Serif).
 - `docusaurus.config.js`, `sidebars.js` — site config and navigation.

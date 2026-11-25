@@ -76,18 +76,19 @@ import ViewportVideo from '@site/src/components/ViewportVideo';
               <h3>Compose, Edit, and Combine Bots</h3>
               <p>
                 Assemble complex robots from vetted components or import one from{' '}
-                <code>.urdf</code>. Iterate on kinematics and dynamics, joint limits,
-                and self-collision until it behaves like the hardware. Bolt a hand
-                onto an arm, or replace OEM fingertips with custom sensors using the
-                bot mod pipeline.
+                <code>.urdf</code> or MuJoCo <code>.xml</code>. Iterate on kinematics
+                and dynamics, joint limits, and self-collision until it behaves like
+                the hardware. Bolt a hand onto an arm, replace OEM fingertips with
+                custom sensors using the bot mod pipeline, cover a hand with a
+                deforming skin, and set up IK goals to retarget motion onto it.
               </p>
             </div>
             <div className={styles.feature}>
               <h3>Create Task Prefabs and Scenes</h3>
               <p>
                 Compose rigid, soft, and articulated actors into reusable task
-                prefabs, then assemble those prefabs into scenes for robotics and
-                dexterous manipulation research.
+                prefabs, then assemble those prefabs and your bots into scenes for
+                robotics and dexterous manipulation research.
               </p>
             </div>
             <div className={styles.feature}>
@@ -95,7 +96,8 @@ import ViewportVideo from '@site/src/components/ViewportVideo';
               <p>
                 Every editor is a live SuperDex Physics scene. Simulate the instant
                 an asset opens, then inspect and debug contact, inertial, and joint
-                behavior on the fly.
+                behavior on the fly, or tune a prefab against repeatable loads with
+                the Asset Tuner.
               </p>
             </div>
             <div className={styles.feature}>

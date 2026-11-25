@@ -1,0 +1,150 @@
+---
+title: IK Editor
+sidebar_label: IK Editor
+sidebar_position: 4
+description: 'Authoring inverse kinematics configurations in SuperDex Studio: goals on a bot''s links, retargeting from an input bot, joint couplings, solver settings, and live preview.'
+---
+
+import Figure, {FigureVideo} from '@site/src/components/Figure';
+import ProjectSuperdexLink from '@site/src/components/ProjectSuperdexLink';
+
+# IK Editor
+
+The **IK Editor** authors and previews an inverse kinematics (IK)
+configuration: a `.superdex_ik` file that says which links of a bot should
+reach which targets, how hard to try, and how to solve. Use it to set up an end
+effector goal for an arm, pose several fingertips at once, or **retarget**
+motion from one bot onto another, such as a tracked human hand onto a robot
+hand.
+
+An IK configuration names two bots:
+
+- The **output bot** is the robot being solved for. Its joints move.
+- An optional **input bot** supplies moving targets. Each goal can follow one of
+  its links, so posing the input bot poses the targets.
+
+Each **goal** ties a constraint frame on an output bot link to a target frame,
+either on an input bot link or fixed relative to the output bot's base. The
+solver moves the output bot's joints to bring each pair of frames together. IK
+produces a pose, not joint efforts; see the SuperDex Robotics guide to
+<ProjectSuperdexLink site="robotics" path="docs/inverse_kinematics/">Inverse Kinematics</ProjectSuperdexLink>
+for the file format and for solving from code.
+
+:::info Screenshot placeholder — IK retargeting
+Open `assets/bots/hands/dg5f_long/right/dg5f_long_right_retarget_openxr.superdex_ik`.
+Capture the whole window with the default layout: the DG5F hand (output bot)
+and the OpenXR hand (input bot) in the viewport with **IK Constraint Frames**
+showing the fingertip goal axes, **IK Goals** and **IK Solver** on the right,
+and **IK Solve Plots** along the bottom after pressing Play for a few seconds.
+:::
+
+## Creating an IK Configuration
+
+`Right-click` a bot in the Asset Browser and choose **Create IK
+Configuration...**. Studio checks that the bot builds, creates
+`<bot>_ik.superdex_ik` beside it with that bot as the output bot, adds a goal
+for each of its leaf links, and opens it after you name it. Double-click an
+existing `.superdex_ik` to open it.
+
+## Editor Windows
+
+| Window | What you do there |
+|--------|-------------------|
+| **IK Goals** | The goal list, the selected goal's frames and stiffness, and joint couplings. |
+| **IK Solver** | The output and input bots, their starting poses, how the input bot is placed, and the solver settings. |
+| **IK Solve Plots** | Each solve's time and solver iterations, while previewing. |
+
+All three are open by default. Edits are undoable with `Ctrl+Z`.
+
+## Goals
+
+Each row of **IK Goals** reads `name : input link -> output link` and has an
+enable checkbox. Add a goal with **Add Output Link Goal**, which lists the
+output bot's links that do not have one yet. Select a goal from its row, by
+clicking its frame in the viewport, or by clicking its output link.
+
+The selected goal shows:
+
+- **Name**, **Output Bot Link**, and **Input Bot Link**. **Output Bot Base**
+  instead of an input link fixes the target relative to the output bot's
+  initial base, which is what you want for a plain reaching goal without an
+  input bot.
+- **Output Base / Input Link Frame From Constraint Frame**: where the target
+  sits on its input link (or on the base). **Match Output Constraint Frame**
+  moves it onto the output frame.
+- **Output Link Frame From Constraint Frame**: where the constraint frame sits
+  on the output link. **Match Input Constraint Frame** moves it onto the
+  target.
+- **Position Stiffness** and **Rotation Stiffness**: how strongly the solver
+  pulls each part of the goal. Zero turns that part off.
+- **Reset Goal to Initial Output Constraint Pose**, and **Remove Goal** (or
+  `Delete`).
+
+In the viewport, **Show → IK Constraint Frames** (`T`) draws every goal: the
+larger RGB axes are the output constraint frame, and the smaller, hue-shifted
+axes are the resolved target. Drag the selected goal's target with the
+transform gizmo.
+
+**Joint Couplings**, at the bottom of IK Goals, add soft constraints that keep
+two single-DOF joints of the same kind in proportion, `q_B = ratio × q_A`, such
+as the coupled joints of a finger. Pick **Joint A** and **Joint B**, then **Add
+Coupling**, and set its **Ratio** and **Stiffness**. A coupling only affects the
+IK solution, not the simulated robot.
+
+<Figure
+  src="/img/r2/studio-ik-selected-goal.png"
+  alt="The DG-5F and blue OpenXR thumbs with separate constraint frames and a transform gizmo; IK Goals shows dg5f_link_1_tip selected, its input and output links, frame offsets, and stiffness fields."
+  caption="The selected thumb goal binds xr_05_thumb_tip to dg5f_link_1_tip. Edit its target and output constraint frame offsets independently."
+/>
+
+## Output and Input Bots
+
+**IK Solver** holds the two bots.
+
+- **Output Bot** is the bot being solved. **Output Bot Pose** sets the starting
+  joint configuration: the solver starts there, and **Stop** returns to it.
+- **Input Bot** is optional; drop a bot onto it to retarget. **Output Base
+  Frame From Input Base Frame** places the input bot relative to the output
+  bot, and **Input Bot Uniform Scale** scales its motion, for example to fit a
+  human hand to a larger robot hand. Click the input bot in the viewport to
+  move or turn it with the gizmo.
+- **Input Bot Pose** poses the input bot with a slider per joint, which moves
+  every goal that follows it. **Snapshot Input Bot Pose** stores the pose
+  currently shown into the document.
+
+**Creation and Numerical Settings** exposes the solver's settings: whether the
+output base is fixed, iteration limits, tolerances, and the time budget of each
+solve. New configurations fix the base and budget 10 ms per solve; an unlimited
+budget can make the viewport unresponsive.
+
+## Previewing the Solve
+
+Use the viewport transport to run the IK:
+
+| Control | What it does |
+|---------|--------------|
+| **Play** (`Space`) | Solves continuously, so the output bot follows the goals as you edit them. |
+| **Pause** | Stops solving and keeps the last result. |
+| **Step** (`→`) | Runs a single solve. |
+| **Stop** (`Esc`) | Returns the output bot to its starting pose. |
+
+The bottom-left of the viewport reports the solve status, and **IK Solve
+Plots** charts each solve's time and solver iterations against the iteration
+limit and the time budget, marking solves that did not converge. **Clear**
+empties the plots, and **Auto-fit** keeps them framed.
+
+Editing goals, couplings, or settings resets the preview; the authored poses
+and the selected recording are kept.
+
+<FigureVideo
+  src="/img/r2/studio-ik-solve-plots.mp4"
+  poster="/img/r2/studio-ik-solve-plots-poster.png"
+  alt="The FR3 arm follows its end-effector goal as the target is dragged, while IK Solve Plots updates solve time and iteration counts below the viewport."
+  caption="Drag the goal target while playing to preview the IK solve and monitor its time and iterations."
+/>
+
+## See Also
+
+- <ProjectSuperdexLink site="robotics" path="docs/inverse_kinematics/">Inverse Kinematics</ProjectSuperdexLink>: the `.superdex_ik` format and solving from code.
+- [Bot Editor](./bot_editor/index.mdx): authoring the bots an IK configuration uses.
+- [User Interface](./user_interface.mdx): the viewport, gizmo, and transport.

@@ -29,14 +29,17 @@ shortcut you can use without opening the menu.
 |---------------|----------|-------------|
 | Grid | `G` | The ground reference grid. |
 | Joint Limits | `J` | Joint axes and range-of-motion indicators. |
+| Linear Transmissions | — | The joints each [linear transmission](./editing.mdx#bot-transmissions) couples. |
+| Spatial Tendons | — | The route of each [spatial tendon](./editing.mdx#bot-transmissions). |
 | Link Transform | `T` | Each link's local coordinate frame. |
 | Link Inertia | `I` | A box at each link approximating its inertia. |
 | Center of Mass | `M` | A marker at each link's center of mass. |
+| Skin-Covered Links | — | The links a [skin](./skinning.mdx) hides, drawn under it. |
 | Physics Debug Draw | `P` | Debug overlays from the live SuperDex Physics simulation. |
 | Render Only | `1` | Show only the render meshes. |
 | Collision Only | `2` | Show only the collision meshes. |
 | Render (Collision Fallback) | `3` | Show render meshes, falling back to the collision mesh for links that have none. |
-| SDF (Collision Fallback) | `4` | Show the surface of each collision model's SDF, falling back to the collision mesh for links without one. |
+| Collider (Collision Fallback) | `4` | Show the surface of each collision model's SDF, falling back to the collision mesh for links without one. |
 
 The last four are mutually exclusive display modes that choose which geometry the
 viewport draws.
@@ -109,7 +112,7 @@ The model options at the bottom of the Show menu choose which geometry the viewp
 draws. **Collision Only** (`2`) hides the render meshes and shows just the
 collision meshes that SuperDex Physics simulates, each link in its own color so
 neighboring parts are easy to separate. It is the fastest way to confirm the
-physics geometry matches the robot you see. **SDF (Collision Fallback)** (`4`)
+physics geometry matches the robot you see. **Collider (Collision Fallback)** (`4`)
 shows instead the surface each collision model's SDF reconstructs to, in its own
 color, so you can check what SDF contacts will see; links whose collision model
 has no SDF keep their collision mesh. The surfaces are built the first time you
@@ -127,7 +130,7 @@ render meshes.
 ### Visualization Settings
 
 The colors, sizes, and scales these overlays use are app-wide settings. Edit them
-from **File > Settings > Bot Visualization**, where you can tune the axis length,
+from **File → Settings → Bot Visualization**, where you can tune the axis length,
 center-of-mass radius, the inertia, center-of-mass, axis, and joint colors, and the
 per-link scaling for both links and joints.
 
@@ -135,7 +138,7 @@ per-link scaling for both links and joints.
   src="../../../img/bot_editor/bot_viz_settings.webp"
   alt="The Settings window with Bot Visualization selected, showing Links and Joints groups with scale, size, and color options."
   maxWidth={839}
-  caption="Bot Visualization settings, under File > Settings > Bot Visualization."
+  caption="Bot Visualization settings, under File → Settings → Bot Visualization."
 />
 
 ## Physics Debug Draw
@@ -153,8 +156,8 @@ see contacts, bounding volumes, collision samples, and more.
 />
 
 Exactly what gets drawn is chosen from a long list of toggles under **Debug Draw**.
-Open it from **Window > Physics Settings > Debug Draw** to change only the current
-editor, or from **File > Settings > Physics Settings > Debug Draw** to set the
+Open it from **Window → Physics Settings → Debug Draw** to change only the current
+editor, or from **File → Settings → Physics Settings → Debug Draw** to set the
 default that every freshly created editor starts with. Turn on **Enable Debug
 Draw**, then pick the specific quantities you want to see. The list grows over time
 as new debug draw features are added, so hover any entry to see exactly what it

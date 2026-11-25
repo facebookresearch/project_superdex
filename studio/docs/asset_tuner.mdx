@@ -1,0 +1,250 @@
+---
+title: Asset Tuner
+sidebar_label: Asset Tuner
+sidebar_position: 6
+description: 'Tuning prefab physics in SuperDex Studio: apply repeatable loads to a prefab, probe its response, plot runs side by side, override parameters per run, and record runs for analysis.'
+---
+
+import ProjectSuperdexLink from '@site/src/components/ProjectSuperdexLink';
+
+# Asset Tuner
+
+The **Asset Tuner** is a physics test bench for a prefab. It replays the same
+experiment on a prefab as many times as you like: push on a part with a known
+force, pull a link along a path, or twist a joint, then measure how the prefab
+responds. Change a contact parameter or a spring stiffness between runs, press
+`Space` again, and compare the new run against the last ones in the same plot.
+
+Use it when a part has to match a measured behavior. If a connector takes 7 N
+to seat, set up a 7 N push on the plug, then tune friction and the latch's
+stiffness until the plug seats the way the real one does.
+
+:::info Screenshot placeholder — Asset Tuner overview
+Open `assets/prefabs/midi/tuning/feel.superdex_tuner` and press `Space`. Let the
+run finish (about 3 s). Capture the whole window with the default layout:
+the keyboard in the viewport with its load arrows visible, **Asset Tuner Loads**
+and **Asset Tuner Prefab Hierarchy** on the right, **Asset Tuner Run** below
+them, and **Asset Tuner Plots** along the bottom showing the load and position
+channels of the finished run.
+:::
+
+## What Is an Asset Tuner?
+
+An asset tuner is a `.superdex_tuner` file, written as JSON, that references a
+prefab and describes one experiment on it:
+
+| Part | What it does |
+|------|--------------|
+| **Loads** | Forces, torques, joint efforts, and pose paths applied to the prefab, each with a profile over time. |
+| **Probes** | What to measure every step: body poses and velocities, joint states, contact forces, penetration, and solver statistics. |
+| **Prefab Overrides** | Values changed on the prefab for each run, without editing the prefab file. |
+| **Stop Conditions** | End a run early, for example when a part falls or leaves a box. |
+| **Run Settings** | Time step, duration, gravity, and the ground plane. |
+
+The tuner never modifies its prefab. Once you have found the values you want,
+copy them into the prefab in the [Prefab Editor](./prefab_editor.mdx).
+
+A tuner runs the same way from the [command line](#command-line), with the
+`superdex_asset_tuner` tool, so a script or an agent can sweep parameters over an
+experiment you set up in Studio. Studio and the command line write the same
+recordings.
+
+## Creating an Asset Tuner
+
+`Right-click` a prefab in the Asset Browser and choose **Create Asset
+Tuner...**. Studio creates `<prefab>_tuner.superdex_tuner` beside the prefab,
+with a **Solver Stats** probe already added, lets you name it, and opens it.
+Double-click an existing `.superdex_tuner` to open it.
+
+:::info Screenshot placeholder — Create Asset Tuner
+In the Asset Browser, open `assets/prefabs/midi` and `Right-click` the `midi`
+prefab tile. Capture the context menu with **Create Asset Tuner...** highlighted
+at the top. Crop to the tile and its menu.
+:::
+
+## Editor Windows
+
+The Asset Tuner adds these windows to the Studio frame. Open the hidden ones
+from the **Window** menu.
+
+| Window | What you do there | Open by default |
+|--------|-------------------|:---------------:|
+| **Asset Tuner Loads** | Add and edit loads. | Yes |
+| **Asset Tuner Prefab Hierarchy** | The prefab's actors, read-only. Click a row to select it in the viewport. | Yes |
+| **Asset Tuner Run** | The prefab, recording, run settings, probes, and stop conditions. | Yes |
+| **Asset Tuner Plots** | Live plots of every channel, and the list of previous runs. | Yes |
+| **Asset Tuner Prefab Overrides** | Values to override on the prefab for each run. | No |
+| **Physics Settings** | Debug draw for this editor. The time step, gravity, and ground come from **Asset Tuner Run**, and the solver from the prefab, so a Studio run matches the command line. | No |
+
+Play, pause, step, and stop with the viewport transport, as in any other
+[physics-enabled editor](./user_interface.mdx#simulating-physics). Each Play
+starts a new run from the prefab's rest pose.
+
+## Loads
+
+Choose a type from **+ Add Load** at the bottom of **Asset Tuner Loads**. If a
+body is selected in the viewport, the new load targets it.
+
+| Load | What it applies | Target |
+|------|-----------------|--------|
+| **Force** | A force at a point. A point away from the center of mass also applies the matching torque. | A dynamic rigid body or an articulated link |
+| **Torque** | A pure torque. | A dynamic rigid body or an articulated link |
+| **Joint Effort** | A generalized force on a joint's degrees of freedom, in N for prismatic and N·m for revolute joints. | A joint |
+| **Pose Path** | A spring-damper that pulls a grab point on the body along timed waypoints, and optionally turns the body with them, like force-dragging it in the viewport. | A dynamic rigid body or an articulated link |
+
+Each load is a card. Its header has an enable checkbox, its name, type, and
+target, and a trash button; drag the card to reorder it, and expand it to edit
+it. A collapsed card shows a small preview of its profile over the run.
+
+- **Frame** chooses how the direction behaves: **World** keeps it fixed in the
+  world while the point rides on the body, **Local** turns it with the body, and
+  **World-Fixed** (forces only) fixes both the direction and the point in the
+  world.
+- **Point** is where a force acts. Press **Pick Point** and click the body in
+  the viewport to set both the target and the point, or **Center of Mass** to
+  place it there.
+- **Profile** sets the magnitude over time: **Constant**, **Envelope** (rise,
+  hold, and fall), **Sine**, or **Keyframes**. Keyframes can also animate a
+  load's direction and, for a force, its point.
+- **Pose Path** loads replace the profile with a waypoint table and a timeline.
+  **Add Waypoint** appends one, **Set to Current Pose** captures the body's pose
+  into the selected waypoint, and each span between waypoints can drive the
+  pose, the position only, or release the body. The **Drive** settings set how
+  stiffly the path is followed, and **Max Pull Force Prediction** estimates the
+  force it can exert.
+
+Selecting a card selects its load in the viewport, where it is drawn as an
+arrow in its type's color. A transform gizmo on the selected load moves its
+point and turns its direction, or moves the selected waypoint of a pose path.
+Most load edits apply live while the simulation runs; adding, removing,
+renaming, reordering, or retargeting a load applies on the next run.
+
+:::info Screenshot placeholder — Load card
+With `feel.superdex_tuner` open and the simulation stopped, select the
+`white_key` load card and expand it. Capture **Asset Tuner Loads** showing the
+expanded card (Name, Type, Target, Frame, Direction, Point with **Pick Point**
+and **Center of Mass**, and the Profile editor with its preview), next to a
+crop of the viewport showing the selected load's arrow and gizmo on the key.
+:::
+
+## Probes and Plots
+
+Probes are added from **Asset Tuner Run → Probes**. Each probe produces one or
+more **channels**, sampled every step, and every load also produces its own
+magnitude channel, `load.<name>.mag`.
+
+| Probe | Channels |
+|-------|----------|
+| **Body Pose** | Position and rotation of a body, in the world frame. |
+| **Body Velocity** | Linear and angular velocity of a body. |
+| **Joint State** | Position and velocity of each of a joint's degrees of freedom. |
+| **Contact Force** | Total contact force on a body. |
+| **Penetration** | Approximate volume by which a body overlaps other actors. **Ignore Ground** leaves out the ground plane. |
+| **Solver Stats** | Nonlinear iterations, residual, line-search iterations, and convergence of each step. |
+| **Performance** | Wall-clock solve time of each step. This varies between runs. |
+
+**Asset Tuner Plots** lists every channel. Tick a channel to plot it, or drag
+channels onto a plot area to group them; **+ Add Plot** adds another plot area,
+and dropping channels onto the empty space below the plots makes one. All plots
+share one time axis, so they pan and zoom together. **Auto-fit All** keeps them
+framed, and **Clear** empties every plot.
+
+Previous runs stay in the plots, faded behind the current one, so you can see
+what a change did. The **Runs** list shows each run; hover one to see what
+changed in the tuner since the run before it. Untick a run to hide it, pin it
+to keep it, or delete it. **Runs Kept** sets how many unpinned runs are kept,
+and **Clear Runs** forgets all unpinned runs.
+
+:::info Screenshot placeholder — Comparing runs
+With `feel.superdex_tuner`, run once, change one prefab override or load
+magnitude, and run again. Capture **Asset Tuner Plots** with two runs: the
+current run in full color over the faded previous run, the channel list on
+the left, and the **Runs** list with the tooltip that names what changed.
+:::
+
+## Prefab Overrides
+
+**Asset Tuner Prefab Overrides** changes values on the prefab before each Play,
+without touching the prefab file. Each override is a **Path** into the prefab's
+JSON and a **Value**:
+
+```text
+actors.rigid[name=block].contact.coulombFrictionCoefficient = 0.8
+prefabs[name=Nested1].actors.rigid[name=Rigid1].isStatic = true
+```
+
+`[index]` and `[name=...]` pick an element of a list. An override that does not
+apply to the prefab turns red and explains why. Overrides apply on the next
+Play; the viewport always shows the unmodified prefab.
+
+## Stop Conditions
+
+A stop condition pauses a run when it triggers, shows a banner in the viewport,
+and records why the run ended. Add one from **Asset Tuner Run → Stop
+Conditions**:
+
+| Condition | Stops when |
+|-----------|------------|
+| **Leaves Box** | A body's origin leaves a box. |
+| **Enters Box** | A body's origin enters a box. |
+| **Falls Below Height** | A body falls below a height. |
+| **Interpenetration** | A body's penetration volume rises above a threshold. |
+| **Channel Threshold** | Any channel goes above or below a value. |
+
+Box conditions draw their box in the viewport. Select the condition to move the
+box with the gizmo (`W`) or resize it (`R`), or press **Center on Target**. A
+condition can wait for a start time, to let the scene settle, and can require
+the condition to hold for a while before it triggers. Stop condition changes
+apply on the next run.
+
+## Recording Runs
+
+**Asset Tuner Run → Recording** writes runs to disk. Press **Record** while a
+run plays to record it, or while stopped to arm recording for every run from
+the next Play; press it again to stop and disarm. Each recording creates a
+timestamped folder (`<UTC timestamp>_<tunerName>`, with an optional run tag)
+in **Output Folder** holding the resolved tuner (`tuner.resolved.json`), every
+channel as `signals.csv` (a `t` column plus one column per channel), and a `summary.json` (per-channel
+min/max/final, plus whether `sim.rrd` was written). When simulation recording is
+enabled, the default Studio build also writes `sim.rrd`, a Rerun recording of
+the simulation. A source build with `-DSUPERDEX_BUILD_RECORDER=OFF` still writes
+the other run files. **Stop at Duration** pauses the run and ends its recording
+at the run's duration. **Last Run** and **Copy Path** point at the most recent
+folder.
+
+## Command Line
+
+`superdex_asset_tuner` runs a saved tuner without Studio, which is useful for
+repeatable comparisons once the loads and probes are set up:
+
+```bash
+superdex_asset_tuner describe experiment.superdex_tuner
+superdex_asset_tuner run experiment.superdex_tuner --out tuner_runs
+superdex_asset_tuner run experiment.superdex_tuner --set 'loads[name=push].profile.magnitude=7' --out tuner_runs --tag force_7n
+```
+
+Run `describe` first to list what loads, probes, and stop conditions can
+target, **after** prefab overrides. Names in nested prefabs are paths, such as
+`fixture/brick`, and articulated links are `arm/link2`. `--set` changes an
+existing field of the tuner for one run, not the file; it cannot append an
+array entry.
+
+`run` prints the run's summary and writes the same run folder as a Studio
+recording; `--no-files` prints the summary only. A `stopped` status means a
+stop condition ended the run, not that the simulation failed: the summary says
+which condition fired.
+
+The [Asset Tuner source guide](https://github.com/facebookresearch/project_superdex/tree/main/superdex_asset_tuner)
+covers the command line and the full `.superdex_tuner` schema.
+
+## Settings
+
+**File → Settings → Asset Tuner** holds the app-wide tuner settings, such as how
+many runs are kept.
+
+## See Also
+
+- [Prefab Editor](./prefab_editor.mdx): authoring the prefab the tuner tests.
+- [User Interface](./user_interface.mdx): the viewport, playback, and force-drag.
+- <ProjectSuperdexLink site="physics" path="docs/concepts/contact/">Contact</ProjectSuperdexLink>: the contact parameters you usually tune.
+- <ProjectSuperdexLink site="physics" path="docs/concepts/constraints/">Constraints</ProjectSuperdexLink>: the springs and limits a prefab's mechanisms use.

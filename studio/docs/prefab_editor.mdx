@@ -2,7 +2,7 @@
 title: Prefab Editor
 sidebar_label: Prefab Editor
 sidebar_position: 5
-description: 'Authoring a prefab in SuperDex Studio: rigid, soft, articulated, and nested actors, inertial properties, the contact filter, and placing and duplicating actors.'
+description: 'Authoring a prefab in SuperDex Studio: rigid bodies, soft bodies, rods, articulations, nested prefabs, constraints, and contact filtering.'
 ---
 
 import Figure, {FigureRow, FigureLabel, FigureVideo, FigureNote} from '@site/src/components/Figure';
@@ -32,15 +32,16 @@ transform gizmo, and the playback transport are app-wide and are covered in
 
 ## Anatomy of a Prefab
 
-A prefab is a flat list of actors of four kinds. Pick the kind by what the part
-has to *do*, then author it in **Details**, which changes its sections to
-match whatever you have selected. [Constraints](#constraints) then tie actors or
-joints together with springs and limits.
+The Prefab Editor can author rigid bodies, soft bodies, rods, articulations,
+and nested prefabs. Pick the kind by what the part has to *do*, then edit it in
+**Details**. [Constraints](#constraints) tie actors or joints together with
+springs and limits.
 
 | Kind | Use it when |
 |------|-------------------|
 | [Rigid](#rigid-actors) | The part does not deform and currently is the most used type. |
 | [Soft](#soft-actors) | The part is compliant and hence squashes, bends, and conforms. |
+| [Rod](#rod-actors) | A cable, band, or other slender part bends and twists around a centerline. |
 | [Articulated](#articulated-actors) | The part has moving pieces joined by constraints: prismatic, revolute, spherical, or hard (e.g., hinged lid, drawer, vise). |
 | [Nested Prefab](#nested-prefabs) | You include an existing prefab inside another. |
 
@@ -49,18 +50,17 @@ joints together with springs and limits.
   alt="The Prefab Hierarchy panel on its Actors tab, with + Actor and + Constraint buttons, a settings cog at the top right, and Name and Type columns: Articulated1 expanded into root, new_link, and new_link_1 as Articulated Links, followed by Nested1 as a Nested Prefab, Rigid1 as Rigid, and Soft1 as Soft."
   variant="inset"
   maxWidth={576}
-  caption="One prefab holding all four actor kinds, with the articulated actor expanded."
+  caption="Rigid, soft, articulated, and nested-prefab actors, with the articulated actor expanded."
 />
 
 ## Feature Support
 
-Those four kinds are what a prefab can hold today. The prefab format can express
-more than this editor can currently author, so here is where the line falls.
+The prefab format can express more than this editor can author.
 
 **Supported**
 
-- **Rigid, soft, and articulated actors, and nested prefabs**, as described above.
-- **Collision and render models** per actor, each with its own scale and offset.
+- **Rigid, soft, rod, and articulated actors, and nested prefabs**, as described above.
+- **Collision and render models** for rigid actors, soft actors, and articulated links. Rods draw their centerline or an embedded surface.
 - **[Inertial properties](#inertial-properties)**, either derived from the collision geometry or given outright.
 - **Joints within one articulated actor**: prismatic, revolute, spherical, and hard, plus an optional skin.
 - **[Constraints](#constraints)**: joint springs and ranges, joints between rigid actors, pivots, and deformable node attachments.
@@ -71,7 +71,6 @@ more than this editor can currently author, so here is where the line falls.
 - <strong><ProjectSuperdexLink site="physics" path="docs/concepts/pose_controller/">Pose controllers</ProjectSuperdexLink></strong> for articulated actors.
 - <strong><ProjectSuperdexLink site="physics" path="docs/concepts/actors/soft_skinned_actors/">Soft-skinned actors</ProjectSuperdexLink></strong>, which are neither listed in the hierarchy nor drawn in the viewport.
 - **Closed-loop articulations** and initial joint velocities.
-- <strong><ProjectSuperdexLink site="physics" path="docs/concepts/actors/rod/">Rods</ProjectSuperdexLink></strong>, which the prefab format supports but this editor does not yet author or display.
 - <strong><ProjectSuperdexLink site="physics" path="docs/concepts/transmissions/">Tendons</ProjectSuperdexLink> and <ProjectSuperdexLink site="physics" path="docs/concepts/actors/shell/">shells</ProjectSuperdexLink> (cloth)</strong>, which the prefab format itself cannot express yet, so those need format work before Studio can author them.
 
 These already simulate in
@@ -228,6 +227,46 @@ their parameters are documented in <ProjectSuperdexLink site="physics" path="doc
     Keep it below the floated video: a figure set beside a float is squeezed
     into the remaining column width. */}
 
+## Rod Actors
+
+A rod simulates a slender body, such as a cable or rubber band, as a polyline
+that bends and twists. Unlike a [soft actor](#soft-actors), it does not need a
+tetrahedral volume mesh.
+
+1. In **Prefab Hierarchy → Actors**, choose **+ Actor → Create Rod**. Select
+   the new rod and drop a polyline `.mochi.h5` into its **Mochi Model** slot in
+   **Details**. The [Model Editor](./model_editor.mdx#polyline-models) can
+   inspect the centerline and add a tubular skin to an existing polyline.
+2. Place it with **World From Local** or the transform gizmo. Set **Material**
+   and **Collision / Contact** for how the rod bends, twists, and interacts.
+   A point-cloud collider requires equal scale magnitudes on all three axes.
+3. Press `Space` to simulate. Drag the rod in the viewport to pull its nearest
+   centerline node. Use **Show → Rod Frame Axes** to see how its segment frames
+   turn as the rod twists.
+
+**Rendered As** reports what Studio draws: the embedded, skinned visual mesh
+if there is one, otherwise the contact skin, otherwise the centerline. Studio
+does not draw a separate render model for a rod. **Collision Only** (`2`)
+shows the contact skin when **Use Contact Skin** is on and the model has one;
+otherwise it shows the centerline. **Collider (Collision Fallback)** (`4`)
+shows the point-cloud collider, when configured, as spheres along the rod.
+
+<Figure
+  src="/img/r2/studio-prefab-rod-collider.png"
+  alt="The selected headphone cable in Collider (Collision Fallback) mode: a row of highlighted spheres along the rod, one at each node, with a frame-axis arrow between each pair, and the cable's plug at its end."
+  caption="The headphones' cable, given a point-cloud collider, in Collider (Collision Fallback) mode with Rod Frame Axes on: a sphere at each node and each element's frame axis. For this image the collider radius is reduced from its 10 mm default to 3 mm, so each sphere shows separately instead of overlapping its neighbors as a disk."
+/>
+
+<Figure
+  src="/img/r2/studio-prefab-rod-collider-details.png"
+  alt="The rod's Collision / Contact section in Details: Collider Type PointCloud, Radius 0.0030 m, self-contact settings, contact penalty and friction parameters, and Use Contact Skin checked."
+  maxWidth={550}
+  caption="Collision / Contact: a PointCloud collider with a 3 mm radius, and Use Contact Skin on."
+/>
+
+For the physics and material parameters, see
+<ProjectSuperdexLink site="physics" path="docs/concepts/actors/rod/">Rods</ProjectSuperdexLink>.
+
 ## Articulated Actors
 
 An articulated actor is a hierarchical tree of links joined by joints, authored as a single
@@ -327,14 +366,14 @@ selects the same constraint, and **Details** then shows its fields.
 | <ProjectSuperdexLink site="physics" path="docs/concepts/constraints/#articulated-constraints">Articulated Joint</ProjectSuperdexLink> | <ProjectSuperdexLink site="physics" path="docs/concepts/constraints/#articulatedsingledoftarget">Joint Target</ProjectSuperdexLink>, <ProjectSuperdexLink site="physics" path="docs/concepts/constraints/#articulatedsingledofrange">Joint Range</ProjectSuperdexLink>, <ProjectSuperdexLink site="physics" path="docs/concepts/constraints/#articulated3drotationtarget">Joint Rotation Target</ProjectSuperdexLink>, <ProjectSuperdexLink site="physics" path="docs/concepts/constraints/#articulated3drotationrange">Joint Rotation Range</ProjectSuperdexLink> | One joint of an articulated actor. Target and Range move one degree of freedom of a revolute, prismatic, or free joint; the rotation versions take a spherical or free joint. |
 | <ProjectSuperdexLink site="physics" path="docs/concepts/constraints/#rigid-rigid-joints">Between Two Rigid Actors</ProjectSuperdexLink> | <ProjectSuperdexLink site="physics" path="docs/concepts/constraints/#rigidsphericaljoint">Spherical Joint</ProjectSuperdexLink>, <ProjectSuperdexLink site="physics" path="docs/concepts/constraints/#rigidprismaticjoint">Prismatic Joint</ProjectSuperdexLink>, <ProjectSuperdexLink site="physics" path="docs/concepts/constraints/#jointrotationtracking">Relative Rotation Target</ProjectSuperdexLink>, <ProjectSuperdexLink site="physics" path="docs/concepts/constraints/#jointrotationrange">Relative Rotation Range</ProjectSuperdexLink> | Actor A and actor B. |
 | <ProjectSuperdexLink site="physics" path="docs/concepts/constraints/#rigid-pivots-to-kinematic-targets">Rigid Actor to World</ProjectSuperdexLink> | <ProjectSuperdexLink site="physics" path="docs/concepts/constraints/#rigidpivotposition">Pivot Position</ProjectSuperdexLink>, <ProjectSuperdexLink site="physics" path="docs/concepts/constraints/#rigidpivottorigidtarget">Pivot Target Pose</ProjectSuperdexLink>, <ProjectSuperdexLink site="physics" path="docs/concepts/constraints/#rigidpivotrotation">Pivot Rotation</ProjectSuperdexLink> | A point or frame on one rigid actor. |
-| <ProjectSuperdexLink site="physics" path="docs/concepts/constraints/#deformable-couplings">Deformable</ProjectSuperdexLink> | <ProjectSuperdexLink site="physics" path="docs/concepts/constraints/#deformablenodeposition">Node Position</ProjectSuperdexLink>, <ProjectSuperdexLink site="physics" path="docs/concepts/constraints/#deformablenodetorigid">Node to Rigid</ProjectSuperdexLink>, <ProjectSuperdexLink site="physics" path="docs/concepts/constraints/#deformablenodetodeformablenode">Node to Node</ProjectSuperdexLink> | Nodes of soft actors. |
+| <ProjectSuperdexLink site="physics" path="docs/concepts/constraints/#deformable-couplings">Deformable</ProjectSuperdexLink> | <ProjectSuperdexLink site="physics" path="docs/concepts/constraints/#deformablenodeposition">Node Position</ProjectSuperdexLink>, <ProjectSuperdexLink site="physics" path="docs/concepts/constraints/#deformablenodetorigid">Node to Rigid</ProjectSuperdexLink>, <ProjectSuperdexLink site="physics" path="docs/concepts/constraints/#deformablenodetodeformablenode">Node to Node</ProjectSuperdexLink> | Nodes of soft actors or rods. |
 
 Each name links to its definition in SuperDex Physics, with the exact equation and
 frame behind every field.
 
 Create one with **+ Constraint** at the top of either tab, or from the
 `Right-click` menu of a row: **Add Constraint** on a link offers the joint
-constraints for that link's joint, and on a rigid or soft actor the ones that fit
+constraints for that link's joint, and on a rigid, soft, or rod actor the ones that fit
 it. A new constraint attaches to the selected actors or link when they fit and to
 the first suitable actors otherwise, and starts where it changes nothing: a Joint
 Range copies the joint's limits, a Spherical Joint anchors where actor B rests,
@@ -375,7 +414,7 @@ pull apart. **Show > Constraints** (`C`) draws every constraint at once.
 
 **+ Actor** at the top of the Prefab Hierarchy's Actors tab, or `Right-click` on
 empty space in it, creates an actor: **Create Rigid**, **Create Soft**, **Create
-Articulated**, or **Create Nested Prefab**. `Right-click` an existing row to copy,
+Rod**, **Create Articulated**, or **Create Nested Prefab**. `Right-click` an existing row to copy,
 duplicate, or delete it.
 
 The Prefab Editor is the only editor with multi-selection. `Ctrl`-click to add
@@ -420,6 +459,8 @@ the contact filter rules that used to apply to it.
 - [User Interface](./user_interface.mdx): the viewport camera, the gizmo, and the playback transport.
 - [Bot Editor Guide](./bot_editor/index.mdx): the field-by-field joint and link reference.
 - [Model Editor Guide](./model_editor.mdx): building the collision models a prefab binds.
+- [Asset Tuner](./asset_tuner.mdx): testing and tuning a prefab's physics with repeatable loads and plots.
+- [Bot Scene Editor](./bot_scene_editor.mdx): using a prefab as a scene's base scene or as a spawnable object.
 - <ProjectSuperdexLink site="physics" path="docs/concepts/prefabs/">Prefabs</ProjectSuperdexLink>: the concept, as the physics engine defines it.
 - <ProjectSuperdexLink site="physics" path="docs/concepts/constraints/">Constraints</ProjectSuperdexLink>: every constraint type, its equation, and its parameters.
 - <ProjectSuperdexLink site="physics" path="docs/authoring_scenes/authoring_prefabs/">Authoring Prefabs</ProjectSuperdexLink>: the full property reference for actors, materials, contacts, and scene settings.

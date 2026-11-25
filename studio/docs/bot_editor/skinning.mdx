@@ -1,0 +1,75 @@
+---
+title: Skinning
+sidebar_label: Skinning
+sidebar_position: 4
+---
+
+import ProjectSuperdexLink from '@site/src/components/ProjectSuperdexLink';
+
+# Skinning
+
+A bot can carry a **skin**: one continuous surface stretched over its links,
+such as the soft covering of a hand. The skin follows the links as they move,
+and can stand in for them in contact, in rendering, or in both. A skinned hand
+can touch an object with one smooth, deforming palm surface instead of a set of
+separate rigid link shapes, and can render as one seamless mesh.
+
+A skin has two optional models, and each has its own role:
+
+| Model | Role |
+|-------|------|
+| **Mochi Model** | The skin's collision model (`.mochi.h5`). Other bodies collide with this deforming surface. |
+| **Render Model** | A skinned `.glb` whose bones follow the bot's links. It is drawn in place of the link render models it covers. |
+
+:::info Screenshot placeholder — Skinned hand
+Open `assets/bots/hands/wuji_hand2_beta1/right/wuji_hand2_beta1_skinned_right.superdex_bot`.
+Capture two views of the same pose side by side: the default view showing the
+skin's render model, and the same view with **Show → Skin-Covered Links** on,
+or **Collision Only** (`2`), so the link geometry under the skin is visible.
+Include the **Bot Skin** window docked beside the viewport.
+:::
+
+## The Bot Skin Window
+
+Open **Window → Bot Skin** in the Bot Editor. For a bot without a skin, press
+**Add Skin**; **Remove Skin** takes it off again.
+
+- **Model**: drop the skin's **Mochi Model** and **Render Model** from the Asset
+  Browser into their slots. The render model has its own translation,
+  rotation, and scale.
+- **Collision / Contact**: the skin's **Layer**, its contact parameters, and how
+  its surface is sampled for contact, with the same meaning as a link's
+  [Collision / Contact](./editing.mdx#link) settings.
+- **Skin Link Substitution**: one row per link. Tick **Collision** to turn off
+  that link's own contact and let the skin collide in its place. Tick
+  **Render** to hide the link's render model wherever the skin is drawn. By
+  default every **Collision** box is ticked, so the skin is the bot's only
+  collider, and the skin hides the render models of the links it is skinned
+  over.
+
+**Show → Skin-Covered Links** in the viewport toggles drawing the links the
+skin hides, so you can check what lies underneath. Press `Space` to simulate:
+the skin deforms with the links, and force-dragging works on the skinned bot
+as on any other.
+
+## Skins on Mod Bots
+
+A [Mod Bot](./modding.mdx) adds a skin with an **AttachSkin** modification
+instead. In the Bot Skin window of a Mod Bot, **Add Skin Modification** appends
+one and the window edits it; a skin that comes from a referenced bot is shown
+as read-only, to be edited in that bot.
+
+## Authoring the Render Model
+
+**Bot → Export Skeletal GLB...** writes the bot as a skeletal `.glb`, a
+skeleton that follows the bot's link hierarchy, which you can then skin in a
+tool such as Blender.
+Choose whether to include the **Render meshes**, the **Collision meshes**, both,
+or neither (the joint hierarchy alone), and bind the skeleton to the bot's
+**Rest** (zero) pose or **Bake current pose**.
+
+## See Also
+
+- [Editing](./editing.mdx): the link and contact settings a skin shares.
+- [Modding](./modding.mdx): adding a skin through a modification.
+- <ProjectSuperdexLink site="physics" path="docs/concepts/contact/">Contact</ProjectSuperdexLink>: what the skin's contact parameters mean.

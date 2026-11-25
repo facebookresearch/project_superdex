@@ -1,0 +1,182 @@
+---
+title: Bot Scene Editor
+sidebar_label: Bot Scene Editor
+sidebar_position: 7
+description: 'Assembling a bot scene in SuperDex Studio: a base physics scene, placed bots with controllers, spawnable prefabs, slots, tasks, and scene archives.'
+---
+
+import ProjectSuperdexLink from '@site/src/components/ProjectSuperdexLink';
+
+# Bot Scene Editor
+
+The **Bot Scene Editor** assembles a complete robotics environment in one file:
+a base physics scene, the bots placed in it with their controllers, and the
+prefabs that tasks can spawn into it. A bot scene is a `.superdex_scene` file,
+written as JSON, that references these assets rather than copying them, so
+improvements to a bot or a prefab show up in every scene that uses it. Open a
+scene, press `Space`, and the whole workcell simulates together.
+
+A scene is configuration, not a control program. What it holds, and how an
+application loads and runs it, is covered in the SuperDex Robotics guide to
+<ProjectSuperdexLink site="robotics" path="docs/bot_scenes/">Bot Scenes</ProjectSuperdexLink>.
+
+:::info Screenshot placeholder — Bot scene overview
+Create a bot scene (see [Creating a Bot Scene](#creating-a-bot-scene)) in a
+scratch folder under `assets/`, with `assets/prefabs/workbench/workbench.superdex_prefab`
+as **Base Scene**, the FR3 arm `assets/bots/arms/fr3_v2/fr3_v2.superdex_bot`
+placed on it, and `assets/prefabs/nine_hole_peg_test/nine_hole_peg_test.mochi_prefab`
+as a spawnable prefab. Capture the whole window: the assembled workcell in the
+viewport, **Bot Scene Info** on the right with the **Scene** and **Bots**
+sections expanded, and **Task Preview** below it. Delete the scratch folder
+afterwards.
+:::
+
+## Creating a Bot Scene
+
+`Right-click` empty space in the Asset Browser and choose **Create → Bot
+Scene...**. Studio adds an empty `.superdex_scene` to the current folder and
+lets you name it. Double-click a `.superdex_scene` or `.superdex_scene_archive`
+to open it.
+
+A loose scene is the editable source file. Its assets stay separate: paths
+resolve relative to the scene file or through tags such as `@prefabs` in a
+`.superdex_root` marker. If Studio cannot write a reference, it warns beside
+the slot. Keep the scene and its dependencies in a portable layout so another
+checkout can open them without your local workspace settings.
+
+## Editor Windows
+
+| Window | What you do there | Open by default |
+|--------|-------------------|:---------------:|
+| **Bot Scene Info** | The scene's metadata, base scene, spawnable prefabs, bots, controllers, and slots. | Yes |
+| **Task Preview** | Load, edit, and preview a task's spawned objects in this scene. | Yes |
+| **Physics Settings** | Simulation and debug-draw settings for this editor. | No |
+
+Every edit restages the viewport immediately and is undoable with `Ctrl+Z`. The
+viewport has no transform gizmo: place bots and objects numerically. Editing is
+locked while the simulation runs.
+
+## Scene
+
+The **Scene** section of Bot Scene Info holds the environment:
+
+- **Base Scene** is a [prefab](./prefab_editor.mdx#what-is-a-prefab), usually a
+  scene prefab, holding the fixtures. Its gravity, solver, and contact filter
+  settings are the scene's.
+- **Task Root**, when enabled, sets the task frame in the world. Place it at a
+  meaningful origin, such as the tabletop. Top-level task objects are placed
+  relative to this frame, or to the world origin if **Task Root** is off.
+- **Spawnable Prefabs** is the catalog of objects a task can place. Use
+  **+ Add Spawnable Prefab**, assign a physics prefab, and give the entry a
+  unique, stable **Name**, such as `block`. Listing it here does not place it
+  in the scene, and spawning it does not change the base scene's physics settings.
+
+Add an entry with its **+** button, reorder entries with the arrow buttons, and
+remove them with the trash button. The same controls work for every list in
+the window.
+
+## Bots
+
+Each entry under **Bots** places one bot:
+
+- **Name** identifies the bot in the scene; slots and controllers refer to it.
+- **Bot** is the `.superdex_bot` or `.superdex_bot_archive` to place.
+- **Spawn Transform** places it in the scene.
+- **Initial Pose** sets the joint configuration it spawns in, with the same
+  sliders as the Bot Editor's [Default Pose](./bot_editor/editing.mdx#bot-details).
+  Picking another bot resets it to that bot's default pose.
+- **Controllers** attaches controllers to the bot. **Add Controller** offers
+  the built-in controller types, or **Custom...** for a type registered by
+  your application. Each controller has a **Name**, a **Type**, and
+  **Parameters**: the type's defaults, a `.superdex_controller` file
+  (**Open...** or **Save As...**), or inline JSON.
+
+:::info Screenshot placeholder — Bot entry
+In the scene above, expand the FR3 entry under **Bots** and add a pose
+controller. Capture **Bot Scene Info** showing the entry's Name, Bot slot,
+Spawn Transform, Initial Pose sliders, and the expanded controller with its
+Type and Parameters.
+:::
+
+### Slots
+
+**Slots** describe roles that one of several bots can fill, such as a "right"
+arm that can be either of two arm-and-hand combinations. Add a slot, name it,
+and add the bots that can fill it. The radio button beside each bot picks which
+one the editor shows and simulates; this choice is a view setting and is not
+saved in the scene.
+
+## Tasks
+
+A scene defines the workcell; a task (`.superdex_task`) defines which objects
+start an episode and where. One scene can host many tasks, and the same task
+can be previewed on another scene that offers the same spawnable names.
+
+1. **Prepare the objects.** Open or create their assets in the [Prefab Editor](./prefab_editor.mdx).
+   Check collision geometry and, if the object will be visible to a renderer,
+   its render model. Register each prefab under **Bot Scene Info → Scene →
+   Spawnable Prefabs**, then save the scene.
+2. **Open a task.** Use **Create → Task...** in the Asset Browser, or duplicate
+   a task whose setup you want to reuse. With the scene active and stopped,
+   use **Task Preview → Load Task...** or double-click the task in the Asset
+   Browser.
+3. **Place the objects.** In **Spawns**, choose **+ Add Spawn**. Give it a
+   unique **Name** (such as `block_left`), then select its **Prefab** (such as
+   `block`). **Prefab** binds to the exact scene entry name, not its filename.
+   Several spawns can use the same prefab. Set **Parent** and **Spawn
+   Transform**: a top-level spawn is relative to the task root; a child is
+   relative to its parent spawn, not to an actor inside that prefab.
+4. **Validate and save.** Check the placement in the viewport, then Play or
+   Step to spot interpenetration or parts that fall at startup. While
+   simulating, **Task Preview** switches to an **Initial** or **Current**
+   transform table. Stop, then use **Save Task** or **Save Task As...** to
+   write the separate task file. Reopen the loose scene and task together to
+   check the saved references.
+
+If task objects disappear while you edit, read the warning in **Task Preview**
+and check the Log Console. Check for an unknown spawnable name, a missing
+asset, duplicate names, or an invalid or cyclic parent relationship.
+
+Studio previews the nominal layout. **Pose Randomization Class** names a
+class for your runner to apply at reset; the preview does not sample it or
+edit or evaluate task termination criteria. See
+<ProjectSuperdexLink site="robotics" path="docs/bot_tasks/">Bot Tasks</ProjectSuperdexLink>
+for runtime reset, randomization, and termination.
+
+:::info Screenshot placeholder — Task preview
+In the scene above, create a task with **Create → Task...**, load it, and add
+two spawns of the spawnable prefab placed apart on the table. Capture the
+viewport showing both spawned objects next to **Task Preview** with one spawn
+expanded.
+:::
+
+## Simulating
+
+Press `Space`, or Play in the viewport transport, to simulate the whole scene:
+the base scene, every bot (only the selected bot of each slot), and the loaded
+task's objects. Studio loads the scene's controllers but runs no control loop of
+its own; to command them, drive the scene from the SuperDex Robotics API.
+Force-drag any body with
+the mouse, and press `Esc` to return everything to where it started. See
+[Simulating Physics](./user_interface.mdx#simulating-physics).
+
+## Archives
+
+The **Bot Scene** menu packages and unpacks scenes:
+
+| Item | What it does |
+|------|--------------|
+| **Create Scene Archive...** | Writes a `.superdex_scene_archive` holding the scene and everything it references, transitively. Save the scene first. Also on a scene's `Right-click` menu in the Asset Browser. |
+| **Extract Archive to Loose Files...** | For an open archive: extracts it into an empty folder, adds that folder to the workspace, and opens the extracted scene. |
+| **Export Simulation Prefab** | While simulating: exports the scene's current state as a prefab. |
+
+Keep the loose scene and its referenced assets as the source for ongoing
+edits. Make an archive when you need to share a self-contained snapshot.
+**Save** on an open archive overwrites that archive, not the original loose
+files. A task is not part of the archive; share its `.superdex_task` separately.
+
+## See Also
+
+- <ProjectSuperdexLink site="robotics" path="docs/bot_scenes/">Bot Scenes</ProjectSuperdexLink>: the scene format, loading scenes from code, and packaging.
+- [Bot Editor](./bot_editor/index.mdx): authoring the bots a scene places.
+- [Prefab Editor](./prefab_editor.mdx): authoring base scenes and spawnable prefabs.

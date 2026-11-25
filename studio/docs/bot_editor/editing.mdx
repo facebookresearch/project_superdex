@@ -46,7 +46,7 @@ new, empty bot and opens it in the Bot Editor.
 Building a bot from scratch is fully supported, but it suits only simple, one-off
 bots. Assembling a complex robot link by link is tedious and error-prone. For
 anything nontrivial, prefer importing the robot instead, from an existing
-[URDF](./import.mdx) or a [SuperDex CAD Exporter export](../cad_exporter/index.mdx), which brings
+[URDF or MJCF](./import.mdx) or a [SuperDex CAD Exporter export](../cad_exporter/index.mdx), which brings
 in the full link hierarchy, geometry, and inertial properties in one step.
 
 However a bot was made, open it for editing by double-clicking its asset tile in
@@ -364,6 +364,11 @@ For the full contact model and the precise meaning of each parameter, see the
 SuperDex Physics guide to
 <ProjectSuperdexLink site="physics" path="docs/concepts/contact/">Contact</ProjectSuperdexLink>.
 
+For editable base bots, **Name** changes to the bot or a link take effect when
+you leave the field. Studio keeps the renamed link selected and updates
+references within the bot, including contact overrides and skin bindings.
+Empty or conflicting link names are rejected.
+
 ## Bot Contact
 
 The **Bot Contact** window is an advanced editor for a bot's per-link contact
@@ -422,9 +427,37 @@ A row of buttons across the top of the window applies bulk actions:
   caption="Estimate Non-Colliding sampling random poses to find link pairs that never collide."
 />
 
+## Bot Transmissions
+
+The **Bot Transmissions** window, opened from the **Window** menu, couples
+joints together beyond what the link tree expresses. It has two sections:
+
+- **Linear Transmissions** tie several joints together. **Add Transmission**
+  adds one; give it a **Name**, then **Add Joint** for each joint it couples,
+  with a **Coefficient** and an **Axis Disp** per joint.
+- **Spatial Tendons** route a cable through the bot. **Add Tendon** adds one,
+  and **Add Routing Element** appends to its route, in order, a **Waypoint** on
+  a link or a **Linear Joint**.
+
+Each transmission and tendon also has a **Displacement Control Actuator**: a
+**Target Displacement**, a **Stiffness** and **Damping**, and whether it may
+push (**Allow Compressive Force**). Reorder or delete entries with the buttons
+on each header. **Show → Linear Transmissions** and **Show → Spatial Tendons**
+draw them in the viewport. For how transmissions and tendons behave, see
+SuperDex Physics'
+<ProjectSuperdexLink site="physics" path="docs/concepts/transmissions/">Transmissions</ProjectSuperdexLink>.
+
+:::info Screenshot placeholder — Bot Transmissions
+Open `assets/bots/grippers/2f_85/2f_85.superdex_bot`, open **Window → Bot
+Transmissions**, and expand its first entry. Capture the window with the
+entry's joints or routing elements and its Displacement Control Actuator,
+beside the viewport with the matching **Show → Linear Transmissions** or
+**Show → Spatial Tendons** toggle on.
+:::
+
 ## Other Editing Features
 
-A couple of bulk tools live in the **Bot** menu on the main menu bar.
+A few bulk tools live in the **Bot** menu on the main menu bar.
 
 ### Batch Link/Joint Rename
 

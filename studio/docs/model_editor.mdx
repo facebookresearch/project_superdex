@@ -45,7 +45,7 @@ with a bot or prefab and it opens the Model Editor.
   />
 </FigureRow>
 
-Opening a file in the model editor will search the nearby folders for a CAD,
+Opening a file in the Model Editor will search the nearby folders for a CAD,
 render, and collision model with the same filename and populate all 3 in the
 [Model Viewer tab](#model-viewer). Visuals will be enabled only for the file
 that was opened. Opening another file in the same set of 3 potential files will
@@ -115,7 +115,7 @@ hit** as the primary model for that slot:
 Step 4 is the fallback for models filed under a role that does not match their
 type. For example, the URDF that imported STL files into the collision folder.
 Because those folders have no precedence among themselves, if there are two or
-more candidates none will be selected and the collision logged.
+more candidates, none will be selected and the collision logged.
 
 `intermediates/` is never searched. It holds generated output, which must not
 [shadow](#shadowed-models) the real asset.
@@ -129,7 +129,7 @@ then by path. The preference order matches the table above in
 
 ### Shadowed Models
 
-Each filename can have only one primary file. If two files share the same name but live at different path depths (e.g. `render/block.glb` and `render/internal/block.glb`), the shallower one wins, it becomes the primary, and the deeper one is *shadowed*.
+Each filename can have only one primary file. If two files share the same name but live at different path depths (e.g. `render/block.glb` and `render/internal/block.glb`), the shallower one wins: it becomes the primary, and the deeper one is *shadowed*.
 
 If you open a shadowed file like `render/internal/block.glb`, Studio will open it on its own with the other slots empty, and report a shadowed warning in the [Log Console](./user_interface.mdx#log-console). The shadowed copy never pulls in models that belong to the primary set.
 
@@ -153,7 +153,7 @@ controls and the viewport overlays work as they do everywhere else (covered in
 
 :::warning
 The Model Editor does not yet have a built-in undo stack. This will be coming
-very soon.
+soon.
 :::
 
 ## Model Viewer
@@ -224,6 +224,43 @@ error between a model's active collision surface and its SDF influences how
 contacts resolve, so visualizing them independently is useful. The SDF
 visualization uses marching cubes.
 
+### Polyline Models
+
+A rod's collision model is a `.mochi.h5` polyline rather than a triangle
+surface or tetrahedral volume. Open one in the Model Editor and use **Polyline**
+to see its centerline, **Frame axes** to inspect the orientation of its
+segments, and **Stats** to check whether it is open or closed, its length, and
+its node and segment counts. If present, its contact skin and visual mesh have
+their own visualization controls.
+
+To add a skin to an existing polyline, use this stack in **Model Processing**:
+
+1. Add **Source from Mochi Model** and point it at the polyline. This reads the
+   centerline and its element frames, not any skins already in the file.
+2. Optionally use **Apply SRT Transformation** to reposition, rotate, or scale
+   the polyline before embedding.
+3. Add **Embed Contact Skin** or **Embed Visual Mesh** and select **Tube**.
+   Set **Radius (m)** and **Segments**, the number of sides around the tube.
+   Add both modifiers if the contact surface and visual mesh should differ.
+4. Finish with **Export Mochi Model**. Choose a different output path if you
+   want to keep the original, then press **Build/Export All**. The resulting
+   `.mochi.h5` holds the polyline, element frames, and any embedded meshes.
+   Polylines export without a baked SDF. Assign the file to a
+   [rod actor](./prefab_editor.mdx#rod-actors) to simulate it.
+
+<Figure
+  src="/img/r2/studio-model-polyline-tube.png"
+  alt="One end of the headphone cable's polyline in the Model Editor: the magenta centerline inside the green wireframe of an eight-sided tube, with a ring of the tube at each 10 mm element."
+  caption="The cable's centerline inside the 6 mm contact-skin tube generated around it, drawn as a wireframe."
+/>
+
+<Figure
+  src="/img/r2/studio-model-polyline-tube-panel.png"
+  alt="The cable's Model Processing stack: Source from Mochi Model with its polyline stats, then Embed Contact Skin with the Tube method, a 0.003 m radius and 8 segments."
+  maxWidth={558}
+  caption="Source from Mochi Model, then Embed Contact Skin → Tube with a 3 mm radius and 8 segments."
+/>
+
 ### Additional Reference Models
 
 Below the three fixed slots (CAD, Render, Collision), **Additional Reference
@@ -233,7 +270,7 @@ models. All reference models and their state are saved as part of the
 [Model Editor state](#saved-pipelines) and will automatically be opened when
 opening the associated file.
 
-When adding an entry select a type (**CAD Model**, **Render Model**, **Collision
+When adding an entry, select a type (**CAD Model**, **Render Model**, **Collision
 Model**), then populate the asset slot by drag-and-drop from the Asset Browser
 or selecting it from the path dropdown. You can configure the visualization
 parameters to your liking and set a transform to offset and orient the model.
@@ -309,7 +346,7 @@ a file you may still want to fix by hand.
 The **Model Processing** window holds the processing pipeline, an ordered stack
 of **modifiers**. Each modifier represents a named group of related **methods**
 to modify the mesh. For example, the modifier **Refine Mesh** contains the
-methods to help refine the existing mesh like making it watertight or collapsing
+methods to help refine the existing mesh, like making it watertight or collapsing
 small edges.
 
 Modifiers come in three kinds, tinted in the stack so they can be identified at
@@ -333,7 +370,7 @@ it. A modifier that has only one method implemented shows no Method dropdown.
 
 A preset is a ready-made pipeline you can drop onto any model.
 **Select Preset** is found at the top of Model Processing. Studio ships with
-several built-in pipelines but you can add your own trivially. Picking one
+several built-in pipelines, but you can add your own trivially. Picking one
 replaces the current stack, asking first if the stack is not empty.
 
 | Preset | Reach for it when |
@@ -419,7 +456,7 @@ done as part of their modifier stage so each following source can pick up what
 the export above it just wrote.
 
 Coordinate spaces are handled for you. The formats disagree about which axis is
-up - `.obj`, `.stl` and `.mochi.h5` are authored Z-up. A `.obj`, an `.stl`, a
+up — `.obj`, `.stl` and `.mochi.h5` are authored Z-up. A `.obj`, an `.stl`, a
 `.glb` and a `.mochi.h5` of the same part all land in the same orientation after
 processing. The **Axis Gizmos** provided in `superdex_studio/assets/axis_gizmos/`
 are a useful tool to verify orientation. They have been carefully authored to be
@@ -445,7 +482,7 @@ is already up to date is skipped, and one that is not is rebuilt first.
 
 A stage is stale when it has never generated, when its own parameters or method
 changed, or when a mesh it derives from has been regenerated since. Staleness
-cascades downstream. A source is the exception, it builds from a file, so it
+cascades downstream. A source is the exception: it builds from a file, so it
 neither inherits the cascade nor tracks the stage above it; instead it rebuilds
 if it has not or when an export preceding it in the pipeline has written.
 
@@ -459,7 +496,7 @@ failure stay written.
   src="../../img/model_editor/generating_status.gif"
   alt="Generating status"
   maxWidth="500px"
-  caption="Status window showing mesh processing, can be cancelled at any time."
+  caption="Mesh processing progress, with a Cancel button below the task list."
 />
 
 :::warning
@@ -467,13 +504,11 @@ The staleness detection does not detect file changes **outside** Studio
 between runs. Press **Generate** on the source to pick it up.
 :::
 
-:::warning
-Clicking cancel will cancel all remaining tasks but cannot interrupt already
-executing tasks that do not have cancel points. Some functions like Bake SDF in
-the Export Mochi Model Modifier do not yet have proper checkpoints. So a long
-running Bake SDF call can be canceled before it starts but will fully run before
-stopping if cancel is clicked during its execution. This will be addressed soon
-to make the cancel button feel very responsive.
+:::warning Canceling mesh processing
+**Cancel** skips stages that haven’t started and can interrupt a running
+operation that uses the mesh helper, such as CAD tessellation. In-process
+operations such as **Bake SDF** in **Export Mochi Model** run to completion
+before the pipeline stops. Files already exported are not removed.
 :::
 
 ### Export Paths
@@ -490,7 +525,7 @@ All export modifiers derive their output path from the source file while
   {'Export Mesh File can export either `.glb` or `.obj` if the path is specified.'}
 </FigureNote>
 
-When using a role-subfolder organization the target folder is used whether or
+When using a role-subfolder organization, the target folder is used whether or
 not it exists. It is created on write. Exporting a STEP opened from `cad/` fills
 `render/` and `collision/` rather than dropping files beside the STEP. A flat
 folder organization stays flat.
@@ -538,22 +573,22 @@ Visualize two stages at once to see exactly what changed.
     src="../../img/model_editor/stages_stats.png"
     alt="Stats"
     maxWidth="350px"
-    caption="Stats provide useful information like estimated file size, triangle count, and watertertightness"
+    caption="Stats provide useful information like estimated file size, triangle count, and watertightness"
   />
 </FigureRow>
 
 **Export Mochi Model** shows both the surface mesh and SDF that was generated as
 part of the modifier.
 
-**Save**, on each modifier next to Generate. Saves the modifier's current output
+**Save**, on each modifier next to Generate, saves the modifier's current output
 to a `.glb` or `.obj` for inspection. This defaults into the asset's
 `intermediates/` folder and matches the filename with a suffix based on the
-Modifier and pipeline ordering. This is incredibly helpful if you need to
+modifier and pipeline ordering. This is incredibly helpful if you need to
 inspect the processing stage in another tool or as reference for another model.
 A tetrahedral output (from **Tetrahedralize** onward) is saved instead as a
 legacy VTK `.vtk` (ASCII) holding its tetrahedra, in the same Z-up coordinates
 as an exported `.mochi.h5`, so it opens in ParaView, Gmsh, and other meshing
-tools.
+tools. For a polyline stage, use **Export Mochi Model** rather than **Save**.
 
 ## Modifier Reference
 
@@ -592,7 +627,7 @@ independent of the Model Viewer, and is how you specify a file directly.
 
 | Method | What it does |
 |--------|--------------|
-| From Model Viewer | Uses the editor's current Mochi Model surface. |
+| From Model Viewer | Uses the editor's current collision model. A polyline source carries its element frames but not its skins. |
 | From File | The same, from this modifier's own collision slot. |
 
 The CAD source is the only one with tessellation settings, and they only appear
@@ -606,8 +641,8 @@ available:
 
 Both take a linear and an angular deflection. The Isotropic backend adds control
 over solid combining, edge sampling (use **Adaptive** to preserve round holes
-and fillets), target edge length, and whether to keep going when a face fails to
-tessellate.
+and fillets), target edge length, whether to keep going when a face fails to
+tessellate, and [per-color face sizing](#color-based-face-sizing).
 
 <FigureRow minWidth={125}>
   <Figure
@@ -630,6 +665,44 @@ tessellate.
     alt="Delabella"
     caption={<FigureLabel>Delabella</FigureLabel>}
   />
+</FigureRow>
+
+#### Color-based Face Sizing
+
+CAD often marks faces by color: contact surfaces, threads, or cosmetic faces.
+With the **Isotropic** backend, **Color-based Face Sizing** in **Source from
+CAD Model** meshes faces of a given color at their own resolution, so a
+fingertip's contact face can be fine while the rest of the part stays coarse.
+
+1. Expand **Color-based Face Sizing** in the CAD source and press **Read
+   Colors**. Studio lists every face color in the STEP file, with its face
+   count and area.
+2. For each color, set a **Target Edge Length** or an **Edge Length Fraction**,
+   and, with **Adaptive** edge sampling, its own deflections. A value of 0 uses
+   the source's global setting.
+3. Press **Generate**. Faces whose color is not listed use the global settings.
+
+**Add Color** adds a row by hand, and the trash button removes one. A color
+listed twice, or not written as `#RRGGBB`, fails the stage.
+
+<FigureRow cols={2}>
+  <Figure
+    src="/img/r2/studio-model-color-sizing-panel.png"
+    alt="Source from CAD Model with the Isotropic backend and Color-based Face Sizing expanded: three face colors read from the brick toy's STEP file, each with its face count, area, deflections and edge length settings."
+    caption="Read Colors lists the brick's three face colors with their face counts. #FCBC84 is meshed at an edge-length fraction of 0.015, a quarter of the 0.06 used for #E4E4E4."
+  />
+  <div>
+    <Figure
+      src="/img/r2/studio-model-color-sizing-model.png"
+      alt="The brick toy's STEP model in its face colors: white top and walls, with the sides of the four studs in orange."
+      caption="The STEP model's face colors: the studs' sides are #FCBC84."
+    />
+    <Figure
+      src="/img/r2/studio-model-color-sizing-wireframe.png"
+      alt="The generated brick toy mesh in wireframe from the same view: a fine mesh on the sides of the four studs and a much coarser mesh on the rest of the brick."
+      caption="The stage's wireframe from the same view: the #FCBC84 faces are meshed much finer than the rest of the brick."
+    />
+  </div>
 </FigureRow>
 
 #### Source from Parts
@@ -663,7 +736,7 @@ Local mesh-quality operations that keep the mesh on, or near, its input surface.
 optimize the edge flips to get closer to its reference mesh. Its **Reference**
 dropdown defaults to the *Preceding Source*, but you can specify an earlier
 stage by index. References follow their targets through reorders, inserts, and
-deletes. If you move the Edge Flip Optimization above its reference it will read
+deletes. If you move the Edge Flip Optimization above its reference, it will read
 `(invalid source)` and fail until a valid source is picked.
 
 <FigureRow minWidth={125}>
@@ -743,12 +816,12 @@ for these when the input is too broken to refine.
   <Figure
     src="../../img/model_editor/wrap_mesh_input.png"
     alt="Input mesh"
-    caption={<><FigureLabel>Input Mesh</FigureLabel> processed using Source from CAD Model, Uniform, then made watertight. Note the two bodies are fully seperated by 5 mm.</>}
+    caption={<><FigureLabel>Input Mesh</FigureLabel> processed using Source from CAD Model, Uniform, then made watertight. Note the two bodies are fully separated by 5 mm.</>}
   />
   <Figure
     src="../../img/model_editor/wrap_mesh_shrink_wrap.png"
     alt="Shrink Wrap"
-    caption={<><FigureLabel>Shrink Wrap</FigureLabel> forms a singular, closed volume; similar to shriking an elastic surface around the entire input model</>}
+    caption={<><FigureLabel>Shrink Wrap</FigureLabel> forms a singular, closed volume; similar to shrinking an elastic surface around the entire input model</>}
   />
   <Figure
     src="../../img/model_editor/warp_mesh_convex_hull.png"
@@ -773,7 +846,7 @@ Rebuilds the triangulation while staying on the input surface.
 | **Incremental Isotropic Remesh** | Iteratively split, collapse, flip, and relax edges toward a uniform target edge length. |
 
 ACVD and Surface Delaunay require a closed input, so both fill holes before they
-run. Isotropic remesh can take any input mesh, and is your best brute force
+run. Isotropic remesh can take any input mesh, and is your best brute-force
 solution for bad meshes.
 
 <FigureRow minWidth={125}>
@@ -838,8 +911,7 @@ Its output is a tetrahedral mesh. The stage shows and measures the mesh's
 boundary surface, its stats add the node and tetrahedron counts, and **Save**
 writes the tetrahedra to a legacy VTK `.vtk`.
 Only **Extract Surface**, **Apply SRT Transformation**, the
-[Embed modifiers](#embed-contact-skin-embed-visual-mesh) and **Export Collision
-Model** take a tetrahedral mesh as input; any other modifier placed after
+[Embed modifiers](#embed-contact-skin-embed-visual-mesh) and **Export Mochi Model** take a tetrahedral mesh as input; any other modifier placed after
 **Tetrahedralize** fails with an error asking you to move it above.
 
 #### Extract Surface
@@ -863,16 +935,18 @@ asking you to place it after **Tetrahedralize**.
 #### Embed Contact Skin, Embed Visual Mesh
 
 Each passes its input mesh on unchanged, with one more triangle mesh embedded in
-it: the [soft actor](./prefab_editor.mdx#soft-actors)'s contact skin or its
-visual mesh, which **Export Collision Model** writes alongside the tetrahedral
-mesh. A soft actor with **Use Contact Skin** on takes its contact samples from
-its contact skin instead of the tetrahedral mesh's boundary, which stays the
-collider geometry when an SDF collider is enabled. Renderers draw a soft actor
-by its visual mesh, which deforms with the simulation.
+it: the contact skin or visual mesh of a [soft actor](./prefab_editor.mdx#soft-actors)
+or a [rod](./prefab_editor.mdx#rod-actors). **Export Mochi Model** writes the
+embedded meshes alongside the tetrahedral mesh or polyline. With **Use Contact
+Skin** on, a soft actor takes its contact samples from the skin instead of the
+tetrahedral mesh's boundary, which stays the collider geometry when an SDF
+collider is enabled. The visual mesh is for rendering and deforms with the
+simulation.
 
 | Method | What it does |
 |--------|--------------|
 | **Upstream Surface** | Embed the triangle surface of a stage above in the tetrahedral mesh. |
+| **Tube** | Generate a tubular surface skinned to the segments of a polyline; see [Polyline Models](#polyline-models). |
 
 **Upstream Surface** picks its **Surface** like Edge Flip Optimization's
 **Reference**; pick the **Wrap Mesh** stage that Tetrahedralize filled to use
@@ -887,14 +961,13 @@ from another model, put the render model's source first, above the source the
 pipeline builds from. **Build/Export All** builds it; a stage's **Generate**
 uses its last generated output.
 
-The stage shows the embedded mesh. Its stats report the mesh's node and
-triangle counts, how far its nodes reach outside the tetrahedra, in element
-heights, and its Hausdorff distance from the input's boundary surface. **Save**
-writes the mesh the stage passes on.
+The stage shows the embedded mesh. Its stats report node and triangle counts
+and, for a tetrahedral input, how the embedded surface compares with the input
+boundary. **Save** is available for tetrahedral output; use **Export Mochi
+Model** to write a polyline and its embedded meshes.
 
 An embedded mesh holds only for the exact mesh it was embedded in. The next
-enabled stage must therefore be another Embed modifier or **Export Collision
-Model**, which writes the embedded meshes. A source may instead start a new
+enabled stage must therefore be another Embed modifier or **Export Mochi Model**, which writes the embedded meshes. A source may instead start a new
 segment without them. Any other modifier fails with an error asking you to move
 the Embed modifiers below it. Each role can be embedded once.
 
@@ -902,23 +975,20 @@ the Embed modifiers below it. Each role can be embedded once.
 
 | Modifier | Method | What it does |
 |----------|--------|--------------|
-| **Export Collision Model** <br /> (Export Mochi Model) | SDF | Bake a grid SDF from the input mesh and export the mesh plus SDF as a `.mochi.h5`, or the mesh alone with **Bake SDF** off. |
+| **Export Mochi Model** | SDF | Write a `.mochi.h5` with an optional baked SDF for triangle and tetrahedral meshes, or write a polyline with its element frames and without an SDF. |
 | **Export Mesh File** | Mesh File | Export the input mesh to a `.glb` or `.obj` in a chosen material color. |
 
-**Export Collision Model** is what produces a `.mochi.h5` collision model, from
-either a triangle surface or a tetrahedral mesh. Its parameters govern the SDF
-bake; with **Bake SDF** off it exports the mesh alone, and SuperDex Physics bakes
-an SDF each time it loads the model. That is the usual choice for a soft actor's
-tetrahedral mesh. The stage's output buffer is the surface reconstructed from the
-SDF, or the input mesh with **Bake SDF** off. Vertices at identical positions are
-welded on export, so a model read from an STL is one connected surface. It also
-writes the contact skin and visual mesh that
-[Embed modifiers](#embed-contact-skin-embed-visual-mesh) above it embedded in
-its input, which is then not welded, since they refer to its vertices as they
-are.
+**Export Mochi Model** writes a triangle surface, tetrahedral mesh, or polyline
+to `.mochi.h5`. **Bake SDF** applies only to triangle and tetrahedral meshes;
+polylines keep their element frames and export without an SDF. Turn the bake
+off for a typical soft actor. For triangle or tetrahedral output, the stage
+shows the reconstructed SDF surface when baked, otherwise the input mesh.
+Coincident surface vertices are welded on export. A polyline, or a mesh with
+[embedded meshes](#embed-contact-skin-embed-visual-mesh), keeps its original
+vertex order and connectivity.
 
 **Export Mesh File** picks its format from the extension given in the filepath.
-`.obj` and `.glb` are supported, anything else is exported as GLB by appending
+`.obj` and `.glb` are supported; anything else is exported as GLB by appending
 `.glb` to the provided path. The **Material Color** is written into the glTF
 `baseColorFactor`, so what you see matches what it writes. OBJ stores no
 materials, so the color is ignored there.
@@ -926,8 +996,8 @@ materials, so the color is ignored there.
 <FigureRow minWidth={125}>
   <Figure
     src="../../img/model_editor/export_collision_model.png"
-    alt="Export Collision Model"
-    caption={<><FigureLabel>Export Collision Model</FigureLabel> a triangular surface mesh of an M8 screw that has been processed</>}
+    alt="Export Mochi Model"
+    caption={<><FigureLabel>Export Mochi Model</FigureLabel> a triangular surface mesh of an M8 screw that has been processed</>}
   />
   <Figure
     src="../../img/model_editor/export_sdf_1mm.png"
@@ -955,10 +1025,10 @@ model to another that will manifest in a future version.
 
 - [User Interface](./user_interface.mdx) — the viewport camera, the Asset
   Browser, and the Log Console.
-- [Importing](./bot_editor/import.mdx) — the URDF importer, which produces the
-  collision models you refine here.
+- [Importing](./bot_editor/import.mdx) — the URDF and MJCF importers, which
+  produce the collision models you refine here.
 - [Bot Editor Guide](./bot_editor/index.mdx) — where a refined collision model
   gets bound to a link.
 - [Prefab Editor Guide](./prefab_editor.mdx) — where a collision model gets
   bound to an actor.
-- [SuperDex CAD Exporter](./cad_exporter/index.mdx) — plugins for SolidWorks and Siemens NX for exporting robots and high-quality, Studio-compatible meshes
+- [SuperDex CAD Exporter](./cad_exporter/index.mdx) — plugins for SolidWorks and Siemens NX for exporting robots and high-quality, Studio-compatible meshes.
