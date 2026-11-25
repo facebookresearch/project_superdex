@@ -276,8 +276,9 @@ bool dbg::BuildCommandInput(
   // std::string overload (imgui_stdlib) enables ImGuiInputTextFlags_CallbackResize under the hood,
   // which is required so that a recalled command can be grown/edited to any length.
   InputCallbackContext callbackContext{.terminal = &term, .completer = completer};
-  bool const submit = ImGui::InputText(
+  bool const submit = ImGui::InputTextWithHint(
       "##cmd",
+      "Type 'help' for commands",
       &term.input,
       ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackHistory |
           ImGuiInputTextFlags_CallbackCompletion | ImGuiInputTextFlags_CallbackAlways,

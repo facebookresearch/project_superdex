@@ -1259,7 +1259,28 @@ void DebugClient::CmdRemote(std::string_view command, bool detailed) {
 }
 
 void DebugClient::CmdHelp() {
-  Print(R"(Commands:
+  Print(R"(Inspect and modify simulation state in the connected application while it runs:
+call methods, tune parameters live, pause and step scenes, and more.
+
+Like a debugger, this can change state in ways the application doesn't expect,
+which may cause it to malfunction or crash. What the console exposes is not part
+of the public API and can change without notice, so use it for debugging, not in
+code or tests that you keep.
+
+Getting started:
+  Everything is organized into paths, like a file system. Use "ls" to list what
+  a directory contains and "cd" to step into one. Each scene's state is under
+  /scenes/<name>, so try "cd /scenes", "ls", then cd into a scene and its actors.
+
+  A path can end at:
+    a property   "<path>" prints its value and "<path> <value>" sets it
+    a method     "<path> <args...>" calls it
+    an object    "<path>" prints it as JSON and "<path> {...}" sets it from JSON
+
+  Values and arguments use JSON syntax. Press Tab to complete paths and to see
+  the arguments a method expects.
+
+Commands:
   help               Show this help.
   servers            List available servers.
   connect            Connect to localhost on the default port.

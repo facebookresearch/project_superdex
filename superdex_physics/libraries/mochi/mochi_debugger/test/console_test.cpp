@@ -579,7 +579,7 @@ TEST_F(ConsoleTest, LocalCommands) {
       {"", "", 0},
       {"echo 'hello world'", "hello world", 1},
       {"pwd", "/", 1},
-      {"help", "Commands:", 1},
+      {"help", "Inspect", 1},
       {"ping", "ping:", 6},
       {"connect invalid", "error: Invalid address", 1},
       {"connect 127.0.0.1:bad", "error: Invalid port number", 1},
