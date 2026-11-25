@@ -24,13 +24,13 @@
 
 namespace mochi::dbg {
 
-/// @brief Terminal layout options. Widths count UTF-8 characters. Zero maximum means unlimited.
+/// @brief Terminal layout options. Widths count display cells. Zero maximum means unlimited.
 struct ConsoleFormatParams {
   size_t _minNameColumnWidth = 32;
   size_t _maxNameColumnWidth = 0;
   size_t _minTypeColumnWidth = 32;
   size_t _maxTypeColumnWidth = 0;
-  size_t _maxLineWidth = 0;
+  size_t _maxLineWidth = 0; ///< Shorten property values to fit this line width.
   size_t _columnSpacing = 4;
   bool _sortAlphabetically = true;
   bool _showTypes = false;

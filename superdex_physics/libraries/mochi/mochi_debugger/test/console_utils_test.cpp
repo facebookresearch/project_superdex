@@ -177,8 +177,8 @@ TEST(ConsoleUtils, AlignsUtf8AndTruncatesAtCharacterBoundaries) {
        "a",
        "string",
        "std::string",
-       "\xC3\xA9\xE4\xB8\xAD\xF0\x9F\x98\x80"
-       "abcd",
+       "\xC3\xA9"
+       "abcdef",
        "",
        false}};
   struct Case {
@@ -186,12 +186,22 @@ TEST(ConsoleUtils, AlignsUtf8AndTruncatesAtCharacterBoundaries) {
     std::string_view expected;
   };
   Case const cases[] = {
-      {1, "."},
-      {2, ".."},
-      {3, "..."},
+      {1, "a"},
+      {2, "a"},
+      {3, "a"},
+      {4, "a  ."},
+      {5, "a  .."},
+      {6, "a  ..."},
       {7, "a  \xC3\xA9..."},
-      {8, "a  \xC3\xA9\xE4\xB8\xAD..."},
-      {9, "a  \xC3\xA9\xE4\xB8\xAD\xF0\x9F\x98\x80..."}};
+      {8,
+       "a  \xC3\xA9"
+       "a..."},
+      {9,
+       "a  \xC3\xA9"
+       "ab..."},
+      {10,
+       "a  \xC3\xA9"
+       "abcdef"}};
   for (auto const& c : cases) {
     SCOPED_TRACE(c.width);
     params._maxLineWidth = c.width;
@@ -294,6 +304,27 @@ TEST(ConsoleUtils, AlignsMethodNamesWithoutWideningPropertyTypeColumns) {
            ._showTypes = true}));
 }
 
+TEST(ConsoleUtils, LimitsValuesWithoutTruncatingMethodSignatures) {
+  DynamicArray<ConsoleListEntry> const entries{
+      {._kind = ConsoleEntryKind::Method,
+       ._name = "doThing",
+       ._typeName = "(LongArgumentType argument) -> LongReturnType"},
+      {._kind = ConsoleEntryKind::Field, ._name = "name", ._value = "abcdefgh"}};
+  struct Case {
+    size_t width;
+    std::string_view value;
+  };
+  Case const cases[] = {
+      {3, ""}, {10, "."}, {11, ".."}, {12, "..."}, {14, "ab..."}, {0, "abcdefgh"}};
+  for (auto const& c : cases) {
+    SCOPED_TRACE(c.width);
+    test::ExpectConsoleListEq(
+        "doThing (LongArgumentType argument) -> LongReturnType\n\nname " + std::string{c.value},
+        FormatConsoleList(
+            entries, {._minNameColumnWidth = 0, ._maxLineWidth = c.width, ._columnSpacing = 2}));
+  }
+}
+
 TEST(ConsoleUtils, ShowsSizeOnlyWhenNoValueWasCaptured) {
   struct Case {
     std::string_view value;
@@ -321,4 +352,11 @@ TEST(ConsoleUtils, ShowsSizeOnlyWhenNoValueWasCaptured) {
          ._containerSize = c.size}};
     test::ExpectConsoleListEq("data " + std::string{c.expected}, FormatConsoleList(entries));
   }
+}
+
+TEST(ConsoleUtils, FitsWideCharacterValuesToTerminalCells) {
+  DynamicArray<ConsoleListEntry> const entries{
+      {._kind = ConsoleEntryKind::Field, ._name = "a", ._value = "\"\xE4\xB8\xAD\xE6\x96\x87\""}};
+  EXPECT_EQ(
+      "a" + std::string(35, ' ') + "\"...", FormatConsoleList(entries, {._maxLineWidth = 40}));
 }

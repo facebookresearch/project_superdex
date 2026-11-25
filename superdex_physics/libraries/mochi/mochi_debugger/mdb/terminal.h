@@ -22,6 +22,7 @@
 #include <mochi_core/utils/guarded.h>
 
 #include <cstddef>
+#include <memory>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -65,11 +66,16 @@ class Terminal final {
    */
   void SetPrompt(std::string_view prompt);
 
+  /** @brief Return the terminal width in character cells, or zero when unavailable. */
+  [[nodiscard]] size_t GetColumnCount() const;
+
   /**
    * @brief Block until the user submits a line (presses Enter).
    *
    * @details Submitted non-empty lines are appended to the command history; the user can cycle
    * back through previous commands with the Up and Down arrow keys, as in a standard terminal.
+   * Left/Right move by character, Ctrl/Alt+Left/Right and Alt+B/F move by word, and Home/End
+   * or Ctrl+A/E move to line boundaries. Typing, Backspace and Delete edit at the cursor.
    *
    * @param[out] line The submitted line (without the trailing newline).
    * @return False if input was closed (EOF / error), true otherwise.
@@ -77,12 +83,14 @@ class Terminal final {
   bool ReadLine(std::string& line);
 
  private:
-  /** @brief All mutable console state, guarded by @ref _state. */
+  /** @brief Prompt, editable line and history state, guarded by @ref _state. */
   struct State {
     std::string buffer; // current (in-progress) input line
+    std::size_t cursorPos{0};
     std::string prompt; // text shown before the input buffer
     DynamicArray<std::string> history; // submitted commands, oldest first
     std::string stashedInput; // live input saved while browsing history
+    std::size_t stashedCursorPos{0};
     std::size_t historyPos{0}; // browse cursor; == history.size() means the live line
     bool rawModeEnabled{false}; // whether the terminal was switched into raw mode
   };
@@ -97,6 +105,8 @@ class Terminal final {
   // Replaces the buffer with the next (newer) history entry, or the stashed live line.
   static void HistoryDown(State& state);
 
+  struct InputReader;
+  std::unique_ptr<InputReader> _input;
   Guarded<State> _state;
 };
 

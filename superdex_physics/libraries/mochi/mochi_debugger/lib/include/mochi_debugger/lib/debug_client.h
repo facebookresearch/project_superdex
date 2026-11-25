@@ -29,6 +29,7 @@
 
 #include <cinttypes>
 #include <condition_variable>
+#include <cstddef>
 #include <deque>
 #include <functional>
 #include <mutex>
@@ -466,6 +467,9 @@ class DebugClient {
    */
   std::string GetCommandPrompt() const;
 
+  /** @brief Set the console width in characters for property values. Zero means unlimited. */
+  void SetConsoleLineWidth(size_t width);
+
   /**
    * @brief Return true if exit was requested via console command
    */
@@ -502,6 +506,7 @@ class DebugClient {
     bool exitRequested = false;
     StepMode stepMode = StepMode::Pause; // Current step mode (applies to all scenes)
     std::string cmdPath = "/"; // Canonical absolute console working directory
+    size_t consoleLineWidth = 0;
     DynamicArray<SceneInfo> scenes; // Cached list of scenes, kept in sync with the server
     CoordinateSpace coordinateSpace = CoordinateSpace::Filament(); // Synced from the server
     protocol::DbgDrawFeatures debugDraw; // Feature catalog plus the client's desired enable state

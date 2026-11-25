@@ -61,6 +61,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv) {
     if (!terminal.ReadLine(input)) {
       break;
     }
+    client.SetConsoleLineWidth(terminal.GetColumnCount());
     client.QueueCommand(input);
     client.WaitForQueuedCommands();
     if (client.WasExitRequested()) {

@@ -1141,6 +1141,10 @@ std::string DebugClient::GetCommandPrompt() const {
   return GetCommandPath();
 }
 
+void DebugClient::SetConsoleLineWidth(size_t width) {
+  _state.Mutate([&](auto& state) { state.consoleLineWidth = width; });
+}
+
 void DebugClient::CmdCd(Span<std::string const> args) {
   std::string const cwd = GetCommandPath();
   std::string path;
@@ -1205,6 +1209,7 @@ void DebugClient::CmdRemote(std::string_view command, bool detailed) {
     if (reply->listing && !reply->listing->empty()) {
       ConsoleFormatParams params;
       params._showTypes = detailed;
+      params._maxLineWidth = detailed ? 0 : _state.Read(&State::consoleLineWidth);
       Print(FormatConsoleList(*reply->listing, params) + "\n");
     } else if (!reply->output.empty()) {
       Print(std::string{reply->output});

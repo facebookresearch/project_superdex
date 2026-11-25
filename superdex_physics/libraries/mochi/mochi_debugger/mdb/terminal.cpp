@@ -17,8 +17,12 @@
 #include "terminal.h"
 
 #include <mochi_core/mochi_platform.h>
+#include <mochi_debugger/lib/terminal_text.h>
 
+#include <cctype>
 #include <cstdio>
+#include <mutex>
+#include <utility>
 
 #if MOCHI_PLATFORM_WINDOWS
 #ifndef NOMINMAX
@@ -26,11 +30,29 @@
 #endif
 #include <Windows.h>
 #else
+#include <sys/ioctl.h>
 #include <termios.h>
 #include <unistd.h>
 #endif
 
 namespace mochi::dbg {
+
+static size_t GetTerminalColumnCount() {
+#if MOCHI_PLATFORM_WINDOWS
+  CONSOLE_SCREEN_BUFFER_INFO info{};
+  if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &info)) {
+    return static_cast<size_t>(info.srWindow.Right - info.srWindow.Left + 1);
+  }
+  return 0;
+#else
+  winsize size{};
+  return ioctl(STDOUT_FILENO, TIOCGWINSZ, &size) == 0 ? size.ws_col : 0;
+#endif
+}
+
+size_t Terminal::GetColumnCount() const {
+  return GetTerminalColumnCount();
+}
 
 // VT escape: carriage-return + erase-to-end-of-line. Used to overwrite the current input line.
 static constexpr std::string_view kClearLine = "\r\x1b[K";
@@ -65,77 +87,108 @@ static void WriteColorOn(Color const& color) {
   }
 }
 
+namespace {
+struct Key;
+} // namespace
+
+struct Terminal::InputReader {
+  std::mutex readMutex;
+  int pending = -1;
+#if MOCHI_PLATFORM_WINDOWS
+  DWORD originalInputMode = 0;
+  DWORD originalOutputMode = 0;
+  UINT originalInputCodePage = 0;
+  UINT originalOutputCodePage = 0;
+  char readBuffer[4]{};
+  DWORD readBegin = 0;
+  DWORD readEnd = 0;
+#else
+  termios originalTermios{};
+#endif
+
+  bool EnableRawMode();
+  void DisableRawMode();
+  int ReadCharBlocking();
+  Key ReadKey();
+};
+
 #if MOCHI_PLATFORM_WINDOWS
 
-// Original console modes, saved by EnableRawMode and restored by DisableRawMode. Stored as process
-// globals because the console is a per-process resource; only one Terminal may exist at a time.
-static DWORD g_originalInputMode = 0;
-static DWORD g_originalOutputMode = 0;
-
-static bool EnableRawMode() {
+bool Terminal::InputReader::EnableRawMode() {
   HANDLE const in = GetStdHandle(STD_INPUT_HANDLE);
   HANDLE const out = GetStdHandle(STD_OUTPUT_HANDLE);
   if (in == INVALID_HANDLE_VALUE || out == INVALID_HANDLE_VALUE) {
     return false;
   }
-  if (!GetConsoleMode(in, &g_originalInputMode) || !GetConsoleMode(out, &g_originalOutputMode)) {
+  if (!GetConsoleMode(in, &originalInputMode) || !GetConsoleMode(out, &originalOutputMode)) {
     return false;
   }
+  originalInputCodePage = GetConsoleCP();
+  originalOutputCodePage = GetConsoleOutputCP();
   // Disable line buffering and echo, and enable VT input so arrow keys arrive as the same escape
   // sequences (ESC [ A/B/...) that POSIX terminals emit.
-  DWORD const inMode = (g_originalInputMode & ~(ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT)) |
+  DWORD const inMode = (originalInputMode & ~(ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT)) |
       ENABLE_VIRTUAL_TERMINAL_INPUT;
   if (!SetConsoleMode(in, inMode)) {
     return false;
   }
-  if (!SetConsoleMode(out, g_originalOutputMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING)) {
+  if (!SetConsoleMode(out, originalOutputMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING)) {
     // Roll back the input mode we just changed so a partial failure doesn't leave the console
     // altered.
-    SetConsoleMode(in, g_originalInputMode);
+    SetConsoleMode(in, originalInputMode);
+    return false;
+  }
+  if (!SetConsoleCP(CP_UTF8) || !SetConsoleOutputCP(CP_UTF8)) {
+    SetConsoleCP(originalInputCodePage);
+    SetConsoleOutputCP(originalOutputCodePage);
+    SetConsoleMode(in, originalInputMode);
+    SetConsoleMode(out, originalOutputMode);
     return false;
   }
   return true;
 }
 
-static void DisableRawMode() {
-  SetConsoleMode(GetStdHandle(STD_INPUT_HANDLE), g_originalInputMode);
-  SetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE), g_originalOutputMode);
+void Terminal::InputReader::DisableRawMode() {
+  SetConsoleMode(GetStdHandle(STD_INPUT_HANDLE), originalInputMode);
+  SetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE), originalOutputMode);
+  SetConsoleCP(originalInputCodePage);
+  SetConsoleOutputCP(originalOutputCodePage);
 }
 
-// Read a single character, blocking. Returns -1 on EOF/error.
-static int ReadCharBlocking() {
+// Read a UTF-8 byte, blocking. The console read buffer can hold a complete code point.
+int Terminal::InputReader::ReadCharBlocking() {
   HANDLE const in = GetStdHandle(STD_INPUT_HANDLE);
-  char c = 0;
-  DWORD read = 0;
-  if (!ReadFile(in, &c, 1, &read, nullptr) || read == 0) {
-    return -1;
+  if (readBegin == readEnd) {
+    DWORD bytesRead = 0;
+    if (!ReadFile(in, readBuffer, static_cast<DWORD>(sizeof(readBuffer)), &bytesRead, nullptr) ||
+        bytesRead == 0) {
+      return -1;
+    }
+    readBegin = 0;
+    readEnd = bytesRead;
   }
-  return static_cast<unsigned char>(c);
+  return static_cast<unsigned char>(readBuffer[readBegin++]);
 }
 
 #else
 
-// Original terminal attributes, saved by EnableRawMode and restored by DisableRawMode. A process
-// global because the controlling terminal is a per-process resource; only one Terminal may exist.
-static termios g_originalTermios{};
-
-static bool EnableRawMode() {
-  if (tcgetattr(STDIN_FILENO, &g_originalTermios) != 0) {
+bool Terminal::InputReader::EnableRawMode() {
+  if (tcgetattr(STDIN_FILENO, &originalTermios) != 0) {
     return false;
   }
-  termios raw = g_originalTermios;
+  termios raw = originalTermios;
   raw.c_lflag &= ~(static_cast<tcflag_t>(ICANON | ECHO));
   raw.c_cc[VMIN] = 1;
   raw.c_cc[VTIME] = 0;
   return tcsetattr(STDIN_FILENO, TCSANOW, &raw) == 0;
 }
 
-static void DisableRawMode() {
-  tcsetattr(STDIN_FILENO, TCSANOW, &g_originalTermios);
+void Terminal::InputReader::DisableRawMode() {
+  tcsetattr(STDIN_FILENO, TCSANOW, &originalTermios);
 }
 
 // Read a single character, blocking. Returns -1 on EOF/error.
-static int ReadCharBlocking() {
+int Terminal::InputReader::ReadCharBlocking() {
   unsigned char c = 0;
   ssize_t const n = read(STDIN_FILENO, &c, 1);
   if (n <= 0) {
@@ -152,24 +205,38 @@ namespace {
 enum class KeyType {
   Eof, // input closed (EOF / error)
   Enter, // submit the current line
-  Backspace, // delete the last character
+  Backspace, // delete the character before the cursor
+  Delete, // delete the character at the cursor
   Up, // previous (older) history entry
   Down, // next (newer) history entry
-  Printable, // a printable ASCII character (see Key::ch)
-  Ignored, // a recognized-but-unhandled key (e.g. left/right arrow, stray control char)
+  Left, // previous character
+  Right, // next character
+  WordLeft,
+  WordRight,
+  Home,
+  End,
+  Printable, // text to insert (see Key::text)
+  Ignored, // an unhandled key or control character
 };
 
 struct Key {
   KeyType type{KeyType::Ignored};
-  char ch{0};
+  std::string text;
+
+  Key(KeyType keyType, char ch) : type(keyType), text(ch == 0 ? 0 : 1, ch) {}
+  Key(KeyType keyType, std::string keyText) : type(keyType), text(std::move(keyText)) {}
 };
 
 } // namespace
 
+static bool IsUtf8ContinuationByte(int byte) {
+  return (static_cast<unsigned char>(byte) & 0xC0) == 0x80;
+}
+
 // Reads and decodes one keypress, blocking. Performs no locking, so async output (Print) may
-// run between keystrokes. Arrow keys arrive as a CSI sequence: ESC '[' followed by 'A'/'B'/'C'/'D'.
-static Key ReadKey() {
-  int const c = ReadCharBlocking();
+// run between keystrokes. Terminal escape sequences may include modifier parameters.
+Key Terminal::InputReader::ReadKey() {
+  int const c = pending >= 0 ? std::exchange(pending, -1) : ReadCharBlocking();
   if (c < 0) {
     return {KeyType::Eof, 0};
   }
@@ -179,33 +246,131 @@ static Key ReadKey() {
   if (c == 127 || c == 8) { // DEL / backspace
     return {KeyType::Backspace, 0};
   }
-  if (c == 27) { // ESC: possibly a CSI arrow sequence
+  if (c == 1) { // Ctrl+A
+    return {KeyType::Home, 0};
+  }
+  if (c == 2) { // Ctrl+B
+    return {KeyType::Left, 0};
+  }
+  if (c == 5) { // Ctrl+E
+    return {KeyType::End, 0};
+  }
+  if (c == 6) { // Ctrl+F
+    return {KeyType::Right, 0};
+  }
+  if (c == 27) { // ESC: Meta key or terminal escape sequence
     int const c1 = ReadCharBlocking();
     if (c1 < 0) {
       return {KeyType::Eof, 0};
     }
-    if (c1 == '[') {
+    if (c1 == 'b' || c1 == 'B') {
+      return {KeyType::WordLeft, 0};
+    }
+    if (c1 == 'f' || c1 == 'F') {
+      return {KeyType::WordRight, 0};
+    }
+    if (c1 == 27) {
+      pending = c1; // A second ESC starts the next key's escape sequence
+      return {KeyType::Ignored, 0};
+    }
+    if (c1 != '[' && c1 != 'O') {
+      return {KeyType::Ignored, 0};
+    }
+    std::string params;
+    while (params.size() < 32) {
       int const c2 = ReadCharBlocking();
       if (c2 < 0) {
         return {KeyType::Eof, 0};
       }
-      if (c2 == 'A') {
-        return {KeyType::Up, 0};
+      if (c2 >= 0x40 && c2 <= 0x7E) {
+        bool const word = params.size() == 3 && params[0] == '1' && params[1] == ';' &&
+            params[2] >= '3' && params[2] <= '8';
+        switch (c2) {
+          case 'A':
+            return {KeyType::Up, 0};
+          case 'B':
+            return {KeyType::Down, 0};
+          case 'C':
+            return {word ? KeyType::WordRight : KeyType::Right, 0};
+          case 'D':
+            return {word ? KeyType::WordLeft : KeyType::Left, 0};
+          case 'H':
+            return {KeyType::Home, 0};
+          case 'F':
+            return {KeyType::End, 0};
+          case '~':
+            if (params == "1" || params == "7") {
+              return {KeyType::Home, 0};
+            }
+            if (params == "4" || params == "8") {
+              return {KeyType::End, 0};
+            }
+            if (params == "3") {
+              return {KeyType::Delete, 0};
+            }
+            return {KeyType::Ignored, 0};
+          default:
+            return {KeyType::Ignored, 0};
+        }
       }
-      if (c2 == 'B') {
-        return {KeyType::Down, 0};
-      }
+      params += static_cast<char>(c2);
     }
     return {KeyType::Ignored, 0}; // unrecognized escape sequence
   }
   if (c >= 32 && c < 127) { // printable ASCII
     return {KeyType::Printable, static_cast<char>(c)};
   }
+  if (c >= 0xC2 && c <= 0xF4) {
+    std::string text(1, static_cast<char>(c));
+    size_t const bytes = c < 0xE0 ? 2 : c < 0xF0 ? 3 : 4;
+    while (text.size() < bytes) {
+      int const byte = ReadCharBlocking();
+      if (byte < 0) {
+        return {KeyType::Eof, 0};
+      }
+      if (!IsUtf8ContinuationByte(byte)) {
+        pending = byte;
+        return {KeyType::Ignored, 0};
+      }
+      text += static_cast<char>(byte);
+    }
+    auto const second = static_cast<unsigned char>(text[1]);
+    if ((c == 0xE0 && second < 0xA0) || (c == 0xED && second >= 0xA0) ||
+        (c == 0xF0 && second < 0x90) || (c == 0xF4 && second >= 0x90)) {
+      return {KeyType::Ignored, 0};
+    }
+    return {KeyType::Printable, std::move(text)};
+  }
   return {KeyType::Ignored, 0}; // other control characters
 }
 
-Terminal::Terminal() {
-  bool const enabled = EnableRawMode();
+static bool IsWordCharacter(char c) {
+  auto const byte = static_cast<unsigned char>(c);
+  return byte >= 0x80 || std::isalnum(byte) || c == '_';
+}
+
+static size_t PreviousCharacter(std::string_view text, size_t cursor) {
+  if (cursor > 0) {
+    --cursor;
+    while (cursor > 0 && IsUtf8ContinuationByte(text[cursor])) {
+      --cursor;
+    }
+  }
+  return cursor;
+}
+
+static size_t NextCharacter(std::string_view text, size_t cursor) {
+  if (cursor < text.size()) {
+    ++cursor;
+    while (cursor < text.size() && IsUtf8ContinuationByte(text[cursor])) {
+      ++cursor;
+    }
+  }
+  return cursor;
+}
+
+Terminal::Terminal() : _input(std::make_unique<InputReader>()) {
+  bool const enabled = _input->EnableRawMode();
   _state.Mutate([enabled](State& state) { state.rawModeEnabled = enabled; });
 }
 
@@ -213,15 +378,20 @@ Terminal::~Terminal() {
   if (_state.LoadMemberObject(&State::rawModeEnabled)) {
     WriteRaw("\r\n");
     Flush();
-    DisableRawMode();
+    _input->DisableRawMode();
   }
 }
 
 void Terminal::Redraw(State const& state) {
   WriteRaw(kClearLine);
-  WriteRaw(state.prompt);
-  WriteRaw("> ");
-  WriteRaw(state.buffer);
+  std::string const text = state.prompt + "> " + state.buffer;
+  size_t const cursor = state.prompt.size() + 2 + state.cursorPos;
+  auto const view = MakeTerminalTextView(text, cursor, GetTerminalColumnCount());
+  WriteRaw(view.text);
+  size_t const end = CountTerminalCells(view.text);
+  if (view.cursorColumn < end) {
+    WriteRaw("\x1b[" + std::to_string(end - view.cursorColumn) + "D");
+  }
 }
 
 void Terminal::HistoryUp(State& state) {
@@ -230,9 +400,11 @@ void Terminal::HistoryUp(State& state) {
   }
   if (state.historyPos == state.history.size()) {
     state.stashedInput = state.buffer; // leaving the live line: remember it for the trip back down
+    state.stashedCursorPos = state.cursorPos;
   }
   --state.historyPos;
   state.buffer = state.history[state.historyPos];
+  state.cursorPos = state.buffer.size();
   Redraw(state);
 }
 
@@ -243,8 +415,10 @@ void Terminal::HistoryDown(State& state) {
   ++state.historyPos;
   if (state.historyPos == state.history.size()) {
     state.buffer = state.stashedInput; // returned to the live line
+    state.cursorPos = state.stashedCursorPos;
   } else {
     state.buffer = state.history[state.historyPos];
+    state.cursorPos = state.buffer.size();
   }
   Redraw(state);
 }
@@ -275,16 +449,20 @@ void Terminal::SetPrompt(std::string_view prompt) {
 }
 
 bool Terminal::ReadLine(std::string& line) {
+  std::lock_guard<std::mutex> inputLock(_input->readMutex);
   _state.Mutate([](State& state) {
     state.buffer.clear();
+    state.cursorPos = 0;
     state.historyPos = state.history.size();
     state.stashedInput.clear();
+    state.stashedCursorPos = 0;
     Redraw(state);
     Flush();
   });
 
   while (true) {
-    Key const key = ReadKey(); // no lock held: async Print can run between keystrokes
+    // The state lock is not held while reading, so async Print can run.
+    Key const key = _input->ReadKey();
     if (key.type == KeyType::Eof) {
       return false;
     }
@@ -294,6 +472,8 @@ bool Terminal::ReadLine(std::string& line) {
     _state.Mutate([&](State& state) {
       switch (key.type) {
         case KeyType::Enter: {
+          WriteRaw(kClearLine);
+          WriteRaw(state.prompt + "> " + state.buffer);
           WriteRaw("\r\n");
           submitted = state.buffer;
           // Record non-empty commands, suppressing consecutive duplicates.
@@ -302,27 +482,79 @@ bool Terminal::ReadLine(std::string& line) {
             state.history.push_back(state.buffer);
           }
           state.buffer.clear();
+          state.cursorPos = 0;
           state.historyPos = state.history.size();
           state.stashedInput.clear();
+          state.stashedCursorPos = 0;
           didSubmit = true;
           break;
         }
         case KeyType::Backspace: {
-          if (!state.buffer.empty()) {
-            state.buffer.pop_back();
-            WriteRaw("\b \b");
+          if (state.cursorPos > 0) {
+            size_t const previous = PreviousCharacter(state.buffer, state.cursorPos);
+            state.buffer.erase(previous, state.cursorPos - previous);
+            state.cursorPos = previous;
+            Redraw(state);
           }
           break;
         }
+        case KeyType::Delete:
+          if (state.cursorPos < state.buffer.size()) {
+            state.buffer.erase(
+                state.cursorPos, NextCharacter(state.buffer, state.cursorPos) - state.cursorPos);
+            Redraw(state);
+          }
+          break;
         case KeyType::Up:
           HistoryUp(state);
           break;
         case KeyType::Down:
           HistoryDown(state);
           break;
+        case KeyType::Left:
+          if (state.cursorPos > 0) {
+            state.cursorPos = PreviousCharacter(state.buffer, state.cursorPos);
+            Redraw(state);
+          }
+          break;
+        case KeyType::Right:
+          if (state.cursorPos < state.buffer.size()) {
+            state.cursorPos = NextCharacter(state.buffer, state.cursorPos);
+            Redraw(state);
+          }
+          break;
+        case KeyType::WordLeft:
+          while (state.cursorPos > 0 && !IsWordCharacter(state.buffer[state.cursorPos - 1])) {
+            state.cursorPos = PreviousCharacter(state.buffer, state.cursorPos);
+          }
+          while (state.cursorPos > 0 && IsWordCharacter(state.buffer[state.cursorPos - 1])) {
+            state.cursorPos = PreviousCharacter(state.buffer, state.cursorPos);
+          }
+          Redraw(state);
+          break;
+        case KeyType::WordRight:
+          while (state.cursorPos < state.buffer.size() &&
+                 !IsWordCharacter(state.buffer[state.cursorPos])) {
+            state.cursorPos = NextCharacter(state.buffer, state.cursorPos);
+          }
+          while (state.cursorPos < state.buffer.size() &&
+                 IsWordCharacter(state.buffer[state.cursorPos])) {
+            state.cursorPos = NextCharacter(state.buffer, state.cursorPos);
+          }
+          Redraw(state);
+          break;
+        case KeyType::Home:
+          state.cursorPos = 0;
+          Redraw(state);
+          break;
+        case KeyType::End:
+          state.cursorPos = state.buffer.size();
+          Redraw(state);
+          break;
         case KeyType::Printable: {
-          state.buffer.push_back(key.ch);
-          WriteRaw(std::string_view(&key.ch, 1));
+          state.buffer.insert(state.cursorPos, key.text);
+          state.cursorPos += key.text.size();
+          Redraw(state);
           break;
         }
         case KeyType::Eof:

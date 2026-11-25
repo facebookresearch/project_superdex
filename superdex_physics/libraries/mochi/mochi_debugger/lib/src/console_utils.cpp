@@ -15,6 +15,7 @@
  */
 
 #include <mochi_debugger/lib/console_utils.h>
+#include <mochi_debugger/lib/terminal_text.h>
 
 #include <mochi_core/utils/dynamic_array.h>
 
@@ -28,9 +29,7 @@ namespace mochi::dbg {
 namespace {
 
 size_t CountCharacters(std::string_view text) {
-  return static_cast<size_t>(std::count_if(text.begin(), text.end(), [](char c) {
-    return (static_cast<unsigned char>(c) & 0xC0) != 0x80;
-  }));
+  return CountTerminalCells(text);
 }
 
 std::string Truncate(std::string text, size_t width) {
@@ -38,13 +37,7 @@ std::string Truncate(std::string text, size_t width) {
     return text;
   }
   size_t const dots = std::min(size_t{3}, width);
-  size_t end = 0;
-  for (size_t i = 0; i < width - dots; ++i) {
-    ++end;
-    while (end < text.size() && (static_cast<unsigned char>(text[end]) & 0xC0) == 0x80) {
-      ++end;
-    }
-  }
+  size_t const end = TerminalPrefixBytes(text, width - dots);
   text.resize(end);
   text.append(dots, '.');
   return text;
@@ -183,7 +176,7 @@ std::string FormatConsoleList(
     if (!result.empty()) {
       result += '\n';
     }
-    result += Truncate(std::move(line), params._maxLineWidth);
+    result += line;
   };
   for (auto const& method : methods) {
     std::string line = method[0];
@@ -203,8 +196,14 @@ std::string FormatConsoleList(
     }
     std::string line = row[0];
     for (size_t i = 1; i <= lastColumn; ++i) {
-      line.append(widths[i - 1] - CountCharacters(row[i - 1]) + params._columnSpacing, ' ');
-      line += row[i];
+      size_t const padding = widths[i - 1] - CountCharacters(row[i - 1]) + params._columnSpacing;
+      bool const limitValue = i + 1 == numColumns && params._maxLineWidth != 0;
+      size_t const prefixWidth = CountCharacters(line) + padding;
+      if (limitValue && prefixWidth >= params._maxLineWidth) {
+        break;
+      }
+      line.append(padding, ' ');
+      line += limitValue ? Truncate(row[i], params._maxLineWidth - prefixWidth) : row[i];
     }
     appendLine(std::move(line));
   }

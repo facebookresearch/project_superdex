@@ -362,6 +362,30 @@ TEST_F(ConsoleTest, ListingFlagsAndSpacing) {
   EXPECT_TRUE(unsupported[0].starts_with("error: Usage: ls"));
 }
 
+TEST_F(ConsoleTest, ListingWidthLimitsOnlyNormalPropertyValues) {
+  _consoleObject.text = std::string(80, 'x');
+  _client->SetConsoleLineWidth(40);
+  auto const normal = Run({"ls"});
+  ASSERT_EQ(1, normal.size());
+  std::istringstream rows(normal[0]);
+  std::string row;
+  bool sawText = false;
+  while (std::getline(rows, row)) {
+    if (row.starts_with("add")) {
+      EXPECT_GT(row.size(), 40);
+      EXPECT_TRUE(row.ends_with("-> int32"));
+    } else if (row.starts_with("text")) {
+      sawText = true;
+      EXPECT_LE(row.size(), 40);
+      EXPECT_TRUE(row.ends_with("..."));
+    }
+  }
+  EXPECT_TRUE(sawText);
+  auto const detailed = Run({"ls -l"});
+  ASSERT_EQ(1, detailed.size());
+  EXPECT_NE(std::string::npos, detailed[0].find('"' + _consoleObject.text + '"'));
+}
+
 TEST_F(ConsoleTest, ChangesDirectoryOnlyAfterValidation) {
   struct Case {
     std::string_view cwd;
