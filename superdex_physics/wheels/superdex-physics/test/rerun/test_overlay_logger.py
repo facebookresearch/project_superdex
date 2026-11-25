@@ -19,18 +19,18 @@ import tempfile
 import unittest
 
 import numpy as np
-from arvr.libraries.mochi.mochi_python.rerun_timeline_test_support import (
-    check_default_overlay_timeline,
-    check_overlay_preroll_timeline,
-    check_scene_snapshot_timeline,
-    flush_and_load_rrd as _flush_and_load_rrd,
-    ROOT_JOINT_OFFSET as _ROOT_JOINT_OFFSET,
-)
 from superdex.physics.utils.testing.testcases import (
     add_rigid_cube,
     make_empty_scene,
     make_single_rigid_cube_scene,
     MochiContextTestCase,
+)
+from test.rerun.rerun_timeline_test_support import (
+    check_default_overlay_timeline,
+    check_overlay_preroll_timeline,
+    check_scene_snapshot_timeline,
+    flush_and_load_rrd as _flush_and_load_rrd,
+    ROOT_JOINT_OFFSET as _ROOT_JOINT_OFFSET,
 )
 
 
