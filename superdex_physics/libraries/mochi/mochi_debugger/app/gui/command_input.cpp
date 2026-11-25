@@ -317,7 +317,10 @@ bool dbg::BuildCommandInput(
     float const cellWidth = ImGui::CalcTextSize("M").x;
     if (isInputActive && textEnd < boxEnd && cellWidth > 0.0f) {
       std::string const suggestion = FitSuggestion(
-          view.preview, view.annotation, static_cast<size_t>((boxEnd - textEnd) / cellWidth));
+          term.input,
+          view.preview,
+          view.annotations,
+          static_cast<size_t>((boxEnd - textEnd) / cellWidth));
       ImGui::GetWindowDrawList()->AddText(
           ImVec2(textEnd, textY), ImGui::GetColorU32(ImGuiCol_TextDisabled), suggestion.c_str());
     }

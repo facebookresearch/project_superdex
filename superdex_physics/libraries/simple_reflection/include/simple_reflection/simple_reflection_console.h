@@ -186,12 +186,14 @@ struct ConsoleAutoCompleteResult {
   std::vector<std::string> _candidates; // Full text of the step or argument, as it would be typed
   size_t _defaultIndex = 0; // The candidate to offer first, if there are any
   std::string _note; // The value's type, or a method argument's type and name. Empty for steps.
+  std::vector<std::string> _laterArgumentNotes; // Notes for the method's arguments after this one
   bool _isTruncated = false; // More candidates match than params._maxCandidates allowed
 
   SR_BeginStruct(SReflect::ConsoleAutoCompleteResult);
   SR_Field_Name(_candidates, "candidates");
   SR_Field_Name(_defaultIndex, "defaultIndex");
   SR_Field_Name(_note, "note");
+  SR_Field_Name(_laterArgumentNotes, "laterArgumentNotes");
   SR_Field_Name(_isTruncated, "isTruncated");
   SR_EndStruct()
 };
@@ -218,7 +220,8 @@ Arguments:
   - Enums also complete to their item names, bools to true and false, and optionals to null.
     Argument candidates longer than params._maxValueLength are left out.
   - The note describes the argument, for example "Fruit" for a value or "Fruit fruit" for a method
-    argument. Nothing completes after a value's argument or a method's last argument.
+    argument. A method argument also has notes for the arguments after it, in order. Nothing
+    completes after a value's argument or a method's last argument.
 
 Candidates are text that ConsoleTokenize reads back as the step or argument. A value is one line of
 JSON with a space after each ',' and ':', except that a string or enum is its text, quoted if

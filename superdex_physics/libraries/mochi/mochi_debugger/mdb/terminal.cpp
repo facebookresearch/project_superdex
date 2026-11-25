@@ -398,7 +398,8 @@ Terminal::Terminal()
 
 Terminal::~Terminal() {
   if (_state.LoadMemberObject(&State::rawModeEnabled)) {
-    WriteRaw("\r\n");
+    // The cursor is on the pinned prompt, which output printed during shutdown has redrawn.
+    WriteRaw(kClearLine);
     Flush();
     _input->DisableRawMode();
   }
@@ -415,8 +416,8 @@ void Terminal::Redraw(State const& state) const {
   if (state.cursorPos == state.buffer.size() && state.suggestionText == state.buffer) {
     // Like the input, the suggestion stops before the last column, so the line never wraps.
     size_t const width = columns == 0 ? SIZE_MAX : std::max(size_t{1}, columns - 1);
-    std::string const suggestion =
-        FitSuggestion(state.suggestion, state.annotation, width > end ? width - end : 0);
+    std::string const suggestion = FitSuggestion(
+        state.buffer, state.suggestion, state.annotations, width > end ? width - end : 0);
     if (!suggestion.empty()) {
       WriteRaw(_suggestionStyle);
       WriteRaw(suggestion);
@@ -491,18 +492,18 @@ void Terminal::SetCompletion(InputFn onInput, TabFn onTab) {
 void Terminal::SetSuggestion(
     std::string_view text,
     std::string_view preview,
-    std::string_view annotation) {
+    Span<std::string const> annotations) {
   _state.Mutate([&](State& state) {
     // A suggestion computed for an earlier input, for example by a reply racing a keystroke,
     // changes nothing on screen.
     if (text != state.buffer ||
         (state.suggestionText == text && state.suggestion == preview &&
-         state.annotation == annotation)) {
+         MakeConstSpan(state.annotations) == annotations)) {
       return;
     }
     state.suggestionText = text;
     state.suggestion = preview;
-    state.annotation = annotation;
+    state.annotations.assign(annotations.begin(), annotations.end());
     Redraw(state);
     Flush();
   });
@@ -517,7 +518,7 @@ bool Terminal::ReadLine(std::string& line) {
     state.stashedInput.clear();
     state.stashedCursorPos = 0;
     state.suggestion.clear();
-    state.annotation.clear();
+    state.annotations.clear();
     Redraw(state);
     Flush();
   });
@@ -539,7 +540,7 @@ bool Terminal::ReadLine(std::string& line) {
         case KeyType::Enter: {
           // The submitted line keeps no suggestion.
           state.suggestion.clear();
-          state.annotation.clear();
+          state.annotations.clear();
           WriteRaw(kClearLine);
           WriteRaw(state.prompt + "> " + state.buffer);
           WriteRaw("\r\n");

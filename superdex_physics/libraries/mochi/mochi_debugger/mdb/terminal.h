@@ -20,6 +20,7 @@
 #include <mochi_core/utils/color.h>
 #include <mochi_core/utils/dynamic_array.h>
 #include <mochi_core/utils/guarded.h>
+#include <mochi_core/utils/span.h>
 
 #include <cstddef>
 #include <functional>
@@ -90,10 +91,13 @@ class Terminal final {
    *
    * @param[in] text The input line the completion is for. It shows only while the input matches.
    * @param[in] preview The text that Tab inserts.
-   * @param[in] annotation Information shown after the preview. It is dropped first when the line is
-   * too narrow for both.
+   * @param[in] annotations Information shown after the preview. When the line is too narrow, the
+   * suggestion is cut as @ref FitSuggestion describes.
    */
-  void SetSuggestion(std::string_view text, std::string_view preview, std::string_view annotation);
+  void SetSuggestion(
+      std::string_view text,
+      std::string_view preview,
+      Span<std::string const> annotations);
 
   /**
    * @brief Block until the user submits a line (presses Enter).
@@ -118,9 +122,9 @@ class Terminal final {
     std::string stashedInput; // live input saved while browsing history
     std::size_t stashedCursorPos{0};
     std::size_t historyPos{0}; // browse cursor; == history.size() means the live line
-    std::string suggestionText; // the input that suggestion and annotation are for
+    std::string suggestionText; // the input that suggestion and annotations are for
     std::string suggestion; // completion preview shown after the input
-    std::string annotation; // shown after the suggestion
+    DynamicArray<std::string> annotations; // shown after the suggestion
     bool rawModeEnabled{false}; // whether the terminal was switched into raw mode
   };
 

@@ -1995,6 +1995,17 @@ TEST(SReflectConsole, CompleteArguments) {
   EXPECT_EQ(Complete(m, "enabled ", one), Completion(Values{"true"}, 0, "bool", true));
 }
 
+TEST(SReflectConsole, CompleteListsLaterArguments) {
+  Machine m;
+  using Notes = std::vector<std::string>;
+  auto const laterNotes = [&](std::string_view command) {
+    return SReflect::ConsoleAutoComplete(&m, command)._laterArgumentNotes;
+  };
+  EXPECT_EQ(laterNotes("base/add "), Notes{"string note"});
+  EXPECT_EQ(laterNotes("base/add 1 "), Notes{});
+  EXPECT_EQ(laterNotes("count "), Notes{});
+}
+
 TEST(SReflectConsole, CompleteFromPathStart) {
   Machine m;
   SReflect::detail::ConsoleCompletion completion;

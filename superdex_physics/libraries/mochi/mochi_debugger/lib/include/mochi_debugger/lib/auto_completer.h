@@ -72,8 +72,10 @@ class AutoCompleter {
     /// Text that Tab inserts at the cursor. Empty until something is typed in the step or argument,
     /// and while cycling.
     std::string preview;
-    /// Shown after the preview: "(+N)" for the other matching candidates, then "# " and the note.
-    std::string annotation;
+    /// Shown after the preview, separated by spaces: "(+N)" for the other matching candidates, then
+    /// a placeholder such as "<Kind>" or "<float amount>" for the value or method argument, and one
+    /// for each method argument after it.
+    DynamicArray<std::string> annotations;
     /// Candidates that match the text typed so far, or the candidates being cycled through
     DynamicArray<std::string> candidates;
     /// The candidate Tab inserts, or the one cycling inserted. Ignored if there are no candidates.
@@ -135,7 +137,7 @@ class AutoCompleter {
   struct Reply {
     protocol::AutoCompleteReply message;
     Step step; // What the request completed
-    std::string note; // The result's note as the terminals show it
+    DynamicArray<std::string> notes; // The result's notes as the terminals show them
   };
 
   struct Cycling {

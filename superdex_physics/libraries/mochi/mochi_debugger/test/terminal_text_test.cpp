@@ -18,6 +18,7 @@
 #include <mochi_debugger/lib/terminal_text.h>
 
 #include <string>
+#include <vector>
 
 using namespace mochi::dbg;
 
@@ -45,11 +46,24 @@ TEST(TerminalText, KeepsTheCursorVisibleForUnicodePrompts) {
 }
 
 TEST(TerminalText, FitsSuggestions) {
-  EXPECT_EQ("enes (+1) # Kind", FitSuggestion("enes", "(+1) # Kind", 80));
-  EXPECT_EQ(" # Kind", FitSuggestion("", "# Kind", 7));
-  EXPECT_EQ("enes", FitSuggestion("enes", "(+1) # Kind", 15));
-  EXPECT_EQ("", FitSuggestion("", "# Kind", 6));
-  EXPECT_EQ("[0, ...", FitSuggestion("[0, -9.8, 0]", "# Real3", 7));
-  EXPECT_EQ("", FitSuggestion("[0, -9.8, 0]", "", 3));
-  EXPECT_EQ("\xE4\xB8\xAD...", FitSuggestion("\xE4\xB8\xAD\xE6\x96\x87\xE4\xB8\xAD", "", 5));
+  using Annotations = std::vector<std::string>;
+  Annotations const none;
+  Annotations const kind{"(+1)", "<Kind>"};
+  Annotations const arguments{"<bool enable>", "<float speed>"};
+  Annotations const real3{"<Real3>"};
+  // Spaces separate the preview and annotations. Without a preview, a space separates the first
+  // annotation from the input, unless the input ends with one.
+  EXPECT_EQ("enes (+1) <Kind>", FitSuggestion("kind Soft", "enes", kind, 80));
+  EXPECT_EQ("<bool enable> <float speed>", FitSuggestion("enable ", "", arguments, 27));
+  EXPECT_EQ(" (+1) <Kind>", FitSuggestion("kind Soft", "", kind, 80));
+  EXPECT_EQ("(+1) <Kind>", FitSuggestion("", "", kind, 80));
+  // Text that does not fit is cut to end in "...", using all the cells.
+  EXPECT_EQ("<bool enable> <float sp...", FitSuggestion("enable ", "", arguments, 26));
+  EXPECT_EQ("enes (+1) <K...", FitSuggestion("kind Soft", "enes", kind, 15));
+  EXPECT_EQ("<bool ena...", FitSuggestion("enable ", "", arguments, 12));
+  EXPECT_EQ("<...", FitSuggestion("enable ", "", arguments, 4));
+  EXPECT_EQ("", FitSuggestion("enable ", "", arguments, 3));
+  EXPECT_EQ("[0, ...", FitSuggestion("gravity ", "[0, -9.8, 0]", real3, 7));
+  EXPECT_EQ("", FitSuggestion("gravity ", "[0, -9.8, 0]", none, 3));
+  EXPECT_EQ("\xE4\xB8\xAD...", FitSuggestion("", "\xE4\xB8\xAD\xE6\x96\x87\xE4\xB8\xAD", none, 5));
 }

@@ -68,7 +68,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv) {
   auto const showSuggestion = [&] {
     std::lock_guard const lock(suggestionMutex);
     auto const view = completer.GetView();
-    terminal.SetSuggestion(view.text, view.preview, view.annotation);
+    terminal.SetSuggestion(view.text, view.preview, view.annotations);
   };
   client.Register<dbg::protocol::AutoCompleteReply>([&](dbg::protocol::AutoCompleteReply&& reply) {
     if (completer.OnReply(std::move(reply))) {

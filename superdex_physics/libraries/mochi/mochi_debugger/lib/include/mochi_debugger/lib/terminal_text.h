@@ -16,6 +16,8 @@
 
 #pragma once
 
+#include <mochi_core/utils/span.h>
+
 #include <cstddef>
 #include <string>
 #include <string_view>
@@ -36,8 +38,14 @@ struct TerminalTextView {
 /// @brief Keep a byte-positioned cursor visible without splitting UTF-8 characters or wrapping.
 TerminalTextView MakeTerminalTextView(std::string_view text, size_t cursor, size_t columns);
 
-/// @brief Fit a completion preview and its annotation, separated by a space, into the given cells.
-/// The annotation is dropped first, then the preview is cut to end in "...".
-std::string FitSuggestion(std::string_view preview, std::string_view annotation, size_t cells);
+/// @brief Fit a completion preview and the annotations after it into the given cells. The
+/// suggestion follows input, the text before the cursor. A space separates each annotation from the
+/// text before it, unless that text is empty or already ends with a space, as after an argument has
+/// been started. Text that does not fit is cut, wherever it falls, to end in "...".
+std::string FitSuggestion(
+    std::string_view input,
+    std::string_view preview,
+    Span<std::string const> annotations,
+    size_t cells);
 
 } // namespace mochi::dbg

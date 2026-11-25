@@ -16,6 +16,7 @@
 
 #include <mochi_debugger/lib/auto_completer.h>
 
+#include <mochi_core/utils/container_utils.h>
 #include <mochi_debugger/lib/console_utils.h>
 #include <mochi_debugger/lib/debug_client.h>
 #include <simple_reflection/simple_reflection_console.h>
@@ -184,9 +185,17 @@ bool AutoCompleter::OnReply(protocol::AutoCompleteReply&& reply) {
   if (!step) {
     return false;
   }
-  std::string note =
-      reply.result._note.empty() ? std::string{} : "# " + FormatConsoleTypeName(reply.result._note);
-  Reply received{.message = std::move(reply), .step = std::move(*step), .note = std::move(note)};
+  DynamicArray<std::string> notes;
+  if (!reply.result._note.empty()) {
+    auto const placeholder = [](std::string_view note) {
+      return "<" + FormatConsoleTypeName(note) + ">";
+    };
+    notes.push_back(placeholder(reply.result._note));
+    for (auto const& note : reply.result._laterArgumentNotes) {
+      notes.push_back(placeholder(note));
+    }
+  }
+  Reply received{.message = std::move(reply), .step = std::move(*step), .notes = std::move(notes)};
   auto const sent = std::chrono::nanoseconds{static_cast<int64_t>(received.message.timestamp)};
   return _state.Mutate([&](State& state) {
     if (sent <= state.resetTime) {
@@ -277,13 +286,16 @@ AutoCompleter::View AutoCompleter::GetView() const {
     if (generation != state.connectionGeneration) {
       return view; // Everything stored is from an earlier connection
     }
-    std::string const note = state.reply ? state.reply->note : std::string{};
+    DynamicArray<std::string> notes;
+    if (state.reply) {
+      notes = state.reply->notes;
+    }
     if (state.cycling) {
       view.candidates = state.cycling->candidates;
       view.selected = state.cycling->index;
       view.offset = state.cycling->prefix.size();
       view.isCycling = true;
-      view.annotation = note;
+      view.annotations = std::move(notes);
       return view;
     }
     if (!state.isCursorAtEnd || !HasCoveringReply(state)) {
@@ -296,11 +308,9 @@ AutoCompleter::View AutoCompleter::GetView() const {
       view.preview = view.candidates[view.selected].substr(typed.size());
     }
     if (!view.preview.empty() && view.candidates.size() > 1) {
-      view.annotation = "(+" + std::to_string(view.candidates.size() - 1) + ")";
+      view.annotations.push_back("(+" + std::to_string(view.candidates.size() - 1) + ")");
     }
-    if (!note.empty()) {
-      view.annotation += (view.annotation.empty() ? "" : " ") + note;
-    }
+    Append(view.annotations, notes);
     return view;
   });
 }

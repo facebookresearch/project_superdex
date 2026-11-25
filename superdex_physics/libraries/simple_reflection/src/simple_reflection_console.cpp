@@ -1596,7 +1596,13 @@ static void CompleteMethodArgument(
   if (value) {
     candidates.push_back(*value);
   }
-  result._note = StripNamespaces(type._nameWithNamespace) + " " + arg._name;
+  auto const note = [](MethodArgInfo const& argument) {
+    return StripNamespaces(argument.GetTypeInfo()._nameWithNamespace) + " " + argument._name;
+  };
+  result._note = note(arg);
+  for (size_t i = index + 1; i < method._args.size(); ++i) {
+    result._laterArgumentNotes.push_back(note(method._args[i]));
+  }
   SetCandidates(std::move(candidates), typed, value, params, result);
 }
 

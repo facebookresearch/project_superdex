@@ -1076,3 +1076,29 @@ TEST_F(AutoCompleterConsoleTest, AutoCompleterUsesTheClient) {
     return completer.GetView().candidates == DynamicArray<std::string>{"A"};
   });
 }
+
+namespace {
+
+struct ArgumentHintRoot {
+  MOCHI_STRUCT_BEGIN(ArgumentHintRoot)
+  MOCHI_METHOD("choose(first, second)", [](ArgumentHintRoot&, int32_t, bool) {})
+  MOCHI_STRUCT_END()
+};
+
+class ArgumentHintConsoleTest : public ConsoleTest {
+ protected:
+  void InstallConsoleRoot() override {
+    _server->SetConsoleRoot_ForTestingOnly(&_root, SReflect::GetTypeInfo<ArgumentHintRoot>());
+  }
+
+  ArgumentHintRoot _root;
+};
+
+} // namespace
+
+TEST_F(ArgumentHintConsoleTest, AutoCompleteLaterArgumentNotes) {
+  auto const result = Complete("/", "choose ").result;
+  EXPECT_EQ(result._note, "int32 first");
+  ASSERT_EQ(result._laterArgumentNotes.size(), 1);
+  EXPECT_EQ(result._laterArgumentNotes[0], "bool second");
+}

@@ -38,6 +38,7 @@ using Strings = DynamicArray<std::string>;
 struct ReplyOptions {
   size_t defaultIndex = 0;
   std::string note{};
+  Strings laterNotes{};
   bool isTruncated = false;
   std::chrono::nanoseconds delay{}; // Time since the request was sent
   std::optional<uint64_t> timestamp{}; // Overrides the request's timestamp
@@ -45,7 +46,7 @@ struct ReplyOptions {
 
 class AutoCompleterTest : public ::testing::Test {
  protected:
-  // preview, annotation, candidates, selected and isCycling
+  // preview, annotations joined by spaces, candidates, selected and isCycling
   using ViewTuple = std::tuple<std::string, std::string, Strings, size_t, bool>;
 
   // Reply to the last request
@@ -55,6 +56,7 @@ class AutoCompleterTest : public ::testing::Test {
     reply.result._candidates.assign(candidates.begin(), candidates.end());
     reply.result._defaultIndex = options.defaultIndex;
     reply.result._note = std::move(options.note);
+    reply.result._laterArgumentNotes.assign(options.laterNotes.begin(), options.laterNotes.end());
     reply.result._isTruncated = options.isTruncated;
     reply.timestamp = options.timestamp.value_or(reply.timestamp);
     _now += options.delay;
@@ -63,7 +65,11 @@ class AutoCompleterTest : public ::testing::Test {
 
   ViewTuple View() const {
     auto view = _completer.GetView();
-    return {view.preview, view.annotation, view.candidates, view.selected, view.isCycling};
+    std::string annotations;
+    for (auto const& annotation : view.annotations) {
+      annotations += (annotations.empty() ? "" : " ") + annotation;
+    }
+    return {view.preview, annotations, view.candidates, view.selected, view.isCycling};
   }
 
   Strings SentCommands() const {
@@ -137,20 +143,35 @@ TEST_F(AutoCompleterTest, CompletesTheFirstStepOfARelativePath) {
   EXPECT_EQ(View(), ViewTuple("me", "", Strings{"name"}, 0, false));
 }
 
-TEST_F(AutoCompleterTest, ShowsArgumentNotes) {
+TEST_F(AutoCompleterTest, ShowsNotesAsPlaceholders) {
   _completer.SetInput("kind ", true);
   EXPECT_TRUE(Reply({"Rigid", "Soft"}, {.note = "Kind"}));
-  EXPECT_EQ(View(), ViewTuple("", "# Kind", Strings{"Rigid", "Soft"}, 0, false));
+  EXPECT_EQ(View(), ViewTuple("", "<Kind>", Strings{"Rigid", "Soft"}, 0, false));
   _completer.SetInput("kind S", true);
-  EXPECT_EQ(View(), ViewTuple("oft", "# Kind", Strings{"Soft"}, 0, false));
+  EXPECT_EQ(View(), ViewTuple("oft", "<Kind>", Strings{"Soft"}, 0, false));
   _completer.SetInput("kind X", true);
-  EXPECT_EQ(View(), ViewTuple("", "# Kind", Strings{}, 0, false));
+  EXPECT_EQ(View(), ViewTuple("", "<Kind>", Strings{}, 0, false));
+}
+
+TEST_F(AutoCompleterTest, ShowsTheArgumentsThatFollow) {
+  _completer.SetInput("setKind ", true);
+  EXPECT_TRUE(Reply(
+      {"Rigid", "Rod", "Soft"}, {.note = "Kind kind", .laterNotes = {"float speed", "bool wake"}}));
+  _completer.SetInput("setKind R", true);
+  EXPECT_EQ(
+      _completer.GetView().annotations,
+      (Strings{"(+1)", "<Kind kind>", "<float speed>", "<bool wake>"}));
+
+  // While cycling, the count is left out.
+  EXPECT_EQ(_completer.Cycle(false), "setKind Rigid");
+  EXPECT_EQ(
+      _completer.GetView().annotations, (Strings{"<Kind kind>", "<float speed>", "<bool wake>"}));
 }
 
 TEST_F(AutoCompleterTest, FormatsNoteTypesLikeListings) {
   _completer.SetInput("follow ", true);
   EXPECT_TRUE(Reply({}, {.note = "std::pair<ActorReflectionData,int> target"}));
-  EXPECT_EQ(View(), ViewTuple("", "# std::pair<Actor, int> target", Strings{}, 0, false));
+  EXPECT_EQ(View(), ViewTuple("", "<std::pair<Actor, int> target>", Strings{}, 0, false));
 }
 
 TEST_F(AutoCompleterTest, IgnoresRepliesThatDoNotCoverTheInput) {
