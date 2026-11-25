@@ -139,7 +139,7 @@ struct BlendingData [from_mochi_core, no_capi, equality(default)] {
 // @brief Non-owning view of blending data for one source shape within a soft skinned mesh.
 //
 // @see BlendingData
-struct BlendingDataView [from_mochi_core, no_capi, equality(default)] {
+struct BlendingDataView [from_mochi_core, no_capi, equality(default), view_of(BlendingData)] {
   // @brief Implicit conversion from @ref BlendingData.
   //
   // @param[in] src Source data.
@@ -171,7 +171,7 @@ struct SkinningData [from_mochi_core, no_capi, equality(default)] {
 // @brief Non-owning view of skinning data for a SuperDex mesh.
 //
 // @see SkinningData
-struct SkinningDataView [from_mochi_core, no_capi, equality(default)] {
+struct SkinningDataView [from_mochi_core, no_capi, equality(default), view_of(SkinningData)] {
   // @brief Implicit conversion from @ref SkinningData.
   //
   // @param[in] src Source data.
@@ -220,7 +220,7 @@ struct MeshData [from_mochi_core, no_capi, equality(default)] {
 // @brief Non-owning view of mesh data for a SuperDex actor or model file.
 //
 // @see MeshData
-struct MeshDataView [from_mochi_core, no_capi, equality(default)] {
+struct MeshDataView [from_mochi_core, no_capi, equality(default), view_of(MeshData)] {
   // @brief Implicit conversion from @ref MeshData.
   //
   // @param[in] src Source data.
@@ -290,7 +290,7 @@ struct GridSdfData [from_mochi_core, no_capi, equality(default)] {
 // @brief Non-owning view of data for a precomputed signed-distance-field grid.
 //
 // @see GridSdfData
-struct GridSdfDataView [from_mochi_core, no_capi, equality(default)] {
+struct GridSdfDataView [from_mochi_core, no_capi, equality(default), view_of(GridSdfData)] {
   // @brief Implicit conversion from @ref GridSdfData.
   //
   // @param[in] src Source data.
@@ -396,7 +396,7 @@ struct ModelData [from_mochi_core, no_capi, equality(default)] {
 // @brief Non-owning view of the contents of a SuperDex model file.
 //
 // @see ModelData
-struct ModelDataView [from_mochi_core, no_capi, equality(default)] {
+struct ModelDataView [from_mochi_core, no_capi, equality(default), view_of(ModelData)] {
   // @brief Implicit conversion from @ref ModelData.
   //
   // @param[in] src Source data.
@@ -967,7 +967,7 @@ struct PerElementSoftMaterialData [from_mochi_core, equality(default), no_capi] 
 // @brief Non-owning view of per-element soft material data.
 //
 // @see PerElementSoftMaterialData
-struct PerElementSoftMaterialDataView [from_mochi_core, equality(default), no_capi] {
+struct PerElementSoftMaterialDataView [from_mochi_core, equality(default), no_capi, view_of(PerElementSoftMaterialData)] {
   // @brief Implicit conversion from @ref PerElementSoftMaterialData.
   //
   // @param[in] src Source data.

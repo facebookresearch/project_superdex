@@ -145,7 +145,7 @@ class Constraint [no_init, no_destruct, use_scene] {
   // @return Pointer to the actor.
   //
   // @see GetNumActors
-  fn GetActor(int actorIndex) -> Actor* [pure, virtual, overloaded, nodiscard];
+  fn GetActor(int actorIndex) -> Actor* [pure, virtual, overloaded, no_reflection, nodiscard];
 
   // @brief Get read-only access to one of the actors affected by this constraint.
   //

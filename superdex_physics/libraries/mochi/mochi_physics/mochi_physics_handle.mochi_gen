@@ -29,11 +29,11 @@ struct Handle [equality, sortable, hashable] {
 
   // @brief Check whether the handle is valid (i.e., its value is non-zero).
   // @return True if the handle is valid, false otherwise.
-  fn IsValid() -> bool [const];
+  fn IsValid() -> bool [const, no_reflection];
 
   // @brief Compute a hash of the handle for use in unordered containers.
   // @return The hash of the handle's raw identifier.
-  fn GetHash() -> uint64 [const];
+  fn GetHash() -> uint64 [const, no_reflection];
 };
 
 // @brief Unique identifier for a @ref Scene within a @ref Context.

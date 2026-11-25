@@ -26,12 +26,12 @@ class Scene [no_init, no_destruct] {
   // @brief Get the @ref Context that owns this scene.
   //
   // @return Pointer to the @ref Context that owns this scene.
-  fn GetContext() -> Context* [pure, virtual, overloaded, no_python, nodiscard];
+  fn GetContext() -> Context* [pure, virtual, overloaded, no_python, nodiscard, no_reflection];
 
   // @brief Get read-only access to the @ref Context that owns this scene.
   //
   // @return Const pointer to the @ref Context that owns this scene.
-  fn GetContext() -> Context const* [pure, virtual, const, overloaded, no_python, nodiscard];
+  fn GetContext() -> Context const* [pure, virtual, const, overloaded, no_python, nodiscard, no_reflection];
 
   // @brief Get the scene handle.
   //
@@ -109,7 +109,7 @@ class Scene [no_init, no_destruct] {
   // evaluate these queries at the end-of-step state instead, call @ref UpdateQueries.
   //
   // @see IntegrationMethod, UpdateQueries
-  fn Step(double timeStepSec [units("s")]) -> void [pure, virtual, release_gil];
+  fn Step(double timeStepSec [units("s")]) -> void [pure, virtual, release_gil, no_reflection];
 
   // @brief Refresh registered queries without advancing the simulation.
   //
@@ -263,7 +263,7 @@ class Scene [no_init, no_destruct] {
   // truncate it to its original size before reuse.
   //
   // @see RestoreStateFromBytes, CaptureState, CaptureStateToFile
-  fn CaptureStateToBytes(DynamicArray<uint8>& outData) -> void [pure, virtual, mochi_error];
+  fn CaptureStateToBytes(DynamicArray<uint8>& outData) -> void [pure, virtual, mochi_error, no_reflection];
 
   // @brief Restore simulation state from a binary byte buffer produced by @ref CaptureStateToBytes.
   //
@@ -382,7 +382,7 @@ class Scene [no_init, no_destruct] {
   // @note After the actor is destroyed, do not use the pointer or its handle.
   //
   // @see GetActor, Actor::GetHandle
-  fn DestroyActor(Actor* actor [nullable]) -> void [pure, virtual, overloaded, no_mochi_error];
+  fn DestroyActor(Actor* actor [nullable]) -> void [pure, virtual, overloaded, no_mochi_error, no_reflection];
 
   // @brief Destroy an actor and remove it from the scene.
   //
@@ -405,7 +405,7 @@ class Scene [no_init, no_destruct] {
   // in this scene.
   //
   // @see Actor, ActorHandle, DestroyActor, Actor::GetHandle
-  fn GetActor(ActorHandle actor) -> Actor* [pure, virtual, overloaded, nullable, nodiscard];
+  fn GetActor(ActorHandle actor) -> Actor* [pure, virtual, overloaded, nullable, nodiscard, no_reflection];
 
   // @brief Get a const pointer to the @ref Actor associated with an @ref ActorHandle.
   //
@@ -415,7 +415,7 @@ class Scene [no_init, no_destruct] {
   // actor in this scene.
   //
   // @see Actor, ActorHandle, DestroyActor, Actor::GetHandle
-  fn GetActor(ActorHandle actor) -> Actor const* [pure, virtual, const, overloaded, no_python, nullable, nodiscard];
+  fn GetActor(ActorHandle actor) -> Actor const* [pure, virtual, const, overloaded, no_python, no_reflection, nullable, nodiscard];
 
   // @brief Get the number of actors in the scene, including nested link actors and nested soft
   // actors.
@@ -432,7 +432,7 @@ class Scene [no_init, no_destruct] {
   // GetNumActors().
   //
   // @see GetNumActors, GetActor
-  fn GetActors(Span<Actor*> outActors) -> void [pure, virtual, overloaded, mochi_error, no_python];
+  fn GetActors(Span<Actor*> outActors) -> void [pure, virtual, overloaded, mochi_error, no_python, no_reflection];
 
   // @brief Get const @ref Actor pointers for all the actors in the scene.
   //
@@ -440,7 +440,7 @@ class Scene [no_init, no_destruct] {
   // GetNumActors().
   //
   // @see GetNumActors, GetActor
-  fn GetActors(Span<Actor const*> outActors) -> void [pure, virtual, const, overloaded, mochi_error, no_python];
+  fn GetActors(Span<Actor const*> outActors) -> void [pure, virtual, const, overloaded, mochi_error, no_python, no_reflection];
 
   // @brief Iterate over all the actors in the scene using a callback. Includes nested link
   // actors and nested soft actors.
@@ -451,7 +451,7 @@ class Scene [no_init, no_destruct] {
   //
   // @note To skip nested actors, check @ref Actor::IsNestedLinkActor and @ref
   // Actor::IsNestedSoftActor inside the callback.
-  fn ForEachActor(Function<void, Actor*> const& callback) -> void [pure, virtual, overloaded];
+  fn ForEachActor(Function<void, Actor*> const& callback) -> void [pure, virtual, overloaded, no_reflection];
 
   // @brief Iterate over all the actors in the scene using a callback (const version). Includes
   // nested link actors and nested soft actors.
@@ -462,7 +462,7 @@ class Scene [no_init, no_destruct] {
   //
   // @note To skip nested actors, check @ref Actor::IsNestedLinkActor and @ref
   // Actor::IsNestedSoftActor inside the callback.
-  fn ForEachActor(Function<void, Actor const*> const& callback) -> void [pure, virtual, const, overloaded, no_python];
+  fn ForEachActor(Function<void, Actor const*> const& callback) -> void [pure, virtual, const, overloaded, no_python, no_reflection];
 
   # Constraints
   // @brief Create a range constraint on a single articulated DoF.
@@ -642,7 +642,7 @@ class Scene [no_init, no_destruct] {
   // constraint in this scene.
   //
   // @see Constraint, ConstraintHandle, DestroyConstraint, Constraint::GetHandle
-  fn GetConstraint(ConstraintHandle constraint) -> Constraint* [pure, virtual, overloaded, nullable, nodiscard];
+  fn GetConstraint(ConstraintHandle constraint) -> Constraint* [pure, virtual, overloaded, nullable, nodiscard, no_reflection];
 
   // @brief Get the const @ref Constraint pointer associated with a @ref ConstraintHandle.
   //
@@ -652,7 +652,7 @@ class Scene [no_init, no_destruct] {
   // identify a constraint in this scene.
   //
   // @see Constraint, ConstraintHandle, DestroyConstraint, Constraint::GetHandle
-  fn GetConstraint(ConstraintHandle constraint) -> Constraint const* [pure, virtual, const, overloaded, no_python, nullable, nodiscard];
+  fn GetConstraint(ConstraintHandle constraint) -> Constraint const* [pure, virtual, const, overloaded, no_python, no_reflection, nullable, nodiscard];
 
   // @brief Destroy a constraint and remove it from the scene.
   //
@@ -669,7 +669,7 @@ class Scene [no_init, no_destruct] {
   // @note After the constraint is destroyed, do not use the pointer or its handle.
   //
   // @see GetConstraint, Constraint::GetHandle
-  fn DestroyConstraint(Constraint* constraint [nullable]) -> void [pure, virtual, overloaded, no_mochi_error];
+  fn DestroyConstraint(Constraint* constraint [nullable]) -> void [pure, virtual, overloaded, no_mochi_error, no_reflection];
 
   // @brief Destroy a constraint and remove it from the scene.
   //
@@ -701,7 +701,7 @@ class Scene [no_init, no_destruct] {
   //
   // @note Includes constraints created implicitly by @ref CreateArticulatedActor (e.g. articulated
   // joint limits).
-  fn ForEachConstraint(Function<void, Constraint*> const& callback) -> void [pure, virtual, overloaded];
+  fn ForEachConstraint(Function<void, Constraint*> const& callback) -> void [pure, virtual, overloaded, no_reflection];
 
   // @brief Iterate over all the constraints in the scene using a callback (const version).
   //
@@ -711,7 +711,7 @@ class Scene [no_init, no_destruct] {
   //
   // @note Includes constraints created implicitly by @ref CreateArticulatedActor (e.g. articulated
   // joint limits).
-  fn ForEachConstraint(Function<void, Constraint const*> const& callback) -> void [pure, virtual, const, overloaded, no_python];
+  fn ForEachConstraint(Function<void, Constraint const*> const& callback) -> void [pure, virtual, const, overloaded, no_python, no_reflection];
 
   # Debugging
   // @brief Get the debug draw interface for this scene.
@@ -736,7 +736,7 @@ class Scene [no_init, no_destruct] {
   // @details Please call this periodically if you are not actively stepping the scene. If this
   // function is never called and the scene is never stepped, then some debugger features will not
   // work.
-  fn UpdateDebugger() -> void [pure, virtual];
+  fn UpdateDebugger() -> void [pure, virtual, no_reflection];
 
   # Contact Filtering
   // @brief Enable or disable collision detection for an ordered pair of contact layer names. Order
@@ -810,7 +810,7 @@ class Scene [no_init, no_destruct] {
   // @note Enumeration order is unspecified.
   //
   // @see GetNumContactLayers
-  fn EnumerateContactLayerNames(Function<void, StringView> const& callback) -> void [pure, virtual, const];
+  fn EnumerateContactLayerNames(Function<void, StringView> const& callback) -> void [pure, virtual, const, no_reflection];
 
   // @brief Enable or disable collision detection between two actors. Order matters: controls only
   // the specified direction (colliding actor checking against collider actor).
@@ -937,7 +937,7 @@ class Scene [no_init, no_destruct] {
   // changes persist. See @ref Step.
   //
   // @see CancelCallback, RegisterPostStepCallback
-  fn RegisterPreStepCallback(StringView debugName, Function<void, StepInfo const&> callback, int priority = kDefaultCallbackPriority) -> CallbackHandle [pure, virtual, nodiscard];
+  fn RegisterPreStepCallback(StringView debugName, Function<void, StepInfo const&> callback, int priority = kDefaultCallbackPriority) -> CallbackHandle [pure, virtual, nodiscard, no_reflection];
 
   // @brief Register a callback to execute after each simulation step.
   //
@@ -957,7 +957,7 @@ class Scene [no_init, no_destruct] {
   // changes persist. See @ref Step.
   //
   // @see CancelCallback, RegisterPreStepCallback
-  fn RegisterPostStepCallback(StringView debugName, Function<void, StepInfo const&> callback, int priority = kDefaultCallbackPriority) -> CallbackHandle [pure, virtual, nodiscard];
+  fn RegisterPostStepCallback(StringView debugName, Function<void, StepInfo const&> callback, int priority = kDefaultCallbackPriority) -> CallbackHandle [pure, virtual, nodiscard, no_reflection];
 
   // @brief Cancel a previously registered callback.
   //
@@ -967,5 +967,5 @@ class Scene [no_init, no_destruct] {
   // @note Invalid and already-cancelled handles are ignored.
   //
   // @see RegisterPreStepCallback, RegisterPostStepCallback
-  fn CancelCallback(CallbackHandle handle) -> void [pure, virtual];
+  fn CancelCallback(CallbackHandle handle) -> void [pure, virtual, no_reflection];
 };

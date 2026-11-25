@@ -39,7 +39,7 @@ class DebugDraw [no_init, no_destruct] {
   // @note When disabled, @ref GatherData returns empty data regardless of feature settings.
   //
   // @see Enable
-  fn IsEnabled() -> bool [pure, virtual, const, nodiscard];
+  fn IsEnabled() -> bool [pure, virtual, const, nodiscard, reflection_getter("enabled")];
 
   // @brief Enable or disable debug drawing for the entire scene.
   //
@@ -48,7 +48,7 @@ class DebugDraw [no_init, no_destruct] {
   // @note This is a master switch that overrides all individual feature settings.
   //
   // @see IsEnabled
-  fn Enable(bool enable) -> void [pure, virtual];
+  fn Enable(bool enable) -> void [pure, virtual, reflection_setter("enabled")];
 
   // @brief Get the number of debug draw features available.
   //
@@ -114,7 +114,7 @@ class DebugDraw [no_init, no_destruct] {
   // @note Returns empty data if @ref IsEnabled is false.
   //
   // @see DebugDrawData
-  fn GatherData() -> DebugDrawData [pure, virtual, nodiscard];
+  fn GatherData() -> DebugDrawData [pure, virtual, nodiscard, no_reflection];
 
   // @brief Enable or disable debug drawing for a specific actor.
   //

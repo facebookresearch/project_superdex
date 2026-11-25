@@ -45,22 +45,22 @@ class Actor [no_init, no_destruct, use_scene] {
   // @brief Get the @ref Context that owns this actor.
   //
   // @return Pointer to the @ref Context that owns this actor.
-  fn GetContext() -> Context* [pure, virtual, overloaded, no_python, nodiscard];
+  fn GetContext() -> Context* [pure, virtual, overloaded, no_python, nodiscard, no_reflection];
 
   // @brief Get read-only access to the @ref Context that owns this actor.
   //
   // @return Const pointer to the @ref Context that owns this actor.
-  fn GetContext() -> Context const* [pure, virtual, const, overloaded, no_python, nodiscard];
+  fn GetContext() -> Context const* [pure, virtual, const, overloaded, no_python, nodiscard, no_reflection];
 
   // @brief Get the @ref Scene that this actor belongs to.
   //
   // @return Pointer to the scene that this actor belongs to.
-  fn GetScene() -> Scene* [pure, virtual, overloaded, batchable, nodiscard];
+  fn GetScene() -> Scene* [pure, virtual, overloaded, batchable, nodiscard, no_reflection];
 
   // @brief Get the @ref Scene that this actor belongs to (read only)
   //
   // @return Pointer to the scene that this actor belongs to.
-  fn GetScene() -> Scene const* [pure, virtual, const, overloaded, batchable, no_python, nodiscard];
+  fn GetScene() -> Scene const* [pure, virtual, const, overloaded, batchable, no_python, nodiscard, no_reflection];
 
   // @brief Get the name of the actor.
   //
@@ -95,7 +95,7 @@ class Actor [no_init, no_destruct, use_scene] {
   // @brief Check whether the actor is static.
   //
   // @return True if the actor is static. False if it's dynamic.
-  fn IsStatic() -> bool [pure, virtual, const, batchable, nodiscard];
+  fn IsStatic() -> bool [pure, virtual, const, batchable, nodiscard, reflection_getter("isStatic")];
 
   // @brief Get the contact parameters of the actor.
   //
@@ -122,7 +122,7 @@ class Actor [no_init, no_destruct, use_scene] {
   // @return True if the actor has a root transform. False otherwise.
   //
   // @note Non-rendered actors may not have a root transform.
-  fn HasRootTransform() -> bool [pure, virtual, const, batchable, nodiscard];
+  fn HasRootTransform() -> bool [pure, virtual, const, batchable, nodiscard, reflection_getter("hasRootTransform")];
 
   // @brief Get the actor's world-from-local transform (root transform).
   //
@@ -386,7 +386,7 @@ class Actor [no_init, no_destruct, use_scene] {
   // @note Only supported for rod actors.
   //
   // @see SetRodPose
-  fn GetRodPose(Span<real> outDisplacements [units("m")], Span<real> outElementFrameAxes) -> void [pure, virtual, const, mochi_error, batchable];
+  fn GetRodPose(Span<real> outDisplacements [units("m")], Span<real> outElementFrameAxes) -> void [pure, virtual, const, mochi_error, batchable, no_reflection];
 
   // @brief Set the pose of a rod actor: its node displacements and element frame axes.
   //
@@ -574,7 +574,7 @@ class Actor [no_init, no_destruct, use_scene] {
   // when done with the handle to avoid leaks.
   //
   // @see Context::ReleaseShape, Context::LoadShapeFromFile
-  fn GetReferenceShape() -> ShapeHandle [pure, virtual, const, mochi_error, nodiscard];
+  fn GetReferenceShape() -> ShapeHandle [pure, virtual, const, mochi_error, nodiscard, no_reflection];
 
   // @brief Get the name of the contact layer of the actor.
   //
@@ -623,7 +623,7 @@ class Actor [no_init, no_destruct, use_scene] {
   // the element frame axes of @ref GetRodPose, so it is not a total twist.
   //
   // @see GetNumDofs
-  fn GetDofValues(Span<int const> dofIndices, Span<real> outDofValues) -> void [pure, virtual, const, mochi_error, batchable];
+  fn GetDofValues(Span<int const> dofIndices, Span<real> outDofValues) -> void [pure, virtual, const, mochi_error, batchable, no_reflection];
 
   // @brief Find the actor's nodes that are inside an axis-aligned bounding box (AABB).
   //
@@ -642,7 +642,7 @@ class Actor [no_init, no_destruct, use_scene] {
   // @note When @ref boundaryOnly is false, requires registering @ref QueryType::NodePositions
   // before the simulation step. When true, requires registering @ref
   // QueryType::SurfaceNodePositions. Results are available after the simulation step completes.
-  fn QueryNodesInVolumeLocal(Aabb const& volume, bool boundaryOnly, Function<void, int, Real3> const& callback) -> void [pure, virtual, const, mochi_error, overloaded];
+  fn QueryNodesInVolumeLocal(Aabb const& volume, bool boundaryOnly, Function<void, int, Real3> const& callback) -> void [pure, virtual, const, mochi_error, overloaded, no_reflection];
 
   // @brief Find the actor's nodes that are inside an oriented bounding box (OBB).
   //
@@ -661,7 +661,7 @@ class Actor [no_init, no_destruct, use_scene] {
   // @note When @ref boundaryOnly is false, requires registering @ref QueryType::NodePositions
   // before the simulation step. When true, requires registering @ref
   // QueryType::SurfaceNodePositions. Results are available after the simulation step completes.
-  fn QueryNodesInVolumeLocal(Obb const& volume, bool boundaryOnly, Function<void, int, Real3> const& callback) -> void [pure, virtual, const, mochi_error, overloaded];
+  fn QueryNodesInVolumeLocal(Obb const& volume, bool boundaryOnly, Function<void, int, Real3> const& callback) -> void [pure, virtual, const, mochi_error, overloaded, no_reflection];
 
   // @brief Find the actor's nodes that are inside a sphere.
   //
@@ -680,7 +680,7 @@ class Actor [no_init, no_destruct, use_scene] {
   // @note When @ref boundaryOnly is false, requires registering @ref QueryType::NodePositions
   // before the simulation step. When true, requires registering @ref
   // QueryType::SurfaceNodePositions. Results are available after the simulation step completes.
-  fn QueryNodesInVolumeLocal(Sphere const& volume, bool boundaryOnly, Function<void, int, Real3> const& callback) -> void [pure, virtual, const, mochi_error, overloaded];
+  fn QueryNodesInVolumeLocal(Sphere const& volume, bool boundaryOnly, Function<void, int, Real3> const& callback) -> void [pure, virtual, const, mochi_error, overloaded, no_reflection];
 
   // @brief Query the signed distance to the closest point on the actor's surface.
   //
@@ -693,7 +693,7 @@ class Actor [no_init, no_destruct, use_scene] {
   // bounding box. Outside the bounding box, it is an upper bound based on the triangle inequality.
   // @note This function is not supported for soft actors or for the experimental @ref
   // ColliderType::PointCloud.
-  fn GetPointsDistanceToSurface(Span<Real3 const> pointsWorld [units("m")], Span<real> outDistances [units("m")]) -> void [pure, virtual, const, mochi_error, batchable];
+  fn GetPointsDistanceToSurface(Span<Real3 const> pointsWorld [units("m")], Span<real> outDistances [units("m")]) -> void [pure, virtual, const, mochi_error, batchable, no_reflection];
 
   // @brief Get an axis-aligned bounding box (AABB) that contains the full volume of the actor, in
   // the actor's local frame.
@@ -1078,7 +1078,7 @@ class Actor [no_init, no_destruct, use_scene] {
   // @note Returned values use the same frame convention as @ref SetExternalForcesOnDofs.
   //
   // @see SetExternalForcesOnDofs, ClearExternalForces
-  fn GetExternalForces(Span<real> outForces) -> void [pure, virtual, mochi_error];
+  fn GetExternalForces(Span<real> outForces) -> void [pure, virtual, mochi_error, no_reflection];
 
   # Contact Info
   // @brief Get all the active contact points of the actor.
@@ -1228,7 +1228,7 @@ class Actor [no_init, no_destruct, use_scene] {
   // @param[in] userData Pointer to user data, or nullptr to clear.
   //
   // @see GetUserData
-  fn SetUserData(void* userData [nullable]) -> void [pure, virtual, no_python];
+  fn SetUserData(void* userData [nullable]) -> void [pure, virtual, no_python, no_reflection];
 
   // @brief Get application-specific user data for this actor.
   //
@@ -1330,7 +1330,7 @@ class Actor [no_init, no_destruct, use_scene] {
   // @note Unconstrained DoFs have limits of ±infinity.
   //
   // @see GetArticulatedJointLimitConstraints
-  fn GetArticulatedDofLimits(Span<Real2> outDofLimits) -> void [pure, virtual, const, mochi_error, batchable];
+  fn GetArticulatedDofLimits(Span<Real2> outDofLimits) -> void [pure, virtual, const, mochi_error, batchable, no_reflection];
 
   // @brief Get the pose of an articulated actor expressed as joint DoFs.
   //
@@ -1340,7 +1340,7 @@ class Actor [no_init, no_destruct, use_scene] {
   // @note Only applicable to articulated actors.
   //
   // @see SetArticulatedPoseFromJoints
-  fn GetArticulatedPose(Span<real> outPose) -> void [pure, virtual, const, mochi_error, batchable];
+  fn GetArticulatedPose(Span<real> outPose) -> void [pure, virtual, const, mochi_error, batchable, no_reflection];
 
   // @brief Get the pose of an articulated actor expressed as world-from-local link transforms.
   //
@@ -1350,7 +1350,7 @@ class Actor [no_init, no_destruct, use_scene] {
   // @note Only applicable to articulated actors.
   //
   // @see SetArticulatedPoseFromLinks, GetArticulatedPose
-  fn GetArticulatedLinkTransforms(Span<TransformRT> outWorldFromLinks) -> void [pure, virtual, const, mochi_error, batchable];
+  fn GetArticulatedLinkTransforms(Span<TransformRT> outWorldFromLinks) -> void [pure, virtual, const, mochi_error, batchable, no_reflection];
 
   // @brief Get time derivatives of the articulated actor DoFs.
   //
@@ -1360,7 +1360,7 @@ class Actor [no_init, no_destruct, use_scene] {
   // @note Only applicable to articulated actors.
   //
   // @see SetArticulatedJointVelocities
-  fn GetArticulatedJointVelocities(Span<real> outVelocities) -> void [pure, virtual, const, mochi_error, batchable];
+  fn GetArticulatedJointVelocities(Span<real> outVelocities) -> void [pure, virtual, const, mochi_error, batchable, no_reflection];
 
   // @brief Set the pose of an articulated actor from the world-from-local link transforms.
   //
@@ -1426,7 +1426,7 @@ class Actor [no_init, no_destruct, use_scene] {
   // vector representation.
   //
   // @see ComputeArticulatedPoseDelta, GetArticulatedPose, GetArticulatedPoseDistance
-  fn AddArticulatedDeltaToPose(Span<real const> pose, Span<real const> deltaDofs, Span<real> outPose) -> void [pure, virtual, const, mochi_error, batchable];
+  fn AddArticulatedDeltaToPose(Span<real const> pose, Span<real const> deltaDofs, Span<real> outPose) -> void [pure, virtual, const, mochi_error, batchable, no_reflection];
 
   // @brief Compute the pose delta from a base pose to a target pose.
   //
@@ -1439,7 +1439,7 @@ class Actor [no_init, no_destruct, use_scene] {
   // correctly subtract the delta.
   //
   // @see AddArticulatedDeltaToPose, GetArticulatedPose, GetArticulatedPoseDistance
-  fn ComputeArticulatedPoseDelta(Span<real const> poseBase, Span<real const> poseTarget, Span<real> outDeltaDofs) -> void [pure, virtual, const, mochi_error, batchable];
+  fn ComputeArticulatedPoseDelta(Span<real const> poseBase, Span<real const> poseTarget, Span<real> outDeltaDofs) -> void [pure, virtual, const, mochi_error, batchable, no_reflection];
 
   // @brief Compute per-joint distances between two poses.
   //
@@ -1454,7 +1454,7 @@ class Actor [no_init, no_destruct, use_scene] {
   // @note Uses joint-specific distance metrics (Euclidean for translation, angle for rotation).
   //
   // @see GetArticulatedPose, AddArticulatedDeltaToPose, ComputeArticulatedPoseDelta
-  fn GetArticulatedPoseDistance(Span<real const> poseA, Span<real const> poseB, Span<real> outTransDistances [units("m")], Span<real> outRotDistances [units("rad")]) -> void [pure, virtual, const, mochi_error, batchable];
+  fn GetArticulatedPoseDistance(Span<real const> poseA, Span<real const> poseB, Span<real> outTransDistances [units("m")], Span<real> outRotDistances [units("rad")]) -> void [pure, virtual, const, mochi_error, batchable, no_reflection];
 
   # Pose Controllers
   // @brief Check if the articulated actor has a pose controller.
@@ -1464,7 +1464,7 @@ class Actor [no_init, no_destruct, use_scene] {
   // @note Only applicable to articulated actors.
   //
   // @see AddArticulatedPoseController, RemoveArticulatedPoseController
-  fn HasArticulatedPoseController() -> bool [pure, virtual, const, mochi_error, batchable, nodiscard];
+  fn HasArticulatedPoseController() -> bool [pure, virtual, const, mochi_error, batchable, nodiscard, reflection_getter("hasArticulatedPoseController")];
 
   // @brief Add a pose controller to an articulated actor.
   //
@@ -1582,7 +1582,7 @@ class Actor [no_init, no_destruct, use_scene] {
   // @note Only applicable to articulated actors with a pose controller.
   //
   // @see GetArticulatedPoseConstraints, SetArticulatedPoseControllerParams
-  fn GetArticulatedPoseControllerParams(PoseControllerParams& outParams) -> void [pure, virtual, const, mochi_error, batchable, no_capi];
+  fn GetArticulatedPoseControllerParams(PoseControllerParams& outParams) -> void [pure, virtual, const, mochi_error, batchable, no_capi, no_reflection];
 
   // @brief Set the pose controller's tracking parameters.
   //
@@ -1605,7 +1605,7 @@ class Actor [no_init, no_destruct, use_scene] {
   //
   // @see SetArticulatedTargetPose, SetArticulatedTargetLinkTransforms,
   // GetArticulatedTargetLinkTransforms
-  fn GetArticulatedTargetPose(Span<real> outPose) -> void [pure, virtual, const, mochi_error, batchable];
+  fn GetArticulatedTargetPose(Span<real> outPose) -> void [pure, virtual, const, mochi_error, batchable, no_reflection];
 
   // @brief Get the last target pose set to the pose controller, expressed as link transforms.
   //
@@ -1615,7 +1615,7 @@ class Actor [no_init, no_destruct, use_scene] {
   // @note Only applicable to articulated actors with a pose controller.
   //
   // @see SetArticulatedTargetPose, SetArticulatedTargetLinkTransforms, GetArticulatedTargetPose
-  fn GetArticulatedTargetLinkTransforms(Span<TransformRT> outWorldFromTargets) -> void [pure, virtual, const, mochi_error, batchable];
+  fn GetArticulatedTargetLinkTransforms(Span<TransformRT> outWorldFromTargets) -> void [pure, virtual, const, mochi_error, batchable, no_reflection];
 
   // @brief Get the generalized forces applied by the pose controller on each joint DoF.
   //
@@ -1666,7 +1666,7 @@ class Actor [no_init, no_destruct, use_scene] {
   // joint i and its ancestor joints miss the contact forces on link i.
   //
   // @see RegisterQuery, QueryType::ArticulatedJointWrenches
-  fn GetArticulatedJointWrenches(Span<Real3> outForces [units("N")], Span<Real3> outTorques [units("Nm")]) -> void [pure, virtual, const, mochi_error, batchable];
+  fn GetArticulatedJointWrenches(Span<Real3> outForces [units("N")], Span<Real3> outTorques [units("Nm")]) -> void [pure, virtual, const, mochi_error, batchable, no_reflection];
 
   // @brief Get the force transmitted by a non-cycle joint of an articulated actor.
   //
@@ -1705,14 +1705,14 @@ class Actor [no_init, no_destruct, use_scene] {
   // @return True if the actor is a nested link actor, false otherwise.
   //
   // @see GetNestedLinkActors, GetArticulatedActor
-  fn IsNestedLinkActor() -> bool [pure, virtual, const, batchable, nodiscard];
+  fn IsNestedLinkActor() -> bool [pure, virtual, const, batchable, nodiscard, reflection_getter("isNestedLinkActor")];
 
   // @brief Check if the actor is a nested soft actor within a soft-skinned actor.
   //
   // @return True if the actor is a nested soft actor, false otherwise.
   //
   // @see GetNestedSoftActors, GetArticulatedActor
-  fn IsNestedSoftActor() -> bool [pure, virtual, const, batchable, nodiscard];
+  fn IsNestedSoftActor() -> bool [pure, virtual, const, batchable, nodiscard, reflection_getter("isNestedSoftActor")];
 
   // @brief Get the owning articulated actor.
   //

@@ -21,7 +21,7 @@ fn bots::Derive(uint64 seed, StringView key, Optional<uint64> index = {}) -> uin
 // base's raw value and validity check.
 struct bots::RoboticsHandle [equality, sortable, hashable] {
   uint64 value;
-  fn IsValid() -> bool [const];
+  fn IsValid() -> bool [const, no_reflection];
 };
 
 // @brief Distinct handle identifying a bot in its owning @ref RoboticsContext.

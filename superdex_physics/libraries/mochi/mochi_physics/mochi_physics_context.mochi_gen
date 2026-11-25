@@ -33,7 +33,7 @@ class Context [no_init, no_destruct, singleton] {
   // @note Call on any thread.
   //
   // @see UnbindThisThread, CreateContext
-  fn BindThisThread() -> void [pure, virtual, no_python];
+  fn BindThisThread() -> void [pure, virtual, no_python, no_reflection];
 
   // @brief Unbind the calling thread from this @ref Context.
   //
@@ -44,7 +44,7 @@ class Context [no_init, no_destruct, singleton] {
   // @note Call on any thread.
   //
   // @see BindThisThread
-  fn UnbindThisThread() -> void [pure, virtual, no_python];
+  fn UnbindThisThread() -> void [pure, virtual, no_python, no_reflection];
 
   // @brief Enable or disable single-threaded mode.
   //
@@ -61,7 +61,7 @@ class Context [no_init, no_destruct, singleton] {
   // @note Call on any thread.
   //
   // @see IsSingleThreaded
-  fn SetIsSingleThreaded(bool isSingleThreaded) -> void [pure, virtual];
+  fn SetIsSingleThreaded(bool isSingleThreaded) -> void [pure, virtual, reflection_setter("singleThreaded")];
 
   // @brief Return true if running in single-threaded mode.
   //
@@ -74,7 +74,7 @@ class Context [no_init, no_destruct, singleton] {
   // @note Call on any thread.
   //
   // @see SetIsSingleThreaded, CreateContext
-  fn IsSingleThreaded() -> bool [pure, virtual, const, nodiscard];
+  fn IsSingleThreaded() -> bool [pure, virtual, const, nodiscard, reflection_getter("singleThreaded")];
 
   // @brief Return the number of worker threads available to execute asynchronous tasks.
   //
@@ -123,7 +123,7 @@ class Context [no_init, no_destruct, singleton] {
   // @note Call on any thread.
   //
   // @see GetLogCallback
-  fn SetLogCallback(LogFn callback) -> void [static];
+  fn SetLogCallback(LogFn callback) -> void [static, no_reflection];
 
   // @brief Get the function currently being used to output logging.
   //
@@ -132,7 +132,7 @@ class Context [no_init, no_destruct, singleton] {
   // @return The current logging callback function.
   //
   // @see SetLogCallback
-  fn GetLogCallback() -> LogFn [static, export, no_python, no_capi, nodiscard];
+  fn GetLogCallback() -> LogFn [static, export, no_python, no_capi, nodiscard, no_reflection];
 
   // @brief Optionally provide a callback function to customize the way in which assertion failures
   // are reported.
@@ -149,7 +149,7 @@ class Context [no_init, no_destruct, singleton] {
   // @note Call on any thread.
   //
   // @see GetAssertionFailureCallback
-  fn SetAssertionFailureCallback(OnAssertFn callback) -> void [static, no_python];
+  fn SetAssertionFailureCallback(OnAssertFn callback) -> void [static, no_python, no_reflection];
 
   // @brief Get the function currently being used to report assertion failures.
   //
@@ -158,7 +158,7 @@ class Context [no_init, no_destruct, singleton] {
   // @return The current assertion failure callback function.
   //
   // @see SetAssertionFailureCallback
-  fn GetAssertionFailureCallback() -> OnAssertFn [static, export, no_python, no_capi, nodiscard];
+  fn GetAssertionFailureCallback() -> OnAssertFn [static, export, no_python, no_capi, nodiscard, no_reflection];
 
   # Shape APIs
   // @brief Load a shape from a file of supported format.
@@ -176,7 +176,7 @@ class Context [no_init, no_destruct, singleton] {
   // @note Call on any thread.
   //
   // @see ShapeHandle, ReleaseShape, LoadShapeFromBytes
-  fn LoadShapeFromFile(StringView filePath) -> ShapeHandle [pure, virtual, overloaded, mochi_error, nodiscard];
+  fn LoadShapeFromFile(StringView filePath) -> ShapeHandle [pure, virtual, overloaded, mochi_error, nodiscard, no_reflection];
 
   // @brief Load a shape from a file of supported format, and bake in some scale.
   //
@@ -209,7 +209,7 @@ class Context [no_init, no_destruct, singleton] {
   fn LoadShapeFromFile(
     StringView filePath,
     Real3 const& bakeScale,
-  ) -> ShapeHandle [overloaded, mochi_error, nodiscard];
+  ) -> ShapeHandle [overloaded, mochi_error, nodiscard, no_reflection];
 
   // @brief Load a shape from a file of supported format, and bake in rotation and translation.
   //
@@ -236,7 +236,7 @@ class Context [no_init, no_destruct, singleton] {
   fn LoadShapeFromFile(
     StringView filePath,
     TransformRT const& bakeTransform,
-  ) -> ShapeHandle [overloaded, mochi_error, nodiscard];
+  ) -> ShapeHandle [overloaded, mochi_error, nodiscard, no_reflection];
 
   // @brief Load a shape from a file of supported format, and bake in some scale, rotation, and
   // translation.
@@ -292,7 +292,7 @@ class Context [no_init, no_destruct, singleton] {
   // @note Call on any thread.
   //
   // @see ShapeHandle, ReleaseShape, LoadShapeFromFile
-  fn LoadShapeFromBytes(Span<char const> fileData) -> ShapeHandle [overloaded, mochi_error, nodiscard];
+  fn LoadShapeFromBytes(Span<char const> fileData) -> ShapeHandle [overloaded, mochi_error, nodiscard, no_reflection];
 
   // @brief Load a shape from a file of supported format, where the file has already been loaded
   // into memory, and baking in some scale.
@@ -327,7 +327,7 @@ class Context [no_init, no_destruct, singleton] {
   fn LoadShapeFromBytes(
     Span<char const> fileData,
     Real3 const& bakeScale,
-  ) -> ShapeHandle [overloaded, mochi_error, nodiscard];
+  ) -> ShapeHandle [overloaded, mochi_error, nodiscard, no_reflection];
 
   // @brief Load a shape from a file of supported format, where the file has already been loaded
   // into memory, and baking in rotation and translation.
@@ -356,7 +356,7 @@ class Context [no_init, no_destruct, singleton] {
   fn LoadShapeFromBytes(
     Span<char const> fileData,
     TransformRT const& bakeTransform,
-  ) -> ShapeHandle [overloaded, mochi_error, nodiscard];
+  ) -> ShapeHandle [overloaded, mochi_error, nodiscard, no_reflection];
 
   // @brief Load a shape from a file of supported format, where the file has already been loaded
   // into memory, and baking in some scale, rotation, and translation.
@@ -394,7 +394,7 @@ class Context [no_init, no_destruct, singleton] {
     Span<char const> fileData,
     Real3 const& bakeScale,
     TransformRT const& bakeTransform,
-  ) -> ShapeHandle [overloaded, mochi_error, nodiscard];
+  ) -> ShapeHandle [overloaded, mochi_error, nodiscard, no_reflection];
 
   // @brief Load a shape from a file of supported format, where the file has already been loaded
   // into memory, with an explicit mesh format hint.
@@ -416,7 +416,7 @@ class Context [no_init, no_destruct, singleton] {
   fn LoadShapeFromBytes(
     Span<char const> fileData,
     MeshFileType format,
-  ) -> ShapeHandle [pure, virtual, overloaded, mochi_error, nodiscard];
+  ) -> ShapeHandle [pure, virtual, overloaded, mochi_error, nodiscard, no_reflection];
 
   // @brief Load a shape from a file of supported format, where the file has already been loaded
   // into memory, with an explicit mesh format hint, and baking in some scale.
@@ -452,7 +452,7 @@ class Context [no_init, no_destruct, singleton] {
     Span<char const> fileData,
     MeshFileType format,
     Real3 const& bakeScale,
-  ) -> ShapeHandle [overloaded, mochi_error, nodiscard];
+  ) -> ShapeHandle [overloaded, mochi_error, nodiscard, no_reflection];
 
   // @brief Load a shape from a file of supported format, where the file has already been loaded
   // into memory, with an explicit mesh format hint, and baking in rotation and translation.
@@ -482,7 +482,7 @@ class Context [no_init, no_destruct, singleton] {
     Span<char const> fileData,
     MeshFileType format,
     TransformRT const& bakeTransform,
-  ) -> ShapeHandle [overloaded, mochi_error, nodiscard];
+  ) -> ShapeHandle [overloaded, mochi_error, nodiscard, no_reflection];
 
   // @brief Load a shape from a file of supported format, where the file has already been loaded
   // into memory, with an explicit mesh format hint, and baking in some scale, rotation, and
@@ -554,7 +554,7 @@ class Context [no_init, no_destruct, singleton] {
   // of @ref MeshDataView::nodesPerElement.
   //
   // @see ShapeHandle, ReleaseShape
-  fn CreateMeshShape(MeshDataView const& mesh) -> ShapeHandle [pure, virtual, overloaded, mochi_error, no_capi, nodiscard];
+  fn CreateMeshShape(MeshDataView const& mesh) -> ShapeHandle [pure, virtual, overloaded, mochi_error, no_capi, nodiscard, no_reflection];
 
   // @brief Create a shape using in-memory model data, so that it can be used to create actors.
   //
@@ -584,7 +584,7 @@ class Context [no_init, no_destruct, singleton] {
   // @note Can be a mesh or an implicit shape, depending on the contents.
   //
   // @see ShapeHandle, ReleaseShape
-  fn CreateModelShape(ModelDataView const& model) -> ShapeHandle [pure, virtual, overloaded, mochi_error, no_capi, nodiscard];
+  fn CreateModelShape(ModelDataView const& model) -> ShapeHandle [pure, virtual, overloaded, mochi_error, no_capi, nodiscard, no_reflection];
 
   // @brief Create a tetrahedral mesh shape using in-memory data.
   //
@@ -827,14 +827,14 @@ class Context [no_init, no_destruct, singleton] {
   // equivalent to calling @ref ClearFileCache.
   //
   // @see IsFileCacheEnabled, ClearFileCache, ClearFileFromCache
-  fn EnableFileCache(bool enable) -> void [pure, virtual];
+  fn EnableFileCache(bool enable) -> void [pure, virtual, reflection_setter("fileCacheEnabled")];
 
   // @brief Return true if the file cache feature is enabled.
   //
   // @return True if the file cache is enabled, false otherwise.
   //
   // @note Call on any thread.
-  fn IsFileCacheEnabled() -> bool [pure, virtual, const, nodiscard];
+  fn IsFileCacheEnabled() -> bool [pure, virtual, const, nodiscard, reflection_getter("fileCacheEnabled")];
 
   // @brief Release all shapes that are being preserved by the file cache (if any).
   //
@@ -879,7 +879,7 @@ class Context [no_init, no_destruct, singleton] {
   // 4 billion, fewer when many scenes stay alive. Creating more fails an assertion.
   //
   // @see DestroyScene
-  fn CreateScene(StringView name) -> Scene* [pure, virtual, nodiscard];
+  fn CreateScene(StringView name) -> Scene* [pure, virtual, nodiscard, no_reflection];
 
   // @brief Immediately destroy a scene and all its actors and constraints.
   //
@@ -895,7 +895,7 @@ class Context [no_init, no_destruct, singleton] {
   // @note Any remaining scenes will be cleaned up automatically when the @ref Context is destroyed.
   //
   // @see CreateScene, DestroyAsyncScene
-  fn DestroyScene(Scene* scene [nullable]) -> void [pure, virtual, no_mochi_error];
+  fn DestroyScene(Scene* scene [nullable]) -> void [pure, virtual, no_mochi_error, no_reflection];
 
   // @brief Get a pointer to a scene by its handle.
   //
@@ -904,7 +904,7 @@ class Context [no_init, no_destruct, singleton] {
   // @return Pointer to the scene, or nullptr if the handle is invalid in this context.
   //
   // @note Call on any thread. Never blocks.
-  fn GetScene(SceneHandle handle) -> Scene* [pure, virtual, overloaded, nullable];
+  fn GetScene(SceneHandle handle) -> Scene* [pure, virtual, overloaded, nullable, no_reflection];
 
   // @brief Get a const pointer to a scene by its handle.
   //
@@ -913,7 +913,7 @@ class Context [no_init, no_destruct, singleton] {
   // @return Const pointer to the scene, or nullptr if the handle is invalid in this context.
   //
   // @note Call on any thread. Never blocks.
-  fn GetScene(SceneHandle handle) -> Scene const* [pure, virtual, const, overloaded, no_python, nullable];
+  fn GetScene(SceneHandle handle) -> Scene const* [pure, virtual, const, overloaded, no_python, no_reflection, nullable];
 
   // @brief Check if a scene is valid (not destroyed), and belongs to this @ref Context.
   //
@@ -949,7 +949,7 @@ class Context [no_init, no_destruct, singleton] {
   // @ref AsyncScene is created, single-threaded mode may be enabled.
   //
   // @see DestroyAsyncScene, IsValidAsyncScene, CreateAsyncScenePaused
-  fn CreateAsyncScene(StringView name) -> AsyncScene* [pure, virtual, mochi_error, no_capi, no_python, nullable, nodiscard];
+  fn CreateAsyncScene(StringView name) -> AsyncScene* [pure, virtual, mochi_error, no_capi, no_python, nullable, nodiscard, no_reflection];
 
   // @brief Create a new @ref AsyncScene that will initially be in the paused state.
   //
@@ -973,7 +973,7 @@ class Context [no_init, no_destruct, singleton] {
   // @ref AsyncScene is created, single-threaded mode may be enabled.
   //
   // @see CreateAsyncScene, DestroyAsyncScene, IsValidAsyncScene, AsyncScene::Pause, AsyncScene::IsPaused
-  fn CreateAsyncScenePaused(StringView name) -> AsyncScene* [pure, virtual, mochi_error, no_capi, no_python, nullable, nodiscard];
+  fn CreateAsyncScenePaused(StringView name) -> AsyncScene* [pure, virtual, mochi_error, no_capi, no_python, nullable, nodiscard, no_reflection];
 
   // @brief Immediately stop and destroy an @ref AsyncScene and all its actors and constraints.
   //
@@ -990,7 +990,7 @@ class Context [no_init, no_destruct, singleton] {
   // @note Any remaining scenes will be cleaned up automatically when the @ref Context is destroyed.
   //
   // @see CreateAsyncScene, IsValidAsyncScene
-  fn DestroyAsyncScene(AsyncScene* scene [nullable]) -> void [pure, virtual, no_capi, no_python];
+  fn DestroyAsyncScene(AsyncScene* scene [nullable]) -> void [pure, virtual, no_capi, no_python, no_reflection];
 
   // @brief Check if an @ref AsyncScene is valid (not destroyed), and belongs to this @ref Context.
   //
@@ -1000,7 +1000,7 @@ class Context [no_init, no_destruct, singleton] {
   // @note Call on any thread.
   //
   // @see CreateAsyncScene, DestroyAsyncScene
-  fn IsValidAsyncScene(AsyncScene const* scene [nullable]) -> bool [pure, virtual, const, no_capi, no_python, nodiscard];
+  fn IsValidAsyncScene(AsyncScene const* scene [nullable]) -> bool [pure, virtual, const, no_capi, no_python, nodiscard, no_reflection];
 
   # DebugServer APIs
   // @brief Get the debug server for this context.
@@ -1015,7 +1015,7 @@ class Context [no_init, no_destruct, singleton] {
   // @return Const reference to the @ref DebugServer.
   //
   // @see DebugServer
-  fn GetDebugServer() -> DebugServer const& [pure, virtual, const, overloaded, no_python];
+  fn GetDebugServer() -> DebugServer const& [pure, virtual, const, overloaded, no_python, reflection_getter("debug")];
 };
 
 // @brief Initialize SuperDex Physics by creating a @ref Context object.

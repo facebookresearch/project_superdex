@@ -28,14 +28,14 @@ class DebugServer [no_init, no_destruct] {
   // @ref Stop.
   //
   // @see Stop, HasStarted, GetPort
-  fn Start(uint16 preferredPort = 7333, bool allowRemoteConnection = false) -> void [pure, virtual];
+  fn Start(uint16 preferredPort = 7333, bool allowRemoteConnection = false) -> void [pure, virtual, no_reflection];
 
   // @brief Stop the server and disconnect any connected client.
   //
   // @note No-op if the server has not started.
   //
   // @see Start, HasStarted
-  fn Stop() -> void [pure, virtual];
+  fn Stop() -> void [pure, virtual, no_reflection];
 
   // @brief Check whether the server has started.
   //
@@ -72,5 +72,5 @@ class DebugServer [no_init, no_destruct] {
   // @note Must be called before @ref Start.
   //
   // @see Start
-  fn SetCoordinateSpace(CoordinateSpace const& space) -> void [pure, virtual];
+  fn SetCoordinateSpace(CoordinateSpace const& space) -> void [pure, virtual, no_reflection];
 };
