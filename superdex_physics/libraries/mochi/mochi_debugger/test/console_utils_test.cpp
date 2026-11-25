@@ -23,6 +23,7 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
+#include <optional>
 #include <string>
 #include <string_view>
 
@@ -64,10 +65,10 @@ TEST(ConsoleUtils, GroupsAndSortsFieldsAndMethods) {
       {ConsoleEntryKind::Method, "clear", "() -> void", "() -> void", "", "", false}};
   std::string const output = FormatConsoleList(entries);
   test::ExpectConsoleListEq(
-      "actors\nid \"a b\"\nposition [1,2,3]\n\nclear() -> void\nreset() -> void", output);
+      "clear () -> void\nreset () -> void\n\nactors\nid \"a b\"\nposition [1,2,3]", output);
   EXPECT_NE(std::string::npos, output.find("\n\n"));
   test::ExpectConsoleListEq(
-      "position [1,2,3]\nactors\nid \"a b\"\n\nreset() -> void\nclear() -> void",
+      "reset () -> void\nclear () -> void\n\nposition [1,2,3]\nactors\nid \"a b\"",
       FormatConsoleList(entries, {._sortAlphabetically = false}));
 }
 
@@ -93,9 +94,11 @@ TEST(ConsoleUtils, ShowsOptionalTypesAndNamespaces) {
     std::string_view expected;
   };
   Case const cases[] = {
-      {false, false, "items [1,2,3]\nset(array<float,3> v) -> string"},
-      {true, false, "items array<float,3> [1,2,3]\nset(array<float,3> v) -> string"},
-      {true, true, "items std::array<float,3> [1,2,3]\nset(std::array<float,3> v) -> std::string"}};
+      {false, false, "set (array<float,3> v) -> string\n\nitems [1,2,3]"},
+      {true, false, "set (array<float,3> v) -> string\n\nitems array<float,3> [1,2,3]"},
+      {true,
+       true,
+       "set (std::array<float,3> v) -> std::string\n\nitems std::array<float,3> [1,2,3]"}};
   for (auto const& c : cases) {
     ConsoleFormatParams params;
     params._maxNameColumnWidth = params._maxTypeColumnWidth = 0;
@@ -220,10 +223,10 @@ TEST(ConsoleUtils, HandlesEmptyAndMetadataOnlyEntries) {
   test::ExpectConsoleListEq("position ...", FormatConsoleList(truncated));
   DynamicArray<ConsoleListEntry> const methods{
       {ConsoleEntryKind::Method, "reset", "() -> void", "() -> void", "", "", false}};
-  EXPECT_EQ("reset() -> void", FormatConsoleList(methods));
+  test::ExpectConsoleListEq("reset () -> void", FormatConsoleList(methods));
 }
 
-TEST(ConsoleUtils, ShowsEntryErrorsOnOneLine) {
+TEST(ConsoleUtils, OmitsEntryErrors) {
   DynamicArray<ConsoleListEntry> const entries{
       {ConsoleEntryKind::Field, "ok", "int32", "int32", "3", "", false},
       {ConsoleEntryKind::Field,
@@ -234,6 +237,88 @@ TEST(ConsoleUtils, ShowsEntryErrorsOnOneLine) {
        "line one\nline two",
        false}};
   std::string const output = FormatConsoleList(entries);
-  test::ExpectConsoleListEq("broken <error: line one line two>\nok 3", output);
+  test::ExpectConsoleListEq("broken\nok 3", output);
   EXPECT_EQ(1, std::count(output.begin(), output.end(), '\n'));
+}
+
+TEST(ConsoleUtils, SimplifiesAdapterTypeNames) {
+  struct Case {
+    std::string_view input;
+    std::string_view expected;
+  };
+  Case const cases[] = {
+      {"std::vector<std::array<FooReflectionData,2>>", "std::vector<std::array<Foo,2>>"},
+      {"ns::FooReflectionData", "ns::Foo"},
+      {"FooReflectionDataReflectionData", "FooReflectionData"},
+      {"ReflectionData", "ReflectionData"},
+      {"ns::ReflectionData", "ns::ReflectionData"},
+      {"FooReflectionDataOther", "FooReflectionDataOther"}};
+  for (auto const& c : cases) {
+    SCOPED_TRACE(c.input);
+    DynamicArray<ConsoleListEntry> const entries{
+        {._kind = ConsoleEntryKind::Field,
+         ._name = "field",
+         ._typeName = std::string{c.input},
+         ._value = "7"}};
+    test::ExpectConsoleListEq(
+        "field " + std::string{c.expected} + " 7",
+        FormatConsoleList(entries, {._showTypes = true}));
+  }
+}
+
+TEST(ConsoleUtils, SimplifiesSignaturesWithoutChangingArgumentNames) {
+  DynamicArray<ConsoleListEntry> const entries{
+      {._kind = ConsoleEntryKind::Method,
+       ._name = "call",
+       ._typeName = "(ActorHandle inputReflectionData, FooReflectionData resultReflectionData)"
+                    " -> ns::BarReflectionData"}};
+  test::ExpectConsoleListEq(
+      "call (ActorHandle inputReflectionData, Foo resultReflectionData) -> ns::Bar",
+      FormatConsoleList(entries));
+}
+
+TEST(ConsoleUtils, AlignsMethodNamesWithoutWideningPropertyTypeColumns) {
+  DynamicArray<ConsoleListEntry> const entries{
+      {._kind = ConsoleEntryKind::Method,
+       ._name = "reset",
+       ._typeName = "(VeryLongArgumentType argument) -> AnotherLongReturnType"},
+      {._kind = ConsoleEntryKind::Field, ._name = "x", ._typeName = "int", ._value = "7"}};
+  EXPECT_EQ(
+      "reset  (VeryLongArgumentType argument) -> AnotherLongReturnType\n\nx      int  7",
+      FormatConsoleList(
+          entries,
+          {._minNameColumnWidth = 0,
+           ._minTypeColumnWidth = 0,
+           ._maxTypeColumnWidth = 3,
+           ._columnSpacing = 2,
+           ._showTypes = true}));
+}
+
+TEST(ConsoleUtils, ShowsSizeOnlyWhenNoValueWasCaptured) {
+  struct Case {
+    std::string_view value;
+    std::string_view error;
+    bool truncated;
+    std::optional<size_t> size;
+    std::string_view expected;
+  };
+  Case const cases[] = {
+      {"", "", false, 0, "(size=0)"},
+      {"", "", false, 9999, "(size=9999)"},
+      {"[]", "", false, 0, "[]"},
+      {"null", "", false, std::nullopt, "null"},
+      {"", "", false, std::nullopt, ""},
+      {"abc", "", true, 9999, "abc..."},
+      {"stale", "failed", false, 5, ""}};
+  for (auto const& c : cases) {
+    SCOPED_TRACE(c.expected);
+    DynamicArray<ConsoleListEntry> const entries{
+        {._kind = ConsoleEntryKind::Directory,
+         ._name = "data",
+         ._value = std::string{c.value},
+         ._valueError = std::string{c.error},
+         ._isValueTruncated = c.truncated,
+         ._containerSize = c.size}};
+    test::ExpectConsoleListEq("data " + std::string{c.expected}, FormatConsoleList(entries));
+  }
 }

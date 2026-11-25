@@ -183,13 +183,13 @@ class ConsoleTest : public MochiDebuggerTest {
 
   DynamicArray<CommandCase> RemoteCases() const {
     std::string const methods =
-        "\n\nadd(int32 amount) -> int32\npositive() -> bool\nreset() -> void";
+        "add (int32 amount) -> int32\npositive () -> bool\nreset () -> void\n\n";
     std::string const root =
-        "child\nnumbers [1,2,3]\nscenes\ntext \"hello world\"\nvalue 7" + methods;
-    std::string const rootDetailed = "child " +
-        std::string{SReflect::GetTypeInfo<ConsoleChild>()._nameWithNamespace} + "\nnumbers " +
-        SReflect::GetTypeInfo<std::array<int32_t, 3>>()._nameWithNamespace +
-        " [1,2,3]\nscenes\ntext std::string \"hello world\"\nvalue int32 7" + methods;
+        methods + "child\nnumbers [1,2,3]\nscenes (size=2)\ntext \"hello world\"\nvalue 7";
+    std::string const rootDetailed = methods + "child " +
+        std::string{SReflect::GetTypeInfo<ConsoleChild>()._name} + "\nnumbers " +
+        SReflect::GetTypeInfo<std::array<int32_t, 3>>()._name +
+        " [1,2,3]\nscenes (size=2)\ntext string \"hello world\"\nvalue int32 7";
     std::string const child = "name \"child\"\nvalue 3";
     std::string const scenes = "1_2 (handle=" + std::to_string(_sceneB->GetHandle().value) +
         ")\nA (handle=" + std::to_string(_sceneA->GetHandle().value) + ")";
@@ -215,7 +215,7 @@ class ConsoleTest : public MochiDebuggerTest {
         {"/scenes/A", "ls /scenes/my_scene/../../scenes/", scenes, ""},
         {"/", "ls child", child, ""},
         {"/child", "ls", child, ""},
-        {"/child", "ls\t-l", "name std::string \"child\"\nvalue int32 3", ""},
+        {"/child", "ls\t-l", "name string \"child\"\nvalue int32 3", ""},
         {"/", "ls scenes -l", scenes, ""},
         {"/scenes/A", "ls '../' -l", scenes, ""},
         {"/", "/scenes/A/name", "\"A\"", ""},
@@ -346,6 +346,20 @@ class ActorConsoleTest : public ConsoleTest {
 
 TEST_F(ConsoleTest, RemoteCommands) {
   CheckCases(RemoteCases());
+}
+
+TEST_F(ConsoleTest, ListingFlagsAndSpacing) {
+  auto const detailed = Run({"ls child -l"});
+  ASSERT_EQ(1, detailed.size());
+  EXPECT_EQ(detailed, Run({"ls -l child"}));
+  EXPECT_EQ(detailed, Run({"ls -l -- child"}));
+  auto const listing = Run({"ls"});
+  ASSERT_EQ(1, listing.size());
+  EXPECT_TRUE(listing[0].starts_with("add"));
+  EXPECT_NE(std::string::npos, listing[0].find("\n\nchild"));
+  auto const unsupported = Run({"ls -m"});
+  ASSERT_EQ(1, unsupported.size());
+  EXPECT_TRUE(unsupported[0].starts_with("error: Usage: ls"));
 }
 
 TEST_F(ConsoleTest, ChangesDirectoryOnlyAfterValidation) {

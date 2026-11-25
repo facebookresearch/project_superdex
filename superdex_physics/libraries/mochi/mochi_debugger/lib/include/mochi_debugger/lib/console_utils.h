@@ -26,9 +26,9 @@ namespace mochi::dbg {
 
 /// @brief Terminal layout options. Widths count UTF-8 characters. Zero maximum means unlimited.
 struct ConsoleFormatParams {
-  size_t _minNameColumnWidth = 16;
+  size_t _minNameColumnWidth = 32;
   size_t _maxNameColumnWidth = 0;
-  size_t _minTypeColumnWidth = 16;
+  size_t _minTypeColumnWidth = 32;
   size_t _maxTypeColumnWidth = 0;
   size_t _maxLineWidth = 0;
   size_t _columnSpacing = 4;
@@ -39,9 +39,12 @@ struct ConsoleFormatParams {
 
 /// @brief Format @ref SReflect::ConsoleListEntry data as terminal rows.
 ///
-/// @details Fields show name, optional type and value. Methods follow in a separate block,
-/// with signatures appended to their names. Entries are sorted alphabetically by default.
-/// Truncated values and lines end in an ellipsis. Lines have no trailing padding.
+/// @details Methods precede properties with a blank line between the blocks.
+/// Fields show name, optional type and value. Methods show names in the first column and signatures
+/// in the second. Entries are sorted alphabetically by default.
+/// Getter errors leave values blank. Otherwise, missing values show container size when available.
+/// Type names drop ReflectionData suffixes when a name remains. Argument names are unchanged.
+/// Truncated values end in an ellipsis. Lines have no trailing padding.
 [[nodiscard]] std::string FormatConsoleList(
     Span<SReflect::ConsoleListEntry const> entries,
     ConsoleFormatParams const& params = {});

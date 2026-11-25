@@ -1166,17 +1166,35 @@ void DebugClient::CmdPwd() {
 }
 
 void DebugClient::CmdLs(Span<std::string const> args) {
-  bool const detailed = !args.empty() && args.back() == "-l";
-  if (detailed) {
-    args = args.subspan(0, args.size() - 1);
-  }
-  if (args.size() > 1) {
-    PrintError("Usage: ls [<path>] [-l]");
-    return;
+  bool detailed = false;
+  bool options = true;
+  std::string const* path = nullptr;
+  for (auto const& arg : args) {
+    if (options && arg == "--") {
+      options = false;
+      continue;
+    }
+    if (options && arg.size() > 1 && arg[0] == '-') {
+      for (char flag : std::string_view{arg}.substr(1)) {
+        switch (flag) {
+          case 'l':
+            detailed = true;
+            break;
+          default:
+            PrintError("Usage: ls [<path>] [-l]");
+            return;
+        }
+      }
+    } else if (path == nullptr) {
+      path = &arg;
+    } else {
+      PrintError("Usage: ls [<path>] [-l]");
+      return;
+    }
   }
   std::string command = "ls";
-  if (!args.empty()) {
-    command += " " + SReflect::ToJsonString(args[0], false);
+  if (path != nullptr) {
+    command += " " + SReflect::ToJsonString(*path, false);
   }
   CmdRemote(command, detailed);
 }
@@ -1187,8 +1205,7 @@ void DebugClient::CmdRemote(std::string_view command, bool detailed) {
     if (reply->listing && !reply->listing->empty()) {
       ConsoleFormatParams params;
       params._showTypes = detailed;
-      params._includeNamespaces = detailed;
-      Print(FormatConsoleList(*reply->listing, params));
+      Print(FormatConsoleList(*reply->listing, params) + "\n");
     } else if (!reply->output.empty()) {
       Print(std::string{reply->output});
     }
@@ -1205,9 +1222,9 @@ void DebugClient::CmdHelp() {
   connect <ip:port>  Connect to <ip> on <port>.
   cd <path>          Change current working directory.
   pwd                Print current working directory.
-  ls                 List current directory contents.
-  ls <path>          List contents of specified directory.
-  ls [<path>] -l     List with fully qualified types and method signatures.
+  ls                 List current directory methods and properties.
+  ls <path>          List methods and properties of specified directory.
+  ls [<path>] -l     List with property types.
   <path>             Print the value at <path>.
   <path> <value>     Set the value at <path>, for example: gravity [0, -9.81, 0]
   <path> [args...]   Call the method at <path>.
