@@ -392,7 +392,7 @@ std::optional<DynamicArray<real>> MjcfReader::Reals(char const* text, char const
     }
     char* end = nullptr;
     double const v = std::strtod(text + at, &end);
-    size_t const parsed = static_cast<size_t>(end - (text + at));
+    auto const parsed = static_cast<size_t>(end - (text + at));
     if (parsed == 0) {
       MOCHI_ERROR_SET(_error, "MJCF attribute is not a list of numbers");
       MOCHI_LOG_ERROR("MJCF attribute '%s' is not a list of numbers: \"%s\"", what, text);

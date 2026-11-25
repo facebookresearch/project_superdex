@@ -28,7 +28,7 @@ using namespace superdex::robotics;
 SensorUniformNoise::SensorUniformNoise(Actor* actor, std::string_view paramArgs, Error& error)
     : SensorBase(actor, error) {
   MOCHI_ERROR_RETURN(error);
-  Params const params = LoadParamsFromPathOrJson<Params>(paramArgs, error, /*allowPartial=*/false);
+  auto const params = LoadParamsFromPathOrJson<Params>(paramArgs, error, /*allowPartial=*/false);
   SetParams(params, error);
 }
 
