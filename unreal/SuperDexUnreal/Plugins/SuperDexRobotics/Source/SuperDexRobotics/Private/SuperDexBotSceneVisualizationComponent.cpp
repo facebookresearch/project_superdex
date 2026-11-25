@@ -65,12 +65,15 @@ struct FBotSceneVizSnapshotEntry {
   bool bDeformable = false;
   TArray<mochi::real> SkinCoords;
   TArray<int32> SkinTriangles;
+  FName ActorName;
+  bool bBot = false;
 };
 
 // A bot's skin render model (see superdex::robotics::ActorSkinRenderModel), with the world
 // transforms of its bones' links.
 struct FBotSceneVizSkinSnapshot {
   uint64 ActorKey = 0; // The bot's articulated actor handle.
+  FName ActorName;
   FString File;
   mochi::TransformRT RootFromModel;
   mochi::Real3 Scale = {1_r, 1_r, 1_r};
@@ -290,13 +293,14 @@ bool USuperDexBotSceneVisualizationComponent::TrySnapshotLinkTransforms(
     // -- so it has to be expanded. Every source of actors goes through here rather than only the
     // bot pass, because a task object can be articulated too: a prefab instance that asked for its
     // reference shape directly got an invalid handle and vanished.
-    auto AppendActor = [&Local, &ArticulatedActors, BotScene, Scene](mochi::Actor* Actor) {
+    auto AppendActor = [&Local, &ArticulatedActors, BotScene, Scene](
+                           mochi::Actor* Actor, bool bBot) {
       if (!Actor) {
         return;
       }
 
       // Returns false when there is nothing to draw: no shape and no render model.
-      auto AppendEntry = [&Local, BotScene](
+      auto AppendEntry = [&Local, BotScene, bBot](
                              mochi::Actor* EntryActor, const mochi::TransformRT& WorldFromLink) {
         mochi::Error ShapeErr;
         const mochi::ShapeHandle Shape = EntryActor->GetReferenceShape(ShapeErr);
@@ -308,6 +312,8 @@ bool USuperDexBotSceneVisualizationComponent::TrySnapshotLinkTransforms(
         }
         FBotSceneVizSnapshotEntry E;
         E.LinkHandle = EntryActor->GetHandle();
+        E.ActorName = FName(UTF8_TO_TCHAR(EntryActor->GetName()));
+        E.bBot = bBot;
         if (bHasShape) {
           E.RefShape = Shape;
           E.ShapeKey = Shape.value;
@@ -398,7 +404,7 @@ bool USuperDexBotSceneVisualizationComponent::TrySnapshotLinkTransforms(
 
     // 1) Base-scene actors
     for (mochi::ActorHandle H : BotScene->GetBaseSceneActorHandles()) {
-      AppendActor(Scene ? Scene->GetActor(H) : nullptr);
+      AppendActor(Scene ? Scene->GetActor(H) : nullptr, /*bBot=*/false);
     }
 
     // 2) Spawnable-prefab instances (placed via BotScene::SpawnPrefabInstance). Keyed by instance
@@ -406,7 +412,7 @@ bool USuperDexBotSceneVisualizationComponent::TrySnapshotLinkTransforms(
     for (mochi::DynamicString const& InstanceName : BotScene->GetPrefabInstanceNames()) {
       for (mochi::ActorHandle H : BotScene->GetPrefabInstanceActors(
                std::string_view(InstanceName.c_str(), InstanceName.size()))) {
-        AppendActor(Scene ? Scene->GetActor(H) : nullptr);
+        AppendActor(Scene ? Scene->GetActor(H) : nullptr, /*bBot=*/false);
       }
     }
 
@@ -418,7 +424,7 @@ bool USuperDexBotSceneVisualizationComponent::TrySnapshotLinkTransforms(
         continue;
       }
       mochi::Actor* const BotActor = Bot->GetArticulatedActor();
-      AppendActor(BotActor);
+      AppendActor(BotActor, /*bBot=*/true);
 
       const superdex::robotics::ActorSkinRenderModel* const Skin =
           BotActor ? BotScene->FindSkinRenderModel(BotActor->GetHandle()) : nullptr;
@@ -427,6 +433,7 @@ bool USuperDexBotSceneVisualizationComponent::TrySnapshotLinkTransforms(
       }
       FBotSceneVizSkinSnapshot& S = State->Skins.AddDefaulted_GetRef();
       S.ActorKey = BotActor->GetHandle().value;
+      S.ActorName = FName(UTF8_TO_TCHAR(BotActor->GetName()));
       S.File = UTF8_TO_TCHAR(Skin->file.c_str());
       S.RootFromModel = Skin->rootFromModel;
       S.Scale = Skin->scale;
@@ -497,6 +504,8 @@ void USuperDexBotSceneVisualizationComponent::EnsureVisualsForSnapshot(
     if (int32* ExistingIdx = HandleToVisualIdx.Find(HandleKey)) {
       FVisualEntry& Existing = Visuals[*ExistingIdx];
       Existing.LinkToWorld = LinkToWorld;
+      Existing.ActorName = Entry.ActorName;
+      Existing.bBot = Entry.bBot;
       // Actor handles are recycled, so a handle seen before can now name a different actor (a task
       // swap respawns its prefab instances). Keep the visual only if it still draws the same thing.
       if (Existing.ShapeKey == Entry.ShapeKey && Existing.RenderModelFile == RenderModelFile &&
@@ -515,6 +524,8 @@ void USuperDexBotSceneVisualizationComponent::EnsureVisualsForSnapshot(
 
     V->HandleValue = HandleKey;
     V->ShapeKey = Entry.ShapeKey;
+    V->ActorName = Entry.ActorName;
+    V->bBot = Entry.bBot;
     V->RefShape = Entry.RefShape;
     V->LinkToWorld = LinkToWorld;
     V->bDeformable = Entry.bDeformable;
@@ -614,6 +625,7 @@ void USuperDexBotSceneVisualizationComponent::EnsureSkinsForSnapshot(
 
     FSkinVisual& Skin = Skins.AddDefaulted_GetRef();
     Skin.ActorKey = S.ActorKey;
+    Skin.ActorName = S.ActorName;
     Skin.File = S.File;
     Skin.BoneLinks = S.BoneLinks;
     Skin.AnchorBone = AnchorBone;
@@ -639,6 +651,7 @@ void USuperDexBotSceneVisualizationComponent::EnsureSkinsForSnapshot(
     }
   }
   UpdateCoveredLinkVisibility();
+  ApplyVisualTags();
 }
 
 void USuperDexBotSceneVisualizationComponent::OnSkinnedMeshLoaded(
@@ -677,6 +690,31 @@ void USuperDexBotSceneVisualizationComponent::OnSkinnedMeshLoaded(
       Skin->CoveredLinks.Num());
   PoseSkins();
   UpdateCoveredLinkVisibility();
+  ApplyVisualTags();
+}
+
+FName USuperDexBotSceneVisualizationComponent::GetBotVisualTag() {
+  static const FName Tag(TEXT("SuperDexBotVisual"));
+  return Tag;
+}
+
+void USuperDexBotSceneVisualizationComponent::ApplyVisualTags() {
+  auto Tag = [](UMeshComponent* Comp, FName ActorName, bool bBot) {
+    if (!IsValid(Comp)) {
+      return;
+    }
+    Comp->ComponentTags.Reset();
+    Comp->ComponentTags.Add(ActorName);
+    if (bBot) {
+      Comp->ComponentTags.Add(GetBotVisualTag());
+    }
+  };
+  for (const FVisualEntry& V : Visuals) {
+    Tag(V.MeshComp, V.ActorName, V.bBot);
+  }
+  for (const FSkinVisual& Skin : Skins) {
+    Tag(Skin.MeshComp, Skin.ActorName, /*bBot=*/true);
+  }
 }
 
 void USuperDexBotSceneVisualizationComponent::UpdateCoveredLinkVisibility() {
@@ -894,6 +932,7 @@ void USuperDexBotSceneVisualizationComponent::OnRenderModelLoaded(
   }
   V->MeshComp->SetWorldTransform(V->ComponentToLink * V->LinkToWorld);
   UpdateCoveredLinkVisibility();
+  ApplyVisualTags();
 }
 
 void USuperDexBotSceneVisualizationComponent::RebuildIfNeeded() {
@@ -938,6 +977,7 @@ void USuperDexBotSceneVisualizationComponent::RebuildIfNeeded() {
   LinkToWorldByHandle.Reset();
   EnsureVisualsForSnapshot(Snapshot, SceneObject);
   EnsureSkinsForSnapshot(SkinSnapshot);
+  ApplyVisualTags();
   RefreshDeformableQueries(SceneObject);
   bHasSceneSnapshot = true;
   SetComponentTickEnabled(Visuals.Num() > 0 || Skins.Num() > 0);

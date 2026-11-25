@@ -79,6 +79,13 @@ class SUPERDEXROBOTICS_API USuperDexBotSceneVisualizationComponent : public USce
   /** Starts with ticking disabled and does not tick in the editor. */
   USuperDexBotSceneVisualizationComponent();
 
+  /**
+   * The component tag every visual of a bot (link or skin) carries. Every visual also carries the
+   * name of the Mochi actor it draws, so a game can find, say, the robot visuals or a stand's
+   * links.
+   */
+  static FName GetBotVisualTag();
+
  protected:
   virtual void BeginPlay() override;
   virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
@@ -105,6 +112,9 @@ class SUPERDEXROBOTICS_API USuperDexBotSceneVisualizationComponent : public USce
 
   /** Hides the visuals of links a drawn skin covers, and shows every other link visual. */
   void UpdateCoveredLinkVisibility();
+
+  /** Tags each visual with its actor's name and, for bots, GetBotVisualTag. */
+  void ApplyVisualTags();
 
   /** Poses each drawn skin from LinkToWorldByHandle. */
   void PoseSkins();
@@ -163,6 +173,9 @@ class SUPERDEXROBOTICS_API USuperDexBotSceneVisualizationComponent : public USce
 
     /** A rod: its contact-skin mesh follows the actor's deformed contact skin every step. */
     bool bDeformable = false;
+    /** The Mochi actor drawn, and whether it is a bot's link. */
+    FName ActorName;
+    bool bBot = false;
   };
   TArray<FVisualEntry> Visuals;
 
@@ -170,8 +183,9 @@ class SUPERDEXROBOTICS_API USuperDexBotSceneVisualizationComponent : public USce
   TArray<TPair<uint64, mochi::QueryHandle>> DeformableQueries;
 
   struct FSkinVisual {
-    /** The bot's articulated actor handle. */
+    /** The bot's articulated actor handle and name. */
     uint64 ActorKey = 0;
+    FName ActorName;
     FString File;
 
     /**
