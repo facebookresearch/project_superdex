@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include "generated/mochi_physics_reflection_declarations.generated.h"
 #include "mochi_callback_set.h"
 #include "mochi_common_components.h"
 #include "mochi_ecs.h"
@@ -400,8 +401,7 @@ class SceneImpl final : public Scene {
 
  public:
   MOCHI_STRUCT_BEGIN(mochi::SceneImpl)
-  MOCHI_PROPERTY("name", [](SceneImpl const& s) -> std::string const& { return s._name; })
-  MOCHI_PROPERTY("gravity", &SceneImpl::GetGravity, &SceneImpl::SetGravity)
+  MOCHI_BASE_CLASS(mochi::Scene)
   MOCHI_STRUCT_END()
 };
 

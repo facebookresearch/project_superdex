@@ -16,6 +16,7 @@
 
 #include "mochi_constraint_interface.h"
 
+#include "generated/mochi_physics_reflection_declarations.generated.h"
 #include "mochi_constraint.h"
 #include "mochi_ecs_utils.h"
 #include "mochi_query.h"
@@ -34,6 +35,10 @@ class ConstraintInterfaceImpl final : public ConstraintInterface {
   entt::registry& reg;
   entt::entity e = {};
   SceneImpl* scene = nullptr;
+
+  MOCHI_STRUCT_BEGIN(ConstraintInterfaceImpl);
+  MOCHI_BASE_CLASS(mochi::Constraint);
+  MOCHI_STRUCT_END();
 
   explicit ConstraintInterfaceImpl(entt::registry& reg_, entt::entity e_, SceneImpl* scene_)
       : reg(reg_), e(e_), scene(scene_) {

@@ -21,6 +21,7 @@
 #if SIMPLE_REFLECTION_ENABLE
 
 #include <cstddef>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -97,7 +98,7 @@ namespace SReflect {
 struct ConsoleListParams {
   size_t _maxValueLength = 1024; // Max bytes to capture for each entry's value
   bool _serializePrimitives = true; // Serialize the value of strings, bools, numbers and enums
-  bool _serializePrimitiveArrays = true; // Serialize the value of arrays and matrices of primitives
+  bool _serializePrimitiveArrays = true; // Serialize fixed-size arrays and matrices of primitives
 
   SR_BeginStruct(SReflect::ConsoleListParams);
   SR_Field_Name(_maxValueLength, "maxValueLength");
@@ -117,6 +118,8 @@ struct ConsoleListEntry {
   std::string _value; // Captured value
   std::string _valueError; // Error reading or serializing the entry, empty if none
   bool _isValueTruncated = false; // The captured value is incomplete. No ellipsis is appended.
+  CoreType _coreType = CoreType::X_Invalid; // Unwrapped value's core type. Invalid for methods.
+  std::optional<size_t> _containerSize = {}; // Array/matrix elements or map entries, if applicable.
 
   SR_BeginStruct(SReflect::ConsoleListEntry);
   SR_Field_Name(_kind, "kind");
@@ -126,6 +129,8 @@ struct ConsoleListEntry {
   SR_Field_Name(_value, "value");
   SR_Field_Name(_valueError, "valueError");
   SR_Field_Name(_isValueTruncated, "isValueTruncated");
+  SR_Field_Name(_coreType, "coreType");
+  SR_Field_Name(_containerSize, "containerSize");
   SR_EndStruct()
 };
 

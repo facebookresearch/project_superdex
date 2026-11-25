@@ -19,6 +19,8 @@
 #include <mochi_core/utils/dynamic_array.h>
 #include <mochi_physics/dbg/protocol.h>
 
+#include <cstdint>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -32,9 +34,13 @@ namespace mochi::dbg {
 // The arguments of a CommandRequest as std::string, which the SReflect console functions take.
 DynamicArray<std::string> GetCommandArgs(protocol::CommandRequest const& request);
 
+// Numeric console directory selectors return an ID. Names return no value, and overflow throws.
+std::optional<uint64_t> ParseConsoleHandle(std::string_view token);
+
 // Return name with each character that would need quotes in a console path or in the terminal
 // replaced by '_': '/', quotes, spaces and control characters, and a leading '[' or '{', which
-// starts a bracket group in the terminal. Return an empty string for "." and "..".
+// starts a bracket group in the terminal, or a leading '@', which escapes a debug name.
+// Return an empty string for "." and "..".
 std::string SanitizeConsoleName(std::string_view name);
 
 // The next number to try for each base name that MakeUniqueDebugName has found taken.
@@ -63,20 +69,22 @@ std::string MakeUniqueDebugName(
 // top-level actors).
 using ActorDebugNameSuffixes = std::unordered_map<ActorHandle, DebugNameSuffixes>;
 
-// Give each actor without a CDebugName one, unique within its directory (the top-level actors, or
-// the children of one parent). The base is the sanitized name, only its local part after the last
-// '/' for a child, or the actor type, such as Rigid, if that is empty. A taken base gets a number
-// from MakeUniqueDebugName. Names never change, and the scene debugger removes them and clears
-// nextSuffixes when it shuts down. Call on the scene's thread before reading CDebugName.
+// Give each actor without a CDebugName one. Actor names are unique within their scope (the
+// top-level actors, or the children of one parent). The base is the sanitized name, only its local
+// part after the last '/' for a child, or the actor type, such as Rigid, if that is empty. A taken
+// base gets a number from MakeUniqueDebugName. Names never change, and the scene debugger removes
+// them and clears nextSuffixes when it shuts down. Call on the scene's thread before reading
+// CDebugName.
 void AssignDebugNames(SceneImpl& scene, ActorDebugNameSuffixes& nextSuffixes);
 
-// A path inside a scene can go through the built-in directories actors/<debug name> and, in an
-// actor with nested actors, children/<debug name>. They hide reflected members with the same
-// name.
+// Scene paths support actors/<debug name or handle>, constraints/<handle>, debugDraw, and
+// children/<debug name or handle> inside actors with nested actors. A leading '@' forces a
+// debug-name selector instead of a numeric handle. Built-in directories hide reflected members
+// with the same name.
 
 // List, read, set or call the member at the request's path inside the scene, which starts at
 // request.pathStart. Call on the scene's thread. It runs inside the scene's step hooks, so console
-// members must not step the scene, pump the debugger, or destroy the scene or its actors.
+// members must not step the scene, pump the debugger, or destroy the scene.
 protocol::CommandReply ExecuteSceneCommand(
     SceneImpl& scene,
     ActorDebugNameSuffixes& nextSuffixes,

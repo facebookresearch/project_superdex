@@ -1276,7 +1276,7 @@ TEST(SReflectConsole, List) {
       {'F', "enabled", "bool", "true"},
       {'D', "factory", "Part", ""},
       {'F', "ratio", "float", "0.5"},
-      {'D', "weights", "vector<float>", "[0.5,1.5]"},
+      {'D', "weights", "vector<float>", ""},
       {'D', "base", "Part", ""},
       {'D', "parts", "vector<Part>", ""},
       {'D', "named", "unordered_map<string,Part>", ""},
@@ -1460,7 +1460,7 @@ TEST(SReflectConsole, ListPrimitiveArrays) {
           {'D', "position", "array<float,3>", "[1,2,3]"},
           {'D', "nested", "array<array<int32,2>,2>", "[[1,2],[3,4]]"},
           {'D', "parts", "vector<optional<Part>>", ""},
-          {'F', "flags", "vector<bool>", "[true,false]"}}));
+          {'F', "flags", "vector<bool>", ""}}));
   EXPECT_EQ(
       List(obj, "position"),
       (std::vector<Row>{
@@ -1517,7 +1517,9 @@ TEST(SReflectConsole, ListSerializationOptions) {
         } else if (entry._name == "kind") {
           EXPECT_EQ(entry._value, primitives ? "\"Rigid\"" : "");
         } else if (entry._name == "weights") {
-          EXPECT_EQ(entry._value, arrays ? "[0.5,1.5]" : "");
+          EXPECT_TRUE(entry._value.empty());
+          EXPECT_EQ(entry._coreType, SReflect::CoreType::CT_array);
+          EXPECT_EQ(entry._containerSize, 2);
         } else if (entry._kind == SReflect::ConsoleEntryKind::Directory) {
           EXPECT_TRUE(entry._value.empty());
         }
@@ -1528,13 +1530,13 @@ TEST(SReflectConsole, ListSerializationOptions) {
       ArrayCases arrayObj;
       EXPECT_FALSE(SReflect::ConsoleList(&arrayObj, "", params).empty());
       EXPECT_EQ(arrayObj.primitiveGets, primitives ? 1 : 0);
-      EXPECT_EQ(arrayObj.positionGets, arrays ? 1 : 0);
+      EXPECT_EQ(arrayObj.positionGets, 1);
     }
   }
   ArrayCases obj;
   SReflect::ConsoleListParams const params{1024, false, false};
   auto const entries = SReflect::ConsoleList(&obj, "", params);
-  EXPECT_EQ(obj.positionGets, 0);
+  EXPECT_EQ(obj.positionGets, 1);
   for (auto const& entry : entries) {
     EXPECT_TRUE(entry._value.empty());
   }
@@ -1542,7 +1544,7 @@ TEST(SReflectConsole, ListSerializationOptions) {
       List(obj, "position", 0, params),
       (std::vector<Row>{
           {'F', "0", "float", ""}, {'F', "1", "float", ""}, {'F', "2", "float", ""}}));
-  EXPECT_EQ(obj.positionGets, 1);
+  EXPECT_EQ(obj.positionGets, 2);
   EXPECT_EQ(obj.positionSets, 0);
 }
 
@@ -1605,18 +1607,72 @@ TEST(SReflectConsole, ListEntriesJson) {
       {ConsoleEntryKind::Method, "clear", "() -> void", "() -> void", "", "", false},
       {ConsoleEntryKind::Field, "broken", "int32", "int32", "", "getter failed", false}};
   std::string const json =
-      "[{\"isValueTruncated\":false,\"kind\":\"Directory\",\"name\":\"base\",\"typeName\":\"Part\","
+      "[{\"coreType\":\"X_Invalid\",\"isValueTruncated\":false,\"kind\":\"Directory\",\"name\":\"base\",\"typeName\":\"Part\","
       "\"typeNameWithNamespace\":\"SReflectConsoleTest::Part\",\"value\":\"\",\"valueError\":\"\"},"
-      "{\"isValueTruncated\":true,\"kind\":\"Field\",\"name\":\"count\",\"typeName\":\"int32\","
+      "{\"coreType\":\"X_Invalid\",\"isValueTruncated\":true,\"kind\":\"Field\",\"name\":\"count\",\"typeName\":\"int32\","
       "\"typeNameWithNamespace\":\"int32\",\"value\":\"3\",\"valueError\":\"\"},"
-      "{\"isValueTruncated\":false,\"kind\":\"Method\",\"name\":\"clear\",\"typeName\":\"() -> void\","
+      "{\"coreType\":\"X_Invalid\",\"isValueTruncated\":false,\"kind\":\"Method\",\"name\":\"clear\",\"typeName\":\"() -> void\","
       "\"typeNameWithNamespace\":\"() -> void\",\"value\":\"\",\"valueError\":\"\"},"
-      "{\"isValueTruncated\":false,\"kind\":\"Field\",\"name\":\"broken\",\"typeName\":\"int32\","
+      "{\"coreType\":\"X_Invalid\",\"isValueTruncated\":false,\"kind\":\"Field\",\"name\":\"broken\",\"typeName\":\"int32\","
       "\"typeNameWithNamespace\":\"int32\",\"value\":\"\",\"valueError\":\"getter failed\"}]";
   EXPECT_EQ(SReflect::ToJsonString(entries, false), json);
   std::vector<SReflect::ConsoleListEntry> loaded;
   EXPECT_TRUE(SReflect::FromJsonString(loaded, json));
   EXPECT_EQ(SReflect::ToJsonString(loaded, false), json);
+}
+
+TEST(SReflectConsole, ListContainerMetadata) {
+  Machine object;
+  object.spare = Part{};
+  auto const entries = SReflect::ConsoleList(&object, "");
+  struct Case {
+    char const* name;
+    SReflect::CoreType type;
+    std::optional<size_t> size;
+  };
+  Case const cases[] = {
+      {"weights", SReflect::CoreType::CT_array, 2},
+      {"named", SReflect::CoreType::CT_map, 2},
+      {"spare", SReflect::CoreType::CT_struct, std::nullopt},
+      {"slot", SReflect::CoreType::CT_struct, std::nullopt}};
+  for (auto const& c : cases) {
+    SCOPED_TRACE(c.name);
+    auto const entry = std::find_if(
+        entries.begin(), entries.end(), [&](auto const& entry) { return entry._name == c.name; });
+    ASSERT_NE(entries.end(), entry);
+    EXPECT_EQ(c.type, entry->_coreType);
+    EXPECT_EQ(c.size, entry->_containerSize);
+  }
+  MatrixCases matrix;
+  auto const matrices = SReflect::ConsoleList(&matrix, "", {1024, true, false});
+  ASSERT_EQ(2, matrices.size());
+  EXPECT_EQ(SReflect::CoreType::CT_matrix, matrices[0]._coreType);
+  EXPECT_EQ(6, matrices[0]._containerSize);
+  EXPECT_EQ(3, matrices[1]._containerSize);
+}
+
+TEST(SReflectConsole, ListNonDefaultMetadataJson) {
+  SReflect::ConsoleListEntry entry;
+  entry._kind = SReflect::ConsoleEntryKind::Directory;
+  entry._name = "items";
+  entry._coreType = SReflect::CoreType::CT_array;
+  entry._containerSize = 7;
+  SReflect::ConsoleListEntry restored;
+  ASSERT_TRUE(SReflect::FromJsonString(restored, SReflect::ToJsonString(entry, false)));
+  EXPECT_EQ(entry._coreType, restored._coreType);
+  EXPECT_EQ(entry._containerSize, restored._containerSize);
+}
+
+TEST(SReflectConsole, ListSerializationErrorClearsContainerSize) {
+  ArrayCases object;
+  object.positionStorage[0] = std::numeric_limits<float>::quiet_NaN();
+  auto const entries = SReflect::ConsoleList(&object, "");
+  auto const entry = std::find_if(
+      entries.begin(), entries.end(), [](auto const& entry) { return entry._name == "position"; });
+  ASSERT_NE(entries.end(), entry);
+  EXPECT_FALSE(entry->_valueError.empty());
+  EXPECT_TRUE(entry->_value.empty());
+  EXPECT_FALSE(entry->_containerSize.has_value());
 }
 
 } // namespace SReflectConsoleTest

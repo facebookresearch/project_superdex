@@ -18,6 +18,7 @@
 
 #include "mochi_ecs.h"
 
+#include <mochi_core/utils/reflection.h>
 #include <mochi_physics/mochi_physics.h>
 
 #include <memory>
@@ -28,7 +29,12 @@ class SceneImpl;
 
 // Unlike Actor, the ConstraintInterface class has a public destructor so std::unique_ptr can
 // destroy it.
-class ConstraintInterface : public Constraint {};
+class ConstraintInterface : public Constraint {
+ public:
+  // Get the TypeInfo for the most-derived class, for type-erased reflection APIs.
+  // Use this object's address as a void*.
+  [[nodiscard]] virtual SReflect::StructTypeInfo const& GetFinalTypeInfo() const = 0;
+};
 using ConstraintInterfacePtr = std::unique_ptr<ConstraintInterface>;
 
 // Create an object that implements mochi::Constraint to satisfy the public interface.

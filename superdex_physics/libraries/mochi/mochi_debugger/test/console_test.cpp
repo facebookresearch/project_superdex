@@ -21,10 +21,12 @@
 #include <mochi_core/test/wait_until.h>
 #include <mochi_core/utils/array_utils.h>
 #include <mochi_core/utils/nd_array.h>
+#include <mochi_core/utils/reflection_error.h>
 #include <mochi_core/utils/string_utils.h>
 #include <mochi_physics/src/mochi_common_components.h>
 #include <mochi_physics/src/mochi_scene.h>
 
+#include <picojson/picojson.h>
 #include <simple_reflection/simple_reflection.h>
 
 #include <gtest/gtest.h>
@@ -36,6 +38,7 @@
 #include <cstdint>
 #include <future>
 #include <initializer_list>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -45,6 +48,11 @@ using namespace mochi;
 using namespace mochi::dbg;
 
 namespace {
+
+// Cover the console protocol and special routing paths here. Reflected API behavior and member
+// coverage belong in those APIs' tests. Use test-owned roots when asserting particular members.
+// Real API members are routing sentinels only. Do not enumerate each class's properties or
+// methods here. Adding or changing reflected API members should not require console-test edits.
 
 using Lines = DynamicArray<std::string>;
 
@@ -118,10 +126,14 @@ class ConsoleTest : public MochiDebuggerTest {
     MochiDebuggerTest::SetUp();
     _sceneA = _context->CreateScene("A");
     _sceneB = _context->CreateScene("1/2");
-    _server->SetConsoleRoot_ForTestingOnly(
-        &_consoleObject, SReflect::GetTypeInfo<ConsoleTestObject>());
+    InstallConsoleRoot();
     StartServer();
     ConnectClient();
+  }
+
+  virtual void InstallConsoleRoot() {
+    _server->SetConsoleRoot_ForTestingOnly(
+        &_consoleObject, SReflect::GetTypeInfo<ConsoleTestObject>());
   }
 
   Lines TakePrinted() {
@@ -179,7 +191,8 @@ class ConsoleTest : public MochiDebuggerTest {
         SReflect::GetTypeInfo<std::array<int32_t, 3>>()._nameWithNamespace +
         " [1,2,3]\nscenes\ntext std::string \"hello world\"\nvalue int32 7" + methods;
     std::string const child = "name \"child\"\nvalue 3";
-    std::string const scenes = "1_2\nA";
+    std::string const scenes = "1_2 (handle=" + std::to_string(_sceneB->GetHandle().value) +
+        ")\nA (handle=" + std::to_string(_sceneA->GetHandle().value) + ")";
     std::string const scenesJson = R"({
   "1_2": {},
   "A": {}
@@ -271,7 +284,7 @@ class ActorConsoleTest : public ConsoleTest {
         Flatten(MakeConstSpan(connectivity)),
         test::ExpectOK{});
     _box = AddRigid(_sceneA, "box");
-    AddRobot(_sceneA, "robot");
+    _robot = AddRobot(_sceneA, "robot");
   }
 
   ActorHandle AddRigid(Scene* scene, std::string_view name) const {
@@ -307,11 +320,26 @@ class ActorConsoleTest : public ConsoleTest {
   void ExpectDirectories(std::string_view path, DynamicArray<std::string> expected) {
     std::ranges::sort(expected);
     std::string const command = "ls " + std::string{path};
-    ExpectOutput(command, Join(expected, "\n"), Run({command}));
+    auto const output = Run({command});
+    ASSERT_EQ(1, output.size());
+    Lines names;
+    std::istringstream lines(output[0]);
+    std::string line;
+    while (std::getline(lines, line)) {
+      std::istringstream row(line);
+      std::string name;
+      std::string handle;
+      if (row >> name) {
+        EXPECT_TRUE(bool(row >> handle));
+        names.push_back(name);
+      }
+    }
+    EXPECT_EQ(expected, names);
   }
 
   ShapeHandle _shape;
   ActorHandle _box;
+  Actor* _robot = nullptr;
 };
 
 } // namespace
@@ -532,11 +560,16 @@ TEST_F(ActorConsoleTest, ActorCommands) {
   "link0": {},
   "link1": {}
 })";
+  auto const links = _robot->GetNestedLinkActors(ErrorAssert{});
+  std::string const actorRows = "box (handle=" + std::to_string(_box.value) +
+      ")\nrobot (handle=" + std::to_string(_robot->GetHandle().value) + ")";
+  std::string const childRows = "link0 (handle=" + std::to_string(links[0].value) +
+      ")\nlink1 (handle=" + std::to_string(links[1].value) + ")";
   CommandCase const cases[] = {
-      {"/scenes/A", "ls actors", "box\nrobot", ""},
+      {"/scenes/A", "ls actors", actorRows, ""},
       {"/scenes/A/actors/box", "name", "\"box\"", ""},
       {"/scenes/A/actors/robot", "name", "\"robot\"", ""},
-      {"/scenes/A/actors/robot", "ls children", "link0\nlink1", ""},
+      {"/scenes/A/actors/robot", "ls children", childRows, ""},
       {"/scenes/A/actors/robot/children", "link0/name", "\"robot/link0\"", ""},
       {"/scenes/A/actors/robot/children", "link1/name", "\"robot/link1\"", ""},
       {"/scenes/A", "actors/box/name", "\"box\"", ""},
@@ -559,12 +592,16 @@ TEST_F(ConsoleTest, SceneDebugNames) {
       {"..", "scene2"},
       {".", "scene3"},
       {"[1]", "_1]"},
-      {"{a", "_a"}};
-  DynamicArray<std::string> entries{"1_2", "A"};
+      {"{a", "_a"},
+      {"@a", "_a2"}};
+  DynamicArray<std::string> entries{
+      "1_2 (handle=" + std::to_string(_sceneB->GetHandle().value) + ")",
+      "A (handle=" + std::to_string(_sceneA->GetHandle().value) + ")"};
   for (auto const& [createdAs, name] : names) {
     Scene* scene = _context->CreateScene(createdAs);
     _extraScenes.push_back(scene);
-    entries.emplace_back(name);
+    entries.emplace_back(
+        std::string{name} + " (handle=" + std::to_string(scene->GetHandle().value) + ")");
   }
   std::ranges::sort(entries);
   ExpectOutput("ls scenes", Join(entries, "\n"), Run({"ls scenes"}));
@@ -580,7 +617,8 @@ TEST_F(ActorConsoleTest, ActorDebugNames) {
       {".", "Rigid2"},
       {"sceneInstance/nestedPrefab/robot", "sceneInstance_nestedPrefab_robot"},
       {"my box", "my_box"},
-      {"[robot", "_robot"}};
+      {"[robot", "_robot"},
+      {"@box", "_box"}};
   DynamicArray<std::string> expected;
   for (auto const& [createdAs, name] : names) {
     AddRigid(_sceneB, createdAs);
@@ -627,4 +665,149 @@ TEST_F(ActorConsoleTest, DisconnectRemovesDebugNames) {
   test::WaitUntil([&] { return !_server->HasConnection(); });
   Run({});
   EXPECT_EQ(0, numNames());
+}
+
+namespace {
+
+class DefaultRootConsoleTest : public ConsoleTest {
+ protected:
+  void InstallConsoleRoot() override {}
+};
+
+struct ShapeConsoleTestObject {
+  Context* context = nullptr;
+
+  ShapeHandle CreateShape(real radius, Error& error) const {
+    return context->CreateSphereShape({}, radius, error);
+  }
+  void ReleaseShape(ShapeHandle const& handle) const {
+    context->ReleaseShape(handle);
+  }
+
+  MOCHI_STRUCT_BEGIN(ShapeConsoleTestObject)
+  MOCHI_METHOD_WITH_ERROR("createShape(radius)", &ShapeConsoleTestObject::CreateShape)
+  MOCHI_METHOD("releaseShape(handle)", &ShapeConsoleTestObject::ReleaseShape)
+  MOCHI_STRUCT_END()
+};
+
+class ShapeConsoleTest : public ConsoleTest {
+ protected:
+  void InstallConsoleRoot() override {
+    _shapeObject.context = _context;
+    _server->SetConsoleRoot_ForTestingOnly(
+        &_shapeObject, SReflect::GetTypeInfo<ShapeConsoleTestObject>());
+  }
+
+  ShapeConsoleTestObject _shapeObject;
+};
+
+} // namespace
+
+TEST_F(DefaultRootConsoleTest, ListsScenesAtDefaultRoot) {
+  auto listing = Run({"ls"});
+  ASSERT_EQ(1, listing.size());
+  EXPECT_NE(std::string::npos, listing[0].find("scenes"));
+  // port is a sentinel for /debug routing. Do not add tests for every future DebugServer member
+  // or assert port's behavior here. DebugServer's own tests cover its API.
+  auto const port = Run({"/debug/port"});
+  ASSERT_EQ(1, port.size());
+  EXPECT_FALSE(port[0].starts_with("error: ")) << port[0];
+  SetDirectory("/scenes/A");
+  ExpectOutput(
+      "ls /scenes",
+      "1_2 (handle=" + std::to_string(_sceneB->GetHandle().value) +
+          ")\nA (handle=" + std::to_string(_sceneA->GetHandle().value) + ")",
+      Run({"ls /scenes"}));
+}
+
+TEST_F(ShapeConsoleTest, RetainsHandlesReturnedByConsoleCalls) {
+  auto result = Run({"createShape 1"});
+  ASSERT_EQ(1, result.size());
+  EXPECT_FALSE(result[0].starts_with("error:")) << result[0];
+  ShapeHandle handle;
+  ASSERT_TRUE(SReflect::FromJsonString(handle, result[0]));
+  EXPECT_TRUE(handle.IsValid());
+  EXPECT_EQ(1, _context->GetNumShapes());
+  {
+    auto native = _context->CreateSphereShape({}, 2_r, test::ExpectOK{});
+    EXPECT_EQ(2, _context->GetNumShapes());
+  }
+  EXPECT_EQ(1, _context->GetNumShapes());
+  auto failure = Run({"createShape -1"});
+  ASSERT_EQ(1, failure.size());
+  EXPECT_TRUE(failure[0].starts_with("error:")) << failure[0];
+  EXPECT_EQ(1, _context->GetNumShapes());
+  EXPECT_TRUE(Run({"releaseShape " + result[0]}).empty());
+  EXPECT_EQ(0, _context->GetNumShapes());
+}
+
+TEST_F(ActorConsoleTest, ConstraintsListHandlesTypesAndAffectedActorNames) {
+  RigidPivotPositionConstraintParams params;
+  params.actor = _box;
+  auto* first = _sceneA->CreateRigidPivotPositionConstraint(params, test::ExpectOK{});
+  auto* second = _sceneA->CreateRigidPivotPositionConstraint(params, test::ExpectOK{});
+  ConstraintHandle const firstHandle = first->GetHandle();
+  ConstraintHandle const secondHandle = second->GetHandle();
+  std::string const base = SReflect::EnumToString(first->GetType());
+  RigidSphericalJointConstraintParams jointParams;
+  jointParams.actorA = _box;
+  jointParams.actorB = AddRigid(_sceneA, "other/actor");
+  auto* joint = _sceneA->CreateRigidSphericalJointConstraint(jointParams, test::ExpectOK{});
+  struct Row {
+    std::string handle;
+    std::string type;
+    std::string actors;
+  };
+  std::array<Row, 3> rows{
+      {{std::to_string(firstHandle.value), base, "box"},
+       {std::to_string(secondHandle.value), base, "box"},
+       {std::to_string(joint->GetHandle().value),
+        SReflect::EnumToString(joint->GetType()),
+        "box, other_actor"}}};
+  std::ranges::sort(rows, {}, &Row::handle);
+  std::string plain;
+  std::string detailed;
+  for (auto const& row : rows) {
+    if (!plain.empty()) {
+      plain += '\n';
+      detailed += '\n';
+    }
+    std::string const hint = "(actors=[" + row.actors + "])";
+    plain += row.handle + " " + hint;
+    detailed += row.handle + " " + row.type + " " + hint;
+  }
+  ExpectOutput("ls /scenes/A/constraints", plain, Run({"ls /scenes/A/constraints"}));
+  ExpectOutput("ls /scenes/A/constraints -l", detailed, Run({"ls /scenes/A/constraints -l"}));
+  auto const& reg = assert_cast<SceneImpl*>(_sceneA)->GetRegistry();
+  EXPECT_EQ(_sceneA->GetNumActors(), reg.view<CDebugName const>().size());
+  std::string const namedPath = "ls constraints/" + base;
+  CommandCase const missingName[]{{"/scenes/A", namedPath, "", "not found"}};
+  CheckCases(missingName);
+  SetDirectory("/scenes/A/constraints/" + std::to_string(firstHandle.value));
+}
+
+TEST_F(ActorConsoleTest, ActorsListEnumTypesAndLabeledHandles) {
+  std::string const box = "(handle=" + std::to_string(_box.value) + ")";
+  std::string const robot = "(handle=" + std::to_string(_robot->GetHandle().value) + ")";
+  ExpectOutput(
+      "ls /scenes/A/actors", "box " + box + "\nrobot " + robot, Run({"ls /scenes/A/actors"}));
+  ExpectOutput(
+      "ls /scenes/A/actors -l",
+      "box Rigid " + box + "\nrobot Articulated " + robot,
+      Run({"ls /scenes/A/actors -l"}));
+}
+
+TEST_F(ActorConsoleTest, DebugDrawAndConstraintDirectories) {
+  RigidPivotPositionConstraintParams params;
+  params.actor = _box;
+  auto* constraint = _sceneA->CreateRigidPivotPositionConstraint(params, test::ExpectOK{});
+  std::string const handle = std::to_string(constraint->GetHandle().value);
+  CommandCase const cases[] = {
+      {"/scenes/A", "ls constraints", handle + " (actors=[box])", ""},
+      {"/scenes/A", "ls constraints/missing", "", "not found"},
+      {"/scenes/A", "constraints", "{\n  \"" + handle + "\": {}\n}", ""},
+      {"/scenes/A", "constraints 1", "", "is read-only"}};
+  CheckCases(cases);
+  SetDirectory("/scenes/A/constraints/" + handle);
+  SetDirectory("/scenes/A/debugDraw");
 }

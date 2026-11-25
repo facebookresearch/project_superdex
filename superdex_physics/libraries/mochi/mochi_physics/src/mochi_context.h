@@ -22,6 +22,7 @@
 #if MOCHI_USE_OSC
 #include "internal/mochi_operational_space_controller.h"
 #endif
+#include "generated/mochi_physics_reflection_declarations.generated.h"
 #include "mochi_scene.h"
 #include "mochi_scene_table.h"
 #include "mochi_shape.h"
@@ -149,6 +150,18 @@ class ContextImpl final : public Context {
   DebugServer& GetDebugServer() override;
   DebugServer const& GetDebugServer() const override;
 
+  // Shape handles returned to console clients live until ReleaseShape or Context destruction.
+  class ScopedShapeHandleRetention {
+    MOCHI_DECLARE_NO_COPY_NO_MOVE(ScopedShapeHandleRetention);
+
+   public:
+    explicit ScopedShapeHandleRetention(ContextImpl const* context);
+    ~ScopedShapeHandleRetention();
+
+   private:
+    ContextImpl const* _previous;
+  };
+
   // For internal use only:
   void SetNumWorkerThreads(int numThreads); // must be called before Initialize()
   TaskScheduler& GetTaskScheduler();
@@ -165,7 +178,13 @@ class ContextImpl final : public Context {
     _enableAutomaticHandleCleanup = enable;
   }
 
+  MOCHI_STRUCT_BEGIN(mochi::ContextImpl)
+  MOCHI_BASE_CLASS(mochi::Context)
+  MOCHI_STRUCT_END()
+
  private:
+  static thread_local ContextImpl const* _shapeHandleRetentionContext;
+
   AsyncScene* CreateAsyncSceneImpl(std::string_view name, bool startPaused, Error& error);
 
   struct FileCacheEntry {

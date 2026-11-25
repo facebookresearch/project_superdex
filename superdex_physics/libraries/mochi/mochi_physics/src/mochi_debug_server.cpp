@@ -128,12 +128,13 @@ class DebugServerImpl : public DebugServerInternal {
       protocol::SceneReply&& reply);
   void OnConsoleRequest(net::ClientId client, protocol::CommandRequest request);
 
+  ContextImpl* const _context;
   net::MessageServer _server;
   RecursiveGuarded<State> _state;
 
  public:
   MOCHI_STRUCT_BEGIN(DebugServerImpl)
-  MOCHI_PROPERTY("port", &DebugServerImpl::GetPort)
+  MOCHI_BASE_CLASS(mochi::DebugServer)
   MOCHI_STRUCT_END()
 };
 
@@ -176,8 +177,7 @@ static DynamicString FormatLabel(DebugServerImpl::State const& state) {
   }
 }
 
-DebugServerImpl::DebugServerImpl([[maybe_unused]] ContextImpl* context) {
-  // In the future, we will need to store the context pointer. For now, it is unused.
+DebugServerImpl::DebugServerImpl(ContextImpl* context) : _context(context) {
   MOCHI_ASSERT_VERBOSE(context);
 
   // NOTE: Protocol registration is deferred until StartImpl to minimize the cost
@@ -333,7 +333,10 @@ static void FillSceneList(DebugServerImpl::State const& state, protocol::SceneLi
 }
 
 static SReflect::ConsoleListEntry MakeDirectoryEntry(std::string_view name) {
-  return {._kind = SReflect::ConsoleEntryKind::Directory, ._name = std::string{name}};
+  return {
+      ._kind = SReflect::ConsoleEntryKind::Directory,
+      ._name = std::string{name},
+      ._coreType = SReflect::CoreType::CT_struct};
 }
 
 // List the scenes by name, sorted like map keys in SReflect::ConsoleList.
@@ -341,7 +344,9 @@ static void ListScenes(
     DebugServerImpl::State const& state,
     DynamicArray<SReflect::ConsoleListEntry>& outEntries) {
   for (auto const& info : state.scenes) {
-    outEntries.push_back(MakeDirectoryEntry(info.debugName));
+    auto entry = MakeDirectoryEntry(info.debugName);
+    entry._value = Format("(handle=%llu)", info.scene->GetHandle().value);
+    outEntries.push_back(std::move(entry));
   }
   std::ranges::sort(outEntries, {}, &SReflect::ConsoleListEntry::_name);
 }
@@ -557,16 +562,24 @@ void DebugServerImpl::OnConsoleRequest(net::ClientId client, protocol::CommandRe
       reply.error = SReflect::detail::FormatConsoleError(error, resolved, args, 0, errorOffset);
     }
   } else {
+    ScopedSchedulerBinding schedulerBinding(_context->GetTaskScheduler());
+    ContextImpl::ScopedShapeHandleRetention retainShapes(_context);
     auto const [object, typeInfo] = _state.Read([&](auto const& state) {
-      return std::pair<void*, SReflect::TypeInfo const*>{
-          state.consoleRoot ? state.consoleRoot : this,
-          state.consoleRoot ? state.consoleRootType : &SReflect::GetTypeInfo<DebugServerImpl>()};
+      using Root = std::pair<void*, SReflect::TypeInfo const*>;
+      if (state.consoleRoot) {
+        return Root{state.consoleRoot, state.consoleRootType};
+      }
+      return Root{_context, &SReflect::GetTypeInfo<ContextImpl>()};
     });
     if (request.isList) {
       auto listing = SReflect::ConsoleList(object, *typeInfo, resolved, /*params*/ {}, &error, 1);
       if (error.empty()) {
         if (steps.empty()) {
-          listing.insert(listing.begin(), MakeDirectoryEntry("scenes"));
+          auto scenes = MakeDirectoryEntry("scenes");
+          scenes._coreType = SReflect::CoreType::CT_map;
+          scenes._containerSize =
+              _state.Read([](auto const& state) { return state.scenes.size(); });
+          listing.insert(listing.begin(), std::move(scenes));
         }
         reply.listing = std::move(listing);
       }
@@ -583,9 +596,19 @@ void DebugServerImpl::OnConsoleRequest(net::ClientId client, protocol::CommandRe
 bool DebugServerImpl::ForwardToScene(
     std::string_view debugName,
     protocol::CommandRequest& request) {
+  std::optional<uint64_t> number;
+  try {
+    number = ParseConsoleHandle(debugName);
+  } catch (std::invalid_argument const&) {
+    return false;
+  }
+  if (!number && debugName.starts_with('@')) {
+    debugName.remove_prefix(1);
+  }
   return _state.Mutate([&](auto& state) {
     for (auto& sceneInfo : state.scenes) {
-      if (sceneInfo.debugName == debugName) {
+      if (number ? sceneInfo.scene->GetHandle().value == *number
+                 : sceneInfo.debugName == debugName) {
         if (!sceneInfo.debugger) { // In case it was released just before _state was locked.
           return false;
         }

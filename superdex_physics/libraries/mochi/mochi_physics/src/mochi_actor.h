@@ -30,11 +30,8 @@ class Scene;
 // Unlike Actor, the ActorInterface class has a public destructor so std::unique_ptr can destroy it.
 class ActorInterface : public Actor {
  public:
-  // Overridden by MOCHI_STRUCT_BEGIN in the implementation. It describes the most-derived object,
-  // dynamic_cast<void*>(this). simple_reflection's free functions that take an ActorInterface,
-  // such as GetTypeInfo, TryGetTypeInfo, GetFinalTypeInfo and the typed ConsoleExecute and
-  // ConsoleList, do not compile with it: this member makes simple_reflection treat ActorInterface
-  // as a reflected struct, but it has no GetTypeInfo.
+  // Get the TypeInfo for the most-derived class, for type-erased reflection APIs.
+  // Use this object's address as a void*.
   [[nodiscard]] virtual SReflect::StructTypeInfo const& GetFinalTypeInfo() const = 0;
 };
 using ActorInterfacePtr = std::unique_ptr<ActorInterface>;

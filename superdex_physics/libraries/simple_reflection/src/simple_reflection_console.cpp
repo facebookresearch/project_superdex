@@ -1035,22 +1035,25 @@ static bool IsPrimitiveType(TypeInfo const& type) {
   }
 }
 
-// All possible values of this type are primitives or arrays of primitives.
-static bool IsPrimitiveOrPrimitiveArrayType(TypeInfo const& type) {
+// All possible values of this type are primitives or fixed-size arrays of primitives.
+static bool IsPrimitiveOrFixedPrimitiveArrayType(TypeInfo const& type) {
   if (IsPrimitiveType(type)) {
     return true;
   } else if (type._coreType == CoreType::CT_array) {
-    return IsPrimitiveOrPrimitiveArrayType(*static_cast<ArrayTypeInfo const&>(type)._innerTypeInfo);
+    auto const& arrayType = static_cast<ArrayTypeInfo const&>(type);
+    return !arrayType.CanResize() &&
+        IsPrimitiveOrFixedPrimitiveArrayType(*arrayType._innerTypeInfo);
   } else if (type._coreType == CoreType::CT_matrix) {
-    return IsPrimitiveOrPrimitiveArrayType(
-        *static_cast<MatrixTypeInfo const&>(type)._innerTypeInfo);
+    auto const& matrixType = static_cast<MatrixTypeInfo const&>(type);
+    return !matrixType._isNumRowsDynamic && !matrixType._isNumColumnsDynamic &&
+        IsPrimitiveOrFixedPrimitiveArrayType(*matrixType._innerTypeInfo);
   } else if (type._coreType == CoreType::CT_optional) {
-    return IsPrimitiveOrPrimitiveArrayType(
+    return IsPrimitiveOrFixedPrimitiveArrayType(
         *static_cast<OptionalTypeInfo const&>(type)._innerTypeInfo);
   } else if (type._coreType == CoreType::CT_variant) {
     auto const& types = static_cast<VariantTypeInfo const&>(type)._innerTypes;
     return std::ranges::all_of(
-        types, [](TypeInfo const* inner) { return IsPrimitiveOrPrimitiveArrayType(*inner); });
+        types, [](TypeInfo const* inner) { return IsPrimitiveOrFixedPrimitiveArrayType(*inner); });
   }
   return false;
 }
@@ -1060,7 +1063,22 @@ static bool ShouldSerializeValue(TypeInfo const& type, ConsoleListParams const& 
     return params._serializePrimitives;
   }
   return (type._coreType == CoreType::CT_array || type._coreType == CoreType::CT_matrix) &&
-      params._serializePrimitiveArrays && IsPrimitiveOrPrimitiveArrayType(type);
+      params._serializePrimitiveArrays && IsPrimitiveOrFixedPrimitiveArrayType(type);
+}
+
+static std::optional<size_t> GetContainerSize(void const* value, TypeInfo const& type) {
+  switch (type._coreType) {
+    case CoreType::CT_array:
+      return static_cast<ArrayTypeInfo const&>(type).GetNumElements(value);
+    case CoreType::CT_matrix: {
+      auto const layout = static_cast<MatrixTypeInfo const&>(type).GetLayout(value);
+      return layout._numRows * layout._numColumns;
+    }
+    case CoreType::CT_map:
+      return static_cast<MapTypeInfo const&>(type).GetNumKeys(value);
+    default:
+      return std::nullopt;
+  }
 }
 
 static std::string GetMethodSignature(MethodInfo const& method) {
@@ -1073,7 +1091,7 @@ static std::string GetMethodSignature(MethodInfo const& method) {
   return "(" + args + ") -> " + (returnType != nullptr ? returnType->_nameWithNamespace : "void");
 }
 
-// visit is called only when classification or requested serialization needs the value.
+// visit is called only when classification, container size or serialization needs the value.
 template <typename Name, typename Visit>
 static void AddConsoleListEntry(
     std::vector<ConsoleListEntry>& entries,
@@ -1085,22 +1103,29 @@ static void AddConsoleListEntry(
   entry._name = "?";
   entry._typeName = StripNamespaces(type._nameWithNamespace);
   entry._typeNameWithNamespace = type._nameWithNamespace;
+  entry._coreType = type._coreType;
   bool const wrapped =
       type._coreType == CoreType::CT_optional || type._coreType == CoreType::CT_variant;
+  bool const container = type._coreType == CoreType::CT_array ||
+      type._coreType == CoreType::CT_matrix || type._coreType == CoreType::CT_map;
   std::optional<std::string> text;
   std::string error;
   try {
     text = name();
     entry._name = FormatPathStep(*text);
     entry._kind = IsDirectoryType(type) ? ConsoleEntryKind::Directory : ConsoleEntryKind::Field;
-    if (!wrapped && !ShouldSerializeValue(type, params)) {
+    if (!wrapped && !container && !ShouldSerializeValue(type, params)) {
       return;
     }
     visit([&](void const* value) {
       WalkNode node{nullptr, value, &type};
       bool const unwrapped = Unwrap(node);
-      if (unwrapped && IsDirectoryType(*node.type)) {
-        entry._kind = ConsoleEntryKind::Directory;
+      if (unwrapped) {
+        entry._coreType = node.type->_coreType;
+        entry._containerSize = GetContainerSize(node.constValue, *node.type);
+        if (IsDirectoryType(*node.type)) {
+          entry._kind = ConsoleEntryKind::Directory;
+        }
       }
       bool const serialize =
           unwrapped ? ShouldSerializeValue(*node.type, params) : params._serializePrimitives;
@@ -1118,6 +1143,7 @@ static void AddConsoleListEntry(
   entry._value.clear();
   entry._valueError = error.empty() ? "exception with no message" : std::move(error);
   entry._isValueTruncated = false;
+  entry._containerSize.reset();
 }
 
 static bool ListValue(

@@ -15,6 +15,7 @@
  */
 
 #include "mochi_debug_draw.h"
+#include "generated/mochi_physics_reflection_declarations.generated.h"
 
 #include "mochi_common_components.h"
 #include "mochi_context.h"
@@ -368,6 +369,8 @@ class DebugDrawSystemImpl final : public DebugDrawSystem {
   DebugDrawImpl
 */
 class DebugDrawImpl final : public DebugDrawInternal {
+  MOCHI_DECLARE_NO_COPY_NO_MOVE(DebugDrawImpl);
+
  public:
   DebugDrawImpl(entt::registry& registry, TaskScheduler& scheduler)
       : _myThreadId(std::this_thread::get_id()), _registry(registry), _scheduler(scheduler) {}
@@ -413,6 +416,10 @@ class DebugDrawImpl final : public DebugDrawInternal {
     _hasFinalizedSystems = true;
     std::ranges::sort(_systems, [](auto const& a, auto const& b) { return a->name < b->name; });
   }
+
+  MOCHI_STRUCT_BEGIN(mochi::DebugDrawImpl)
+  MOCHI_BASE_CLASS(mochi::DebugDraw)
+  MOCHI_STRUCT_END()
 
  private:
   void OnSystemEnable(DebugDrawSystemImpl* system, bool enable);

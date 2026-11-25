@@ -17,6 +17,9 @@
 #include "mochi_scene_console.h"
 #include "mochi_actor.h"
 #include "mochi_common_components.h"
+#include "mochi_constraint_interface.h"
+#include "mochi_context.h"
+#include "mochi_debug_draw.h"
 #include "mochi_ecs_utils.h"
 #include "mochi_scene.h"
 
@@ -29,7 +32,11 @@
 #include <simple_reflection/simple_reflection_console.h>
 
 #include <algorithm>
+#include <charconv>
 #include <initializer_list>
+#include <iterator>
+#include <stdexcept>
+#include <system_error>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -40,6 +47,31 @@ using namespace mochi::dbg;
 
 DynamicArray<std::string> dbg::GetCommandArgs(protocol::CommandRequest const& request) {
   return DynamicArray<std::string>(request.args.begin(), request.args.end());
+}
+
+std::optional<uint64_t> dbg::ParseConsoleHandle(std::string_view token) {
+  if (token.empty() || token.front() == '@') {
+    return std::nullopt;
+  }
+  bool const negative = token.front() == '-';
+  std::string_view const digits = negative || token.front() == '+' ? token.substr(1) : token;
+  if (digits.empty() ||
+      !std::all_of(digits.begin(), digits.end(), [](char c) { return c >= '0' && c <= '9'; })) {
+    return std::nullopt;
+  }
+  uint64_t value = 0;
+  std::from_chars_result result;
+  if (negative) {
+    int64_t signedValue = 0;
+    result = std::from_chars(token.data(), token.data() + token.size(), signedValue);
+    value = static_cast<uint64_t>(signedValue);
+  } else {
+    result = std::from_chars(digits.data(), digits.data() + digits.size(), value);
+  }
+  if (result.ec != std::errc{}) {
+    throw std::invalid_argument("Handle identifier is out of range");
+  }
+  return value;
 }
 
 std::string dbg::SanitizeConsoleName(std::string_view name) {
@@ -54,7 +86,7 @@ std::string dbg::SanitizeConsoleName(std::string_view name) {
         return c == '/' || c == '"' || c == '\'' || byte <= ' ' || byte == 0x7F;
       },
       '_');
-  if (sanitized.starts_with('[') || sanitized.starts_with('{')) {
+  if (sanitized.starts_with('[') || sanitized.starts_with('{') || sanitized.starts_with('@')) {
     sanitized[0] = '_';
   }
   return sanitized;
@@ -94,9 +126,10 @@ static std::string MakeActorDebugName(
 
 void dbg::AssignDebugNames(SceneImpl& scene, ActorDebugNameSuffixes& nextSuffixes) {
   entt::registry& reg = scene.GetRegistry();
-  size_t const numNamed = reg.view<CDebugName const>().size();
+  auto const namedActors = reg.view<CDebugName const, CActorInfo const>();
+  size_t const numNamed =
+      static_cast<size_t>(std::distance(namedActors.begin(), namedActors.end()));
   auto const numActors = static_cast<size_t>(scene.GetNumActors());
-  MOCHI_ASSERT_VERBOSE(numNamed <= numActors, "Only actors have debug names");
   if (numNamed == numActors) {
     return;
   }
@@ -122,11 +155,11 @@ void dbg::AssignDebugNames(SceneImpl& scene, ActorDebugNameSuffixes& nextSuffixe
     siblingNames.insert(name);
     reg.emplace<CDebugName>(ToEntity(actor), std::move(name));
   }
-  MOCHI_ASSERT_VERBOSE(
-      reg.view<CDebugName const>().size() == numActors, "Every actor has a debug name");
+  MOCHI_ASSERT_VERBOSE(numNamed + unnamed.size() == numActors, "Every actor has a debug name");
 }
 
 static constexpr std::string_view kActorsStep = "actors";
+static constexpr std::string_view kConstraintsStep = "constraints";
 static constexpr std::string_view kChildrenStep = "children";
 
 // Call fn(debugName, actor) for the scene's top-level actors if parent is null, otherwise for
@@ -155,10 +188,25 @@ static void ForEachActorEntry(SceneImpl& scene, Actor const* parent, Fn const& f
   }
 }
 
-static Actor* FindActorEntry(SceneImpl& scene, Actor const* parent, std::string_view name) {
+static size_t CountActorEntries(SceneImpl& scene, Actor const* parent) {
+  size_t count = 0;
+  ForEachActorEntry(scene, parent, [&](std::string_view, Actor const*) { ++count; });
+  return count;
+}
+
+static Actor* FindActorEntry(SceneImpl& scene, Actor const* parent, std::string_view reference) {
+  std::optional<uint64_t> number;
+  try {
+    number = ParseConsoleHandle(reference);
+  } catch (std::invalid_argument const&) {
+    return nullptr;
+  }
+  if (!number && reference.starts_with('@')) {
+    reference.remove_prefix(1);
+  }
   Actor* found = nullptr;
-  ForEachActorEntry(scene, parent, [&](std::string_view entryName, Actor* actor) {
-    if (found == nullptr && entryName == name) {
+  ForEachActorEntry(scene, parent, [&](std::string_view name, Actor* actor) {
+    if (found == nullptr && (number ? actor->GetHandle().value == *number : name == reference)) {
       found = actor;
     }
   });
@@ -176,7 +224,9 @@ static void ListActorEntries(
         {._kind = SReflect::ConsoleEntryKind::Directory,
          ._name = std::string{name},
          ._typeName = typeName,
-         ._typeNameWithNamespace = typeName});
+         ._typeNameWithNamespace = typeName,
+         ._value = "(handle=" + std::to_string(actor->GetHandle().value) + ")",
+         ._coreType = SReflect::CoreType::CT_struct});
   });
   std::ranges::sort(outEntries, {}, &SReflect::ConsoleListEntry::_name);
 }
@@ -193,14 +243,51 @@ static std::string FormatActorEntries(SceneImpl& scene, Actor const* parent) {
   return json;
 }
 
-static SReflect::ConsoleListEntry MakeDirectoryEntry(std::string_view name) {
-  return {._kind = SReflect::ConsoleEntryKind::Directory, ._name = std::string{name}};
+static SReflect::ConsoleListEntry MakeDirectoryEntry(std::string_view name, size_t containerSize) {
+  return {
+      ._kind = SReflect::ConsoleEntryKind::Directory,
+      ._name = std::string{name},
+      ._coreType = SReflect::CoreType::CT_map,
+      ._containerSize = containerSize};
+}
+
+static DynamicArray<SReflect::ConsoleListEntry> ListConstraintEntries(SceneImpl& scene) {
+  DynamicArray<SReflect::ConsoleListEntry> entries;
+  scene.ForEachConstraint([&](Constraint* constraint) {
+    std::string actors = "(actors=[";
+    for (int i = 0; i < constraint->GetNumActors(); ++i) {
+      if (i != 0) {
+        actors += ", ";
+      }
+      actors += scene.GetRegistry().get<CDebugName>(ToEntity(constraint->GetActor(i))).name;
+    }
+    actors += "])";
+    entries.push_back({
+        ._kind = SReflect::ConsoleEntryKind::Directory,
+        ._name = std::to_string(constraint->GetHandle().value),
+        ._typeName = SReflect::EnumToString(constraint->GetType()),
+        ._value = std::move(actors),
+        ._coreType = SReflect::CoreType::CT_struct,
+    });
+  });
+  std::ranges::sort(entries, {}, &SReflect::ConsoleListEntry::_name);
+  return entries;
+}
+
+static Constraint* FindConstraintEntry(SceneImpl& scene, std::string_view reference) {
+  if (auto number = ParseConsoleHandle(reference)) {
+    return scene.GetConstraint(ConstraintHandle{*number});
+  }
+  return nullptr;
 }
 
 protocol::CommandReply dbg::ExecuteSceneCommand(
     SceneImpl& scene,
     ActorDebugNameSuffixes& nextSuffixes,
     protocol::CommandRequest const& request) {
+  ContextImpl::ScopedShapeHandleRetention retainShapes(
+      assert_cast<ContextImpl*>(scene.GetContext()));
+  AssignDebugNames(scene, nextSuffixes);
   protocol::CommandReply reply(request);
   reply.path = request.path;
   std::string_view const path = request.path;
@@ -222,9 +309,44 @@ protocol::CommandReply dbg::ExecuteSceneCommand(
     step.offset += pathStart;
   }
 
+  if (!steps.empty() && steps[0].name == kConstraintsStep) {
+    if (steps.size() == 1) {
+      auto entries = ListConstraintEntries(scene);
+      if (request.isList) {
+        reply.listing = std::move(entries);
+      } else if (!args.empty()) {
+        setError("Cannot set value because \"constraints\" is read-only", steps[0].offset);
+      } else {
+        picojson::object constraints;
+        for (auto const& entry : entries) {
+          constraints.emplace(entry._name, picojson::object{});
+        }
+        std::string json = picojson::value{std::move(constraints)}.serialize(/*prettify*/ true);
+        json.pop_back(); // Pretty JSON ends with a newline
+        reply.output = json;
+      }
+      return reply;
+    }
+    ConstraintInterface* found = nullptr;
+    try {
+      if (auto* constraint = FindConstraintEntry(scene, steps[1].name)) {
+        found = assert_cast<ConstraintInterface*>(constraint);
+      }
+    } catch (std::invalid_argument const& e) {
+      setError(e.what(), steps[1].offset);
+      return reply;
+    }
+    if (found == nullptr) {
+      setError(SReflect::ToJsonString(steps[1].name, false) + " not found", steps[1].offset);
+      return reply;
+    }
+    object = dynamic_cast<void*>(found);
+    type = &found->GetFinalTypeInfo();
+    pathStart = steps.size() > 2 ? steps[2].offset : path.size();
+  }
+
   Actor* actor = nullptr;
   if (!steps.empty() && steps[0].name == kActorsStep) {
-    AssignDebugNames(scene, nextSuffixes);
     // Walk actors/<name>, then children/<name> in each actor that can own nested actors.
     size_t i = 0;
     do {
@@ -255,6 +377,11 @@ protocol::CommandReply dbg::ExecuteSceneCommand(
     object = dynamic_cast<void*>(actorInterface);
     type = &actorInterface->GetFinalTypeInfo();
     pathStart = i < steps.size() ? steps[i].offset : path.size();
+  } else if (!steps.empty() && steps[0].name == "debugDraw") {
+    auto* draw = assert_cast<DebugDrawInternal*>(&scene.GetDebugDraw());
+    object = dynamic_cast<void*>(draw);
+    type = &draw->GetFinalTypeInfo();
+    pathStart = steps.size() > 1 ? steps[1].offset : path.size();
   }
 
   std::string error;
@@ -264,9 +391,13 @@ protocol::CommandReply dbg::ExecuteSceneCommand(
       reply.listing = std::move(listing);
       if (pathStart == path.size()) {
         if (object == &scene) {
-          reply.listing->push_back(MakeDirectoryEntry(kActorsStep));
+          reply.listing->push_back(
+              MakeDirectoryEntry(kActorsStep, CountActorEntries(scene, nullptr)));
+          reply.listing->push_back(
+              MakeDirectoryEntry(kConstraintsStep, static_cast<size_t>(scene.GetNumConstraints())));
         } else if (actor != nullptr && actor::CanOwnNestedActors(actor->GetType())) {
-          reply.listing->push_back(MakeDirectoryEntry(kChildrenStep));
+          reply.listing->push_back(
+              MakeDirectoryEntry(kChildrenStep, CountActorEntries(scene, actor)));
         }
       }
     }

@@ -16,6 +16,7 @@
 
 #include "mochi_actor.h"
 
+#include "generated/mochi_physics_reflection_declarations.generated.h"
 #include "mochi_actor_convergence.h"
 #include "mochi_actor_preconditioner_policy.h"
 #include "mochi_articulated_actor_params.h"
@@ -2652,10 +2653,7 @@ class ActorInterfaceImpl : public ActorInterface {
 #undef MOCHI_ERROR_RETURN_IF_NOT_LINK
 
   MOCHI_STRUCT_BEGIN(mochi::ActorInterfaceImpl)
-  MOCHI_PROPERTY("name", [](ActorInterfaceImpl const& actor) {
-    return std::string{actor.GetName()};
-  })
-  MOCHI_PROPERTY("type", &ActorInterfaceImpl::GetType)
+  MOCHI_BASE_CLASS(mochi::Actor)
   MOCHI_STRUCT_END()
 };
 

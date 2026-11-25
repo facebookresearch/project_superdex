@@ -19,6 +19,7 @@
 #include "mochi_ecs.h"
 
 #include <mochi_core/utils/dynamic_array.h>
+#include <mochi_core/utils/reflection.h>
 #include <mochi_physics/mochi_physics.h>
 
 #include <functional>
@@ -155,6 +156,10 @@ struct DebugDrawSystem {
 */
 class DebugDrawInternal : public DebugDraw {
  public:
+  // Get the TypeInfo for the most-derived class, for type-erased reflection APIs.
+  // Use this object's address as a void*.
+  [[nodiscard]] virtual SReflect::StructTypeInfo const& GetFinalTypeInfo() const = 0;
+
   // Register your DebugDrawSystem along with its list of required components/tags (if any).
   // System functions will only be invoked for entities that have ALL the required components/tags.
   //

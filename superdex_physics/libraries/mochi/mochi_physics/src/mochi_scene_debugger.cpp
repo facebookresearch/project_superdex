@@ -1045,7 +1045,7 @@ void SceneDebuggerImpl::ShutdownOnSceneThread(SceneImpl* scene) {
 
   // Debug names exist only while a debugger is connected
   scene->GetRegistry().clear<CDebugName>();
-  _debugNameSuffixes.clear();
+  _debugNameSuffixes = {};
 }
 
 std::shared_ptr<SceneDebugger>

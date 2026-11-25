@@ -80,6 +80,15 @@ static int GetDefaultNumWorkerThreads() {
   return Max(1, numCores - 2);
 }
 
+thread_local ContextImpl const* ContextImpl::_shapeHandleRetentionContext = nullptr;
+
+ContextImpl::ScopedShapeHandleRetention::ScopedShapeHandleRetention(ContextImpl const* context)
+    : _previous(std::exchange(_shapeHandleRetentionContext, context)) {}
+
+ContextImpl::ScopedShapeHandleRetention::~ScopedShapeHandleRetention() {
+  _shapeHandleRetentionContext = _previous;
+}
+
 ContextImpl::ContextImpl() : _numWorkerThreadsRequested(GetDefaultNumWorkerThreads()) {
   _weakRefToThis = std::make_shared<WeakRef>(this);
 }
@@ -1073,7 +1082,7 @@ ShapeHandle ContextImpl::RegisterShape(ConstShapePtr newShape, Error& error) {
   shapeRef = std::move(newShape);
 
   // Enable auto-cleanup
-  if (_enableAutomaticHandleCleanup) {
+  if (_enableAutomaticHandleCleanup && _shapeHandleRetentionContext != this) {
     newHandle._cleanup = std::make_shared<ShapeHandleAutoCleanup>(newHandle.value, _weakRefToThis);
   }
 
