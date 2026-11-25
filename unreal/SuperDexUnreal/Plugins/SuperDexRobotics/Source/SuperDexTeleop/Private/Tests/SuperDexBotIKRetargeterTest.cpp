@@ -438,7 +438,10 @@ bool FGenericBotIKGoalsAndMetadataTest::RunTest(const FString&) {
   TestFalse(
       TEXT("Unsupported non-root free joint rejects"), Ret->ValidateConfiguration(Diagnostic));
   Cached.joints[2].type = Type;
-  Cached.cycles.resize(1);
+  mochi::ArticulatedCycleJointParams Cycle;
+  Cycle.parentLink = 0;
+  Cycle.childLink = 2;
+  Cached.cycles.push_back(Cycle);
   TestTrue(
       TEXT("Cycle input validates (the input kinematics follow its tree)"),
       Ret->ValidateConfiguration(Diagnostic));
