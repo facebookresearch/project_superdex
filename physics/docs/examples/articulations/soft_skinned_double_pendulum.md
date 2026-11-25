@@ -20,21 +20,22 @@ The scene is a soft-skinned actor — a 2-joint / 2-link revolute chain anchored
 world -[Revolute]-> UpperArm (0.25 m) -[Revolute]-> LowerArm (0.125 m) -[soft attached]-> SoftArm (0.1 m)
 ```
 
-The nested soft actor uses a tetrahedral mesh spanning `X=0.375→0.475` in the skeleton rest frame (total rigid 0.375 + soft 0.1 = 0.475 m). Its first cross-section nodes (4 nodes at X=0.375) are listed as [`constrainedNodes`](pathname:///generated/api/latest/cpp/structsuperdex_1_1ModelData.html) in the shape JSON and are bound to `LowerArm` via [`SoftSkinnedActorParams.softAttachLinks`](pathname:///generated/api/latest/cpp/structsuperdex_1_1SoftSkinnedActorParams.html). Contact between the nested soft actor and its attachment link is automatically disabled. A ball rests on the ground within reach and is struck by the swinging nested soft actor.
+The nested soft actor uses a tetrahedral mesh spanning `X=0.375→0.475` in the articulated actor's frame (total rigid 0.375 + soft 0.1 = 0.475 m). Its first cross-section nodes (4 nodes at X=0.375) are listed as [`constrainedNodes`](pathname:///generated/api/latest/cpp/structsuperdex_1_1ModelData.html) in the shape JSON and are bound to `LowerArm` via [`SoftSkinnedActorParams.softAttachLinks`](pathname:///generated/api/latest/cpp/structsuperdex_1_1SoftSkinnedActorParams.html). Contact between the nested soft actor and its attachment link is automatically disabled. A ball rests on the ground within reach and is struck by the swinging nested soft actor.
 
 :::tip Coordinate frames
-For each nested soft actor, the corresponding [`SoftActorParams`](pathname:///generated/api/latest/cpp/structsuperdex_1_1SoftActorParams.html) entry's [`world_from_local`](pathname:///generated/api/latest/python/api/physics.html#superdex.physics.SoftActorParams.world_from_local) must be identity, and its mesh must be authored in the articulated actor's reference frame at the skeleton's reference pose. Use `skeleton_params.world_from_root` to place the complete soft-skinned actor; it moves the links and soft mesh together. This example puts the 0.5 m pivot height in `joint_0.parent_link_from_joint`, so [`world_from_root`](pathname:///generated/api/latest/python/api/physics.html#superdex.physics.ArticulatedActorParams.world_from_root) remains identity.
+For each nested soft actor, the corresponding [`SoftActorParams`](pathname:///generated/api/latest/cpp/structsuperdex_1_1SoftActorParams.html) entry's [`world_from_local`](pathname:///generated/api/latest/python/api/physics.html#superdex.physics.SoftActorParams.world_from_local) must be identity, and its mesh must be authored in the articulated actor's reference frame at the skeleton's reference pose. Use `skeleton_params.world_from_root` to place the complete soft-skinned actor; it moves the links and soft mesh together. Like its reference prefab, this example uses [`world_from_root`](pathname:///generated/api/latest/python/api/physics.html#superdex.physics.ArticulatedActorParams.world_from_root) to put that frame at the upper arm's rest frame, and `joint_0.parent_link_from_joint` to put the 0.5 m pivot on the arm's centerline.
 :::
 
 ## Implementation
 
 ### Building the Chain with a Soft Attach
 
-An articulated skeleton is described by parallel `joints[]` and `links[]` arrays (see [Double Pendulum on Rail](./double_pendulum_on_rail.md) for the base pattern). The nested soft actor is configured by a [`SoftActorParams`](pathname:///generated/api/latest/python/api/physics.html#superdex.physics.SoftActorParams) entry with a tet-mesh shape that contains [`constrainedNodes`](pathname:///generated/api/latest/cpp/structsuperdex_1_1ModelData.html). Its rest coordinates are authored in the skeleton's rest frame so the rod overlays the second arm tip at rest.
+An articulated skeleton is described by parallel `joints[]` and `links[]` arrays (see [Double Pendulum on Rail](./double_pendulum_on_rail.md) for the base pattern). The nested soft actor is configured by a [`SoftActorParams`](pathname:///generated/api/latest/python/api/physics.html#superdex.physics.SoftActorParams) entry with a tet-mesh shape that contains [`constrainedNodes`](pathname:///generated/api/latest/cpp/structsuperdex_1_1ModelData.html). Its rest coordinates are authored in the articulated actor's frame so the rod overlays the second arm tip at rest.
 
 ```python
 ROOT_HEIGHT = 0.5  # [m]
 ARM_SCALE = [0.25, 0.025, 0.025]  # [m]
+ROOT_POSITION = [0, ROOT_HEIGHT - 0.0125, -0.0125]  # [m] the upper arm's rest frame
 SECOND_ARM_SCALE = [0.125, 0.025, 0.025]  # [m]
 
 arm_shape = sdp.load_shape_from_file(
@@ -53,7 +54,8 @@ soft_shape = sdp.load_shape_from_file(
 )
 
 skeleton_params = sdp.ArticulatedActorParams(name="SoftSkinnedDoublePendulum")
-skeleton_params.joints = _make_joints()  # joint_0 at [0,ROOT_HEIGHT,0], joint_1 at [0.25,0.0125,0.0125]
+skeleton_params.joints = _make_joints()  # joint_0 at [0,0.0125,0.0125], joint_1 at [0.25,0.0125,0.0125]
+skeleton_params.world_from_root = sdp.TransformRT(translation=ROOT_POSITION)
 skeleton_params.links = _make_links(arm_shape, second_arm_shape)
 
 soft_params = sdp.SoftActorParams(

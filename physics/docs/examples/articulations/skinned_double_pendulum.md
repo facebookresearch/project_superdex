@@ -28,18 +28,19 @@ A thin rectangular tube along +X spans both arms in the articulation's rest fram
 The skin is **colliding-only**: it probes other actors for contact, but it does not act as a collider. The links act as colliders.
 
 :::tip Coordinate frames
-[`world_from_root`](pathname:///generated/api/latest/python/api/physics.html#superdex.physics.ArticulatedActorParams.world_from_root) places the complete articulated actor, moving the links and skin together without changing their alignment. This example instead puts the 0.5 m pivot height in `joint_0.parent_link_from_joint` and leaves [`world_from_root`](pathname:///generated/api/latest/python/api/physics.html#superdex.physics.ArticulatedActorParams.world_from_root) at identity to match the reference `doublependulum` prefab.
+[`world_from_root`](pathname:///generated/api/latest/python/api/physics.html#superdex.physics.ArticulatedActorParams.world_from_root) places the complete articulated actor, moving the links and skin together without changing their alignment. The skin is authored in the articulated actor's frame, so this example, like its reference prefab, uses [`world_from_root`](pathname:///generated/api/latest/python/api/physics.html#superdex.physics.ArticulatedActorParams.world_from_root) to put that frame at the upper arm's rest frame, and `joint_0.parent_link_from_joint` to put the 0.5 m pivot on the arm's centerline.
 :::
 
 ## Implementation
 
 ### Building the Articulated Chain with a Skin
 
-An articulated actor is described by parallel `joints[]` and `links[]` arrays (see [Double Pendulum on Rail](./double_pendulum_on_rail.md) for the base pattern). The skin is an optional [`ArticulatedSkinParams`](pathname:///generated/api/latest/python/api/physics.html#superdex.physics.ArticulatedSkinParams) holding a triangle-mesh shape that **contains skinning weights and link indices**. Its rest coordinates are authored in the skeleton's rest frame so the tube overlays the arms at rest.
+An articulated actor is described by parallel `joints[]` and `links[]` arrays (see [Double Pendulum on Rail](./double_pendulum_on_rail.md) for the base pattern). The skin is an optional [`ArticulatedSkinParams`](pathname:///generated/api/latest/python/api/physics.html#superdex.physics.ArticulatedSkinParams) holding a triangle-mesh shape that **contains skinning weights and link indices**. Its rest coordinates are authored in the articulated actor's frame so the tube overlays the arms at rest.
 
 ```python
 ROOT_HEIGHT = 0.5  # [m]
 ARM_SCALE = [0.25, 0.025, 0.025]  # [m]
+ROOT_POSITION = [0, ROOT_HEIGHT - 0.0125, -0.0125]  # [m] the upper arm's rest frame
 
 arm_shape = sdp.load_shape_from_file(
     file_path=str(resolve_asset("cube/cube_fine_mesh.mochi.json")),
@@ -53,10 +54,11 @@ skin_shape = sdp.load_shape_from_file(
 )
 
 params = sdp.ArticulatedActorParams(name="SkinnedDoublePendulum")
+params.world_from_root = sdp.TransformRT(translation=ROOT_POSITION)
 params.joints = [
     sdp.ArticulatedJointParams(
         name="joint_0", type=sdp.ArticulatedJointType.REVOLUTE, axis=[0, 0, -1],
-        parent_link_from_joint=sdp.TransformRT(translation=[0, ROOT_HEIGHT, 0]),
+        parent_link_from_joint=sdp.TransformRT(translation=[0, 0.0125, 0.0125]),
     ),
     sdp.ArticulatedJointParams(
         name="joint_1", type=sdp.ArticulatedJointType.REVOLUTE, axis=[0, 0, -1],
@@ -130,7 +132,7 @@ normals = np.array(articulation.get_surface_mesh_node_normals_local())
 aabb = articulation.get_aabb_world()
 
 # Spatial query on the deformed surface:
-volume = sdp.Aabb(min=[0.2, ROOT_HEIGHT-0.05, -0.05], max=[0.55, ROOT_HEIGHT+0.05, 0.05])
+volume = sdp.Aabb(min=[0.2, -0.05, -0.05], max=[0.55, 0.05, 0.05])  # in the actor's frame
 hits: list[int] = []
 articulation.query_nodes_in_volume_local(volume, True, lambda node, _pos: hits.append(node))
 
