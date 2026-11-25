@@ -1,0 +1,183 @@
+---
+title: Physics in Unreal
+sidebar_label: Physics
+---
+
+import Figure, {FigureRow} from '@site/src/components/Figure';
+import sceneSettingsImage from '@site/static/img/unreal/unreal-scene-settings-details.png';
+import plateViewportImage from '@site/static/img/unreal/plate-component-viewport.png';
+import plateDetailsImage from '@site/static/img/unreal/plate-component-details.png';
+import ProjectSuperdexLink from '@site/src/components/ProjectSuperdexLink';
+
+# Physics in Unreal
+
+The `SuperDexPhysics` plugin runs one SuperDex Physics scene per game instance and lets you
+author it with ordinary Unreal actors and components. Its editor module,
+`SuperDexPhysicsEditor`, imports the models and prefabs you build in
+<ProjectSuperdexLink site="studio">SuperDex Studio</ProjectSuperdexLink>, and the
+`SuperDexRoboticsEditor` module of the `SuperDexRobotics` plugin imports bots, scenes, and IK
+configurations.
+
+This page covers what gets imported, which settings control the simulation, and which components
+make up a scene. For loading a whole scene file at runtime instead, see
+[Runtime Scene Loading](./runtime_loading.mdx).
+
+## Importers
+
+Drag a file into the Content Browser, or use **Import**. Each file type becomes an Unreal asset
+that keeps its source path, so **Reimport** picks up changes made in Studio. Reimporting a prefab
+regenerates its components under the same names, so its constraints, which find components by
+name, still connect.
+A prefab may contain only rigid bodies, or combine rigid and soft bodies,
+articulations, and nested prefabs. **A rigid-body prefab does not require a bot,
+IK configuration, or teleoperation setup**; import it and place the resulting
+Blueprint or use the generated Map.
+
+| Source file | Imported as | Notes |
+| --- | --- | --- |
+| `.mochi.h5` (`.h5`, `.hdf5`) | **Mochi Model** (`MM_<name>`) | Volumetric or surface model with its baked SDF. Reimport keeps the asset, so references to it stay intact. |
+| `.superdex_prefab`, `.mochi_prefab`, `.mochi_scene` | **SuperDex Prefab** plus a generated Blueprint or Map | You pick **Blueprint** or **Map** when you import. Render meshes (`.glb`), Mochi models, contact and material params, and articulations are generated next to the prefab. Nested prefabs are imported as their own Blueprints. |
+| `.superdex_bot`, `.superdex_bot_archive` | **SuperDex Bot** (`SDB_<name>`) | Render meshes, collision models, and, for skinned bots, a skeleton and skeletal mesh. Drag the bot into a level to place a `SuperDexBotActor`. |
+| `.superdex_scene`, `.superdex_scene_archive` | **SuperDex Scene** (`SDS_<name>`) plus a generated Blueprint or Map | The base scene is imported as a prefab Blueprint and each bot as a SuperDex Bot placed with a `SuperDexBotComponent`. Spawnable prefabs and bots are imported but not placed. |
+| `.superdex_ik` | **SuperDex Bot IK Config** | See [Tutorial: Roboperator from a Studio IK Config](./tutorials/roboperator.mdx). |
+
+**Blueprint or Map?** A Blueprint import gives you one actor with a component per simulated
+actor, which you can place several times or spawn at runtime. A Map import gives you a level with
+one actor per simulated actor, plus a `MochiSceneSettingsActor` that carries the prefab's gravity,
+solver params, and layer contact filters. Blueprints cannot hold that settings actor, so a
+Blueprint import drops scene settings (the importer warns about it).
+
+:::warning What the importers do not bring over
+The importers log a warning and skip what Unreal cannot represent yet:
+
+- **Prefabs:** soft skinned actors, rod constraints, the render models and initial poses of rod
+  actors, pose controllers, contact pair params overrides, initial velocities, flow on soft actors,
+  soft actors with inertia or stress disabled, and actor contact filters other than symmetric
+  filters between two links of one articulation.
+- **Scenes:** bot controllers and scene-level sensors. Add controllers to the placed bots in
+  Unreal instead.
+
+Rod actors import as `MochiRodMeshComponent`s. Shell components exist in Unreal (see
+[Components](#components)), but no importer creates them; you add them by hand.
+:::
+
+### Where imported assets go
+
+By default an import lands in the folder you dropped it into. Under
+**Project Settings > Plugins > SuperDex Physics > Editor**, turn on **Organize Prefabs In Root
+Folder** to mirror the source directory layout relative to the nearest `.superdex_root` marker
+file under **Prefab Root Folder** (default `/Game/Prefabs`). **Prefab Map Template** sets the
+level that new Map imports start from (by default the engine's Basic level template).
+
+## Settings
+
+### Project settings
+
+**Project Settings > Plugins > SuperDex Physics** (`UMochiPhysicsSettings`, saved to
+`DefaultGame.ini`) holds the project-wide defaults:
+
+| Setting | Purpose |
+| --- | --- |
+| `SimulationSpace` | The axes and scale the simulation, the debugger, and exported scenes use. Defaults to SuperDex space (+X forward, +Y left, +Z up, meters). Unreal authoring is unaffected. |
+| `NumWorkerThreads` | Worker threads for the simulation; `<= 0` lets SuperDex Physics choose. |
+| `bForceSingleIsland` | Simulate everything in one island. For debugging; slower. |
+| `bEnablePhysicsDebuggerConnection` | Start the SuperDex Physics debugger server when the plugin starts (ignored in Shipping builds). |
+| `DefaultSceneSettings` | The scene settings used by any level without a `MochiSceneSettingsActor` (fields below). |
+
+### Per-level scene settings
+
+Place a **Mochi Scene Settings Actor** (`AMochiSceneSettingsActor`) in a level to override the
+defaults for that level. It starts out with the project's values. Its `SceneSettings` are:
+
+<Figure
+  src={sceneSettingsImage}
+  alt="The MochiSceneSettingsActor Details panel with gravity, step parameters, solver and contact-matrix assets, pause, and debug-draw settings."
+  maxWidth={703}
+  caption="One actor supplies the level's simulation settings and references reusable parameter assets."
+/>
+
+
+| Field | Purpose |
+| --- | --- |
+| `GravityVector` | Gravity in m/s², in Unreal axes. |
+| `StepParams` | How the scene steps on the simulation thread, e.g. `bUseFixedTimeStep` and `FixedTimeStepSeconds`. |
+| `SolverParams` | A **Mochi Solver Params** asset. |
+| `ContactMatrix` | A **Mochi Contact Matrix** asset: which contact layers collide. |
+| `bStartPaused` | Start the simulation paused. |
+| `bOverrideSimulationSpace`, `SimulationSpace` | Use a different simulation space for this level only. |
+| `bEnableDebugDraw`, `DebugDrawFlags`, `DebugDraw_Line_Length_Multiplier` | Draw contacts, forces, and other debug geometry in the viewport. |
+
+The Blueprint function library `MochiPhysicsFunctionLibrary` changes some of these while the game
+runs: `SetMochiGravity`, `SetMochiContactMatrixEntry`, `SetPaused`, and `ToggleMochiDebugDraw`,
+among others.
+
+### Settings assets
+
+Solver, contact, and material parameters are assets, so many components can share one. Create
+them from the Content Browser's **Add** menu; the importers also generate them from Studio
+prefabs. The plugin ships defaults in `/SuperDexPhysics/Params/`: `MSP_Default`, `MCP_Default`,
+`MMP_Default`, and `MCM_Default`.
+
+| Asset | Used by | Main fields |
+| --- | --- | --- |
+| **Mochi Solver Params** | Scene settings | `NonLinearSolverParams`, `LinearSolverParams`, `IntegrationMethod`, `ExperimentalEvalParams` |
+| **Mochi Contact Matrix** | Scene settings | `Matrix`: entries of `LayerA`, `LayerB`, `bEnabled`, `bSymmetric` |
+| **Mochi Contact Params** | Every simulated component | Penalty contact (`PenaltyCoefficient`, `PenaltyThresholdDist`, `PenaltyExtraPadding`, `PenaltySmoothingHalfDistance`) and friction (`CoulombFrictionCoefficient`, `ViscousFrictionCoefficient`, `FrictionFalloffVel`, `NormalViscousDampingCoefficient`) |
+| **Mochi Material Params** | Rigid and soft components | `MaterialType`, `YoungsModulus`, `PoissonRatio`, `Density`, damping coefficients |
+| **Mochi Shell Material Params** | Shell components | Membrane and bending stiffness, area density. **Apply Estimate to Shell Material** derives them from 3D material values and a thickness. |
+| **Mochi Rod Material Params** | Rod components | Linear density, axial, torsional, and flexural stiffness |
+| **Mochi Model Material Modifier** | Soft components | Per-element material overrides |
+
+Contact layers are plain names. Components default to `GenericObject`; `LeftHand` and `RightHand`
+are the other predefined layers.
+
+Articulated **joint friction** is separate from contact friction. The joint's dry-friction model
+uses **Presliding Displacement** (meters or radians), the displacement at which it reaches its
+static peak, rather than the old joint **Falloff Vel** field. Revisit older joint-friction tuning
+instead of reusing a velocity value as a displacement. See
+<ProjectSuperdexLink site="physics" path="docs/concepts/actors/articulated_actors/#joint-friction-and-damping">Joint Friction</ProjectSuperdexLink>
+for the model and parameter meanings. This does not rename the contact-parameter asset's
+`FrictionFalloffVel` field.
+
+## Components
+
+Every simulated object is a component. A component creates its SuperDex Physics actor at Begin
+Play, and the Unreal component follows the simulated result each frame. Its properties are in the
+**SuperDex Physics** Details category and its subcategories, such as **Constraint**. Each one takes a
+`ContactParams` asset and a `Layer`, and with `bEnableContacts` set it raises
+`OnMochiComponentBeginContact`, `OnMochiComponentContact`, and `OnMochiComponentEndContact`.
+
+| Component | Simulates | Key properties |
+| --- | --- | --- |
+| `MochiRigidMeshComponent` | A rigid body (a Static Mesh Component) | `Model` (Mochi Model), or `bUseStaticMeshAsMochiModel` to collide the static mesh itself; `bIsStatic`, `ColliderType`, `MaterialParams`, `bOverrideMass`/`Mass`, `FreezeConstraints` |
+| `MochiImplicitShapeComponent` | A static plane or sphere | `Shape` (`Plane` or `Sphere`), `SphereRadius` in centimeters |
+| `MochiSoftMeshComponent` | A volumetric soft body | `Model`, `MaterialParams`, `ColliderType`, `bUseContactSkin`, `MaterialModifiers` |
+| `MochiShellMeshComponent` | A thin shell (cloth-like surface) | `Model`, `ShellMaterialParams`, `ColliderType` |
+| `MochiRodMeshComponent` | A rod (cable-like curve) | `Model`, `RodMaterialParams`, `ColliderType`, `PointCloudRadius` |
+| `MochiArticulationComponent` | An articulated mechanism | `Articulation` (a **Mochi Articulation** asset, generated from prefab articulations), `ArticulationController` |
+| `MochiRigidJointConstraintComponent`, `MochiRigidPivotConstraintComponent`, `MochiArticulationJointConstraintComponent`, `MochiSoftNodeConstraintComponent`, `MochiRodConstraintComponent`, `MochiNodeBoundaryConditionComponent` | Joints, pivots, and node attachments between components | Imported from prefab constraints where supported |
+| `MochiForceVisualizerComponent` | Nothing: draws contact forces | |
+| `SuperDexBotComponent` (SuperDexRobotics) | A SuperDex bot | `Bot`, `InitialPose`, `BotControllerClass`, `bAutoSpawn`, `LayerOverride` |
+
+<FigureRow minWidth={550}>
+  <Figure
+    src={plateViewportImage}
+    alt="The selected ceramic plate in the BP_plate Blueprint viewport, outlined in orange with its transform gizmo."
+    maxWidth={800}
+    caption="The plate Blueprint's rigid mesh component."
+  />
+  <Figure
+    src={plateDetailsImage}
+    alt="The plate component's Details panel, showing MM_plate, GenericObject contact layer, material and contact parameter assets, and static, gravity, contact, and freeze settings."
+    maxWidth={621}
+    caption="The Mochi model and physics parameters are configured independently of the visible static mesh and render material."
+  />
+</FigureRow>
+
+
+## See Also
+
+- [Runtime Scene Loading](./runtime_loading.mdx) — load a `.superdex_scene` file at runtime.
+- [Tutorial: Physics Scene in the Editor](./tutorials/editor_scene.mdx) — build a level like the
+  example levels.
+- [Bots](../bots.mdx) — the `.superdex_bot` format the bot importer reads.

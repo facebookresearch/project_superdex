@@ -1,0 +1,156 @@
+---
+title: Getting Started with Unreal
+sidebar_label: Getting Started
+slug: /unreal/getting-started
+---
+
+import Figure from '@site/src/components/Figure';
+import playerStartImage from '@site/static/img/unreal/unreal-player-start-details.png';
+
+# Getting Started with Unreal
+
+Start with the **SuperDexUnreal** project: its plugins, example content, and
+player Blueprints are already arranged for use together. After running an
+example, bring the same plugins into your own C++ project if you need a custom
+application.
+
+## Platforms and Requirements
+
+| Platform | Status | Engine |
+|----------|--------|--------|
+| Windows (x86-64) | Supported editor and desktop workflow. | Unreal Engine 5.5 |
+| Meta Quest standalone (Android/ARM64) | Experimental; builds on Windows. | Unreal Engine 5.8 with Android support |
+| Linux | Development use; not the supported release workflow. | Supply the matching Unreal engine/toolchain when hydrating. |
+
+For Windows, install **Python 3.10+**, **CMake**, **Ninja**, and Visual Studio's
+C++ build tools with **ClangCL 17+**. The repository's
+[build prerequisites](https://github.com/facebookresearch/project_superdex#install-pre-requisites)
+give the full toolchain setup. Installing the Python SuperDex wheel alone does
+**not** stage the native libraries required by the Unreal plugins.
+
+## Open the Project
+
+1. Get the [Project SuperDex source](https://github.com/facebookresearch/project_superdex).
+2. Open a terminal in `unreal/SuperDexUnreal` and build/stage the native libraries:
+
+   ```bat
+   py -3 hydrate_plugins.py
+   ```
+
+3. Open `SuperDexUnreal.uproject` in Unreal Engine 5.5. Allow Unreal to compile
+   the plugin modules on the first open.
+4. In the Content Browser, enable **Show Plugin Content** to see
+   **SuperDexAssets**, **SuperDexExamples**, and the robotics/physics content.
+5. Open an example map such as **L_Sampler** (see [Example Maps](#example-maps))
+   and use **Play** for desktop interaction or **VR Preview** with a working
+   OpenXR runtime for tracked-hand interaction.
+
+Re-run hydration after changing the native SuperDex libraries. Unreal's module
+build and native-library hydration are separate steps: rebuilding a Blueprint
+or plugin module does not rebuild its underlying native library.
+
+## Example Maps
+
+The public **SuperDexExamples** plugin contains:
+
+- **`/SuperDexExamples/Sampler/L_Sampler`** — a table with a prefab spawner for
+  trying task content one piece at a time. Swap between proxy hands and virtual
+  arm-and-hand combinations to compare their interactions.
+- **`/SuperDexExamples/Sampler/L_Sampler_Android`** — the Android sampler map.
+- **`/SuperDexExamples/Kitchen/L_Kitchen`** — a complex manipulation showcase:
+  interact with multiple objects, articulated mechanisms, and a soft body
+  together in a kitchen environment.
+
+Start with Sampler to learn how prefabs, player pose sources, and poseable
+actors fit together. Then follow the
+[editor-scene tutorial](./tutorials/editor_scene.mdx) to assemble your own level.
+A VR preview needs the headset's OpenXR runtime and hand-tracking support.
+Opening a map does not by itself provide tracking. The examples also include
+a keyboard-shortcut overlay and an FPS/SPS counter, so you can compare rendering
+and simulation rates while interacting. The project starts in VR by default;
+use `-nohmd` when launching a packaged desktop example without a headset.
+
+## Player Setup and Controls
+
+The supplied player setup uses **BP_SuperDexGameMode**,
+**BP_SuperDexPlayerController**, **BP_SuperDexPlayerPawn**, and a
+**SuperDexPlayerStart**. The PlayerStart's left/right pose-source lists choose
+which providers the player uses; its left/right poseable-actor lists choose
+which hands or roboperators to spawn. **The first entry is the default.**
+Pose sources operate independently of the PlayerStart: a scene-placed bot's
+poseable actor or component can set **Pose Source Override** to use a provider
+directly. Without an override, a poseable actor attached to the player pawn
+asks the pawn for its selected source. The PlayerStart configures this supplied
+player setup; it is not required for every bot or pose source in a scene.
+
+<Figure
+  src={playerStartImage}
+  alt="The SuperDexPlayerStart Details panel with left and right OpenXR pose sources, poseable-actor lists, and automatic spawning enabled."
+  maxWidth={703}
+  caption="Tracking providers and available hand actors are configured separately on the PlayerStart."
+/>
+
+The supplied player pawn and controller collectively define these keyboard
+shortcuts. Hold **Shift** for movement and rotation:
+
+| Shortcut | Action |
+|----------|--------|
+| **Shift+W / Shift+S** | Move forward / backward. |
+| **Shift+A / Shift+D** | Move left / right. |
+| **Shift+Q / Shift+E** | Step-rotate counterclockwise / clockwise. |
+| **Shift+Z / Shift+X** | Move down / up. |
+| **Ctrl+A / Alt+A** | Next poseable actor for the left / right hand. |
+| **Ctrl+S / Alt+S** | Next pose source for the left / right hand. |
+| **Ctrl+D / Alt+D** | Toggle the left / right hand actor's debug visualization, such as its tracked hand. |
+| **Shift+C** | Align/center the pawn to the scene. |
+
+:::note Alt+S in Play In Editor
+Unreal Editor currently consumes **Alt+S** even during Play In Editor, so it
+can prevent right-hand pose-source switching. Unbind the conflicting editor
+shortcut in **Editor Preferences**, or change our binding in the
+**BP_SuperDexPlayerPawn / BP_SuperDexPlayerController** Blueprints.
+:::
+
+The examples use **BP_RoboperatorSpawner** from `/SuperDexAssets/utilities/`
+to choose left/right roboperators from configured lists, including the virtual
+FR3/DG-5F and Tianji/Wuji combinations. This spawner is separate from the
+PlayerStart's pawn-attached poseable lists: keep only one owner for each actor's
+spawning and switching. Its **Spawn Transform** places the robot base; hand
+tracking supplies the operator pose.
+
+Click the play viewport so it receives keyboard input. These are **example
+Blueprint bindings**, not global editor shortcuts or a fixed plugin API.
+Clutch controls and task-specific actions belong to the selected actor/level;
+check its input graph when making a custom setup.
+
+## Using the Plugins in Another Project
+
+From the repository's `unreal` directory:
+
+```bat
+py -3 package_plugins.py --out-dir dist
+```
+
+This hydrates the native libraries and creates one source-plugin archive per
+public plugin. Extract the required archives into your C++ project's
+**`Plugins/`** directory and open the project to compile the modules. Keep
+SuperDexPhysics, SuperDexRobotics, and their required content together. Include
+SuperDexOpenXRPoseSource and Unreal's OpenXR plugins for hand tracking; include
+TeleopNodeZenoh only when that transport is needed.
+
+Use `--skip-hydrate` only when the staged native libraries are already current.
+Linux development packaging requires `--ue-root` or `UE_ROOT` so the native
+libraries use Unreal's toolchain. The packaging script and each plugin's
+`.uplugin` file are the authoritative dependency/build descriptions.
+
+## Before Building a Custom Application
+
+- Keep **Unreal units** and **native joint coordinates** distinct. Unreal
+  transforms use centimetres; native joint positions use radians/metres.
+- SuperDex physics is separate from Unreal's Chaos simulation. Use SuperDex
+  components for objects that must interact in the same SuperDex scene.
+- A pose source, a robot controller, and a communication transport are different
+  pieces. A missing hand, a nonmoving robot, and a disconnected remote node
+  therefore need different checks.
+- For standalone Quest, follow [Quest Packaging](./tutorials/quest.mdx); desktop
+  hydration alone does not create Android libraries.

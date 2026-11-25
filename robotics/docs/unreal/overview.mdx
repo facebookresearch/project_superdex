@@ -1,0 +1,76 @@
+---
+title: SuperDex Unreal
+sidebar_label: Overview
+slug: /unreal/overview
+---
+
+import ProjectSuperdexLink from '@site/src/components/ProjectSuperdexLink';
+
+# SuperDex Unreal
+
+SuperDex Unreal brings **SuperDex Physics** and **SuperDex Robotics** into Unreal
+Engine for interactive robotics, virtual and physical teleoperation, and data
+collection. It ships as source plugins and the ready-to-open **SuperDexUnreal**
+project. Unreal supplies the application, rendering, input, and Blueprint logic;
+SuperDex supplies the contact simulation and robotics.
+
+Use <ProjectSuperdexLink site="studio" path="docs/overview/">SuperDex Studio</ProjectSuperdexLink> to author
+bots, physics prefabs, IK configurations, and combined scenes. Those assets can
+then enter Unreal through either of two workflows.
+
+## Two Ways to Build an Application
+
+| Workflow | What you author | When to use it | Main tradeoff |
+|---------|----------------|----------------|---------------|
+| **[Editor import](./physics.mdx)** | Import SuperDex assets into the Content Browser, then assemble actors and Blueprints in a level. | Interactive demos, custom visuals, and applications built around Unreal's editor. | Changes to imported content require reimporting; a packaged application only contains the assets you cook. |
+| **[Runtime scene loading](./runtime_loading.mdx)** | Build an Unreal host level and load a Studio-authored `.superdex_scene` or scene archive into its simulation. | Reusing one application with different robotics scenes and data-collection tasks. | The host still has to package its Unreal assets and provide the hooks between native scene components and Unreal. |
+
+These are **not** separate demo and data-collection products. Both can support
+interactive demos and recording. Choose based on where you want to author the
+scene and what must change without rebuilding the application. A native scene
+file does not replace an Unreal map or automatically carry arbitrary Blueprint
+logic, materials, or UI.
+
+:::note Screenshot placeholder
+Capture the public Sampler level running in SuperDexUnreal, with a task prefab
+and a tracked-hand robot visible. Pair it with the same assets open in Studio
+to show the authoring-to-interaction workflow.
+:::
+
+## The Plugins
+
+| Plugin | Role |
+|--------|------|
+| **SuperDexPhysics** | SuperDex's simulation, physics assets and components, and editor import tools. |
+| **SuperDexRobotics** | Bots, controllers, IK, pose/retargeting, teleop nodes, recording, and optional study prompts. Its editor module imports bot and scene assets. |
+| **SuperDexOpenXRPoseSource** | Hand tracking from OpenXR. Requires an active hand-tracking runtime and Unreal's OpenXR/OpenXRHandTracking plugins. |
+| **SuperDexAssets** | Reusable task content. |
+| **SuperDexExamples** | Example maps built from the physics, robotics, and content plugins. |
+| **TeleopNodeZenoh** | Optional communication between processes or machines. In-process teleop also works without it. |
+| **AndroidInput** | Keyboard/gamepad input support for experimental Android/Quest applications. |
+
+SuperDexRobotics depends on SuperDexPhysics; the content plugins depend on the
+simulation plugins. Install dependent plugins **side by side**, not in isolation.
+Device-specific pose sources and network transports are separate so an
+application only needs the integrations it uses.
+
+## Where to Go Next
+
+- **[Getting Started](./getting_started.mdx)** — platforms, native libraries,
+  opening the project, example maps, and player controls.
+- **[Physics in Unreal](./physics.mdx)** — import and compose physics content,
+  simulation settings, and the component map.
+- **[Robotics and Teleoperation](./teleoperation.mdx)** — bot controllers,
+  tracked poses, retargeting, clutching, and the roboperator.
+- **[Recording and Studies](./recording.mdx)** — episode recording, metadata,
+  sources, and optional questionnaire prompts.
+- **[Runtime Scene Loading](./runtime_loading.mdx)** — the host-level workflow
+  and its packaging boundary.
+- **[Tutorials](./tutorials/editor_scene.mdx)** — build an editor scene, make a
+  roboperator, or set up a runtime scene.
+- **[Quest Packaging](./tutorials/quest.mdx)** — the experimental standalone
+  Android path.
+
+The guides cover the capabilities and normal workflows, not every property.
+For plugin source and build details, see the
+[SuperDex Unreal README](https://github.com/facebookresearch/project_superdex/tree/main/unreal/SuperDexUnreal#readme).

@@ -1,0 +1,147 @@
+---
+title: 'Tutorial: Roboperator from a Studio IK Config'
+sidebar_label: Roboperator from an IK Config
+---
+
+import ProjectSuperdexLink from '@site/src/components/ProjectSuperdexLink';
+import SiteImage from '@site/src/components/SiteImage';
+
+# Tutorial: Roboperator from a Studio IK Config
+
+A **roboperator** is the Blueprint actor that let's you control a virtual robot hand with the pose
+tracked from your real hand: it reads the
+OpenXR hand pose, retargets it onto the robot with inverse kinematics, and has the bot follow the
+result in SuperDex Physics. This tutorial takes an IK configuration authored in
+<ProjectSuperdexLink site="studio" path="docs/ik_editor/">SuperDex Studio's IK Editor</ProjectSuperdexLink> through import to a
+working roboperator, following the shipped DG-5F (long, seed) right hand:
+
+| Step | Asset |
+| --- | --- |
+| IK config (source) | `assets/bots/hands/dg5f_long_seed/right/dg5f_long_seed_right_retarget_openxr.superdex_ik` |
+| IK config (imported) | `/SuperDexAssets/bots/hands/dg5f_long_seed/right/roboperator/SDBIK_dg5f_long_seed_right` |
+| Roboperator | `/SuperDexAssets/bots/hands/dg5f_long_seed/right/BP_Roboperator_ProxyHand_dg5f_long_seed_right_openxr` |
+
+<SiteImage src="img/modifying_bots/dg5f_long_seed_right.png" alt="The DG-5F (long, seed) right hand the shipped roboperator drives" width="320" />
+
+## 1. Author the IK config in Studio
+
+A `.superdex_ik` file maps an **input bot**, the tracked hand, onto an **output bot**, the robot:
+
+- `inputBot` and `outputBot`: the two `.superdex_bot` files, by relative path. The shipped config
+  maps the OpenXR hand bot `openxr_hand_lowpoly_right.superdex_bot` onto
+  `dg5f_long_seed_right.superdex_bot`.
+- `goals`: one per output link to steer, each bound to an input link with position and rotation
+  stiffnesses. The shipped config has five, one per fingertip, from `xr_05_thumb_tip` through
+  `xr_25_little_tip`.
+- `jointCouplings`: soft ratios between output joints, such as the DG-5F's distal joints. These
+  help to resolve kinematic redundancy from the robot finger's three co-planar revolute joints.
+- `outputBaseFrameFromInputBaseFrame` and `inputBotScale`: where the hand sits relative to the
+  robot base, and how much larger the robot is than the hand.
+- `createParams`: the solver's iteration limits, tolerances, and time budget.
+
+Studio's <ProjectSuperdexLink site="studio" path="docs/ik_editor/">IK Editor</ProjectSuperdexLink>
+can be used to author the IK configuration with both bots in the viewport and a live preview of
+the solve. Save the result next to the output bot.
+
+<SiteImage
+  src="img/unreal/studio_ik_editor.png"
+  alt="SuperDex Studio IK Editor showing the DG-5F right hand overlaid with the OpenXR input hand, five fingertip goals, and joint coupling settings"
+/>
+
+*The Studio IK preview overlays the OpenXR input hand with the DG-5F output
+hand. The IK Goals panel shows the five fingertip bindings and soft joint
+couplings.*
+
+## 2. Import the bots, then the IK config
+
+Import the SuperDex Bot and IK configurations into your Unreal Engine project by dragging the
+`.superdex_bot` and `.superdex_ik` files into the Content Browser. Note that import order matters:
+the IK config finds its bots among the bots already imported.
+
+1. Import the output and input `.superdex_bot` files (see [Importers](../physics.mdx#importers)).
+   Each becomes a **SuperDex Bot** (`SDB_<name>`).
+2. Import the `.superdex_ik` file. It becomes a **SuperDex Bot IK Config** whose `OutputBot` and
+   `InputBot` point to the bots imported from those exact source files.
+3. Open the asset. If a bot was missing, or more than one imported bot came from the same file,
+   that field is empty and the log says so: pick the bot in **Details**. The original references
+   stay in `OutputBotReference` and `InputBotReference`.
+
+**Reimport** reads the file again and keeps bots you picked by hand, as long as the file still
+names the same source bots.
+
+## 3. Build the roboperator Blueprint
+
+Start from a shipped roboperator rather than from scratch: duplicate
+`BP_Roboperator_ProxyHand_dg5f_long_seed_right_openxr`. Like every roboperator, it is a child of
+`BP_Roboperator_Base` (a `TeleopRoboperatorActor`), and it implements the
+`GetTrackedPoseableComponent` function that the base class requires. Its components are:
+
+| Component class | Role |
+| --- | --- |
+| `SuperDexPlayerPawnPoseSource` | Reads the tracked hand pose from the player pawn. |
+| `VrRootToActorRootRetargeter` | Makes that pose relative to this actor instead of the pawn's VR root. |
+| `SuperDexBotIKRetargeter` (`OpenXRHandPoseBotIKRetargeter`) | Solves the IK config: turns the hand pose into joint positions of the output bot. |
+| `SuperDexBotComponent` (`SuperDexBot`) | The simulated robot hand. Its `BotControllerClass`, `BP_Controller_ArticulatedPose_dg5f_long_seed_right`, is a `Controller_MochiArticulatedPose` that tracks the solved joint positions. |
+
+In your copy, change three assets:
+
+1. **`SuperDexBot`**: set `Bot` to your output bot.
+2. **`OpenXRHandPoseBotIKRetargeter`**: set `Config` to your IK config. **Validate Configuration**
+   reports what is wrong with it, if anything.
+3. **`BotControllerClass`**: duplicate the shipped controller Blueprint and tune its tracking
+   gains for your bot, or keep it if the bots are alike.
+
+The retargeter outputs a **SuperDexPose** on the output bot: one value per actuated DOF, in the bot
+prefab's DOF order and native units (radians and meters), so a spherical joint contributes three
+values. Its root placement follows the input through the IK config's
+`OutputBaseFrameFromInputBaseFrame`; this is the authored alignment, not a calibration inferred
+from wherever the components happen to be placed at startup. An attached input poseable is
+placed from that same alignment. Keep the shipped attachment layout when substituting bots.
+
+**Get Cached Joint Configuration** exposes the solved joint positions and whether they are
+currently valid. For mapping errors, use **Validate Configuration**, the on-screen/log
+message, and the retargeter's **Debug Draw IK Coordinate Frames** or **Debug Draw Input Pose
+Skeleton**.
+
+<SiteImage
+  src="img/unreal/roboperator_components.png"
+  alt="Unreal Blueprint Editor showing the DG-5F roboperator's Components tree with OpenXRHandPoseBotIKRetargeter selected, the robot hand in the viewport, and the Bot IK Config field in Details"
+/>
+
+*Select `OpenXRHandPoseBotIKRetargeter` in the Components tree and assign the
+imported IK configuration in **Details → Bot IK → Config**.*
+
+### Spawning at the tracked hand
+
+On the roboperator, `bSpawnBotsAtTrackedHand` creates the bot where the tracked hand is first
+seen instead of at the actor, and `bScaleBotsToTrackedHand` scales it to the hand.
+`SpawnSettleSeconds`, `SpawnScaleTolerance`, and `SpawnMaxWaitSeconds` control how long it waits
+for the hand-size estimate to settle.
+
+## 4. Use it in a level
+
+Add the Blueprint to `RightPoseableActors` (or `LeftPoseableActors`) on the level's
+`SuperDexPlayerStart`, as in
+[Tutorial: Physics Scene in the Editor](./editor_scene.mdx#3-add-hands-and-bots), and play in VR
+Preview. A left hand needs its own left bots and IK config.
+
+## 5. Extend to an arm-and-hand combo
+
+A proxy-hand Blueprint follows a hand pose directly. To move an arm with a hand on its end,
+start from a shipped **virtual combo roboperator**, such as
+`/SuperDexAssets/bots/arm_hand_combos/fr3_v2_dg5f_long_seed/right/BP_Roboperator_Virtual_fr3_v2_dg5f_long_seed_right`.
+Its hand mapping is still the same Studio-authored IK asset, but an **Arm EE Goal Publisher**
+turns the clutched hand-root pose into an arm end-effector target. Paired TeleopNodes send that
+pose and the solved hand joints to **Controller_ArmOsc_HandJsc**, then return robot state for
+display.
+
+When changing the combo, update the bot/controller assets, EE publisher articulation and end-effector
+bone, and matching arm/hand joint counts on both nodes. Keep the hand mounted at the correct
+bone and let the authored IK alignment place its input source; do not recreate that offset with
+an extra component transform. See [Arm-and-Hand Teleoperation](../teleoperation.mdx#arm-and-hand-teleoperation)
+for the command split, feedback display, and the example controller's gravity limitation.
+
+## See Also
+
+- [Physics in Unreal](../physics.mdx) — importers and the physics components the bot touches.
+- [Bots](../../bots.mdx) — the `.superdex_bot` format.

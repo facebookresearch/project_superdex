@@ -1,0 +1,282 @@
+---
+title: Robotics and Teleoperation in Unreal
+sidebar_label: Robotics and Teleoperation
+slug: /unreal/teleoperation
+---
+
+import Figure, {FigureRow, FigureLabel} from '@site/src/components/Figure';
+import pinchDisabledImage from '@site/static/img/unreal/openxr-quest-pinch-disabled.png';
+import pinchEnabledImage from '@site/static/img/unreal/openxr-quest-pinch-enabled.png';
+import roboperatorComponentsImage from '@site/static/img/unreal/unreal-roboperator-components.png';
+import roboperatorClutchPlayImage from '@site/static/img/unreal/unreal-roboperator-clutch-play.png';
+
+# Robotics and Teleoperation in Unreal
+
+Teleoperation connects **an operator's tracked pose** to **a robot's command**,
+then displays the robot's response. SuperDex separates these responsibilities so
+the same input and retargeting can drive a virtual robot in the current process
+or communicate with a robot elsewhere.
+
+## The Data Flow
+
+For example, an **FR3 + Wuji combo bot** can use this data flow. Retargeters
+can send targets directly to the controller or through paired TeleopNodes:
+
+```text
+Pose source → poseable component → clutch / retargeter ───→ controller → robot
+                                              ↕                ↕
+                                      operator TeleopNode ↔ robot TeleopNode
+```
+
+- A **pose source** obtains tracking data and reports whether it is valid.
+- A **poseable component** selects a source and can display its skeleton.
+- A **retargeter** transforms a pose into the coordinate system or joint
+  configuration needed by the target robot.
+- A **controller** receives a target pose and drives the simulated robot toward it.
+- **TeleopNodes** carry commands and state bidirectionally between the operator
+  and robot sides.
+
+Tracking, the retargeted command, and simulated feedback need not be identical:
+a robot can hit a joint limit, fail to reach an IK goal, or lag behind a target
+under contact. Displaying each stage separately helps distinguish tracking
+problems from mapping or control problems.
+
+:::note Screenshot placeholder
+Capture a roboperator Blueprint's component tree with its tracked-hand poseable,
+clutch, IK retargeter, bot component, and operator/robot TeleopNodes labeled.
+Beside it, show tracked, target, and simulated hand poses in a running level.
+:::
+
+## Bots and Controllers
+
+Import a `.superdex_bot` as a **SuperDex Bot** asset and assign it to a
+**SuperDex Bot Component** (or use a bot actor). The asset provides the
+robot definition; the component owns its instance in the simulation and the
+Unreal-side visualization. Configure its controller for the behavior you need.
+
+Our proxy robot hands use **Controller_MochiArticulatedPose** to drive the
+bot's SuperDex Physics pose toward a target bot pose. Its position, rotation,
+and joint tracking parameters set stiffness, damping, and saturation.
+When several poseable children exist, **Child Source Name Contains Substring**
+disambiguates which one supplies the target.
+
+**Teleport Distance Threshold** (centimetres) and **Teleport Angle Threshold**
+(degrees) optionally reset a confidently tracked bot to its target at rest when
+its root is too far away—for example, after spawning or a tracking jump. Both
+are disabled at `0`. Unlike normal physical tracking, this recovery can move
+through obstacles; leave it off when continuous physical motion is required.
+
+The **SuperDex Bot IK Component** and **SuperDex IK Solver Object** expose
+kinematic solving; the teleop **SuperDex Bot IK Retargeter** combines that solve
+with live pose input. IK computes a desired configuration. It does not, by
+itself, actuate the robot or provide physical contact handling.
+
+## Pose Sources
+
+SuperDex's pose pipeline supports multiple pose-source options behind a common
+interface, so tracking providers can change without rebuilding the retargeting
+and control pipeline. A source reports a **SuperDexPose** on its skeleton bot,
+including joint positions, root transform, scale, and tracking validity.
+Device-specific sources live in separate plugins and can manage their own
+connection and tracking settings.
+
+**OpenXR hand tracking is currently the only open-source device integration.**
+Additional pose sources are planned for future releases. Applications can also
+implement a source by deriving from **SuperDexPoseSource** and supplying poses
+and the corresponding skeleton bot. Sources in enabled plugins are discovered
+by the pose subsystem; a source can opt out when its required setup is absent.
+
+Select a provider through **Pose Source Override** on a poseable actor or
+component, or use the player's left/right selection configured by
+**SuperDexPlayerStart**. A direct override does not depend on the PlayerStart.
+Choose a source skeleton compatible with the retargeter's input bot; matching
+only the number of links does not make arbitrary skeletons interchangeable.
+
+### OpenXR Hand Tracking
+
+Enable **SuperDexOpenXRPoseSource**, **OpenXR**, and **OpenXRHandTracking**, then
+select the OpenXR provider. The active OpenXR runtime must support hand
+tracking. It provides left/right hand poses on the OpenXR skeleton bot.
+
+SuperDex poses carry **bot joint positions**, not an independent transform for
+every bone. Native OpenXR input maps directly to the OpenXR bot's degrees of
+freedom. Unreal transforms use centimetres; native joint coordinates use
+radians/metres.
+
+### OpenXR Quest Pinch Compensation
+
+Under **Project Settings → Plugins → SuperDex OpenXR Pose Source**, **Account
+For Quest Hand Tracking Pinch** is enabled by default. Quest's tracked thumb
+can include thumb-base motion that the fixed OpenXR bot mechanism does not
+represent. Pinch compensation refits the thumb toward the tracked distal frame
+and smoothly blends nearby fingers toward a pinch.
+
+It alters the reported **SuperDexPose** to better match Quest's native hand
+tracking. It does not change the bot's physical joints, limits, gains, or
+geometry. Disable it for the mapping based only on the supplied tracked joint
+rotations, without SuperDex pinch compensation.
+
+For a runtime comparison, the console variable
+**`superdex.OpenXRPinchCorrection.Enable`** uses `0` for disabled, `1` for enabled,
+and `-1` to defer to the project setting. Keep the setting recorded with an
+experiment when comparing manipulation behavior.
+
+<FigureRow cols={2}>
+  <Figure
+    src={pinchDisabledImage}
+    alt="A tracked pinch represented by the OpenXR hand bot without compensation, with a visible gap between thumb and index finger."
+    maxWidth={470}
+    caption={<><FigureLabel>Compensation disabled</FigureLabel>The reported pinch remains open.</>}
+  />
+  <Figure
+    src={pinchEnabledImage}
+    alt="A tracked pinch represented by the OpenXR hand bot with compensation, with thumb and index finger meeting."
+    maxWidth={470}
+    caption={<><FigureLabel>Compensation enabled</FigureLabel>The reported pose closes the pinch.</>}
+  />
+</FigureRow>
+
+## Retargeting with an IK Asset
+
+Author and test an [inverse-kinematics](../inverse_kinematics.mdx) mapping in
+Studio's IK Editor, then import its
+`.superdex_ik` into Unreal as a **SuperDex Bot IK Config**. It stores the input
+and output bots, reference configuration/alignment, goal bindings, joint
+couplings, and solver settings. Goals relate named input links to named output
+links; the input geometry scale is distinct from the bot prefab's own scale.
+
+Assign the config to a **SuperDex Bot IK Retargeter**, connect the input
+poseable, and route its output to the robot's controller. Validate the config
+and reinitialize the retargeter after changing the model or configuration.
+Unresolved bot references or misspelled goal links prevent initialization.
+A mismatched source link count is rejected; matching count alone does not
+validate the skeleton layout. Verify link order and frames, and inspect
+input-pose residual warnings.
+
+The output bot's base remains fixed for the solve. The config's **Output Base
+Frame From Input Base Frame** places the input hand relative to that base and
+carries root motion into the output pose; an attached input poseable is placed
+from the same authored transform. **Get Cached Joint Configuration** returns
+native joint positions and a separate current-valid flag. Inspect **Validate
+Configuration** and the on-screen/log diagnostic for configuration errors.
+
+For alignment checks, enable **Debug Draw IK Coordinate Frames** to compare
+each goal with its solved constraint frame, or **Debug Draw Input Pose
+Skeleton** to see the input geometry used by the solve. **Joint Angle
+Multiplier** biases the solved command after IK (with optional excluded DOF
+indices); biased commands are clamped to the output bot's limits. This changes
+the command, not the IK goals.
+
+See [Make a Roboperator](./tutorials/roboperator.mdx) for the authoring-to-Blueprint
+workflow. The underlying asset concepts are covered in
+[Inverse Kinematics](../inverse_kinematics.mdx).
+
+## Arm-and-Hand Teleoperation
+
+The public virtual roboperators include **FR3 V2 + DG-5F (long, seed)** and
+**Tianji M6 + Wuji Hand 2 (Beta 1)** combinations under
+`/SuperDexAssets/bots/arm_hand_combos/`. Their operator side produces two
+commands: an arm end-effector pose and hand joint positions.
+
+- **SuperDex EE Goal Publisher** converts the clutched hand-root pose and the
+  fixed hand-mount offset into an end-effector goal in the arm base frame. It
+  does not solve arm IK. Robot joint feedback poses its displayed arm.
+- **SuperDex Bot IK Retargeter** solves the hand mapping. Enable **Publish
+  Teleop Hand Joint Targets** to send solved joints through the operator node;
+  **Subscribe To Teleop Hand Joint Positions** can display returned hand state
+  without changing the solved command.
+- **Controller_ArmOsc_HandJsc** drives the arm with operational-space PD and
+  the hand with joint-space PD, then publishes joint state back. Match its
+  **Base Link Name** and **EE Link Name**, and both nodes' arm/hand joint counts,
+  to the bot. The example holds its last targets when commands stop; a redundant
+  arm is biased toward its spawn configuration.
+
+Duplicate the corresponding shipped virtual Blueprint rather than attaching a
+hand-only proxy controller to an entire combo bot. This example controller has
+**no gravity compensation**: simulate its bot without gravity, as in the
+example, or supply an appropriate feedforward term in your own controller.
+A simulated example is not a ready-to-use real-robot safety or control stack.
+
+## Clutching
+
+A clutch lets the operator reposition their hand without continuously moving
+the robot. **ClutchSkeletonRootToVrRootRetargeter** holds the output while
+disengaged, then captures the input/output relationship when engaged.
+Its translation and rotation modes independently choose relative or absolute
+motion.
+
+- **Relative translation** preserves the starting offset; absolute translation
+  follows the source position.
+- **Relative rotation** preserves the starting rotation relationship; absolute
+  rotation follows the source orientation.
+- **Time In Seconds To Lerp To Absolute** smoothly blends the output from its
+  initial relative transform to the absolute transform over the specified time,
+  only for translation or rotation components configured as absolute.
+- Confidence and distance thresholds can automatically disengage the clutch
+  for safety. **Pause Clutch Instead Of Auto Disengaging** instead holds the
+  output through invalid input.
+- **Time In Seconds To Lerp On Unpause** blends the transform error accumulated
+  while paused to zero over the specified time, restoring the original
+  input/output relationship without an immediate jump.
+
+These checks are interaction safeguards, not a complete real-robot safety
+system. Validate workspace limits and the receiving controller before enabling
+physical motion of a real robot.
+
+## Why a Roboperator Talks to Itself
+
+A **TeleopRoboperatorActor** pairs the operator and robot sides in one actor
+and exposes clutch toggling for its attached clutch retargeters. The operator
+side—retargeters and a TeleopNode—produces commands. The robot side—a SuperDex
+Bot Component, its controller, and a TeleopNode—consumes those commands and
+returns state. Keeping that boundary in a virtual setup makes it possible to
+replace the simulated receiver with an external one without redesigning the
+input UI.
+
+For a single-process application, the **Direct** transport passes messages in
+memory. It is the fallback when neither a node nor the project selects a
+communication class. A network server is not needed for a virtual roboperator.
+
+**Spawn Bots At Tracked Hand** can defer bot creation until its driving hand
+is seen. **Scale Bots To Tracked Hand** uses the tracking scale at spawn,
+with a settling interval to avoid immediately accepting an unstable hand-size
+estimate. Disable scaling for nominal robot geometry. Standard bot-component
+auto-spawn stops after a creation failure and reports the error. Inspect
+on-screen/log diagnostics and fix the asset or setup before retrying; the
+tracked-hand spawn path has its own retry behavior.
+
+## TeleopNodes and Communication
+
+Configure matching **Robot Name For Publishers/Subscribers**, joint/sensor
+counts, and enabled command/state channels on the operator and robot nodes.
+Only enable the channels the application actually supplies. A hand target array
+must follow the receiving robot's joint order; a valid connection does not
+validate that convention for you.
+
+To communicate across processes or machines, enable **TeleopNodeZenoh** and
+choose `/Script/TeleopNodeZenoh.TeleopNodeImplZenoh` on both nodes, or as the
+**Default Communication Class Name** under **Project Settings → Plugins →
+SuperDex Teleop**. Its separate **Teleop Node Zenoh** settings choose peer/client
+mode and endpoints. Use explicit endpoints when you need predictable network
+routing. Local Direct transport remains the simpler choice when everything
+runs in the same process.
+
+The [TeleopNodeZenoh README](https://github.com/facebookresearch/project_superdex/tree/main/unreal/SuperDexUnreal/Plugins/TeleopNodePlugins/TeleopNodeZenoh#readme)
+covers the wire format, peer/router configurations, Quest USB forwarding, and
+connection troubleshooting.
+
+### Integrating Other Communication Systems
+
+TeleopNodes separate command/state channels from their communication backend.
+To connect to another system, such as **ROS topics**, implement a backend
+by deriving from **`UTeleopNodeImplBase`** in your own plugin. Provide the
+publisher/subscriber and message-delivery hooks for the channels you use,
+and manage the connection's initialization, incoming-message processing, and
+shutdown. Select your backend through each node's **Communication Class Name**
+or the project's default, just as for Zenoh.
+
+Map the external message types to SuperDex's joint arrays and transforms,
+preserving joint order, units, coordinate frames, and the direction of commands
+versus state. This lets your application retain its retargeters, controllers,
+and operator/robot node structure while using your existing communication
+endpoints. It is an extension interface, not a bundled ROS integration.

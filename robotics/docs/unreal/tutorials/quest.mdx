@@ -1,0 +1,108 @@
+---
+title: Package for Meta Quest
+sidebar_label: Quest Packaging (Experimental)
+slug: /unreal/tutorials/quest
+---
+
+import Figure from '@site/src/components/Figure';
+import questSamplerImage from '@site/static/img/unreal/unreal-quest-sampler.png';
+
+# Package for Meta Quest
+
+SuperDexUnreal can run **standalone on a Meta Quest headset**: rendering,
+SuperDex simulation, and hand interaction run on-device rather than streaming
+from a PC. This workflow is **experimental** and uses Unreal Engine **5.8 on
+Windows** with Android support. It uses Epic's OpenXR integration and does not
+require the Meta XR Plugin.
+
+:::warning Experimental platform
+Desktop success does not establish Android compatibility or performance.
+Choose content and simulation settings for the headset's budget. The Win64
+Recorder module is not an on-device Android recorder, and [runtime scene
+loading](../runtime_loading.mdx) is not currently supported on Quest.
+:::
+
+## Prepare the Toolchain and Headset
+
+1. Install Unreal Engine 5.8 and enable **Android** under the Epic Games
+   Launcher's engine **Options → Target Platforms**.
+2. Install Android Studio and Android SDK command-line tools, then run the
+   engine's **`Engine/Extras/Android/SetupAndroid.bat`**. Use the SDK/NDK versions
+   required by that engine; the project's documented 5.8 setup uses **NDK r27c**.
+   Open a new terminal after environment variables are configured.
+3. Install the Windows native build tools from
+   [Getting Started](../getting_started.mdx).
+4. Put the headset in developer mode, connect USB, and authorize USB debugging
+   in the headset. **`adb devices`** must show it as `device`, not `unauthorized`.
+5. The Sampler level (**L_Sampler_Android**) that launches by default uses keyboard hotkeys. You can either plug in a USB keyboard or pair a Bluetooth keyboard with your headset.
+
+## Hydrate Both Platforms
+
+In `unreal/SuperDexUnreal`, run:
+
+```bat
+py -3 hydrate_plugins.py
+py -3 hydrate_plugins.py --android
+```
+
+The Windows editor that cooks the content needs Windows libraries; the headset
+app needs Android libraries. Run the host hydration first, which also stages
+sources for optional communication dependencies.
+
+## Build, Install, and Launch
+
+Close the editor. From a **Command Prompt** in `unreal/SuperDexUnreal`:
+
+```bat
+set "UE_ROOT=C:\Program Files\Epic Games\UE_5.8"
+"%UE_ROOT%\Engine\Build\BatchFiles\RunUAT.bat" BuildCookRun -project="%CD%\SuperDexUnreal.uproject" -nop4 -utf8output -target=SuperDexUnreal -platform=Android -cookflavor=ASTC -clientconfig=Development -build -cook -stage -package -pak -iostore -compressed -archive -archivedirectory="%CD%\Saved\PackagedBuild"
+```
+
+The project README's default package uses the application identifier
+`com.meta.superdex.SuperDexUnreal` and the following files:
+
+```bat
+adb install -r -g Saved\PackagedBuild\Android_ASTC\SuperDexUnreal-arm64.apk
+adb shell mkdir -p /sdcard/Android/obb/com.meta.superdex.SuperDexUnreal
+adb push Saved\PackagedBuild\Android_ASTC\main.1.com.meta.superdex.SuperDexUnreal.obb /sdcard/Android/obb/com.meta.superdex.SuperDexUnreal/
+adb shell am start -n com.meta.superdex.SuperDexUnreal/com.epicgames.unreal.GameActivity
+```
+
+Use the actual generated package/file names if you change the application
+identifier or version. The app also appears under **Unknown Sources**.
+Rebuild/reinstall after Unreal project or content changes; rehydrate too after
+native-library changes.
+
+<Figure
+  src={questSamplerImage}
+  alt="The standalone Sampler running on Quest, with two OpenXR-driven hands holding a 2x2 puzzle cube on a wooden table and the control hints and FPS/SPS counters shown in the view."
+  maxWidth={703}
+  caption="The standalone Sampler on Quest with a task prefab and OpenXR-driven hands."
+/>
+
+## Check the First Run
+
+- Confirm the chosen map and required assets were cooked into the package.
+- Verify tracking, left/right hand selection, and clutch behavior independently
+  from whether the level renders.
+- Start with a small task scene and inspect frame/simulation behavior before
+  increasing physics content or sensor work.
+- For keyboard/gamepad controls, keep the project's **AndroidInput** integration
+  enabled.
+- For a network teleop setup, use the
+  [Zenoh configuration guide](https://github.com/facebookresearch/project_superdex/tree/main/unreal/SuperDexUnreal/Plugins/TeleopNodePlugins/TeleopNodeZenoh#readme),
+  which also covers USB forwarding and non-Shipping command-line overrides.
+
+## Common Setup Problems
+
+| Symptom | Check |
+|---------|-------|
+| Android SDK validation fails. | Install Android engine support and re-run the engine's SetupAndroid script with its required NDK. |
+| Android hydration reports missing TeleopNodeZenoh sources. | Run host hydration before `--android`. |
+| Headset appears as `unauthorized`. | Put it on and accept the USB debugging prompt. |
+| Install reports an incompatible signature. | A differently signed build is installed; remove that build before installing the new one, preserving any data you need first. |
+| The scene loads but hands do not track. | Check the active OpenXR hand-tracking setup and the PlayerStart's pose-source configuration. |
+
+For the complete version-specific setup and commands, see
+[Packaging for Meta Quest](https://github.com/facebookresearch/project_superdex/tree/main/unreal/SuperDexUnreal#experimental-packaging-for-meta-quest-standalone-android)
+in the project README.

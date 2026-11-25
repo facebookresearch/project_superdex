@@ -1,0 +1,168 @@
+---
+title: Recording and Studies
+sidebar_label: Recording and Studies
+slug: /unreal/recording
+---
+
+import Figure from '@site/src/components/Figure';
+import recorderDetailsImage from '@site/static/img/unreal/recorder-recording-details.png';
+import recorderTrialImage from '@site/static/img/unreal/recorder-trial-blueprint.png';
+import recorderRerunImage from '@site/static/img/unreal/recorder-trial-rerun.png';
+
+# Recording and Studies
+
+**SuperDex Recorder** captures an episode of the SuperDex scene and its robot
+controllers to a Rerun recording (`.rrd`). Use it to preserve demonstrations,
+inspect commands alongside physical motion, and annotate trials with events,
+measurements, and per-episode metadata. It records either editor-assembled or
+runtime-loaded scenes.
+
+:::info Platform boundary
+The Unreal recorder module is available on **Win64**. Do not assume an
+experimental standalone Quest build records locally just because it can run the
+simulation and teleop modules.
+:::
+
+## Record an Episode
+
+1. Place **one SuperDex Recorder actor** in the level.
+2. In its **SuperDex Robotics → Recording** settings, set **Output Directory** if you want a location other than
+   `<Project>/Saved/SuperDexRecorder`.
+3. Set **Properties** before each episode—for example, task, condition, and
+   trial identifiers.
+4. Choose automatic or application-controlled recording:
+   - The default starts once the physics scene and configured
+     **Wait For Actors Before Start** actors are ready, and commits when play
+     ends (unless **Commit On End Play** is off, which discards the episode).
+   - For explicit trials, disable **Start Automatically** and call
+     **Start Recording**, then **Commit Recording** or **Abort Recording** from
+     Blueprint. **Prevent Automatic Start** can gate the default start while
+     the application prepares.
+5. Use **On Recording Started/Committed/Aborted** to update the UI and confirm
+   the episode's output path or failure.
+
+A second recorder in the same world does not divide the scene into separate
+streams; it would duplicate the capture, so only the first recorder to
+initialize records. **Get Active Recorder** lets application Blueprints find
+that recorder without keeping their own actor reference.
+
+<Figure
+  src={recorderDetailsImage}
+  alt="The SuperDex Recorder Recording settings: output directory, scene reference, live export and archive options, properties, sources, automatic start, and commit on end play."
+  maxWidth={686}
+  variant="inset"
+  caption="Configure the recorder's output, sources, and episode boundaries in its Details panel."
+/>
+
+
+<Figure
+  src={recorderTrialImage}
+  alt="A Level Blueprint starts recording on Space Bar, commits on TrialSuccessful, aborts on Backspace with reason UserAborted, and aborts on HandTrackingIssue with reason TrackingFailure."
+  maxWidth={1260}
+  caption="An application-controlled trial: start on Space, commit on success, or abort on Backspace or a tracking failure. Disable Start Automatically for this flow."
+/>
+
+## What the Recording Contains
+
+The recorder samples SuperDex bodies and robot state, controller commands, and
+configured additional sources. Samples share **frame**, **sim_time**, and
+**wall_time** timelines; comparing simulation and elapsed wall time exposes
+slow or missing steps. Enable **Record Contact Forces** when the analysis needs
+contact forces, bearing in mind the extra data per contact point.
+
+The physics recording already includes SuperDex bodies and the robotics
+recording includes SuperDex bots. Add source components only for information
+outside those streams:
+
+- **SuperDex Recording Player Camera Source** — the first local player's
+  camera/headset pose.
+- **SuperDex Recording Transform Source** — transforms of selected Unreal
+  components, including objects that do not have SuperDex physics.
+
+Attach sources to the recorder or include their actors in **Source Actors**.
+From any Blueprint, use **Record Event** for milestones and **Record Scalar(s)**
+for measured values or outcomes. These calls do nothing outside a recording.
+Keep each scalar name's meaning and array length consistent across episodes.
+
+## Scene Archives and Replay
+
+A recording of state is not automatically a self-contained scene definition.
+For archive-based reconstruction, set **Scene Archive** to the matching native
+archive. **Scene Archive** is ignored when **Export Live Scene** is on.
+The recording stores the archive's filename and content hash; use the archive
+with that hash to reconstruct the scene, not a later file with the same name.
+
+For hand-built levels in the editor, enable **Export Live Scene** (off by
+default). It writes a native `.superdex_scene_archive` when the first episode
+starts and references it in subsequent episodes. It pauses the simulation
+during export. After adding or removing bots or physics actors, call
+**Export Live Scene At Next Episode** to refresh the archive for the next episode.
+
+**Live export does not capture every element of the Unreal application.** It
+exports supported native physics and bot data, including task objects already
+spawned into the simulation. Those objects are captured as scene actors, not as
+a task file or a catalog of spawnable prefabs. It does not capture complete Blueprint
+logic, pose-source/retargeter pipeline, communication wiring, or other
+Unreal-side components. Archive-based replay or resimulation is therefore most
+straightforward for **passive physics simulations**. For an actively controlled
+or interactive scene, identify and recreate the missing components and wire
+them back together before expecting meaningful behavior. An exported archive
+is not a turnkey replay of the original teleoperation application.
+
+**Live scene export is editor-only**, including Play In Editor: it needs the
+bots' source files, whose paths are not retained for packaged runtime export.
+A packaged build can record with a supplied matching archive, or without one;
+it cannot create a live archive itself. **Require Scene Archive** refuses
+capture if no archive is available. Without an archive, the recording can still
+be inspected in Rerun, but cannot reconstruct its scene from an archive.
+
+<Figure
+  src={recorderRerunImage}
+  alt="A scripted Unreal trial in Rerun showing the FR3 arm and DG5F hand, translucent command shadow, recorded joint state and effort, trial events with frame, sim_time and wall_time columns, and the matching scene archive reference."
+  caption="A committed Unreal trial: robot state and commands share the recording's timelines with trial events. The matching scene archive is a separate file, identified by its filename and content hash."
+/>
+
+## Keep Episodes Bounded
+
+The recorder writes sampled columns in bounded chunks on a background thread,
+rather than retaining a whole episode until commit. **Blueprint Commit
+Recording is still synchronous**: it ends capture, waits for the remaining
+writes, and reports success or failure before returning. Commit at a natural
+pause, keep episode boundaries meaningful, and check the result rather than
+assuming play ending guarantees a complete file.
+
+Native C++ hosts can use **CommitEpisodeAsync** to finish in the background;
+the next commit and recorder destruction wait for it. Starting an asynchronous
+commit is not evidence that the output has finished writing. See the
+[Python recording guide](../examples/control/recording.mdx) for completion and
+failure handling.
+
+For the native recorder configuration and additional sources, see the
+[Unreal Recorder README](https://github.com/facebookresearch/project_superdex/blob/main/unreal/SuperDexUnreal/Plugins/SuperDexRobotics/Source/SuperDexRecorder/README.md).
+
+## Spectator View for VR Capture
+
+Place a **SuperDex Spectator Camera** in a PC VR level to show a 16:9,
+head-following view in the desktop spectator window. Set its field of view,
+head-relative offset, and position/rotation smoothing; **Lock Roll** keeps the
+view level. This is useful for capturing readable demonstration video alongside
+a native recording.
+
+The spectator camera does **not** save video or add a stream to the `.rrd`.
+Capture the window with your video-recording tool. It requires an HMD with a
+controllable spectator screen and does nothing in non-VR play or standalone
+Quest.
+
+## Optional Study Prompts
+
+The **SuperDexStudy** module supplies questionnaire data assets and a
+**SuperDex Study Question Prompt** actor. Assign **Question Data** and implement
+its Blueprint interface for the presentation you need. The actor's **On
+Response** event supplies a numeric answer; connect it to **Record Scalar** on
+the active recorder and use **Record Event** for block starts or other study
+milestones.
+
+The prompt does not organize an entire study or automatically store every
+answer. Trial order, participant-facing UI, identifiers, and recording
+boundaries remain application logic. Set the next episode's metadata **before**
+starting it and commit each block at a natural pause.

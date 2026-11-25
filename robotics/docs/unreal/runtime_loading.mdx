@@ -1,0 +1,126 @@
+---
+title: Runtime Scene Loading
+sidebar_label: Runtime Scene Loading
+---
+
+import Figure from '@site/src/components/Figure';
+import ProjectSuperdexLink from '@site/src/components/ProjectSuperdexLink';
+import runtimeSceneLoadPlayImage from '@site/static/img/unreal/unreal-runtime-scene-load-play.png';
+import runtimeSceneLoadDetailsImage from '@site/static/img/unreal/unreal-runtime-scene-load-details.png';
+
+# Runtime Scene Loading
+
+There are two ways to get a SuperDex scene into Unreal. You can **import it in the editor**, so
+that the level's own actors and components are the physics scene, or you can **load a scene file
+at runtime**, so that a `.superdex_scene` file is the physics scene and Unreal mirrors it. Both
+can drive demos and data collection; they trade off differently.
+
+| | Editor-authored level | Runtime scene file |
+| --- | --- | --- |
+| Source of truth | Unreal assets and the level | The `.superdex_scene` or `.superdex_scene_archive` file |
+| Changing the scene | Edit the level; reimport after Studio changes | Point the build at another file. Its physics and generic visuals need no re-cook; Blueprints, levels, and hooks it relies on must already be in the build |
+| Unreal-side tuning | Every component and settings asset is editable | Gravity, solver, and contact layers come from the file |
+| Visuals | Imported meshes and materials, full Unreal lighting | Built at runtime from the file's render models (`.glb`) or collision shapes |
+| Bots, controllers, sensors | The scene importer places each bot with a `SuperDexBotComponent`; it skips the file's controllers and scene sensors (add controllers in Unreal) | The native loader declares the file's bots, controllers included, but creates none until your code calls `BotScene::InitializeBot` |
+| Same physics as Python and Studio | As close as the importers allow (see their [limits](./physics.mdx#importers)) | Loaded by the same native SuperDex Robotics loader |
+| Ready-made support in the plugins | Example levels, Player Start, roboperators | Loader, visualization, and hooks; your project wires up control |
+
+## How runtime loading works
+
+`USuperDexBotSceneSubsystem` (a game-instance subsystem in `SuperDexRobotics`) owns the load. It
+reads the scene path from the command line when the game instance starts, before any actor's
+Begin Play:
+
+```bat
+SuperDexUnreal.exe -SuperDexSceneFile="C:\scenes\my_scene.superdex_scene_archive"
+```
+
+Use an absolute path; Unreal resolves a relative one against its own base directory, not the
+shell's working directory. The subsystem then:
+
+1. Claims the game instance's SuperDex Physics scene for the file. From then on Unreal components
+   create no simulated actors in it, and level settings (gravity, solver params, contact layers)
+   no longer apply; only step params and debug draw do.
+2. Fails if the physics scene already holds actors: the file must be the only source of physics
+   actors.
+3. Populates the scene from the file and reports its state through `GetState()`: `Disabled` (no
+   scene requested), `Loaded`, or `Failed`. `Failed` is terminal: the session does not quietly fall
+   back to level physics. The reason is in the log, prefixed `SuperDexBotSceneSubsystem:`.
+
+Without `-SuperDexSceneFile=`, the subsystem stays `Disabled` and levels simulate their own
+components as usual.
+
+### Seeing the scene
+
+`USuperDexBotSceneVisualizationComponent` mirrors the loaded scene into the level: base-scene
+actors, spawned prefabs, and bot links, updated every frame. Add it to any actor in the level
+you run; it never loads a scene itself, and builds whenever the subsystem reports a load. Entries
+with a render model (`.glb`) are drawn with it, imported at runtime; the others, and every entry
+under `-NoRenderModels`, are drawn from their collision shapes. Rods are drawn from their visual mesh
+or contact skin; a rod with neither is visible only in SuperDex Physics debug draw.
+
+### Driving the scene's bots
+
+The loader declares the scene's bots but does not create them, because only your project knows
+which of the offered bots it drives. That step, and binding Unreal to the result, is C++:
+
+- `USuperDexBotSceneSubsystem::GetBotScene()` returns the native `BotScene`; create the bots you
+  use with `BotScene::InitializeBot`, then call `NotifySceneContentsChanged()` so the
+  visualization rebuilds.
+- `USuperDexBotComponent::BindToExistingBot` lets a level's bot component, such as the one in a
+  roboperator, pose its skeletal mesh from a scene-owned bot instead of creating its own.
+  `bHideMeshWhenBoundToSceneBot` (on by default) leaves drawing to the visualization.
+- `USuperDexBotSceneSubsystem::EnsureLoaded` loads a fallback path when the command line gave
+  none, for editor iteration. Call it before any actor's Begin Play, for example from an actor's
+  `PostInitializeComponents`.
+
+:::warning Public runtime example coming soon
+A ready-made runtime example is coming as we finish migrating the example content. For now,
+the shipped example levels are editor-authored. To drive bots in a runtime-loaded scene, add a
+C++ module that uses the hooks above to initialize the bots and bind roboperators; these hooks
+are not exposed to Blueprint. While a scene file owns the physics scene, a level-authored bot
+component that is not bound creates no bot of its own.
+:::
+
+## Producing a scene file
+
+For what a scene file holds, see [SuperDex Scenes](../bot_scenes.mdx).
+
+- **SuperDex Studio** authors `.superdex_scene` files and exports archives in its
+  <ProjectSuperdexLink site="studio" path="docs/bot_scene_editor/">Bot Scene Editor</ProjectSuperdexLink>.
+- **From a running level**, the Blueprint node `ExportSuperDexBotScene` (in
+  `SuperDexRoboticsFunctionLibrary`) writes the current physics scene to
+  `<OutputDir>.superdex_scene_archive`, with actors in their current pose and bots as bot
+  archives. It works in the editor and Play In Editor only. Set `bCaptureLiveScene` to capture the
+  scene exactly as it is.
+
+## Tasks and Repeated Episodes
+
+Pass **`-SuperDexTaskFile="C:\tasks\trial.superdex_task"`** to parse a task
+alongside the scene, or **`-SuperDexTaskFolder="C:\tasks"`** to select the first
+task in a folder's filename-sorted playlist. The folder takes precedence when
+both switches are supplied. Task files are separate from scene archives.
+
+The subsystem holds the task but does **not** apply its reset state. Your C++
+host resolves placements and any randomization, calls **SpawnTaskInstance** for
+the required objects, then **NotifySceneContentsChanged** once after the batch
+so visualization rebuilds. **DestroyAllTaskInstances** removes those objects;
+**AdvanceToNextTask** changes the parsed task without replacing the scene or
+its bots. The host still owns robot/controller reset, episode timing, and
+recording boundaries. See [Bot Tasks](../bot_tasks.mdx) for the format and
+outcome semantics.
+
+## Packaging
+
+The project cooks the maps listed in `Config/DefaultGame.ini` (`MapsToCook`); add the level you
+run to that list. Scene files are read from disk at runtime, so they are not cooked: ship them
+next to the build, or anywhere `-SuperDexSceneFile=` can reach.
+
+For the Windows and experimental Meta Quest build steps, see the
+[SuperDex Unreal README](https://github.com/facebookresearch/project_superdex/tree/main/unreal/SuperDexUnreal#readme).
+Passing launch arguments to an app installed on a headset is not covered there.
+
+## See Also
+
+- [Tutorial: Load a Scene File at Runtime](./tutorials/runtime_scene.mdx)
+- [Physics in Unreal](./physics.mdx) — importers, settings, and components for the editor path.

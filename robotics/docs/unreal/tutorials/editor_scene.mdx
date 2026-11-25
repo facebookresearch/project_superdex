@@ -1,0 +1,110 @@
+---
+title: 'Tutorial: Physics Scene in the Editor'
+sidebar_label: Physics Scene in the Editor
+---
+
+import Figure from '@site/src/components/Figure';
+import samplerImage from '@site/static/img/unreal/unreal-sampler-editor.png';
+import playerStartImage from '@site/static/img/unreal/unreal-player-start-details.png';
+import kitchenPlayImage from '@site/static/img/unreal/kitchen_play.png';
+
+# Tutorial: Physics Scene in the Editor
+
+Build a level like the example levels in the `SuperDexExamples` plugin: a SuperDex prefab on a
+floor, with tracked hands and robot hands you can switch between. You can follow along by opening
+the examples:
+
+| Level | What it shows |
+| --- | --- |
+| `/SuperDexExamples/Sampler/L_Sampler` | A workbench with `BP_PrefabSpawner` cycling task prefabs and `BP_RoboperatorSpawner` switching proxy hands or virtual arm-hand bots. The project's startup map. |
+| `/SuperDexExamples/Kitchen/L_Kitchen` | The kitchen prefab (`BP_kitchen`): cabinets, sink, faucet, plates, and other parts placed as one scene. |
+
+Both levels hold the same few actors, which this tutorial adds one at a time.
+
+<Figure
+  src={samplerImage}
+  alt="The public Sampler map open in Unreal, showing the workbench, configured PlayerStart, prefab spawner, and scene settings in the Outliner."
+  caption="The editor-authored Sampler level: a workbench and a small set of application actors."
+/>
+
+## 1. Import a prefab
+
+Drag a `.superdex_prefab` or `.mochi_prefab` file into the Content Browser and choose
+**Blueprint** when asked. The SuperDexAssets prefabs were imported this way from
+`assets/prefabs/` (for example `assets/prefabs/kitchen/kitchen.mochi_prefab` became
+`/SuperDexAssets/prefabs/kitchen/BP_kitchen`), so you can also skip this step and use them
+directly.
+
+Choose **Map** instead to get a new level containing the prefab and its scene settings, then
+continue from step 3.
+
+## 2. Create the level
+
+Create a new level and add:
+
+- **A floor.** The example levels use an actor named `Floor` with a `MochiImplicitShapeComponent`
+  whose `Shape` is `Plane`. Unreal geometry alone does not collide in SuperDex Physics; anything
+  bots or prefabs should touch needs a SuperDex Physics component.
+- **The prefab Blueprint**, dragged into the level and placed on the floor or a table.
+- **A `MochiSceneSettingsActor`**, if the level needs settings other than the project defaults:
+  gravity, solver params, contact matrix, or start paused. See
+  [scene settings](../physics.mdx#per-level-scene-settings).
+- Lights and a sky, as in any Unreal level.
+
+## 3. Add hands and bots
+
+Add a **`SuperDexPlayerStart`** and open **World Settings**: the example levels set the game mode
+override to `BP_SuperDexGameMode` (from `/SuperDexRobotics/Pose/Player/`). On the player start,
+fill in its **SuperDex Robotics → Player Start** properties:
+
+| Property | Example levels |
+| --- | --- |
+| `LeftPoseSources`, `RightPoseSources` | `SuperDexOpenXRPoseSource`: OpenXR hand tracking. The first entry is the default. |
+| `LeftPoseableActors`, `RightPoseableActors` | Pawn-attached poseables, when the pawn owns spawning. Examples include `BP_Roboperator_ProxyHand_openxr_hand_lowpoly_right`, `BP_Roboperator_ProxyHand_dg5f_long_seed_right_openxr`, and `BP_Roboperator_ProxyHand_wuji_hand2_beta1_skinned_right_openxr` under `/SuperDexAssets/bots/hands/`, or `BP_Roboperator_ProxyHand_2f_85_right_openxr` under `/SuperDexAssets/bots/grippers/2f_85/`. |
+| `bSpawnPoseablesAtBeginPlay` | On: spawn the poseables when play starts. |
+
+Each roboperator retargets the tracked hand onto its bot and simulates it in SuperDex Physics.
+The current Sampler and Kitchen levels use `/SuperDexAssets/utilities/BP_RoboperatorSpawner`
+for their selectable proxy hands and virtual FR3/DG-5F or Tianji/Wuji combos. Configure its
+left/right lists and **Spawn Transform** rather than populating both that spawner and the pawn's
+poseable lists with the same actors. To make your own roboperator, see
+[Tutorial: Roboperator from a Studio IK Config](./roboperator.mdx).
+
+<Figure
+  src={playerStartImage}
+  alt="PlayerStart configuration showing the left/right OpenXR sources, available poseable-actor arrays, and automatic spawning."
+  maxWidth={703}
+  caption="Each hand's first pose source is its default. Sampler leaves the poseable-actor lists empty because its roboperator spawner supplies the hands."
+/>
+
+
+## 4. Optional: spawn prefabs one at a time
+
+`/SuperDexAssets/utilities/BP_PrefabSpawner` holds a `Prefabs` array of prefab Blueprints and
+spawns one at a time at its **Spawn Transform**, destroying the previous one. Use the
+level's keyboard overlay and the spawner's Event Graph for the switching and reset bindings.
+Add the Blueprint to your level and edit `Prefabs` to use your own prefabs. In Sampler, the
+placed spawner may retain the instance
+name `BP_Sampler_PrefabSpawner`; the reusable asset is now `BP_PrefabSpawner`.
+
+## 5. Play
+
+Press **Play** to simulate without a headset, or use **VR Preview** with an OpenXR runtime for
+hand tracking. To watch the simulation in the SuperDex Physics debugger, turn on
+`bEnablePhysicsDebuggerConnection` under **Project Settings > Plugins > SuperDex Physics**.
+
+To ship the level, add it to `MapsToCook` in `Config/DefaultGame.ini`, which already lists the
+example levels, and package as described in [Runtime Scene Loading](../runtime_loading.mdx#packaging).
+
+<Figure
+  src={kitchenPlayImage}
+  alt="A robot hand holds a blue-and-yellow sponge against the faucet above the sink in the running Kitchen level."
+  maxWidth={497}
+  caption="Using a robot hand to clean the faucet with a sponge in the Kitchen level."
+/>
+
+## See Also
+
+- [Physics in Unreal](../physics.mdx) — importers, settings, and components.
+- [Tutorial: Load a Scene File at Runtime](./runtime_scene.mdx) — the same scene from a file
+  instead of a level.
