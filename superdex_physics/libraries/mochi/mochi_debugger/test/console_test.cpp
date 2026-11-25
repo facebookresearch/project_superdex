@@ -562,7 +562,7 @@ TEST_F(ConsoleTest, SceneDebugNames) {
       {"{a", "_a"}};
   DynamicArray<std::string> entries{"1_2", "A"};
   for (auto const& [createdAs, name] : names) {
-    Scene* scene = _context->CreateScene(std::string{createdAs}.c_str());
+    Scene* scene = _context->CreateScene(createdAs);
     _extraScenes.push_back(scene);
     entries.emplace_back(name);
   }
