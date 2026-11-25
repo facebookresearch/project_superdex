@@ -49,13 +49,14 @@ from superdex.physics.paths import resolve_asset
 np_real = np.float64 if sdp.uses_double_precision() else np.float32
 
 # --- Locked scene spec (mirrors the .mochi_scene prefab) ---------------------
-# Frame: +Y up. The pivot is anchored in the world by joint_0's
-# parent_link_from_joint (world_from_root is left at identity). The two arms lie
-# along local +X at rest and swing about Z revolute joints (in the X-Y plane).
+# Frame: +Y up. As in the prefab, world_from_root places the articulated actor's
+# frame at the upper arm's rest frame, and joint_0's parent_link_from_joint puts
+# the pivot at ROOT_HEIGHT on the arm's centerline. The two arms lie along local
+# +X at rest and swing about Z revolute joints (in the X-Y plane).
 #
-# This example stores the pivot in joint_0 and leaves world_from_root at identity
-# to mirror the reference prefab. Either placement is valid: world_from_root
-# moves the links and skin together without changing their alignment.
+# The skin is authored in the articulated actor's frame, so that frame must sit
+# where the skin's coordinates place the upper arm. world_from_root then moves the
+# links and skin together without changing their alignment.
 ROOT_HEIGHT = 0.5  # [m] pivot height; chosen so the fully-extended tip reaches
 # the floor ball (arm total length 2*L = 0.5 m).
 
@@ -65,9 +66,12 @@ ARM_WIDTH = 0.025  # [m] cross-section of each arm (w)
 # [0, L] x [0, w] x [0, w]. parent_joint_from_link [0, -w/2, -w/2] centers the
 # bar on its inbound joint in Y/Z while leaving it to extend along +X.
 ARM_SCALE = [ARM_LENGTH, ARM_WIDTH, ARM_WIDTH]  # [m]
+# The articulated actor's frame, at the upper arm's rest frame: half an arm width
+# below the pivot and behind it in Z.
+ROOT_POSITION = [0, ROOT_HEIGHT - ARM_WIDTH / 2, -ARM_WIDTH / 2]  # [m]
 
 # Shared skin asset: a thin rectangular tube along +X spanning both arms in the
-# root-local rest frame, with per-node LBS weights binding to link indices 0/1.
+# articulated actor's frame, with per-node LBS weights binding to link indices 0/1.
 SKIN_ASSET = "samples/articulations_parts/skin.mochi.json"
 
 BALL_RADIUS = 0.05  # [m]
@@ -89,13 +93,15 @@ DAMP_VISCOUS = 0.022  # [N*m*s/rad] joint friction for the damping event
 def _make_joints() -> list[sdp.ArticulatedJointParams]:
     """Build the 2 inbound joints of the chain (joints[i] drives links[i])."""
     return [
-        # Upper hinge: revolute about Z, anchored at the world pivot (the pivot
-        # height is baked into this joint so world_from_root stays identity).
+        # Upper hinge: revolute about Z at the pivot, on the upper arm's centerline
+        # (link-local [0, w/2, w/2]).
         sdp.ArticulatedJointParams(
             name="joint_0",
             type=sdp.ArticulatedJointType.REVOLUTE,
             axis=[0, 0, -1],
-            parent_link_from_joint=sdp.TransformRT(translation=[0, ROOT_HEIGHT, 0]),
+            parent_link_from_joint=sdp.TransformRT(
+                translation=[0, ARM_WIDTH / 2, ARM_WIDTH / 2]
+            ),
         ),
         # Elbow: revolute about Z, at the far end of the upper arm on its
         # centerline (link-local [L, w/2, w/2]).
@@ -158,8 +164,9 @@ def build_scene() -> tuple[Scene, Actor, Actor]:
     )
 
     # The skin: a skinned triangle mesh. Its rest coordinates are authored in the
-    # skeleton's link-local rest frame (cross-section centered on the arm
-    # centerline at y=z=w/2) so the tube overlays the two arms at rest.
+    # articulated actor's frame, at the upper arm's rest frame (cross-section
+    # centered on the arm centerline at y=z=w/2), so the tube overlays the two arms
+    # at rest.
     # bake_scale=1 keeps the authored units (baking only moves positions, never
     # the weights).
     skin_shape = sdp.load_shape_from_file(
@@ -169,6 +176,7 @@ def build_scene() -> tuple[Scene, Actor, Actor]:
 
     params = sdp.ArticulatedActorParams(name="SkinnedDoublePendulum")
     params.joints = _make_joints()
+    params.world_from_root = sdp.TransformRT(translation=ROOT_POSITION)
     params.links = _make_links(arm_shape)
     # Attach the skinned surface. The skin is a contact collidee. Two optional
     # tuning knobs (left at their defaults here) bound its per-step contact cost:
@@ -301,11 +309,9 @@ def demonstrate_skin_surface(scene: Scene, articulation: Actor) -> None:
 
     # Count how many skin surface nodes fall inside a local AABB covering the
     # lower arm (boundary_only uses the surface-node query registered above). The
-    # skin's local frame has the pivot at y=ROOT_HEIGHT, so the arms lie near
-    # that height along +X.
-    volume = sdp.Aabb(
-        min=[0.2, ROOT_HEIGHT - 0.05, -0.05], max=[0.55, ROOT_HEIGHT + 0.05, 0.05]
-    )
+    # skin's local frame is the articulated actor's frame, at the upper arm's rest
+    # frame, so the arms lie along +X with their centerline at y = z = w/2.
+    volume = sdp.Aabb(min=[0.2, -0.05, -0.05], max=[0.55, 0.05, 0.05])
     hits: list[int] = []
     articulation.query_nodes_in_volume_local(
         volume, True, lambda node, _pos: hits.append(node)

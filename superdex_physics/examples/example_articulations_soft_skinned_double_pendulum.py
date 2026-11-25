@@ -53,9 +53,11 @@ from superdex.physics.paths import resolve_asset
 np_real = np.float64 if sdp.uses_double_precision() else np.float32
 
 # --- Locked scene spec (mirrors the .mochi_scene prefab) ---------------------
-# Frame: +Y up. The pivot is anchored in the world by joint_0's
-# parent_link_from_joint (world_from_root is left at identity). The two arms lie
-# along local +X at rest and swing about Z revolute joints (in the X-Y plane).
+# Frame: +Y up. As in the prefab, world_from_root places the articulated actor's
+# frame at the upper arm's rest frame, and joint_0's parent_link_from_joint puts
+# the pivot at ROOT_HEIGHT on the arm's centerline. The nested soft mesh is
+# authored in the articulated actor's frame. The two arms lie along local +X at
+# rest and swing about Z revolute joints (in the X-Y plane).
 ROOT_HEIGHT = 0.5  # [m] pivot height; chosen so the fully-extended tip (rigid 0.375 + soft 0.10 = 0.475) stays just above ground.
 
 ARM_LENGTH = 0.25  # [m] length of top arm along +X (L)
@@ -64,6 +66,9 @@ SOFT_LENGTH = 0.10  # [m] slightly shorter than half to avoid ground contact
 ARM_WIDTH = 0.025  # [m] cross-section of each rigid arm (w)
 ARM_SCALE = [ARM_LENGTH, ARM_WIDTH, ARM_WIDTH]  # [m]
 SECOND_ARM_SCALE = [SECOND_ARM_LENGTH, ARM_WIDTH, ARM_WIDTH]  # [m]
+# The articulated actor's frame, at the upper arm's rest frame: half an arm width
+# below the pivot and behind it in Z.
+ROOT_POSITION = [0, ROOT_HEIGHT - ARM_WIDTH / 2, -ARM_WIDTH / 2]  # [m]
 
 # Soft tet mesh: authored as rod along +X from 0.375 to 0.475 with constrained nodes at X=0.375.
 SOFT_ASSET = "samples/articulations_parts/soft.mochi.json"
@@ -84,7 +89,9 @@ def _make_joints() -> list[sdp.ArticulatedJointParams]:
             name="joint_0",
             type=sdp.ArticulatedJointType.REVOLUTE,
             axis=[0, 0, -1],
-            parent_link_from_joint=sdp.TransformRT(translation=[0, ROOT_HEIGHT, 0]),
+            parent_link_from_joint=sdp.TransformRT(
+                translation=[0, ARM_WIDTH / 2, ARM_WIDTH / 2]
+            ),
         ),
         sdp.ArticulatedJointParams(
             name="joint_1",
@@ -155,6 +162,7 @@ def build_scene() -> tuple[Scene, Actor, Actor]:
     # Skeleton params (articulated part)
     skeleton_params = sdp.ArticulatedActorParams(name="SoftSkinnedDoublePendulum")
     skeleton_params.joints = _make_joints()
+    skeleton_params.world_from_root = sdp.TransformRT(translation=ROOT_POSITION)
     skeleton_params.links = _make_links(arm_shape, second_arm_shape)
 
     # Soft params (deformable part) - must have has_gravity=False, constrained via JSON + attach link.
