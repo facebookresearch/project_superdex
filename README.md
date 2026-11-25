@@ -74,11 +74,11 @@ Click to learn more about [SuperDex Lab](https://projectsuperdex.com/lab/).
 
 ---
 
-## SuperDex Teleop (early preview)
+## SuperDex Unreal
 
-SuperDex Teleop brings SuperDex Physics and SuperDex Robotics into Unreal Engine 5 for real-time virtual/physical teleoperation and data collection. It ships as the SuperDexUnreal project and its plugins. It is currently in early preview and will receive substantial improvements.
+SuperDex Unreal brings SuperDex Physics and SuperDex Robotics into Unreal Engine for interactive robotics, virtual/physical teleoperation, and data collection. It ships as the SuperDexUnreal project and its plugins. Import assets and build levels in the Unreal editor, or load Studio-authored robotics scenes into a reusable host application at runtime.
 
-Click to learn more about [SuperDex Teleop](https://projectsuperdex.com/teleop/).
+Click to learn more about [SuperDex Unreal](https://projectsuperdex.com/robotics/docs/latest/unreal/overview/).
 
 ![Ben Virtual Teleop](https://github.com/user-attachments/assets/08a742a1-b7e5-4f77-a69a-8e24a761048e)
 
@@ -230,7 +230,7 @@ Documentation, getting started guides, and examples are available for all module
 * [SuperDex Robotics](https://projectsuperdex.com/robotics/docs/overview/)
 * [SuperDex Studio](https://projectsuperdex.com/studio/docs/overview/)
 * [SuperDex Lab](https://projectsuperdex.com/lab/docs/overview/)
-* [SuperDex Teleop](https://projectsuperdex.com/teleop/docs/overview/)
+* [SuperDex Unreal](https://projectsuperdex.com/robotics/docs/latest/unreal/overview/)
 
 ---
 

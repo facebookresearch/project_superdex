@@ -13,6 +13,9 @@ Engine 5.5 and 5.8. This is a ready-to-open Unreal project that carries the Supe
 | [SuperDexExamples](Plugins/SuperDexExamples) | Content only: example levels |
 | [AndroidInput](Plugins/AdditionalPlugins/AndroidInput) | Gamepad and keyboard input on Android (Meta Quest), which the OpenXR integration otherwise blocks |
 
+For the capability guides, editor/runtime workflows, and tutorials, see
+[SuperDex Unreal documentation](https://projectsuperdex.com/robotics/docs/latest/unreal/overview/).
+
 ## Usage
 
 The plugins are source plugins. Before Unreal can compile them, build the native SuperDex
