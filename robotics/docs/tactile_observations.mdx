@@ -37,9 +37,10 @@ acquires contact itself and applies a fingertip model.
    distribution. `sampleRateHz: 0` captures every graph step; a positive rate
    follows its own drift-free schedule.
 2. **`SENSOR_LINK_VERTEX_FORCE`**: one force vector per surface vertex, `[N, 3]`,
-   in the sensor link frame, with vertex positions and normals in
-   `VertexListMeta`. Use it when contact location matters, and as the input to
-   the two transforms below. It takes the same `sampleRateHz` parameter.
+   in the sensor link frame, with vertex positions in `VertexListMeta`. This
+   source leaves the metadata's normals empty. Use it when contact location
+   matters, and as the input to the two transforms below. It takes the same
+   `sampleRateHz` parameter.
 3. **`SENSOR_AGGREGATE_FORCE`**: the sum `[3]` of one vertex-force input. It
    keeps the input's capture time and does not query physics, so it reports
    only what its input saw; use the link contact force for the link's net
