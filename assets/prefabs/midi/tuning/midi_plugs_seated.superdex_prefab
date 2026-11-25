@@ -1,0 +1,54 @@
+{
+  "_comment": "The keyboard on the ground with a 1/4 in plug (the cable's) seated in each of its jacks.",
+  "prefabs": [
+    {
+      "name": "",
+      "path": "./../midi.mochi_prefab"
+    },
+    {
+      "name": "plug_l",
+      "path": "./../../headphones/cable/cable_plug.superdex_prefab",
+      "translation": [
+        -0.132,
+        -0.29125,
+        0.057
+      ],
+      "rotation": [
+        -0.5,
+        0.5,
+        0.5,
+        0.5
+      ]
+    },
+    {
+      "name": "plug_r",
+      "path": "./../../headphones/cable/cable_plug.superdex_prefab",
+      "translation": [
+        -0.112,
+        -0.29125,
+        0.057
+      ],
+      "rotation": [
+        -0.5,
+        0.5,
+        0.5,
+        0.5
+      ]
+    },
+    {
+      "name": "plug_phones",
+      "path": "./../../headphones/cable/cable_plug.superdex_prefab",
+      "translation": [
+        -0.092,
+        -0.29125,
+        0.057
+      ],
+      "rotation": [
+        -0.5,
+        0.5,
+        0.5,
+        0.5
+      ]
+    }
+  ]
+}

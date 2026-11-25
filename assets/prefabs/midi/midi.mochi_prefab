@@ -1,5 +1,5 @@
 {
-  "_comment": "MIDI keyboard as one articulation: the housing on a free joint, every key and control on its own joint, and four rubber feet hard-jointed under the housing. The actor transform turns the CAD layout (players' side at -Y) so the keys face +X, centered on the origin. Return springs are constraints. Generated from the CAD layout and tuned with superdex_asset_tuner (see tuning/).",
+  "_comment": "MIDI keyboard as one articulation: the housing on a free joint, every key and control on its own joint, four rubber feet hard-jointed under the housing, and a jack plate in its left end with three 1/4 in jacks (L, R and PHONES: the cable's jack sockets, hard-jointed to the plate). The actor transform turns the CAD layout (players' side at -Y) so the keys face +X, centered on the origin. Return springs are constraints. Generated from the CAD layout and tuned with superdex_asset_tuner (see tuning/).",
   "actors": {
     "articulated": [
       {
@@ -1724,6 +1724,119 @@
                 0.0
               ]
             }
+          },
+          {
+            "name": "jack_plate_joint",
+            "type": "Hard",
+            "parentLinkFromJoint": {
+              "translation": [
+                -0.29125,
+                0.1895,
+                0.051
+              ]
+            }
+          },
+          {
+            "name": "jack_l_bore_joint",
+            "type": "Hard",
+            "parentLinkFromJoint": {
+              "translation": [
+                0.0,
+                0.02,
+                0.003
+              ],
+              "rotation": [
+                0.0,
+                0.7071067811865476,
+                0.0,
+                0.7071067811865476
+              ]
+            }
+          },
+          {
+            "name": "jack_l_detent_joint",
+            "type": "Hard",
+            "parentLinkFromJoint": {
+              "translation": [
+                0.0,
+                0.02,
+                0.003
+              ],
+              "rotation": [
+                0.0,
+                0.7071067811865476,
+                0.0,
+                0.7071067811865476
+              ]
+            }
+          },
+          {
+            "name": "jack_r_bore_joint",
+            "type": "Hard",
+            "parentLinkFromJoint": {
+              "translation": [
+                0.0,
+                0.0,
+                0.003
+              ],
+              "rotation": [
+                0.0,
+                0.7071067811865476,
+                0.0,
+                0.7071067811865476
+              ]
+            }
+          },
+          {
+            "name": "jack_r_detent_joint",
+            "type": "Hard",
+            "parentLinkFromJoint": {
+              "translation": [
+                0.0,
+                0.0,
+                0.003
+              ],
+              "rotation": [
+                0.0,
+                0.7071067811865476,
+                0.0,
+                0.7071067811865476
+              ]
+            }
+          },
+          {
+            "name": "jack_phones_bore_joint",
+            "type": "Hard",
+            "parentLinkFromJoint": {
+              "translation": [
+                0.0,
+                -0.02,
+                0.003
+              ],
+              "rotation": [
+                0.0,
+                0.7071067811865476,
+                0.0,
+                0.7071067811865476
+              ]
+            }
+          },
+          {
+            "name": "jack_phones_detent_joint",
+            "type": "Hard",
+            "parentLinkFromJoint": {
+              "translation": [
+                0.0,
+                -0.02,
+                0.003
+              ],
+              "rotation": [
+                0.0,
+                0.7071067811865476,
+                0.0,
+                0.7071067811865476
+              ]
+            }
           }
         ],
         "links": [
@@ -2643,6 +2756,123 @@
             },
             "renderModel": "./render/midi_foot.glb",
             "shape": "./collision/midi_foot.mochi.h5"
+          },
+          {
+            "name": "jack_plate",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 380,
+            "contact": {
+              "coulombFrictionCoefficient": 0.6,
+              "penaltyCoefficient": 5500000000.0
+            },
+            "renderModel": "./render/midi_jack_plate.glb",
+            "shape": "./collision/midi_jack_plate.mochi.h5"
+          },
+          {
+            "name": "jack_l_bore",
+            "parentLink": 55,
+            "colliderType": "Sdf",
+            "mass": 0.002,
+            "layer": "jack_socket",
+            "contact": {
+              "penaltyCoefficient": 5500000000.0,
+              "coulombFrictionCoefficient": 0.1,
+              "penaltyThresholdDefault": 5e-05,
+              "penaltySmoothingHalfDistance": 5e-05
+            },
+            "boundarySubsampling": {
+              "subsamplingDensity": 0.0
+            },
+            "renderModel": "./../headphones/cable/render/jack_socket_white.glb",
+            "shape": "./../headphones/cable/collision/jack_socket_bore.mochi.h5"
+          },
+          {
+            "name": "jack_l_detent",
+            "parentLink": 55,
+            "colliderType": "Sdf",
+            "mass": 0.001,
+            "layer": "jack_socket",
+            "contact": {
+              "penaltyCoefficient": 5500000000.0,
+              "coulombFrictionCoefficient": 0.02,
+              "penaltyThresholdDefault": 0.0003,
+              "penaltySmoothingHalfDistance": 0.0002
+            },
+            "boundarySubsampling": {
+              "subsamplingDensity": 0.0
+            },
+            "shape": "./../headphones/cable/collision/jack_socket_detent.mochi.h5"
+          },
+          {
+            "name": "jack_r_bore",
+            "parentLink": 55,
+            "colliderType": "Sdf",
+            "mass": 0.002,
+            "layer": "jack_socket",
+            "contact": {
+              "penaltyCoefficient": 5500000000.0,
+              "coulombFrictionCoefficient": 0.1,
+              "penaltyThresholdDefault": 5e-05,
+              "penaltySmoothingHalfDistance": 5e-05
+            },
+            "boundarySubsampling": {
+              "subsamplingDensity": 0.0
+            },
+            "renderModel": "./../headphones/cable/render/jack_socket_red.glb",
+            "shape": "./../headphones/cable/collision/jack_socket_bore.mochi.h5"
+          },
+          {
+            "name": "jack_r_detent",
+            "parentLink": 55,
+            "colliderType": "Sdf",
+            "mass": 0.001,
+            "layer": "jack_socket",
+            "contact": {
+              "penaltyCoefficient": 5500000000.0,
+              "coulombFrictionCoefficient": 0.02,
+              "penaltyThresholdDefault": 0.0003,
+              "penaltySmoothingHalfDistance": 0.0002
+            },
+            "boundarySubsampling": {
+              "subsamplingDensity": 0.0
+            },
+            "shape": "./../headphones/cable/collision/jack_socket_detent.mochi.h5"
+          },
+          {
+            "name": "jack_phones_bore",
+            "parentLink": 55,
+            "colliderType": "Sdf",
+            "mass": 0.002,
+            "layer": "jack_socket",
+            "contact": {
+              "penaltyCoefficient": 5500000000.0,
+              "coulombFrictionCoefficient": 0.1,
+              "penaltyThresholdDefault": 5e-05,
+              "penaltySmoothingHalfDistance": 5e-05
+            },
+            "boundarySubsampling": {
+              "subsamplingDensity": 0.0
+            },
+            "renderModel": "./../headphones/cable/render/jack_socket.glb",
+            "shape": "./../headphones/cable/collision/jack_socket_bore.mochi.h5"
+          },
+          {
+            "name": "jack_phones_detent",
+            "parentLink": 55,
+            "colliderType": "Sdf",
+            "mass": 0.001,
+            "layer": "jack_socket",
+            "contact": {
+              "penaltyCoefficient": 5500000000.0,
+              "coulombFrictionCoefficient": 0.02,
+              "penaltyThresholdDefault": 0.0003,
+              "penaltySmoothingHalfDistance": 0.0002
+            },
+            "boundarySubsampling": {
+              "subsamplingDensity": 0.0
+            },
+            "shape": "./../headphones/cable/collision/jack_socket_detent.mochi.h5"
           }
         ]
       }
@@ -3003,13 +3233,73 @@
     ]
   },
   "contactFilter": {
-    "_comment": "Keys and controls never touch each other (they only move along their joints), which saves contact work; hands and props still touch them. Mochi already disables contact between each control and the housing (adjacent links).",
+    "_comment": "Keys and controls never touch each other (they only move along their joints), which saves contact work; hands and props still touch them. Mochi already disables contact between each control and the housing (adjacent links). The jacks' sockets touch only a plug, never the housing; they have no contact points of their own (boundarySubsampling), so only a plug's points touch them, also where layer filters are dropped.",
     "layerContactSymmetric": [
       {
         "enable": false,
         "layers": [
           "midi_controls",
           "midi_controls"
+        ]
+      },
+      {
+        "enable": false,
+        "layers": [
+          "jack_socket",
+          "jack_socket"
+        ]
+      }
+    ],
+    "layerContactAsymmetric": [
+      {
+        "enable": false,
+        "layers": [
+          "jack_socket",
+          "audio_plug"
+        ]
+      }
+    ],
+    "actorContactSymmetric": [
+      {
+        "enable": false,
+        "actors": [
+          "midi/housing",
+          "midi/jack_l_bore"
+        ]
+      },
+      {
+        "enable": false,
+        "actors": [
+          "midi/housing",
+          "midi/jack_l_detent"
+        ]
+      },
+      {
+        "enable": false,
+        "actors": [
+          "midi/housing",
+          "midi/jack_r_bore"
+        ]
+      },
+      {
+        "enable": false,
+        "actors": [
+          "midi/housing",
+          "midi/jack_r_detent"
+        ]
+      },
+      {
+        "enable": false,
+        "actors": [
+          "midi/housing",
+          "midi/jack_phones_bore"
+        ]
+      },
+      {
+        "enable": false,
+        "actors": [
+          "midi/housing",
+          "midi/jack_phones_detent"
         ]
       }
     ]

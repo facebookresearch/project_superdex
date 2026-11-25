@@ -1,0 +1,24 @@
+{
+  "_comment": "The keyboard on the ground with a loose 1/4 in plug (the cable's) lined up 40 mm out of its L jack.",
+  "prefabs": [
+    {
+      "name": "",
+      "path": "./../midi.mochi_prefab"
+    },
+    {
+      "name": "plug",
+      "path": "./../../headphones/cable/cable_plug.superdex_prefab",
+      "translation": [
+        -0.132,
+        -0.33125,
+        0.057
+      ],
+      "rotation": [
+        -0.5,
+        0.5,
+        0.5,
+        0.5
+      ]
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "_comment": "The keyboard on the ground with the cable's plug A seated in its PHONES jack and the cable held straight out from it at the jack's height.",
+  "prefabs": [
+    {
+      "name": "",
+      "path": "./../midi.mochi_prefab"
+    },
+    {
+      "name": "cable",
+      "path": "./../../headphones/cable/cable.superdex_prefab",
+      "translation": [
+        -0.092,
+        -0.33325,
+        0.05065
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        -0.707107,
+        0.707107
+      ]
+    }
+  ]
+}

@@ -1,0 +1,61 @@
+{
+  "comment": "A plug seated in each jack, left alone for 2 s: the jacks hold them against gravity: each sags about 0.6 mm in its jack's play and stays there.",
+  "assetsRoot": "",
+  "prefab": "./midi_plugs_seated.superdex_prefab",
+  "prefabOverrides": [],
+  "loads": [],
+  "probes": [
+    {
+      "kind": "SolverStats",
+      "target": ""
+    },
+    {
+      "kind": "Performance",
+      "target": ""
+    },
+    {
+      "kind": "BodyPose",
+      "target": "plug_l/plug"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "plug_r/plug"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "plug_phones/plug"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "midi/housing"
+    }
+  ],
+  "stopConditions": [],
+  "run": {
+    "singleThreaded": true,
+    "dt": 0.002,
+    "duration": 2.0,
+    "groundPlane": true,
+    "record": {
+      "enabled": false,
+      "contactPoints": false,
+      "staticActors": false
+    }
+  },
+  "plots": [
+    {
+      "channels": [
+        "plug_l/plug.pos.z",
+        "plug_r/plug.pos.z",
+        "plug_phones/plug.pos.z"
+      ],
+      "height": 140
+    },
+    {
+      "channels": [
+        "perf.solveMs"
+      ],
+      "height": 120
+    }
+  ]
+}

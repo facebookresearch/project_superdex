@@ -1,0 +1,310 @@
+{
+  "comment": "Push the loose plug straight into the L jack at 15 mm/s, hold it, and pull it back out; then the R jack, then PHONES. The contact force along the jacks' axis on the plug (plug.contactForce.y) peaks at about -14 N going in, as the tip passes the detent, and about +21 N coming out, the same in every jack and as in the headphones' jack. The keyboard stays put on its rubber feet (it moves 0.3 mm).",
+  "assetsRoot": "",
+  "prefab": "./midi_plug.superdex_prefab",
+  "prefabOverrides": [],
+  "loads": [
+    {
+      "name": "hand",
+      "enabled": true,
+      "type": "PosePath",
+      "target": "plug/plug",
+      "frame": "World",
+      "pointLocal": [
+        0,
+        0,
+        0
+      ],
+      "waypoints": [
+        {
+          "time": 0.0,
+          "position": [
+            -0.132,
+            -0.33125,
+            0.057
+          ],
+          "rotation": [
+            -1.2092,
+            1.2092,
+            1.2092
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 0.2,
+          "position": [
+            -0.132,
+            -0.33125,
+            0.057
+          ],
+          "rotation": [
+            -1.2092,
+            1.2092,
+            1.2092
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 2.9,
+          "position": [
+            -0.132,
+            -0.29075,
+            0.057
+          ],
+          "rotation": [
+            -1.2092,
+            1.2092,
+            1.2092
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 3.4,
+          "position": [
+            -0.132,
+            -0.29075,
+            0.057
+          ],
+          "rotation": [
+            -1.2092,
+            1.2092,
+            1.2092
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 6.1,
+          "position": [
+            -0.132,
+            -0.33125,
+            0.057
+          ],
+          "rotation": [
+            -1.2092,
+            1.2092,
+            1.2092
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 6.6,
+          "position": [
+            -0.112,
+            -0.33125,
+            0.057
+          ],
+          "rotation": [
+            -1.2092,
+            1.2092,
+            1.2092
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 6.8,
+          "position": [
+            -0.112,
+            -0.33125,
+            0.057
+          ],
+          "rotation": [
+            -1.2092,
+            1.2092,
+            1.2092
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 9.5,
+          "position": [
+            -0.112,
+            -0.29075,
+            0.057
+          ],
+          "rotation": [
+            -1.2092,
+            1.2092,
+            1.2092
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 10.0,
+          "position": [
+            -0.112,
+            -0.29075,
+            0.057
+          ],
+          "rotation": [
+            -1.2092,
+            1.2092,
+            1.2092
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 12.7,
+          "position": [
+            -0.112,
+            -0.33125,
+            0.057
+          ],
+          "rotation": [
+            -1.2092,
+            1.2092,
+            1.2092
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 13.2,
+          "position": [
+            -0.092,
+            -0.33125,
+            0.057
+          ],
+          "rotation": [
+            -1.2092,
+            1.2092,
+            1.2092
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 13.4,
+          "position": [
+            -0.092,
+            -0.33125,
+            0.057
+          ],
+          "rotation": [
+            -1.2092,
+            1.2092,
+            1.2092
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 16.1,
+          "position": [
+            -0.092,
+            -0.29075,
+            0.057
+          ],
+          "rotation": [
+            -1.2092,
+            1.2092,
+            1.2092
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 16.6,
+          "position": [
+            -0.092,
+            -0.29075,
+            0.057
+          ],
+          "rotation": [
+            -1.2092,
+            1.2092,
+            1.2092
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 19.3,
+          "position": [
+            -0.092,
+            -0.33125,
+            0.057
+          ],
+          "rotation": [
+            -1.2092,
+            1.2092,
+            1.2092
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        }
+      ],
+      "drive": {
+        "responseHz": 80,
+        "dampingRatio": 1,
+        "maxAcceleration": 0,
+        "rotation": true,
+        "rotResponseHz": 80,
+        "rotDampingRatio": 1,
+        "maxAngularAcceleration": 0
+      }
+    }
+  ],
+  "probes": [
+    {
+      "kind": "SolverStats",
+      "target": ""
+    },
+    {
+      "kind": "Performance",
+      "target": ""
+    },
+    {
+      "kind": "BodyPose",
+      "target": "plug/plug"
+    },
+    {
+      "kind": "ContactForce",
+      "target": "plug/plug"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "midi/housing"
+    }
+  ],
+  "stopConditions": [],
+  "run": {
+    "singleThreaded": true,
+    "dt": 0.002,
+    "duration": 19.5,
+    "groundPlane": true,
+    "record": {
+      "enabled": false,
+      "contactPoints": false,
+      "staticActors": false
+    }
+  },
+  "plots": [
+    {
+      "channels": [
+        "plug/plug.pos.y"
+      ],
+      "height": 140
+    },
+    {
+      "channels": [
+        "plug/plug.contactForce.y"
+      ],
+      "height": 160
+    },
+    {
+      "channels": [
+        "perf.solveMs"
+      ],
+      "height": 120
+    }
+  ]
+}

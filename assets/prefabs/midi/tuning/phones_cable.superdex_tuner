@@ -1,0 +1,62 @@
+{
+  "comment": "The cable plugged into the PHONES jack, let go straight out from the keyboard: it falls to the ground and lies there, and plug A stays seated (cable/plug_a/plug.pos.y stays at the jack's mouth).",
+  "assetsRoot": "",
+  "prefab": "./midi_phones_cable.superdex_prefab",
+  "prefabOverrides": [],
+  "loads": [],
+  "probes": [
+    {
+      "kind": "SolverStats",
+      "target": ""
+    },
+    {
+      "kind": "Performance",
+      "target": ""
+    },
+    {
+      "kind": "BodyPose",
+      "target": "cable/plug_a/plug"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "cable/plug_b/plug"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "midi/housing"
+    }
+  ],
+  "stopConditions": [],
+  "run": {
+    "singleThreaded": true,
+    "dt": 0.002,
+    "duration": 3.0,
+    "groundPlane": true,
+    "record": {
+      "enabled": false,
+      "contactPoints": false,
+      "staticActors": false
+    }
+  },
+  "plots": [
+    {
+      "channels": [
+        "cable/plug_a/plug.pos.y",
+        "cable/plug_a/plug.pos.z"
+      ],
+      "height": 140
+    },
+    {
+      "channels": [
+        "cable/plug_b/plug.pos.z"
+      ],
+      "height": 120
+    },
+    {
+      "channels": [
+        "perf.solveMs"
+      ],
+      "height": 120
+    }
+  ]
+}
