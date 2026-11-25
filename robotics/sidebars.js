@@ -63,10 +63,37 @@ module.exports = {
     'getting_started',
     'bots',
     'modifying_bots',
+    'bot_skinning',
     'bot_context_lifetime',
     'bot_components',
     'bot_assets',
     'domain_randomization',
+    'inverse_kinematics',
+    'sensor_graphs',
+    'bot_scenes',
+    'bot_tasks',
+    {
+      type: 'category',
+      label: 'SuperDex Unreal',
+      link: {type: 'doc', id: 'unreal/overview'},
+      items: [
+        'unreal/getting_started',
+        'unreal/physics',
+        'unreal/teleoperation',
+        'unreal/recording',
+        'unreal/runtime_loading',
+        {
+          type: 'category',
+          label: 'Tutorials',
+          items: [
+            'unreal/tutorials/editor_scene',
+            'unreal/tutorials/roboperator',
+            'unreal/tutorials/runtime_scene',
+            'unreal/tutorials/quest',
+          ],
+        },
+      ],
+    },
     ...internalCategoryItems(),
   ],
   examplesSidebar: [
@@ -78,6 +105,7 @@ module.exports = {
         'examples/basic/loading_a_bot',
         'examples/basic/loading_a_scene',
         'examples/basic/loading_from_urdf',
+        'examples/basic/loading_from_mjcf',
       ],
     },
     {
@@ -89,6 +117,7 @@ module.exports = {
         'examples/control/ik_pose_control',
         'examples/control/osc_jsc_control',
         'examples/control/bimanual_control',
+        'examples/control/recording',
       ],
     },
     {

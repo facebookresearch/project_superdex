@@ -31,6 +31,7 @@ import { useRef } from "react";
 import { motion, useInView } from "framer-motion";
 import { ArrowRight, BookOpen } from "lucide-react";
 import { docHref } from "@/lib/docs";
+import docsRelease from "../../../docs_release.json";
 import { LAYERS } from "@/lib/layers";
 
 // The repo README (rendered on the GitHub project home page) is the canonical
@@ -164,6 +165,23 @@ export default function GetStarted() {
               </motion.a>
             );
           })}
+        </div>
+        <div className="editorial-card mt-6 p-5">
+          <h2 className="font-semibold mb-2">SuperDex Unreal</h2>
+          <p className="body-text mb-4" style={{ fontSize: "0.88rem" }}>
+            Build interactive robotics and teleoperation applications with the
+            SuperDexUnreal project and plugins. Import assets into the editor or
+            load native scenes at runtime; add tracked-hand retargeting and
+            episode recording to either workflow.
+          </p>
+          <a
+            href={`${docHref("robotics")}docs/${docsRelease.stable_version && import.meta.env.VITE_PUBLIC_BUILD === "1" ? "latest/" : ""}unreal/overview/`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="link-arrow no-underline"
+          >
+            Explore SuperDex Unreal <ArrowRight aria-hidden="true" size={12} />
+          </a>
         </div>
       </div>
     </section>
