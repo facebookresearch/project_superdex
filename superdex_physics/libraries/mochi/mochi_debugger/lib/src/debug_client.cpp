@@ -198,6 +198,7 @@ void DebugClient::ResetConnectionState() {
   _state.Mutate([&](auto& state) {
     // _isFullyConnected is modified while _state is locked to keep things in sync.
     _isFullyConnected = false;
+    ++state.connectionGeneration;
 
     state.scenes.clear();
     state.coordinateSpace = CoordinateSpace::Filament(); // Matches server's default
@@ -313,7 +314,7 @@ std::optional<protocol::CommandReply> DebugClient::ExecuteRemoteCommandAndWait(
   Error error;
   protocol::CommandRequest request;
   request.command = command;
-  request.workingDirectory = GetCommandPath();
+  request.workingDirectory = GetWorkingDirectory();
 
   double const timeout =
       _state.Read([](auto const& state) { return state.settings.commandTimeout; });
@@ -397,6 +398,7 @@ void DebugClient::OnWelcomeMessage(protocol::WelcomeMessage&& msg) {
   DynamicArray<protocol::SleepParamsRequest> sleepRequestsToSend;
   DynamicArray<protocol::SceneSettingsRequest> settingsRequestsToSend;
   bool const isFirstWelcome = _state.Mutate([&](auto& state) {
+    ++state.connectionGeneration;
     // The server sends exactly one WelcomeMessage per connection. It includes information about
     // current scenes, so the client can join in progress. After this point, scenes are tracked
     // individually via SceneAddRemove.
@@ -1137,18 +1139,20 @@ void DebugClient::OnLogMessage(protocol::LogMessage&& msg) {
 void DebugClient::InitCommands() {
   // Register each command that will be handled on this client. Others will be forwarded to the
   // server directly. numArgsAllowed == -1 means "any number".
-  auto addCommand = [this](std::string const& name, int numArgsAllowed, CommandFn fn) {
-    auto& cmd = _commands[name];
-    cmd.fn = std::move(fn);
-    cmd.numArgsAllowed = numArgsAllowed;
-  };
+  auto addCommand =
+      [this](std::string const& name, int numArgsAllowed, CommandFn fn, bool takesPath = false) {
+        auto& cmd = _commands[name];
+        cmd.fn = std::move(fn);
+        cmd.numArgsAllowed = numArgsAllowed;
+        cmd.takesPath = takesPath;
+      };
   addCommand("connect", -1, [this](auto tokens) { CmdConnect(tokens.subspan(1)); });
   addCommand("disconnect", 0, [this](auto /*tokens*/) { Disconnect(); });
   addCommand("echo", -1, [this](auto tokens) { Print(Join(tokens.subspan(1), " ")); });
   addCommand("help", -1, [this](auto /*tokens*/) { CmdHelp(); });
-  addCommand("cd", 1, [this](auto tokens) { CmdCd(tokens.subspan(1)); });
+  addCommand("cd", 1, [this](auto tokens) { CmdCd(tokens.subspan(1)); }, /*takesPath*/ true);
   addCommand("pwd", 0, [this](auto /*tokens*/) { CmdPwd(); });
-  addCommand("ls", -1, [this](auto tokens) { CmdLs(tokens.subspan(1)); });
+  addCommand("ls", -1, [this](auto tokens) { CmdLs(tokens.subspan(1)); }, /*takesPath*/ true);
   addCommand("ping", 0, [this](auto /*tokens*/) { CmdPing(); });
   addCommand("servers", 0, [this](auto /*tokens*/) { CmdServers(); });
   addCommand("quit", -1, [this](auto /*tokens*/) { CmdQuit(); });
@@ -1158,12 +1162,24 @@ bool DebugClient::WasExitRequested() const {
   return _state.Read(&State::exitRequested);
 }
 
-std::string DebugClient::GetCommandPath() const {
+std::string DebugClient::GetWorkingDirectory() const {
   return _state.Read(&State::cmdPath);
 }
 
+uint64_t DebugClient::GetConnectionGeneration() const {
+  return _state.Read(&State::connectionGeneration);
+}
+
+ConsoleCommandKind DebugClient::GetCommandKind(std::string_view word) const {
+  auto const it = _commands.find(std::string{word});
+  if (it == _commands.end()) {
+    return ConsoleCommandKind::Remote;
+  }
+  return it->second.takesPath ? ConsoleCommandKind::LocalWithPath : ConsoleCommandKind::Local;
+}
+
 std::string DebugClient::GetCommandPrompt() const {
-  return GetCommandPath();
+  return GetWorkingDirectory();
 }
 
 void DebugClient::SetConsoleLineWidth(size_t width) {
@@ -1171,7 +1187,7 @@ void DebugClient::SetConsoleLineWidth(size_t width) {
 }
 
 void DebugClient::CmdCd(Span<std::string const> args) {
-  std::string const cwd = GetCommandPath();
+  std::string const cwd = GetWorkingDirectory();
   std::string path;
   std::string error;
   size_t errorOffset = 0;
@@ -1191,7 +1207,7 @@ void DebugClient::CmdCd(Span<std::string const> args) {
 }
 
 void DebugClient::CmdPwd() {
-  Print(GetCommandPath());
+  Print(GetWorkingDirectory());
 }
 
 void DebugClient::CmdLs(Span<std::string const> args) {

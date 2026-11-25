@@ -21,6 +21,7 @@
 
 #include <cstddef>
 #include <string>
+#include <string_view>
 
 namespace mochi::dbg {
 
@@ -36,6 +37,10 @@ struct ConsoleFormatParams {
   bool _showTypes = false;
   bool _includeNamespaces = false;
 };
+
+/// @brief Format a type name or method signature as listings show it: ReflectionData suffixes
+/// are dropped, and a space follows each comma.
+[[nodiscard]] std::string FormatConsoleTypeName(std::string_view text);
 
 /// @brief Format @ref SReflect::ConsoleListEntry data as terminal rows.
 ///

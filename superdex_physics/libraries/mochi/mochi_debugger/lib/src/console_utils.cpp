@@ -118,6 +118,10 @@ std::string SimplifyTypeNames(std::string_view text) {
 
 } // namespace
 
+std::string FormatConsoleTypeName(std::string_view text) {
+  return Beautify(SimplifyTypeNames(text));
+}
+
 std::string FormatConsoleList(
     Span<SReflect::ConsoleListEntry const> entries,
     ConsoleFormatParams const& params) {
@@ -136,10 +140,10 @@ std::string FormatConsoleList(
   std::array<size_t, 2> widths{};
   size_t const numColumns = params._showTypes ? 3 : 2;
   for (auto const* entry : ordered) {
-    std::string const type = Beautify(SimplifyTypeNames(
+    std::string const type = FormatConsoleTypeName(
         params._includeNamespaces && !entry->_typeNameWithNamespace.empty()
             ? entry->_typeNameWithNamespace
-            : entry->_typeName));
+            : entry->_typeName);
     if (entry->_kind == SReflect::ConsoleEntryKind::Method) {
       std::array<std::string, 2> row{Truncate(entry->_name, params._maxNameColumnWidth), type};
       widths[0] = std::max(widths[0], CountCharacters(row[0]));

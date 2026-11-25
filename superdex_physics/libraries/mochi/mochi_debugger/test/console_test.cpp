@@ -23,6 +23,7 @@
 #include <mochi_core/utils/nd_array.h>
 #include <mochi_core/utils/reflection_error.h>
 #include <mochi_core/utils/string_utils.h>
+#include <mochi_debugger/lib/auto_completer.h>
 #include <mochi_physics/src/mochi_common_components.h>
 #include <mochi_physics/src/mochi_scene.h>
 
@@ -38,6 +39,7 @@
 #include <cstdint>
 #include <future>
 #include <initializer_list>
+#include <memory>
 #include <optional>
 #include <sstream>
 #include <stdexcept>
@@ -1012,4 +1014,38 @@ TEST_F(ActorConsoleTest, AutoCompleteConstraintsAndDebugDraw) {
   CheckCompletions(std::array{CompletionCase{"/scenes/A", "constraints/", {handle}}});
   EXPECT_FALSE(Complete("/scenes/A", "constraints/" + handle + "/").result._candidates.empty());
   EXPECT_FALSE(Complete("/scenes/A", "debugDraw/").result._candidates.empty());
+}
+
+class AutoCompleterConsoleTest : public ConsoleTest {
+ protected:
+  void RegisterClientHandlers() override {
+    _completer = std::make_unique<AutoCompleter>(AutoCompleter::MakeHost(*_client));
+    _client->Register<protocol::AutoCompleteReply>(
+        [this](protocol::AutoCompleteReply&& reply) { _completer->OnReply(std::move(reply)); });
+  }
+
+  std::unique_ptr<AutoCompleter> _completer;
+};
+
+TEST_F(AutoCompleterConsoleTest, AutoCompleterUsesTheClient) {
+  AutoCompleter& completer = *_completer;
+  auto const waitForPreview = [&](std::string_view preview) {
+    test::WaitUntil([&] {
+      UpdateDebuggers();
+      return completer.GetView().preview == preview;
+    });
+  };
+
+  // An in-process server can reply before the request's send returns.
+  completer.SetInput("chi", true);
+  waitForPreview("ld");
+  SetDirectory("/child");
+  completer.SetInput("va", true);
+  waitForPreview("lue");
+  completer.SetInput("ls /scenes/", true);
+  completer.SetInput("ls /scenes/A", true);
+  test::WaitUntil([&] {
+    UpdateDebuggers();
+    return completer.GetView().candidates == DynamicArray<std::string>{"A"};
+  });
 }

@@ -47,6 +47,13 @@ class MessageServer;
 
 namespace mochi::dbg {
 
+/// @brief How the console handles a command's first word (see @ref DebugClient::GetCommandKind).
+enum class ConsoleCommandKind {
+  Remote, ///< Not a local command, so the word is a path for the server
+  LocalWithPath, ///< A local command whose first argument is a directory path, such as `cd <path>`
+  Local, ///< Any other local command
+};
+
 /// @brief An entry in the client's cached scene list.
 struct SceneInfo {
   SceneHandle handle;
@@ -480,6 +487,18 @@ class DebugClient {
    */
   std::string GetCommandPrompt() const;
 
+  /** @brief Return the console's absolute working directory. */
+  std::string GetWorkingDirectory() const;
+
+  /**
+   * @brief Return a number that changes whenever this client connects or disconnects, so data from
+   * an earlier connection can be recognized.
+   */
+  uint64_t GetConnectionGeneration() const;
+
+  /** @brief Return how @ref QueueCommand handles a command whose first token is word. */
+  ConsoleCommandKind GetCommandKind(std::string_view word) const;
+
   /** @brief Set the console width in characters for property values. Zero means unlimited. */
   void SetConsoleLineWidth(size_t width);
 
@@ -506,6 +525,7 @@ class DebugClient {
   struct CommandInfo {
     CommandFn fn;
     int numArgsAllowed = 0; // Number of tokens after the command name. -1 means any number
+    bool takesPath = false; // The first argument is a directory path
   };
 
   struct MeshInfo {
@@ -517,6 +537,7 @@ class DebugClient {
 
   struct State {
     bool exitRequested = false;
+    uint64_t connectionGeneration = 0; // Incremented on every connect and disconnect
     StepMode stepMode = StepMode::Pause; // Current step mode (applies to all scenes)
     std::string cmdPath = "/"; // Canonical absolute console working directory
     size_t consoleLineWidth = 0;
@@ -543,7 +564,6 @@ class DebugClient {
   void OnStatusChange(net::SocketStatus status);
   void SetSceneSyncParams(SceneSyncParams const& params);
   void ResetConnectionState(); // Clear per-connection client state (e.g. cached scene list)
-  std::string GetCommandPath() const;
   void ProcessQueuedCommands();
   void ExecuteCommand(std::string_view str);
   std::optional<protocol::CommandReply> ExecuteRemoteCommandAndWait(std::string_view command);
