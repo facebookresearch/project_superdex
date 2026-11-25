@@ -61,11 +61,15 @@ static std::vector<real> CalcElementVolume(
 
 namespace impl {
 
+namespace {
+
 struct ElementInfo {
   size_t count = 0; // Number of touching elements
   size_t element = 0; // Index of a touching element
   size_t faceNum = 0; // the index of kTetFaceIndices
 };
+
+} // namespace
 
 static std::unordered_map<Int3, ElementInfo, Int3SortAndHash, Int3SortAndCompare>
 CreateFaceToElementMap(Span<Int4 const> connectivity) {
