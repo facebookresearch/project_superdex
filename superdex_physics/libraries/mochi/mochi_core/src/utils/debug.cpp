@@ -34,7 +34,7 @@ bool mochi::IsDebuggerAttached() {
     std::ifstream statusFile("/proc/self/status");
     std::string line;
     while (std::getline(statusFile, line)) {
-      if (line.find("TracerPid:") == 0) {
+      if (line.starts_with("TracerPid:")) {
         int tracerPid = std::stoi(line.substr(10));
         return tracerPid != 0;
       }
