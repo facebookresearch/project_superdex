@@ -36,8 +36,10 @@ simulation and teleop modules.
      ends (unless **Commit On End Play** is off, which discards the episode).
    - For explicit trials, disable **Start Automatically** and call
      **Start Recording**, then **Commit Recording** or **Abort Recording** from
-     Blueprint. **Prevent Automatic Start** can gate the default start while
-     the application prepares.
+     Blueprint. Check the boolean that **Start Recording** returns: when an
+     episode cannot start, it returns false and fires neither **On Recording
+     Started** nor **On Recording Aborted**. **Prevent Automatic Start** can
+     gate the default start while the application prepares.
 5. Use **On Recording Started/Committed/Aborted** to update the UI and confirm
    the episode's output path or failure.
 
@@ -112,9 +114,12 @@ is not a turnkey replay of the original teleoperation application.
 **Live scene export is editor-only**, including Play In Editor: it needs the
 bots' source files, whose paths are not retained for packaged runtime export.
 A packaged build can record with a supplied matching archive, or without one;
-it cannot create a live archive itself. **Require Scene Archive** refuses
-capture if no archive is available. Without an archive, the recording can still
-be inspected in Rerun, but cannot reconstruct its scene from an archive.
+it cannot create a live archive itself. Turn **Export Live Scene** off in a
+packaged build that should use **Scene Archive**: with it on, the recorder
+ignores **Scene Archive**, and a failed live export does not fall back to it.
+**Require Scene Archive** refuses capture if no archive is available. Without
+an archive, the recording can still be inspected in Rerun, but cannot
+reconstruct its scene from an archive.
 
 <Figure
   src={recorderRerunImage}
