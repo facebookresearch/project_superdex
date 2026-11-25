@@ -352,6 +352,8 @@ static protocol::DbgDrawFeatures ReconcileDebugDrawFeatures(
 }
 
 void DebugClient::InitProtocol() {
+  _socket.Register<protocol::AutoCompleteReply>();
+  _socket.Register<protocol::AutoCompleteRequest>();
   _socket.Register<protocol::CommandReply>();
   _socket.Register<protocol::CommandRequest>();
   _socket.Register<protocol::DebugDrawReply>(

@@ -17,8 +17,10 @@
 #pragma once
 
 #include <mochi_core/utils/dynamic_array.h>
+#include <mochi_core/utils/span.h>
 #include <mochi_physics/dbg/protocol.h>
 
+#include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -89,5 +91,22 @@ protocol::CommandReply ExecuteSceneCommand(
     SceneImpl& scene,
     ActorDebugNameSuffixes& nextSuffixes,
     protocol::CommandRequest const& request);
+
+// Complete the step or argument after the request's path inside the scene, which starts at
+// request.pathStart. Call on the scene's thread, under the same rules as ExecuteSceneCommand.
+protocol::AutoCompleteReply CompleteSceneCommand(
+    SceneImpl& scene,
+    ActorDebugNameSuffixes& nextSuffixes,
+    protocol::AutoCompleteRequest const& request);
+
+// Add the steps that select the entries of a built-in directory to a path step completion result
+// (see SReflect::detail::AddConsoleStepCandidates).
+// Constraint directory names are handles and need no debug-name escaping.
+void AddDirectoryCandidates(
+    SReflect::ConsoleAutoCompleteResult& result,
+    Span<SReflect::ConsoleListEntry const> entries,
+    std::string_view typed,
+    SReflect::ConsoleAutoCompleteParams const& params,
+    bool namesAreHandles = false);
 
 } // namespace mochi::dbg

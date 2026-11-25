@@ -537,6 +537,60 @@ struct CommandReply : net::ReplyMessage {
   MOCHI_STRUCT_END()
 };
 
+/// @brief [S<--C] Ask how the step or argument at the end of a console command can be completed
+/// (see SReflect::ConsoleAutoComplete). The server answers with an @ref AutoCompleteReply holding
+/// the candidates that start with the text already typed in that step or argument.
+///
+/// @note A request forwarded to a scene gets no reply if the scene's debugger is released before
+/// the scene handles it, for example when the scene is destroyed. Clients must not wait forever.
+///
+/// @note Not a @ref net::RequestMessage, because the client receives these replies in a callback,
+/// while it keeps replies to requests for @ref net::MessageClient::SendAndAwaitReply.
+struct AutoCompleteRequest : net::Message {
+  DynamicString command; ///< Console command typed so far
+  DynamicString workingDirectory = "/"; ///< Absolute working directory
+  /// Chosen by the client and echoed in the reply. Never read by the server.
+  uint64_t timestamp = 0;
+  /// The token that is the path, such as 1 for `cd <path>`. Only a path in token 0 takes arguments.
+  uint32_t pathTokenIndex = 0;
+  bool directoriesOnly = false; ///< Offer only path steps that `ls` can list
+
+  // Prepared by the server before dispatch to a scene. These fields are not serialized.
+  SReflect::detail::ConsoleCompletion completion; ///< With the path resolved and absolute
+  size_t pathStart = 0; ///< Where the part of the path inside the scene starts
+
+  MOCHI_STRUCT_BEGIN(mochi::dbg::protocol::AutoCompleteRequest)
+  MOCHI_BASE_CLASS(net::Message)
+  MOCHI_FIELD(command)
+  MOCHI_FIELD(workingDirectory)
+  MOCHI_FIELD(timestamp)
+  MOCHI_FIELD(pathTokenIndex)
+  MOCHI_FIELD(directoriesOnly)
+  MOCHI_STRUCT_END()
+};
+
+/// @brief [S-->C] Reply to @ref AutoCompleteRequest.
+struct AutoCompleteReply : net::Message {
+  DynamicString command; ///< Copy of @ref AutoCompleteRequest::command
+  DynamicString workingDirectory; ///< Copy of @ref AutoCompleteRequest::workingDirectory
+  uint64_t timestamp = 0; ///< Copy of @ref AutoCompleteRequest::timestamp
+  SReflect::ConsoleAutoCompleteResult result; ///< Empty when nothing completes
+
+  AutoCompleteReply() = default;
+  explicit AutoCompleteReply(AutoCompleteRequest const& request)
+      : command(request.command),
+        workingDirectory(request.workingDirectory),
+        timestamp(request.timestamp) {}
+
+  MOCHI_STRUCT_BEGIN(mochi::dbg::protocol::AutoCompleteReply)
+  MOCHI_BASE_CLASS(net::Message)
+  MOCHI_FIELD(command)
+  MOCHI_FIELD(workingDirectory)
+  MOCHI_FIELD(timestamp)
+  MOCHI_FIELD(result)
+  MOCHI_STRUCT_END()
+};
+
 /// @brief [S-->C] First message sent from the server to the client. The client does not consider
 /// themselves to be fully connected until this arrives.
 struct WelcomeMessage : net::Message {

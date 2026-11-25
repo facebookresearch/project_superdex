@@ -310,6 +310,9 @@ void SceneDebuggerImpl::Init(SceneImpl* scene) {
   MOCHI_ASSERT(_sceneHandle.IsValid(), "Invalid SceneHandle");
 
   // Register message handlers
+  _dispatcher.Register<protocol::AutoCompleteRequest>([this](auto* scene, auto&& msg) {
+    SendToClient(CompleteSceneCommand(*scene, _debugNameSuffixes, msg));
+  });
   _dispatcher.Register<protocol::CommandRequest>([this](auto* scene, auto&& msg) {
     SendToClient(ExecuteSceneCommand(*scene, _debugNameSuffixes, msg));
   });

@@ -457,3 +457,76 @@ protocol::CommandReply dbg::ExecuteSceneCommand(
   reply.error = error;
   return reply;
 }
+
+// Escape a scene or actor debug name that would be read as a handle number. SanitizeConsoleName
+// keeps debug names from starting with '@'.
+static std::string ConsoleDirectoryStep(std::string_view debugName) {
+  bool isNumber = true;
+  try {
+    isNumber = ParseConsoleHandle(debugName).has_value();
+  } catch (std::invalid_argument const&) {
+    // An out-of-range number still reads as a handle number.
+  }
+  return isNumber ? "@" + std::string{debugName} : std::string{debugName};
+}
+
+void dbg::AddDirectoryCandidates(
+    SReflect::ConsoleAutoCompleteResult& result,
+    Span<SReflect::ConsoleListEntry const> entries,
+    std::string_view typed,
+    SReflect::ConsoleAutoCompleteParams const& params,
+    bool namesAreHandles) {
+  std::vector<std::string> names;
+  for (auto const& entry : entries) {
+    names.push_back(namesAreHandles ? entry._name : ConsoleDirectoryStep(entry._name));
+  }
+  SReflect::detail::AddConsoleStepCandidates(result, names, typed, params);
+}
+
+protocol::AutoCompleteReply dbg::CompleteSceneCommand(
+    SceneImpl& scene,
+    ActorDebugNameSuffixes& nextSuffixes,
+    protocol::AutoCompleteRequest const& request) {
+  ContextImpl::ScopedShapeHandleRetention retainShapes(
+      assert_cast<ContextImpl*>(scene.GetContext()));
+  AssignDebugNames(scene, nextSuffixes);
+  protocol::AutoCompleteReply reply(request);
+  auto const& completion = request.completion;
+  std::string_view const path = completion.path;
+  std::string_view const typed = std::string_view{request.command}.substr(completion.offset);
+  bool const isStep = completion.target == SReflect::detail::ConsoleCompletionTarget::PathStep;
+  SReflect::ConsoleAutoCompleteParams params;
+  params._directoriesOnly = request.directoriesOnly;
+
+  SceneTarget const target = ResolveScenePath(scene, path, request.pathStart);
+  if (!target.error.empty()) {
+    return reply;
+  }
+  if (target.directory) {
+    // A built-in directory takes no argument, because it cannot be set.
+    if (isStep) {
+      AddDirectoryCandidates(
+          reply.result,
+          ListDirectory(scene, *target.directory),
+          typed,
+          params,
+          target.directory->isConstraints);
+    }
+    return reply;
+  }
+  std::string error;
+  if (SReflect::detail::ConsoleAutoComplete(
+          target.object,
+          *target.type,
+          completion,
+          typed,
+          params,
+          reply.result,
+          &error,
+          target.pathStart) &&
+      isStep) {
+    AddDirectoryCandidates(
+        reply.result, ListBuiltInDirectories(scene, target, path), typed, params);
+  }
+  return reply;
+}

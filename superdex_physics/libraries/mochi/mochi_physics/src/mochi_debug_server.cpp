@@ -119,7 +119,8 @@ class DebugServerImpl : public DebugServerInternal {
 
   // Forward a request to the scene with the given debug name and return true, leaving request
   // moved from. Return false and leave request untouched if there is no such scene.
-  bool ForwardToScene(std::string_view debugName, protocol::CommandRequest& request);
+  template <class RequestT>
+  bool ForwardToScene(std::string_view debugName, RequestT& request);
 
   // Call fn(object, typeInfo) with the object that console paths outside "scenes" start from. The
   // context is bound to this thread, and shapes made by console members stay registered, until fn
@@ -133,6 +134,7 @@ class DebugServerImpl : public DebugServerInternal {
       std::unique_ptr<protocol::SceneRequest>&& request,
       protocol::SceneReply&& reply);
   void OnConsoleRequest(net::ClientId client, protocol::CommandRequest request);
+  void OnAutoCompleteRequest(net::ClientId client, protocol::AutoCompleteRequest request);
 
   ContextImpl* const _context;
   net::MessageServer _server;
@@ -444,6 +446,10 @@ void DebugServerImpl::RegisterSceneRequest() {
 }
 
 void DebugServerImpl::RegisterProtocol() {
+  _server.Register<protocol::AutoCompleteReply>();
+  _server.Register<protocol::AutoCompleteRequest>([this](net::ClientId client, auto&& request) {
+    OnAutoCompleteRequest(client, std::forward<decltype(request)>(request));
+  });
   _server.Register<protocol::CommandReply>();
   _server.Register<protocol::CommandRequest>([this](net::ClientId client, auto&& request) {
     OnConsoleRequest(client, std::forward<decltype(request)>(request));
@@ -622,9 +628,63 @@ void DebugServerImpl::OnConsoleRequest(net::ClientId client, protocol::CommandRe
   _server.SendTo(client, reply);
 }
 
-bool DebugServerImpl::ForwardToScene(
-    std::string_view debugName,
-    protocol::CommandRequest& request) {
+void DebugServerImpl::OnAutoCompleteRequest(
+    net::ClientId client,
+    protocol::AutoCompleteRequest request) {
+  using SReflect::detail::ConsoleCompletionTarget;
+  protocol::AutoCompleteReply reply(request);
+  auto completion =
+      SReflect::detail::FindConsoleCompletion(request.command, request.pathTokenIndex);
+  std::string resolved;
+  std::string error;
+  size_t errorOffset = 0;
+  // Only a path in the first token takes arguments. A command such as `cd <path>` takes none.
+  if (!completion ||
+      (completion->target == ConsoleCompletionTarget::Argument && request.pathTokenIndex != 0) ||
+      !ResolveConsolePath(
+          request.workingDirectory, completion->path, resolved, error, errorOffset)) {
+    _server.SendTo(client, reply);
+    return;
+  }
+  completion->path = resolved;
+  bool const isStep = completion->target == ConsoleCompletionTarget::PathStep;
+  std::string_view const typed = std::string_view{request.command}.substr(completion->offset);
+  SReflect::ConsoleAutoCompleteParams params;
+  params._directoriesOnly = request.directoriesOnly;
+
+  auto const steps = SplitResolvedPath(resolved);
+  if (!steps.empty() && steps[0].name == "scenes") {
+    if (steps.size() >= 2) {
+      request.pathStart = ScenePathStart(steps, resolved);
+      request.completion = std::move(*completion);
+      if (ForwardToScene(steps[1].name, request)) {
+        return;
+      }
+    } else if (isStep) {
+      DynamicArray<SReflect::ConsoleListEntry> scenes;
+      _state.Read([&](auto const& state) { ListScenes(state, scenes); });
+      AddDirectoryCandidates(reply.result, scenes, typed, params);
+      // Scene names starting with '_' denote implementation details, such as IK scenes.
+      auto const& candidates = reply.result._candidates;
+      auto const it = std::ranges::find_if(
+          candidates, [](std::string const& name) { return !name.starts_with('_'); });
+      reply.result._defaultIndex =
+          it != candidates.end() ? static_cast<size_t>(it - candidates.begin()) : 0;
+    }
+  } else {
+    WithConsoleRoot([&](void* object, SReflect::TypeInfo const& typeInfo) {
+      bool const ok = SReflect::detail::ConsoleAutoComplete(
+          object, typeInfo, *completion, typed, params, reply.result, &error, 1);
+      if (ok && isStep && steps.empty()) {
+        SReflect::detail::AddConsoleStepCandidates(reply.result, {"scenes"}, typed, params);
+      }
+    });
+  }
+  _server.SendTo(client, reply);
+}
+
+template <class RequestT>
+bool DebugServerImpl::ForwardToScene(std::string_view debugName, RequestT& request) {
   std::optional<uint64_t> number;
   try {
     number = ParseConsoleHandle(debugName);
@@ -641,8 +701,7 @@ bool DebugServerImpl::ForwardToScene(
         if (!sceneInfo.debugger) { // In case it was released just before _state was locked.
           return false;
         }
-        sceneInfo.debugger->OnReceiveAsync(
-            std::make_unique<protocol::CommandRequest>(std::move(request)));
+        sceneInfo.debugger->OnReceiveAsync(std::make_unique<RequestT>(std::move(request)));
         return true;
       }
     }

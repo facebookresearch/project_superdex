@@ -38,6 +38,7 @@
 #include <cstdint>
 #include <future>
 #include <initializer_list>
+#include <optional>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -124,11 +125,22 @@ class ConsoleTest : public MochiDebuggerTest {
 
   void SetUp() override {
     MochiDebuggerTest::SetUp();
+    RegisterClientHandlers();
     _sceneA = _context->CreateScene("A");
     _sceneB = _context->CreateScene("1/2");
     InstallConsoleRoot();
     StartServer();
     ConnectClient();
+  }
+
+  virtual void RegisterClientHandlers() {
+    _client->Register<protocol::AutoCompleteReply>([this](protocol::AutoCompleteReply&& reply) {
+      _completion.Mutate([&](auto& state) {
+        if (reply.timestamp == state.timestamp) {
+          state.reply = std::move(reply);
+        }
+      });
+    });
   }
 
   virtual void InstallConsoleRoot() {
@@ -161,18 +173,75 @@ class ConsoleTest : public MochiDebuggerTest {
     }
     auto finished = std::async(std::launch::async, [&] { _client->WaitForQueuedCommands(); });
     test::WaitUntil([&] {
-      for (Scene* scene : {_sceneA, _sceneB}) {
-        if (scene) {
-          scene->UpdateDebugger();
-        }
-      }
-      for (Scene* scene : _extraScenes) {
-        scene->UpdateDebugger();
-      }
+      UpdateDebuggers();
       return finished.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
     });
     finished.get();
     return TakePrinted();
+  }
+
+  // Let each scene handle the requests the server forwarded to it.
+  void UpdateDebuggers() {
+    for (Scene* scene : {_sceneA, _sceneB}) {
+      if (scene) {
+        scene->UpdateDebugger();
+      }
+    }
+    for (Scene* scene : _extraScenes) {
+      scene->UpdateDebugger();
+    }
+  }
+
+  // Send an AutoCompleteRequest and wait for its reply.
+  protocol::AutoCompleteReply Complete(
+      std::string_view cwd,
+      std::string_view command,
+      uint32_t pathTokenIndex = 0,
+      bool directoriesOnly = false) {
+    protocol::AutoCompleteRequest request;
+    request.command = command;
+    request.workingDirectory = cwd;
+    request.timestamp = _completion.Mutate([](auto& state) {
+      state.reply.reset();
+      return ++state.timestamp;
+    });
+    request.pathTokenIndex = pathTokenIndex;
+    request.directoriesOnly = directoriesOnly;
+    EXPECT_TRUE(_client->Send(request));
+    if (!test::WaitUntil([&] {
+          UpdateDebuggers();
+          return _completion.Read([](auto const& state) { return state.reply.has_value(); });
+        })) {
+      return {};
+    }
+    return _completion.Mutate([](auto& state) { return std::move(*state.reply); });
+  }
+
+  struct CompletionCase {
+    std::string_view cwd;
+    std::string_view command;
+    Lines candidates;
+    size_t defaultIndex = 0;
+    std::string_view note = {};
+    uint32_t pathTokenIndex = 0;
+    bool directoriesOnly = false;
+  };
+
+  void CheckCompletions(Span<CompletionCase const> cases) {
+    for (auto const& c : cases) {
+      SCOPED_TRACE(std::string{c.cwd} + "> " + std::string{c.command});
+      auto const reply = Complete(c.cwd, c.command, c.pathTokenIndex, c.directoriesOnly);
+      EXPECT_EQ(
+          Lines(reply.result._candidates.begin(), reply.result._candidates.end()), c.candidates);
+      EXPECT_EQ(reply.result._defaultIndex, c.defaultIndex);
+      EXPECT_EQ(reply.result._note, c.note);
+    }
+  }
+
+  // Whether the step after path, run from cwd, can complete to name
+  bool CanComplete(std::string_view cwd, std::string_view path, std::string_view name) {
+    auto const candidates = Complete(cwd, path).result._candidates;
+    return std::ranges::find(candidates, name) != candidates.end();
   }
 
   void SetDirectory(std::string_view path) {
@@ -272,6 +341,11 @@ class ConsoleTest : public MochiDebuggerTest {
   Scene* _sceneA = nullptr;
   Scene* _sceneB = nullptr;
   std::atomic<bool> _received = false;
+  struct CompletionState {
+    uint64_t timestamp = 0;
+    std::optional<protocol::AutoCompleteReply> reply;
+  };
+  Guarded<CompletionState> _completion;
 };
 
 class ActorConsoleTest : public ConsoleTest {
@@ -848,4 +922,94 @@ TEST_F(ActorConsoleTest, DebugDrawAndConstraintDirectories) {
   CheckCases(cases);
   SetDirectory("/scenes/A/constraints/" + handle);
   SetDirectory("/scenes/A/debugDraw");
+}
+
+TEST_F(ConsoleTest, AutoComplete) {
+  Lines const root{"add", "child", "numbers", "positive", "reset", "scenes", "text", "value"};
+  Lines const scenes{"1_2", "A"};
+  CompletionCase const cases[] = {
+      // The step after the path, from the working directory, starting with what is typed
+      {"/", "", root},
+      {"/", "/sc", {"scenes"}},
+      {"/child", "", {"name", "value"}},
+      {"/child", "../", root},
+      {"/", "scenes/", scenes},
+      {"/scenes/A", "../", scenes},
+      // The arguments of values and methods
+      {"/", "value ", {"7"}, 0, "int32"},
+      {"/", "add ", {"0"}, 0, "int32 amount"},
+      {"/", "add 1 ", {}},
+      {"/", "scenes ", {}},
+      {"/", "missing/", {}},
+      {"/", "scenes/missing/", {}},
+      {"/", "scenes/missing/name ", {}},
+      {"/", "../", {}},
+      // A path after a command word, such as `cd <path>`, which takes no arguments
+      {"/", "cd ", {"child", "numbers", "scenes"}, 0, "", 1, true},
+      {"/", "cd n", {"numbers"}, 0, "", 1, true},
+      {"/", "cd child ", {}, 0, "", 1, true},
+      {"/", "cd", {}, 0, "", 1, true},
+  };
+  CheckCompletions(cases);
+
+  // A scene adds its built-in directories to its reflected members.
+  EXPECT_TRUE(CanComplete("/", "scenes/A/", "name"));
+  EXPECT_TRUE(CanComplete("/", "scenes/A/", "actors"));
+  EXPECT_TRUE(CanComplete("/scenes/A", "", "constraints"));
+
+  // The reply identifies its request.
+  auto const reply = Complete("/child", "va");
+  EXPECT_EQ(
+      Lines(reply.result._candidates.begin(), reply.result._candidates.end()), Lines{"value"});
+  EXPECT_EQ(reply.command, "va");
+  EXPECT_EQ(reply.workingDirectory, "/child");
+  EXPECT_EQ(reply.timestamp, _completion.Read([](auto const& state) { return state.timestamp; }));
+}
+
+TEST_F(ConsoleTest, AutoCompletePrefersScenesWithoutLeadingUnderscore) {
+  for (Scene** scene : {&_sceneA, &_sceneB}) {
+    _context->DestroyScene(*scene);
+    *scene = nullptr;
+  }
+  _extraScenes.push_back(_context->CreateScene("_ik"));
+  CheckCompletions(std::array{CompletionCase{"/", "scenes/", {"_ik"}, 0}});
+  _extraScenes.push_back(_context->CreateScene("main"));
+  CheckCompletions(std::array{CompletionCase{"/", "scenes/", {"_ik", "main"}, 1}});
+}
+
+TEST_F(ActorConsoleTest, AutoComplete) {
+  CompletionCase const cases[] = {
+      {"/scenes/A", "actors/", {"box", "robot"}},
+      {"/scenes/A", "actors/robot/children/", {"link0", "link1"}},
+      {"/scenes/A", "actors ", {}},
+      {"/scenes/A", "actors/missing/", {}},
+  };
+  CheckCompletions(cases);
+  EXPECT_TRUE(CanComplete("/scenes/A", "actors/robot/", "children"));
+  EXPECT_FALSE(CanComplete("/scenes/A", "actors/box/", "children"));
+
+  // One real property is a sentinel for argument completion routed to the scene thread.
+  auto const enabled = Complete("/scenes/A", "debugDraw/enabled ").result;
+  EXPECT_FALSE(enabled._candidates.empty());
+  EXPECT_FALSE(enabled._note.empty());
+
+  // A name that would read as a handle number is selected with '@'.
+  AddRigid(_sceneA, "123");
+  CheckCompletions(std::array{CompletionCase{"/scenes/A", "actors/", {"@123", "box", "robot"}}});
+
+  // Directories only, including the built-in ones
+  auto const candidates = Complete("/", "cd scenes/A/", 1, true).result._candidates;
+  EXPECT_NE(std::ranges::find(candidates, "actors"), candidates.end());
+  EXPECT_NE(std::ranges::find(candidates, "constraints"), candidates.end());
+  EXPECT_EQ(std::ranges::find(candidates, "name"), candidates.end());
+}
+
+TEST_F(ActorConsoleTest, AutoCompleteConstraintsAndDebugDraw) {
+  RigidPivotPositionConstraintParams params;
+  params.actor = _box;
+  auto* constraint = _sceneA->CreateRigidPivotPositionConstraint(params, test::ExpectOK{});
+  std::string const handle = std::to_string(constraint->GetHandle().value);
+  CheckCompletions(std::array{CompletionCase{"/scenes/A", "constraints/", {handle}}});
+  EXPECT_FALSE(Complete("/scenes/A", "constraints/" + handle + "/").result._candidates.empty());
+  EXPECT_FALSE(Complete("/scenes/A", "debugDraw/").result._candidates.empty());
 }
