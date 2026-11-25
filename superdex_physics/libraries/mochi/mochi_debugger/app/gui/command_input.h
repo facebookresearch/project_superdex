@@ -19,9 +19,13 @@
 #include <string>
 
 namespace mochi::dbg {
+class AutoCompleter;
 struct TerminalPanelState;
 
-// Draw the terminal's command line, with the prompt inside the box and history on Up and Down.
-// Returns true when the user submits the input with Enter.
-bool BuildCommandInput(TerminalPanelState& terminal, std::string const& prompt);
+// Draw the terminal's command line, with the prompt inside the box, history on Up and Down, and Tab
+// completion when completer is not null. Returns true when the user submits the input with Enter.
+bool BuildCommandInput(
+    TerminalPanelState& terminal,
+    AutoCompleter* completer,
+    std::string const& prompt);
 } // namespace mochi::dbg

@@ -21,6 +21,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <string>
 
 // Forward
@@ -46,8 +47,18 @@ struct TerminalPanelState {
   DynamicArray<std::string> history; // submitted commands, oldest first
   std::string stashed; // live line saved while browsing history
   int historyPos = 0; // browse cursor; == history.size() means the live line
-  bool refocus = false; // re-assert keyboard focus on the input next frame (after Enter)
+  bool refocus = false; // re-assert keyboard focus on the input next frame
   bool scrollToBottom = false;
+  // Tab completion
+  std::optional<std::string> pendingInput; // replaces the input when the box next runs its callback
+  std::string reportedInput; // the input and cursor last reported to the completer
+  int reportedCursor = -1;
+  bool isMenuOpen = false;
+  bool isMenuScrollNeeded = false; // scroll the selected candidate into view
+  double menuEmptyTime = -1.0; // when the open menu last ran out of candidates, or -1
+  DynamicArray<std::string> menuCandidates; // what the menu shows
+  size_t menuSelected = 0;
+  size_t menuOffset = 0; // byte offset in the input where the candidates start
   bool bringToForegroundOnErrorOrWarning = true;
 };
 

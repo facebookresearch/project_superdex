@@ -41,6 +41,7 @@
 #include <mochi_core/utils/quaternion.h>
 #include <mochi_core/utils/span.h>
 #include <mochi_core/utils/transform_rt.h>
+#include <mochi_debugger/lib/auto_completer.h>
 #include <mochi_debugger/lib/command_line.h>
 #include <mochi_debugger/lib/debug_client.h>
 #include <mochi_debugger/lib/single_instance.h>
@@ -55,6 +56,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <utility>
 
 #if MOCHI_PLATFORM_WINDOWS
 #ifndef WIN32_LEAN_AND_MEAN
@@ -92,7 +94,10 @@ class MochiDebuggerApp final : public ImGuios::Application {
     // Stop accepting launch arguments and release kSingletonPort (if bound).
     _singleInstanceHelper.reset();
 
-    // Disconnect and destroy the client
+    // Stop callbacks before releasing the objects they use.
+    _client->ShutDown();
+    _uiState.completer = nullptr;
+    _completer.reset();
     _client.reset();
 
     // Destroy the render scene before the renderer.
@@ -113,6 +118,7 @@ class MochiDebuggerApp final : public ImGuios::Application {
   CommandLine _commandLine;
   std::unique_ptr<SingleInstanceHelper> _singleInstanceHelper;
   std::unique_ptr<DebugClient> _client;
+  std::unique_ptr<AutoCompleter> _completer;
   std::unique_ptr<mochi_renderer::MochiRenderer> _mochiRenderer;
   RenderScenePtr _renderScene;
   UiState _uiState;
@@ -160,11 +166,16 @@ void MochiDebuggerApp::OnInitialize() {
 #endif
 
   _client = std::make_unique<DebugClient>();
+  _completer = std::make_unique<AutoCompleter>(AutoCompleter::MakeHost(*_client));
+  // The terminal reads the completer every frame, so a reply needs no other notification.
+  _client->Register<protocol::AutoCompleteReply>(
+      [this](protocol::AutoCompleteReply&& reply) { _completer->OnReply(std::move(reply)); });
   _renderScene = RenderScene::Create(_mochiRenderer.get());
 
   InitializeUi(_uiState);
   _uiState.viewport.renderScene = _renderScene.get();
   _uiState.client = _client.get();
+  _uiState.completer = _completer.get();
 
   // Init DebugClient settings
   {

@@ -38,6 +38,7 @@ namespace mochi::dbg {
 
 // Forwards
 class DebugClient;
+class AutoCompleter;
 struct UiState;
 
 // Panel names to help prevent typos
@@ -92,6 +93,7 @@ struct UiState : NoCopy {
   std::map<std::string, PanelState> panels;
   DynamicArray<UiCommand> uiCommands;
   DebugClient* client = nullptr; // Owned by the app
+  AutoCompleter* completer = nullptr; // Owned by the app. Completes terminal input.
 
   // Panel + dialog state
   ViewportPanelState viewport;

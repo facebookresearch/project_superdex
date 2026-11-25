@@ -132,7 +132,8 @@ void dbg::BuildTerminalPanel(UiState& state) {
 
   BuildLogOutput(state.logView, state.terminal, footerHeight, state.client);
 
-  bool const submit = BuildCommandInput(state.terminal, FormatPrompt(state.client));
+  bool const submit = BuildCommandInput(
+      state.terminal, state.client ? state.completer : nullptr, FormatPrompt(state.client));
   if (submit) {
     std::string const command = state.terminal.input;
     state.terminal.scrollToBottom = true;
