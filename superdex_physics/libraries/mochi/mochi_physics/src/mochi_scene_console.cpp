@@ -35,7 +35,10 @@
 #include <charconv>
 #include <initializer_list>
 #include <iterator>
+#include <optional>
 #include <stdexcept>
+#include <string>
+#include <string_view>
 #include <system_error>
 #include <unordered_map>
 #include <unordered_set>
@@ -231,18 +234,6 @@ static void ListActorEntries(
   std::ranges::sort(outEntries, {}, &SReflect::ConsoleListEntry::_name);
 }
 
-// A JSON object with an empty object for each actor entry, because actors are not serialized
-// recursively.
-static std::string FormatActorEntries(SceneImpl& scene, Actor const* parent) {
-  picojson::object actors;
-  ForEachActorEntry(scene, parent, [&](std::string_view name, Actor const*) {
-    actors.emplace(std::string{name}, picojson::object{});
-  });
-  std::string json = picojson::value{std::move(actors)}.serialize(/*prettify*/ true);
-  json.pop_back(); // Pretty JSON ends with a newline
-  return json;
-}
-
 static SReflect::ConsoleListEntry MakeDirectoryEntry(std::string_view name, size_t containerSize) {
   return {
       ._kind = SReflect::ConsoleEntryKind::Directory,
@@ -281,6 +272,130 @@ static Constraint* FindConstraintEntry(SceneImpl& scene, std::string_view refere
   return nullptr;
 }
 
+namespace {
+
+// A built-in directory: the scene's top-level actors, the nested actors of one actor, or the
+// scene's constraints.
+struct SceneDirectory {
+  bool isConstraints = false;
+  Actor const* parent = nullptr; // The actor whose nested actors are listed, or null
+  SReflect::detail::ConsolePathStep step; // The path step that names the directory
+};
+
+// Where a path inside a scene leads: to an error, a built-in directory, or a reflected object.
+struct SceneTarget {
+  std::string error;
+  size_t errorOffset = 0;
+  std::optional<SceneDirectory> directory;
+  void* object = nullptr;
+  SReflect::TypeInfo const* type = nullptr;
+  size_t pathStart = 0; // Where the rest of the path, inside object, starts
+  Actor const* actor = nullptr; // The actor that object is, if any
+};
+
+} // namespace
+
+// Follow the built-in directories at the start of the path, which starts at pathStart. The rest of
+// the path is left for SReflect. Call AssignDebugNames first.
+static SceneTarget ResolveScenePath(SceneImpl& scene, std::string_view path, size_t pathStart) {
+  SceneTarget target;
+  target.object = &scene;
+  target.type = &SReflect::GetTypeInfo<SceneImpl>();
+  target.pathStart = pathStart;
+  auto const fail = [&](std::string message, size_t offset) {
+    target.error = std::move(message);
+    target.errorOffset = offset;
+    return target;
+  };
+
+  // SReflect reports an invalid path.
+  std::vector<SReflect::detail::ConsolePathStep> steps;
+  if (!SReflect::detail::SplitConsolePath(path.substr(pathStart), steps)) {
+    steps.clear();
+  }
+  for (auto& step : steps) {
+    step.offset += pathStart;
+  }
+  auto const startAt = [&](size_t i) { return i < steps.size() ? steps[i].offset : path.size(); };
+
+  if (!steps.empty() && steps[0].name == kConstraintsStep) {
+    if (steps.size() == 1) {
+      target.directory = SceneDirectory{.isConstraints = true, .step = steps[0]};
+      return target;
+    }
+    ConstraintInterface* found = nullptr;
+    try {
+      if (auto* constraint = FindConstraintEntry(scene, steps[1].name)) {
+        found = assert_cast<ConstraintInterface*>(constraint);
+      }
+    } catch (std::invalid_argument const& e) {
+      return fail(e.what(), steps[1].offset);
+    }
+    if (found == nullptr) {
+      return fail(SReflect::ToJsonString(steps[1].name, false) + " not found", steps[1].offset);
+    }
+    target.object = dynamic_cast<void*>(found);
+    target.type = &found->GetFinalTypeInfo();
+    target.pathStart = startAt(2);
+  } else if (!steps.empty() && steps[0].name == kActorsStep) {
+    // Walk actors/<name>, then children/<name> in each actor that can own nested actors.
+    Actor* actor = nullptr;
+    size_t i = 0;
+    do {
+      if (i + 1 == steps.size()) {
+        target.directory = SceneDirectory{.parent = actor, .step = steps[i]};
+        return target;
+      }
+      actor = FindActorEntry(scene, actor, steps[i + 1].name);
+      if (actor == nullptr) {
+        return fail(
+            SReflect::ToJsonString(steps[i + 1].name, false) + " not found", steps[i + 1].offset);
+      }
+      i += 2;
+    } while (i < steps.size() && steps[i].name == kChildrenStep &&
+             actor::CanOwnNestedActors(actor->GetType()));
+    auto* const actorInterface = assert_cast<ActorInterface*>(actor);
+    target.object = dynamic_cast<void*>(actorInterface);
+    target.type = &actorInterface->GetFinalTypeInfo();
+    target.pathStart = startAt(i);
+    target.actor = actor;
+  } else if (!steps.empty() && steps[0].name == "debugDraw") {
+    auto* draw = assert_cast<DebugDrawInternal*>(&scene.GetDebugDraw());
+    target.object = dynamic_cast<void*>(draw);
+    target.type = &draw->GetFinalTypeInfo();
+    target.pathStart = startAt(1);
+  }
+  return target;
+}
+
+static DynamicArray<SReflect::ConsoleListEntry> ListDirectory(
+    SceneImpl& scene,
+    SceneDirectory const& directory) {
+  if (directory.isConstraints) {
+    return ListConstraintEntries(scene);
+  }
+  DynamicArray<SReflect::ConsoleListEntry> entries;
+  ListActorEntries(scene, directory.parent, entries);
+  return entries;
+}
+
+// The built-in directories inside the object that target reaches, when the path ends there.
+static DynamicArray<SReflect::ConsoleListEntry>
+ListBuiltInDirectories(SceneImpl& scene, SceneTarget const& target, std::string_view path) {
+  DynamicArray<SReflect::ConsoleListEntry> entries;
+  if (target.pathStart != path.size()) {
+    return entries;
+  }
+  if (target.object == &scene) {
+    entries.push_back(MakeDirectoryEntry(kActorsStep, CountActorEntries(scene, nullptr)));
+    entries.push_back(
+        MakeDirectoryEntry(kConstraintsStep, static_cast<size_t>(scene.GetNumConstraints())));
+  } else if (target.actor != nullptr && actor::CanOwnNestedActors(target.actor->GetType())) {
+    entries.push_back(MakeDirectoryEntry(kChildrenStep, CountActorEntries(scene, target.actor)));
+  }
+  return entries;
+}
+
 protocol::CommandReply dbg::ExecuteSceneCommand(
     SceneImpl& scene,
     ActorDebugNameSuffixes& nextSuffixes,
@@ -296,114 +411,47 @@ protocol::CommandReply dbg::ExecuteSceneCommand(
     reply.error = SReflect::detail::FormatConsoleError(message, path, args, 0, offset);
   };
 
-  void* object = &scene;
-  SReflect::TypeInfo const* type = &SReflect::GetTypeInfo<SceneImpl>();
-  size_t pathStart = request.pathStart;
-
-  // SReflect reports an invalid path below.
-  std::vector<SReflect::detail::ConsolePathStep> steps;
-  if (!SReflect::detail::SplitConsolePath(path.substr(pathStart), steps)) {
-    steps.clear();
+  SceneTarget const target = ResolveScenePath(scene, path, request.pathStart);
+  if (!target.error.empty()) {
+    setError(target.error, target.errorOffset);
+    return reply;
   }
-  for (auto& step : steps) {
-    step.offset += pathStart;
-  }
-
-  if (!steps.empty() && steps[0].name == kConstraintsStep) {
-    if (steps.size() == 1) {
-      auto entries = ListConstraintEntries(scene);
-      if (request.isList) {
-        reply.listing = std::move(entries);
-      } else if (!args.empty()) {
-        setError("Cannot set value because \"constraints\" is read-only", steps[0].offset);
-      } else {
-        picojson::object constraints;
-        for (auto const& entry : entries) {
-          constraints.emplace(entry._name, picojson::object{});
-        }
-        std::string json = picojson::value{std::move(constraints)}.serialize(/*prettify*/ true);
-        json.pop_back(); // Pretty JSON ends with a newline
-        reply.output = json;
+  if (target.directory) {
+    auto entries = ListDirectory(scene, *target.directory);
+    if (request.isList) {
+      reply.listing = std::move(entries);
+    } else if (!args.empty()) {
+      auto const& step = target.directory->step;
+      setError(
+          "Cannot set value because " + SReflect::ToJsonString(step.name, false) + " is read-only",
+          step.offset);
+    } else {
+      // An empty object for each entry, because entries are not serialized recursively
+      picojson::object names;
+      for (auto const& entry : entries) {
+        names.emplace(entry._name, picojson::object{});
       }
-      return reply;
+      std::string json = picojson::value{std::move(names)}.serialize(/*prettify*/ true);
+      json.pop_back(); // Pretty JSON ends with a newline
+      reply.output = json;
     }
-    ConstraintInterface* found = nullptr;
-    try {
-      if (auto* constraint = FindConstraintEntry(scene, steps[1].name)) {
-        found = assert_cast<ConstraintInterface*>(constraint);
-      }
-    } catch (std::invalid_argument const& e) {
-      setError(e.what(), steps[1].offset);
-      return reply;
-    }
-    if (found == nullptr) {
-      setError(SReflect::ToJsonString(steps[1].name, false) + " not found", steps[1].offset);
-      return reply;
-    }
-    object = dynamic_cast<void*>(found);
-    type = &found->GetFinalTypeInfo();
-    pathStart = steps.size() > 2 ? steps[2].offset : path.size();
-  }
-
-  Actor* actor = nullptr;
-  if (!steps.empty() && steps[0].name == kActorsStep) {
-    // Walk actors/<name>, then children/<name> in each actor that can own nested actors.
-    size_t i = 0;
-    do {
-      if (i + 1 == steps.size()) {
-        if (request.isList) {
-          reply.listing.emplace();
-          ListActorEntries(scene, actor, *reply.listing);
-        } else if (!args.empty()) {
-          setError(
-              "Cannot set value because " + SReflect::ToJsonString(steps[i].name, false) +
-                  " is read-only",
-              steps[i].offset);
-        } else {
-          reply.output = FormatActorEntries(scene, actor);
-        }
-        return reply;
-      }
-      actor = FindActorEntry(scene, actor, steps[i + 1].name);
-      if (actor == nullptr) {
-        setError(
-            SReflect::ToJsonString(steps[i + 1].name, false) + " not found", steps[i + 1].offset);
-        return reply;
-      }
-      i += 2;
-    } while (i < steps.size() && steps[i].name == kChildrenStep &&
-             actor::CanOwnNestedActors(actor->GetType()));
-    auto* const actorInterface = assert_cast<ActorInterface*>(actor);
-    object = dynamic_cast<void*>(actorInterface);
-    type = &actorInterface->GetFinalTypeInfo();
-    pathStart = i < steps.size() ? steps[i].offset : path.size();
-  } else if (!steps.empty() && steps[0].name == "debugDraw") {
-    auto* draw = assert_cast<DebugDrawInternal*>(&scene.GetDebugDraw());
-    object = dynamic_cast<void*>(draw);
-    type = &draw->GetFinalTypeInfo();
-    pathStart = steps.size() > 1 ? steps[1].offset : path.size();
+    return reply;
   }
 
   std::string error;
   if (request.isList) {
-    auto listing = SReflect::ConsoleList(object, *type, path, /*params*/ {}, &error, pathStart);
+    auto listing = SReflect::ConsoleList(
+        target.object, *target.type, path, /*params*/ {}, &error, target.pathStart);
     if (error.empty()) {
       reply.listing = std::move(listing);
-      if (pathStart == path.size()) {
-        if (object == &scene) {
-          reply.listing->push_back(
-              MakeDirectoryEntry(kActorsStep, CountActorEntries(scene, nullptr)));
-          reply.listing->push_back(
-              MakeDirectoryEntry(kConstraintsStep, static_cast<size_t>(scene.GetNumConstraints())));
-        } else if (actor != nullptr && actor::CanOwnNestedActors(actor->GetType())) {
-          reply.listing->push_back(
-              MakeDirectoryEntry(kChildrenStep, CountActorEntries(scene, actor)));
-        }
+      for (auto& entry : ListBuiltInDirectories(scene, target, path)) {
+        reply.listing->push_back(std::move(entry));
       }
     }
   } else {
     std::string output;
-    SReflect::detail::ConsoleExecute(object, *type, path, args, &output, &error, pathStart);
+    SReflect::detail::ConsoleExecute(
+        target.object, *target.type, path, args, &output, &error, target.pathStart);
     reply.output = output;
   }
   reply.error = error;

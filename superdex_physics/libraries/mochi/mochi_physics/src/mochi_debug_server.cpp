@@ -121,6 +121,12 @@ class DebugServerImpl : public DebugServerInternal {
   // moved from. Return false and leave request untouched if there is no such scene.
   bool ForwardToScene(std::string_view debugName, protocol::CommandRequest& request);
 
+  // Call fn(object, typeInfo) with the object that console paths outside "scenes" start from. The
+  // context is bound to this thread, and shapes made by console members stay registered, until fn
+  // returns.
+  template <class Fn>
+  void WithConsoleRoot(Fn const& fn);
+
   // Message Handlers:
   void OnSceneRequest(
       net::ClientId client,
@@ -486,6 +492,39 @@ void DebugServerImpl::OnSceneRequest(
   }
 }
 
+// Split a resolved absolute path into steps, with offsets into the whole path.
+static std::vector<SReflect::detail::ConsolePathStep> SplitResolvedPath(std::string_view resolved) {
+  std::vector<SReflect::detail::ConsolePathStep> steps;
+  [[maybe_unused]] bool const isValid =
+      SReflect::detail::SplitConsolePath(resolved.substr(1), steps);
+  MOCHI_ASSERT(isValid, "Resolved path must be valid");
+  for (auto& step : steps) {
+    ++step.offset;
+  }
+  return steps;
+}
+
+// Where the part of a resolved path inside scenes/<name> starts
+static size_t ScenePathStart(
+    Span<SReflect::detail::ConsolePathStep const> steps,
+    std::string_view resolved) {
+  return steps.size() > 2 ? steps[2].offset : resolved.size();
+}
+
+template <class Fn>
+void DebugServerImpl::WithConsoleRoot(Fn const& fn) {
+  ScopedSchedulerBinding schedulerBinding(_context->GetTaskScheduler());
+  ContextImpl::ScopedShapeHandleRetention retainShapes(_context);
+  auto const [object, typeInfo] = _state.Read([&](auto const& state) {
+    using Root = std::pair<void*, SReflect::TypeInfo const*>;
+    if (state.consoleRoot) {
+      return Root{state.consoleRoot, state.consoleRootType};
+    }
+    return Root{_context, &SReflect::GetTypeInfo<ContextImpl>()};
+  });
+  fn(object, *typeInfo);
+}
+
 void DebugServerImpl::OnConsoleRequest(net::ClientId client, protocol::CommandRequest request) {
   protocol::CommandReply reply(request);
   auto const fail = [&](std::string_view error) {
@@ -527,17 +566,11 @@ void DebugServerImpl::OnConsoleRequest(net::ClientId client, protocol::CommandRe
     request.args.assign(tokens.begin() + 1, tokens.end());
   }
 
-  std::vector<SReflect::detail::ConsolePathStep> steps;
-  [[maybe_unused]] bool const isValid =
-      SReflect::detail::SplitConsolePath(std::string_view{resolved}.substr(1), steps);
-  MOCHI_ASSERT(isValid, "Resolved path must be valid");
-  for (auto& step : steps) {
-    ++step.offset;
-  }
+  auto const steps = SplitResolvedPath(resolved);
   auto const args = DynamicArray<std::string>(request.args.begin(), request.args.end());
   if (!steps.empty() && steps[0].name == "scenes") {
     if (steps.size() >= 2) {
-      request.pathStart = steps.size() > 2 ? steps[2].offset : resolved.size();
+      request.pathStart = ScenePathStart(steps, resolved);
       if (ForwardToScene(steps[1].name, request)) {
         return;
       }
@@ -565,32 +598,25 @@ void DebugServerImpl::OnConsoleRequest(net::ClientId client, protocol::CommandRe
       reply.error = SReflect::detail::FormatConsoleError(error, resolved, args, 0, errorOffset);
     }
   } else {
-    ScopedSchedulerBinding schedulerBinding(_context->GetTaskScheduler());
-    ContextImpl::ScopedShapeHandleRetention retainShapes(_context);
-    auto const [object, typeInfo] = _state.Read([&](auto const& state) {
-      using Root = std::pair<void*, SReflect::TypeInfo const*>;
-      if (state.consoleRoot) {
-        return Root{state.consoleRoot, state.consoleRootType};
-      }
-      return Root{_context, &SReflect::GetTypeInfo<ContextImpl>()};
-    });
-    if (request.isList) {
-      auto listing = SReflect::ConsoleList(object, *typeInfo, resolved, /*params*/ {}, &error, 1);
-      if (error.empty()) {
-        if (steps.empty()) {
-          auto scenes = MakeDirectoryEntry("scenes");
-          scenes._coreType = SReflect::CoreType::CT_map;
-          scenes._containerSize =
-              _state.Read([](auto const& state) { return state.scenes.size(); });
-          listing.insert(listing.begin(), std::move(scenes));
+    WithConsoleRoot([&](void* object, SReflect::TypeInfo const& typeInfo) {
+      if (request.isList) {
+        auto listing = SReflect::ConsoleList(object, typeInfo, resolved, /*params*/ {}, &error, 1);
+        if (error.empty()) {
+          if (steps.empty()) {
+            auto scenes = MakeDirectoryEntry("scenes");
+            scenes._coreType = SReflect::CoreType::CT_map;
+            scenes._containerSize =
+                _state.Read([](auto const& state) { return state.scenes.size(); });
+            listing.insert(listing.begin(), std::move(scenes));
+          }
+          reply.listing = std::move(listing);
         }
-        reply.listing = std::move(listing);
+      } else {
+        std::string output;
+        SReflect::detail::ConsoleExecute(object, typeInfo, resolved, args, &output, &error, 1);
+        reply.output = output;
       }
-    } else {
-      std::string output;
-      SReflect::detail::ConsoleExecute(object, *typeInfo, resolved, args, &output, &error, 1);
-      reply.output = output;
-    }
+    });
     reply.error = error;
   }
   _server.SendTo(client, reply);
