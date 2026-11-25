@@ -43,3 +43,13 @@ TEST(TerminalText, KeepsTheCursorVisibleForUnicodePrompts) {
     }
   }
 }
+
+TEST(TerminalText, FitsSuggestions) {
+  EXPECT_EQ("enes (+1) # Kind", FitSuggestion("enes", "(+1) # Kind", 80));
+  EXPECT_EQ(" # Kind", FitSuggestion("", "# Kind", 7));
+  EXPECT_EQ("enes", FitSuggestion("enes", "(+1) # Kind", 15));
+  EXPECT_EQ("", FitSuggestion("", "# Kind", 6));
+  EXPECT_EQ("[0, ...", FitSuggestion("[0, -9.8, 0]", "# Real3", 7));
+  EXPECT_EQ("", FitSuggestion("[0, -9.8, 0]", "", 3));
+  EXPECT_EQ("\xE4\xB8\xAD...", FitSuggestion("\xE4\xB8\xAD\xE6\x96\x87\xE4\xB8\xAD", "", 5));
+}

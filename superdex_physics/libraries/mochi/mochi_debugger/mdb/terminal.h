@@ -22,6 +22,7 @@
 #include <mochi_core/utils/guarded.h>
 
 #include <cstddef>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
@@ -69,6 +70,31 @@ class Terminal final {
   /** @brief Return the terminal width in character cells, or zero when unavailable. */
   [[nodiscard]] size_t GetColumnCount() const;
 
+  /** @brief Receives the input line after every edit and cursor movement. */
+  using InputFn = std::function<void(std::string_view text, bool isCursorAtEnd)>;
+
+  /** @brief Receives Tab, or Shift+Tab when backward is true, and returns a new input line. */
+  using TabFn = std::function<std::optional<std::string>(bool backward)>;
+
+  /**
+   * @brief Set the functions that implement Tab completion. Call before @ref ReadLine.
+   *
+   * @details onInput also receives the line that onTab returns, and an empty line when
+   * @ref ReadLine starts. Both run on the thread that calls @ref ReadLine, without the terminal's
+   * lock, so they may call @ref SetSuggestion and @ref Print.
+   */
+  void SetCompletion(InputFn onInput, TabFn onTab);
+
+  /**
+   * @brief Show a completion in faint text after the input while the cursor is at its end.
+   *
+   * @param[in] text The input line the completion is for. It shows only while the input matches.
+   * @param[in] preview The text that Tab inserts.
+   * @param[in] annotation Information shown after the preview. It is dropped first when the line is
+   * too narrow for both.
+   */
+  void SetSuggestion(std::string_view text, std::string_view preview, std::string_view annotation);
+
   /**
    * @brief Block until the user submits a line (presses Enter).
    *
@@ -92,21 +118,29 @@ class Terminal final {
     std::string stashedInput; // live input saved while browsing history
     std::size_t stashedCursorPos{0};
     std::size_t historyPos{0}; // browse cursor; == history.size() means the live line
+    std::string suggestionText; // the input that suggestion and annotation are for
+    std::string suggestion; // completion preview shown after the input
+    std::string annotation; // shown after the suggestion
     bool rawModeEnabled{false}; // whether the terminal was switched into raw mode
   };
 
-  // Clears the current line and redraws the prompt followed by the input buffer.
+  // Clears the current line and redraws the prompt followed by the input buffer, and the
+  // suggestion while it matches the input and the cursor is at the end.
   // All helpers below assume the caller holds the state lock (i.e. run inside a Mutate/Read).
-  static void Redraw(State const& state);
+  void Redraw(State const& state) const;
 
   // Replaces the buffer with the previous (older) history entry, if any.
-  static void HistoryUp(State& state);
+  void HistoryUp(State& state) const;
 
   // Replaces the buffer with the next (newer) history entry, or the stashed live line.
-  static void HistoryDown(State& state);
+  void HistoryDown(State& state) const;
 
   struct InputReader;
   std::unique_ptr<InputReader> _input;
+  // Escape sequence that starts the faint style of suggestions
+  std::string_view const _suggestionStyle;
+  InputFn _onInput;
+  TabFn _onTab;
   Guarded<State> _state;
 };
 

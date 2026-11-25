@@ -147,4 +147,24 @@ TerminalTextView MakeTerminalTextView(std::string_view text, size_t cursor, size
   return {text.substr(start, end - start), remaining};
 }
 
+std::string FitSuggestion(std::string_view preview, std::string_view annotation, size_t cells) {
+  std::string text{preview};
+  if (!annotation.empty()) {
+    text += ' ';
+    text += annotation;
+  }
+  if (CountTerminalCells(text) <= cells) {
+    return text;
+  }
+  if (CountTerminalCells(preview) <= cells) {
+    return std::string{preview};
+  }
+  static constexpr std::string_view kEllipsis = "...";
+  if (cells <= kEllipsis.size()) {
+    return {};
+  }
+  return std::string{preview.substr(0, TerminalPrefixBytes(preview, cells - kEllipsis.size()))} +
+      std::string{kEllipsis};
+}
+
 } // namespace mochi::dbg

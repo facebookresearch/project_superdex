@@ -1276,6 +1276,9 @@ void DebugClient::CmdHelp() {
   <path> [args...]   Call the method at <path>.
   ping               Measure round-trip time to the server.
   echo <message>     Print message to the console.
+  Tab                Complete the path step or argument at the end of the line.
+                     Press again to cycle through the alternatives.
+  Shift+Tab          Cycle through the alternatives in reverse.
   disconnect         Disconnect from the current server.
   quit               Exit.
 )");

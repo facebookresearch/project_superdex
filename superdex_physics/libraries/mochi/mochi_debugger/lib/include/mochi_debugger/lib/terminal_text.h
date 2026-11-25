@@ -17,6 +17,7 @@
 #pragma once
 
 #include <cstddef>
+#include <string>
 #include <string_view>
 
 namespace mochi::dbg {
@@ -34,5 +35,9 @@ struct TerminalTextView {
 
 /// @brief Keep a byte-positioned cursor visible without splitting UTF-8 characters or wrapping.
 TerminalTextView MakeTerminalTextView(std::string_view text, size_t cursor, size_t columns);
+
+/// @brief Fit a completion preview and its annotation, separated by a space, into the given cells.
+/// The annotation is dropped first, then the preview is cut to end in "...".
+std::string FitSuggestion(std::string_view preview, std::string_view annotation, size_t cells);
 
 } // namespace mochi::dbg

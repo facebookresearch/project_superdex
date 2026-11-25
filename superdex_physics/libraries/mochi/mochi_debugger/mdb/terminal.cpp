@@ -19,7 +19,9 @@
 #include <mochi_core/mochi_platform.h>
 #include <mochi_debugger/lib/terminal_text.h>
 
+#include <algorithm>
 #include <cctype>
+#include <cstdint>
 #include <cstdio>
 #include <mutex>
 #include <utility>
@@ -59,6 +61,18 @@ static constexpr std::string_view kClearLine = "\r\x1b[K";
 
 // VT escape: reset all text attributes (including foreground color) back to the terminal default.
 static constexpr std::string_view kColorReset = "\x1b[0m";
+
+// Faint text, which follows the terminal's color scheme. The Windows console host does not support
+// it, so outside Windows Terminal (WT_SESSION) and VS Code (TERM_PROGRAM) Windows uses dark gray.
+static std::string_view GetSuggestionStyle() {
+#if MOCHI_PLATFORM_WINDOWS
+  if (GetEnvironmentVariableA("WT_SESSION", nullptr, 0) == 0 &&
+      GetEnvironmentVariableA("TERM_PROGRAM", nullptr, 0) == 0) {
+    return "\x1b[90m";
+  }
+#endif
+  return "\x1b[2m";
+}
 
 // Writes text to stdout without flushing. Callers flush once per logical operation (see Flush).
 static void WriteRaw(std::string_view text) {
@@ -215,6 +229,8 @@ enum class KeyType {
   WordRight,
   Home,
   End,
+  Tab, // complete the input
+  BackTab, // Shift+Tab: complete the input, cycling backward
   Printable, // text to insert (see Key::text)
   Ignored, // an unhandled key or control character
 };
@@ -245,6 +261,9 @@ Key Terminal::InputReader::ReadKey() {
   }
   if (c == 127 || c == 8) { // DEL / backspace
     return {KeyType::Backspace, 0};
+  }
+  if (c == '\t') {
+    return {KeyType::Tab, 0};
   }
   if (c == 1) { // Ctrl+A
     return {KeyType::Home, 0};
@@ -298,6 +317,8 @@ Key Terminal::InputReader::ReadKey() {
             return {KeyType::Home, 0};
           case 'F':
             return {KeyType::End, 0};
+          case 'Z':
+            return {KeyType::BackTab, 0};
           case '~':
             if (params == "1" || params == "7") {
               return {KeyType::Home, 0};
@@ -369,7 +390,8 @@ static size_t NextCharacter(std::string_view text, size_t cursor) {
   return cursor;
 }
 
-Terminal::Terminal() : _input(std::make_unique<InputReader>()) {
+Terminal::Terminal()
+    : _input(std::make_unique<InputReader>()), _suggestionStyle(GetSuggestionStyle()) {
   bool const enabled = _input->EnableRawMode();
   _state.Mutate([enabled](State& state) { state.rawModeEnabled = enabled; });
 }
@@ -382,19 +404,32 @@ Terminal::~Terminal() {
   }
 }
 
-void Terminal::Redraw(State const& state) {
+void Terminal::Redraw(State const& state) const {
   WriteRaw(kClearLine);
   std::string const text = state.prompt + "> " + state.buffer;
   size_t const cursor = state.prompt.size() + 2 + state.cursorPos;
-  auto const view = MakeTerminalTextView(text, cursor, GetTerminalColumnCount());
+  size_t const columns = GetTerminalColumnCount();
+  auto const view = MakeTerminalTextView(text, cursor, columns);
   WriteRaw(view.text);
-  size_t const end = CountTerminalCells(view.text);
+  size_t end = CountTerminalCells(view.text);
+  if (state.cursorPos == state.buffer.size() && state.suggestionText == state.buffer) {
+    // Like the input, the suggestion stops before the last column, so the line never wraps.
+    size_t const width = columns == 0 ? SIZE_MAX : std::max(size_t{1}, columns - 1);
+    std::string const suggestion =
+        FitSuggestion(state.suggestion, state.annotation, width > end ? width - end : 0);
+    if (!suggestion.empty()) {
+      WriteRaw(_suggestionStyle);
+      WriteRaw(suggestion);
+      WriteRaw(kColorReset);
+      end += CountTerminalCells(suggestion);
+    }
+  }
   if (view.cursorColumn < end) {
     WriteRaw("\x1b[" + std::to_string(end - view.cursorColumn) + "D");
   }
 }
 
-void Terminal::HistoryUp(State& state) {
+void Terminal::HistoryUp(State& state) const {
   if (state.history.empty() || state.historyPos == 0) {
     return; // no history, or already at the oldest entry
   }
@@ -408,7 +443,7 @@ void Terminal::HistoryUp(State& state) {
   Redraw(state);
 }
 
-void Terminal::HistoryDown(State& state) {
+void Terminal::HistoryDown(State& state) const {
   if (state.historyPos == state.history.size()) {
     return; // already on the live line
   }
@@ -448,17 +483,47 @@ void Terminal::SetPrompt(std::string_view prompt) {
   });
 }
 
+void Terminal::SetCompletion(InputFn onInput, TabFn onTab) {
+  _onInput = std::move(onInput);
+  _onTab = std::move(onTab);
+}
+
+void Terminal::SetSuggestion(
+    std::string_view text,
+    std::string_view preview,
+    std::string_view annotation) {
+  _state.Mutate([&](State& state) {
+    // A suggestion computed for an earlier input, for example by a reply racing a keystroke,
+    // changes nothing on screen.
+    if (text != state.buffer ||
+        (state.suggestionText == text && state.suggestion == preview &&
+         state.annotation == annotation)) {
+      return;
+    }
+    state.suggestionText = text;
+    state.suggestion = preview;
+    state.annotation = annotation;
+    Redraw(state);
+    Flush();
+  });
+}
+
 bool Terminal::ReadLine(std::string& line) {
   std::lock_guard<std::mutex> inputLock(_input->readMutex);
-  _state.Mutate([](State& state) {
+  _state.Mutate([&](State& state) {
     state.buffer.clear();
     state.cursorPos = 0;
     state.historyPos = state.history.size();
     state.stashedInput.clear();
     state.stashedCursorPos = 0;
+    state.suggestion.clear();
+    state.annotation.clear();
     Redraw(state);
     Flush();
   });
+  if (_onInput) {
+    _onInput("", true);
+  }
 
   while (true) {
     // The state lock is not held while reading, so async Print can run.
@@ -472,6 +537,9 @@ bool Terminal::ReadLine(std::string& line) {
     _state.Mutate([&](State& state) {
       switch (key.type) {
         case KeyType::Enter: {
+          // The submitted line keeps no suggestion.
+          state.suggestion.clear();
+          state.annotation.clear();
           WriteRaw(kClearLine);
           WriteRaw(state.prompt + "> " + state.buffer);
           WriteRaw("\r\n");
@@ -557,17 +625,35 @@ bool Terminal::ReadLine(std::string& line) {
           Redraw(state);
           break;
         }
+        case KeyType::Tab:
+        case KeyType::BackTab:
         case KeyType::Eof:
         case KeyType::Ignored:
           break;
       }
     });
-    Flush(); // make this keystroke's output visible
-
     if (didSubmit) {
+      Flush();
       line = std::move(submitted);
       return true;
     }
+    if (key.type == KeyType::Tab || key.type == KeyType::BackTab) {
+      if (auto const text = _onTab ? _onTab(key.type == KeyType::BackTab) : std::nullopt) {
+        _state.Mutate([&](State& state) {
+          state.buffer = *text;
+          state.cursorPos = state.buffer.size();
+          Redraw(state);
+        });
+      }
+    }
+    if (_onInput && key.type != KeyType::Ignored) {
+      auto const [text, isCursorAtEnd] = _state.Read([](State const& state) {
+        return std::pair{state.buffer, state.cursorPos == state.buffer.size()};
+      });
+      _onInput(text, isCursorAtEnd);
+    }
+    // One flush shows the keystroke with its suggestion, so the faint text does not flicker.
+    Flush();
   }
 }
 
