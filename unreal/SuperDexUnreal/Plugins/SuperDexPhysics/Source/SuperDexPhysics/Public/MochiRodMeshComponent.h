@@ -90,13 +90,10 @@ class SUPERDEXPHYSICS_API UMochiRodMeshComponent : public UMochiDeformableMeshCo
  protected:
   virtual void OnRegister() override;
 
- private:
-  /**
-   * Rebuild the editor preview's dynamic mesh from Model. Skipped on archetypes/CDOs to avoid
-   * creating a private UBodySetup on the Blueprint CDO.
-   */
-  void RebuildPreviewMesh();
+  /** Skipped on archetypes/CDOs to avoid creating a private UBodySetup on the Blueprint CDO. */
+  virtual void RebuildPreviewMesh() override;
 
+ private:
   /**
    * Mark any UBodySetup on this component RF_Public so it serializes legally
    * when attached to a Blueprint CDO. See body for the failure mode.

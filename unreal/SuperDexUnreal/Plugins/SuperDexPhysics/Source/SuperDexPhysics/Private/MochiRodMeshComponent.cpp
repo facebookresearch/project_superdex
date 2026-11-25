@@ -24,20 +24,9 @@
 #include <mochi_core/utils/profile.h>
 
 void UMochiRodMeshComponent::RebuildPreviewMesh() {
-  MOCHI_PROFILE_SCOPE();
-  if (IsTemplate()) {
-    return;
+  if (!IsTemplate()) {
+    Super::RebuildPreviewMesh();
   }
-  EditMesh([this](UE::Geometry::FDynamicMesh3& Mesh) {
-    Mesh.Clear();
-    PopulateMeshFromMochiModel(
-        &Mesh,
-        Model,
-        FTransform::Identity,
-        false /* use visual mesh if present */,
-        true /* use contact skin if present */);
-    ComputeOrDiscardVertexNormals(Mesh, bUseMochiNodeNormals);
-  });
 }
 
 void UMochiRodMeshComponent::CreateMochiActor() {

@@ -86,32 +86,10 @@ UMochiShellMeshComponent::UMochiShellMeshComponent(const FObjectInitializer& Obj
   }
 }
 
-static void PopulateFromMochiMesh_ShellInternal(
-    FDynamicMesh3& Mesh,
-    UMochiModel* Model,
-    bool bUseMochiNodeNormals) {
-  MOCHI_PROFILE_SCOPE();
-  Mesh.Clear();
-
-  if (Model) {
-    PopulateMeshFromMochiModel(
-        &Mesh,
-        Model,
-        FTransform::Identity,
-        true /* use visual mesh if present */,
-        true /* use contact skin if present */);
-  }
-
-  ComputeOrDiscardVertexNormals(Mesh, bUseMochiNodeNormals);
-}
-
 void UMochiShellMeshComponent::OnRegister() {
   MOCHI_PROFILE_SCOPE();
   SetEnableFlatShading(!bUseMochiNodeNormals);
-  // Populate the underlying UDynamicMesh from the Model data
-  EditMesh([this](UE::Geometry::FDynamicMesh3& Mesh) {
-    PopulateFromMochiMesh_ShellInternal(Mesh, Model, bUseMochiNodeNormals);
-  });
+  RebuildPreviewMesh();
   ValidateMaterialSlots();
   Super::OnRegister();
 }
@@ -122,9 +100,7 @@ void UMochiShellMeshComponent::PostEditChangeProperty(FPropertyChangedEvent& Pro
   const FName PropName = PropertyChangedEvent.GetPropertyName();
   if (PropName == GET_MEMBER_NAME_CHECKED(UMochiShellMeshComponent, Model)) {
     UE_LOG(LogMochiPhysics, Display, TEXT("[%hs] %s changed"), __FUNCTION__, *PropName.ToString());
-    EditMesh([this](UE::Geometry::FDynamicMesh3& Mesh) {
-      PopulateFromMochiMesh_ShellInternal(Mesh, Model, bUseMochiNodeNormals);
-    });
+    RebuildPreviewMesh();
     ValidateMaterialSlots();
   }
   Super::PostEditChangeProperty(PropertyChangedEvent);

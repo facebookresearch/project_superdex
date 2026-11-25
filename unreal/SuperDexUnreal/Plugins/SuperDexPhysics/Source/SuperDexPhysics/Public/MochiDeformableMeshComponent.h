@@ -24,7 +24,7 @@
 #include "MochiDeformableMeshComponent.generated.h"
 
 /**
- * Abstract base for Mochi deformable mesh components (shell, soft).
+ * Abstract base for Mochi deformable mesh components.
  * Owns shared UPROPERTYs, lifecycle, and the per-step query pump. Subclasses
  * implement @ref CreateMochiActor and may override @ref OnQueryDataApplied.
  */
@@ -73,6 +73,17 @@ class SUPERDEXPHYSICS_API UMochiDeformableMeshComponent : public UDynamicMeshCom
       Category = "SuperDex Physics",
       meta = (EditCondition = "bEnableContacts", DisplayName = "Filter Self-Contacts From Events"))
   bool bFilterSelfContacts = true;
+
+  /**
+   * TEXCOORD_0 and COLOR_0 (linear RGBA) of the prefab render model, one per visual-mesh node, set
+   * by the prefab importer when the render model is the visual mesh. Either may be empty. They are
+   * drawn only on the visual mesh with bUseMochiNodeNormals set, since flat shading is not
+   * supported. Not shown in the Details panel, which would build a property node per element.
+   */
+  UPROPERTY()
+  TArray<FVector2f> RenderModelUVs;
+  UPROPERTY()
+  TArray<FLinearColor> RenderModelColors;
 
   /**
    * Emitted when this component begins contact with another Mochi component.
@@ -148,8 +159,18 @@ class SUPERDEXPHYSICS_API UMochiDeformableMeshComponent : public UDynamicMeshCom
   virtual void SetMaterial(int32 ElementIndex, UMaterialInterface* Material) override;
 
  protected:
-  void SetHasRenderModelAttributes(bool bHasAttributes) {
-    bHasRenderModelAttributes = bHasAttributes;
+  /** Rebuild the dynamic mesh via @ref PopulateMesh. Overrides may skip this, e.g. on templates. */
+  virtual void RebuildPreviewMesh();
+
+  /**
+   * Clear Mesh and populate it from the existing actor when set, otherwise from Model.
+   * Set normals and matching render-model attributes only when the populated mesh is non-empty.
+   *
+   * @param Mesh Dynamic mesh to populate.
+   */
+  void PopulateMesh(UE::Geometry::FDynamicMesh3& Mesh);
+  bool HasExistingMochiActor() const {
+    return MochiExistingActor.IsValid();
   }
 
   /**
@@ -161,8 +182,18 @@ class SUPERDEXPHYSICS_API UMochiDeformableMeshComponent : public UDynamicMeshCom
  protected:
   UPROPERTY()
   UMochiActorObject* MochiActorObject = nullptr;
+  /**
+   * Set when wrapping an existing Mochi actor, e.g. a skinned hand; takes precedence over Model.
+   */
+  mochi::ActorHandle MochiExistingActor;
   FMochiContactEventHandler ContactEventHandler;
 
   /** Set only when the current dynamic mesh was given per-vertex render-model overlays. */
   bool bHasRenderModelAttributes = false;
+
+ private:
+  EMochiRenderMeshSource PopulateMeshFromExistingMochiActor(
+      UE::Geometry::FDynamicMesh3& Mesh) const;
+  bool AddRenderModelAttributes(UE::Geometry::FDynamicMesh3& Mesh, EMochiRenderMeshSource Source)
+      const;
 };

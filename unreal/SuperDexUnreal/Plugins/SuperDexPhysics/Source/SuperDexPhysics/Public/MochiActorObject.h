@@ -30,6 +30,7 @@
 
 class UMochiShellMaterialParams;
 class UMochiRodMaterialParams;
+enum class EMochiRenderMeshSource : uint8;
 
 /** General purpose query data for use with UMochiActorObject::TryGetQueryData. */
 struct FMochiActorQueryData {
@@ -525,7 +526,6 @@ class SUPERDEXPHYSICS_API UMochiActorObject : public UObject {
       bool bQueryElasticEnergy,
       const UMochiMaterialParams* MaterialParams,
       UMochiSceneObject* Scene,
-      bool bUseVisualMeshIfPresent = true,
       bool bUseContactSkinIfPresent = false);
 
   void ExtractQueryData_Internal(const mochi::Actor* Actor, mochi::Scene* Scene);
@@ -550,8 +550,9 @@ class SUPERDEXPHYSICS_API UMochiActorObject : public UObject {
   bool bQueryNodeNormals = false;
   bool bQueryElasticEnergy = false;
   bool bQueryContactPoints = false;
-  bool bUseVisualMeshIfPresent = true;
-  bool bUseContactSkinIfPresent = false;
+
+  /** The mesh whose node positions and normals are queried, chosen once at creation. */
+  EMochiRenderMeshSource RenderMeshSource{};
   mochi::CallbackHandle ExtractQueryDataCallbackHandle = {};
 
   /** Cached copy of material parameters to avoid having to query the Mochi actor */

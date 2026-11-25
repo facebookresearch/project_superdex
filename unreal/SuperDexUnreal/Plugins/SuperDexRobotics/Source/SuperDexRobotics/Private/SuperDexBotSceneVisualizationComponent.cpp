@@ -770,11 +770,16 @@ UMeshComponent* USuperDexBotSceneVisualizationComponent::CreateShapeMeshComponen
       PopulateMeshFromMochiShape(
           &Tmp,
           RefShape,
-          /*bUseVisualMeshIfPresent=*/true,
-          /*bUseContactSkinIfPresent=*/false);
+          /*bUseContactSkinIfPresent=*/false,
+          /*bPosedByNodeQueries=*/false);
       if (Tmp.VertexCount() == 0) {
         Tmp.Clear();
-        PopulateMeshFromMochiActor(&Tmp, mochi::ActorHandle(HandleKey), SceneObject, true);
+        PopulateMeshFromMochiActor(
+            &Tmp,
+            mochi::ActorHandle(HandleKey),
+            SceneObject,
+            /*bUseContactSkinIfPresent=*/false,
+            /*bPosedByNodeQueries=*/false);
       }
       // Copy into the shared mesh we cache (keeps geometry even if Tmp goes out of scope)
       NewMesh->Copy(Tmp);

@@ -47,23 +47,44 @@ bool FMochiSkinlessRodTest::RunTest(const FString& Parameters) {
       EAutomationExpectedErrorFlags::Contains,
       2);
   const mochi::Real3 Nodes[] = {{0.f, 0.f, 0.f}, {1.f, 0.f, 0.f}, {2.f, 0.f, 0.f}};
-  for (bool bHasSkin : {false, true}) {
+  enum class ERodMesh { None, ContactSkin, Visual, Both };
+  for (ERodMesh Source :
+       {ERodMesh::None, ERodMesh::ContactSkin, ERodMesh::Visual, ERodMesh::Both}) {
+    const bool bHasMesh = Source != ERodMesh::None;
+    const bool bHasVisual = Source == ERodMesh::Visual || Source == ERodMesh::Both;
     mochi::Error Error;
     mochi::ModelData Model = mochi::experimental::GenerateTubularRodModelData(
         mochi::Span<mochi::Real3 const>(Nodes, 3), {}, mochi::real(0.01), 8, false, Error);
-    if (!bHasSkin) {
+    if (bHasVisual) {
+      // Distinct tessellation makes visual/contact precedence observable in the drawn/query counts.
+      const mochi::ModelData VisualModel = mochi::experimental::GenerateTubularRodModelData(
+          mochi::Span<mochi::Real3 const>(Nodes, 3), {}, mochi::real(0.02), 6, false, Error);
+      Model.visualMesh = VisualModel.contactSkinMesh;
+    }
+    if (Source == ERodMesh::None || Source == ERodMesh::Visual) {
       Model.contactSkinMesh.reset();
     }
+    const EMochiRenderMeshSource ExpectedSource = bHasVisual ? EMochiRenderMeshSource::Visual
+        : bHasMesh                                           ? EMochiRenderMeshSource::ContactSkin
+                                                             : EMochiRenderMeshSource::Surface;
+    const int32 ExpectedNodeCount = bHasVisual ? Model.visualMesh->GetNumNodes()
+        : bHasMesh                             ? Model.contactSkinMesh->GetNumNodes()
+                                               : 0;
     const mochi::ShapeHandle Shape = Context->CreateModelShape(Model, Error);
     if (!TestTrue(TEXT("Rod shape created"), Error.IsOK() && Shape.IsValid())) {
       return false;
     }
 
     UE::Geometry::FDynamicMesh3 Mesh;
-    PopulateMeshFromMochiShape(&Mesh, Shape, false, true);
-    TestEqual(TEXT("Only authored skin produces triangles"), Mesh.VertexCount() > 0, bHasSkin);
+    EMochiRenderMeshSource DrawnSource = EMochiRenderMeshSource::Surface;
+    PopulateMeshFromMochiShape(&Mesh, Shape, true, true, &DrawnSource);
+    TestEqual(
+        TEXT("Shape mesh uses the authored source"),
+        static_cast<uint8>(DrawnSource),
+        static_cast<uint8>(ExpectedSource));
+    TestEqual(TEXT("Shape mesh uses the authored nodes"), Mesh.VertexCount(), ExpectedNodeCount);
 
-    if (!bHasSkin) {
+    if (!bHasMesh) {
       SceneObject->QueueOrExecuteCommand([&](mochi::Scene* Scene) {
         mochi::RodActorParams Params;
         Params.shape = Shape;
@@ -129,9 +150,17 @@ bool FMochiSkinlessRodTest::RunTest(const FString& Parameters) {
         TestTrue(
             TEXT("Contact user data initialized"), Actor->GetUserData() == ActorObject->GetOuter());
       });
-      Mesh.Clear();
-      PopulateMeshFromMochiActor(&Mesh, Handle, SceneObject, true, true);
-      TestEqual(TEXT("Archive mesh matches authored geometry"), Mesh.VertexCount() > 0, bHasSkin);
+      for (bool bPosedByNodeQueries : {false, true}) {
+        Mesh.Clear();
+        PopulateMeshFromMochiActor(
+            &Mesh, Handle, SceneObject, true, bPosedByNodeQueries, &DrawnSource);
+        TestEqual(
+            TEXT("Actor mesh uses the authored source"),
+            static_cast<uint8>(DrawnSource),
+            static_cast<uint8>(ExpectedSource));
+        TestEqual(
+            TEXT("Actor mesh uses the authored nodes"), Mesh.VertexCount(), ExpectedNodeCount);
+      }
 
       for (int Step = 0; Step < 3; ++Step) {
         SceneObject->StepPause();
@@ -139,11 +168,13 @@ bool FMochiSkinlessRodTest::RunTest(const FString& Parameters) {
         ActorObject->TryGetQueryData([&](const FMochiActorQueryData& Data) {
           bGotQueryData = true;
           TestEqual(
-              TEXT("Render positions queried only for skin"),
-              !Data.SurfaceNodePositions.IsEmpty(),
-              bHasSkin);
+              TEXT("Queried positions match the drawn nodes"),
+              Data.SurfaceNodePositions.Num(),
+              3 * ExpectedNodeCount);
           TestEqual(
-              TEXT("Render normals queried only for skin"), !Data.NodeNormals.IsEmpty(), bHasSkin);
+              TEXT("Queried normals match the drawn nodes"),
+              Data.NodeNormals.Num(),
+              3 * ExpectedNodeCount);
         });
         TestTrue(TEXT("Invisible rod still publishes query data"), bGotQueryData);
         SceneObject->QueueOrExecuteActorCommand(Handle, [&](mochi::Actor* Actor) {

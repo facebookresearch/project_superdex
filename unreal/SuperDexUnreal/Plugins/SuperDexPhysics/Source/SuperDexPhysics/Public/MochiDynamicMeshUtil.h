@@ -21,53 +21,98 @@
 #include "MochiSceneObject.h"
 #include "UDynamicMesh.h"
 
+#include <mochi_core/geometry/mesh_data.h>
 #include <mochi_core/mochi_config.h>
+#include <mochi_physics/cpp_api/mochi_enums.h>
 
 /**
- * Populate dynamic render geometry from a model asset.
- *
- * @param OutMesh Existing mesh storage supplied to the operation.
- * @param MochiModel Model asset supplying geometry.
- * @param ShapeTransform Transform applied to the model geometry.
- * @param bUseVisualMeshIfPresent Whether available visual geometry is preferred.
- * @param bUseContactSkinIfPresent Whether an available contact skin is preferred.
+ * Which mesh of a Mochi shape or actor is drawn. The drawn mesh and the node queries that deform
+ * it must use the same one, so that vertex IDs are node indices.
+ * Surface is first so value-initialization gives the fallback used when no mesh is selected.
  */
-void SUPERDEXPHYSICS_API PopulateMeshFromMochiModel(
-    UE::Geometry::FDynamicMesh3* OutMesh,
-    UMochiModel* MochiModel,
-    const FTransform& ShapeTransform = FTransform::Identity,
-    bool bUseVisualMeshIfPresent = true,
-    bool bUseContactSkinIfPresent = false);
+enum class EMochiRenderMeshSource : uint8 { Surface, Visual, ContactSkin };
 
 /**
- * Populate dynamic render geometry from a native actor.
+ * Whether actors of Type deform (soft, shell, rod).
+ *
+ * @param Type Native actor type to classify.
+ * @return Whether the actor type is deformable.
+ */
+bool SUPERDEXPHYSICS_API IsDeformableActorType(mochi::ActorType Type);
+
+/**
+ * The visual mesh if usable; else the contact skin if usable, whether or not it is used for
+ * contact; else the surface mesh. Pass an empty view for a mesh that is not wanted. An embedded
+ * mesh is usable if present and, if bPosedByNodeQueries, skinned, since skinning is what ties its
+ * vertices to the actor's nodes. Takes shape views, which carry skinning for every embedding,
+ * rods' included; a deformable actor's embedding is built from that skinning.
+ *
+ * @param VisualMesh Shape visual mesh, or an empty view if not wanted.
+ * @param ContactSkinMesh Shape contact skin, or an empty view if not wanted.
+ * @param bPosedByNodeQueries False for a mesh only ever moved by a rigid transform.
+ * @return The selected mesh source.
+ */
+EMochiRenderMeshSource SUPERDEXPHYSICS_API ChooseRenderMeshSource(
+    mochi::MeshDataView const& VisualMesh,
+    mochi::MeshDataView const& ContactSkinMesh,
+    bool bPosedByNodeQueries);
+
+/** A mesh view of a Mochi shape, which mesh it is, and the shape whose storage it views. */
+struct FMochiRenderMesh {
+  mochi::ShapeHandle Shape;
+  mochi::MeshDataView Data;
+  EMochiRenderMeshSource Source = EMochiRenderMeshSource::Surface;
+};
+
+/**
+ * The mesh of Actor's reference shape that Actor's node queries pose: ChooseRenderMeshSource's
+ * choice, posed by node queries if Actor is deformable, among the meshes whose node queries Actor
+ * supports. A rod with no usable visual mesh or contact skin returns empty Data without error.
+ * Otherwise, sets Error if the selected mesh has no supported node query. Call on the Mochi
+ * thread.
+ *
+ * @param Actor Native actor whose reference shape is drawn.
+ * @param bUseContactSkinIfPresent Whether a usable contact skin may be selected.
+ * @param Error Error set if no drawable mesh has a supported node query.
+ * @return The drawn mesh, its source, and its shape.
+ */
+FMochiRenderMesh SUPERDEXPHYSICS_API
+GetDrawnMochiMesh(mochi::Actor const& Actor, bool bUseContactSkinIfPresent, mochi::Error& Error);
+
+/**
+ * Populate dynamic render geometry from a native actor. If bPosedByNodeQueries, use
+ * GetDrawnMochiMesh's actor query selection; otherwise, select a mesh for rigid posing.
  *
  * @param OutMesh Mesh storage populated by the operation.
  * @param MochiActor Native actor handle supplying the mesh.
  * @param MochiScene Scene wrapper associated with the native actor.
- * @param bUseVisualMeshIfPresent Whether available visual geometry is preferred.
  * @param bUseContactSkinIfPresent Whether to use an available model contact skin.
+ * @param bPosedByNodeQueries Whether the mesh is posed by node queries; see ChooseRenderMeshSource.
+ * @param OutSource Optional; set to the populated mesh's source, or Surface if nothing is drawn.
  */
 void SUPERDEXPHYSICS_API PopulateMeshFromMochiActor(
     UE::Geometry::FDynamicMesh3* OutMesh,
     mochi::ActorHandle const& MochiActor,
     UMochiSceneObject* MochiScene,
-    bool bUseVisualMeshIfPresent = true,
-    bool bUseContactSkinIfPresent = false);
+    bool bUseContactSkinIfPresent = false,
+    bool bPosedByNodeQueries = true,
+    EMochiRenderMeshSource* OutSource = nullptr);
 
 /**
  * Populate dynamic render geometry from a native shape.
  *
  * @param OutMesh Mesh storage populated by the operation.
  * @param Shape Native shape handle supplying actor geometry.
- * @param bUseVisualMeshIfPresent Whether available visual geometry is preferred.
  * @param bUseContactSkinIfPresent Whether to use an available model contact skin.
+ * @param bPosedByNodeQueries Whether the mesh is posed by node queries; see ChooseRenderMeshSource.
+ * @param OutSource Optional; set to the populated mesh's source, or Surface if nothing is drawn.
  */
 void SUPERDEXPHYSICS_API PopulateMeshFromMochiShape(
     UE::Geometry::FDynamicMesh3* OutMesh,
     mochi::ShapeHandle Shape,
-    bool bUseVisualMeshIfPresent,
-    bool bUseContactSkinIfPresent);
+    bool bUseContactSkinIfPresent,
+    bool bPosedByNodeQueries = true,
+    EMochiRenderMeshSource* OutSource = nullptr);
 
 /**
  * Convert native node coordinates into Unreal positions.

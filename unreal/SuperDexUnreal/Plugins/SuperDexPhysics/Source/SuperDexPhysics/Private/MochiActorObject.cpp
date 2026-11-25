@@ -18,6 +18,7 @@
 
 #include "MochiAssets.h"
 #include "MochiConversions.h"
+#include "MochiDynamicMeshUtil.h"
 #include "MochiGameInstanceSubsystem.h"
 #include "MochiModel.h"
 #include "MochiPhysicsModule.h"
@@ -438,7 +439,6 @@ UMochiActorObject* UMochiActorObject::CreateSoft(
       bQueryElasticEnergy,
       MaterialParams,
       Scene,
-      true /* use visual mesh if present */,
       true /* use contact skin if present */);
 }
 
@@ -502,7 +502,6 @@ UMochiActorObject* UMochiActorObject::CreateShell(
       false, /* elastic energy */
       nullptr, /* material params */
       Scene,
-      true /* use visual mesh if present */,
       true /* use contact skin if present */);
 }
 
@@ -568,7 +567,6 @@ UMochiActorObject* UMochiActorObject::CreateRod(
       false, /* elastic energy */
       nullptr, /* material params */
       Scene,
-      false /* use visual mesh if present */,
       true /* use contact skin if present */);
 }
 
@@ -595,7 +593,6 @@ UMochiActorObject* UMochiActorObject::CreateFromExistingActor(
       false,
       nullptr,
       Scene,
-      true /* use visual mesh if present */,
       bUseContactSkinIfPresent);
 }
 
@@ -735,7 +732,6 @@ UMochiActorObject* UMochiActorObject::Create_Internal(
     bool bQueryElasticEnergy,
     const UMochiMaterialParams* MaterialParams,
     UMochiSceneObject* Scene,
-    bool bUseVisualMeshIfPresent,
     bool bUseContactSkinIfPresent) {
   MOCHI_PROFILE_SCOPE();
   if (!ActorHandle.IsValid()) {
@@ -747,40 +743,47 @@ UMochiActorObject* UMochiActorObject::Create_Internal(
     return nullptr;
   }
   FString ActorName;
+  EMochiRenderMeshSource RenderMeshSource = EMochiRenderMeshSource::Surface;
   // Reference captures rely on the wait below before this scope ends. It completes queued work
   // only off the async simulation thread; synchronous scenes run this callback inline.
   Scene->QueueOrExecuteCommand([&](mochi::Scene* PhysicsScene) {
     mochi::ErrorLog E{};
     if (mochi::Actor* const Actor = PhysicsScene->GetActor(ActorHandle)) {
-      if ((bQuerySurfaceNodePositions || bQueryNodeNormals) &&
-          Actor->GetType() == mochi::ActorType::Rod &&
-          !(bUseVisualMeshIfPresent &&
-            Actor->IsQuerySupported(mochi::QueryType::VisualNodePositions)) &&
-          !(bUseContactSkinIfPresent &&
-            Actor->IsQuerySupported(mochi::QueryType::ContactSkinNodePositions))) {
-        UE_LOG(
-            LogMochiPhysics,
-            Warning,
-            TEXT(
-                "Rod actor '%hs' has no drawable visual mesh or contact skin and will only be "
-                "visible in Mochi debug draw."),
-            Actor->GetName());
-        bQuerySurfaceNodePositions = false;
-        bQueryNodeNormals = false;
+      // Query the mesh that is drawn.
+      if (bQuerySurfaceNodePositions || bQueryNodeNormals) {
+        const FMochiRenderMesh Mesh = GetDrawnMochiMesh(*Actor, bUseContactSkinIfPresent, E);
+        MOCHI_ERROR_RETURN(E);
+        RenderMeshSource = Mesh.Source;
+        if (Actor->GetType() == mochi::ActorType::Rod && Mesh.Data.IsEmpty()) {
+          UE_LOG(
+              LogMochiPhysics,
+              Warning,
+              TEXT(
+                  "Rod actor '%hs' has no drawable visual mesh or contact skin and will only be "
+                  "visible in Mochi debug draw."),
+              Actor->GetName());
+          bQuerySurfaceNodePositions = false;
+          bQueryNodeNormals = false;
+        }
       }
-      bool bUseVisualMesh = bUseVisualMeshIfPresent && !Actor->GetVisualMesh().IsEmpty();
-      bool bUseContactSkin =
-          !bUseVisualMesh && bUseContactSkinIfPresent && !Actor->GetContactSkinMesh().IsEmpty();
 
       // register queries
+      mochi::QueryType PositionsQuery = mochi::QueryType::SurfaceNodePositions;
+      mochi::QueryType NormalsQuery = mochi::QueryType::SurfaceNodeNormals;
+      switch (RenderMeshSource) {
+        case EMochiRenderMeshSource::Visual:
+          PositionsQuery = mochi::QueryType::VisualNodePositions;
+          NormalsQuery = mochi::QueryType::VisualNodeNormals;
+          break;
+        case EMochiRenderMeshSource::ContactSkin:
+          PositionsQuery = mochi::QueryType::ContactSkinNodePositions;
+          NormalsQuery = mochi::QueryType::ContactSkinNodeNormals;
+          break;
+        case EMochiRenderMeshSource::Surface:
+          break;
+      }
       if (bQuerySurfaceNodePositions) {
-        if (bUseVisualMesh) {
-          Actor->RegisterQuery(mochi::QueryType::VisualNodePositions, E);
-        } else if (bUseContactSkin) {
-          Actor->RegisterQuery(mochi::QueryType::ContactSkinNodePositions, E);
-        } else {
-          Actor->RegisterQuery(mochi::QueryType::SurfaceNodePositions, E);
-        }
+        Actor->RegisterQuery(PositionsQuery, E);
         MOCHI_ERROR_RETURN(E);
       }
       if (bQueryVolumeNodePositions) {
@@ -788,13 +791,7 @@ UMochiActorObject* UMochiActorObject::Create_Internal(
         MOCHI_ERROR_RETURN(E);
       }
       if (bQueryNodeNormals) {
-        if (bUseVisualMesh) {
-          Actor->RegisterQuery(mochi::QueryType::VisualNodeNormals, E);
-        } else if (bUseContactSkin) {
-          Actor->RegisterQuery(mochi::QueryType::ContactSkinNodeNormals, E);
-        } else {
-          Actor->RegisterQuery(mochi::QueryType::SurfaceNodeNormals, E);
-        }
+        Actor->RegisterQuery(NormalsQuery, E);
         MOCHI_ERROR_RETURN(E);
       }
       if (bQueryContactPoints) {
@@ -835,8 +832,7 @@ UMochiActorObject* UMochiActorObject::Create_Internal(
   MochiActorObj->bQueryNodeNormals = bQueryNodeNormals;
   MochiActorObj->bQueryElasticEnergy = bQueryElasticEnergy;
   MochiActorObj->bQueryContactPoints = bQueryContactPoints;
-  MochiActorObj->bUseVisualMeshIfPresent = bUseVisualMeshIfPresent;
-  MochiActorObj->bUseContactSkinIfPresent = bUseContactSkinIfPresent;
+  MochiActorObj->RenderMeshSource = RenderMeshSource;
 
   // register post step callbacks to extract queried data
   MochiActorObj->ExtractQueryDataCallbackHandle = Scene->RegisterPostStepCallback(
@@ -1182,18 +1178,19 @@ void UMochiActorObject::ExtractQueryData_Internal(const mochi::Actor* Actor, moc
     MochiThreadQueryData->AngularVelocity =
         M2u.DirectionToUnreal(Actor->GetAngularVelocity(mochi::ErrorLog{}));
   }
-  const bool bUseVisualMesh = bUseVisualMeshIfPresent && !Actor->GetVisualMesh().IsEmpty();
-  const bool bUseContactSkin =
-      !bUseVisualMesh && bUseContactSkinIfPresent && !Actor->GetContactSkinMesh().IsEmpty();
   // extract node positions
   if (bQuerySurfaceNodePositions) {
     mochi::Span<const mochi::real> MochiNodePositions;
-    if (bUseVisualMesh) {
-      MochiNodePositions = Actor->GetVisualMeshNodePositionsLocal(Err);
-    } else if (bUseContactSkin) {
-      MochiNodePositions = Actor->GetContactSkinMeshNodePositionsLocal(Err);
-    } else {
-      MochiNodePositions = Actor->GetSurfaceMeshNodePositionsLocal(Err);
+    switch (RenderMeshSource) {
+      case EMochiRenderMeshSource::Visual:
+        MochiNodePositions = Actor->GetVisualMeshNodePositionsLocal(Err);
+        break;
+      case EMochiRenderMeshSource::ContactSkin:
+        MochiNodePositions = Actor->GetContactSkinMeshNodePositionsLocal(Err);
+        break;
+      case EMochiRenderMeshSource::Surface:
+        MochiNodePositions = Actor->GetSurfaceMeshNodePositionsLocal(Err);
+        break;
     }
     CopyToUnrealArray(MochiNodePositions, MochiThreadQueryData->SurfaceNodePositions, Err);
   }
@@ -1204,12 +1201,16 @@ void UMochiActorObject::ExtractQueryData_Internal(const mochi::Actor* Actor, moc
   // extract node normals
   if (bQueryNodeNormals) {
     mochi::Span<const mochi::real> MochiNodeNormals;
-    if (bUseVisualMesh) {
-      MochiNodeNormals = Actor->GetVisualMeshNodeNormalsLocal(Err);
-    } else if (bUseContactSkin) {
-      MochiNodeNormals = Actor->GetContactSkinMeshNodeNormalsLocal(Err);
-    } else {
-      MochiNodeNormals = Actor->GetSurfaceMeshNodeNormalsLocal(Err);
+    switch (RenderMeshSource) {
+      case EMochiRenderMeshSource::Visual:
+        MochiNodeNormals = Actor->GetVisualMeshNodeNormalsLocal(Err);
+        break;
+      case EMochiRenderMeshSource::ContactSkin:
+        MochiNodeNormals = Actor->GetContactSkinMeshNodeNormalsLocal(Err);
+        break;
+      case EMochiRenderMeshSource::Surface:
+        MochiNodeNormals = Actor->GetSurfaceMeshNodeNormalsLocal(Err);
+        break;
     }
     CopyToUnrealArray(MochiNodeNormals, MochiThreadQueryData->NodeNormals, Err);
   }

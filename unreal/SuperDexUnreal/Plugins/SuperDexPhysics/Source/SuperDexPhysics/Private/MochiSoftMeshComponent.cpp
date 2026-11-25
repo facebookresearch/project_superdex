@@ -17,10 +17,7 @@
 #include "MochiSoftMeshComponent.h"
 
 #include "MochiDynamicMeshUtil.h"
-#include "MochiGameInstanceSubsystem.h"
 #include "MochiPhysicsModule.h"
-
-#include "Engine/GameInstance.h"
 
 #include <mochi_core/utils/profile.h>
 
@@ -134,74 +131,10 @@ const void UMochiSoftMeshComponent::ApplyMaterialModifiers(
 UMochiSoftMeshComponent::UMochiSoftMeshComponent(const FObjectInitializer& ObjectInitializer)
     : Super(ObjectInitializer) {}
 
-static bool PopulateFromMochiMesh_SoftInternal(
-    FDynamicMesh3& Mesh,
-    UMochiModel* Model,
-    bool bUseMochiNodeNormals,
-    TConstArrayView<FVector2f> RenderModelUVs,
-    TConstArrayView<FLinearColor> RenderModelColors,
-    mochi::ActorHandle const& MochiExistingActor,
-    UWorld* World) {
-  MOCHI_PROFILE_SCOPE();
-  Mesh.Clear();
-
-  if (Model) {
-    PopulateMeshFromMochiModel(
-        &Mesh,
-        Model,
-        FTransform::Identity,
-        true /* use visual mesh if present */,
-        true /* use contact skin if present */);
-  } else if (MochiExistingActor.IsValid()) {
-    // If this dynamic mesh was created at run time with existing actor, get the mesh from there.
-    UGameInstance* const Game = World->GetGameInstance();
-    UMochiGameInstanceSubsystem* const Subsys = Game->GetSubsystem<UMochiGameInstanceSubsystem>();
-    if (Subsys) {
-      PopulateMeshFromMochiActor(
-          &Mesh,
-          MochiExistingActor,
-          Subsys->GetScene(),
-          true /* use visual mesh if present */,
-          true /* use contact skin if present */);
-    }
-  }
-
-  ComputeOrDiscardVertexNormals(Mesh, bUseMochiNodeNormals);
-  // Vertex IDs are visual-mesh node indices. A count mismatch means the model changed after import,
-  // or the mesh came from the contact skin or surface instead. Flat shading is not supported: it
-  // draws face normals, but the material's tangents are built from the normal overlay.
-  const auto Fits = [&Mesh](int32 Num) { return Num == 0 || Num == Mesh.MaxVertexID(); };
-  if (bUseMochiNodeNormals && !(RenderModelUVs.IsEmpty() && RenderModelColors.IsEmpty())) {
-    if (Fits(RenderModelUVs.Num()) && Fits(RenderModelColors.Num())) {
-      EnableRenderModelAttributes(Mesh, RenderModelUVs, RenderModelColors);
-      return true;
-    } else {
-      UE_LOG(
-          LogMochiPhysics,
-          Warning,
-          TEXT(
-              "Render model UVs or colors aren't drawn on Mochi model %s: they don't match the %d "
-              "vertices of its drawn mesh. Reimport the prefab."),
-          *GetNameSafe(Model),
-          Mesh.MaxVertexID());
-    }
-  }
-  return false;
-}
-
 void UMochiSoftMeshComponent::SetMochiModel(UMochiModel* NewMochiModel) {
   MOCHI_PROFILE_SCOPE();
   Model = NewMochiModel;
-  EditMesh([this](UE::Geometry::FDynamicMesh3& Mesh) {
-    SetHasRenderModelAttributes(PopulateFromMochiMesh_SoftInternal(
-        Mesh,
-        Model,
-        bUseMochiNodeNormals,
-        RenderModelUVs,
-        RenderModelColors,
-        MochiExistingActor,
-        GetWorld()));
-  });
+  RebuildPreviewMesh();
   ValidateMaterialSlots();
 }
 
@@ -218,17 +151,7 @@ void UMochiSoftMeshComponent::OnRegister() {
       SetVertexColorSpaceTransformMode(EDynamicMeshVertexColorTransformMode::LinearToSRGB);
     }
   }
-  // Populate the underlying UDynamicMesh from the Model data
-  EditMesh([this](UE::Geometry::FDynamicMesh3& Mesh) {
-    SetHasRenderModelAttributes(PopulateFromMochiMesh_SoftInternal(
-        Mesh,
-        Model,
-        bUseMochiNodeNormals,
-        RenderModelUVs,
-        RenderModelColors,
-        MochiExistingActor,
-        GetWorld()));
-  });
+  RebuildPreviewMesh();
   ValidateMaterialSlots();
   Super::OnRegister();
 }
@@ -278,16 +201,7 @@ void UMochiSoftMeshComponent::PostEditChangeProperty(FPropertyChangedEvent& Prop
   if (PropName == GET_MEMBER_NAME_CHECKED(UMochiSoftMeshComponent, Model)) {
     UE_LOG(LogMochiPhysics, Display, TEXT("[%hs] %s changed"), __FUNCTION__, *PropName.ToString());
 
-    EditMesh([this](UE::Geometry::FDynamicMesh3& Mesh) {
-      SetHasRenderModelAttributes(PopulateFromMochiMesh_SoftInternal(
-          Mesh,
-          Model,
-          bUseMochiNodeNormals,
-          RenderModelUVs,
-          RenderModelColors,
-          MochiExistingActor,
-          GetWorld()));
-    });
+    RebuildPreviewMesh();
     ValidateMaterialSlots();
   }
 

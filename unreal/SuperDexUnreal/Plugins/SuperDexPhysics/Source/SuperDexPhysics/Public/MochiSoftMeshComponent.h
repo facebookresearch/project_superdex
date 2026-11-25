@@ -73,17 +73,6 @@ class SUPERDEXPHYSICS_API UMochiSoftMeshComponent : public UMochiDeformableMeshC
   UPROPERTY(EditAnywhere, Category = "SuperDex Physics")
   bool bEnableElasticEnergyQuery = false;
 
-  /**
-   * TEXCOORD_0 and COLOR_0 (linear RGBA) of the prefab render model, one per visual-mesh node, set
-   * by the prefab importer when the render model is the visual mesh. Either may be empty. They are
-   * drawn only when bUseMochiNodeNormals is set, since flat shading is not supported. Not shown in
-   * the Details panel, which would build a property node per element.
-   */
-  UPROPERTY()
-  TArray<FVector2f> RenderModelUVs;
-  UPROPERTY()
-  TArray<FLinearColor> RenderModelColors;
-
   // EXPERIMENTAL
 
   /**
@@ -164,10 +153,6 @@ class SUPERDEXPHYSICS_API UMochiSoftMeshComponent : public UMochiDeformableMeshC
 
  private:
   void WarnIfRenderModelAttributesNotDrawn() const;
-
-  // TODO: Again, not very graceful, but these fields permit construction of this component from an
-  // existing actor, specifically for skinned hand meshes.
-  mochi::ActorHandle MochiExistingActor;
 
   /** Cached node positions in local space. */
   TArray<FVector> VolumeNodeReferencePositions;

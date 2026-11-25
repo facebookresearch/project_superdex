@@ -67,86 +67,145 @@ static void PopulateMeshFromMochiMeshData(
   }
 }
 
-static mochi::MeshDataView GetMeshDataForDynamicMesh(
+bool IsDeformableActorType(mochi::ActorType Type) {
+  return Type == mochi::ActorType::Soft || Type == mochi::ActorType::Shell ||
+      Type == mochi::ActorType::Rod;
+}
+
+EMochiRenderMeshSource ChooseRenderMeshSource(
+    mochi::MeshDataView const& VisualMesh,
+    mochi::MeshDataView const& ContactSkinMesh,
+    bool bPosedByNodeQueries) {
+  const auto Usable = [bPosedByNodeQueries](mochi::MeshDataView const& Mesh) {
+    return !Mesh.IsEmpty() && (!bPosedByNodeQueries || Mesh.skinning.has_value());
+  };
+  if (Usable(VisualMesh)) {
+    return EMochiRenderMeshSource::Visual;
+  }
+  if (Usable(ContactSkinMesh)) {
+    return EMochiRenderMeshSource::ContactSkin;
+  }
+  return EMochiRenderMeshSource::Surface;
+}
+
+static mochi::MeshDataView SelectDrawnMochiMesh(
     mochi::Context const& MochiContext,
     mochi::ShapeHandle Shape,
-    bool bUseVisualMeshIfPresent,
-    bool bUseContactSkinIfPresent,
+    mochi::MeshDataView const& VisualMesh,
+    mochi::MeshDataView const& ContactSkin,
+    bool bPosedByNodeQueries,
+    EMochiRenderMeshSource& OutSource,
     mochi::Error& Error) {
   MOCHI_ERROR_RETURN(Error, {});
 
-  mochi::MeshDataView MeshData{};
-  if (bUseVisualMeshIfPresent) {
-    MeshData = MochiContext.GetShapeVisualMesh(Shape, Error);
-    MOCHI_ERROR_RETURN(Error, {});
+  OutSource = ChooseRenderMeshSource(VisualMesh, ContactSkin, bPosedByNodeQueries);
+  switch (OutSource) {
+    case EMochiRenderMeshSource::Visual:
+      return VisualMesh;
+    case EMochiRenderMeshSource::ContactSkin:
+      return ContactSkin;
+    case EMochiRenderMeshSource::Surface:
+      break;
   }
-  if (bUseContactSkinIfPresent && MeshData.IsEmpty()) {
-    mochi::MeshDataView const ContactSkin = MochiContext.GetShapeContactSkinMesh(Shape, Error);
-    MOCHI_ERROR_RETURN(Error, {});
-    if (ContactSkin.skinning.has_value()) {
-      MeshData = ContactSkin;
-    }
-  }
+  const mochi::MeshDataView MeshData = MochiContext.GetShapeSurfaceMesh(Shape, Error);
+  MOCHI_ERROR_RETURN(Error, {});
   if (MeshData.IsEmpty()) {
-    MeshData = MochiContext.GetShapeSurfaceMesh(Shape, Error);
+    const mochi::MeshDataView Mesh = MochiContext.GetShapeMesh(Shape, Error);
     MOCHI_ERROR_RETURN(Error, {});
-    if (MeshData.IsEmpty()) {
-      const mochi::MeshDataView Mesh = MochiContext.GetShapeMesh(Shape, Error);
-      MOCHI_ERROR_RETURN(Error, {});
-      if (Mesh.nodesPerElement == 2) {
-        return {};
-      }
+    // A rod centerline with no usable embedding has nothing to draw.
+    if (Mesh.nodesPerElement == 2) {
+      return {};
     }
   }
   MOCHI_ERROR_IF(
       MeshData.IsEmpty(),
       Error,
-      "Cannot populate mesh: shape has no surface mesh data, and no requested visual mesh or "
+      "Cannot populate mesh: shape has no surface mesh data, and no usable visual mesh or "
       "contact skin.");
   MOCHI_ERROR_RETURN(Error, {});
 
   return MeshData;
 }
 
-void PopulateMeshFromMochiModel(
-    UE::Geometry::FDynamicMesh3* OutMesh,
-    UMochiModel* MochiModel,
-    const FTransform& ShapeTransform,
-    bool bUseVisualMeshIfPresent,
-    bool bUseContactSkinIfPresent) {
-  MOCHI_PROFILE_SCOPE();
-  if (!MochiModel || !MochiModel->IsValid()) {
-    return;
-  }
-  mochi::Context* MochiContext = IMochiPhysicsModule::Get()->GetMochiContext();
-  if (MochiContext) {
-    mochi::ErrorLog E{};
-    mochi::ShapeHandle Shape = MochiModel->GetMochiShape(FVector::OneVector, ShapeTransform);
-    MOCHI_ERROR_RETURN(E);
+// The mesh of Shape that PopulateMeshFromMochiShape draws for the same flags.
+static mochi::MeshDataView GetDrawnMochiMesh(
+    mochi::Context const& MochiContext,
+    mochi::ShapeHandle Shape,
+    bool bUseContactSkinIfPresent,
+    bool bPosedByNodeQueries,
+    EMochiRenderMeshSource& OutSource,
+    mochi::Error& Error) {
+  MOCHI_ERROR_RETURN(Error, {});
+  mochi::MeshDataView const VisualMesh = MochiContext.GetShapeVisualMesh(Shape, Error);
+  mochi::MeshDataView const ContactSkin = bUseContactSkinIfPresent
+      ? MochiContext.GetShapeContactSkinMesh(Shape, Error)
+      : mochi::MeshDataView{};
+  return SelectDrawnMochiMesh(
+      MochiContext, Shape, VisualMesh, ContactSkin, bPosedByNodeQueries, OutSource, Error);
+}
 
-    mochi::MeshDataView MeshData = GetMeshDataForDynamicMesh(
-        *MochiContext, Shape, bUseVisualMeshIfPresent, bUseContactSkinIfPresent, E);
-    MOCHI_ERROR_RETURN(E);
-    PopulateMeshFromMochiMeshData(OutMesh, MeshData);
+FMochiRenderMesh
+GetDrawnMochiMesh(mochi::Actor const& Actor, bool bUseContactSkinIfPresent, mochi::Error& Error) {
+  MOCHI_ERROR_RETURN(Error, {});
+  FMochiRenderMesh Mesh;
+  Mesh.Shape = Actor.GetReferenceShape(Error);
+  MOCHI_ERROR_RETURN(Error, {});
+  // A mesh's node normals query is supported exactly when its positions query is (see
+  // mochi::QueryType).
+  const mochi::Context& MochiContext = *Actor.GetContext();
+  const mochi::MeshDataView VisualMesh =
+      Actor.IsQuerySupported(mochi::QueryType::VisualNodePositions)
+      ? MochiContext.GetShapeVisualMesh(Mesh.Shape, Error)
+      : mochi::MeshDataView{};
+  const mochi::MeshDataView ContactSkin =
+      bUseContactSkinIfPresent && Actor.IsQuerySupported(mochi::QueryType::ContactSkinNodePositions)
+      ? MochiContext.GetShapeContactSkinMesh(Mesh.Shape, Error)
+      : mochi::MeshDataView{};
+  Mesh.Data = SelectDrawnMochiMesh(
+      MochiContext,
+      Mesh.Shape,
+      VisualMesh,
+      ContactSkin,
+      IsDeformableActorType(Actor.GetType()),
+      Mesh.Source,
+      Error);
+  MOCHI_ERROR_RETURN(Error, {});
+  if (Actor.GetType() == mochi::ActorType::Rod && Mesh.Data.IsEmpty()) {
+    return Mesh;
   }
+  MOCHI_ERROR_IF(
+      Mesh.Source == EMochiRenderMeshSource::Surface &&
+          !Actor.IsQuerySupported(mochi::QueryType::SurfaceNodePositions),
+      Error,
+      "The actor supports node queries on none of its meshes that may be drawn.");
+  MOCHI_ERROR_RETURN(Error, {});
+  return Mesh;
 }
 
 void PopulateMeshFromMochiShape(
     UE::Geometry::FDynamicMesh3* OutMesh,
     mochi::ShapeHandle Shape,
-    bool bUseVisualMeshIfPresent,
-    bool bUseContactSkinIfPresent) {
+    bool bUseContactSkinIfPresent,
+    bool bPosedByNodeQueries,
+    EMochiRenderMeshSource* OutSource) {
   MOCHI_PROFILE_SCOPE();
+  if (OutSource) {
+    *OutSource = EMochiRenderMeshSource::Surface;
+  }
   if (!Shape.IsValid()) {
     return;
   }
   mochi::Context* MochiContext = IMochiPhysicsModule::Get()->GetMochiContext();
   if (MochiContext) {
     mochi::ErrorLog E{};
-    mochi::MeshDataView MeshData = GetMeshDataForDynamicMesh(
-        *MochiContext, Shape, bUseVisualMeshIfPresent, bUseContactSkinIfPresent, E);
+    EMochiRenderMeshSource Source = EMochiRenderMeshSource::Surface;
+    mochi::MeshDataView MeshData = GetDrawnMochiMesh(
+        *MochiContext, Shape, bUseContactSkinIfPresent, bPosedByNodeQueries, Source, E);
     MOCHI_ERROR_RETURN(E);
     PopulateMeshFromMochiMeshData(OutMesh, MeshData);
+    if (OutSource) {
+      *OutSource = Source;
+    }
   }
 }
 
@@ -154,26 +213,32 @@ void SUPERDEXPHYSICS_API PopulateMeshFromMochiActor(
     UE::Geometry::FDynamicMesh3* OutMesh,
     mochi::ActorHandle const& MochiActor,
     UMochiSceneObject* MochiScene,
-    bool bUseVisualMeshIfPresent,
-    bool bUseContactSkinIfPresent) {
+    bool bUseContactSkinIfPresent,
+    bool bPosedByNodeQueries,
+    EMochiRenderMeshSource* OutSource) {
   MOCHI_PROFILE_SCOPE();
-  if (!MochiActor.IsValid() || !MochiScene->IsValid()) {
+  if (OutSource) {
+    *OutSource = EMochiRenderMeshSource::Surface;
+  }
+  if (!MochiActor.IsValid() || !MochiScene || !MochiScene->IsValid()) {
     return;
   }
-  mochi::Context* MochiContext = IMochiPhysicsModule::Get()->GetMochiContext();
-  if (MochiContext) {
-    mochi::ShapeHandle Shape;
-    MochiScene->QueueOrExecuteActorCommand(MochiActor, [&Shape](mochi::Actor* Actor) {
-      mochi::ErrorLog E{};
-      Shape = Actor->GetReferenceShape(E);
-    });
-    MochiScene->WaitForQueuedCommands();
-
-    mochi::ErrorLog E{};
-    mochi::MeshDataView MeshData = GetMeshDataForDynamicMesh(
-        *MochiContext, Shape, bUseVisualMeshIfPresent, bUseContactSkinIfPresent, E);
-    MOCHI_ERROR_RETURN(E);
-    PopulateMeshFromMochiMeshData(OutMesh, MeshData);
+  FMochiRenderMesh Mesh;
+  mochi::ErrorLog E{};
+  MochiScene->QueueOrExecuteActorCommand(MochiActor, [&](mochi::Actor* Actor) {
+    if (bPosedByNodeQueries) {
+      Mesh = GetDrawnMochiMesh(*Actor, bUseContactSkinIfPresent, E);
+      return;
+    }
+    Mesh.Shape = Actor->GetReferenceShape(E);
+    Mesh.Data = GetDrawnMochiMesh(
+        *Actor->GetContext(), Mesh.Shape, bUseContactSkinIfPresent, false, Mesh.Source, E);
+  });
+  MochiScene->WaitForQueuedCommands();
+  MOCHI_ERROR_RETURN(E);
+  PopulateMeshFromMochiMeshData(OutMesh, Mesh.Data);
+  if (OutSource) {
+    *OutSource = Mesh.Source;
   }
 }
 

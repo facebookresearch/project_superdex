@@ -18,11 +18,76 @@
 
 #include "MochiComponentTags.h"
 #include "MochiDynamicMeshUtil.h"
+#include "MochiGameInstanceSubsystem.h"
+#include "MochiPhysicsModule.h"
+
+#include "Engine/GameInstance.h"
+#include "Engine/World.h"
 
 #include <mochi_core/utils/profile.h>
 
 const TArray<FMochiContactPoint>& UMochiDeformableMeshComponent::GetContactPoints() const {
   return ContactEventHandler.ContactPoints;
+}
+
+EMochiRenderMeshSource UMochiDeformableMeshComponent::PopulateMeshFromExistingMochiActor(
+    UE::Geometry::FDynamicMesh3& Mesh) const {
+  MOCHI_PROFILE_SCOPE();
+  const UWorld* World = GetWorld();
+  const UGameInstance* Game = World ? World->GetGameInstance() : nullptr;
+  const UMochiGameInstanceSubsystem* Subsys =
+      Game ? Game->GetSubsystem<UMochiGameInstanceSubsystem>() : nullptr;
+  UMochiSceneObject* Scene = Subsys ? Subsys->GetScene() : nullptr;
+  EMochiRenderMeshSource Source = EMochiRenderMeshSource::Surface;
+  PopulateMeshFromMochiActor(
+      &Mesh, MochiExistingActor, Scene, true /* use contact skin if present */, true, &Source);
+  return Source;
+}
+
+void UMochiDeformableMeshComponent::RebuildPreviewMesh() {
+  EditMesh([this](UE::Geometry::FDynamicMesh3& Mesh) { PopulateMesh(Mesh); });
+}
+
+void UMochiDeformableMeshComponent::PopulateMesh(UE::Geometry::FDynamicMesh3& Mesh) {
+  MOCHI_PROFILE_SCOPE();
+  Mesh.Clear();
+  bHasRenderModelAttributes = false;
+  EMochiRenderMeshSource Source = EMochiRenderMeshSource::Surface;
+  if (HasExistingMochiActor()) {
+    Source = PopulateMeshFromExistingMochiActor(Mesh);
+  } else if (Model && Model->IsValid() && IMochiPhysicsModule::Get()->GetMochiContext()) {
+    const mochi::ShapeHandle Shape = Model->GetMochiShape(FVector::OneVector, FTransform::Identity);
+    PopulateMeshFromMochiShape(&Mesh, Shape, true /* use contact skin if present */, true, &Source);
+  }
+  if (Mesh.VertexCount() > 0) {
+    ComputeOrDiscardVertexNormals(Mesh, bUseMochiNodeNormals);
+    bHasRenderModelAttributes = AddRenderModelAttributes(Mesh, Source);
+  }
+}
+
+bool UMochiDeformableMeshComponent::AddRenderModelAttributes(
+    UE::Geometry::FDynamicMesh3& Mesh,
+    EMochiRenderMeshSource Source) const {
+  // Render-model attributes are indexed by visual-mesh node, not contact-skin or surface node.
+  // Flat shading is not supported: the material's tangents need the normal overlay.
+  if (!bUseMochiNodeNormals || (RenderModelUVs.IsEmpty() && RenderModelColors.IsEmpty())) {
+    return false;
+  }
+  const auto Fits = [&Mesh](int32 Num) { return Num == 0 || Num == Mesh.MaxVertexID(); };
+  if (Source == EMochiRenderMeshSource::Visual && Fits(RenderModelUVs.Num()) &&
+      Fits(RenderModelColors.Num())) {
+    EnableRenderModelAttributes(Mesh, RenderModelUVs, RenderModelColors);
+    return true;
+  }
+  UE_LOG(
+      LogMochiPhysics,
+      Warning,
+      TEXT(
+          "Render model UVs or colors aren't drawn on Mochi model %s: its drawn mesh is not the "
+          "matching visual mesh (%d vertices). Reimport the prefab."),
+      *GetNameSafe(Model),
+      Mesh.MaxVertexID());
+  return false;
 }
 
 void UMochiDeformableMeshComponent::DestroyMochiActor() {
