@@ -35,11 +35,14 @@ namespace {
 
 using Strings = DynamicArray<std::string>;
 
+using Kind = SReflect::ConsoleCandidateKind;
+
 struct ReplyOptions {
   size_t defaultIndex = 0;
   std::string note{};
   Strings laterNotes{};
   bool isTruncated = false;
+  DynamicArray<Kind> kinds{}; // None, as from a server built before candidate kinds
   std::chrono::nanoseconds delay{}; // Time since the request was sent
   std::optional<uint64_t> timestamp{}; // Overrides the request's timestamp
 };
@@ -58,6 +61,7 @@ class AutoCompleterTest : public ::testing::Test {
     reply.result._note = std::move(options.note);
     reply.result._laterArgumentNotes.assign(options.laterNotes.begin(), options.laterNotes.end());
     reply.result._isTruncated = options.isTruncated;
+    reply.result._candidateKinds.assign(options.kinds.begin(), options.kinds.end());
     reply.timestamp = options.timestamp.value_or(reply.timestamp);
     _now += options.delay;
     return _completer.OnReply(std::move(reply));
@@ -162,10 +166,11 @@ TEST_F(AutoCompleterTest, ShowsTheArgumentsThatFollow) {
       _completer.GetView().annotations,
       (Strings{"(+1)", "<Kind kind>", "<float speed>", "<bool wake>"}));
 
-  // While cycling, the count is left out.
+  // The count stays while cycling, which shows that Tab offers more.
   EXPECT_EQ(_completer.Cycle(false), "setKind Rigid");
   EXPECT_EQ(
-      _completer.GetView().annotations, (Strings{"<Kind kind>", "<float speed>", "<bool wake>"}));
+      _completer.GetView().annotations,
+      (Strings{"(+1)", "<Kind kind>", "<float speed>", "<bool wake>"}));
 }
 
 TEST_F(AutoCompleterTest, FormatsNoteTypesLikeListings) {
@@ -293,7 +298,7 @@ TEST_F(AutoCompleterTest, CyclesThroughMatches) {
   EXPECT_EQ(_completer.Cycle(false), std::nullopt); // No reply yet
   Reply({"scenes", "settings", "value"}, {.defaultIndex = 1});
   EXPECT_EQ(_completer.Cycle(false), "/settings");
-  EXPECT_EQ(View(), ViewTuple("", "", Strings{"scenes", "settings"}, 1, true));
+  EXPECT_EQ(View(), ViewTuple("", "(+1)", Strings{"scenes", "settings"}, 1, true));
   EXPECT_EQ(_completer.Cycle(false), "/scenes");
   EXPECT_EQ(_completer.Cycle(true), "/settings");
 
@@ -307,6 +312,59 @@ TEST_F(AutoCompleterTest, CyclesThroughMatches) {
   EXPECT_EQ(_completer.Cycle(false), "/scenes");
   _completer.SetInput("/scenes/", true);
   EXPECT_EQ(SentCommands(), (Strings{"/", "/scenes/"}));
+}
+
+TEST_F(AutoCompleterTest, TabFinishesTheOnlyMatch) {
+  _completer.SetInput("/", true);
+  Reply(
+      {"gravity", "scenes", "settings", "speed"},
+      {.kinds = {Kind::DirectoryOrLeaf, Kind::Directory, Kind::Directory, Kind::Leaf}});
+
+  // A directory gets '/' and anything else a space, so the next Tab completes what follows.
+  _completer.SetInput("/sc", true);
+  EXPECT_EQ(_completer.Cycle(false), "/scenes/");
+  EXPECT_FALSE(_completer.GetView().isCycling);
+  _completer.SetInput("/sp", true);
+  EXPECT_EQ(_completer.Cycle(false), "/speed ");
+  _completer.SetInput("/speed ", true);
+  EXPECT_EQ(SentCommands().back(), "/speed ");
+
+  // A step that is a directory with a value can be followed by either, so the user decides.
+  _completer.SetInput("/g", true);
+  EXPECT_EQ(_completer.Cycle(false), "/gravity");
+  EXPECT_TRUE(_completer.GetView().isCycling);
+
+  // Several matches cycle, and typing '/' or a space accepts one.
+  _completer.SetInput("/s", true);
+  EXPECT_EQ(_completer.Cycle(false), "/scenes");
+  EXPECT_EQ(View(), ViewTuple("", "(+2)", Strings{"scenes", "settings", "speed"}, 0, true));
+
+  // Selecting in a menu never adds anything.
+  _completer.SetInput("/sc", true);
+  EXPECT_EQ(_completer.Select(0), "/scenes");
+
+  // After a method argument, the next Tab completes the next one.
+  _completer.SetInput("add ", true);
+  Reply({"0"}, {.note = "float amount", .laterNotes = {"string note"}, .kinds = {Kind::Leaf}});
+  EXPECT_EQ(_completer.Cycle(false), "add 0 ");
+}
+
+TEST_F(AutoCompleterTest, CountsOtherMatchesWhenTheTypedTextIsADefault) {
+  _completer.SetInput("/scenes", true);
+  EXPECT_TRUE(Reply({"scenes", "scenesB"}));
+  EXPECT_EQ(View(), ViewTuple("", "(+1)", Strings{"scenes", "scenesB"}, 0, false));
+}
+
+TEST_F(AutoCompleterTest, TabFinishesOnlyACertainMatch) {
+  // A truncated reply may leave out other matches.
+  _completer.SetInput("items/", true);
+  Reply({"10"}, {.isTruncated = true, .kinds = {Kind::Leaf}});
+  EXPECT_EQ(_completer.Cycle(false), "items/10");
+
+  // A server built before candidate kinds does not say what follows.
+  _completer.SetInput("na", true);
+  Reply({"name"});
+  EXPECT_EQ(_completer.Cycle(false), "name");
 }
 
 TEST_F(AutoCompleterTest, TabNeedsTheCursorAtTheEnd) {

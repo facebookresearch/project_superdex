@@ -2006,6 +2006,63 @@ TEST(SReflectConsole, CompleteListsLaterArguments) {
   EXPECT_EQ(laterNotes("count "), Notes{});
 }
 
+TEST(SReflectConsole, CompleteCandidateKinds) {
+  using Kind = SReflect::ConsoleCandidateKind;
+  using Kinds = std::vector<std::pair<std::string, Kind>>;
+  auto const kinds = [](SReflect::ConsoleAutoCompleteResult const& result) {
+    EXPECT_EQ(result._candidateKinds.size(), result._candidates.size());
+    Kinds found;
+    for (size_t i = 0; i < result._candidates.size() && i < result._candidateKinds.size(); ++i) {
+      found.emplace_back(result._candidates[i], result._candidateKinds[i]);
+    }
+    return found;
+  };
+  Machine m;
+  EXPECT_EQ(
+      kinds(SReflect::ConsoleAutoComplete(&m, "co")),
+      (Kinds{{"core", Kind::Directory}, {"count", Kind::Leaf}}));
+  EXPECT_EQ(kinds(SReflect::ConsoleAutoComplete(&m, "base/a")), (Kinds{{"add", Kind::Leaf}}));
+  EXPECT_EQ(
+      kinds(SReflect::ConsoleAutoComplete(&m, "named/")),
+      (Kinds{{"'\"..\"'", Kind::Directory}, {"'\"a/b\"'", Kind::Directory}}));
+
+  // An optional or variant may hold a directory or a value.
+  EXPECT_EQ(
+      kinds(SReflect::ConsoleAutoComplete(&m, "s")),
+      (Kinds{{"slot", Kind::DirectoryOrLeaf}, {"spare", Kind::DirectoryOrLeaf}}));
+
+  // A fixed-size array of primitives is listed with its value, which can be set as a whole too.
+  ArrayCases arrays;
+  EXPECT_EQ(
+      kinds(SReflect::ConsoleAutoComplete(&arrays, "")),
+      (Kinds{
+          {"count", Kind::Leaf},
+          {"flags", Kind::Leaf},
+          {"nested", Kind::DirectoryOrLeaf},
+          {"parts", Kind::Directory},
+          {"position", Kind::DirectoryOrLeaf}}));
+
+  // A command that takes a directory completes only directories.
+  SReflect::ConsoleAutoCompleteParams directories;
+  directories._directoriesOnly = true;
+  EXPECT_EQ(
+      kinds(SReflect::ConsoleAutoComplete(&m, "s", directories)),
+      (Kinds{{"slot", Kind::Directory}, {"spare", Kind::Directory}}));
+
+  // Arguments end their token.
+  EXPECT_EQ(
+      kinds(SReflect::ConsoleAutoComplete(&m, "kind ")),
+      (Kinds{{"Rigid", Kind::Leaf}, {"Soft", Kind::Leaf}}));
+  EXPECT_EQ(kinds(SReflect::ConsoleAutoComplete(&m, "base/add ")), (Kinds{{"0", Kind::Leaf}}));
+
+  // Steps named outside of reflection are directories, and keep the kinds already found.
+  auto result = SReflect::ConsoleAutoComplete(&m, "na");
+  SReflect::detail::AddConsoleStepCandidates(result, {"nav"}, "na", {});
+  EXPECT_EQ(
+      kinds(result),
+      (Kinds{{"name", Kind::Leaf}, {"named", Kind::Directory}, {"nav", Kind::Directory}}));
+}
+
 TEST(SReflectConsole, CompleteFromPathStart) {
   Machine m;
   SReflect::detail::ConsoleCompletion completion;
@@ -2019,13 +2076,16 @@ TEST(SReflectConsole, CompleteFromPathStart) {
 }
 
 TEST(SReflectConsole, AddStepCandidates) {
+  using Kind = SReflect::ConsoleCandidateKind;
   SReflect::ConsoleAutoCompleteResult result;
   result._candidates = {"base", "count"};
+  result._candidateKinds = {Kind::DirectoryOrLeaf, Kind::Leaf};
   result._defaultIndex = 1;
   SReflect::ConsoleAutoCompleteParams params;
   params._maxCandidates = 3;
   SReflect::detail::AddConsoleStepCandidates(result, {"a b", "box", "core"}, "b", params);
   EXPECT_EQ(result._candidates, (std::vector<std::string>{"base", "box"}));
+  EXPECT_EQ(result._candidateKinds, (std::vector<Kind>{Kind::DirectoryOrLeaf, Kind::Directory}));
   EXPECT_EQ(result._defaultIndex, 0);
   EXPECT_FALSE(result._isTruncated);
   SReflect::detail::AddConsoleStepCandidates(result, {"bat", "bee"}, "", params);

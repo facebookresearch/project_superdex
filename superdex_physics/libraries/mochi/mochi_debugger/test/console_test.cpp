@@ -1031,6 +1031,21 @@ TEST_F(ActorConsoleTest, AutoComplete) {
   EXPECT_NE(std::ranges::find(candidates, "actors"), candidates.end());
   EXPECT_NE(std::ranges::find(candidates, "constraints"), candidates.end());
   EXPECT_EQ(std::ranges::find(candidates, "name"), candidates.end());
+
+  // Kinds reach the client. Scenes and built-in directories take '/', and a value takes a space.
+  auto const kindOf = [&](std::string_view cwd, std::string_view path, std::string_view name) {
+    auto const result = Complete(cwd, path).result;
+    auto const index = static_cast<size_t>(
+        std::ranges::find(result._candidates, name) - result._candidates.begin());
+    return index < result._candidateKinds.size() ? std::optional{result._candidateKinds[index]}
+                                                 : std::nullopt;
+  };
+  using Kind = SReflect::ConsoleCandidateKind;
+  EXPECT_EQ(kindOf("/", "", "scenes"), Kind::Directory);
+  EXPECT_EQ(kindOf("/", "scenes/", "A"), Kind::Directory);
+  EXPECT_EQ(kindOf("/scenes/A", "", "actors"), Kind::Directory);
+  EXPECT_EQ(kindOf("/scenes/A", "actors/", "box"), Kind::Directory);
+  EXPECT_EQ(kindOf("/scenes/A", "", "name"), Kind::Leaf);
 }
 
 TEST_F(ActorConsoleTest, AutoCompleteConstraintsAndDebugDraw) {

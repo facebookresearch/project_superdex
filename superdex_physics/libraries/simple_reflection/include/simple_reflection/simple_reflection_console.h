@@ -180,10 +180,27 @@ struct ConsoleAutoCompleteParams {
 };
 
 /**
+What can follow a completion candidate. A Leaf ends its token, a Directory continues with '/', and
+a DirectoryOrLeaf can do either.
+*/
+enum class ConsoleCandidateKind { Leaf, Directory, DirectoryOrLeaf };
+
+} // namespace SReflect
+
+SR_BeginEnum(SReflect::ConsoleCandidateKind);
+SR_EnumItem(Leaf);
+SR_EnumItem(Directory);
+SR_EnumItem(DirectoryOrLeaf);
+SR_EndEnum();
+
+namespace SReflect {
+
+/**
 Ways to complete the path step or argument at the end of a console command.
 */
 struct ConsoleAutoCompleteResult {
   std::vector<std::string> _candidates; // Full text of the step or argument, as it would be typed
+  std::vector<ConsoleCandidateKind> _candidateKinds; // One for each candidate
   size_t _defaultIndex = 0; // The candidate to offer first, if there are any
   std::string _note; // The value's type, or a method argument's type and name. Empty for steps.
   std::vector<std::string> _laterArgumentNotes; // Notes for the method's arguments after this one
@@ -191,6 +208,7 @@ struct ConsoleAutoCompleteResult {
 
   SR_BeginStruct(SReflect::ConsoleAutoCompleteResult);
   SR_Field_Name(_candidates, "candidates");
+  SR_Field_Name(_candidateKinds, "candidateKinds");
   SR_Field_Name(_defaultIndex, "defaultIndex");
   SR_Field_Name(_note, "note");
   SR_Field_Name(_laterArgumentNotes, "laterArgumentNotes");
@@ -207,6 +225,10 @@ Path steps:
   - The first token is a path, and only its last step is completed: a field, property or method
     name or a map key. Array indices do not complete.
   - The default is the first candidate.
+  - A step that ConsoleList can list is a Directory, unless ConsoleList shows its value, or it is an
+    optional or variant that may hold another kind of value. Those can be set as a whole as well,
+    so they are a DirectoryOrLeaf. With params._directoriesOnly, every candidate is a Directory.
+    Other steps, including methods, are a Leaf.
 
 Arguments:
   - A value takes one argument, which completes to its current value as the default. Nothing
@@ -222,6 +244,7 @@ Arguments:
   - The note describes the argument, for example "Fruit" for a value or "Fruit fruit" for a method
     argument. A method argument also has notes for the arguments after it, in order. Nothing
     completes after a value's argument or a method's last argument.
+  - Every argument candidate is a Leaf.
 
 Candidates are text that ConsoleTokenize reads back as the step or argument. A value is one line of
 JSON with a space after each ',' and ':', except that a string or enum is its text, quoted if

@@ -1357,11 +1357,34 @@ static bool CanBeDirectory(TypeInfo const& type) {
   return IsDirectoryType(type);
 }
 
+namespace {
+struct Candidate {
+  std::string text;
+  ConsoleCandidateKind kind = ConsoleCandidateKind::Leaf;
+};
+} // namespace
+
+// What can follow a path step to a value of this type (see ConsoleAutoComplete).
+static ConsoleCandidateKind StepKind(
+    TypeInfo const& type,
+    ConsoleAutoCompleteParams const& params) {
+  if (!CanBeDirectory(type)) {
+    return ConsoleCandidateKind::Leaf;
+  } else if (params._directoriesOnly) {
+    return ConsoleCandidateKind::Directory;
+  }
+  bool const isWrapped =
+      type._coreType == CoreType::CT_optional || type._coreType == CoreType::CT_variant;
+  return isWrapped || IsPrimitiveOrFixedPrimitiveArrayType(type)
+      ? ConsoleCandidateKind::DirectoryOrLeaf
+      : ConsoleCandidateKind::Directory;
+}
+
 // Store the candidates that start with typed, in order and without duplicates. At most
 // params._maxCandidates are kept, always including defaultText if it is a candidate, which becomes
 // the default. Otherwise the first candidate is the default. A truncated result stays truncated.
 static void SetCandidates(
-    std::vector<std::string> candidates,
+    std::vector<Candidate> candidates,
     std::string_view typed,
     std::optional<std::string> const& defaultText,
     ConsoleAutoCompleteParams const& params,
@@ -1370,12 +1393,24 @@ static void SetCandidates(
       std::remove_if(
           candidates.begin(),
           candidates.end(),
-          [&](std::string const& candidate) { return !StartsWith(candidate, typed); }),
+          [&](Candidate const& candidate) { return !StartsWith(candidate.text, typed); }),
       candidates.end());
-  std::sort(candidates.begin(), candidates.end(), ConsoleCandidateLess);
-  candidates.erase(std::unique(candidates.begin(), candidates.end()), candidates.end());
-  auto const it = defaultText ? std::find(candidates.begin(), candidates.end(), *defaultText)
-                              : candidates.end();
+  std::stable_sort(
+      candidates.begin(), candidates.end(), [](Candidate const& a, Candidate const& b) {
+        return ConsoleCandidateLess(a.text, b.text);
+      });
+  candidates.erase(
+      std::unique(
+          candidates.begin(),
+          candidates.end(),
+          [](Candidate const& a, Candidate const& b) { return a.text == b.text; }),
+      candidates.end());
+  auto const it = defaultText
+      ? std::find_if(
+            candidates.begin(),
+            candidates.end(),
+            [&](Candidate const& candidate) { return candidate.text == *defaultText; })
+      : candidates.end();
   size_t defaultIndex = static_cast<size_t>(it - candidates.begin());
   if (candidates.size() > params._maxCandidates) {
     result._isTruncated = true;
@@ -1388,7 +1423,12 @@ static void SetCandidates(
     candidates.resize(params._maxCandidates);
   }
   result._defaultIndex = defaultIndex < candidates.size() ? defaultIndex : 0;
-  result._candidates = std::move(candidates);
+  result._candidates.clear();
+  result._candidateKinds.clear();
+  for (Candidate& candidate : candidates) {
+    result._candidates.push_back(std::move(candidate.text));
+    result._candidateKinds.push_back(candidate.kind);
+  }
 }
 
 void detail::AddConsoleStepCandidates(
@@ -1396,9 +1436,12 @@ void detail::AddConsoleStepCandidates(
     std::vector<std::string> const& names,
     std::string_view typed,
     ConsoleAutoCompleteParams const& params) {
-  std::vector<std::string> candidates = std::move(result._candidates);
+  std::vector<Candidate> candidates;
+  for (size_t i = 0; i < result._candidates.size(); ++i) {
+    candidates.push_back({std::move(result._candidates[i]), result._candidateKinds[i]});
+  }
   for (std::string const& name : names) {
-    candidates.push_back(QuoteConsoleToken(name));
+    candidates.push_back({QuoteConsoleToken(name), ConsoleCandidateKind::Directory});
   }
   SetCandidates(std::move(candidates), typed, std::nullopt, params, result);
 }
@@ -1409,10 +1452,10 @@ static void CompleteStep(
     std::string_view typed,
     ConsoleAutoCompleteParams const& params,
     ConsoleAutoCompleteResult& result) {
-  std::vector<std::string> candidates;
+  std::vector<Candidate> candidates;
   auto const add = [&](std::string const& name, TypeInfo const& type) {
     if (!params._directoriesOnly || CanBeDirectory(type)) {
-      candidates.push_back(QuoteConsoleToken(FormatPathStep(name)));
+      candidates.push_back({QuoteConsoleToken(FormatPathStep(name)), StepKind(type, params)});
     }
   };
   TypeInfo const& type = *node.type;
@@ -1425,7 +1468,7 @@ static void CompleteStep(
     }
     for (MethodInfo const* method : structType._methods) {
       if (!params._directoriesOnly && !method->HasAttribute<Attribute_HideFromEditor>()) {
-        candidates.emplace_back(method->_name);
+        candidates.push_back({std::string{method->_name}, ConsoleCandidateKind::Leaf});
       }
     }
   } else if (type._coreType == CoreType::CT_map) {
@@ -1481,11 +1524,11 @@ static std::optional<std::string> FormatArgument(TypeInfo const& type, void cons
 }
 
 // Argument text that names a value of type: enum items, true and false, and null for an optional.
-static std::vector<std::string> NamedArguments(TypeInfo const& type, size_t maxLength) {
-  std::vector<std::string> names;
+static std::vector<Candidate> NamedArguments(TypeInfo const& type, size_t maxLength) {
+  std::vector<Candidate> names;
   auto const add = [&](std::string name) {
     if (name.size() <= maxLength) {
-      names.push_back(std::move(name));
+      names.push_back({std::move(name), ConsoleCandidateKind::Leaf});
     }
   };
   TypeInfo const* inner = &type;
@@ -1549,8 +1592,8 @@ static void CompleteValueArgument(
   if (!current) {
     return;
   }
-  std::vector<std::string> candidates = NamedArguments(type, params._maxValueLength);
-  candidates.push_back(*current);
+  std::vector<Candidate> candidates = NamedArguments(type, params._maxValueLength);
+  candidates.push_back({*current, ConsoleCandidateKind::Leaf});
   SetCandidates(std::move(candidates), typed, current, params, result);
 }
 
@@ -1589,12 +1632,12 @@ static void CompleteMethodArgument(
   } catch (...) {
     // The default cannot be written as text. Offer only named values.
   }
-  std::vector<std::string> candidates = NamedArguments(type, params._maxValueLength);
+  std::vector<Candidate> candidates = NamedArguments(type, params._maxValueLength);
   if (value && value->size() > params._maxValueLength) {
     value.reset();
   }
   if (value) {
-    candidates.push_back(*value);
+    candidates.push_back({*value, ConsoleCandidateKind::Leaf});
   }
   auto const note = [](MethodArgInfo const& argument) {
     return StripNamespaces(argument.GetTypeInfo()._nameWithNamespace) + " " + argument._name;

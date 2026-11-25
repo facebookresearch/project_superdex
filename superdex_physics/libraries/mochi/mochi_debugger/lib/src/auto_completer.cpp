@@ -231,6 +231,31 @@ std::optional<AutoCompleter::Cycling> AutoCompleter::StartCycling(State& state, 
   return cycling;
 }
 
+std::string_view AutoCompleter::OnlyCandidateTerminator(
+    State const& state,
+    Cycling const& cycling) {
+  auto const& result = state.reply->message.result;
+  if (cycling.candidates.size() != 1 || result._isTruncated) {
+    return {};
+  }
+  auto const it =
+      std::find(result._candidates.begin(), result._candidates.end(), cycling.candidates.front());
+  auto const index = static_cast<size_t>(it - result._candidates.begin());
+  // A server built before candidate kinds sends none.
+  if (index >= result._candidateKinds.size()) {
+    return {};
+  }
+  switch (result._candidateKinds[index]) {
+    case SReflect::ConsoleCandidateKind::Leaf:
+      return " ";
+    case SReflect::ConsoleCandidateKind::Directory:
+      return "/";
+    case SReflect::ConsoleCandidateKind::DirectoryOrLeaf:
+      break;
+  }
+  return {};
+}
+
 std::string AutoCompleter::Insert(State& state, Cycling cycling) const {
   cycling.text = cycling.prefix + cycling.candidates[cycling.index];
   state.text = cycling.text;
@@ -252,6 +277,12 @@ std::optional<std::string> AutoCompleter::Cycle(bool backward) {
       cycling = StartCycling(state, request);
       if (!cycling) {
         return std::nullopt;
+      }
+      std::string_view const terminator = OnlyCandidateTerminator(state, *cycling);
+      if (!terminator.empty()) {
+        state.text = cycling->prefix + cycling->candidates.front() + std::string{terminator};
+        state.step = FindStep(state.text);
+        return state.text;
       }
       if (backward) {
         cycling->index = cycling->candidates.size() - 1;
@@ -290,24 +321,25 @@ AutoCompleter::View AutoCompleter::GetView() const {
     if (state.reply) {
       notes = state.reply->notes;
     }
+    bool isTyped = false;
     if (state.cycling) {
       view.candidates = state.cycling->candidates;
       view.selected = state.cycling->index;
       view.offset = state.cycling->prefix.size();
       view.isCycling = true;
-      view.annotations = std::move(notes);
-      return view;
+    } else {
+      if (!state.isCursorAtEnd || !HasCoveringReply(state)) {
+        return view;
+      }
+      view.candidates = MatchingCandidates(state, view.selected);
+      view.offset = state.step->prefix.size();
+      std::string_view const typed = state.step->typed;
+      isTyped = !typed.empty();
+      if (isTyped && !view.candidates.empty()) {
+        view.preview = view.candidates[view.selected].substr(typed.size());
+      }
     }
-    if (!state.isCursorAtEnd || !HasCoveringReply(state)) {
-      return view;
-    }
-    view.candidates = MatchingCandidates(state, view.selected);
-    view.offset = state.step->prefix.size();
-    std::string_view const typed = state.step->typed;
-    if (!typed.empty() && !view.candidates.empty()) {
-      view.preview = view.candidates[view.selected].substr(typed.size());
-    }
-    if (!view.preview.empty() && view.candidates.size() > 1) {
+    if ((view.isCycling || isTyped) && view.candidates.size() > 1) {
       view.annotations.push_back("(+" + std::to_string(view.candidates.size() - 1) + ")");
     }
     Append(view.annotations, notes);

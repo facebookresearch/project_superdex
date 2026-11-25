@@ -180,7 +180,7 @@ bool ConsoleAutoComplete(
     size_t pathStart = 0);
 
 /**
-Add path steps named outside of reflection, such as built-in directories, to a result for a path
+Add directories named outside of reflection, such as built-in directories, to a result for a path
 step. Names are quoted for the terminal, then the candidates are matched, ordered and limited as in
 ConsoleAutoComplete. The default becomes the first candidate.
 */

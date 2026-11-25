@@ -72,9 +72,9 @@ class AutoCompleter {
     /// Text that Tab inserts at the cursor. Empty until something is typed in the step or argument,
     /// and while cycling.
     std::string preview;
-    /// Shown after the preview, separated by spaces: "(+N)" for the other matching candidates, then
-    /// a placeholder such as "<Kind>" or "<float amount>" for the value or method argument, and one
-    /// for each method argument after it.
+    /// Shown after the preview, separated by spaces: "(+N)" for the other candidates once something
+    /// is typed in the step or argument, then a placeholder such as "<Kind>" or "<float amount>"
+    /// for the value or method argument, and one for each method argument after it.
     DynamicArray<std::string> annotations;
     /// Candidates that match the text typed so far, or the candidates being cycled through
     DynamicArray<std::string> candidates;
@@ -107,17 +107,21 @@ class AutoCompleter {
   /**
    * @brief Complete the input for Tab, or Shift+Tab when backward is true.
    *
-   * @details The first call inserts the candidate Tab would insert, or the last candidate when
-   * backward. Calls without input changes between them replace it with the next or previous
-   * candidate that matches the text typed before the first call, wrapping around. Nothing completes
-   * while the cursor is not at the end of the input.
+   * @details When only one candidate matches and the server says what must follow it, Tab inserts
+   * it followed by '/' for a directory or a space for anything else, and starts no cycle, so the
+   * next Tab completes the next step or argument. Otherwise, the first call inserts the candidate
+   * Tab would insert, or the last candidate when backward. Calls without input changes between them
+   * replace it with the next or previous candidate that matches the text typed before the first
+   * call, wrapping around. Typing '/' or a space accepts the candidate. Nothing completes while the
+   * cursor is not at the end of the input.
    *
    * @return The new input line, or nullopt if nothing completes.
    */
   std::optional<std::string> Cycle(bool backward);
 
   /**
-   * @brief Insert @ref View::candidates[index], as cycling does.
+   * @brief Insert @ref View::candidates[index], as cycling does. Nothing follows it, even when it
+   * is the only candidate, because arrow keys in a menu select with this too.
    *
    * @return The new input line, or nullopt if index is out of range.
    */
@@ -177,6 +181,8 @@ class AutoCompleter {
   Request MakeRequest(State& state) const;
   Request RequestIfNeeded(State& state) const;
   std::optional<Cycling> StartCycling(State& state, Request& outRequest) const;
+  // What follows the only candidate of a new cycle: "/", " ", or nothing when it is not certain
+  static std::string_view OnlyCandidateTerminator(State const& state, Cycling const& cycling);
   std::string Insert(State& state, Cycling cycling) const;
   void Send(Request const& request) const;
 
