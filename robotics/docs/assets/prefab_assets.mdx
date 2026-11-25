@@ -1,0 +1,64 @@
+---
+title: Prefab Assets
+sidebar_label: Prefab Assets
+---
+import ProjectSuperdexLink from '@site/src/components/ProjectSuperdexLink';
+import SiteImage from "@site/src/components/SiteImage";
+
+# Prefab Assets
+
+SuperDex ships a library of physics prefabs under `assets/prefabs/`. A prefab is
+a JSON file (`.superdex_prefab`, or `.mochi_prefab` for older assets) that
+declares rigid, soft, articulated, and rod actors with their materials,
+collision models, and render models. Add one to a SuperDex Physics scene, open
+it in the <ProjectSuperdexLink site="studio" path="docs/prefab_editor/">Studio
+Prefab Editor</ProjectSuperdexLink>, import it into SuperDex Unreal, or list it
+as a spawnable prefab in a [SuperDex scene](../superdex_scenes.mdx). For the
+format, see
+<ProjectSuperdexLink site="physics" path="docs/authoring_scenes/authoring_prefabs/">Authoring
+Prefabs</ProjectSuperdexLink>.
+
+Each folder holds a main prefab and, where useful, variants of it, such as a
+task's starting arrangement. Many folders also have a `tuning/` subfolder of
+<ProjectSuperdexLink site="studio" path="docs/asset_tuner/">Asset Tuner</ProjectSuperdexLink>
+experiments that check the prefab's behavior,
+for example how hard a key must be pressed or how firmly a plug seats. The
+**Bodies** column lists the actor types the main prefab uses.
+
+## Dexterity Tests
+
+Simulated versions of standard clinical hand-function tests.
+
+| Thumbnail | Prefab | Asset Link | Bodies | Contents |
+|-----------|--------|------------|--------|----------|
+| <SiteImage src="img/prefab_assets/box_and_blocks.png" alt="Box and Block Test" width="120" /> | Box and Block Test | [`box_and_blocks`](https://github.com/facebookresearch/project_superdex/tree/main/assets/prefabs/box_and_blocks) | Rigid | A partitioned box with 32 blocks in four colors. The box and each colored block are also separate prefabs. |
+| <SiteImage src="img/prefab_assets/functional_dexterity_test.png" alt="Functional Dexterity Test" width="120" /> | Functional Dexterity Test | [`functional_dexterity_test`](https://github.com/facebookresearch/project_superdex/tree/main/assets/prefabs/functional_dexterity_test) | Rigid | A pegboard with its pegs seated. Variants: a single peg (`fdt_peg`), and `functional_dexterity_test_partly_flipped`, with four pegs not yet flipped. |
+| <SiteImage src="img/prefab_assets/nine_hole_peg_test.png" alt="Nine-Hole Peg Test" width="120" /> | Nine-Hole Peg Test | [`nine_hole_peg_test`](https://github.com/facebookresearch/project_superdex/tree/main/assets/prefabs/nine_hole_peg_test) | Rigid | A pegboard with nine seated pegs. Variants: a single peg (`nine_hole_peg`), and `nine_hole_peg_test_transfer`, which adds an empty board to move the pegs to. |
+
+## Toys and Puzzles
+
+| Thumbnail | Prefab | Asset Link | Bodies | Contents |
+|-----------|--------|------------|--------|----------|
+| <SiteImage src="img/prefab_assets/brick_toys.png" alt="Brick Toys" width="120" /> | Brick Toys | [`brick_toys`](https://github.com/facebookresearch/project_superdex/tree/main/assets/prefabs/brick_toys) | Rigid | Eight large 2x2 interlocking bricks whose studs snap together. Each color is also its own prefab (`large_brick_toy_2x2_<color>`). |
+| <SiteImage src="img/prefab_assets/fidget_box.png" alt="Fidget Box" width="120" /> | Fidget Box | [`fidget_box`](https://github.com/facebookresearch/project_superdex/tree/main/assets/prefabs/fidget_box) | Articulated | A fidget toy built as a single articulation. |
+| <SiteImage src="img/prefab_assets/puzzle_cube.png" alt="Puzzle Cube" width="120" /> | Puzzle Cube | [`puzzle_cube`](https://github.com/facebookresearch/project_superdex/tree/main/assets/prefabs/puzzle_cube) | Articulated | A 2x2 puzzle cube whose corners turn about the center on spherical joints, with detents. Variant: `puzzle_cube_scrambled`, two quarter turns from solved. |
+| <SiteImage src="img/prefab_assets/rubber_duck.png" alt="Rubber Duck" width="120" /> | Rubber Duck | [`rubber_duck`](https://github.com/facebookresearch/project_superdex/tree/main/assets/prefabs/rubber_duck) | Soft | A bath-sized soft rubber duck. |
+| <SiteImage src="img/prefab_assets/shape_box.png" alt="Shape Box" width="120" /> | Shape Box | [`shape_box`](https://github.com/facebookresearch/project_superdex/tree/main/assets/prefabs/shape_box) | Rigid | A shape-sorting box with a sliding lid and 12 blocks that fit through its holes. Variant: `shape_box_four_out`, with four blocks on the table. |
+
+## Household Objects
+
+| Thumbnail | Prefab | Asset Link | Bodies | Contents |
+|-----------|--------|------------|--------|----------|
+| <SiteImage src="img/prefab_assets/duck_lamp.png" alt="Duck Lamp" width="120" /> | Duck Lamp | [`duck_lamp`](https://github.com/facebookresearch/project_superdex/tree/main/assets/prefabs/duck_lamp) | Soft | A compliant duck-shaped lamp, lying down. |
+| <SiteImage src="img/prefab_assets/headphones.png" alt="Headphones" width="120" /> | Headphones | [`headphones`](https://github.com/facebookresearch/project_superdex/tree/main/assets/prefabs/headphones) | Articulated, rigid, rod, soft | Over-ear headphones with a sprung band, swiveling cups and soft pads, and a 1/4 in audio cable with a plug at each end that seats in the headphones' jack. `headphones_set` places them on a table with the cable; `headphones/` and `cable/` are standalone prefabs. |
+| <SiteImage src="img/prefab_assets/kitchen.png" alt="Kitchen" width="120" /> | Kitchen | [`kitchen`](https://github.com/facebookresearch/project_superdex/tree/main/assets/prefabs/kitchen) | Articulated, rigid, soft | A kitchen sink scene: a counter with an inset sink, a turning faucet, a pump soap dispenser, a double light switch, a wall cabinet with doors, and loose props (a screw-top jar, plates, and a soft sponge). Each object is also its own prefab in a subfolder. |
+| <SiteImage src="img/prefab_assets/midi.png" alt="MIDI Keyboard" width="120" /> | MIDI Keyboard | [`midi`](https://github.com/facebookresearch/project_superdex/tree/main/assets/prefabs/midi) | Articulated | A 37-key MIDI controller built as a single articulation: keys, buttons, sliders, a knob, pitch and modulation wheels, a joystick, and 1/4 in jacks (L, R, and PHONES) that the headphone cable's plug seats in. |
+| <SiteImage src="img/prefab_assets/paper_cups.png" alt="Paper Cups" width="120" /> | Paper Cups | [`paper_cups`](https://github.com/facebookresearch/project_superdex/tree/main/assets/prefabs/paper_cups) | Rigid | An 8 oz paper cup that nests and stacks. `paper_cup_pyramid` stacks ten upside down; `paper_cup_pyramid_half_built` has the bottom two rows built and three cups beside them. |
+
+## Fixtures and Primitives
+
+| Thumbnail | Prefab | Asset Link | Bodies | Contents |
+|-----------|--------|------------|--------|----------|
+| <SiteImage src="img/prefab_assets/chain.png" alt="Chain" width="120" /> | Chain | [`chain`](https://github.com/facebookresearch/project_superdex/tree/main/assets/prefabs/chain) | Rigid | Ten interlocking chain links. |
+| <SiteImage src="img/prefab_assets/sphere.png" alt="Sphere" width="120" /> | Sphere | [`sphere`](https://github.com/facebookresearch/project_superdex/tree/main/assets/prefabs/sphere) | Rigid | A single rigid sphere. |
+| <SiteImage src="img/prefab_assets/workbench.png" alt="Workbench" width="120" /> | Workbench | [`workbench`](https://github.com/facebookresearch/project_superdex/tree/main/assets/prefabs/workbench) | Rigid | A static workbench, 1.5 m wide, 0.6 m deep and 0.9 m tall, used as the table in the SuperDex Unreal Sampler and the [`runtime_scene_load`](./scene_assets.mdx) scene. |

@@ -1,7 +1,6 @@
 ---
 title: Bot Assets
 sidebar_label: Bot Assets
-sidebar_position: 5
 ---
 import SiteImage from "@site/src/components/SiteImage";
 
@@ -14,6 +13,10 @@ folder they live in; left/right variants are listed separately. All bot asset
 visuals are GLB and have been given custom PBR materials to better represent the
 real product, compared to the visual assets provided by upstream sources
 (COLLADA, etc.).
+
+Some bot folders also include `control/` parameter files for the controllers
+that a SuperDex scene attaches, such as those used by the
+[`runtime_scene_load` example](../superdex_scenes.mdx#example-runtime_scene_load).
 
 Each entry carries three preparation flags:
 
@@ -67,6 +70,10 @@ for the measured and mirrored parameters.
 | <SiteImage src="img/bot_assets/wuji_hand2_beta1_left-paired.png" alt="Wuji Hand 2 Beta 1 left: unskinned and skinned, side by side" height="120" style={{width: 'auto', maxWidth: 'none'}} /> | Wuji Hand 2, Beta 1 (Left) | [`wuji_hand2_beta1_left`](https://github.com/facebookresearch/project_superdex/tree/main/assets/bots/hands/wuji_hand2_beta1/left) | Remeshed CAD | Mfgr. | Mfgr. |
 | <SiteImage src="img/bot_assets/wuji_hand2_beta1_right-paired.png" alt="Wuji Hand 2 Beta 1 right: unskinned and skinned, side by side" height="120" style={{width: 'auto', maxWidth: 'none'}} /> | Wuji Hand 2, Beta 1 (Right) | [`wuji_hand2_beta1_right`](https://github.com/facebookresearch/project_superdex/tree/main/assets/bots/hands/wuji_hand2_beta1/right) | Remeshed CAD | Mfgr. | Mfgr. |
 
+The DG-5F hand folders also keep the hands' earlier parameters as
+`*_legacy.superdex_bot`, from before the joint limits, link inertials and joint
+friction were updated to Tesollo's latest URDFs and system identification.
+
 ## Avatar Hands
 
 Not production robots — these are human hands built with the bot definition
@@ -78,6 +85,15 @@ format, for avatar and hand-tracking use.
 | <SiteImage src="img/bot_assets/oculus_xr_hand_highpoly_right.png" alt="Meta XR hand high-poly right" width="120" /> | Meta XR Hand, High-poly (Right) | [`oculus_xr_hand_highpoly_right`](https://github.com/facebookresearch/project_superdex/tree/main/assets/bots/hands/oculus_xr/right) | Remeshed Visual | Mfgr. | Mfgr. |
 | <SiteImage src="img/bot_assets/oculus_xr_hand_lowpoly_left.png" alt="Meta XR hand low-poly left" width="120" /> | Meta XR Hand, Low-poly (Left) | [`oculus_xr_hand_lowpoly_left`](https://github.com/facebookresearch/project_superdex/tree/main/assets/bots/hands/oculus_xr/left) | Remeshed Visual | Mfgr. | Mfgr. |
 | <SiteImage src="img/bot_assets/oculus_xr_hand_lowpoly_right.png" alt="Meta XR hand low-poly right" width="120" /> | Meta XR Hand, Low-poly (Right) | [`oculus_xr_hand_lowpoly_right`](https://github.com/facebookresearch/project_superdex/tree/main/assets/bots/hands/oculus_xr/right) | Remeshed Visual | Mfgr. | Mfgr. |
+| <SiteImage src="img/bot_assets/openxr_hand_highpoly_left.png" alt="Meta XR Hand, OpenXR Skeleton, High-poly (Left)" width="120" /> | Meta XR Hand, OpenXR Skeleton, High-poly (Left) | [`openxr_hand_highpoly_left`](https://github.com/facebookresearch/project_superdex/tree/main/assets/bots/hands/openxr/left) | Remeshed Visual | Mfgr. | Mfgr. |
+| <SiteImage src="img/bot_assets/openxr_hand_highpoly_right.png" alt="Meta XR Hand, OpenXR Skeleton, High-poly (Right)" width="120" /> | Meta XR Hand, OpenXR Skeleton, High-poly (Right) | [`openxr_hand_highpoly_right`](https://github.com/facebookresearch/project_superdex/tree/main/assets/bots/hands/openxr/right) | Remeshed Visual | Mfgr. | Mfgr. |
+| <SiteImage src="img/bot_assets/openxr_hand_lowpoly_left.png" alt="Meta XR Hand, OpenXR Skeleton, Low-poly (Left)" width="120" /> | Meta XR Hand, OpenXR Skeleton, Low-poly (Left) | [`openxr_hand_lowpoly_left`](https://github.com/facebookresearch/project_superdex/tree/main/assets/bots/hands/openxr/left) | Remeshed Visual | Mfgr. | Mfgr. |
+| <SiteImage src="img/bot_assets/openxr_hand_lowpoly_right.png" alt="Meta XR Hand, OpenXR Skeleton, Low-poly (Right)" width="120" /> | Meta XR Hand, OpenXR Skeleton, Low-poly (Right) | [`openxr_hand_lowpoly_right`](https://github.com/facebookresearch/project_superdex/tree/main/assets/bots/hands/openxr/right) | Remeshed Visual | Mfgr. | Mfgr. |
+
+The `openxr` hands reuse the `oculus_xr` geometry, rigged to the 26 joints of
+the OpenXR hand skeleton so raw OpenXR joint poses drive them without per-bone
+correction. See the [asset README](https://github.com/facebookresearch/project_superdex/tree/main/assets/bots/hands/openxr)
+for the link-to-joint mapping.
 
 ## Torsos
 
@@ -93,7 +109,7 @@ format, for avatar and hand-tracking use.
 
 ## Arm + Hand Combos
 
-Combos are [`ModBotPrefab`](./modifying_bots.mdx) recipes — a base arm (or torso)
+Combos are [`ModBotPrefab`](../modifying_bots.mdx) recipes — a base arm (or torso)
 with grippers/hands attached. Their preparation flags are **N/A** because each
 combo is a composite of the standalone robots above; see those entries for the
 per-component Collision, Link Dynamics, and Joint Dynamics ratings.
@@ -103,10 +119,12 @@ per-component Collision, Link Dynamics, and Joint Dynamics ratings.
 | <SiteImage src="img/bot_assets/openarm_v20.png" alt="OpenArm v2.0 bimanual" width="120" /> | OpenArm v2.0 (Bimanual) | [`openarm_v20`](https://github.com/facebookresearch/project_superdex/tree/main/assets/bots/arm_hand_combos/openarm_v20) | N/A | N/A | N/A |
 | <SiteImage src="img/bot_assets/fr3_dg5f_short_left.png" alt="FR3 + DG-5F short left" width="120" /> | FR3 + DG-5F Short (Left) | [`fr3_dg5f_short_left`](https://github.com/facebookresearch/project_superdex/tree/main/assets/bots/arm_hand_combos/fr3_dg5f_short/left) | N/A | N/A | N/A |
 | <SiteImage src="img/bot_assets/fr3_dg5f_short_right.png" alt="FR3 + DG-5F short right" width="120" /> | FR3 + DG-5F Short (Right) | [`fr3_dg5f_short_right`](https://github.com/facebookresearch/project_superdex/tree/main/assets/bots/arm_hand_combos/fr3_dg5f_short/right) | N/A | N/A | N/A |
+| <SiteImage src="img/bot_assets/fr3_dg5f_long_left.png" alt="FR3 + DG-5F Long (Left)" width="120" /> | FR3 + DG-5F Long (Left) | [`fr3_dg5f_long_left`](https://github.com/facebookresearch/project_superdex/tree/main/assets/bots/arm_hand_combos/fr3_dg5f_long/left) | N/A | N/A | N/A |
+| <SiteImage src="img/bot_assets/fr3_dg5f_long_right.png" alt="FR3 + DG-5F Long (Right)" width="120" /> | FR3 + DG-5F Long (Right) | [`fr3_dg5f_long_right`](https://github.com/facebookresearch/project_superdex/tree/main/assets/bots/arm_hand_combos/fr3_dg5f_long/right) | N/A | N/A | N/A |
 | <SiteImage src="img/bot_assets/fr3_dg5f_short_seed_right.png" alt="FR3 + DG-5F short seed right" width="120" /> | FR3 + DG-5F Short, SEED (Right) | [`fr3_dg5f_short_seed_right`](https://github.com/facebookresearch/project_superdex/tree/main/assets/bots/arm_hand_combos/fr3_dg5f_short_seed/right) | N/A | N/A | N/A |
 | <SiteImage src="img/bot_assets/fr3_v2_2f_85.png" alt="FR3 v2 + Robotiq 2F-85" width="120" /> | FR3 v2 + Robotiq 2F-85 | [`fr3_v2_2f_85`](https://github.com/facebookresearch/project_superdex/tree/main/assets/bots/arm_hand_combos/fr3_v2_2f_85) | N/A | N/A | N/A |
 | <SiteImage src="img/bot_assets/fr3_v2_allegro_v5_right.png" alt="FR3 v2 + Allegro Hand v5 right" width="120" /> | FR3 v2 + Allegro Hand v5 (Right) | [`fr3_v2_allegro_v5_right`](https://github.com/facebookresearch/project_superdex/tree/main/assets/bots/arm_hand_combos/fr3_v2_allegro_v5/right) | N/A | N/A | N/A |
-| <SiteImage src="img/bot_assets/openarm_v20_wuji.png" alt="OpenArm v2.0 + Wuji Hand 2" width="120" /> | OpenArm v2.0 + Wuji Hand 2 (Bimanual) | [`openarm_v20_wuji`](https://github.com/facebookresearch/project_superdex/tree/main/assets/bots/arm_hand_combos/openarm_v20) | N/A | N/A | N/A |
+| <SiteImage src="img/bot_assets/openarm_v20_wuji.png" alt="OpenArm v2.0 + Wuji Hand 2" width="120" /> | OpenArm v2.0 + Wuji Hand 2 (Bimanual) | [`openarm_v20_wuji`](https://github.com/facebookresearch/project_superdex/tree/main/assets/bots/arm_hand_combos/openarm_v20_wuji2_beta1) | N/A | N/A | N/A |
 | <SiteImage src="img/bot_assets/fr3_dg5f_short_seed_left.png" alt="FR3 + DG-5F short seed left" width="120" /> | FR3 + DG-5F Short, SEED (Left) | [`fr3_dg5f_short_seed_left`](https://github.com/facebookresearch/project_superdex/tree/main/assets/bots/arm_hand_combos/fr3_dg5f_short_seed/left) | N/A | N/A | N/A |
 | <SiteImage src="img/bot_assets/fr3_v2_dg5f_long_seed_left.png" alt="FR3 v2 + DG-5F long seed left" width="120" /> | FR3 v2 + DG-5F Long, SEED (Left) | [`fr3_v2_dg5f_long_seed_left`](https://github.com/facebookresearch/project_superdex/tree/main/assets/bots/arm_hand_combos/fr3_v2_dg5f_long_seed/left) | N/A | N/A | N/A |
 | <SiteImage src="img/bot_assets/fr3_v2_dg5f_long_seed_right.png" alt="FR3 v2 + DG-5F long seed right" width="120" /> | FR3 v2 + DG-5F Long, SEED (Right) | [`fr3_v2_dg5f_long_seed_right`](https://github.com/facebookresearch/project_superdex/tree/main/assets/bots/arm_hand_combos/fr3_v2_dg5f_long_seed/right) | N/A | N/A | N/A |
@@ -115,7 +133,7 @@ per-component Collision, Link Dynamics, and Joint Dynamics ratings.
 | <SiteImage src="img/bot_assets/tianji_m6_wuji2_beta1_left.png" alt="Tianji Marvin M6 + Wuji Hand 2 left" width="120" /> | Tianji Marvin M6 + Wuji Hand 2 (Left) | [`tianji_m6_wuji2_beta1_left`](https://github.com/facebookresearch/project_superdex/tree/main/assets/bots/arm_hand_combos/tianji_m6_wuji2_beta1/left) | N/A | N/A | N/A |
 | <SiteImage src="img/bot_assets/tianji_m6_wuji2_beta1_right.png" alt="Tianji Marvin M6 + Wuji Hand 2 right" width="120" /> | Tianji Marvin M6 + Wuji Hand 2 (Right) | [`tianji_m6_wuji2_beta1_right`](https://github.com/facebookresearch/project_superdex/tree/main/assets/bots/arm_hand_combos/tianji_m6_wuji2_beta1/right) | N/A | N/A | N/A |
 
-Wuji Hand 2 also ships [skinned left/right variants](./bot_skinning.mdx) in its
+Wuji Hand 2 also ships [skinned left/right variants](../bot_skinning.mdx) in its
 hand asset folder. The Tianji combinations attach those skinned variants, so
 the hand retains continuous skin alongside the arm's rigid-link geometry.
 
@@ -127,3 +145,8 @@ Playful, non-production bots for demos and fun.
 |-----------|------------|------------|-----------|---------------|----------------|
 | <SiteImage src="img/bot_assets/fr3_v2_with_eyes.png" alt="FR3 v2 with googly eyes" width="120" /> | FR3 v2 with Googly Eyes | [`fr3_v2_with_eyes`](https://github.com/facebookresearch/project_superdex/tree/main/assets/bots/fun/arm_eyes_combos) | N/A | N/A | N/A |
 | <SiteImage src="img/bot_assets/googly_eyes.png" alt="Googly eyes" width="120" /> | Googly Eyes | [`googly_eyes`](https://github.com/facebookresearch/project_superdex/tree/main/assets/bots/fun/googly_eyes) | N/A | N/A | N/A |
+| <SiteImage src="img/bot_assets/example_bot_2dof.png" alt="Example 2-DOF Bot" width="120" /> | Example 2-DOF Bot | [`example_bot_2dof`](https://github.com/facebookresearch/project_superdex/tree/main/assets/bots/fun/example_bot_2dof) | Remeshed CAD | N/A | N/A |
+
+The googly eyes folder also has `googly_eyes_extra_small.superdex_bot`, a
+smaller pair. The example 2-DOF bot is a textbook two-joint RR arm used by the
+[Custom Components](../examples/advanced/custom_components.mdx) example.

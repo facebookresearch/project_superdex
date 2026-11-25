@@ -66,7 +66,16 @@ module.exports = {
     'bot_skinning',
     'bot_context_lifetime',
     'bot_components',
-    'bot_assets',
+    {
+      type: 'category',
+      label: 'Assets',
+      link: {type: 'doc', id: 'assets/overview'},
+      items: [
+        'assets/bot_assets',
+        'assets/prefab_assets',
+        'assets/scene_assets',
+      ],
+    },
     'domain_randomization',
     'inverse_kinematics',
     {

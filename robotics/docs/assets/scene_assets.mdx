@@ -1,0 +1,35 @@
+---
+title: Scene Assets
+sidebar_label: Scene Assets
+---
+import SiteImage from "@site/src/components/SiteImage";
+
+# Scene Assets
+
+SuperDex ships ready-to-load [SuperDex scenes](../superdex_scenes.mdx) under
+`assets/scenes/`. A scene combines a base physics scene, the bots placed in it
+with their controllers, and the prefabs its tasks can spawn, and its
+`.superdex_task` files describe where each task's objects start. Load a scene
+through the SuperDex Robotics API, open it in the Studio Scene Editor, or load
+it at runtime in [SuperDex Unreal](../unreal/runtime_loading.mdx).
+
+| Thumbnail | Scene | Asset Link | Contents |
+|-----------|-------|------------|----------|
+| <SiteImage src="img/scene_assets/runtime_scene_load.png" alt="Runtime Scene Load" width="120" /> | Runtime Scene Load | [`runtime_scene_load`](https://github.com/facebookresearch/project_superdex/tree/main/assets/scenes/runtime_scene_load) | The [workbench](./prefab_assets.mdx#fixtures-and-primitives), FR3 v2 and Tianji Marvin M6 arm-and-hand combos and proxy hands for each side in `left` and `right` slots, seven spawnable prefabs, and one task per prefab. It matches the SuperDex Unreal Sampler level and is what the `L_RuntimeSceneLoad` example level runs. |
+
+The scene's tasks each place one prefab on the table:
+
+| Task | Starts from | Objective |
+|------|-------------|-----------|
+| `01_paper_cup_pyramid` | `paper_cup_pyramid_half_built` | Finish the pyramid. |
+| `02_shape_box` | `shape_box_four_out` | Put the four blocks in the box. |
+| `03_puzzle_cube` | `puzzle_cube_scrambled` | Solve the cube. |
+| `04_functional_dexterity_test` | `functional_dexterity_test_partly_flipped` | Flip and reinsert the remaining pegs. |
+| `05_nine_hole_peg_test` | `nine_hole_peg_test_transfer` | Move the pegs to the empty board. |
+| `06_brick_toys` | `brick_toys` | Stack the bricks in one tower. |
+| `07_jar` | the kitchen `jar` | Take the lid off. |
+
+The objectives describe each task's intent; the task files declare starting
+states only, without success or failure criteria. For the scene's bots,
+controllers, and slots, see
+[Example: `runtime_scene_load`](../superdex_scenes.mdx#example-runtime_scene_load).

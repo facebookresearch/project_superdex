@@ -1,0 +1,33 @@
+---
+title: Assets
+sidebar_label: Overview
+slug: /assets
+---
+
+# Assets
+
+SuperDex ships a library of ready-to-use, simulation-ready assets in the
+[`assets/`](https://github.com/facebookresearch/project_superdex/tree/main/assets)
+folder of the repository. Every asset is a plain file you can load from Python
+or C++, open in SuperDex Studio, or import into SuperDex Unreal, and each asset
+folder carries a README and license describing where its geometry came from and
+how it was prepared.
+
+| Page | What it covers | Folder |
+|------|----------------|--------|
+| [Bot Assets](./bot_assets.mdx) | Arms, grippers, hands, torsos, sensors, arm-and-hand combinations, and demo bots, as `.superdex_bot` files. | [`assets/bots`](https://github.com/facebookresearch/project_superdex/tree/main/assets/bots) |
+| [Prefab Assets](./prefab_assets.mdx) | Physics prefabs: dexterity tests, toys and puzzles, household objects, and fixtures. | [`assets/prefabs`](https://github.com/facebookresearch/project_superdex/tree/main/assets/prefabs) |
+| [Scene Assets](./scene_assets.mdx) | SuperDex scenes that combine a base scene, bots, controllers, and task objects. | [`assets/scenes`](https://github.com/facebookresearch/project_superdex/tree/main/assets/scenes) |
+
+Assets reference one another by path rather than copying each other's files.
+A combination bot attaches the standalone hand and arm bots, and a scene points
+at the bots and prefabs it uses, so an improvement to one asset shows up
+everywhere it is used. Scenes resolve those paths through root tags such as
+`@bots` and `@prefabs`; see [SuperDex Scenes](../superdex_scenes.mdx).
+
+:::note Licensing
+Assets carry their own licenses, separate from the code. Meta-authored assets
+are generally CC BY 4.0, while assets derived from a manufacturer's models
+(for example the robot arms and hands) keep that manufacturer's terms. Read the
+README, LICENSE, and NOTICE in an asset's folder before redistributing it.
+:::

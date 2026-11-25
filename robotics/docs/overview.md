@@ -58,7 +58,7 @@ Explore our documentation to begin building with SuperDex Robotics:
 | [Modifying Bots](./modifying_bots.mdx) | Composing bots from a base with `ModBotPrefab` modification recipes. |
 | [Bot Context & Lifetime](./bot_context_lifetime.mdx) | How `RoboticsContext` owns bot and controller memory. |
 | [Controllers, Sensors & Actuators](./bot_components.mdx) | Creating, driving and writing the three component kinds. |
-| [Bot Assets](./bot_assets.mdx) | The bots we ship in the `assets/bots` folder. |
+| [Assets](./assets/overview.mdx) | The bots, prefabs, and scenes we ship in the `assets` folder. |
 | [Inverse Kinematics](./inverse_kinematics.mdx) | IK assets, link-frame goals, retargeting and solve limits. |
 | [Bot Skinning](./bot_skinning.mdx) | Collision and render skins, composition and coverage. |
 | [SuperDex Scenes](./superdex_scenes.mdx) | Combined workcell configuration and runtime lookup. |
