@@ -1,0 +1,260 @@
+---
+title: Bot Tasks
+sidebar_label: Bot Tasks
+sidebar_position: 8
+---
+
+import Figure, {FigureRow} from '@site/src/components/Figure';
+
+# Bot Tasks
+
+A **`BotTaskPrefab`** (`.superdex_task`, JSON) describes an episode's starting
+objects, how their placement or identity may vary, and what counts as success
+or failure. It is separate from the [bot scene](./bot_scenes.mdx): one workcell
+can host many tasks, and a task can move between workcells that provide the
+spawnable prefabs it names.
+
+Tasks do not define policy observations, actions, rewards or a control loop.
+Your application resolves the reset state, spawns the objects, resets the
+robots, and runs the episode.
+
+## Reset state and task coordinates
+
+Each `resetState` entry names an instance and a prefab from the scene's
+`scene.spawnablePrefabs`. Give instances stable **role names** so recordings and
+termination criteria keep the same identity even when the chosen prefab varies.
+Several instances can use the same prefab. Prefer names such as
+`source_container` and `target_container` over `box0` and `box1`; observations,
+criteria and recorded identities should describe the role even when
+`PrefabSelection` chooses a different shape.
+
+```json
+{
+  "physicsHz": 200,
+  "timeLimitS": 10,
+  "resetState": [
+    {
+      "name": "target",
+      "prefabName": "block",
+      "parentFromSpawn": {
+        "translation": [0.4, 0, 0.02],
+        "rotation": [0, 0, 0, 1]
+      }
+    }
+  ]
+}
+```
+
+A pose is relative to its `parent`: another reset-state instance, or
+`task_root` when omitted. Children follow a parent's resolved placement,
+including its randomization. Parents must exist and cannot form a cycle;
+`task_root` is reserved and cannot be an instance name. **Parentage uses the
+parent task instance's resolved spawn frame**, not the transform of a link or
+actor inside its prefab. A board's child follows the board's authored spawn
+placement; it does not follow a moving sub-actor merely because that actor is
+inside the board prefab.
+
+Set the scene's **`taskRoot`** at the nominal work surface and author new tasks
+in that frame. `compute_world_from_task` supplies the transform used to place
+root-level entries. Without a scene task root, task coordinates are world
+coordinates. `taskRootOffset` exists to relocate legacy tasks; new tasks do not
+need it.
+
+## Randomization
+
+An entry can declare what varies in `randomization`:
+
+- **`PoseRandomization`** names a `domainRandomizationClass` for a pose offset in
+  the parent's frame.
+- **`PrefabSelection`** lists candidate `prefabNames`; the instance name and
+  placement stay the same when its prefab changes.
+
+For example:
+
+```json
+"randomization": [
+  { "PoseRandomization": { "domainRandomizationClass": "object_placement" } },
+  { "PrefabSelection": { "prefabNames": ["block", "cylinder"] } }
+]
+```
+
+The task declares **what** varies, not the ranges or draws. The application or
+DR system supplies each episode's values. `resolve_reset_state` reads pose
+values under `dr/spawn/<name>/<class>/pose` and prefab indices under
+`dr/spawn/<name>/prefab`. Missing values leave the nominal state unchanged.
+Check that every nominal and candidate prefab exists in the scene before
+running an episode; loading a task alone cannot validate that binding.
+
+## Reproducible Episode Draws
+
+Native C++ `Derive(episodeSeed, key, optionalIndex)` produces an order-independent
+sub-seed for a stable UTF-8 key. Adding another randomized object does not change
+that key's seed. An omitted index and index zero are distinct; use a capture
+index deliberately for per-acquisition randomness.
+
+`Uniform`, `Normal` and `UniformQuat` in
+`superdex_robotics/domain_randomization/random.h` turn a seed into uniform,
+standard-normal and uniform-rotation draws. Each advances the supplied RNG
+state. For example:
+
+```cpp
+#include <superdex_robotics/domain_randomization/derive.h>
+#include <superdex_robotics/domain_randomization/random.h>
+
+uint64_t state = superdex::robotics::Derive(episodeSeed, "target/placement");
+double offsetMeters = superdex::robotics::Uniform(state, -0.01, 0.01);
+```
+
+These helpers do not select ranges or apply a task: the application builds the
+DR values consumed by `ResolveResetState`. Retain the seed, stable keys,
+configuration and sampled values with the episode. These RNG helpers are
+public C++ APIs, not functions in the current Python `superdex.robotics` binding.
+
+## Outcomes and time limits
+
+`terminationCriteria` holds separate `success` and `failure` groups. Each group
+combines its criteria with `All` or `Any` and can require the combined condition
+to hold for `validationTimeS` seconds. Built-in criteria test proximity
+(`SphericalProximity`), containment (`RelativeBounds`) or axis alignment
+(`AxisAlignment`). They reference task instances by name, or a part as
+`<instance>.<link-or-actor>`. `RelativeBounds` tests the object's origin, not its
+whole mesh; `useTargetBounds` uses the target's local bounds with per-face
+`xRangeM` / `yRangeM` / `zRangeM` offsets.
+
+Criteria can also name existing scene bots or base-scene actors when their
+reference prefix is declared in **`terminationCriteria.sceneObjects`**. For a
+scene bot named `fixture` whose link `socket` is the target:
+
+```json
+"terminationCriteria": {
+  "sceneObjects": ["fixture"],
+  "success": {
+    "criteria": [
+      {
+        "SphericalProximity": {
+          "taskObjectA": "target",
+          "taskObjectB": "fixture.socket",
+          "comparator": "LessThan",
+          "thresholdM": 0.01,
+          "horizontal": true
+        }
+      }
+    ]
+  }
+}
+```
+
+`horizontal: true` measures distance in the **world X/Y plane**, ignoring Z; it
+is not a plane inferred from arbitrary gravity. Scene objects are referenced,
+not spawned or reset by that declaration. `sceneObjects` and `horizontal` are
+native task-file/C++ fields; the current Python typed wrappers do not expose
+those fields. A missing actor/link still evaluates false.
+
+A criterion's `evaluationRateS` defaults to 0.05 seconds; zero checks every
+physics step. Short events between evaluations can be missed. `latch` retains
+a satisfied criterion for the episode, but does not impose an order on stages.
+Missing object references evaluate false.
+
+`bot_scene.start_termination(task)` starts the native post-physics monitor.
+`get_termination_outcome()` returns sticky success/failure results and separate
+`success_authored` / `failure_authored` flags. An empty criteria group is **not
+authored**, not an automatically failed task: keep the application's own rule
+for that outcome.
+
+`physicsHz` requests a physics rate; zero retains the consumer's rate.
+`timeLimitS` requests a simulated-time limit; zero means unlimited. These are
+**consumer settings**, not automatic scene stepping or a termination criterion.
+The application must honor the rate and end the episode at the time limit
+without manufacturing a success/failure result.
+
+## Validation and Reuse
+
+Validation happens at different stages:
+
+- **Scene load** resolves asset paths and checks named bots, controllers,
+  spawnables and slots. Creating components additionally requires registered
+  types and valid assets/parameters.
+- **Task load** checks reset-state names, parent cycles, randomization declarations
+  and criterion parameters/references. It can validate a declared scene-object
+  prefix, but cannot prove that a live scene has its requested sub-actor.
+- **Binding and reset** remain application work: check all nominal and candidate
+  prefab names against the scene catalog before running. `resolve_reset_state`
+  checks the supplied draws and computes placements; `spawn_prefab_instance`
+  rejects an unknown chosen prefab. Test criterion actor/link references in the
+  actual scene—unresolved references produce false, not a load-time error.
+
+A compatible runtime host can load a different task without rebuilding its
+application. The host must support the file schema, referenced assets and
+component types, the required object/link names, and the task's reset, rate and
+outcome conventions. Data-driven tasks do not add new control logic, rewards,
+UI or native sensor implementations to a packaged application.
+
+For reproducible trials, retain the **scene archive, task file and DR
+configuration/values** together, with content hashes or another immutable
+version identity. The scene archive pins its dependencies, but does not pin a
+separately edited task. A seed alone cannot reproduce an episode after assets,
+keys or randomization ranges change.
+
+## Running an episode
+
+Continuing with a loaded `bot_scene` whose spawnables include `block`:
+
+```python
+import superdex.robotics as robotics
+
+task = robotics.load_bot_task_prefab_from_file("reach.superdex_task")
+world_from_task = robotics.compute_world_from_task(
+    bot_scene.get_bot_scene_prefab().scene, task
+)
+
+# Empty DR values produce the nominal reset state.
+bot_scene.stop_termination()
+bot_scene.destroy_all_prefab_instances()
+for spawn in robotics.resolve_reset_state(task, [], world_from_task):
+    bot_scene.spawn_prefab_instance(
+        spawn.name, spawn.prefab_name, spawn.world_from_spawn
+    )
+# Reset robot poses and controllers here too.
+bot_scene.reset_sensors()
+bot_scene.start_termination(task)
+
+scene = bot_scene.get_scene()
+dt = 1.0 / (task.physics_hz or 200)
+elapsed = 0.0
+while task.time_limit_s == 0 or elapsed < task.time_limit_s:
+    # Supply targets, compute controller outputs, and apply efforts.
+    scene.step(dt)
+    elapsed += dt
+    bot_scene.check_sensor_graph()
+    outcome = bot_scene.get_termination_outcome()
+    if (outcome.success_authored and outcome.success) or (
+        outcome.failure_authored and outcome.failure
+    ):
+        break
+bot_scene.stop_termination()
+```
+
+Resolving reset state only computes placements; it does not spawn actors.
+Reset sensors after any settling steps if policy acquisition should start at
+episode time zero. Reset state, controller state and sensor state are distinct:
+resetting one does not reset the others.
+
+<FigureRow cols={2}>
+  <Figure
+    src="/img/r2/robotics-task-reset-before.png"
+    alt="The runtime_scene_load workcell mid-episode: the jar tipped over and the shape box's loose pieces dragged across the workbench, with the arms where they started."
+    caption="Mid-episode, the task's objects have been moved."
+  />
+  <Figure
+    src="/img/r2/robotics-task-reset-after.png"
+    alt="The same workcell after the reset: the jar upright beside the shape box and the four loose pieces back in front of it, with the same arms and workbench."
+    caption="After the reset, the objects are back at their reset placements; the bots and workbench are unchanged."
+  />
+</FigureRow>
+
+<Figure
+  src="/img/r2/robotics-task-reset-task-preview.png"
+  alt="Task Preview with two spawns, shape_box (shape_box_four_out) and jar (jar), and a SphericalProximity success criterion between shape_box.star and shape_box.shapebox_body with a 0.03 m threshold."
+  maxWidth={574}
+  caption="The task in Studio's Task Preview: two named spawns and a success criterion."
+/>

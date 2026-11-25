@@ -35,6 +35,12 @@ source URDF), **CAD** (derived from CAD), **Tuned** (hand-tuned), or **SysID**
 | <SiteImage src="img/bot_assets/fr3_v2.png" alt="FR3 v2" width="120" /> | Franka Research 3 (FR3 v2) | [`fr3_v2`](https://github.com/facebookresearch/project_superdex/tree/main/assets/bots/arms/fr3_v2) | Remeshed Visual | Mfgr. | SysID |
 | <SiteImage src="img/bot_assets/openarm_v20_left_arm.png" alt="OpenArm v2.0 left arm" width="120" /> | OpenArm v2.0 Arm (Left) | [`openarm_v20_left_arm`](https://github.com/facebookresearch/project_superdex/tree/main/assets/bots/arms/openarm_v20/left) | Remeshed CAD | Mfgr. | Mfgr. |
 | <SiteImage src="img/bot_assets/openarm_v20_right_arm.png" alt="OpenArm v2.0 right arm" width="120" /> | OpenArm v2.0 Arm (Right) | [`openarm_v20_right_arm`](https://github.com/facebookresearch/project_superdex/tree/main/assets/bots/arms/openarm_v20/right) | Remeshed CAD | Mfgr. | Mfgr. |
+| <SiteImage src="img/bot_assets/tianji_m6_left.png" alt="Tianji Marvin M6 left arm" width="120" /> | Tianji Marvin M6 (Left) | [`Marvin_M6_S_L_CCS_696_V40`](https://github.com/facebookresearch/project_superdex/tree/main/assets/bots/arms/tianji_m6/left) | Remeshed CAD | Mfgr. mass/COM; mirrored SysID inertia | Copied right-arm SysID |
+| <SiteImage src="img/bot_assets/tianji_m6_right.png" alt="Tianji Marvin M6 right arm" width="120" /> | Tianji Marvin M6 (Right) | [`Marvin_M6_S_R_CCS_696_V40`](https://github.com/facebookresearch/project_superdex/tree/main/assets/bots/arms/tianji_m6/right) | Remeshed CAD | Mfgr. mass/COM; SysID inertia | SysID |
+
+The Tianji left-arm dynamics currently reuse the identified right-arm model;
+see the [asset README](https://github.com/facebookresearch/project_superdex/tree/main/assets/bots/arms/tianji_m6)
+for the measured and mirrored parameters.
 
 ## Grippers
 
@@ -58,8 +64,8 @@ source URDF), **CAD** (derived from CAD), **Tuned** (hand-tuned), or **SysID**
 | <SiteImage src="img/bot_assets/dg5f_long_right.png" alt="DG-5F long right" width="120" /> | Tesollo DG-5F Long (Right) | [`dg5f_long_right`](https://github.com/facebookresearch/project_superdex/tree/main/assets/bots/hands/dg5f_long/right) | Remeshed CAD | Mfgr. | SysID |
 | <SiteImage src="img/bot_assets/dg5f_long_seed_left.png" alt="DG-5F long seed left" width="120" /> | Tesollo DG-5F Long, SEED (Left) | [`dg5f_long_seed_left`](https://github.com/facebookresearch/project_superdex/tree/main/assets/bots/hands/dg5f_long_seed/left) | Remeshed CAD | Mfgr. | SysID |
 | <SiteImage src="img/bot_assets/dg5f_long_seed_right.png" alt="DG-5F long seed right" width="120" /> | Tesollo DG-5F Long, SEED (Right) | [`dg5f_long_seed_right`](https://github.com/facebookresearch/project_superdex/tree/main/assets/bots/hands/dg5f_long_seed/right) | Remeshed CAD | Mfgr. | SysID |
-| <SiteImage src="img/bot_assets/wuji_hand2_beta1_left.png" alt="Wuji Hand 2 Beta 1 left" width="120" /> | Wuji Hand 2, Beta 1 (Left) | [`wuji_hand2_beta1_left`](https://github.com/facebookresearch/project_superdex/tree/main/assets/bots/hands/wuji_hand2_beta1/left) | Remeshed CAD | Mfgr. | Mfgr. |
-| <SiteImage src="img/bot_assets/wuji_hand2_beta1_right.png" alt="Wuji Hand 2 Beta 1 right" width="120" /> | Wuji Hand 2, Beta 1 (Right) | [`wuji_hand2_beta1_right`](https://github.com/facebookresearch/project_superdex/tree/main/assets/bots/hands/wuji_hand2_beta1/right) | Remeshed CAD | Mfgr. | Mfgr. |
+| <SiteImage src="img/bot_assets/wuji_hand2_beta1_left-paired.png" alt="Wuji Hand 2 Beta 1 left: unskinned and skinned, side by side" height="120" style={{width: 'auto', maxWidth: 'none'}} /> | Wuji Hand 2, Beta 1 (Left) | [`wuji_hand2_beta1_left`](https://github.com/facebookresearch/project_superdex/tree/main/assets/bots/hands/wuji_hand2_beta1/left) | Remeshed CAD | Mfgr. | Mfgr. |
+| <SiteImage src="img/bot_assets/wuji_hand2_beta1_right-paired.png" alt="Wuji Hand 2 Beta 1 right: unskinned and skinned, side by side" height="120" style={{width: 'auto', maxWidth: 'none'}} /> | Wuji Hand 2, Beta 1 (Right) | [`wuji_hand2_beta1_right`](https://github.com/facebookresearch/project_superdex/tree/main/assets/bots/hands/wuji_hand2_beta1/right) | Remeshed CAD | Mfgr. | Mfgr. |
 
 ## Avatar Hands
 
@@ -101,6 +107,17 @@ per-component Collision, Link Dynamics, and Joint Dynamics ratings.
 | <SiteImage src="img/bot_assets/fr3_v2_2f_85.png" alt="FR3 v2 + Robotiq 2F-85" width="120" /> | FR3 v2 + Robotiq 2F-85 | [`fr3_v2_2f_85`](https://github.com/facebookresearch/project_superdex/tree/main/assets/bots/arm_hand_combos/fr3_v2_2f_85) | N/A | N/A | N/A |
 | <SiteImage src="img/bot_assets/fr3_v2_allegro_v5_right.png" alt="FR3 v2 + Allegro Hand v5 right" width="120" /> | FR3 v2 + Allegro Hand v5 (Right) | [`fr3_v2_allegro_v5_right`](https://github.com/facebookresearch/project_superdex/tree/main/assets/bots/arm_hand_combos/fr3_v2_allegro_v5/right) | N/A | N/A | N/A |
 | <SiteImage src="img/bot_assets/openarm_v20_wuji.png" alt="OpenArm v2.0 + Wuji Hand 2" width="120" /> | OpenArm v2.0 + Wuji Hand 2 (Bimanual) | [`openarm_v20_wuji`](https://github.com/facebookresearch/project_superdex/tree/main/assets/bots/arm_hand_combos/openarm_v20) | N/A | N/A | N/A |
+| <SiteImage src="img/bot_assets/fr3_dg5f_short_seed_left.png" alt="FR3 + DG-5F short seed left" width="120" /> | FR3 + DG-5F Short, SEED (Left) | [`fr3_dg5f_short_seed_left`](https://github.com/facebookresearch/project_superdex/tree/main/assets/bots/arm_hand_combos/fr3_dg5f_short_seed/left) | N/A | N/A | N/A |
+| <SiteImage src="img/bot_assets/fr3_v2_dg5f_long_seed_left.png" alt="FR3 v2 + DG-5F long seed left" width="120" /> | FR3 v2 + DG-5F Long, SEED (Left) | [`fr3_v2_dg5f_long_seed_left`](https://github.com/facebookresearch/project_superdex/tree/main/assets/bots/arm_hand_combos/fr3_v2_dg5f_long_seed/left) | N/A | N/A | N/A |
+| <SiteImage src="img/bot_assets/fr3_v2_dg5f_long_seed_right.png" alt="FR3 v2 + DG-5F long seed right" width="120" /> | FR3 v2 + DG-5F Long, SEED (Right) | [`fr3_v2_dg5f_long_seed_right`](https://github.com/facebookresearch/project_superdex/tree/main/assets/bots/arm_hand_combos/fr3_v2_dg5f_long_seed/right) | N/A | N/A | N/A |
+| <SiteImage src="img/bot_assets/fr3_v2_wuji2_beta1_left.png" alt="FR3 v2 + Wuji Hand 2 left" width="120" /> | FR3 v2 + Wuji Hand 2 (Left) | [`fr3_v2_wuji2_beta1_left`](https://github.com/facebookresearch/project_superdex/tree/main/assets/bots/arm_hand_combos/fr3_v2_wuji2_beta1/left) | N/A | N/A | N/A |
+| <SiteImage src="img/bot_assets/fr3_v2_wuji2_beta1_right.png" alt="FR3 v2 + Wuji Hand 2 right" width="120" /> | FR3 v2 + Wuji Hand 2 (Right) | [`fr3_v2_wuji2_beta1_right`](https://github.com/facebookresearch/project_superdex/tree/main/assets/bots/arm_hand_combos/fr3_v2_wuji2_beta1/right) | N/A | N/A | N/A |
+| <SiteImage src="img/bot_assets/tianji_m6_wuji2_beta1_left.png" alt="Tianji Marvin M6 + Wuji Hand 2 left" width="120" /> | Tianji Marvin M6 + Wuji Hand 2 (Left) | [`tianji_m6_wuji2_beta1_left`](https://github.com/facebookresearch/project_superdex/tree/main/assets/bots/arm_hand_combos/tianji_m6_wuji2_beta1/left) | N/A | N/A | N/A |
+| <SiteImage src="img/bot_assets/tianji_m6_wuji2_beta1_right.png" alt="Tianji Marvin M6 + Wuji Hand 2 right" width="120" /> | Tianji Marvin M6 + Wuji Hand 2 (Right) | [`tianji_m6_wuji2_beta1_right`](https://github.com/facebookresearch/project_superdex/tree/main/assets/bots/arm_hand_combos/tianji_m6_wuji2_beta1/right) | N/A | N/A | N/A |
+
+Wuji Hand 2 also ships [skinned left/right variants](./bot_skinning.mdx) in its
+hand asset folder. The Tianji combinations attach those skinned variants, so
+the hand retains continuous skin alongside the arm's rigid-link geometry.
 
 ## Fun
 

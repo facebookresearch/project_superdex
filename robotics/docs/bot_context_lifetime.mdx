@@ -94,15 +94,16 @@ when the bot is.
 | **Actuator** | declared per-link in the [`BotPrefab`](./bots.mdx#botlinkprefab) (auto-created), `bot.create_actuator(type, link_name, …)`, or `ctx.create_actuator(type, link_actor, …)` | a link actor (**required**); the bot containing it, if any | its bot's `destroy_bot`, or context teardown |
 
 :::note Actuators
-No concrete actuator types ship yet, but all the APIs are in place and you can
-register your own. Additional controllers, sensors, and actuators will also be
-coming soon.
+No concrete per-link actuator component types ship in the public library yet,
+but the APIs are in place and you can register your own. Authored bot
+transmissions and tendons are separate physics mechanisms; see
+[Bots](./bots.mdx#mechanical-coupling).
 :::
 
 ### Creating and destroying
 
 `create_bot` in the above example builds the bot and everything declared in its
-prefab (sensors and actuators) in a single call. You must create and attach 
+prefab (sensors and actuators) in a single call. You must create and attach
 controllers yourself; a controller created on a bot is associated with it. You
 can further create and attach sensors and actuators in the scene or on links
 after creating the bot.
@@ -177,9 +178,10 @@ botsContext->DestroySensor(cameraHandle);
 </Tabs>
 
 :::note Scene files
-We plan to release a combined scene file that can host bots,
-<ProjectSuperdexLink site="studio" path="docs/prefab_editor/#what-is-a-prefab">prefabs</ProjectSuperdexLink>,
-controllers and more to load in a single call.
+[BotScene](./bot_scenes.mdx) combines bots, physics prefabs, controllers and
+scene-level sensors in a `.superdex_scene` file. Loading creates the components;
+your application still runs controllers and actuators. Its selected numeric
+sensor graph outputs acquire after physics.
 :::
 
 You rarely destroy controllers or sensors individually — destroying the bot, or

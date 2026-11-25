@@ -1,0 +1,200 @@
+---
+title: Bot Scenes
+sidebar_label: Bot Scenes
+sidebar_position: 7
+---
+
+import Figure, {FigureRow} from '@site/src/components/Figure';
+import ProjectSuperdexLink from '@site/src/components/ProjectSuperdexLink';
+
+# Bot Scenes
+
+A **`BotScenePrefab`** (`.superdex_scene`, JSON) combines the reusable pieces of
+a robotics environment: a base physics scene, bot instances, their controllers,
+scene-level sensors, and a catalog of objects that can be spawned later. Loading
+it creates a **`BotScene`**, the runtime owner and named lookup interface for
+those pieces.
+
+Use a scene when the same workcell needs to open in Studio, run from library
+code, and host different [tasks](./bot_tasks.mdx). A scene is configuration, not
+a control program: your application still supplies targets, runs controllers,
+and advances physics.
+
+## Scene, Task and Application
+
+Keep the three responsibilities separate:
+
+| Layer | Owns |
+|---|---|
+| Scene | Persistent geometry, robot instances, controller configuration, sensors, spawnable assets and task-root placement. |
+| Task | Episode objects, reset-state relationships, randomization declarations and success/failure criteria. |
+| Application / harness | Bot selection, sampled DR values, reset/settling, observations and targets, controller/actuator execution, physics stepping, rewards and recording. |
+
+This lets the same authored workcell serve different tasks and consumers without
+copying robot or physics definitions into each application. It does not guarantee
+identical behavior across hosts: use compatible engine settings, stepping/control
+rates, assets, component implementations and sampled episode values.
+
+## Assembling a scene
+
+The scene references assets rather than copying their definitions:
+
+- **`scene.baseScene`**: an optional physics scene with fixtures and simulation
+  settings. It is the authoritative source of gravity, solver settings, contact
+  filtering and collision layers. Without it, the engine defaults apply.
+- **`bots`**: named instances of `.superdex_bot` or `.superdex_bot_archive`
+  assets. Each entry sets placement (`parentFromBot`), an optional starting
+  joint configuration (`initialPose`), and controllers.
+- **`sensors`**: environment sensors, placed with `parentFromSensor` rather than
+  attached to a bot. Bot-link sensors and actuators come from the bot asset.
+- **`scene.spawnablePrefabs`**: named physics prefabs/scenes or bot assets
+  available for later spawning. Listing an asset here does not instantiate it.
+
+For example, save this as `workcell.superdex_scene`, with the referenced bot
+and controller files beside it:
+
+```json
+{
+  "scene": {},
+  "bots": [
+    {
+      "name": "arm",
+      "path": "fr3_v2.superdex_bot",
+      "parentFromBot": {
+        "translation": [0, 0, 0.75],
+        "rotation": [0, 0, 0, 1]
+      },
+      "controllers": [
+        {
+          "type": "MOCHI_ARTICULATED_POSE",
+          "name": "pose",
+          "params": "fr3_v2_pose.superdex_controller"
+        }
+      ]
+    }
+  ]
+}
+```
+
+Transforms map child coordinates into the parent frame, in meters and XYZW
+quaternions, using the [bot coordinate convention](./bots.mdx#coordinate-system-and-units).
+`initialPose` is in bot DOF order, excluding the root joint; omitted, it uses the
+bot's default pose.
+
+Controller `type` is a registered name; `name` identifies the instance on that
+bot. `params` is a parameter-file path or inline JSON string, and `initArgs` is
+a nested JSON object interpreted by the controller's
+`configure_from_scene_entry` hook. Register custom types on the robotics context
+**before** loading a scene that uses them. Loading configures controllers but
+does not compute outputs or apply efforts.
+
+Relative paths resolve from the scene file. Tagged paths such as `@bots/...`
+resolve through a nearby `.superdex_root` tag map. Keep references portable;
+do not rely on the application's working directory.
+
+:::info Screenshot placeholder — combined workcell
+Capture a loaded Studio bot scene with one arm, a fixture from its base physics
+scene, and one task object instantiated from `spawnablePrefabs`. Show the scene
+hierarchy with bot and object instance names. The image should make the
+assembled environment visible; the Studio guide covers editor controls.
+:::
+
+## Loading and looking up components
+
+```python
+import superdex.physics as physics
+import superdex.robotics as robotics
+
+physics.initialize(num_worker_threads=0)
+context = robotics.create_context()
+bot_scene = robotics.load_bot_scene("workcell.superdex_scene", context)
+scene = bot_scene.get_scene()
+arm = bot_scene.get_bot("arm")
+pose_handle = bot_scene.get_controller_handle("arm/pose")
+pose_controller = context.get_controller(pose_handle)
+
+# Your loop supplies targets and computes controller outputs before each step.
+# Numeric sensor graphs acquire automatically after physics; select outputs first.
+scene.step(1.0 / 200.0)
+bot_scene.check_sensor_graph()
+
+# Release the BotScene before shutting down the engine.
+del pose_controller, arm, scene, bot_scene
+physics.shutdown()
+```
+
+Use `get_bot` for an exact scene instance name and
+`get_controller_handle("bot/controller")` for a declared controller. Context
+finders return every name/type match, not just those from this scene. Keep
+borrowed bots, components, actor handles and render-model views within the
+scene's lifetime. The overload `load_bot_scene(scene, path, context)` populates
+a caller-owned physics scene; destroying the BotScene removes what it added
+but leaves that physics scene alive.
+
+[Sensor Graphs](./sensor_graphs.mdx) covers output selection, automatic
+post-physics acquisition and sample reads. Controllers and actuators remain
+application-driven.
+
+## Spawnable objects and episode reset
+
+A spawnable entry maps a prefab name to a file. `scene.taskRoot` places the task
+frame at the nominal work surface; root-level task placements are relative to
+it, not to a particular bot or a nested actor in the base scene. Moving this
+one frame relocates compatible tasks without editing each object's pose:
+
+```json
+"scene": {
+  "taskRoot": {
+    "translation": [0, 0, 0.75],
+    "rotation": [0, 0, 0, 1]
+  },
+  "spawnablePrefabs": [
+    { "name": "block", "path": "block.superdex_prefab" }
+  ]
+}
+```
+
+Create a named instance with
+`bot_scene.spawn_prefab_instance("object", "block", world_from_object)`.
+The same prefab can have several live instances with different names; destroy
+one with `destroy_prefab_instance`, or all with
+`destroy_all_prefab_instances`. A bot-file spawnable is created as an
+articulated bot, not flattened into rigid geometry. Spawned prefabs do not
+replace the base scene's physics settings.
+
+For per-run changes, edit prefabs **before** creating their shapes and actors.
+C++ scene-loading overloads accept `BotPrefabEdit` for declared bots and
+`SpawnEditedPrefabInstance` for physics prefab instances. `DiffPrefab` captures
+the changed fields as JSON; loading/spawning overloads can apply those edits
+again to reconstruct a recorded configuration without changing source files.
+
+## Slots and roboperators
+
+`slots` describes roles and which declared bots can fill each:
+
+```json
+"slots": [{ "name": "right", "controlledBots": ["arm"] }]
+```
+
+The application chooses at most one bot per slot. Slot names are application
+roles, not built-in meanings. A bot entry's optional `roboperatorClass` is a key
+that the consuming teleoperation application maps to its own rig class; the
+library does not instantiate that rig or connect a pose source.
+
+Ordinary scene loading creates all declared bots; slots alone do not select or
+hide alternatives. Selective loading accepts the chosen bot names. At runtime,
+`initialize_bot` loads a declared alternative and `remove_bot` retires it with
+its components. Sensor graph membership follows these changes; newly added
+sensor outputs must be selected explicitly.
+
+## Packaging a workcell
+
+A `.superdex_scene_archive` bundles the scene and its referenced bots, meshes,
+physics prefabs, controller/sensor parameters and skin assets. Load an archive
+through the same scene APIs; extraction is cached. Use it when sharing or
+recording a fixed workcell so later source-asset edits cannot change that
+configuration. [Task files](./bot_tasks.mdx) remain separate from the archive.
+
+See <ProjectSuperdexLink site="studio" path="docs/bot_scene_editor/">the Studio scene editor</ProjectSuperdexLink>
+for authoring and archive export, or [Loading a Scene](./examples/basic/loading_a_scene.mdx)
+for assembling separate assets programmatically without a combined file.

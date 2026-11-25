@@ -1,10 +1,10 @@
 ---
-title: Tactile Observations
-sidebar_label: Tactile Observations
+title: Tactile Sensors
+sidebar_label: Tactile Sensors
 sidebar_position: 5
 ---
 
-# Tactile Observations
+# Tactile Sensors
 
 SuperDex exposes tactile readings through concrete representations. A producer
 may emit any representation directly, and downstream code can transform it
@@ -13,13 +13,54 @@ without depending on a particular policy or training framework.
 | Representation | Description | Reference implementation |
 |---|---|---|
 | Vertex forces | Dense per-vertex force vectors | `SensorLinkVertexForce` |
-| Aggregate force or wrench | Values aggregated across one tactile site | `SensorAggregateForce` or `SensorAggregateWrench` |
+| Aggregate force or wrench | Values aggregated across one tactile site | `AggregateTactileForce` or `AggregateTactileWrench` |
 | Rectangular force grid | A regular spatial grid | `MapTactileHemisphereToRect` |
 
-The aggregate-force baseline is deliberately simple. It sums per-vertex forces
-without applying a learned response, sensor calibration, threshold, or torque
-model. `SensorAggregateForce` and the underlying C++ aggregation functions are
-public; `SensorAggregateWrench` remains internal.
+The aggregate-force baseline sums per-vertex forces without applying a learned
+response, calibration, or threshold. Aggregate wrench also sums moments about an
+explicit reference point. The C++ aggregation functions are public and do not
+require a graph; `SensorAggregateForce` computes the aggregate force as a graph
+sensor.
+
+See [Sensor Graphs](./sensor_graphs.mdx) for source acquisition, dependency wiring,
+and timestamped observation reads.
+
+## Available tactile sensors
+
+These graph sensors are registered in the public `RoboticsContext`. The first two
+read contact from a link; the next two transform a vertex-force input; the last
+acquires contact itself and applies a fingertip model.
+
+1. **`SENSOR_LINK_CONTACT_FORCE`**: the total contact force `[3]` on a link, in
+   newtons, acting from the environment on the link and expressed in the sensor
+   frame. It includes every contact on the link and gives no spatial
+   distribution. `sampleRateHz: 0` captures every graph step; a positive rate
+   follows its own drift-free schedule.
+2. **`SENSOR_LINK_VERTEX_FORCE`**: one force vector per surface vertex, `[N, 3]`,
+   in the sensor link frame, with vertex positions and normals in
+   `VertexListMeta`. Use it when contact location matters, and as the input to
+   the two transforms below. It takes the same `sampleRateHz` parameter.
+3. **`SENSOR_AGGREGATE_FORCE`**: the sum `[3]` of one vertex-force input. It
+   keeps the input's capture time and does not query physics, so it reports
+   only what its input saw; use the link contact force for the link's net
+   physical contact.
+4. **`SENSOR_SEED_RECT_MAP`**: a rectangular `[height, width, 3]` force grid from
+   a vertex-force input and its vertex metadata, using the hemisphere mapping
+   described [below](#mapping-a-hemispherical-sensor-to-a-rectangle). Configure
+   the hemisphere center and directions for the actual sensor geometry.
+5. **`SENSOR_SEED_V1_MLP`** (experimental): a SEED fingertip response `[3]`. It
+   reads the link's contact points itself, then applies a learned model when
+   `weightsPath` supplies weights; with no weights, or `bypassModel: true`, it
+   publishes the raw contact force.
+
+Contact-based sensors require the link's actor to support their force queries.
+The vertex-force source also requires an integration method whose final stage is
+the end of the physics step; incompatible methods are rejected instead of
+returning a mistimed observation.
+
+A typical tactile pipeline declares a vertex-force source on the fingertip link
+and selects a map, an aggregate, or both, as shown in
+[Sensor Graphs](./sensor_graphs.mdx#declaring-a-pipeline-on-a-bot).
 
 ## Vertex-force layout contract
 

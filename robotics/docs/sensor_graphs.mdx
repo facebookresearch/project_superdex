@@ -1,0 +1,260 @@
+---
+title: Sensor Graphs
+sidebar_label: Sensor Graphs
+sidebar_position: 9
+---
+
+# Sensor Graphs
+
+A **`SensorGraph`** connects numeric sensor sources and transforms into a
+synchronous pipeline. It runs only the outputs you request and their upstream
+dependencies, in dependency order, after physics has produced the data to
+measure. Policy reads do not trigger another acquisition.
+
+For example, a fingertip's vertex forces can feed a rectangular force map:
+
+```text
+link contact forces → vertex-force source → rectangular map → policy observation
+```
+
+These are CPU numeric observations, including image-like tactile tensors.
+`SENSOR_CAMERA` describes a camera's pose and intrinsics for a renderer; it does
+**not** publish camera images through the sensor graph. See
+[Sensors](./sensors.mdx) for the registered source and transform types.
+
+## Building a graph
+
+### Declaring a pipeline on a bot
+
+A link's `sensors` list can declare both the source and its transform. For a
+hemispherical tactile link aligned with local +Z:
+
+```json
+"sensors": [
+  {
+    "type": "SENSOR_LINK_VERTEX_FORCE",
+    "name": "surface",
+    "params": { "sampleRateHz": 100 }
+  },
+  {
+    "type": "SENSOR_SEED_RECT_MAP",
+    "name": "map",
+    "inputs": ["surface"],
+    "params": { "width": 16, "height": 8 }
+  }
+]
+```
+
+Bot-owned node names become **`bot/link/sensor`** in a loaded bot scene. An
+unqualified input name resolves on the same link. Missing inputs, duplicate
+names and dependency cycles fail graph construction.
+
+`params` can also reference a `.superdex_sensor` file. Keep learned weights and
+other companion assets with that file; relative companion paths are resolved
+from the parameter file rather than the working directory.
+
+### Scene-level sensors
+
+A `.superdex_scene` file's top-level `sensors` list declares sensors that belong
+to the scene rather than to a bot, bound to no link. They use their declared
+name and refer to bot-owned inputs by their full canonical name:
+
+```json
+"sensors": [
+  {
+    "type": "SENSOR_DELAY_LINE",
+    "name": "hand_encoder_delayed",
+    "inputs": ["hand/dg5f_link_mount/joint_encoder"],
+    "params": { "delayMs": 10 }
+  }
+]
+```
+
+The graph-capable sources registered today all read from a link or its bot, so
+current scene-level graph sensors are transforms like this one.
+
+### Combining outputs
+
+`SENSOR_CONCAT` stacks inputs with identical formats along a new leading axis,
+so `K` inputs of shape `[N, 3]` become one `[K, N, 3]` observation. The output's
+capture time is the newest input's; each input's capture time stays available
+and is recorded.
+
+### Building from a scene
+
+[BotScene](./bot_scenes.mdx) builds the declared graph from the scene's bots
+and scene-level sensors when it loads, with **no selected outputs**. Select what
+the application needs before stepping; see
+[Changing the graph](#changing-the-graph).
+
+### Building a graph without BotScene
+
+C++ callers can construct a graph directly: `Add` the borrowed sensors and
+their input names, select outputs with `SetOutputEnabled`, `Build` with a
+`SensorScope`, then `Reset`. Sensor objects must outlive the graph's use of
+them.
+
+Python exposes sensor parameter types and accessors, but not `SensorGraph`
+construction; use BotScene from Python.
+
+## Stepping
+
+BotScene advances the graph automatically in its **post-physics callback**;
+do not manually step the same graph as well. Call
+`bot_scene.check_sensor_graph()` after stepping to surface native post-step
+acquisition errors. A graph built without BotScene is stepped with `Step`
+**after** each physics step.
+
+Serialize graph mutation, physics stepping and borrowed sensor reads on the
+stepping thread.
+
+## Reading the latest sample
+
+For a scene containing bot `hand` with link `tip` and the sensors above:
+
+```python
+import numpy as np
+
+bot_scene.add_sensor_outputs(["hand/tip/map"])
+scene = bot_scene.get_scene()
+for _ in range(20):
+    scene.step(0.005)
+    bot_scene.check_sensor_graph()  # Surfaces native post-step acquisition errors.
+    for output in bot_scene.get_sensor_outputs():
+        sensor = output.sensor
+        sample = sensor.latest()
+        if sample.capture_step < 0:
+            continue  # No publication yet; allocated storage is not a sample.
+        values = np.asarray(sensor.copy_latest_values()).reshape(
+            sensor.get_format().shape
+        )
+        # Consume values with sample.capture_time, not the policy's read time.
+```
+
+`NoUpdate` retains the last sample. A faster policy loop can legitimately read
+the same capture several times; neither a read nor a reset creates a new
+measurement.
+
+C++ `Latest().Floats()` is a borrowed Float32 payload. Consume or copy it before
+that sensor publishes again, resets, reinitializes or is destroyed. Python
+`copy_latest_values()` provides an owning copy. Use `get_format()` for the fixed
+row-major shape and units; typed C++ metadata supplies vertex or joint-row
+identities. Raw metadata object bytes are not a serialization format.
+
+Matching tensor shape alone is not enough: check units, coordinate frames and
+row identities.
+
+## Two timestamps per sample
+
+Native C++ `SensorSample.captureStep` / `captureTime` identify acquisition;
+`publishedStep` / `publishedTime` identify when that node made its result
+available. Transforms preserve the input's capture identity while stamping their
+own publication time. A delay therefore changes availability, not when the
+measurement was taken. Use capture time for physical alignment and publication
+time for observation latency.
+
+Positive-rate vertex-force sampling starts at the first positive physics step
+after reset and then follows its own cadence, sampled on physics steps rather
+than the policy's read schedule.
+
+The current Python `SensorSample` binding exposes `capture_step` and
+`capture_time`, but not the native publication fields. Do not use the policy
+read time as a substitute for either timestamp.
+
+## Changing the graph
+
+- `bot_scene.add_sensor_outputs(outputs)` selects more outputs. Selecting the
+  map above activates its source dependency without selecting the source as a
+  separate output. Only newly active nodes are initialized; existing
+  acquisition state and selections are preserved.
+- Removing a bot prunes its sensors and downstream dependants, including
+  scene-level sensors that read them. Initializing an alternative bot adds its
+  own declared nodes without resetting surviving sensors; select its new outputs
+  explicitly. Pruned scene-level sensors return only when the graph is rebuilt.
+- `bot_scene.reset_sensors()` clears sensor state and restarts the acquisition
+  clock without resetting physics, controllers or task state.
+- `rebuild_sensor_graph(outputs)` explicitly reconstructs the declared graph,
+  selects outputs and resets acquisition. Use it for a full acquisition
+  restart, not routine reads.
+
+## Noise, Delay and History
+
+A graph can model the observation path as well as the physical sensor. Each
+transform below takes one fixed Float32 input:
+
+- **`SensorGaussianNoise`** adds noise once per new **capture**, not per policy
+  read. `std` is a one-element broadcast or one standard deviation per flattened
+  input element, in that element's units. Values must be finite and nonnegative.
+- **`SensorUniformNoise`** adds independent uniform noise, likewise drawn once
+  per input publication.
+- **`SensorOutlierInjection`** replaces whole input samples with outliers at a
+  fixed probability, decided once per input publication; other samples pass
+  through unchanged.
+- **`SensorDelayLine`** queues input publications and releases them after
+  `delayMs` milliseconds, preserving capture identity. Delay begins at the
+  **input publication time**, so chained delays accumulate. A graph step can
+  release several due samples; `Latest()` exposes the last released one.
+- **`SensorTemporalWindow`** prepends a `historyLength` axis: a `[N, 3]` input
+  becomes `[historyLength, N, 3]`, oldest first. It advances on new input
+  publications, not policy reads. Initial rows are zero-padded with invalid
+  step `-1`; use its C++ row capture/publication accessors to distinguish padding
+  from measured zeros. The window's sample header describes its newest row.
+
+For example, add a noise node after the `map` declared above, then select
+`hand/tip/noisy_map` instead of `hand/tip/map`:
+
+```json
+{
+  "type": "SENSOR_GAUSSIAN_NOISE",
+  "name": "noisy_map",
+  "inputs": ["map"],
+  "params": {
+    "std": [0.01],
+    "random": { "episodeSeed": 7, "processKey": "hand/tip/map_noise" }
+  }
+}
+```
+
+`random.processKey` must be nonempty and stable. Noise is derived from the
+**episode seed, process key and source capture step**, so repeated reads do not
+redraw it. Supply the next episode's parameters before resetting the graph;
+resetting alone does not choose a new seed. Retain these parameters with the
+experiment when comparing observations.
+
+Delay storage is sized at initialization from `bufferMs` and the input's
+publication-frequency estimate. If that estimate is unknown,
+`bufferAssumedFrequencyHzEstimate` is used. Cover the largest delay and actual
+input rate: underestimated capacity produces an error, not silent data loss.
+Buffer sizing cannot change after initialization; set episode delay parameters
+before graph reset. A temporal window's history length is construction-time
+configuration.
+
+**Creation boundary:** Gaussian noise and delay lines are registered
+automatically in the public `RoboticsContext`. The temporal-window
+implementation is public, but the default context does not register its
+factory. C++ applications can construct it directly or register it before
+loading a scene that declares `SENSOR_TEMPORAL_WINDOW`:
+
+```cpp
+#include <superdex_robotics/core/context.h>
+#include <superdex_robotics/sensors/sensor_temporal_window.h>
+
+botsContext->RegisterSensor<superdex::robotics::SensorTemporalWindow>();
+```
+
+Python exposes its parameter type and accessors, but not native constructors or
+these C++ registration templates. A class or `type_name()` being visible in
+Python does not make it a default creatable type.
+
+## Recording observations
+
+`SensorRecordingSink` is a backend-neutral C++ destination for constants and
+timestamped sensor samples. `ConfigureRecording` writes the sensor's fixed
+metadata; `Record` writes its latest sample and any sidecar fields. A graph step
+alone does not record anything. The application supplies the sink and invokes
+these hooks at its chosen recording cadence, preserving capture timestamps
+rather than treating every policy read as a new measurement.
+
+See [Controllers, Sensors & Actuators](./bot_components.mdx) for component
+ownership and registration, and [Recording a Control Loop](./examples/control/recording.mdx)
+for simulation and controller recording with SuperDex Recorder.

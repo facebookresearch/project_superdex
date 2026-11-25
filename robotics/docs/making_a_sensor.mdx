@@ -1,0 +1,124 @@
+---
+title: Making a Sensor
+sidebar_label: Making a Sensor
+---
+
+# Making a Sensor
+
+Check first whether existing sensors already give you the observation. Many
+observations are a source followed by one or more transforms, declared in a bot
+or scene file with no new code; see [Sensor Graphs](./sensor_graphs.mdx). Write
+a new sensor when you need a measurement no source provides, or a transformation
+the built-in types do not cover.
+
+## Choosing an approach
+
+| You need | Use |
+|---|---|
+| A new pipeline built from registered types | Declare it in a `.superdex_bot` or `.superdex_scene` file. |
+| Values computed by a C++ function at every graph step | A `SensorFunction`; no class of your own. |
+| A new source or transform that can be declared in files | A C++ class derived from `SensorBase`, registered on the `RoboticsContext`. |
+| A component you call from your own Python loop | A Python sensor; see [Controllers, Sensors & Actuators](./bot_components.mdx#a-sensor). It cannot be a graph node. |
+
+## Writing a C++ sensor
+
+A graph-enabled sensor derives from `SensorBase` and implements three steps of
+its life:
+
+```cpp
+class SensorMyForce final : public SensorBase {
+ public:
+  // Attached to a link actor; an unattached (scene-level) sensor uses the
+  // SensorBase constructor without an actor.
+  SensorMyForce(Actor* link, Params const& params, Error& error);
+
+  std::string_view GetTypeName() const override {
+    return "SENSOR_MY_FORCE";
+  }
+  SensorStepResult Step(StepTime const& now, Error& error) override;
+
+ private:
+  SensorFormat InitSensor(SensorScope const& scope, Error& error) override;
+  void ResetSensor() override;
+};
+```
+
+1. **Describe the output in `InitSensor`.** Return the `SensorFormat` the sensor
+   will publish: its kind, row-major shape, and axes with labels and units. The
+   format is fixed from then on, and the base class allocates the output storage
+   from it. A transform also checks its `Inputs()` here, so a miswired graph
+   fails at initialization rather than on the first step.
+2. **Publish in `Step`.** A source acquires from the scene; a transform reads its
+   inputs' already-published `Latest()` samples. Return `NoUpdate` when there is
+   nothing new, for example when an input has not published yet or a sampling
+   period is not due. When the values derive from an input, publish with
+   `PublishSample(now, values, error, &source)` so the result keeps the input's
+   capture time; see [Two timestamps per sample](./sensor_graphs.mdx#two-timestamps-per-sample).
+3. **Clear episode state in `ResetSensor`.** `Reset()` itself is final and
+   clears the published sample; a stateless sensor implements an empty
+   `ResetSensor()`.
+
+If a consumer needs more than the format, such as the identity of each row, expose typed metadata
+that callers read with `TryGetSensorMetadata<T>()`, as the vertex-force and
+joint-wrench sources do.
+
+## Making it declarable
+
+To use the new type in bot and scene files, register it on the
+`RoboticsContext` before loading a scene. `RegisterSensor<T>()` needs a static
+`TypeName()` and a constructor with the uniform factory signature, which loads
+the sensor's own parameters:
+
+```cpp
+// paramArgs is a params file path or inline JSON; empty means default Params.
+SensorMyForce(Actor* link, std::string_view paramArgs, Error& error);
+static std::string_view TypeName() { return "SENSOR_MY_FORCE"; }
+```
+
+```cpp
+botsContext->RegisterSensor<SensorMyForce>();
+```
+
+`RegisterSensorType(typeName, factory)` registers any other factory with the same
+`(Actor*, std::string_view paramArgs, Error&)` signature. After registration,
+the type name can appear in a link's `sensors` list or a scene's `sensors` list,
+with `inputs` and `params` like any built-in type.
+
+## Computing a source in a function
+
+When the values come from code you already have, `SensorFunction` wraps a C++
+function as a graph node. It publishes whatever the function writes at every
+graph step, including the reset step. The function returns the sample its
+values derive from, to keep that sample's capture time, or `std::nullopt` for
+values captured at the current step:
+
+```cpp
+SensorFunction joint_sum(
+    SensorFunction::ValuesFormat(1),
+    [&bot](Span<float> out) -> std::optional<SensorSample> {
+      out[0] = SumOfJointPositions(bot);  // Your own computation.
+      return std::nullopt;                // Captured at this step.
+    },
+    error);
+```
+
+`SensorFunction::ValuesFormat(width)` is the format of `width` plain values.
+Add the function node to a graph like any other sensor.
+
+## Python sensors
+
+Python sensors are registered and created on the context like C++ ones, but they
+are components you call from your own loop. They do not publish samples into a
+sensor graph: graph initialization rejects them. For a Python-defined
+observation, call the sensor yourself alongside the graph's outputs, or write
+the measurement as a C++ sensor when it needs to feed other sensors.
+
+## Before you rely on it
+
+- State units and frames in the format; downstream consumers check them, not
+  just the shape.
+- Return `NoUpdate` rather than republishing an old value, so consumers can
+  tell a new capture from a held one.
+- Remember that published samples are borrowed until the next publication,
+  reset or destruction.
+- Serialize graph stepping, mutation and reads on one thread.

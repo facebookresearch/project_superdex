@@ -16,8 +16,10 @@ produce one: a camera image, a contact reading, a fused estimate. An
 **actuator** takes a command and models hardware outputs: a servo, a brush DC
 motor, a pneumatic piston.
 
-The three are deliberately implemented in the same shape. Everything on this
-page that is not explicitly called out as a difference applies to all of them.
+The framework also supports numeric sensor graphs, whose acquisition lifecycle
+is different from the application-driven controller/actuator loop. See
+[Sensor Graphs](./sensor_graphs.mdx) for post-physics acquisition and timestamped
+sample reads.
 
 ## One shape, three kinds
 
@@ -78,9 +80,15 @@ The framework **creates and owns** components. Loading a `.superdex_bot` will
 create and associate any sensors and actuators declared on that bot. The context
 will handle destruction of the components at the right time.
 
-It does **not** run them. Nothing calls your sensor's read method, feeds that
-reading to a controller, computes the actuator efforts, or applies the resulting
-efforts to the articulation. **That glue is yours to write.**
+It does **not** run your controllers or actuators. Nothing feeds observations
+to a controller, chooses targets, computes actuator efforts or applies the
+resulting efforts to the articulation. **That control glue is yours to write.**
+
+Graph-native sensors are the exception: a [BotScene](./bot_scenes.mdx) can
+acquire its selected numeric [Sensor Graph](./sensor_graphs.mdx) outputs after
+each physics step. The graph does not route those samples into controllers for
+you. Sensors created outside a graph can still expose specialized read methods,
+which the application calls directly.
 
 This is deliberate. The useful ways to wire sensors, controllers and actuators
 together are effectively unbounded — which sensor feeds which controller, at
@@ -151,12 +159,22 @@ exceed your robot's effort limits.
 | `BASIC_JSC_PD` | Controller | Per-joint PD toward target joint positions, with per-joint gains, output saturation, and a deadband. The simplest way to hold or drive a pose. |
 | `BASIC_OSC_PD` | Controller | Drives the **end-effector** to a target pose using Jacobian-transpose impedance: `τ = Jᵀ·F`, where `F = Kp·(pose error) + Kd·(velocity error)`. Robot-agnostic; no nullspace posture or gravity compensation. |
 | `MOCHI_ARTICULATED_POSE` | Controller | Drives Mochi's built-in articulated-pose controller from per-link transforms or pose DOFs. Applies control internally, so it returns an empty effort vector — you do not apply efforts for it. It also rejects a null actor, since it cannot run without a simulation. |
-| `SENSOR_CAMERA` | Sensor | A camera with a pose and intrinsics, configured from a `.superdex_sensor` params file. It produces nothing in the physics loop — a renderer reads its params to place its own camera. |
+| `SENSOR_CAMERA` | Sensor | A camera with a pose and intrinsics, configured from a `.superdex_sensor` params file. It produces no graph image sample — a renderer reads its params to place its own camera. |
+| `SENSOR_LINK_VERTEX_FORCE` | Sensor | Ordered per-vertex contact-force observations from a link. |
+| `SENSOR_ARTICULATED_JOINT_WRENCH` | Sensor | Solver-backed articulated-joint force/torque observations, with explicit row identities. |
+| `SENSOR_SEED_RECT_MAP` | Sensor transform | Maps vertex forces to a rectangular tactile tensor. |
+| `SENSOR_SEED_V1_MLP` | Sensor | Experimental SEED contact-force response with optional learned weights. |
+| `SENSOR_GAUSSIAN_NOISE` | Sensor transform | Add keyed, reproducible Gaussian noise once per new input capture. |
+
+See [Sensor Graphs](./sensor_graphs.mdx) for wiring, timing and acquisition limits,
+including the public delay/history transforms that require C++ creation or
+explicit factory registration.
 
 :::note Actuators
-No concrete actuator types ship yet, but all the APIs are in place and you can
-register your own. Additional controllers, sensors, and actuators will also be
-coming soon.
+No concrete per-link actuator component types ship in the public library yet,
+but the APIs are in place and you can register your own. Authored bot
+transmissions and tendons are separate physics mechanisms; see
+[Bots](./bots.mdx#mechanical-coupling).
 :::
 
 ## Wiring it together
@@ -297,17 +315,17 @@ The built-in components cover common cases; beyond them you write your own types
 or use types created by others. You can **register** your new types with the
 `RoboticsContext` under a type name, and from then on your new component is
 created by that name exactly like a built-in component. This includes being
-declared in a `.superdex_bot` link or in future combined scene descriptions.
+declared in a `.superdex_bot` link or in a [BotScene](./bot_scenes.mdx).
 Built-in types are registered automatically by the context in its constructor.
 
 Every type you write supplies the same four things:
 
 - a static **`TypeName()`** — the name it is registered and created by;
 - a **`GetTypeName()`** override returning it;
-- a **`Reset()`** override — resets the internal state of your component while
-  keeping params. Used when resetting your scene between episodes. An empty body
-  states that your type carries no per-episode state. Requiring Reset forces all
-  implementers to either support it or intentionally forgo it;
+- a **`Reset()`** override for controllers and actuators, or **`ResetSensor()`**
+  for C++ sensors (`SensorBase::Reset()` is final and also clears publication).
+  Python components keep their `reset()` method. Reset clears episode state
+  while retaining params; stateless types use an explicit empty implementation;
 - the **uniform constructor** for its kind and initializers:
 
 | Kind | Construction |
@@ -606,17 +624,18 @@ class MySensor final : public SensorBase {
   // creation need not go through a file or a JSON string.
   MySensor(Actor* actor, Params const& params, superdex::Error& error);
 
-  // Required -- clears internal state, leaving params alone.
-  void Reset() override {}
-
-  // Your own API. You call these, not the framework. Observations come in as an
-  // argument rather than being read from the simulation inside compute, so the same
-  // code runs on a real robot and you choose when state is sampled.
+  // Optional specialized read API for application-driven use.
   void SetParams(Params const& params, superdex::Error& error);
   MySignal ComputeSignal(Obsv const& obsv, superdex::Error& error);
   Obsv GetCurrentObservationsFromMochi(superdex::Error& error);
 
+  // Required by SensorBase. A graph-native implementation acquires/transforms
+  // here, publishes with PublishSample(), and returns Published or NoUpdate.
+  SensorStepResult Step(StepTime const& now, superdex::Error& error) override;
+
  private:
+  SensorFormat InitSensor(SensorScope const& scope, superdex::Error& error) override;
+  void ResetSensor() override {}  // Common Reset() also clears publication.
   Params _params;
   // Anything else stateful in your sensor
 };
@@ -800,10 +819,13 @@ Resolving a handle with `bots_context.get_sensor(handle)` gives you the
 `None` if the handle is invalid or names a C++ sensor. `get_python_controller`
 and `get_python_actuator` do the same for their kinds.
 
-A Python type uses the same type string and factory as its C++ counterpart. In
-the initial release, custom sensors and actuators can be declared on a
-`.superdex_bot` link. Declaring controllers and scene-level sensors in a
-combined scene description is planned for a future release.
+A Python type uses the same registered type string and factory as its C++
+counterpart. Custom components can be declared on bot links, and controllers
+and scene-level sensors can be declared in a [BotScene](./bot_scenes.mdx).
+The Python shim shown here forwards specialized application-driven reads; it
+does not make the class a numeric graph node. C++ graph sensors additionally
+implement `InitSensor`, `Step` and `ResetSensor`; see
+[Sensor Graphs](./sensor_graphs.mdx).
 :::
 
 ## See Also

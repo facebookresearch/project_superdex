@@ -1,0 +1,155 @@
+---
+title: Inverse Kinematics
+sidebar_label: Inverse Kinematics
+sidebar_position: 6
+---
+
+import ProjectSuperdexLink from '@site/src/components/ProjectSuperdexLink';
+import SiteImage from '@site/src/components/SiteImage';
+
+# Inverse Kinematics
+
+Inverse kinematics (IK) finds joint positions that bring a bot's links toward
+position and orientation goals. Use it to place an end effector, pose several
+fingertips together, or retarget motion from one bot to another. **IK produces a
+pose, not actuator efforts**: a controller still has to drive the simulated or
+real robot toward that pose.
+
+## IK assets
+
+An IK configuration defines one or more position and/or orientation goals
+attached to links on a SuperDex bot. When the inverse kinematics problem is
+solved at runtime, anchor frames on these links are driven toward their goal
+frames according to the constraint weights (stiffnesses) specified in the configuration.
+A `.superdex_ik` file stores a reusable **`BotIKConfig`**: the output bot, its
+starting joint configuration, solver settings, and goals. An optional input bot
+provides moving goal frames for retargeting. Author and preview these assets in
+<ProjectSuperdexLink site="studio" path="docs/ik_editor/">SuperDex Studio's IK editor</ProjectSuperdexLink>.
+The document stores authored configuration, not the last solved pose or preview
+state.
+
+A goal connects two frames:
+
+- **Output**: a constraint frame attached to `outputBotLink`, with its local
+  offset in `linkFrameFromConstraintFrame`.
+- **Target**: a frame attached to `inputBotLink`, or to the output bot's initial
+  base when no input link is bound. Its local offset is
+  `baseOrInputLinkFrameFromConstraintFrame`.
+
+`positionStiffness` and `rotationStiffness` set the relative importance of
+matching the two frames. Set either to zero to omit that part of the goal;
+`enabled: false` disables the whole goal. Use unique goal names and avoid
+repeating a binding to the same output link.
+
+For retargeting, `outputBaseFrameFromInputBaseFrame` places the input base in
+output-base coordinates. `inputBotScale` scales input root-relative
+translations and bound target offsets, **not** rotations or joint values. It is
+separate from the input bot's native scale. Empty input or output configurations
+use the corresponding bot's authored `defaultPose`.
+
+<SiteImage
+  src="img/inverse_kinematics/ik_frames.png"
+  alt="SuperDex Studio showing the FR3 arm with separated output and target IK frames and the goal's frame offsets and stiffness settings"
+/>
+
+*The FR3 end-effector goal's output constraint frame and target frame are
+separated in the preview. The IK Goals panel shows the frame offsets and
+position and rotation stiffnesses.*
+
+## Solving from C++
+
+`BotIK` owns a private IK scene and a copy of the output bot. It does not alter
+another live robot or the source prefab. Load a prepared bot, create the solver,
+set goals, and read the solution:
+
+```cpp
+#include <superdex_robotics/ik/bot_ik.h>
+#include <superdex_robotics/utils/bot_utils.h>
+#include <superdex_robotics/utils/file_utils.h>
+
+using namespace superdex::robotics;
+using namespace mochi;
+
+// context is an initialized Mochi context and must outlive ik.
+Error error;
+BotPrefab prefab = LoadBotPrefabFromFile(botPath, error);
+if (!error.IsOK()) {
+  return;
+}
+BotIKCreateParams params;
+params.fixedBase = true;
+params.solverParams.maxElapsedTimeSeconds = 0.01;
+BotIK* ik = BotIK::Create(context, prefab, params, error);
+if (ik == nullptr) {
+  return;
+}
+
+int const tool = FindLinkIndexByName(prefab, "fr3_link8");
+if (tool == kIndexNone) {
+  BotIK::Destroy(ik);
+  return;  // The chosen bot does not have this tool link.
+}
+ik->SetPositionGoal(tool, {0_r, 0_r, 0_r}, {0.5_r, 0_r, 0.45_r}, 100_r, error);
+if (error.IsOK()) {
+  bool const reached = ik->SolveIK(error);
+  if (error.IsOK()) {
+    // Borrowed snapshots: consume or copy before the next mutation.
+    auto positions = ik->GetJointPositions();
+    auto links = ik->GetWorldFromLinks();
+    // Check reached and the remaining goal error before using this as a target.
+  }
+}
+BotIK::Destroy(ik);
+```
+
+The position target is in **world space**, and the pivot is in the output
+link's local frame. `SetRotationGoal` similarly takes local and world
+quaternions. There is one position goal and one independent rotation goal per
+output link. Joint-position snapshots exclude root-joint DOFs and follow the
+prepared output prefab's order; see [Bots](./bots.mdx#coordinate-system-and-units).
+
+For document-driven retargeting, load with `LoadIKConfig`, resolve the bot
+references with `ResolveIKBotPath`, and load the input and output bots.
+`SetInputBotConfiguration` resolves the configured goals from input-bot forward
+kinematics; call it with the new input joint positions before each solve. Pass
+`inputBotScale` to its scale-aware overload when the document uses retarget
+scaling. These convenience APIs are C++; the shipped Python
+[IK + Pose Control example](./examples/control/ik_pose_control.md) uses the
+lower-level `physics.experimental` solver instead.
+
+## Solver settings and limits
+
+- **`fixedBase`** pins the private output root at its authored placement.
+  `BotIKCreateParams` defaults to retaining the root's joint type; newly authored
+  IK documents default to a fixed base.
+- **`maxIter` / `lineSearchMaxIter`** bound nonlinear and line-search work.
+  **`maxElapsedTimeSeconds`** is a soft solve-time budget; zero is unlimited.
+  New IK documents start with a 10 ms budget.
+- **`absTol` / `relTol`** govern numerical convergence.
+  **`positionErrorThres` / `rotationErrorThres`** govern whether goals count as
+  reached, in meters and radians. A converged numerical solve need not reach
+  every goal; inspect both the result and the remaining errors.
+- Solves are synchronous and warm-start from the current configuration.
+  `SetJointPositions` supplies a new seed. `GetLastSolverStats` reports the last
+  solve's iterations, residual and convergence status; reading snapshots does
+  not solve again.
+
+Joint limits, cycles, transmissions and tendons remain in the private model,
+but mechanical constraints and goals are **soft penalties, not guarantees**.
+Contact is disabled even when collision geometry is retained; this solver is
+not a collision-avoidance planner. Sensors and per-link actuator components
+are omitted. An error-free solve can still return `false` for unreachable
+goals and publish its best current pose. A solve with no goals is an error.
+Serialize access to an IK instance and destroy it before its Mochi context.
+
+An IK asset can also declare soft **joint couplings** (`jointCouplings`):
+`qB ≈ ratio × qA`, with a stiffness and enable flag. Active document pairs bind
+exact-case names of distinct, nonroot, single-DOF joints of the same kind.
+Both joints may move. These penalties affect only the private IK output and do
+not add a mechanical linkage to the simulated robot.
+
+## See Also
+
+- [Bots](./bots.mdx) — the output robot and joint-position layout.
+- [Controllers, Sensors & Actuators](./bot_components.mdx) — driving a solved pose.
+- [IK + Pose Control](./examples/control/ik_pose_control.md) — a runnable Python control loop.

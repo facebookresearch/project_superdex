@@ -1,0 +1,90 @@
+---
+title: Loading from MJCF
+sidebar_label: Loading from MJCF
+sidebar_position: 4
+---
+
+import ProjectSuperdexLink from '@site/src/components/ProjectSuperdexLink';
+
+# Loading from MJCF
+
+Load a robot directly from a MuJoCo XML file for quick prototyping, or import it
+through Studio to prepare native SuperDex collision and render assets.
+
+**Source**: `examples/basic/example_mjcf_loading.py`
+
+## Runtime loading
+
+```python
+import superdex.physics as physics
+import superdex.robotics as robotics
+from superdex.physics.paths import resolve_asset
+
+physics.initialize(num_worker_threads=0)
+scene = physics.create_scene("MJCF example")
+context = robotics.create_context()
+
+prefab = robotics.load_bot_prefab_from_mjcf_file(
+    str(resolve_asset("test/mjcf/franka_fr3_v2/fr3v2.xml"))
+)
+bot = robotics.create_bot(scene, prefab, context)
+print(prefab.name, len(prefab.links), bot.get_articulated_actor().get_num_dofs())
+
+# No controller is installed: the joints remain free to move under gravity.
+scene.step(1.0 / 60.0)
+robotics.destroy_bot(scene, bot)
+physics.shutdown()
+```
+
+Bodies become links and joints; explicit inertial properties become link
+inertia. Mesh assets resolve through the MJCF compiler's mesh directory,
+relative to the XML file. A body with several collision or visual meshes gets
+Hard-jointed child links for the extra meshes. The bundled FR3 v2 remains a
+7-DOF arm even though its geometry is split across more links.
+
+Unlike the URDF runtime loader, MJCF does not always inject a Free root: a
+jointless top-level robot body is welded to the world, while a top-level
+`freejoint` produces a floating root. A `home` keyframe supplies the default
+joint pose when present. Inspect the imported prefab instead of assuming the
+base type or DOF count.
+
+## Import is not a MuJoCo simulation
+
+The loader converts a robot description, **not a whole MuJoCo environment**:
+
+- Only mesh geoms are assigned by the convenience runtime loader. Primitive
+  boxes, capsules, spheres, cylinders and ellipsoids need conversion to shape
+  assets; use Studio rather than expecting them to collide at runtime.
+- Unsupported or approximated content produces import warnings. MuJoCo sites,
+  sensors, tendons and actuator gains are not imported as SuperDex components.
+  Review the warnings and supply SuperDex controllers and sensors explicitly.
+- A floating robot import omits unrelated top-level bodies; use a
+  [BotScene](../../bot_scenes.mdx) to assemble its surroundings.
+- Raw meshes are used as supplied. Open or degenerate meshes may be unusable
+  as dynamic collision shapes. Runtime SDF baking is not offline mesh repair
+  or validation.
+
+For custom C++ importers, the `MjcfImportInfo` overload returns body geometry,
+contact rules and warnings without assigning shapes. Convert the geometry,
+then use `ExpandMjcfGeomLinks` and `ApplyMjcfContactFilter` once shapes are
+final. This path is distinct from the convenience loader above.
+
+## Preparing a reusable bot
+
+<ProjectSuperdexLink site="studio" path="docs/bot_editor/import/#mjcf-mujoco">Studio's MJCF importer</ProjectSuperdexLink>
+converts supported primitives, merges or splits body geometry, remeshes and
+bakes collision assets, and saves a `.superdex_bot`. Load that prepared file
+with `load_bot_prefab_from_file` like any other bot. The same preparation
+workflow also accepts URDF; URDF separates visual and collision elements,
+while MJCF geoms carry contact and visibility settings.
+
+## Running the complete example
+
+```bash
+uv run python superdex_robotics/examples/basic/example_mjcf_loading.py
+uv run python superdex_robotics/examples/basic/example_mjcf_loading.py path/to/robot.xml
+```
+
+The full script opens the Physics Debugger and runs until it is closed. See
+[Loading from URDF](./loading_from_urdf.mdx) for that loader's different base
+and geometry conventions, and [Bots](../../bots.mdx) for native assets.

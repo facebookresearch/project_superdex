@@ -31,8 +31,7 @@ entry point of the schema. It closely mirrors SuperDex Physics's
 `ArticulatedLinkPrefab`, so the underlying articulation description is shared
 rather than reinvented. It is kept as a separate type so robotics-specific
 extensions — joint effort limits and link contact overrides — can be layered on
-without changing the physics engine.
-fields:
+without changing the physics engine. Its fields:
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -43,9 +42,11 @@ fields:
 | `defaultPose` (optional) | `real[]` | Default pose used when spawning the bot: one value per joint DOF — radians for revolute joints, meters for prismatic joints. If empty, all DOFs default to zero. |
 | `contactOverrides` (optional) | `BotContactOverride[]` | Link-link contact override pairs. |
 | `cycles` (optional) | `ArticulatedCycleJointParams[]` | Cycle-closing joints for closed-loop mechanisms (e.g. four-bar linkages, parallel grippers). |
+| `linearTransmissions` / `spatialTendons` (optional) | transmission / tendon arrays | Authored coupling and routing for displacement-control actuation; see [Mechanical coupling](#mechanical-coupling). |
+| `skin` (optional) | `ArticulatedSkinPrefab` | A collision/render skin following the links; see [Bot Skinning](./bot_skinning.mdx). |
 
 :::note Joint / Link Sizes
-In contrast to some conventions (e.g. URDF), `joints` and `links` arrays are always the same length — joint `i` is the
+In contrast to some conventions (e.g. URDF), the `joints` and `links` arrays are always the same length — joint `i` is the
 parent joint of link `i`. The first entry (index `0`) is the **world joint**,
 which attaches the root link to the world; it is typically a `Free` joint
 (floating base) or a `Hard` joint (base rigidly fixed to the world).
@@ -149,6 +150,23 @@ of these combinations — any other combination is rejected:
 provided, `density` and `mass` must be positive and finite. Links **without**
 geometry (no `shapeFile`, e.g. frames or tool tips) carry no mass properties.
 :::
+
+## Mechanical Coupling
+
+A bot can represent coupled mechanisms as well as a joint tree:
+
+- **`cycles`** closes a link-to-link loop, such as a four-bar linkage.
+- **`linearTransmissions`** couples joint displacement through per-joint
+  coefficients, as in a gearbox or fixed tendon relation.
+- **`spatialTendons`** defines an ordered path through waypoint and linear-joint
+  routing elements.
+
+Transmissions and tendons carry displacement-control actuator parameters and
+are instantiated with the bot. They are separate from the extensible
+[per-link actuator component framework](./bot_components.mdx), and importing a
+MuJoCo tendon does not automatically author a SuperDex tendon. See the C++ API
+reference for routing and parameter details; use Studio to inspect the mechanism
+under motion before relying on it.
 
 ## Meshes
 
@@ -317,6 +335,41 @@ watertight SDFs offline, validates parameters, and emits a self-contained
 `.superdex_bot` with preprocessed `.glb` and `.mochi.h5` assets — which you then
 load with `load_bot_prefab_from_file` like any other bot.
 :::
+
+## Loading from MJCF
+
+The corresponding MuJoCo XML loader is
+`load_bot_prefab_from_mjcf_file("path/to/robot.xml")`. It maps bodies, joints,
+inertial properties and mesh geoms to a `BotPrefab`; a jointless top-level
+robot body is welded, while a top-level `freejoint` remains floating. Like
+runtime URDF loading, it does not convert primitive geometry into colliders.
+Unsupported sites, sensors, tendon definitions and actuator gains are reported
+as import warnings, not installed as SuperDex components.
+
+Use [Loading from MJCF](./examples/basic/loading_from_mjcf.mdx) for the runnable
+example and import limitations. Studio accepts both URDF and MJCF and can
+prepare primitives and merged geometry as native collision/render assets.
+
+## Exporting a Robot
+
+C++ `SaveToUrdfFile` writes a bot's URDF description,
+stripping the injected world joint. It does not convert native GLB or Mochi
+collision models into STL/DAE assets. For a portable robot export with converted
+meshes, use <ProjectSuperdexLink site="studio" path="docs/bot_editor/archive_and_export/">Studio's export workflow</ProjectSuperdexLink>.
+Do not expect SuperDex-only skin or mechanical features to round-trip through
+URDF.
+
+## Kinematics Without Simulation
+
+C++ `ComputeLinkTransformsFromPose` computes parent-relative or root-relative
+link transforms from bot-space joint positions without stepping physics.
+`ComputePoseFromLinkTransforms` extracts the joint positions each transform can
+represent and can report off-axis rotation/translation residuals; it is not a
+full-body IK solve. The root is separate from the joint-position vector, and
+these utilities operate in nominal bot units. Load a prepared prefab first (or
+call `RebuildBotData` after structural edits), and resolve names after any
+reordering. See [Inverse Kinematics](./inverse_kinematics.mdx) when several
+link goals must be solved together.
 
 ## Runtime Interface
 

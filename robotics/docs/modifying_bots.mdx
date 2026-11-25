@@ -37,6 +37,7 @@ modifications and returns the final, compiled `BotPrefab`.
 | `name` | string | Name for the resulting bot. |
 | `base` | string | File path to the base `.superdex_bot` file. |
 | `modifications` | `BotMod[]` | Ordered list of modifications applied to the base. |
+| `contactOverrides` (optional) | `BotContactOverride[]` | Contact overrides applied after composition, including link/skin pairs. |
 
 :::note Order matters
 Modifications are applied in **serial order**, each operating on the result of
@@ -60,6 +61,7 @@ human-readable label for the modification) and an `enabled` flag (set it to
 | `AttachLink` | Attach a single new inline link to a parent link, joined by a new `joint`. Like `AttachBot`, but for one hand-authored link rather than a referenced bot file. Useful for small adapters — e.g. a camera mount or a mount plate — between the base bot and an attached bot. | `parentLinkName`, `joint`, `link` |
 | `ReplaceLink` | Swap an existing link (and its descendants) for a new inline link, preserving the original connecting joint. Useful for retrofitting a single link, e.g. a sensorized fingertip. | `linkToReplace`, `link` |
 | `ReplaceLinkWithBot` | Swap an existing link (and its descendants) for an external bot, preserving the original connecting joint. The replacement's names may be `prefix`ed. E.g. replace an arm's end-effector stub with a gripper bot. | `linkToReplace`, `prefix`, `path` |
+| `AttachSkin` | Attach one collision/render skin following the existing articulation. A bot supports at most one skin. See [Bot Skinning](./bot_skinning.mdx) for coverage and visibility. | `skin` |
 
 :::tip Name prefixing
 `AttachBot` and `ReplaceLinkWithBot` accept a `prefix` that is applied to the

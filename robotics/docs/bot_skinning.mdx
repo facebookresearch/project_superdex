@@ -1,0 +1,114 @@
+---
+title: Bot Skinning
+sidebar_label: Bot Skinning
+sidebar_position: 3
+---
+
+import Figure, {FigureRow} from '@site/src/components/Figure';
+import ProjectSuperdexLink from '@site/src/components/ProjectSuperdexLink';
+
+# Bot Skinning
+
+A bot can carry a **skinned surface** that follows its articulated links. This
+provides continuous contact geometry across joints, such as the skin around a
+robot hand, while retaining the bot's existing links and DOFs. The skin is
+posed by the articulation; it is not a separately simulated soft-body robot.
+
+## Collision and render skins
+
+`BotPrefab.skin` contains two independent assets:
+
+- A **collision skin** (`shape` in JSON, `shapeFile` in C++) is a preprocessed
+  Mochi model with skinning weights. It acts as the articulation's contact
+  collidee and carries its own contact parameters and collision layer.
+- A **render skin** (`renderModel` in JSON, `renderModelFile` in C++) is a
+  skinned GLB for visualization. Its placement and scale do not change collision
+  geometry.
+
+A **render-only skin** omits `shape` and supplies `renderModel`: it changes
+visualization while retaining the bot's original link collision geometry and
+mechanism. This is useful for bot visuals without introducing a contact skin. A skin can also supply collision geometry without a render model.
+
+The collision skin must already be authored in the bot's frame; there is no
+per-skin collision transform to fix an incorrectly aligned mesh at load time.
+Author weights against the intended skeleton and verify the skin across joint
+poses, not just at the default pose.
+
+<FigureRow cols={2}>
+  <Figure
+    src="/img/r2/robotics-wuji-collision-skin.png"
+    alt="A bent Wuji Hand 2 shown with its collision skin wireframe, small articulated-link frames, and solid rigid-link render meshes."
+    caption="Collision skin, small link frames, and rigid render meshes at a bent-finger pose."
+  />
+  <Figure
+    src="/img/r2/robotics-wuji-render-skin.png"
+    alt="The same Wuji Hand 2 pose and camera showing continuous render skin around the knuckles and separate fingertip geometry."
+    caption="Render skin at the same pose, with covered rigid render links hidden."
+  />
+</FigureRow>
+
+## Attaching a skin without changing the base bot
+
+Use an **`AttachSkin`** modification to keep the skin as a lightweight recipe
+on an existing bot:
+
+```json
+{
+  "name": "my_skinned_hand",
+  "base": "hand.superdex_bot",
+  "modifications": [
+    {
+      "AttachSkin": {
+        "name": "hand_skin",
+        "skin": {
+          "shape": "collision/skin.mochi.h5",
+          "renderModel": "render/skin.glb"
+        }
+      }
+    }
+  ]
+}
+```
+
+Load the result with `load_bot_prefab_from_file` and `create_bot`, exactly like
+any [mod bot](./modifying_bots.mdx). A bot supports **at most one skin**;
+attaching another skin to an already skinned bot is rejected. Composing a
+skinned sub-bot with an arm preserves its skin-to-link bindings automatically.
+Do not hand-edit the serialized `skinBoneLinks` bookkeeping.
+
+The shipped `wuji_hand2_beta1_skinned_left` and
+`wuji_hand2_beta1_skinned_right` recipes under
+`assets/bots/hands/wuji_hand2_beta1/` provide examples with explicit coverage
+and contact overrides. Each extends the unskinned Wuji hand of the same side
+through `base`, and arm combinations such as `tianji_m6_wuji2_beta1_left` and
+`tianji_m6_wuji2_beta1_right` use the skinned hands.
+
+## Contact coverage is not render visibility
+
+Two lists control different things:
+
+- **`nonCollidingLinks`**, when a collision skin is present, disables the named
+  rigid-link collidees so the skin can take their place. Omitted, all link
+  collidees are disabled; an explicit empty list leaves all enabled. A
+  render-only skin does not apply this collision replacement.
+- **`hiddenLinks`** hides named rigid render models wherever the render skin is
+  drawn: in Studio, in a bot exported as a skeletal GLB, and in Unreal, whether
+  the bot is imported in the editor or loaded at runtime. Omitted, the skin
+  hides the links it is skinned over; an explicit empty list hides none.
+
+Use explicit lists for partial skins, especially when fingertips, pads or an
+attached arm should keep their own geometry. Hiding a rigid model does not
+remove its collision, and disabling a rigid collidee does not hide its model.
+`contactOverrides` can separately opt link/skin pairs in or out; the skin's
+name in an override is the **resulting bot name**, not a separate link name.
+
+For C++ renderer integration, `BotScene::FindSkinRenderModel` returns the skin
+file, mapped link actors, zero-pose rest frames and hidden links. Linear blend
+skinning uses the bot links' **zero-pose** rest transforms, not the GLB's
+inverse-bind matrices. `ComputeSkinHiddenLinks` and
+`ComputeSkinCoveredLinks` provide the corresponding C++ visibility and
+collision-coverage queries.
+
+See <ProjectSuperdexLink site="studio" path="docs/bot_editor/">SuperDex Studio's bot editor</ProjectSuperdexLink>
+for asset preparation and preview, and [Bots](./bots.mdx#meshes) for ordinary
+per-link collision and render meshes.

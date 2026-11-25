@@ -1,0 +1,110 @@
+---
+title: Recording a Control Loop
+sidebar_label: Recording
+sidebar_position: 6
+---
+
+import Figure from '@site/src/components/Figure';
+import recordingRerunImage from '@site/static/img/control/osc-jsc-recording-rerun.png';
+
+# Recording a Control Loop
+
+SuperDex Recorder records physics state, robot efforts and commanded-pose
+shadows into a self-contained Rerun `.rrd` episode. Keep recording in the
+application's control loop so actions are paired with the state they actually
+drove.
+
+**Source**: `examples/control/example_osc_jsc_recording.py`
+
+## Step ordering
+
+The example combines OSC on the arm and JSC on the hand. Both return
+whole-articulation effort vectors; it masks the arm DOFs out of the JSC output
+before summing and applying them.
+
+```python
+import superdex.recorder as recorder
+
+# scene, bot and actor already exist; all_dofs covers the actor's DOFs.
+writer = recorder.Recorder(recorder.RecorderConfig("recordings"))
+metadata = recorder.EpisodeMetadata(properties={"task": "my_control_loop"})
+with writer.begin_episode(metadata) as episode:
+    physics_recording = recorder.PhysicsRecorder(episode, scene)
+    controls = recorder.RoboticsRecorder(episode, bot)
+    physics_recording.record(0, scene.get_total_simulation_time())
+
+    for frame in range(num_steps):
+        t = scene.get_total_simulation_time()
+        effort = compute_effort()  # Your controller output for this transition.
+        actor.set_external_forces_on_dofs(
+            dof_indices=all_dofs, force_values=effort
+        )
+        controls.record(frame, t)
+        scene.step(dt)
+        physics_recording.record(frame + 1, scene.get_total_simulation_time())
+    episode.commit_sync()
+```
+
+Record the initial state before the first step. Record robot efforts **after
+applying them and before stepping**; record the resulting physics state after
+the step. This preserves the state/action transition used when restoring or
+resuming a recorded frame. Create recorders after adding the actors and keep
+the episode, scene and robotics context alive while they exist.
+
+A `RobotShadow` can record a commanded pose for comparison with the simulated
+robot without changing its dynamics. The example uses a translucent command
+shadow alongside the live arm and hand. Numeric sensor graph recording is a
+separate hook; see [Sensor Graphs](../../sensor_graphs.mdx#recording-observations).
+
+<Figure
+  src={recordingRerunImage}
+  alt="The Python OSC and JSC recording example in Rerun at simulation time 0.750 seconds, with the simulated FR3 arm and DG5F hand beside a translucent cyan commanded-pose shadow, an applied joint-effort plot, and the expanded simulation timeline."
+  caption="The example's committed recording at 0.750 s: compare the simulated robot with its cyan commanded-pose shadow and the efforts applied during the circular trajectory."
+/>
+
+## Installing and Running
+
+The recorder wheels install the Python package and native extension together.
+For this example, use **Python 3.12+** and matching R2 packages:
+
+```bash
+pip install superdex-recorder
+python superdex_robotics/examples/control/example_osc_jsc_recording.py --output-dir recordings --steps 800
+```
+
+The umbrella `superdex` package also includes the recorder. For double precision,
+install `superdex-recorder[fp64]` and set `SUPERDEX_PRECISION=fp64` before Python
+imports SuperDex. From a source checkout, `uv sync --extra core` includes the
+recorder; add `--extra fp64` for its double-precision extension. Native CMake
+builds enable `SUPERDEX_BUILD_RECORDER` by default; set it to `OFF` to omit
+recording.
+
+Wheels do not supply the example script or robot assets: use the source checkout
+and the [asset-path setup](../../getting_started.mdx#example-code).
+Add `--debugger` to attach the Physics Debugger during recording. The example
+prints the committed episode path; open that `.rrd` in the Rerun viewer.
+
+## Finishing an Episode
+
+`commit_sync()` waits for all recorded chunks and constants to be written and
+for the episode file to be published; an error is reported before it returns.
+Use it when the file must be available immediately, as in this example.
+
+`commit_async()` begins publication without waiting. Stop appending first, keep
+the episode alive, and call `wait_for_commit()` before consuming its output or
+reporting success. `is_commit_finished` means **finished or failed**, not
+necessarily a valid recording. Async failures surface through
+`wait_for_commit()`; releasing the episode and its recorders can itself wait
+for the writer.
+
+The recorder writes series in chunks on a background thread rather than keeping
+all samples until commit. `RecorderConfig.chunk_max_bytes` and
+`chunk_max_duration_sec` control when a series flushes; zero disables that
+limit. Keep one `Recorder` for consecutive episodes to reuse buffers, but still
+use explicit episode boundaries and handle completion errors.
+
+See the [Recorder source guide](https://github.com/facebookresearch/project_superdex/tree/main/superdex_recorder)
+for native configuration, readers and restore support.
+
+See [OSC + JSC Control](./osc_jsc_control.md) for the controller setup without
+recording.

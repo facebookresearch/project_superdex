@@ -1,0 +1,75 @@
+---
+title: Joint Pose and Wrench
+sidebar_label: Joint Pose and Wrench
+---
+
+# Joint Pose and Wrench
+
+Two sources read an articulated bot's joints: an encoder for joint positions
+and velocities, and a wrench sensor for the forces and torques the solver
+transmits through each joint. Both are registered in the public
+`RoboticsContext` and are declared on a link of the bot they measure.
+
+## Joint encoder
+
+**`SENSOR_JOINT_ENCODER`** publishes the owning bot's one-DOF joint states as a
+`[2, N]` tensor, one column per joint:
+
+- row 0: joint positions plus a per-joint calibration offset, in radians or
+  metres;
+- row 1: joint velocities, in rad/s or m/s.
+
+It reads the bot's articulated state rather than a particular link, so it can be
+declared on any link of the bot. It publishes at every graph step, including the
+reset step.
+
+| Parameter | Meaning |
+|---|---|
+| `joints` | Names of the joints to read, in output order. Empty reads every one-DOF joint except the root, in the bot's joint order. |
+| `offset` | Calibration offset added to each joint's position, in output order. Empty means zero. |
+
+```json
+{
+  "type": "SENSOR_JOINT_ENCODER",
+  "name": "joint_encoder",
+  "params": { "joints": ["thumb_1", "thumb_2"], "offset": [0.0, 0.01] }
+}
+```
+
+The offsets can change between episodes, for example to randomize calibration:
+C++ `SetParams` installs new ones. The joint selection is fixed once the graph
+has initialized the sensor. To model measurement noise or latency, feed the
+encoder into the transforms in
+[Noise, Delay and History](./sensor_graphs.mdx#noise-delay-and-history).
+
+## Articulated joint wrench
+
+**`SENSOR_ARTICULATED_JOINT_WRENCH`** publishes the wrench through every joint of
+an articulated actor that the solver can measure, as `[N, 6]`: force `x, y, z`
+in newtons, then torque `x, y, z` in newton-metres. Each row is the wrench the
+proximal side applies to the distal side, in world coordinates, with torque
+about the child-side joint origin. Rows follow articulated-link index order.
+
+It measures the whole actor, so the link it is declared on only identifies which
+articulated actor to read. It takes no parameters.
+
+Not every joint has a row. A joint is omitted when its child link is
+**static**: its own joint and every ancestor joint up to the root are welded, so
+the link is fixed to the world and no contact forces are computed for it. Every
+joint with a moving child is reported, even below a static base, and its wrench
+includes every force on the subtree beyond it.
+
+Do not assume a row count. Read the row identities from the typed metadata:
+
+```cpp
+auto const* meta = TryGetSensorMetadata<ArticulatedJointWrenchMeta>(sensor);
+// meta->rowJointIndices: the joint behind each row.
+// meta->omittedStaticLinkIndices: links left out as static.
+// meta->coordinateFrame and meta->momentReference describe the convention.
+```
+
+## See Also
+
+- [Sensors](./sensors.mdx) for the other sensor categories.
+- [Domain Randomization](./domain_randomization.mdx) for randomizing parameters
+  between episodes.
