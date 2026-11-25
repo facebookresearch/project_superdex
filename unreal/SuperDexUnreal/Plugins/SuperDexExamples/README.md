@@ -7,8 +7,14 @@ plugins. It needs those plugins and SuperDexAssets.
 
 | Level | Contents |
 | --- | --- |
-| `Content/Sampler/L_Sampler` | A table on which `BP_Sampler_PrefabSpawner` spawns the SuperDexAssets task prefabs one at a time, for trying them in SuperDex Physics |
+| `Content/Sampler/L_Sampler` | A workbench with the reusable `BP_PrefabSpawner` cycling task prefabs and `BP_RoboperatorSpawner` switching proxy hands or virtual FR3/DG-5F and Tianji/Wuji combinations |
+| `Content/Sampler/L_Sampler_Android` | The standalone Android sampler |
 | `Content/RuntimeSceneLoad/L_RuntimeSceneLoad` | `L_Sampler`'s lighting around the [runtime_scene_load SuperDex scene](https://github.com/facebookresearch/project_superdex/tree/main/assets/scenes/runtime_scene_load), teleoperated through `ASuperDexRuntimeSceneLoadExample`; the scene's README says how to run it |
+| `Content/Kitchen/L_Kitchen` | A kitchen manipulation scene with objects, articulated mechanisms, and a soft body |
+
+The reusable spawners live under `/SuperDexAssets/utilities/`. The levels also include keyboard
+shortcut overlays and an FPS/SPS counter. For setup and controls, see the
+[Unreal guides](https://projectsuperdex.com/robotics/docs/latest/unreal/getting-started/).
 
 The levels and Blueprints are the original work of Meta Platforms, Inc. and affiliates. The levels
 also use content that ships with Unreal Engine (basic shapes, sky, and template materials); that
