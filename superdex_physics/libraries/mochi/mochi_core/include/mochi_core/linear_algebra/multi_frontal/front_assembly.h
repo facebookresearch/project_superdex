@@ -134,7 +134,7 @@ void ExpandIntoParent(
   static_assert(
       kStairColBlock % kDofsPerNode == 0, "L stair block size must be a multiple of DoFs per node");
   static_assert(kPackSmall == true, "pack big is not implemented yet.");
-  auto childNodalRange = childFront.template NodalColumnsRange<Scalar, kDofsPerNode>();
+  auto childNodalRange = childFront.template NodalColumns<Scalar, kDofsPerNode>();
   auto cIt = childNodalRange.begin();
   auto cEnd = childNodalRange.end();
 
@@ -176,7 +176,7 @@ void ExpandIntoParent(
   }
 
   int totalParentBlocks = parentNdCount - parentNodeIndex;
-  for (auto& [nd, nodalFCol] : parentFront.template NodalColumns<Scalar, kDofsPerNode>()) {
+  for (auto nodalFCol : parentFront.template NodalColumns<Scalar, kDofsPerNode>()) {
     // if we have perfect overlay, we don't need to work further.
     if (childInParent != kMinusOne<int> && (*cIt).data() == nodalFCol.data()) {
       return;
@@ -259,51 +259,40 @@ void AssembleIntoParent(
 
   auto childIt = childNodalColumns.begin();
   auto childEnd = childNodalColumns.end();
+  int childColumn = 0;
 
   int rangeIdx = 0;
   int childInParent = childIt == childEnd
       ? kMinusOne<int>
-      : AdvanceAndMapChildToParent(childIt->first, ranges, rangeIdx);
+      : AdvanceAndMapChildToParent(childColumn, ranges, rangeIdx);
   int parentNodeIndex = 0;
   int parentNdCount = static_cast<int>(parentL.Rows() / kDofsPerNode);
   int numChildNodes = ranges.empty() ? 0 : (ranges.back().childStart + ranges.back().length);
 
-  for (auto nodalL : parentL.template NodalColumns<kDofsPerNode>()) {
-    if (parentNodeIndex == childInParent) {
-      // Assemble
-      auto lPerNode = BlockColView<Scalar, kDofsPerNode>(
-          nodalL.data(), nodalL.LeadDim(), parentNdCount - parentNodeIndex);
-      auto& chNodeCols = childIt->second;
-      auto childPerNode = BlockColView<Scalar, kDofsPerNode>(
-          chNodeCols.data(), chNodeCols.LeadDim(), numChildNodes - childIt->first);
+  // Accumulates the child's nodal columns into the parent nodal columns they map to.
+  auto assembleColumns = [&](auto parentColumns) {
+    for (auto parentCol : parentColumns) {
+      if (parentNodeIndex == childInParent) {
+        auto parentPerNode = BlockColView<Scalar, kDofsPerNode>(
+            parentCol.data(), parentCol.LeadDim(), parentNdCount - parentNodeIndex);
+        auto chNodeCols = *childIt;
+        auto childPerNode = BlockColView<Scalar, kDofsPerNode>(
+            chNodeCols.data(), chNodeCols.LeadDim(), numChildNodes - childColumn);
 
-      AccumulateOverRanges<kDofsPerNode>(
-          childPerNode, lPerNode, ranges, rangeIdx, childIt->first, parentNodeIndex);
+        AccumulateOverRanges<kDofsPerNode>(
+            childPerNode, parentPerNode, ranges, rangeIdx, childColumn, parentNodeIndex);
 
-      childInParent = ++childIt == childEnd
-          ? kMinusOne<int>
-          : AdvanceAndMapChildToParent(childIt->first, ranges, rangeIdx);
+        ++childColumn;
+        childInParent = ++childIt == childEnd
+            ? kMinusOne<int>
+            : AdvanceAndMapChildToParent(childColumn, ranges, rangeIdx);
+      }
+      ++parentNodeIndex;
     }
-    ++parentNodeIndex;
-  }
-  for (auto& [nd, nodalFCol] : parentFront.template NodalColumns<Scalar, kDofsPerNode>()) {
-    if (parentNodeIndex == childInParent) {
-      // Assemble
-      auto lPerNode = BlockColView<Scalar, kDofsPerNode>(
-          nodalFCol.data(), nodalFCol.LeadDim(), parentNdCount - parentNodeIndex);
-      auto& chNodeCols = childIt->second;
-      auto childPerNode = BlockColView<Scalar, kDofsPerNode>(
-          chNodeCols.data(), chNodeCols.LeadDim(), numChildNodes - childIt->first);
+  };
 
-      AccumulateOverRanges<kDofsPerNode>(
-          childPerNode, lPerNode, ranges, rangeIdx, childIt->first, parentNodeIndex);
-
-      childInParent = ++childIt == childEnd
-          ? kMinusOne<int>
-          : AdvanceAndMapChildToParent(childIt->first, ranges, rangeIdx);
-    }
-    ++parentNodeIndex;
-  }
+  assembleColumns(parentL.template NodalColumns<kDofsPerNode>());
+  assembleColumns(parentFront.template NodalColumns<Scalar, kDofsPerNode>());
 }
 
 } // namespace mochi

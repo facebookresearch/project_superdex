@@ -18,7 +18,6 @@
 
 #include <mochi_core/linear_algebra/matrix.h>
 #include <mochi_core/linear_algebra/multi_frontal/stair_iterator.h>
-#include <mochi_core/utils/generator.h>
 #include <mochi_core/utils/range_by_iterators.h>
 
 namespace mochi {
@@ -72,23 +71,11 @@ class Front {
   template <typename Scalar>
   MatrixView<Scalar> Block(size_t block) const;
 
-  template <typename Scalar>
-  Generator<MatrixView<Scalar>> Blocks() const;
-
+  /// @brief One @p kDofsPerNode-wide view per node, in increasing node order, each from the node's
+  /// diagonal down. The front must not be mirrored, and its size and @p kColumnBlock must be
+  /// multiples of @p kDofsPerNode.
   template <typename Scalar, size_t kDofsPerNode>
-  Generator<std::pair<
-      int,
-      MatrixView<
-          Scalar,
-          krylov::kDynamic,
-          kDofsPerNode,
-          krylov::Direction::ColMajor,
-          krylov::kDynamic>>>
-  NodalColumns() const;
-
-  template <typename Scalar, size_t kDofsPerNode>
-  RangeByIterators<StairNodalIterator<Scalar, kDofsPerNode, kColumnBlock>> NodalColumnsRange()
-      const;
+  RangeByIterators<StairNodalIterator<Scalar, kDofsPerNode, kColumnBlock>> NodalColumns() const;
 
   [[nodiscard]] size_t NumBlocks() const;
 
@@ -201,131 +188,18 @@ MatrixView<Scalar> Front<kColumnBlock, kPackSmall>::Block(size_t block) const {
 }
 
 template <size_t kColumnBlock, bool kPackSmall>
-template <typename Scalar>
-Generator<MatrixView<Scalar>> Front<kColumnBlock, kPackSmall>::Blocks() const {
-  if constexpr (kPackSmall) {
-    // Get the pointer to the reference pointer of the first block.
-    ptrdiff_t offset = _numBlocks * (_numBlocks - 1) * (_mirrored ? kHalfSquare : -kHalfSquare);
-    auto values = static_cast<Scalar*>(_refPtr) + offset;
-    auto cols = _edgeCols; // The first block has a unique width
-    auto rows = _numDOFs;
-    while (rows > 0) {
-      co_yield MatrixView<Scalar>{
-          !_mirrored ? values - rows * cols : values,
-          static_cast<int>(rows),
-          static_cast<int>(cols)};
-      rows -= cols;
-      cols = kColumnBlock;
-      if (_mirrored) {
-        values -= rows * cols;
-      } else {
-        values += rows * cols;
-      }
-    }
-  } else {
-    ptrdiff_t cols = std::min<ptrdiff_t>(kColumnBlock, _numDOFs);
-    ptrdiff_t rows = _numDOFs;
-    // When kPackSmall is false, the `_refPtr` pointer
-    // points to the beginning (if !_mirrored) or end (otherwise) of block 0.
-    // Get the pointer to the beginning of the first block.
-    ptrdiff_t offset = (_mirrored ? -cols * rows : 0);
-    auto values = static_cast<Scalar*>(_refPtr) + offset;
-    while (rows > 0) {
-      co_yield MatrixView<Scalar>{values, static_cast<int>(rows), static_cast<int>(cols)};
-      if (!_mirrored) {
-        values += rows * cols;
-      }
-      rows -= cols;
-      cols = std::min<ptrdiff_t>(kColumnBlock, rows);
-      if (_mirrored) {
-        values -= rows * cols;
-      }
-    }
-  }
-}
-template <size_t kColumnBlock, bool kPackSmall>
-template <typename Scalar, size_t kDofsPerNode>
-Generator<std::pair<
-    int,
-    MatrixView<
-        Scalar,
-        krylov::kDynamic,
-        kDofsPerNode,
-        krylov::Direction::ColMajor,
-        krylov::kDynamic>>>
-Front<kColumnBlock, kPackSmall>::NodalColumns() const {
-  int nodeIndex = 0;
-  auto rows = static_cast<int>(_numDOFs);
-  if constexpr (kPackSmall) {
-    // Get the pointer to the beginning of the first block.
-    ptrdiff_t offset = _numBlocks * (_numBlocks - 1) * (_mirrored ? kHalfSquare : -kHalfSquare);
-    auto values = static_cast<Scalar*>(_refPtr) + offset;
-    auto cols = static_cast<int>(_edgeCols); // The first block has a unique width
-    while (rows > 0) {
-      auto blockStart = !_mirrored ? values - rows * cols : values;
-      for (size_t c = 0; c < cols; c += kDofsPerNode) {
-        co_yield {
-            nodeIndex++,
-            MatrixView<
-                Scalar,
-                krylov::kDynamic,
-                kDofsPerNode,
-                krylov::Direction::ColMajor,
-                krylov::kDynamic>{
-                blockStart + c * rows + c,
-                static_cast<int>(rows - c),
-                static_cast<int>(kDofsPerNode),
-                rows}};
-      }
-      rows -= cols;
-      cols = kColumnBlock;
-      if (_mirrored) {
-        values -= rows * cols;
-      } else {
-        values += rows * cols;
-      }
-    }
-  } else {
-    auto cols = std::min(kColumnBlock, _numDOFs);
-    // When kPackSmall is false, the `_refPtr` pointer
-    // points to the beginning (if !_mirrored) or end (otherwise) of block 0.
-    // Get the pointer to the beginning of the first block.
-    ptrdiff_t offset = (_mirrored ? -cols * rows : 0);
-    auto values = static_cast<Scalar*>(_refPtr) + offset;
-    while (rows > 0) {
-      auto blockStart = values;
-      for (size_t c = 0; c < cols; c += kDofsPerNode) {
-        co_yield {
-            nodeIndex++,
-            MatrixView<
-                Scalar,
-                krylov::kDynamic,
-                kDofsPerNode,
-                krylov::Direction::ColMajor,
-                krylov::kDynamic>{
-                blockStart + c * rows + c,
-                static_cast<int>(rows - c),
-                static_cast<int>(kDofsPerNode),
-                rows}};
-      }
-      if (!_mirrored) {
-        values += rows * cols;
-      }
-      rows -= cols;
-      cols = std::min<int>(kColumnBlock, rows);
-      if (_mirrored) {
-        values -= rows * cols;
-      }
-    }
-  }
-}
-template <size_t kColumnBlock, bool kPackSmall>
 template <typename Scalar, size_t kDofsPerNode>
 RangeByIterators<StairNodalIterator<Scalar, kDofsPerNode, kColumnBlock>>
-Front<kColumnBlock, kPackSmall>::NodalColumnsRange() const {
+Front<kColumnBlock, kPackSmall>::NodalColumns() const {
+  static_assert(
+      kColumnBlock % kDofsPerNode == 0,
+      "Front column block size must be a multiple of DoFs per node");
   MOCHI_ASSERT_VERBOSE(!_mirrored, "Mirrored front are not yet supported by StairNodalIterators");
-  auto startPtr = static_cast<Scalar*>(_refPtr) - StorageSize();
-  auto endPtr = static_cast<Scalar*>(_refPtr);
+  MOCHI_ASSERT_VERBOSE(
+      _numDOFs % kDofsPerNode == 0, "Front size must be a multiple of DoFs per node");
+
+  auto startPtr = MemoryStart<Scalar>();
+  auto endPtr = startPtr + StorageSize();
   auto firstNumCols = kPackSmall ? _edgeCols : std::min(kColumnBlock, _numDOFs);
   auto blockEndPtr = startPtr + firstNumCols * _numDOFs;
   auto nDofs = static_cast<int>(_numDOFs);

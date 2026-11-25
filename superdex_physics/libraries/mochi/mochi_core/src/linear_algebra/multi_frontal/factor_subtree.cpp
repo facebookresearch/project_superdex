@@ -96,7 +96,8 @@ void ForwardElimination(
   for (int super = 0; super < numSuper; super++) {
     auto superL = lMatrix.LforSN(super);
     int subOffset = 0;
-    for (auto block : superL.Blocks()) {
+    for (size_t iBl = 0; iBl < superL.NumBlocks(); ++iBl) {
+      auto block = superL.Block(iBl);
       // Separate diagonal block.
       auto diagBlock = block.TopRows(block.Cols());
       auto lowerBlock = block.BottomRows(block.Rows() - block.Cols());

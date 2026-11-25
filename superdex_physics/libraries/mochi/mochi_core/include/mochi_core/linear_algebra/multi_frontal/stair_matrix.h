@@ -18,7 +18,6 @@
 #include <mochi_core/linear_algebra/base_tools.h>
 #include <mochi_core/linear_algebra/matrix_fwd.h>
 #include <mochi_core/linear_algebra/multi_frontal/stair_iterator.h>
-#include <mochi_core/utils/generator.h>
 #include <mochi_core/utils/range_by_iterators.h>
 
 namespace mochi {
@@ -78,17 +77,9 @@ class StairMatrixView {
    */
   auto Block(size_t iBlock) const -> BlockType;
 
-  /**
-   * @brief Generates views for all blocks in the matrix.
-   *
-   * Yields blocks in order from left to right.
-   * Each block represents a view into part of the original matrix data,
-   * with dimensions following the stair pattern.
-   *
-   * @return Generator<BlockType> Generator yielding views of each block
-   */
-  auto Blocks() const -> Generator<BlockType>;
-
+  /// @brief One @p kDofsPerNode-wide view per node, in increasing node order, each from the node's
+  /// diagonal down. The matrix must have at least as many rows as columns, and its column count
+  /// and @p kBlockSize must be multiples of @p kDofsPerNode.
   template <size_t kDofsPerNode>
   RangeByIterators<StairNodalIterator<Scalar, kDofsPerNode, kBlockSize>> NodalColumns() const;
 
@@ -142,24 +133,15 @@ auto StairMatrixView<Scalar, kBlockSize>::Block(size_t iBlock) const -> BlockTyp
 }
 
 template <typename Scalar, size_t kBlockSize>
-auto StairMatrixView<Scalar, kBlockSize>::Blocks() const -> Generator<BlockType> {
-  auto ptr = _v;
-  size_t blockStartCol = 0;
-  auto rows = _rows;
-  auto blockCols = _firstCols;
-  while (blockStartCol < _cols) {
-    co_yield BlockType{ptr, static_cast<int>(rows), static_cast<int>(blockCols)};
-    ptr += blockCols * rows;
-    rows -= blockCols;
-    blockStartCol += blockCols;
-    blockCols = std::min(kBlockSize, _cols - blockStartCol);
-  }
-}
-
-template <typename Scalar, size_t kBlockSize>
 template <size_t kDofsPerNode>
 RangeByIterators<StairNodalIterator<Scalar, kDofsPerNode, kBlockSize>>
 StairMatrixView<Scalar, kBlockSize>::NodalColumns() const {
+  static_assert(
+      kBlockSize % kDofsPerNode == 0, "Stair block size must be a multiple of DoFs per node");
+  MOCHI_ASSERT_VERBOSE(
+      _cols % kDofsPerNode == 0, "Stair column count must be a multiple of DoFs per node");
+  MOCHI_ASSERT_VERBOSE(_rows >= _cols, "Stair must have at least as many rows as columns");
+
   auto stairSize = StairMatrixSize(_rows, _cols, kBlockSize);
   auto endPtr = _v + stairSize;
   int rows = static_cast<int>(_rows);

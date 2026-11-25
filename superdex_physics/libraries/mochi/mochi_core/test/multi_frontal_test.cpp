@@ -258,6 +258,8 @@ void TestFront(size_t numDofs) {
   }
   Scalar* nextBlock = nullptr;
   Scalar* nextBlockBack = nullptr;
+  constexpr int kDofsPerNode = 2; // Divides kColumnBlock and every numDofs tested.
+  DynamicArray<std::tuple<Scalar*, int, int>> expectedNodalColumns;
   for (size_t i = 0; i < nb; ++i) {
     auto block = front.template Block<Scalar>(i);
     auto blockBack = frontBack.template Block<Scalar>(i);
@@ -270,15 +272,26 @@ void TestFront(size_t numDofs) {
     EXPECT_EQ(blockBack.Cols(), cols);
     // Check that the mirrored block precedes the previous one in memory.
     if (nextBlock != nullptr) {
-      EXPECT_EQ(nextBlock, &block(rows - 1, cols - 1));
+      EXPECT_EQ(nextBlock, &block(rows - 1, cols - 1) + 1);
     }
     // Check that the regular block follows the previous one in memory.
     if (nextBlockBack != nullptr) {
       EXPECT_EQ(nextBlockBack, &blockBack(0, 0));
     }
-    nextBlock = &block(0, 0) - 1;
+    nextBlock = &block(0, 0);
     nextBlockBack = &blockBack(rows - 1, cols - 1) + 1;
+
+    // The regular front's nodal columns run down from each block's diagonal, block by block.
+    for (int c = 0; c < cols; c += kDofsPerNode) {
+      expectedNodalColumns.emplace_back(&blockBack(c, c), rows - c, rows);
+    }
   }
+
+  DynamicArray<std::tuple<Scalar*, int, int>> nodalColumns;
+  for (auto column : frontBack.template NodalColumns<Scalar, kDofsPerNode>()) {
+    nodalColumns.emplace_back(column.data(), column.Rows(), column.LeadDim());
+  }
+  EXPECT_EQ(nodalColumns, expectedNodalColumns);
 }
 
 template <typename Scalar, size_t kColumnBlock, bool kPackSmall>
@@ -291,32 +304,6 @@ void TestFrontMemoryStart(size_t numDofs) {
   Front<kColumnBlock, kPackSmall> frontBack(vEnd, numDofs, false);
   EXPECT_EQ(front.template MemoryStart<Scalar>(), v);
   EXPECT_EQ(frontBack.template MemoryStart<Scalar>(), v);
-}
-
-template <typename Scalar, size_t kColumnBlock, bool kPackSmall>
-void TestFrontBlockRange(size_t numDofs) {
-  using Fr = Front<kColumnBlock, kPackSmall>;
-  std::vector<Scalar> values(Fr::StorageSize(numDofs));
-  auto v = values.data();
-  auto vEnd = v + values.size();
-  Front<kColumnBlock, kPackSmall> front(v, numDofs, true);
-  Front<kColumnBlock, kPackSmall> frontBack(vEnd, numDofs, false);
-
-  for (size_t i = 0; auto b : front.template Blocks<Scalar>()) {
-    auto bRef = front.template Block<Scalar>(i);
-    EXPECT_EQ(&bRef(0, 0), &b(0, 0));
-    EXPECT_EQ(&bRef(bRef.Rows() - 1, bRef.Cols() - 1), &b(b.Rows() - 1, b.Cols() - 1));
-    ++i;
-  }
-  // Check that the first and last blocks have the correct sizes.
-  for (size_t i = 0; auto bBack : frontBack.template Blocks<Scalar>()) {
-    auto bBackRef = frontBack.template Block<Scalar>(i);
-    EXPECT_EQ(&bBackRef(0, 0), &bBack(0, 0));
-    EXPECT_EQ(
-        &bBackRef(bBackRef.Rows() - 1, bBackRef.Cols() - 1),
-        &bBack(bBack.Rows() - 1, bBack.Cols() - 1));
-    ++i;
-  }
 }
 
 template <typename Scalar, size_t kColumnBlock, size_t kNodeSize>
@@ -443,7 +430,7 @@ void TestAssembly(int elemsPerSide) {
   // Fill the child front with data:
   std::vector<bool> isInChild(eTree.NumNodes(), false);
   auto fillFront = [&isInChild](auto& childFront, auto const& childFrontIndices, auto&& value) {
-    for (auto [ndIdx, nodeCol] : childFront.template NodalColumns<Scalar, kNodeSize>()) {
+    for (int ndIdx = 0; auto nodeCol : childFront.template NodalColumns<Scalar, kNodeSize>()) {
       isInChild[childFrontIndices[ndIdx]] = true;
       auto rows = nodeCol.Rows();
       EXPECT_EQ(rows, kNodeSize * (childFrontIndices.size() - ndIdx));
@@ -452,6 +439,7 @@ void TestAssembly(int elemsPerSide) {
         auto v = value(childFrontIndices[r], childFrontIndices[ndIdx]);
         nodeCol.MiddleRows(kNodeSize * (r - ndIdx), kNodeSize).SetConstant(v);
       }
+      ++ndIdx;
     }
   };
 
@@ -486,7 +474,7 @@ void TestAssembly(int elemsPerSide) {
       }
       ++nd;
     }
-    for (auto [_, block] : parentFront.template NodalColumns<Scalar, kNodeSize>()) {
+    for (auto block : parentFront.template NodalColumns<Scalar, kNodeSize>()) {
       auto cnd = parentIndices[nd];
       for (int r = 0; r < block.Rows(); ++r) {
         int rnd = parentIndices[nd + r / kNodeSize];
@@ -570,12 +558,13 @@ void TestLOperations(int numRows, int numCols) {
   Matrix<Scalar> R = -C * Ct;
   Matrix<Scalar> C2 = Ct.Transpose() * A.Block(0, 0, numCols, numCols);
 
-  for (auto [nd, sc] : front.template NodalColumns<Scalar, kNodeSize>()) {
+  for (int nd = 0; auto const& sc : front.template NodalColumns<Scalar, kNodeSize>()) {
     auto rBlock = R.Block(nd * kNodeSize, nd * kNodeSize, sc.Rows(), sc.Cols());
     auto refNrm = sc.Norm();
     Matrix<Scalar> comp = rBlock - sc;
     auto diffNrm = comp.Norm();
     EXPECT_LT(diffNrm, epsilon * refNrm);
+    ++nd;
   }
 }
 
@@ -1152,15 +1141,6 @@ TEST(MultifrontalStructure, MemoryStart) {
   TestFrontMemoryStart<real, 24, true>(120);
   TestFrontMemoryStart<real, 24, false>(188);
   TestFrontMemoryStart<real, 24, true>(188);
-}
-
-TEST(MultifrontalStructure, BlockRange) {
-  TestFrontBlockRange<real, 24, false>(6);
-  TestFrontBlockRange<real, 24, true>(6);
-  TestFrontBlockRange<real, 24, false>(120);
-  TestFrontBlockRange<real, 24, true>(120);
-  TestFrontBlockRange<real, 24, false>(188);
-  TestFrontBlockRange<real, 24, true>(188);
 }
 
 TEST(MultifrontalStructure, StairNodalIterator) {

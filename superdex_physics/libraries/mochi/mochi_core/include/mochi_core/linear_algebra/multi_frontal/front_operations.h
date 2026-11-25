@@ -141,9 +141,11 @@ void FrontManipulator<Scalar, kBufferRows>::RankNUpdate(
   MOCHI_ASSERT_VERBOSE(
       stairLD.Rows() - stairLD.Cols() == front.Size(),
       "stairLD and front have incompatible sizes.");
-  bool firstUpdate = isLeaf;
-  for (auto lBlock : stairLD.Blocks()) {
-    for (auto schurBlock : front.template Blocks<Scalar>()) {
+  for (size_t lIdx = 0; lIdx < stairLD.NumBlocks(); ++lIdx) {
+    auto lBlock = stairLD.Block(lIdx);
+    bool const firstUpdate = isLeaf && lIdx == 0;
+    for (size_t schurIdx = 0; schurIdx < front.NumBlocks(); ++schurIdx) {
+      auto schurBlock = front.template Block<Scalar>(schurIdx);
       auto schurRows = schurBlock.Rows();
       auto schurCols = schurBlock.Cols();
       auto subL = lBlock.BottomRows(schurRows);
@@ -164,7 +166,6 @@ void FrontManipulator<Scalar, kBufferRows>::RankNUpdate(
         schurBlock -= subL * U;
       }
     }
-    firstUpdate = false;
   }
 }
 

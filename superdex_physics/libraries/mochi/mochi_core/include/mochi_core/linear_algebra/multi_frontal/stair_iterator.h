@@ -52,13 +52,16 @@ struct StairNodalIterator {
         currentNRows(current_n_rows) {}
 
   StairNodalIterator& operator++() {
-    v += kDofsPerNode * fullNRows + kDofsPerNode;
+    // Compare before advancing: a pointer past the end of the buffer would be undefined.
+    auto const stride = static_cast<ptrdiff_t>(kDofsPerNode * fullNRows + kDofsPerNode);
     currentNRows -= kDofsPerNode;
-    if (v >= blockEnd) {
+    if (stride < blockEnd - v) {
+      v += stride;
+    } else {
       v = blockEnd;
-      auto blockSize = std::min<size_t>(kBlockCols, currentNRows) * currentNRows;
-      blockEnd += blockSize;
-      blockEnd = std::min(blockEnd, fullEnd);
+      auto const blockSize =
+          static_cast<ptrdiff_t>(std::min<size_t>(kBlockCols, currentNRows) * currentNRows);
+      blockEnd += Min(blockSize, fullEnd - blockEnd);
       fullNRows = currentNRows;
     }
     return *this;

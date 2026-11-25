@@ -260,7 +260,8 @@ TrunkWork<Scalar, kColumnBlock>::TrunkWork(
   // Create front panels
   if (frontDOFs > 0) {
     auto frontNodeOffset = static_cast<int>(snL.Cols() / dofsPerNode);
-    for (auto block : front.template Blocks<Scalar>()) {
+    for (size_t ib = 0; ib < front.NumBlocks(); ++ib) {
+      auto block = front.template Block<Scalar>(ib);
       auto nodeOffset =
           frontNodeOffset + static_cast<int>((front.Size() - block.Rows()) / dofsPerNode);
       auto& pnl = panels[panelIdx++];
@@ -302,8 +303,11 @@ void TrunkWork<Scalar, kColumnBlock>::AssembleChildrenFronts(int panelIndex) {
   for (auto& child : childrenFronts) {
     auto childNodes = child.nodeIndices;
     auto indicesInParent = child.indicesInParent;
+    auto const childNodalColumns = child.front.template NodalColumns<Scalar, kDofsPerNode>();
 
-    for (auto [childColIdx, childCol] : child.front.template NodalColumns<Scalar, kDofsPerNode>()) {
+    int childColIdx = 0;
+    for (auto it = childNodalColumns.begin(); it != childNodalColumns.end(); ++it, ++childColIdx) {
+      auto childCol = *it;
       int pi = indicesInParent[childColIdx] - panelStartNode;
       if (pi < 0) {
         continue;
