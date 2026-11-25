@@ -34,8 +34,10 @@ Each soft volume is attached to the skeleton through a two-step mechanism; both 
 
 ### Contact Surface
 
-- By default, contact is computed on the individual soft surfaces. Set [`enableCollidingLinks`](pathname:///generated/api/latest/cpp/structsuperdex_1_1SoftSkinnedActorParams.html) to also collide the rigid links.
+- By default, contact is computed on the individual soft surfaces. Set [`enableCollidingLinks`](pathname:///generated/api/latest/cpp/structsuperdex_1_1SoftSkinnedActorParams.html) to also use the rigid links as colliding surfaces.
 - With a **blended skin** (`skeletonParams.skin`), a single overarching mesh becomes the colliding surface, presenting one seamless surface — deforming where it is backed by a soft region and rigidly following the skeleton elsewhere. See [Blended Skin](#blended-skin).
+
+For a blended skin that covers only selected links, set `skeletonParams.skin.nonCollidingLinks` (Python `skeleton_params.skin.non_colliding_links`) to their local names. Listed links never supply rigid colliding samples; unlisted links supply them only when `enableCollidingLinks` is `true`. Unlike a [standalone skinned articulation](./articulated_actors.mdx#partial-skin-coverage), an unset or empty list leaves `enableCollidingLinks` in control of every link. This mask does not change link colliders, and it requires a blended skin. The skin still supplies samples over unlisted links, so overlapping skin and rigid geometry can both generate contact there.
 
 ### The Three Flavors
 

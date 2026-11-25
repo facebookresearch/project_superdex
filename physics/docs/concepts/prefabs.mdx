@@ -143,6 +143,21 @@ sdp.prefab.export_scene(
 
 Export reconstructs selected scene and actor data; it is not a lossless snapshot. See [Export limitations](../authoring_scenes/authoring_prefabs.md#export-limitations) before relying on round trips.
 
+### Saving the Current Pose
+
+To reuse a deformed or posed scene as an initial configuration, opt into `ExportParams::exportCurrentPose` (Python `export_current_pose`):
+
+```python
+sdp.prefab.export_scene(
+    scene=scene,
+    export_name="posed_scene",
+    output_dir=output_dir,
+    params=sdp.prefab.ExportParams(export_current_pose=True),
+)
+```
+
+Loading that export through `add_to_scene` restores soft displacements, articulated joint poses, and rod poses, including the skeleton and nested soft regions of soft-skinned actors. Velocities are not saved, and ROM soft displacements are excluded. Use [State Capture](./state_capture.mdx) rather than a prefab when you need to resume the same scene's dynamic state.
+
 ## Support Boundary
 
 Prefab loading represents rigid, soft, articulated, soft-skinned, and rod actors, [supported prefab constraints](pathname:///generated/api/latest/cpp/group__prefabs__constraints.html), [pose controllers](pathname:///generated/api/latest/cpp/group__prefabs__articulation.html), nested prefabs, [scene settings](pathname:///generated/api/latest/cpp/group__prefabs__document.html), and [contact filters](#contact-filters).

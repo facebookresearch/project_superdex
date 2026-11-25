@@ -119,6 +119,24 @@ Independent islands limit the size of each numerical system and may be solved co
 
 [`SetForceSingleIsland(true)`](pathname:///generated/api/latest/cpp/classsuperdex_1_1Scene.html) / [`set_force_single_island(True)`](pathname:///generated/api/latest/python/api/physics.html#superdex.physics.Scene.set_force_single_island) forces all actors into one island. This is a debugging aid for investigating partitioning behavior and normally hurts performance.
 
+### Experimental Sleeping
+
+:::warning Experimental
+Island sleeping is a work in progress, is disabled by default, and may change or be removed in future releases.
+:::
+
+Sleeping lets settled islands skip simulation work until a relevant API change or contact with an awake actor wakes them. Enable it per scene with `experimental::SetSleepParams` in C++ or [`sdp.experimental.set_sleep_params`](../api_reference/python.mdx) in Python:
+
+```python
+sleep_params = sdp.experimental.get_sleep_params(scene)
+sleep_params.can_sleep = True
+sdp.experimental.set_sleep_params(scene, sleep_params)
+```
+
+`SleepParams` defaults to 20 consecutive rest steps before sleeping, with `sleepThreshold = 0.5` (`sleep_threshold` in Python). Rest is judged from solver convergence, not a simple speed cutoff: unconverged steps never count. Higher thresholds are stricter; lower thresholds can stop slowly moving actors before they have settled. The threshold must be in `(0, 1]`, and `minStepsBeforeSleep` (`min_steps_before_sleep`) must be at least 2.
+
+Changing sleep parameters wakes all islands. Quasistatic (infinite-time-step) steps also wake them. Sleeping is unsupported in differentiable scenes and scenes owned by an IK solver; islands do not sleep while scene recording is enabled, so recording can change simulation results. Sleeping actors report `ConvergenceStatus::None` and their islands are excluded from aggregate solver statistics. See the [`SleepParams` reference](../api_reference/python.mdx) for the full contract.
+
 ## AsyncScene {#asyncscene}
 
 [`AsyncScene`](pathname:///generated/api/latest/cpp/classsuperdex_1_1AsyncScene.html) is a C++-only wrapper that owns a synchronous [`Scene`](pathname:///generated/api/latest/cpp/classsuperdex_1_1Scene.html) and advances it with a long-lived task on the shared SuperDex Physics worker pool. It is useful when physics should progress independently of rendering or other application work. Access the wrapped [`Scene`](pathname:///generated/api/latest/cpp/classsuperdex_1_1Scene.html) only from queued commands and step callbacks.

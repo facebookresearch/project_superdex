@@ -210,6 +210,16 @@ Joint friction is configured per joint via [`ArticulatedJointParams::friction`](
 | `stictionExtra` | `0.0` | **(Experimental)** Extra stiction force [N or N*m], representing the difference between peak static and dynamic friction. |
 | `stribeckVel` | `0.0` | **(Experimental)** Stribeck velocity [m/s or rad/s] governing the static-to-dynamic friction transition sharpness. |
 
+[`preslidingDisplacement`](pathname:///generated/api/latest/cpp/structsuperdex_1_1ArticulatedJointFrictionParams.html) must be positive. In Python, use `presliding_displacement`; remove old `falloff_vel` settings rather than treating their velocity values as displacements. Joint dry friction uses this model whenever `coulomb + stictionExtra` is positive; it is independent of the **contact** friction setting `preferElastoPlasticFriction`.
+
+```python
+# Configure a revolute joint before creating the articulated actor.
+params.joints[1].friction = sdp.ArticulatedJointFrictionParams(
+    coulomb=0.1,                   # N*m
+    presliding_displacement=1e-4,  # rad
+)
+```
+
 Dry friction is elasto-plastic: each joint keeps a friction anchor $a_j$, which stays fixed during a time step. For a one-DoF joint with coordinate $q_j$, let $z_j=q_j-a_j$ be its displacement from the anchor, $\mu_c$ its [`coulomb`](pathname:///generated/api/latest/cpp/structsuperdex_1_1ArticulatedJointFrictionParams.html) force, $\mu_s$ its [`stictionExtra`](pathname:///generated/api/latest/cpp/structsuperdex_1_1ArticulatedJointFrictionParams.html), $\delta$ its [`preslidingDisplacement`](pathname:///generated/api/latest/cpp/structsuperdex_1_1ArticulatedJointFrictionParams.html), $v_s$ its [`stribeckVel`](pathname:///generated/api/latest/cpp/structsuperdex_1_1ArticulatedJointFrictionParams.html), and $\tau$ the time since the start of the time step (at the integration stage). When $\mu_0=\mu_c+\mu_s>0$, define $r=\mu_c/\mu_0$ and $x_s=v_s\tau$, and
 
 $$
@@ -317,9 +327,11 @@ Contact is automatically disabled between links that are (a) directly adjacent, 
 
 ## Skinned Surface
 
-An articulated actor can carry an optional **skinned surface**: a single triangle mesh that is deformed by the underlying links via linear blend skinning. This gives the articulation one continuous surface for collision and rendering, instead of the separate per-link collision shapes.
+An articulated actor can carry an optional **skinned surface**: a mesh surface deformed by the underlying links via linear blend skinning. This gives the articulation a continuous contact surface, which can replace all or selected per-link colliding surfaces.
 
 The skin is a **colliding-only surface** — it detects contact against other actors, but others do not detect against it (the per-link shapes remain the colliders). Attach it by setting [`skin`](pathname:///generated/api/latest/cpp/structsuperdex_1_1ArticulatedActorParams.html) on [`ArticulatedActorParams`](pathname:///generated/api/latest/cpp/structsuperdex_1_1ArticulatedActorParams.html) before creating the actor.
+
+The skin shape may be a triangle or tetrahedral mesh with skinning data. Author its coordinates in the articulation's reference frame, not in each link's local frame or in world space: `worldFromRoot` places the whole skinned articulation. Every skin node must be referenced by an element.
 
 <Tabs groupId="language">
 <TabItem value="cpp" label="C++" default>
@@ -352,17 +364,36 @@ actor = scene.create_articulated_actor(params)
 </TabItem>
 </Tabs>
 
+### Partial Skin Coverage
+
+Use `ArticulatedSkinParams::nonCollidingLinks` (Python `non_colliding_links`) when a skin covers only part of the articulation. It names links whose **colliding samples** are replaced by skin samples; it does not disable their [collider role](../contact.md#contact-roles).
+
+- Unset (`None` in Python): the skin is the sole colliding surface; no rigid link supplies samples.
+- An empty list: every rigid link supplies samples as well as the skin.
+- A non-empty list: listed links supply no rigid samples; unlisted links keep theirs.
+
+For example, keep rigid contact on an arm but replace fingertip contact with the skin:
+
+```python
+# Set before scene.create_articulated_actor(params).
+# Entries are skeleton link local names, not hierarchy paths.
+params.skin.non_colliding_links = ["finger_tip"]
+```
+
+The skin still collides over unlisted links. If skin and rigid geometry overlap there, both can generate contact in that region. List all skin-covered links to avoid that duplicate response. Each entry must be non-empty and match a skeleton link name. [Soft-skinned actors](./soft_skinned_actors.mdx#contact-surface) additionally gate rigid samples with `enableCollidingLinks`.
+
 ### ArticulatedSkinParams Reference
 
 The skin is configured with `ArticulatedSkinParams` ([C++](pathname:///generated/api/latest/cpp/structsuperdex_1_1ArticulatedSkinParams.html), [Python](pathname:///generated/api/latest/python/api/physics.html#superdex.physics.ArticulatedSkinParams)).
 
 | Field | C++ Type | Python Name | Description |
 |-------|----------|-------------|-------------|
-| `shape` | [`ShapeHandle`](pathname:///generated/api/latest/cpp/structsuperdex_1_1ShapeHandle.html) | `shape` | Triangle-mesh shape for the skinned surface. |
+| `shape` | [`ShapeHandle`](pathname:///generated/api/latest/cpp/structsuperdex_1_1ShapeHandle.html) | `shape` | Triangle- or tetrahedral-mesh shape with skinning data, authored in the articulation's reference frame. |
 | `layer` | `DynamicString` | `layer` | Contact layer name for the skin (for contact filtering). |
 | `contact` | [`ContactParams`](pathname:///generated/api/latest/cpp/structsuperdex_1_1ContactParams.html) | `contact` | Contact mechanics parameters for the skin. |
 | `boundaryElementType` | `ActorBoundaryElementType` | `boundary_element_type` | Finite-element type for the skin's boundary/contact integrals. Default: `Default`. |
 | `boundarySubsampling` | `optional<BoundarySubsamplingParams>` | `boundary_subsampling` | Optional subsampling to reduce contact-integral cost. Best combined with `boundaryElementType = P1Q1`. |
+| `nonCollidingLinks` | `optional<DynamicArray<DynamicString>>` | `non_colliding_links` | Local names of links whose rigid colliding samples are replaced by the skin. Unset disables all rigid colliding samples on a standalone skinned articulation; an empty list disables none. See [Partial Skin Coverage](#partial-skin-coverage). |
 
 :::note
 This surface follows the links via skinning; it is not itself physically deformable. A **deformable** skin is possible, but it requires integrating the articulated actor with soft actors into a [soft-skinned actor](./soft_skinned_actors.mdx).
@@ -516,7 +547,7 @@ actor.clear_boundary_conditions()
 
 ### Live Joint Modeling
 
-Per-joint friction and joint inertia can be read and changed mid-simulation (one entry per joint).
+Per-joint friction and joint inertia can be read and changed mid-simulation (one entry per joint). Updating friction parameters preserves each joint's displacement from its anchor under the previous parameters, and the new parameters determine its force. A joint whose dry friction is newly enabled starts without preload. Setting joint positions resets preload; velocity and root-transform setters do not.
 
 <Tabs groupId="language">
 <TabItem value="cpp" label="C++" default>
@@ -611,11 +642,11 @@ The [Pose Controller](../pose_controller.mdx) adds implicit PD constraints to an
 ## Examples
 
 - **Plain — [Double Pendulum on Rail](../../examples/articulations/double_pendulum_on_rail.md)**: builds a double pendulum on a rail in code and tours the runtime API described above.
-  - Python - `uv run superdex_physics/examples/example_articulations_double_pendulum_on_rail.py`
+  - Python — `uv run superdex_physics/examples/example_articulations_double_pendulum_on_rail.py`
   - Prefab — `superdex_physics/assets/samples/articulations_double_pendulum_on_rail.mochi_scene`
 
 - **Skinned — [Skinned Double Pendulum](../../examples/articulations/skinned_double_pendulum.md)**: adds a linear-blend-skinned surface as a colliding-only skin.
-  - Python - `uv run superdex_physics/examples/example_articulations_skinned_double_pendulum.py`
+  - Python — `uv run superdex_physics/examples/example_articulations_skinned_double_pendulum.py`
   - Prefab — `superdex_physics/assets/samples/articulations_skinned_double_pendulum.mochi_scene`
 
 ## Related Concepts

@@ -79,6 +79,8 @@ Mesh coordinates are flat XYZ values in meters, so their length is three times t
 
 For polylines, connectivity is either empty (an open chain) or the sequential segments `[0, 1], [1, 2], ...`, optionally closed by `[n - 1, 0]`. In C++, `experimental::CreatePolylineShape` generates this connectivity from an `isClosedLoop` flag and accepts per-element frame axes; if the axes are empty, it generates a discrete Bishop frame using parallel transport.
 
+`ModelData::elementFrameAxes` stores a polyline's reference cross-section axes. Runtime shape creation generates missing axes. For a C++ asset pipeline that transforms or exports a model first, call `model_utils::GenerateMissingPolylineFrameAxes(modelData, error)` before `model_utils::BakeTransform`; this makes generated axes transform like authored ones. The helper leaves already-authored axes unchanged.
+
 Dedicated helpers cover tetrahedral and triangle meshes:
 
 <Tabs groupId="language">

@@ -8,7 +8,7 @@ import TabItem from '@theme/TabItem';
 
 # Authoring Assets
 
-The SuperDex Physics engine provides some basic utilities to convert geometry data into simulation-ready model assets. This standalone workflow uses only APIs shipped in `superdex-physics`: load model data, validate it, optionally convert its length units and axis convention, optionally bake a grid-interpolated signed-distance field (SDF) for use in the [Contact](../concepts/contact.md) formulation, and save the result as a `.mochi.h5` file.
+The SuperDex Physics engine provides utilities to convert geometry data into simulation-ready model assets. The core model-data workflow loads and validates geometry, optionally converts its length units and axis convention, optionally bakes a grid-interpolated signed-distance field (SDF) for use in the [Contact](../concepts/contact.md) formulation, and saves the result as a `.mochi.h5` file. [Experimental mesh generation](#generate-a-tetrahedral-volume) additionally uses the separately installed geometry helper.
 
 Supported inputs are:
 
@@ -19,16 +19,52 @@ Supported inputs are:
 - SuperDex Physics JSON (`.mochi.json`)
 - SuperDex Physics HDF5 (`.mochi.h5`)
 
-The OBJ, STL, PLY, and OFF loaders mentioned above import only triangulated surface geometry.
-Parsing or generating mesh data for tetrahedral meshes or polylines from formats other than SuperDex JSON or HDF5 is outside the current scope of the physics engine.
-An application may use other functionality (e.g., a third-party mesh generator) to produce flattened nodes and connectivity arrays for a tetrahedral mesh or polyline, then construct [`MeshData`](pathname:///generated/api/latest/cpp/structsuperdex_1_1MeshData.html) from these directly (as described in [Mesh Shapes](../concepts/shapes.mdx#mesh-shapes)) and assign it to [`ModelData.mesh`](pathname:///generated/api/latest/cpp/structsuperdex_1_1ModelData.html).
+The OBJ, STL, PLY, and OFF loaders mentioned above import only triangulated surface geometry; loading a surface file does not generate a tetrahedral volume. Use the [experimental mesh-processing module](#generate-a-tetrahedral-volume) or another mesher to generate tetrahedra, or create a polyline directly from nodes and connectivity. Construct [`MeshData`](pathname:///generated/api/latest/cpp/structsuperdex_1_1MeshData.html) from those arrays (as described in [Mesh Shapes](../concepts/shapes.mdx#mesh-shapes)) and assign it to [`ModelData.mesh`](pathname:///generated/api/latest/cpp/structsuperdex_1_1ModelData.html).
 Set [`nodesPerElement`](pathname:///generated/api/latest/cpp/structsuperdex_1_1MeshData.html) / [`nodes_per_element`](pathname:///generated/api/latest/python/api/physics.html#superdex.physics.MeshData.nodes_per_element) to `2` for polylines, `3` for triangles, or `4` for tetrahedra.
 The [Mass on Rod Spring](../examples/tendons_rods/mass_on_rod_spring.md) and [high-fidelity rod-based tendon](../examples/tendons_rods/tendon_model_fidelity.md#high-fidelity-elastic-rod) examples provide practical polyline-model references.
-For higher-level asset preparation, you can also use SuperDex Studio's Model Editor before starting this workflow.
+For higher-level asset preparation, use the [SuperDex Studio Model Editor](https://projectsuperdex.com/studio/docs/latest/model_editor/) before starting this workflow.
+
+## Preparing STEP and Tetrahedral Meshes
+
+STEP (`.step` / `.stp`) is CAD geometry, not a runtime Physics model format. Prepare it in Studio, then load the resulting mesh asset with the Physics APIs below:
+
+1. **Tessellate the CAD surface.** Studio's CAD source processing converts STEP faces into a triangle mesh. It can use authored face colors to control local mesh density, preserving more detail where contact needs it.
+2. **Choose surface or volume geometry.** A triangle surface can represent a rigid body or articulated link. A soft body requires a tetrahedral volume; Studio's **Tetrahedralize** operation fills a closed, self-intersection-free surface with tetrahedra. Its constrained variant preserves the boundary shape, while the refinement variant may approximate it.
+3. **Export the prepared Physics model.** Load it as `ModelData` or a shape, then configure the actor's material and contact behavior. Mesh generation does not itself make a body soft: the consuming actor type determines that behavior.
+
+The model-data loaders below do not tessellate STEP or generate tetrahedra. Keep CAD preparation in the [Model Editor](https://projectsuperdex.com/studio/docs/latest/model_editor/) or your own meshing pipeline. For a prepared triangle surface, the Python mesh module provides a volume-generation alternative.
+
+### Generate a Tetrahedral Volume
+
+R2 Physics wheels include `superdex.physics.mesh`, which provides experimental surface remeshing and tetrahedralization. Heavy mesh operations require the separately installed `superdex-mesh-cli` helper distribution. The module discovers its packaged executable automatically; `SUPERDEX_MESH_CLI_PATH` can instead point to a local helper executable. If no helper is available, these operations report an error.
+
+For a closed triangle surface free of self-intersections:
+
+```python
+import numpy as np
+import superdex.physics as sdp
+import superdex.physics.mesh as mesh
+
+surface_model = sdp.model.load_from_file("models/closed_surface.obj")
+surface = surface_model.mesh
+vertices, tetrahedra = mesh.tetrahedralize(
+    vertices=np.asarray(surface.coordinates).reshape(-1, 3),
+    faces=np.asarray(surface.connectivity, dtype=np.int32).reshape(-1, 3),
+)
+model_data = sdp.ModelData()
+model_data.mesh = sdp.MeshData(
+    nodes_per_element=4,
+    coordinates=vertices.reshape(-1),
+    connectivity=tetrahedra.reshape(-1),
+)
+sdp.model.validate(model_data)
+```
+
+Continue with the validation, coordinate conversion, and serialization steps below. `tetrahedralize` may approximate the input boundary. `tetrahedralize_constrained`, with `ConstrainedTetrahedralizationParams`, preserves its shape but may split boundary triangles; setting the parameter object's `strict` property to `True` requires the original boundary triangles to remain unchanged. The constrained input must also be a consistently oriented manifold with no unreferenced or coincident vertices. These mesh-generation APIs are experimental; they do not change the runtime actor's material or contact settings.
 
 ## Input Requirements
 
-The model APIs load and validate geometry; they do not provide general mesh preparation. Prepare input data with these requirements in mind:
+The model-data loading and validation APIs do not repair or remesh geometry. Prepare input data with these requirements in mind:
 
 - Coordinates must reach simulation in the consuming application's length units and axis convention. Input data in another convention can be transformed with [Convert Scale and Coordinate Space](#convert-scale-and-coordinate-space). For a known consumer, author assets in that consumer's expected length units and axis convention to minimize friction.
 - A meaningful SDF requires a suitable closed surface with consistent orientation and without severe degeneracies, self-intersections, or ambiguous topology.
