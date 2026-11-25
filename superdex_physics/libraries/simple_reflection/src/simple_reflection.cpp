@@ -40,34 +40,6 @@ SR_WARNING_POP()
 #include <unordered_map>
 #include <utility>
 
-// Reflection of this enum type could be moved to the header if it is needed elsewhere.
-// For now, it is restricted to the cpp file to reduce bloat.
-SR_BeginEnum(SReflect::CoreType);
-SR_EnumItem(X_Invalid);
-SR_EnumItem(CT_string);
-SR_EnumItem(CT_bool);
-SR_EnumItem(CT_uint8);
-SR_EnumItem(CT_int8);
-SR_EnumItem(CT_uint16);
-SR_EnumItem(CT_int16);
-SR_EnumItem(CT_uint32);
-SR_EnumItem(CT_int32);
-SR_EnumItem(CT_uint64);
-SR_EnumItem(CT_int64);
-SR_EnumItem(CT_float);
-SR_EnumItem(CT_double);
-SR_EnumItem(CT_enum);
-SR_EnumItem(CT_array);
-SR_EnumItem(CT_matrix);
-SR_EnumItem(CT_struct);
-SR_EnumItem(CT_field);
-SR_EnumItem(CT_map);
-SR_EnumItem(CT_optional);
-SR_EnumItem(CT_variant);
-SR_EnumItem(CT_other);
-SR_EnumItem(X_Count);
-SR_EndEnum();
-
 SR_BeginStructDefinitionEx(SReflect::IssueReport);
 SR_Field_Name(_path, "path");
 SR_Field_Name(_description, "description");
