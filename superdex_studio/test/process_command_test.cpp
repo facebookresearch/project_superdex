@@ -1288,7 +1288,7 @@ TEST_F(ProcessCommandTest, APolylineModelGetsATubularContactSkinAndVisualMesh) {
   EXPECT_EQ(context->GetShapeVisualMesh(params.shape, error).GetNumNodes(), 16 * 4 + 2);
 }
 
-// Tube embeds only in a polyline, and Upstream Surface only in a tetrahedral mesh.
+// Tube embeds only in a polyline, and Upstream Surface embeds only a triangle surface.
 TEST_F(ProcessCommandTest, EachEmbedMethodNeedsItsKindOfMesh) {
   constexpr char const* kTubeContactSkin =
       R"({"modifier": "Embed Contact Skin", "method": "Tube", "enabled": true, "collapsed": true,
@@ -1317,7 +1317,57 @@ TEST_F(ProcessCommandTest, EachEmbedMethodNeedsItsKindOfMesh) {
   ASSERT_TRUE(polylineError.IsOK()) << polylineError.GetDescription();
   ASSERT_EQ(polyline.stages.size(), 2u);
   EXPECT_FALSE(polyline.stages[1].succeeded);
-  EXPECT_NE(polyline.stages[1].error.find("Tube"), std::string::npos) << polyline.stages[1].error;
+  EXPECT_NE(polyline.stages[1].error.find("triangle surface"), std::string::npos)
+      << polyline.stages[1].error;
+}
+
+// A render model's own source, ahead of the polyline's, provides the surface to embed in the
+// polyline vertex for vertex, as the visual mesh a rod actor deforms.
+TEST_F(ProcessCommandTest, AnUpstreamRenderModelIsEmbeddedInAPolyline) {
+  fs::path const renderPath = _root / "render" / "cube.glb";
+  WriteCubeGlb(renderPath);
+  fs::path const rodPath = _root / "rods" / "rod.mochi.h5";
+  mochi::model_utils::SaveToFile(
+      RodModel(), rodPath.string(), mochi::FileFormat::H5, mochi::test::ExpectOK{});
+  fs::path const pipeline = _root / "rods" / "intermediates" / "rod.StudioProcessing.json";
+  WriteModifiers(
+      pipeline,
+      {kRenderSourceFromModelViewer,
+       kMochiSourceFromModelViewer,
+       kEmbedSourceAsVisualMesh,
+       kNoSdfExport});
+
+  mochi::Error error;
+  ProcessReport const report = RunProcessingPipeline(
+      {.pipelinePath = pipeline.string(),
+       .slots = {.renderPath = renderPath.string(), .mochiPath = rodPath.string()}},
+      error);
+
+  ASSERT_TRUE(error.IsOK()) << error.GetDescription();
+  ASSERT_TRUE(report.succeeded);
+  ASSERT_EQ(report.stages.size(), 4u);
+  fs::path const exportedPath = report.stages[3].exportedPath;
+  mochi::ModelData const model = mochi::model_utils::LoadFromFile(exportedPath.string(), error);
+  ASSERT_TRUE(error.IsOK()) << error.GetDescription();
+  ASSERT_TRUE(model.mesh.has_value());
+  EXPECT_EQ(model.mesh->nodesPerElement, 2);
+  // Both primitives' copies of the cube's corners, each skinned to both of the rod's two elements.
+  ASSERT_TRUE(model.visualMesh.has_value());
+  EXPECT_EQ(model.visualMesh->GetNumNodes(), 2 * 8);
+  ASSERT_TRUE(model.visualMesh->skinning.has_value());
+  EXPECT_EQ(model.visualMesh->skinning->weightsPerNode, 2);
+
+  mochi::Context* const context = mochi::CreateContext(0);
+  MOCHI_DEFER(mochi::DestroyContext(context));
+  mochi::Scene* const scene = context->CreateScene("rod_render_model_export");
+  MOCHI_DEFER(context->DestroyScene(scene));
+  mochi::RodActorParams params;
+  params.shape = context->LoadShapeFromFile(exportedPath.string(), error);
+  ASSERT_TRUE(error.IsOK()) << error.GetDescription();
+  MOCHI_DEFER(context->ReleaseShape(params.shape));
+  EXPECT_NE(scene->CreateRodActor(params, error), nullptr);
+  EXPECT_TRUE(error.IsOK()) << error.GetDescription();
+  EXPECT_EQ(context->GetShapeVisualMesh(params.shape, error).GetNumNodes(), 2 * 8);
 }
 
 // Around a closed loop, the tube has a ring per element and no caps.
