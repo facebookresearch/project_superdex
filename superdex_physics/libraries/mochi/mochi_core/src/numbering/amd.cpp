@@ -124,7 +124,7 @@ class QuotientGraph {
 
  private:
   using Ptr = size_t;
-  static_assert(std::is_signed_v<Idx>, "Abandoned slots store minus their size.");
+  static_assert(std::is_signed_v<Idx>, "Sizes are negated in abandoned slots and as flags.");
 
   static constexpr auto kInvalidPtr = kMinusOne<Ptr>;
 
@@ -137,6 +137,12 @@ class QuotientGraph {
 
   [[nodiscard]] bool IsPrincipal(Idx i) const {
     return _superSize[i] != 0;
+  }
+
+  /// @brief Return the size of flagged supervariable @p i.
+  [[nodiscard]] Idx FlaggedSize(Idx i) const {
+    MOCHI_ASSERT_VERBOSE(_superSize[i] < 0, "Supervariable is not flagged.");
+    return -_superSize[i];
   }
 
   /// @brief Return true once element @p e has been absorbed into another element.
@@ -157,11 +163,6 @@ class QuotientGraph {
 
   [[nodiscard]] Span<Idx, Idx> Variables(Idx i) {
     return NeighborNodes(i).subspan(_nodeInfo[i].numElements);
-  }
-
-  /// @brief Return true if principal @p var is @p pivot or a variable of Lp.
-  [[nodiscard]] bool InPivotElement(Idx var, Idx pivot) const {
-    return _mark[var] == pivot;
   }
 
   /// @brief Return true the first time @p pivot visits element @p e.
@@ -203,10 +204,13 @@ class QuotientGraph {
   /// @brief Merge the indistinguishable variables of Lp into supervariables.
   void DetectSupervariables(Idx pivot);
 
-  /// @brief Finish the approximate degree of the variables of Lp and update the degree lists.
+  /// @brief Finish the approximate degree of the variables of Lp, update the degree lists, and
+  /// clear the flags of pivot and the variables of Lp.
   void UpdateDegrees(Idx pivot);
 
   /// @brief Merge @p var into the supervariable of @p principal.
+  ///
+  /// @pre Both are flagged.
   void JoinVarTo(Idx var, Idx principal);
 
   /// @brief Release @p node's slot in `_dataSpace`.
@@ -230,8 +234,7 @@ class QuotientGraph {
   /// @brief End of the used part of `_dataSpace`.
   Ptr _tail = 0;
 
-  /// @brief Last pivot that marked each node: the pivot itself, its variables, the variables of Lp,
-  /// and the elements visited by @ref ComputeExternalDegrees.
+  /// @brief Last pivot whose @ref ComputeExternalDegrees visited each element.
   DynamicArray<Idx> _mark;
 
   /// @brief Approximate external degree of each variable.
@@ -262,7 +265,8 @@ class QuotientGraph {
   /// @brief Principal that each merged variable joined.
   DynamicArray<Idx> _superParent;
 
-  /// @brief Number of variables in each principal's supervariable, or 0 once merged.
+  /// @brief Number of variables in each principal's supervariable, or 0 once merged. Pivot and the
+  /// variables of Lp are flagged by negating it, from @ref Eliminate to @ref UpdateDegrees.
   DynamicArray<Idx> _superSize;
 
   /// @brief Number of variables not eliminated yet.
@@ -345,15 +349,15 @@ DynamicArray<Idx> QuotientGraph::ComputeOrdering() {
 
 void QuotientGraph::Eliminate(Idx const pivot) {
   _order.push_back(pivot);
-  // Mark pivot and its variables, so CreateElement skips them among the variables of its elements,
+  _remainingVars -= _superSize[pivot];
+  // Flag pivot and its variables, so CreateElement skips them among the variables of its elements,
   // and the walks drop them.
-  _mark[pivot] = pivot;
+  _superSize[pivot] = -_superSize[pivot];
   for (Idx const var : Variables(pivot)) {
-    _mark[var] = pivot;
+    _superSize[var] = -_superSize[var];
   }
   _elementDegree[pivot] =
       Elements(pivot).empty() ? CreateElementInPlace(pivot) : CreateElement(pivot);
-  _remainingVars -= _superSize[pivot];
 }
 
 Idx QuotientGraph::CreateElementInPlace(Idx const pivot) {
@@ -364,7 +368,7 @@ Idx QuotientGraph::CreateElementInPlace(Idx const pivot) {
   Idx lpSize = 0;
   for (Idx const var : vars) {
     if (IsPrincipal(var)) {
-      lpSize += _superSize[var];
+      lpSize += FlaggedSize(var);
       *kept++ = var;
     }
   }
@@ -393,9 +397,11 @@ Idx QuotientGraph::CreateElement(Idx const pivot) {
   // degree ties.
   for (Idx const e : ReverseRange(Elements(pivot))) {
     for (Idx const var : Variables(e)) {
-      if (IsPrincipal(var) && !InPivotElement(var, pivot)) {
-        lpSize += _superSize[var];
-        _mark[var] = pivot;
+      // Skip merged and flagged variables.
+      Idx const varSize = _superSize[var];
+      if (varSize > 0) {
+        lpSize += varSize;
+        _superSize[var] = -varSize;
         _dataSpace[_tail++] = var;
         ++numVariables;
       }
@@ -405,7 +411,7 @@ Idx QuotientGraph::CreateElement(Idx const pivot) {
 
   for (Idx const var : Variables(pivot)) {
     if (IsPrincipal(var)) {
-      lpSize += _superSize[var];
+      lpSize += FlaggedSize(var);
       _dataSpace[_tail++] = var;
       ++numVariables;
     }
@@ -422,6 +428,7 @@ Idx QuotientGraph::CreateElement(Idx const pivot) {
 void QuotientGraph::ComputeExternalDegrees(Idx const pivot) {
   // |Le \ Lp| = |Le| - |Le ∩ Lp|. The elements pivot absorbed are dropped by the walk.
   for (Idx const var : Variables(pivot)) {
+    Idx const varSize = FlaggedSize(var);
     for (Idx const e : Elements(var)) {
       if (IsAbsorbed(e)) {
         continue;
@@ -429,7 +436,7 @@ void QuotientGraph::ComputeExternalDegrees(Idx const pivot) {
       if (FirstVisit(e, pivot)) {
         _externalDegree[e] = _elementDegree[e];
       }
-      _externalDegree[e] -= _superSize[var];
+      _externalDegree[e] -= varSize;
     }
   }
 }
@@ -442,8 +449,9 @@ void QuotientGraph::AbsorbAndUpdateNeighbors(Idx const pivot) {
     if (partial == 0) {
       // Mass elimination: pivot's element is var's only remaining adjacency, so var is eliminated
       // with pivot.
-      _remainingVars -= _superSize[var];
-      _elementDegree[pivot] -= _superSize[var];
+      Idx const varSize = FlaggedSize(var);
+      _remainingVars -= varSize;
+      _elementDegree[pivot] -= varSize;
       JoinVarTo(var, pivot);
     } else {
       _approximateDegree[var] = Min(_approximateDegree[var], partial);
@@ -484,11 +492,12 @@ Idx QuotientGraph::WalkAndCompactNeighborhood(Idx const var, Idx const pivot) {
   Idx pending = pivot;
   for (Idx* in = elemEnd; in != varEnd; ++in) {
     Idx const v = *in;
-    // Merged variables are represented by their principal, and members of Lp by pivot.
-    if (!IsPrincipal(v) || InPivotElement(v, pivot)) {
+    Idx const size = _superSize[v];
+    // Merged variables are represented by their principal, and flagged ones by pivot.
+    if (size <= 0) {
       continue;
     }
-    partial += _superSize[v];
+    partial += size;
     hash += static_cast<uint32_t>(v);
     *out++ = std::exchange(pending, v);
   }
@@ -546,12 +555,14 @@ void QuotientGraph::UpdateDegrees(Idx const pivot) {
   // eliminated yet, which also keeps it below n, the size of the degree lists.
   Idx const lpSize = _elementDegree[pivot];
   for (Idx const var : Variables(pivot)) {
-    Idx const varSize = _superSize[var];
+    Idx const varSize = FlaggedSize(var);
+    _superSize[var] = varSize;
     Idx const degree = Min(_approximateDegree[var] + lpSize - varSize, _remainingVars - varSize);
     _approximateDegree[var] = degree;
     _degreeLists.Remove(var);
     _degreeLists.Insert(var, degree);
   }
+  _superSize[pivot] = FlaggedSize(pivot);
 }
 
 void QuotientGraph::JoinVarTo(Idx const var, Idx const principal) {
