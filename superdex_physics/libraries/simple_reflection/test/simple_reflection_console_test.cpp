@@ -173,6 +173,8 @@ namespace SReflectConsoleTest {
 namespace {
 
 enum class Kind { Rigid, Soft };
+enum class Level { Low = 1, High = 2 }; // No item for zero, the default value
+enum class Mode { Active = 1, Disabled = 0 };
 
 // A row-major float matrix with fixed dimensions
 template <size_t kRows, size_t kColumns>
@@ -220,6 +222,16 @@ class MatrixInfo final : public SReflect::MatrixTypeInfo {
 SR_BeginEnum(SReflectConsoleTest::Kind);
 SR_EnumItem(Rigid);
 SR_EnumItem(Soft);
+SR_EndEnum();
+
+SR_BeginEnum(SReflectConsoleTest::Level);
+SR_EnumItem(Low);
+SR_EnumItem(High);
+SR_EndEnum();
+
+SR_BeginEnum(SReflectConsoleTest::Mode);
+SR_EnumItem(Active);
+SR_EnumItem(Disabled);
 SR_EndEnum();
 
 template <size_t kRows, size_t kColumns>
@@ -483,6 +495,48 @@ struct MatrixCases {
 using Step = std::tuple<std::string, size_t, size_t, bool>; // name, offset, length, isQuoted
 // A ConsoleListEntry: the initial of its kind, then name, type and value
 using Row = std::tuple<char, std::string, std::string, std::string>;
+
+// Completion cases that Machine does not cover. A leading '_' has no special meaning.
+struct Completions {
+  int32_t b = 0;
+  int32_t _underscore = 0;
+  int32_t a = 0;
+  std::vector<int32_t> items = std::vector<int32_t>(12);
+  std::unordered_map<std::string, int32_t> keys{{"9", 0}, {"10", 0}, {"1a", 0}};
+  std::optional<int32_t> limit = 5;
+  float nan = std::numeric_limits<float>::quiet_NaN();
+  std::string quote = "it's";
+
+  SR_BeginStruct(SReflectConsoleTest::Completions);
+  SR_Field(b);
+  SR_Field(_underscore);
+  SR_Field(a);
+  SR_Field(items);
+  SR_Field(keys);
+  SR_Field(limit);
+  SR_Field(nan);
+  SR_Field(quote);
+  SR_Method("setLevel(level)", [](Completions&, Level) {});
+  SR_Method("setMode(mode)", [](Completions&, Mode) {});
+  SR_Method("noDefault(value)", [](Completions&, int32_t) { return NoDefault{1}; });
+  SR_EndStruct();
+};
+
+struct UnreadableProperty {
+  bool readable = false;
+
+  SR_BeginStruct(SReflectConsoleTest::UnreadableProperty);
+  SR_Property(
+      "enabled",
+      [](UnreadableProperty const& property) {
+        if (!property.readable) {
+          throw std::runtime_error("unavailable");
+        }
+        return false;
+      },
+      [](UnreadableProperty&, bool) {});
+  SR_EndStruct();
+};
 
 } // namespace
 
@@ -1704,6 +1758,276 @@ TEST(SReflectConsole, ListSerializationErrorClearsContainerSize) {
   EXPECT_FALSE(entry->_valueError.empty());
   EXPECT_TRUE(entry->_value.empty());
   EXPECT_FALSE(entry->_containerSize.has_value());
+}
+
+using Completion = std::tuple<std::vector<std::string>, size_t, std::string, bool>;
+
+template <class T>
+static Completion
+Complete(T const& obj, std::string_view command, SReflect::ConsoleAutoCompleteParams params = {}) {
+  std::string error;
+  auto result = SReflect::ConsoleAutoComplete(&obj, command, params, &error);
+  EXPECT_EQ(error, "") << command;
+  return {result._candidates, result._defaultIndex, result._note, result._isTruncated};
+}
+
+TEST(SReflectConsole, FindCompletion) {
+  using SReflect::detail::ConsoleCompletionTarget;
+  using Args = std::vector<std::string>;
+  using Found = std::optional<std::tuple<ConsoleCompletionTarget, size_t, std::string, Args>>;
+  auto const find = [](std::string_view input, size_t pathTokenIndex = 0) -> Found {
+    auto const completion = SReflect::detail::FindConsoleCompletion(input, pathTokenIndex);
+    if (!completion) {
+      return std::nullopt;
+    }
+    return std::tuple{completion->target, completion->offset, completion->path, completion->args};
+  };
+  auto constexpr kStep = ConsoleCompletionTarget::PathStep;
+  auto constexpr kArgument = ConsoleCompletionTarget::Argument;
+
+  // The last step of the path
+  EXPECT_EQ(find(""), Found(std::tuple(kStep, 0, "", Args{})));
+  EXPECT_EQ(find("parts/1/ma"), Found(std::tuple(kStep, 8, "parts/1/", Args{})));
+  EXPECT_EQ(find("parts/1/"), Found(std::tuple(kStep, 8, "parts/1/", Args{})));
+
+  // A path typed with quotes or escapes cannot be completed.
+  EXPECT_EQ(find("'named/\"a/"), std::nullopt);
+  EXPECT_EQ(find("\"a b\"/c"), std::nullopt);
+
+  // Arguments after the path, including one that has not started
+  EXPECT_EQ(find("parts/0/add 1 "), Found(std::tuple(kArgument, 14, "parts/0/add", Args{"1"})));
+  EXPECT_EQ(find("parts/0/add [1, "), Found(std::tuple(kArgument, 12, "parts/0/add", Args{})));
+
+  // A command word before the path
+  EXPECT_EQ(find("ls parts/", 1), Found(std::tuple(kStep, 9, "parts/", Args{})));
+  EXPECT_EQ(find("ls ", 1), Found(std::tuple(kStep, 3, "", Args{})));
+  EXPECT_EQ(find("ls", 1), std::nullopt);
+}
+
+TEST(SReflectConsole, CandidateOrder) {
+  std::vector<std::string> names{"b", "10", "1a", "9", "_x", "A", "0"};
+  SReflect::ConsoleAutoCompleteResult result;
+  SReflect::detail::AddConsoleStepCandidates(result, names, "", {});
+  EXPECT_EQ(result._candidates, (std::vector<std::string>{"0", "9", "10", "1a", "A", "_x", "b"}));
+}
+
+TEST(SReflectConsole, CompleteSteps) {
+  Machine m;
+  using Steps = std::vector<std::string>;
+  // Members leave out the hidden "view", and the default is the first candidate.
+  Steps const root{
+      "base",
+      "core",
+      "count",
+      "enabled",
+      "factory",
+      "kind",
+      "name",
+      "named",
+      "parts",
+      "ratio",
+      "slot",
+      "spare",
+      "tables",
+      "weights"};
+  EXPECT_EQ(Complete(m, ""), Completion(root, 0, "", false));
+  EXPECT_EQ(Complete(m, "na"), Completion(Steps{"name", "named"}, 0, "", false));
+  EXPECT_EQ(Complete(m, "parts/"), Completion(Steps{}, 0, "", false));
+
+  // Methods follow the path rules too, leaving out the hidden "debugDump".
+  Steps const part{"add", "clear", "label", "limit", "mass", "scaled", "snapshot"};
+  EXPECT_EQ(Complete(m, "parts/1/"), Completion(part, 0, "", false));
+  EXPECT_EQ(Complete(m, "core/"), Completion(part, 0, "", false));
+
+  // Keys that need quotes in a path, then in the terminal
+  EXPECT_EQ(Complete(m, "named/"), Completion(Steps{"'\"..\"'", "'\"a/b\"'"}, 0, "", false));
+
+  // Only directories, including an optional or variant that could hold one
+  SReflect::ConsoleAutoCompleteParams directories;
+  directories._directoriesOnly = true;
+  EXPECT_EQ(
+      Complete(m, "", directories),
+      Completion(
+          Steps{"base", "core", "factory", "named", "parts", "slot", "spare", "tables", "weights"},
+          0,
+          "",
+          false));
+
+  // Names are sorted alphabetically.
+  Completions c;
+  EXPECT_EQ(
+      Complete(c, ""),
+      Completion(
+          Steps{
+              "_underscore",
+              "a",
+              "b",
+              "items",
+              "keys",
+              "limit",
+              "nan",
+              "noDefault",
+              "quote",
+              "setLevel",
+              "setMode"},
+          0,
+          "",
+          false));
+  EXPECT_EQ(Complete(c, "keys/"), Completion(Steps{"9", "10", "1a"}, 0, "", false));
+
+  // The limit applies after the typed text is matched.
+  SReflect::ConsoleAutoCompleteParams three;
+  three._maxCandidates = 3;
+  EXPECT_EQ(Complete(c, "", three), Completion(Steps{"_underscore", "a", "b"}, 0, "", true));
+  EXPECT_EQ(Complete(c, "keys/", three), Completion(Steps{"9", "10", "1a"}, 0, "", false));
+  SReflect::ConsoleAutoCompleteParams two;
+  two._maxCandidates = 2;
+  EXPECT_EQ(Complete(c, "keys/", two), Completion(Steps{"9", "10"}, 0, "", true));
+  EXPECT_EQ(Complete(c, "keys/1", two), Completion(Steps{"10", "1a"}, 0, "", false));
+  SReflect::ConsoleAutoCompleteParams zero;
+  zero._maxCandidates = 0;
+  EXPECT_EQ(Complete(c, "keys/", zero), Completion(Steps{}, 0, "", true));
+
+  // Array indices never complete, even in a large array or after typing a numeric prefix.
+  c.items.resize(100000);
+  for (std::string_view const command : {"items/", "items/0", "items/1", "items/01", "items/x"}) {
+    EXPECT_EQ(Complete(c, command), Completion(Steps{}, 0, "", false)) << command;
+  }
+
+  // A value has no steps, and a bare "/" is not a path.
+  EXPECT_EQ(Complete(m, "count/"), Completion(Steps{}, 0, "", false));
+  std::string error;
+  EXPECT_TRUE(SReflect::ConsoleAutoComplete(&m, "/", {}, &error)._candidates.empty());
+  EXPECT_NE(error, "");
+}
+
+TEST(SReflectConsole, CompleteArguments) {
+  Machine m;
+  m.name = "a b";
+  m.parts[0].limitStorage = -1; // Its getter throws
+  Completions c;
+  UnreadableProperty unreadable;
+  using Values = std::vector<std::string>;
+  Completion const none{Values{}, 0, "", false};
+  std::tuple<std::string_view, Completion> const machineCases[] = {
+      // A value completes to its current value, plus the names of its type's values.
+      {"count ", {Values{"3"}, 0, "int32", false}},
+      {"name ", {Values{"'a b'"}, 0, "string", false}},
+      {"weights ", {Values{"[0.5, 1.5]"}, 0, "vector<float>", false}},
+      {"weights/0 ", {Values{"0.5"}, 0, "float", false}},
+      {"tables/0/x ", {Values{"1"}, 0, "int32", false}},
+      {"enabled ", {Values{"false", "true"}, 1, "bool", false}},
+      {"kind ", {Values{"Rigid", "Soft"}, 0, "Kind", false}},
+      {"kind S", {Values{"Soft"}, 0, "Kind", false}},
+      {"spare ", {Values{"null"}, 0, "optional<Part>", false}},
+      // A getter that throws leaves only the note.
+      {"parts/0/limit ", {Values{}, 0, "int32", false}},
+      // A method argument completes to a default-constructed value of its type.
+      {"base/add ", {Values{"0"}, 0, "float amount", false}},
+      {"base/add 1 ", {Values{"''"}, 0, "string note", false}},
+      // A const method can be called on a read-only path.
+      {"factory/scaled ", {Values{"0"}, 0, "float factor", false}},
+      // Nothing after the last argument, or for what cannot be set or called
+      {"count 4 ", none},
+      {"base/add 1 x ", none},
+      {"base/clear ", none},
+      {"factory ", none},
+      {"factory/mass ", none},
+      {"factory/add ", none},
+      {"view/mass ", none},
+  };
+  for (auto const& [command, expected] : machineCases) {
+    EXPECT_EQ(Complete(m, command), expected) << command;
+  }
+
+  std::tuple<std::string_view, Completion> const completionCases[] = {
+      {"limit ", {Values{"5", "null"}, 0, "optional<int32>", false}},
+      {"quote ", {Values{R"("it's")"}, 0, "string", false}},
+      // A value that cannot be written as text leaves only the note.
+      {"nan ", {Values{}, 0, "float", false}},
+      // An enum without a name for zero defaults to its first alphabetical item.
+      {"setLevel ", {Values{"High", "Low"}, 0, "Level level", false}},
+      // A named zero value stays selected in an alphabetical list, until the prefix excludes it.
+      {"setMode ", {Values{"Active", "Disabled"}, 1, "Mode mode", false}},
+      {"setMode A", {Values{"Active"}, 0, "Mode mode", false}},
+      // A method whose return type cannot be default constructed cannot be called.
+      {"noDefault ", none},
+  };
+  for (auto const& [command, expected] : completionCases) {
+    EXPECT_EQ(Complete(c, command), expected) << command;
+  }
+  EXPECT_EQ(Complete(unreadable, "enabled "), Completion(Values{}, 0, "bool", false));
+
+  // Values with read-only members cannot be set as a whole.
+  BulkValues bulk;
+  EXPECT_EQ(Complete(bulk, "pairValue "), none);
+  EXPECT_EQ(std::get<0>(Complete(bulk, "writablePair ")).size(), 1);
+
+  // A value too long to edit leaves only the note.
+  SReflect::ConsoleAutoCompleteParams shortValues;
+  shortValues._maxValueLength = 9;
+  EXPECT_EQ(Complete(m, "weights ", shortValues), Completion(Values{}, 0, "vector<float>", false));
+  m.name = std::string(256, 'x');
+  EXPECT_EQ(Complete(m, "name "), Completion(Values{m.name}, 0, "string", false));
+  m.name += 'x';
+  EXPECT_EQ(Complete(m, "name "), Completion(Values{}, 0, "string", false));
+  c.items.resize(100000);
+  EXPECT_EQ(Complete(c, "items "), Completion(Values{}, 0, "vector<int32>", false));
+  shortValues._maxValueLength = 3;
+  EXPECT_EQ(
+      Complete(c, "setLevel ", shortValues), Completion(Values{"Low"}, 0, "Level level", false));
+  shortValues._maxValueLength = 1;
+  EXPECT_EQ(Complete(m, "base/add 1 ", shortValues), Completion(Values{}, 0, "string note", false));
+
+  // Without current text, an optional or enum must not suggest a replacement value.
+  c.limit = 12345;
+  shortValues._maxValueLength = 4;
+  EXPECT_EQ(Complete(c, "limit ", shortValues), Completion(Values{}, 0, "optional<int32>", false));
+  c.limit.reset();
+  EXPECT_EQ(
+      Complete(c, "limit ", shortValues), Completion(Values{"null"}, 0, "optional<int32>", false));
+  m.kind = static_cast<Kind>(99);
+  EXPECT_EQ(Complete(m, "kind "), Completion(Values{}, 0, "Kind", false));
+
+  // The default is kept within the limit.
+  SReflect::ConsoleAutoCompleteParams one;
+  one._maxCandidates = 1;
+  EXPECT_EQ(Complete(m, "enabled ", one), Completion(Values{"true"}, 0, "bool", true));
+}
+
+TEST(SReflectConsole, CompleteFromPathStart) {
+  Machine m;
+  SReflect::detail::ConsoleCompletion completion;
+  completion.path = "machine/parts/1/";
+  SReflect::ConsoleAutoCompleteResult result;
+  std::string error;
+  EXPECT_TRUE(
+      SReflect::detail::ConsoleAutoComplete(
+          &m, SReflect::GetTypeInfo<Machine>(), completion, "ma", {}, result, &error, 8));
+  EXPECT_EQ(result._candidates, std::vector<std::string>{"mass"});
+}
+
+TEST(SReflectConsole, AddStepCandidates) {
+  SReflect::ConsoleAutoCompleteResult result;
+  result._candidates = {"base", "count"};
+  result._defaultIndex = 1;
+  SReflect::ConsoleAutoCompleteParams params;
+  params._maxCandidates = 3;
+  SReflect::detail::AddConsoleStepCandidates(result, {"a b", "box", "core"}, "b", params);
+  EXPECT_EQ(result._candidates, (std::vector<std::string>{"base", "box"}));
+  EXPECT_EQ(result._defaultIndex, 0);
+  EXPECT_FALSE(result._isTruncated);
+  SReflect::detail::AddConsoleStepCandidates(result, {"bat", "bee"}, "", params);
+  EXPECT_EQ(result._candidates, (std::vector<std::string>{"base", "bat", "bee"}));
+  EXPECT_TRUE(result._isTruncated);
+}
+
+TEST(SReflectConsole, CompleteErrors) {
+  Machine m;
+  std::string error;
+  auto const result = SReflect::ConsoleAutoComplete(&m, "nope/", {}, &error);
+  EXPECT_TRUE(result._candidates.empty());
+  EXPECT_EQ(error, "\"nope\" not found\n  | nope\n  | ^");
 }
 
 } // namespace SReflectConsoleTest

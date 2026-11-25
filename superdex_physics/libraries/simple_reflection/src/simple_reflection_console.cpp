@@ -439,7 +439,8 @@ struct WalkContext {
   std::optional<ConsolePathStep> rootStep; // The last step of path[0, pathStart)
   std::vector<ConsolePathStep> steps; // Of path[pathStart, end), with offsets into path
   size_t step = kNoStep; // The step being processed, which exceptions are reported at
-  size_t readOnlyStep = kNoStep; // The read-only member that made the rest of the walk const
+  // The first read-only member on the path. A mutable walk is const after it.
+  size_t readOnlyStep = kNoStep;
   bool modified = false; // A set or non-const call succeeded
   bool isMethod = false; // The path resolves to a method
   std::string error;
@@ -704,7 +705,7 @@ static bool Walk(WalkContext& ctx, WalkNode const& node, size_t i, size_t end, O
       return ctx.modified;
     });
   } else {
-    if (member.parent.value != nullptr) {
+    if (ctx.readOnlyStep == kNoStep && IsReadOnlyMember(field)) {
       ctx.readOnlyStep = i;
     }
     field.VisitValue(member.parent.constValue, [&](void const* value) {
@@ -1281,6 +1282,392 @@ bool ConsoleExecute(
     SR_LOG("%s", error.c_str());
   }
   return false;
+}
+
+/////////////////////////////////////////////////////////////////////////////
+// ConsoleAutoComplete
+/////////////////////////////////////////////////////////////////////////////
+
+static bool IsDecimal(std::string_view text) {
+  return !text.empty() &&
+      std::all_of(text.begin(), text.end(), [](char c) { return c >= '0' && c <= '9'; });
+}
+
+static bool StartsWith(std::string_view text, std::string_view prefix) {
+  return text.substr(0, prefix.size()) == prefix;
+}
+
+// Candidates made only of digits come first, in numeric order, then the rest in alphabetical order.
+static bool ConsoleCandidateLess(std::string_view a, std::string_view b) {
+  bool const aIsDecimal = IsDecimal(a);
+  if (aIsDecimal != IsDecimal(b)) {
+    return aIsDecimal;
+  } else if (aIsDecimal && a.size() != b.size()) {
+    return a.size() < b.size();
+  }
+  return a < b;
+}
+
+std::optional<ConsoleCompletion> detail::FindConsoleCompletion(
+    std::string_view input,
+    size_t pathTokenIndex) {
+  std::string error;
+  std::vector<ConsoleToken> tokens = ConsoleTokenize(input, error);
+  bool const isTyping =
+      !tokens.empty() && tokens.back().offset + tokens.back().length == input.size();
+  size_t const index = isTyping ? tokens.size() - 1 : tokens.size();
+  if (index < pathTokenIndex) {
+    return std::nullopt;
+  }
+  ConsoleCompletion completion;
+  completion.offset = input.size();
+  if (index > pathTokenIndex) {
+    completion.target = ConsoleCompletionTarget::Argument;
+    if (isTyping) {
+      completion.offset = tokens.back().offset;
+    }
+    completion.path = std::move(tokens[pathTokenIndex].text);
+    for (size_t i = pathTokenIndex + 1; i < index; ++i) {
+      completion.args.push_back(std::move(tokens[i].text));
+    }
+  } else if (isTyping) {
+    ConsoleToken const& token = tokens.back();
+    std::string_view const path = token.text;
+    if (input.substr(token.offset, token.length) != path) {
+      return std::nullopt; // Removed quotes or escapes hide where the path's steps were typed
+    }
+    // Without quotes, every '/' separates steps.
+    size_t const stepStart = path.rfind('/') + 1;
+    completion.offset = token.offset + stepStart;
+    completion.path = path.substr(0, stepStart);
+  }
+  return completion;
+}
+
+// Could a value of this type be listed by ConsoleList, depending on what an optional or variant
+// holds?
+static bool CanBeDirectory(TypeInfo const& type) {
+  if (type._coreType == CoreType::CT_optional) {
+    return CanBeDirectory(*static_cast<OptionalTypeInfo const&>(type)._innerTypeInfo);
+  } else if (type._coreType == CoreType::CT_variant) {
+    auto const& types = static_cast<VariantTypeInfo const&>(type)._innerTypes;
+    return std::any_of(
+        types.begin(), types.end(), [](TypeInfo const* inner) { return CanBeDirectory(*inner); });
+  }
+  return IsDirectoryType(type);
+}
+
+// Store the candidates that start with typed, in order and without duplicates. At most
+// params._maxCandidates are kept, always including defaultText if it is a candidate, which becomes
+// the default. Otherwise the first candidate is the default. A truncated result stays truncated.
+static void SetCandidates(
+    std::vector<std::string> candidates,
+    std::string_view typed,
+    std::optional<std::string> const& defaultText,
+    ConsoleAutoCompleteParams const& params,
+    ConsoleAutoCompleteResult& result) {
+  candidates.erase(
+      std::remove_if(
+          candidates.begin(),
+          candidates.end(),
+          [&](std::string const& candidate) { return !StartsWith(candidate, typed); }),
+      candidates.end());
+  std::sort(candidates.begin(), candidates.end(), ConsoleCandidateLess);
+  candidates.erase(std::unique(candidates.begin(), candidates.end()), candidates.end());
+  auto const it = defaultText ? std::find(candidates.begin(), candidates.end(), *defaultText)
+                              : candidates.end();
+  size_t defaultIndex = static_cast<size_t>(it - candidates.begin());
+  if (candidates.size() > params._maxCandidates) {
+    result._isTruncated = true;
+    if (defaultIndex < candidates.size() && defaultIndex >= params._maxCandidates &&
+        params._maxCandidates > 0) {
+      // The default sorts after every kept candidate, so it can replace the last one.
+      std::swap(candidates[params._maxCandidates - 1], candidates[defaultIndex]);
+      defaultIndex = params._maxCandidates - 1;
+    }
+    candidates.resize(params._maxCandidates);
+  }
+  result._defaultIndex = defaultIndex < candidates.size() ? defaultIndex : 0;
+  result._candidates = std::move(candidates);
+}
+
+void detail::AddConsoleStepCandidates(
+    ConsoleAutoCompleteResult& result,
+    std::vector<std::string> const& names,
+    std::string_view typed,
+    ConsoleAutoCompleteParams const& params) {
+  std::vector<std::string> candidates = std::move(result._candidates);
+  for (std::string const& name : names) {
+    candidates.push_back(QuoteConsoleToken(name));
+  }
+  SetCandidates(std::move(candidates), typed, std::nullopt, params, result);
+}
+
+// The steps that can follow node, a directory, and start with typed.
+static void CompleteStep(
+    WalkNode const& node,
+    std::string_view typed,
+    ConsoleAutoCompleteParams const& params,
+    ConsoleAutoCompleteResult& result) {
+  std::vector<std::string> candidates;
+  auto const add = [&](std::string const& name, TypeInfo const& type) {
+    if (!params._directoriesOnly || CanBeDirectory(type)) {
+      candidates.push_back(QuoteConsoleToken(FormatPathStep(name)));
+    }
+  };
+  TypeInfo const& type = *node.type;
+  if (type._coreType == CoreType::CT_struct) {
+    auto const& structType = static_cast<StructTypeInfo const&>(type);
+    for (FieldTypeInfo const* field : structType._fields) {
+      if (!field->HasAttribute<Attribute_HideFromEditor>()) {
+        add(std::string{field->_name}, *field->_innerTypeInfo);
+      }
+    }
+    for (MethodInfo const* method : structType._methods) {
+      if (!params._directoriesOnly && !method->HasAttribute<Attribute_HideFromEditor>()) {
+        candidates.emplace_back(method->_name);
+      }
+    }
+  } else if (type._coreType == CoreType::CT_map) {
+    auto const& mapType = static_cast<MapTypeInfo const&>(type);
+    mapType.Enumerate(node.constValue, [&](void const* key, void const*) {
+      add(MapKeyText(mapType, key), *mapType._valueTypeInfo);
+      return true;
+    });
+  }
+  SetCandidates(std::move(candidates), typed, std::nullopt, params, result);
+}
+
+// Insert a space after each ',' and ':' outside strings in compact JSON.
+static std::string SpaceJson(std::string_view json) {
+  std::string result;
+  bool inString = false;
+  bool escaped = false;
+  for (char const c : json) {
+    result += c;
+    if (escaped) {
+      escaped = false;
+    } else if (inString) {
+      escaped = c == '\\';
+      inString = c != '"';
+    } else if (c == '"') {
+      inString = true;
+    } else if (c == ',' || c == ':') {
+      result += ' ';
+    }
+  }
+  return result;
+}
+
+// Text that LoadArgument reads back as value, or nullopt for an enum value without a name. Throws
+// if the value cannot be serialized, for example a NaN.
+static std::optional<std::string> FormatArgument(TypeInfo const& type, void const* value) {
+  if (type._coreType == CoreType::CT_optional) {
+    auto const& optional = static_cast<OptionalTypeInfo const&>(type);
+    void const* const inner = optional.GetOptionalValue(value);
+    return inner != nullptr ? FormatArgument(*optional._innerTypeInfo, inner)
+                            : std::optional<std::string>{"null"};
+  } else if (type._coreType == CoreType::CT_enum) {
+    auto const& enumType = static_cast<EnumTypeInfo const&>(type);
+    EnumItem const* const item = enumType.FindItemByValue(enumType.GetValue(value));
+    return item != nullptr ? std::optional{QuoteConsoleToken(item->_name)} : std::nullopt;
+  }
+  picojson::value json;
+  type.Serialize(value, json);
+  if (type._coreType == CoreType::CT_string && json.is<std::string>()) {
+    return QuoteConsoleToken(json.get<std::string>());
+  }
+  return QuoteConsoleToken(SpaceJson(json.serialize()));
+}
+
+// Argument text that names a value of type: enum items, true and false, and null for an optional.
+static std::vector<std::string> NamedArguments(TypeInfo const& type, size_t maxLength) {
+  std::vector<std::string> names;
+  auto const add = [&](std::string name) {
+    if (name.size() <= maxLength) {
+      names.push_back(std::move(name));
+    }
+  };
+  TypeInfo const* inner = &type;
+  if (type._coreType == CoreType::CT_optional) {
+    add("null");
+    inner = static_cast<OptionalTypeInfo const&>(type)._innerTypeInfo;
+  }
+  if (inner->_coreType == CoreType::CT_bool) {
+    add("false");
+    add("true");
+  } else if (inner->_coreType == CoreType::CT_enum) {
+    for (EnumItem const& item : static_cast<EnumTypeInfo const&>(*inner)._items) {
+      add(QuoteConsoleToken(item._name));
+    }
+  }
+  return names;
+}
+
+// Complete the one argument that sets a value, if a set would succeed.
+static void CompleteValueArgument(
+    WalkContext const& ctx,
+    Member const& member,
+    std::string_view typed,
+    ConsoleAutoCompleteParams const& params,
+    ConsoleAutoCompleteResult& result) {
+  TypeInfo const& type = ValueType(member);
+  std::vector<TypeInfo const*> visited;
+  if (ctx.args.size() != 0 || ctx.steps.empty() || ctx.readOnlyStep != kNoStep ||
+      (member.field != nullptr && IsReadOnlyMember(*member.field)) ||
+      HasReadOnlyDescendants(type, visited)) {
+    return;
+  }
+  // A set loads the argument onto a copy, so a value that cannot be copied cannot be set. A value
+  // too long to edit on one line is not offered, which also spares copying it.
+  bool isCopyable = true;
+  std::optional<std::string> current;
+  try {
+    VisitMemberValue(member, [&](void const* value) {
+      WalkNode node{nullptr, value, &type};
+      if (Unwrap(node)) {
+        auto const size = GetContainerSize(node.constValue, *node.type);
+        if (size && *size > params._maxValueLength / 2) {
+          return; // Each JSON element needs at least one character and a separator.
+        }
+      }
+      current = FormatArgument(type, value);
+      if (!current || current->size() > params._maxValueLength) {
+        current.reset();
+        return;
+      }
+      OwnedValues owned;
+      isCopyable = owned.Clone(type, value) != nullptr;
+    });
+  } catch (...) {
+    current.reset();
+  }
+  if (!isCopyable) {
+    return;
+  }
+  result._note = StripNamespaces(type._nameWithNamespace);
+  if (!current) {
+    return;
+  }
+  std::vector<std::string> candidates = NamedArguments(type, params._maxValueLength);
+  candidates.push_back(*current);
+  SetCandidates(std::move(candidates), typed, current, params, result);
+}
+
+// Complete the next argument of a method, if it takes another and could be called.
+static void CompleteMethodArgument(
+    WalkContext const& ctx,
+    MethodInfo const& method,
+    std::string_view typed,
+    ConsoleAutoCompleteParams const& params,
+    ConsoleAutoCompleteResult& result) {
+  size_t const index = ctx.args.size();
+  if (index >= method._args.size() || (!method._isConst && ctx.readOnlyStep != kNoStep)) {
+    return;
+  }
+  // A call default-constructs every argument and the return value.
+  OwnedValues owned;
+  auto const canConstruct = [&](TypeInfo const& type) { return owned.New(type) != nullptr; };
+  TypeInfo const* const returnType = method.GetReturnTypeInfo();
+  for (size_t i = 0; i < method._args.size(); ++i) {
+    if (i != index && !canConstruct(method._args[i].GetTypeInfo())) {
+      return;
+    }
+  }
+  if (returnType != nullptr && !canConstruct(*returnType)) {
+    return;
+  }
+  MethodArgInfo const& arg = method._args[index];
+  TypeInfo const& type = arg.GetTypeInfo();
+  std::optional<std::string> value;
+  void const* const defaultValue = owned.New(type);
+  if (defaultValue == nullptr) {
+    return;
+  }
+  try {
+    value = FormatArgument(type, defaultValue);
+  } catch (...) {
+    // The default cannot be written as text. Offer only named values.
+  }
+  std::vector<std::string> candidates = NamedArguments(type, params._maxValueLength);
+  if (value && value->size() > params._maxValueLength) {
+    value.reset();
+  }
+  if (value) {
+    candidates.push_back(*value);
+  }
+  result._note = StripNamespaces(type._nameWithNamespace) + " " + arg._name;
+  SetCandidates(std::move(candidates), typed, value, params, result);
+}
+
+bool detail::ConsoleAutoComplete(
+    void const* obj,
+    TypeInfo const& typeInfo,
+    ConsoleCompletion const& completion,
+    std::string_view typed,
+    ConsoleAutoCompleteParams const& params,
+    ConsoleAutoCompleteResult& outResult,
+    std::string* outError,
+    size_t pathStart) {
+  outResult = {};
+  bool const isStep = completion.target == ConsoleCompletionTarget::PathStep;
+  std::string_view path = completion.path;
+  if (isStep && path.size() > pathStart + 1 && path.back() == '/') {
+    path.remove_suffix(1);
+  }
+  Span<std::string const> const args =
+      isStep ? Span<std::string const>{} : Span<std::string const>{completion.args};
+  WalkContext ctx(path, args, pathStart, typeInfo);
+  WalkNode const root{nullptr, obj, &typeInfo};
+  auto const complete = [&](Member const& member) {
+    if (!isStep) {
+      if (member.method != nullptr) {
+        CompleteMethodArgument(ctx, *member.method, typed, params, outResult);
+      } else {
+        CompleteValueArgument(ctx, member, typed, params, outResult);
+      }
+    } else if (member.method == nullptr) {
+      VisitMemberValue(member, [&](void const* value) {
+        WalkNode node{nullptr, value, &ValueType(member)};
+        if (Unwrap(node) && IsDirectoryType(*node.type)) {
+          CompleteStep(node, typed, params, outResult);
+        }
+      });
+    }
+    return true;
+  };
+  std::string ignoredError;
+  return RunCommand(ctx, outError != nullptr ? outError : &ignoredError, [&] {
+    if (ctx.steps.empty()) {
+      Member member;
+      member.element = root;
+      return complete(member);
+    }
+    size_t const last = ctx.steps.size() - 1;
+    return Walk(ctx, root, 0, last, [&](WalkNode const& parent) {
+      Member member;
+      return FindMember(ctx, parent, last, member) && complete(member);
+    });
+  });
+}
+
+ConsoleAutoCompleteResult ConsoleAutoComplete(
+    void const* obj,
+    TypeInfo const& typeInfo,
+    std::string_view command,
+    ConsoleAutoCompleteParams const& params,
+    std::string* outError) {
+  ConsoleAutoCompleteResult result;
+  std::optional<ConsoleCompletion> const completion = FindConsoleCompletion(command);
+  if (!completion) {
+    if (outError != nullptr) {
+      outError->clear();
+    }
+    return result;
+  }
+  detail::ConsoleAutoComplete(
+      obj, typeInfo, *completion, command.substr(completion->offset), params, result, outError);
+  return result;
 }
 
 } // namespace SReflect

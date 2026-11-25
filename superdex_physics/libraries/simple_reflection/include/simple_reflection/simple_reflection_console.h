@@ -164,6 +164,89 @@ template <typename T>
       static_cast<void const*>(obj), GetFinalTypeInfo(*obj), path, params, outError, pathStart);
 }
 
+/**
+Options for ConsoleAutoComplete.
+*/
+struct ConsoleAutoCompleteParams {
+  size_t _maxCandidates = 1000; // Candidates beyond this many are left out
+  size_t _maxValueLength = 256; // Longer argument values are not offered
+  bool _directoriesOnly = false; // Offer only path steps that ConsoleList can list
+
+  SR_BeginStruct(SReflect::ConsoleAutoCompleteParams);
+  SR_Field_Name(_maxCandidates, "maxCandidates");
+  SR_Field_Name(_maxValueLength, "maxValueLength");
+  SR_Field_Name(_directoriesOnly, "directoriesOnly");
+  SR_EndStruct()
+};
+
+/**
+Ways to complete the path step or argument at the end of a console command.
+*/
+struct ConsoleAutoCompleteResult {
+  std::vector<std::string> _candidates; // Full text of the step or argument, as it would be typed
+  size_t _defaultIndex = 0; // The candidate to offer first, if there are any
+  std::string _note; // The value's type, or a method argument's type and name. Empty for steps.
+  bool _isTruncated = false; // More candidates match than params._maxCandidates allowed
+
+  SR_BeginStruct(SReflect::ConsoleAutoCompleteResult);
+  SR_Field_Name(_candidates, "candidates");
+  SR_Field_Name(_defaultIndex, "defaultIndex");
+  SR_Field_Name(_note, "note");
+  SR_Field_Name(_isTruncated, "isTruncated");
+  SR_EndStruct()
+};
+
+/**
+Complete the path step or argument at the end of a console command, which has the form of a
+ConsoleExecute command. Only candidates that start with the text typed so far are returned. Nothing
+is written through obj.
+
+Path steps:
+  - The first token is a path, and only its last step is completed: a field, property or method
+    name or a map key. Array indices do not complete.
+  - The default is the first candidate.
+
+Arguments:
+  - A value takes one argument, which completes to its current value as the default. Nothing
+    completes if the current value cannot be read or represented as text within
+    params._maxValueLength, or when a set would fail because the value, a step on its path or one
+    of its members is read-only, or the value cannot be copied.
+  - A method argument completes to a default-constructed value of its type. Nothing completes for a
+    method that cannot be called because an argument or its return type cannot be default
+    constructed, or because it is non-const and a step on its path is read-only.
+    An enum argument selects its zero item when present, otherwise the first alphabetical match.
+  - Enums also complete to their item names, bools to true and false, and optionals to null.
+    Argument candidates longer than params._maxValueLength are left out.
+  - The note describes the argument, for example "Fruit" for a value or "Fruit fruit" for a method
+    argument. Nothing completes after a value's argument or a method's last argument.
+
+Candidates are text that ConsoleTokenize reads back as the step or argument. A value is one line of
+JSON with a space after each ',' and ':', except that a string or enum is its text, quoted if
+needed. Candidates made only of digits come first in numeric order, then other candidates in
+alphabetical order. At most params._maxCandidates are returned, always including the default.
+A path step typed with quotes or escapes does not complete.
+
+Return the available completion data. Errors are reported only through outError, when provided,
+and are never logged. On success, clear outError.
+*/
+[[nodiscard]] ConsoleAutoCompleteResult ConsoleAutoComplete(
+    void const* obj,
+    TypeInfo const& typeInfo,
+    std::string_view command,
+    ConsoleAutoCompleteParams const& params = {},
+    std::string* outError = nullptr);
+
+// Uses GetFinalTypeInfo(*obj)
+template <typename T>
+[[nodiscard]] ConsoleAutoCompleteResult ConsoleAutoComplete(
+    T const* obj,
+    std::string_view command,
+    ConsoleAutoCompleteParams const& params = {},
+    std::string* outError = nullptr) {
+  return ConsoleAutoComplete(
+      static_cast<void const*>(obj), GetFinalTypeInfo(*obj), command, params, outError);
+}
+
 } // namespace SReflect
 
 #include "simple_reflection_console_inl.h"

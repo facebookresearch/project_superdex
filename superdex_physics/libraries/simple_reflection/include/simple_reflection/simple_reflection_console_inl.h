@@ -20,6 +20,7 @@
 
 #if SIMPLE_REFLECTION_ENABLE
 
+#include <optional>
 #include <vector>
 
 namespace SReflect {
@@ -138,6 +139,56 @@ args[i - 1]. offset is the position of the problem in that token.
     Span<std::string const> args,
     size_t tokenIndex,
     size_t offset);
+
+enum class ConsoleCompletionTarget { PathStep, Argument };
+
+/**
+What the end of a console command completes (see FindConsoleCompletion).
+*/
+struct ConsoleCompletion {
+  ConsoleCompletionTarget target = ConsoleCompletionTarget::PathStep;
+  size_t offset = 0; // Position in the input where the step or argument being completed starts
+  std::string path; // The path up to that step, or the path of the member taking the argument
+  std::vector<std::string> args; // Arguments before the one being completed
+};
+
+/**
+Find what the end of input completes. Token pathTokenIndex is the path, and the tokens before it
+are ignored, so a caller can pass 1 for commands such as "ls <path>". The tokens after the path are
+arguments. Return nullopt while a token before the path is typed, and while typing a path that has
+quotes or escapes, because its steps cannot be located in the input.
+*/
+[[nodiscard]] std::optional<ConsoleCompletion> FindConsoleCompletion(
+    std::string_view input,
+    size_t pathTokenIndex = 0);
+
+/**
+Complete the step or argument described by completion, keeping the candidates that start with
+typed, as ConsoleAutoComplete does. completion.path may end with '/' after a step. pathStart skips a
+prefix already resolved to reach obj, as in ConsoleExecute. Return false on failure, retaining any
+available completion data. Errors are reported only through outError, when provided, and are never
+logged.
+*/
+bool ConsoleAutoComplete(
+    void const* obj,
+    TypeInfo const& typeInfo,
+    ConsoleCompletion const& completion,
+    std::string_view typed,
+    ConsoleAutoCompleteParams const& params,
+    ConsoleAutoCompleteResult& outResult,
+    std::string* outError = nullptr,
+    size_t pathStart = 0);
+
+/**
+Add path steps named outside of reflection, such as built-in directories, to a result for a path
+step. Names are quoted for the terminal, then the candidates are matched, ordered and limited as in
+ConsoleAutoComplete. The default becomes the first candidate.
+*/
+void AddConsoleStepCandidates(
+    ConsoleAutoCompleteResult& result,
+    std::vector<std::string> const& names,
+    std::string_view typed,
+    ConsoleAutoCompleteParams const& params);
 
 } // namespace detail
 
