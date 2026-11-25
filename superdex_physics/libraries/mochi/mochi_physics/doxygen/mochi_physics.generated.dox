@@ -6551,7 +6551,7 @@
 ///
 /// @brief Set the per-joint inertia coefficients of the articulated actor.
 ///
-/// @param[in] inertia Inertia coefficients, one per joint. Must be of size equal to the number of joints (matching @ref mochi::Actor::GetArticulatedJointInertiaParams "GetArticulatedJointInertiaParams"); all values must be finite and non-negative.
+/// @param[in] inertia Inertia coefficients, one per joint. Must be of size equal to the number of joints (matching @ref mochi::Actor::GetArticulatedJointInertiaParams "GetArticulatedJointInertiaParams"); all values must be finite and non-negative, and free joints must have zero inertia.
 /// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
 ///
 /// @note Only applicable to articulated actors.

@@ -12637,7 +12637,8 @@ class Actor:
             inertia (ArrayLikeReal): Inertia coefficients, one per joint. Must be of
                 size equal to the number of joints (matching
                 :meth:`~superdex.physics.Actor.get_articulated_joint_inertia_params`);
-                all values must be finite and non-negative.
+                all values must be finite and non-negative, and free joints must have
+                zero inertia.
 
         Raises:
             :class:`~superdex.physics.Error`: If an error occurs.

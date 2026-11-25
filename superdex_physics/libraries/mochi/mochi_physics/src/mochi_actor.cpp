@@ -1250,8 +1250,10 @@ class ActorInterfaceImpl : public ActorInterface {
 
     // Validate through the shared per-joint validator (short-circuits once error is set),
     // mirroring the friction setter above.
-    for (real const value : inertia) {
-      ValidateInertia(value, error);
+    auto const& jointTypes =
+        reg.get<CArticulatedBodyShape const>(e).shape->GetJointsData()->jointTypes;
+    for (int i = 0; i < isize(inertia); ++i) {
+      ValidateInertia(jointTypes[i], inertia[i], error);
     }
     MOCHI_ERROR_RETURN(error);
     if (inertia == MakeConstSpan(current)) {

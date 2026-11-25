@@ -266,15 +266,16 @@ class TestScene(MochiTestBase):
         # The joint-inertia component is always present on articulated actors; the getter returns
         # one coefficient per joint (default zero) and the setter round-trips new values.
         scene = mochi.create_scene("Joint Inertia Scene")
-        actor = self._create_revolute_chain_articulated_actor(scene, num_joints=2)
+        # A free root joint and a spherical child joint.
+        actor = self._create_two_link_articulated_actor(scene)
 
         inertia = actor.get_articulated_joint_inertia_params()
         self.assertEqual(2, len(inertia))
 
-        actor.set_articulated_joint_inertia_params([0.5, 1.5])
+        actor.set_articulated_joint_inertia_params([0.0, 1.5])
         result = actor.get_articulated_joint_inertia_params()
         self.assertEqual(2, len(result))
-        self.assertAlmostEqual(0.5, result[0])
+        self.assertAlmostEqual(0.0, result[0])
         self.assertAlmostEqual(1.5, result[1])
 
         # A size that does not match the joint count is rejected.
@@ -283,7 +284,14 @@ class TestScene(MochiTestBase):
 
         # Negative coefficients are rejected.
         with self.assertRaises(mochi.Error):
-            actor.set_articulated_joint_inertia_params([-1.0, 1.0])
+            actor.set_articulated_joint_inertia_params([0.0, -1.0])
+
+        # Free joints must have zero inertia.
+        with self.assertRaises(mochi.Error):
+            actor.set_articulated_joint_inertia_params([0.5, 2.5])
+        self.assertEqual(
+            [0.0, 1.5], actor.get_articulated_joint_inertia_params().tolist()
+        )
 
         mochi.destroy_scene(scene)
 

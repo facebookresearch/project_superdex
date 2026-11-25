@@ -282,10 +282,14 @@ void mochi::ValidateFriction(
   }
 }
 
-void mochi::ValidateInertia(real inertia, Error& error) {
+void mochi::ValidateInertia(ArticulatedJointType type, real inertia, Error& error) {
   MOCHI_ERROR_RETURN(error);
   MOCHI_ERROR_IF(!IsFinite(inertia), error, "Joint inertia is not finite.");
   MOCHI_ERROR_IF(inertia < 0_r, error, "Joint inertia is negative.");
+  MOCHI_ERROR_IF(
+      type == ArticulatedJointType::Free && inertia != 0_r,
+      error,
+      "Joint inertia must be zero for free joints.");
 }
 
 static void ValidateJoint(ArticulatedJointParams const& joint, Error& error) {
@@ -320,7 +324,7 @@ static void ValidateJoint(ArticulatedJointParams const& joint, Error& error) {
 
   // Inertia
   if (joint.inertia.has_value()) {
-    ValidateInertia(*joint.inertia, error);
+    ValidateInertia(joint.type, *joint.inertia, error);
   }
 
   // Limit stiffness

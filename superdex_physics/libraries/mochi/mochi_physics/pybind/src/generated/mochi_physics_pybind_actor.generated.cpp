@@ -788,7 +788,7 @@ void mochi::DefineMochiPhysics_MochiPhysicsActor([[maybe_unused]] nb::module_& m
       }
     }
       , nb::arg("inertia")
-      , "Set the per-joint inertia coefficients of the articulated actor.\n\nArgs:\n    inertia (ArrayLikeReal): Inertia coefficients, one per joint. Must be of\n        size equal to the number of joints (matching\n        :meth:`~superdex.physics.Actor.get_articulated_joint_inertia_params`);\n        all values must be finite and non-negative.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    Only applicable to articulated actors.\n\nSee Also:\n    :meth:`~superdex.physics.Actor.get_articulated_joint_inertia_params`"
+      , "Set the per-joint inertia coefficients of the articulated actor.\n\nArgs:\n    inertia (ArrayLikeReal): Inertia coefficients, one per joint. Must be of\n        size equal to the number of joints (matching\n        :meth:`~superdex.physics.Actor.get_articulated_joint_inertia_params`);\n        all values must be finite and non-negative, and free joints must have\n        zero inertia.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    Only applicable to articulated actors.\n\nSee Also:\n    :meth:`~superdex.physics.Actor.get_articulated_joint_inertia_params`"
     )
     .def("get_articulated_dof_limits", [](mochi::Actor& self, mochi::Span<mochi::Real2> out_dof_limits) {
       mochi::Error error;

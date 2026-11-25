@@ -63,7 +63,8 @@ void ValidateFriction(
     ArticulatedJointFrictionParams const& friction,
     Error& error);
 
-// Check for errors in a single joint's inertia coefficient (finite + non-negative).
-void ValidateInertia(real inertia, Error& error);
+// Check for errors in a single joint's inertia coefficient (finite + non-negative, and zero for a
+// free joint).
+void ValidateInertia(ArticulatedJointType type, real inertia, Error& error);
 
 } // namespace mochi

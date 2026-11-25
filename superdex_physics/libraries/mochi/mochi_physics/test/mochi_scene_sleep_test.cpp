@@ -1059,7 +1059,7 @@ static DynamicArray<WakeCase> const& GetWakeCases() {
          auto const current = c.actor->GetArticulatedJointInertiaParams(test::ExpectOK{});
          DynamicArray<real> inertia;
          inertia.assign(current.begin(), current.end());
-         inertia[0] = 0.05_r;
+         inertia.back() = 0.05_r; // The root joint may be free, which has no joint inertia
          c.actor->SetArticulatedJointInertiaParams(MakeConstSpan(inertia), test::ExpectOK{});
        }},
       {"EnableNewtonEulerInertia",

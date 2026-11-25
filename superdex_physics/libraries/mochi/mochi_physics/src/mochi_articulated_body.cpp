@@ -2258,6 +2258,9 @@ void articulated::compound::AssembleInertiaForces(
   auto assemblerRigidBody =
       [&](int i, double* energy, RigidGradient* gradient, RigidHessian* hessian) -> bool {
     MOCHI_ASSERT_VERBOSE_FREE_OR_SPHERICAL(jointTypes[i]);
+    MOCHI_ASSERT_VERBOSE(
+        jointTypes[i] != ArticulatedJointType::Free || inertiaParams[i] == 0_r,
+        "Joint inertia must be zero for free joints");
     if (inertiaParams[i] == 0_r) {
       return false;
     }
