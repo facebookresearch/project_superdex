@@ -16,9 +16,31 @@
 
 #include "mochi_constraint_test.h"
 
+#include <mochi_core/test/log_suppression.h>
+
 using namespace mochi;
 using namespace mochi::test;
 using namespace mochi::constraint_test;
+
+TEST_F(MochiSceneTestBase, ConstraintActorIndicesOutsideRange) {
+  RigidActorParams actorParams;
+  actorParams.shape = CreateUnitCubeTetMeshShape(_mochiContext);
+  actorParams.colliderType = ColliderType::Box;
+  auto* actor = _scene->CreateRigidActor(actorParams, ExpectOK{});
+  RigidPivotPositionConstraintParams params;
+  params.actor = actor->GetHandle();
+  auto* constraint = _scene->CreateRigidPivotPositionConstraint(params, ExpectOK{});
+  ASSERT_EQ(1, constraint->GetNumActors());
+  EXPECT_EQ(actor, constraint->GetActor(0));
+  auto const* constConstraint = constraint;
+  auto suppressErrors = test::SuppressLogError();
+  for (int const index : {-1, constraint->GetNumActors(), constraint->GetNumActors() + 1}) {
+    SCOPED_TRACE(index);
+    EXPECT_EQ(nullptr, constraint->GetActor(index));
+    EXPECT_EQ(nullptr, constConstraint->GetActor(index));
+    EXPECT_TRUE(constConstraint->GetDofIndicesForActor(index).empty());
+  }
+}
 
 ShapeHandle constraint_test::GetUnitCubeShape(Context* context) {
   auto&& [coordinates, connectivity] = CreateMinimalTetMeshUnitCube();

@@ -23,6 +23,7 @@
 #include <mochi_core/geometry/geometry_utils.h>
 #include <mochi_core/utils/array_utils.h>
 #include <mochi_core/utils/container_utils.h>
+#include <mochi_core/utils/log.h>
 #include <mochi_core/utils/matrix_utils.h>
 #include <mochi_core/utils/profile.h>
 
@@ -478,9 +479,12 @@ int DebugDrawImpl::FindFeature(std::string_view name) const {
 
 void DebugDrawImpl::EnableFeature(int index, bool enable) {
   MOCHI_ASSERT(std::this_thread::get_id() == _myThreadId);
+  if (index < 0 || index >= isize(_systems)) {
+    MOCHI_LOG_ERROR(
+        "DebugDraw::EnableFeature: feature index %d is outside [0, %d).", index, isize(_systems));
+    return;
+  }
   ScopedSchedulerBinding schedulerBinding(_scheduler);
-
-  MOCHI_ASSERT(index < isize(_systems));
 
   DebugDrawSystemImpl* system = _systems[index].get();
   if (enable != system->isEnabled) {
@@ -554,19 +558,35 @@ void DebugDrawImpl::OnSystemEnable(DebugDrawSystemImpl* system, bool enable) {
 
 std::string_view DebugDrawImpl::GetFeatureName(int index) const {
   MOCHI_ASSERT(std::this_thread::get_id() == _myThreadId);
-  MOCHI_ASSERT(index < isize(_systems));
+  if (index < 0 || index >= isize(_systems)) {
+    MOCHI_LOG_ERROR(
+        "DebugDraw::GetFeatureName: feature index %d is outside [0, %d).", index, isize(_systems));
+    return "";
+  }
   return _systems[index]->name;
 }
 
 std::string_view DebugDrawImpl::GetFeatureDescription(int index) const {
   MOCHI_ASSERT(std::this_thread::get_id() == _myThreadId);
-  MOCHI_ASSERT(index < isize(_systems));
+  if (index < 0 || index >= isize(_systems)) {
+    MOCHI_LOG_ERROR(
+        "DebugDraw::GetFeatureDescription: feature index %d is outside [0, %d).",
+        index,
+        isize(_systems));
+    return "";
+  }
   return _systems[index]->description;
 }
 
 bool DebugDrawImpl::IsFeatureEnabled(int index) const {
   MOCHI_ASSERT(std::this_thread::get_id() == _myThreadId);
-  MOCHI_ASSERT(index < isize(_systems));
+  if (index < 0 || index >= isize(_systems)) {
+    MOCHI_LOG_ERROR(
+        "DebugDraw::IsFeatureEnabled: feature index %d is outside [0, %d).",
+        index,
+        isize(_systems));
+    return false;
+  }
   return _systems[index]->isEnabled;
 }
 

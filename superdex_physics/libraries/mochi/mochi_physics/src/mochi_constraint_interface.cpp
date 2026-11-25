@@ -22,6 +22,8 @@
 #include "mochi_scene.h"
 #include "mochi_sleep.h"
 
+#include <mochi_core/utils/log.h>
+
 #include <memory>
 
 using namespace mochi;
@@ -124,7 +126,11 @@ class ConstraintInterfaceImpl final : public ConstraintInterface {
 
   Actor* GetActor(int actorIndex) override {
     auto const& actors = reg.get<CConstraintInfo const>(e).actors;
-    MOCHI_ASSERT(actorIndex >= 0 && actorIndex < isize(actors), "Actor index out of bounds");
+    if (actorIndex < 0 || actorIndex >= isize(actors)) {
+      MOCHI_LOG_ERROR(
+          "Constraint::GetActor: actor index %d is outside [0, %d).", actorIndex, isize(actors));
+      return nullptr;
+    }
     auto* actor = scene->GetActor(GetActorHandle(actors[actorIndex], scene->GetHandle()));
     MOCHI_ASSERT(
         actor, "If the actor was destroyed, then this constraint should have been destroyed too");
@@ -139,7 +145,13 @@ class ConstraintInterfaceImpl final : public ConstraintInterface {
   Span<int const> GetDofIndicesForActor(int actorIndex) const override {
     auto const& info = reg.get<CConstraintInfo const>(e);
     auto const numActors = isize(info.actors);
-    MOCHI_ASSERT(actorIndex >= 0 && actorIndex < numActors, "Actor index out of bounds");
+    if (actorIndex < 0 || actorIndex >= numActors) {
+      MOCHI_LOG_ERROR(
+          "Constraint::GetDofIndicesForActor: actor index %d is outside [0, %d).",
+          actorIndex,
+          numActors);
+      return {};
+    }
     return info.actorDofs[actorIndex];
   }
 

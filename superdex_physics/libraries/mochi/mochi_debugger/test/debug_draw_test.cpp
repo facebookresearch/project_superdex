@@ -16,6 +16,8 @@
 
 #include "mochi_debugger_test.h"
 
+#include <mochi_core/test/log_suppression.h>
+
 #include <mochi_core/test/wait_until.h>
 #include <mochi_core/utils/dynamic_array.h>
 #include <mochi_physics/dbg/protocol.h>
@@ -131,6 +133,19 @@ TEST_F(DebugDrawTest, InvalidFeatureNameIsIgnored) {
 
   auto const features = _client->GetDebugDrawFeatures();
   EXPECT_TRUE(std::ranges::none_of(features, &protocol::DbgDrawFeature::enabled));
+}
+
+TEST_F(DebugDrawTest, FeatureIndicesOutsideRange) {
+  auto* scene = _context->CreateScene("DebugDrawTest");
+  auto& draw = scene->GetDebugDraw();
+  auto suppressErrors = test::SuppressLogError();
+  for (int const index : {-1, draw.GetNumFeatures(), draw.GetNumFeatures() + 1}) {
+    SCOPED_TRACE(index);
+    draw.EnableFeature(index, true);
+    EXPECT_TRUE(draw.GetFeatureName(index).empty());
+    EXPECT_TRUE(draw.GetFeatureDescription(index).empty());
+    EXPECT_FALSE(draw.IsFeatureEnabled(index));
+  }
 }
 
 TEST_F(DebugDrawTest, SelectingSceneAppliesTheDisabledState) {
