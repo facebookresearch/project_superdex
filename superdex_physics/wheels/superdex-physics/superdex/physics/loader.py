@@ -42,6 +42,11 @@ _PACKAGED_NATIVE_DLL_DIR_HANDLES: list[object] = []
 
 def _resolve_isa() -> str:
     machine = platform.machine().lower()
+    if not machine and sys.platform == "win32":
+        # On Windows, platform.machine() is empty when neither WMI nor PROCESSOR_ARCHITECTURE is
+        # available, e.g., in sandboxed test runners. The interpreter's platform tag ("win-amd64",
+        # "win-arm64") names the architecture its native modules are built for.
+        machine = sysconfig.get_platform().removeprefix("win-")
     if machine in {"x86_64", "amd64"}:
         default = "avx2"
         compatible_isas = {"avx2", "avx512"}

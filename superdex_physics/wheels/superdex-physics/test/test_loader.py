@@ -701,6 +701,34 @@ class LoaderTest(unittest.TestCase):
                         loader._resolve_isa()
                 self.assertEqual(dict(os.environ), env)
 
+    def test_resolve_isa_without_machine_name(self) -> None:
+        cases = [
+            ("win32", "win-amd64", "avx2"),
+            ("win32", "win-arm64", "neon"),
+            ("win32", "win32", None),
+            ("linux", "linux-x86_64", None),
+        ]
+        for sys_platform, interpreter_platform, expected in cases:
+            with (
+                self.subTest(platform=sys_platform, interpreter=interpreter_platform),
+                patch.object(loader.platform, "machine", return_value=""),
+                patch.object(loader.sys, "platform", sys_platform),
+                patch.object(
+                    loader.sysconfig, "get_platform", return_value=interpreter_platform
+                ),
+                patch.object(loader, "_physics_runtime_is_present", return_value=False),
+                patch.dict(os.environ, {}, clear=True),
+                patch.dict(
+                    loader.sys.modules,
+                    {"mochi.loader": None, "superdex.physics.loader": None},
+                ),
+            ):
+                if expected is None:
+                    with self.assertRaisesRegex(ImportError, "target architecture"):
+                        loader._resolve_isa()
+                else:
+                    self.assertEqual(loader._resolve_isa(), expected)
+
     def test_precision_before_isa_suffix(self) -> None:
         for isa in ("avx2", "avx512", "neon"):
             for double in (False, True):
