@@ -516,6 +516,30 @@ class BotFileType:
     def __int__(self) -> int: ...
     def __index__(self) -> int: ...
 
+class SelfContactFilter:
+    """Which of a bot's own link pairs collide by default, before its
+    :attr:`~superdex.robotics.BotPrefab.contact_overrides`.
+    """
+    MOCHI: SelfContactFilter
+    """Mochi's rule: links joined directly, through hard joints or through links with
+    no shape do not collide (the rule at articulated actor creation).
+    """
+    MUJOCO: SelfContactFilter
+    """MuJoCo's filterparent rule: links on one weld (hard joints) and a weld and its
+    parent weld do not collide; the bot's root is its own weld, not the world's, and
+    links joined by a cycle joint do not collide either (MJCF models exclude both by
+    hand).
+    """
+    COUNT: SelfContactFilter
+    """Number of enum values."""
+    def __init__(self, value: int) -> None: ...
+    @property
+    def name(self) -> str: ...
+    @property
+    def value(self) -> int: ...
+    def __int__(self) -> int: ...
+    def __index__(self) -> int: ...
+
 class LinkTransformSpace:
     """Reference space for computed link transforms."""
     PARENT_FROM_LINK: LinkTransformSpace
@@ -1032,6 +1056,13 @@ class BotPrefab:
     contact collidee. When present, produces the mochi::ArticulatedActorParams::skin
     at instantiation time.
     """
+    self_contact_filter: Optional[SelfContactFilter]
+    """Which of the bot's own link pairs collide before
+    :attr:`~superdex.robotics.BotPrefab.contact_overrides`: Mochi's rule or MuJoCo's
+    (see :class:`~superdex.robotics.SelfContactFilter`); unset spawns Mochi's. A
+    combo has one rule: its base's, else the one an attached bot names; a base and
+    an attached bot that name different rules refuse the combo.
+    """
     @overload
     def __init__(self) -> None: ...
     @overload
@@ -1049,6 +1080,7 @@ class BotPrefab:
         contact_overrides: ArrayLikeBotContactOverride = ...,
         cycles: mochi_physics.ArrayLikeArticulatedCycleJointParams = ...,
         skin: Optional[mochi_physics.prefab.ArticulatedSkinPrefab] = ...,
+        self_contact_filter: Optional[SelfContactFilter | int] = ...,
     ) -> None: ...
 
 class RoboticsContext:

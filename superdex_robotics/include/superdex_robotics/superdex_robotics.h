@@ -45,6 +45,29 @@ enum class BotFileType {
 };
 
 /**
+ * @brief Which of a bot's own link pairs collide by default, before its @ref
+ * BotPrefab::contactOverrides.
+ */
+enum class SelfContactFilter {
+  Mochi, ///< Mochi's rule: links joined directly, through hard joints or through links with no
+         ///< shape do not collide.
+  Mujoco, ///< MuJoCo's filterparent rule, with the bot's root as its own weld and cycle-joined
+          ///< links excluded (see @ref MujocoFiltersSelfContact).
+  Count ///< Number of enum values.
+};
+
+} // namespace superdex::robotics
+
+// Reflected here, ahead of BotPrefab, whose reflection reads it.
+MOCHI_ENUM_BEGIN(superdex::robotics::SelfContactFilter)
+MOCHI_ENUM_ITEM(Mochi)
+MOCHI_ENUM_ITEM(Mujoco)
+MOCHI_ENUM_COUNT(Count)
+MOCHI_ENUM_END()
+
+namespace superdex::robotics {
+
+/**
  * @brief Reference space for computed link transforms.
  */
 enum class LinkTransformSpace {
@@ -361,6 +384,12 @@ struct BotPrefab {
   // it). Populated by ApplyMod only; DO NOT set by hand.
   DynamicArray<DynamicString> _skinBoneLinks;
 
+  /// Which of the bot's own link pairs collide before @ref contactOverrides: Mochi's rule or
+  /// MuJoCo's (see @ref SelfContactFilter); unset spawns Mochi's. A combo has one rule: its base's,
+  /// else the one an attached bot names; a base and an attached bot that name different rules
+  /// refuse the combo.
+  std::optional<SelfContactFilter> selfContactFilter;
+
   MOCHI_STRUCT_BEGIN(superdex::robotics::BotPrefab)
   MOCHI_FIELD(name)
   MOCHI_FIELD(joints) MOCHI_ATTRIBUTE(NoSerializeDefaults);
@@ -374,6 +403,7 @@ struct BotPrefab {
   MOCHI_FIELD(cycles) MOCHI_ATTRIBUTE(NoSerializeDefaults);
   MOCHI_FIELD(skin) MOCHI_ATTRIBUTE(NoSerializeDefaults);
   MOCHI_FIELD_NAME(_skinBoneLinks, "skinBoneLinks") MOCHI_ATTRIBUTE(NoSerializeDefaults);
+  MOCHI_FIELD(selfContactFilter) MOCHI_ATTRIBUTE(NoSerializeDefaults);
   MOCHI_STRUCT_END()
 };
 

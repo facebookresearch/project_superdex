@@ -497,6 +497,24 @@ MOCHI_API void BakeMassProperties(
 IsContactImplicitlyDisabled(BotPrefab const& botPrefab, int linkA, int linkB);
 
 /**
+ * @brief Whether MuJoCo's default contact filter (filterparent) leaves two links of the bot apart,
+ * the rule @ref SelfContactFilter::Mujoco spawns: links on one weld (joined by hard joints) and a
+ * weld and its parent weld do not collide. Two deviations from plain MuJoCo, which MJCF models make
+ * by hand with exclusions: the bot's root is its own weld, not the world's, so a fixed-base arm's
+ * base and first link stay apart; and links joined by a cycle joint (@ref BotPrefab::cycles), which
+ * MuJoCo models as an equality constraint, do not collide.
+ *
+ * Returns false if either link is out of range, or both are one link. Shapes are not considered.
+ *
+ * @param[in] botPrefab Bot describing the articulation.
+ * @param[in] linkA First link index.
+ * @param[in] linkB Second link index.
+ * @return True if MuJoCo's rule disables contact between the two links.
+ */
+[[nodiscard]] MOCHI_API bool
+MujocoFiltersSelfContact(BotPrefab const& botPrefab, int linkA, int linkB);
+
+/**
  * @brief Convert a bot-space pose to an articulated-actor pose.
  *
  * @details Bot DOFs never include the root joint's, whether or not the articulation has any: a

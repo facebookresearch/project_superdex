@@ -46,6 +46,20 @@ enum bots::BotFileType {
   Count,
 };
 
+// @brief Which of a bot's own link pairs collide by default, before its @ref
+// bots::BotPrefab::contactOverrides.
+enum bots::SelfContactFilter [no_reflection] {
+  // @brief Mochi's rule: links joined directly, through hard joints or through links with no shape
+  // do not collide (the rule at articulated actor creation).
+  Mochi,
+  // @brief MuJoCo's filterparent rule: links on one weld (hard joints) and a weld and its parent
+  // weld do not collide; the bot's root is its own weld, not the world's, and links joined by a
+  // cycle joint do not collide either (MJCF models exclude both by hand).
+  Mujoco,
+  // @brief Number of enum values.
+  Count,
+};
+
 // @brief Reference space for computed link transforms.
 enum bots::LinkTransformSpace {
   // @brief Transform from each link to its parent link.
@@ -244,6 +258,11 @@ struct bots::BotPrefab [no_reflection] {
   // history that cannot be reconstructed from a flattened bot, so it is serialized. Populated by
   // ApplyMod only; DO NOT set by hand.
   DynamicArray<String> _skinBoneLinks [no_python, no_serialize_defaults, reflection_name("skinBoneLinks")];
+  // @brief Which of the bot's own link pairs collide before @ref contactOverrides: Mochi's rule or
+  // MuJoCo's (see @ref bots::SelfContactFilter); unset spawns Mochi's. A combo has one rule: its
+  // base's, else the one an attached bot names; a base and an attached bot that name different
+  // rules refuse the combo.
+  Optional<bots::SelfContactFilter> selfContactFilter [no_serialize_defaults];
 };
 
 // @brief Base fields shared by bot modification actions.

@@ -390,6 +390,17 @@ void superdex::robotics::ApplyMod(
     MOCHI_ERROR_SET(error, "Child bot has no links");
     MOCHI_ERROR_RETURN(error);
   }
+  // A bot has one self-contact rule: the base's, else one an attached bot names. A child that names
+  // a rule the bot names otherwise refuses the combo instead of silently dropping its rule.
+  MOCHI_ERROR_IF(
+      child.selfContactFilter && botPrefab.selfContactFilter &&
+          *child.selfContactFilter != *botPrefab.selfContactFilter,
+      error,
+      "Cannot attach a bot whose selfContactFilter differs from the bot's (a combo has one rule).");
+  MOCHI_ERROR_RETURN(error);
+  if (!botPrefab.selfContactFilter) {
+    botPrefab.selfContactFilter = child.selfContactFilter;
+  }
   // A bot supports at most one skin, so a skinned child cannot be attached onto a bot that already
   // has one.
   MOCHI_ERROR_IF(
@@ -736,6 +747,13 @@ void superdex::robotics::Validate(
   }
 
   // Structural validation
+  bool const knownFilter = !botPrefab.selfContactFilter ||
+      *botPrefab.selfContactFilter == SelfContactFilter::Mochi ||
+      *botPrefab.selfContactFilter == SelfContactFilter::Mujoco;
+  if (!knownFilter) {
+    REPORT_BOT_ISSUE(results, "selfContactFilter must be Mochi or Mujoco");
+  }
+  MOCHI_ERROR_IF(!knownFilter, error, "Invalid BotPrefab; see log warnings for details");
   if (botPrefab.name.empty()) {
     REPORT_BOT_ISSUE(results, "bot has no name");
   }
@@ -1837,6 +1855,45 @@ static void ApplyBotContactOverrides(
   }
 }
 
+/* Under SelfContactFilter::Mujoco, sets every pair of the bot's shaped links whose contact the
+   scene does not already have as MuJoCo's rule gives it, reading the scene's own table (Mochi's
+   rule applied at creation), before the bot's contact overrides. */
+static void
+ApplySelfContactFilter(BotPrefab const& botPrefab, Actor* actor, Scene* scene, Error& error) {
+  MOCHI_ERROR_RETURN(error);
+  SelfContactFilter const filter = botPrefab.selfContactFilter.value_or(SelfContactFilter::Mochi);
+  MOCHI_ERROR_IF(
+      filter != SelfContactFilter::Mochi && filter != SelfContactFilter::Mujoco,
+      error,
+      "BotPrefab::selfContactFilter must be Mochi or Mujoco");
+  MOCHI_ERROR_RETURN(error);
+  if (filter != SelfContactFilter::Mujoco) {
+    return;
+  }
+  Span<ActorHandle const> const linkActors = actor->GetNestedLinkActors(error);
+  MOCHI_ERROR_RETURN(error);
+  MOCHI_ERROR_IF(
+      isize(linkActors) != isize(botPrefab.links),
+      error,
+      "ApplySelfContactFilter: nested link actor count does not match bot prefab link count");
+  MOCHI_ERROR_RETURN(error);
+  for (int a = 0; a < isize(botPrefab.links); ++a) {
+    for (int b = a + 1; b < isize(botPrefab.links); ++b) {
+      if (botPrefab.links[a].shapeFile.empty() || botPrefab.links[b].shapeFile.empty()) {
+        continue;
+      }
+      bool const mujocoCollides = !MujocoFiltersSelfContact(botPrefab, a, b);
+      bool const enabled = scene->IsContactEnabled(linkActors[a], linkActors[b], error);
+      MOCHI_ERROR_RETURN(error);
+      if (enabled != mujocoCollides) {
+        scene->EnableActorContactSymmetric(
+            linkActors[a], linkActors[b], mujocoCollides, IncludeNestedActors::No, error);
+        MOCHI_ERROR_RETURN(error);
+      }
+    }
+  }
+}
+
 static Actor* AddToSceneImpl(
     BotPrefab const& botPrefab,
     Scene* scene,
@@ -1860,6 +1917,7 @@ static Actor* AddToSceneImpl(
   // BotContactOverride that names the skin opts a specific skin<->link pair out -- e.g. the skin's
   // own links, which it wraps and would otherwise fight the joints (a skinned double pendulum
   // seizing near 90 degrees).
+  ApplySelfContactFilter(botPrefab, actor, scene, error);
   ApplyBotContactOverrides(botPrefab, contactOverrides, actor, scene, error);
   MOCHI_ERROR_RETURN(error, nullptr);
   return actor;
@@ -2250,6 +2308,38 @@ bool superdex::robotics::IsContactImplicitlyDisabled(
     return false;
   };
   return reaches(from);
+}
+
+bool superdex::robotics::MujocoFiltersSelfContact(
+    BotPrefab const& botPrefab,
+    int linkA,
+    int linkB) {
+  int const numLinks = isize(botPrefab.links);
+  if (linkA < 0 || linkA >= numLinks || linkB < 0 || linkB >= numLinks || linkA == linkB) {
+    return false;
+  }
+  // A link's weld: the highest link it reaches over hard joints, the root's being its own.
+  auto weldOf = [&](int link) {
+    while (botPrefab.links[link].parentLink != kIndexNone && link < isize(botPrefab.joints) &&
+           botPrefab.joints[link].type == ArticulatedJointType::Hard) {
+      link = botPrefab.links[link].parentLink;
+    }
+    return link;
+  };
+  auto parentWeldOf = [&](int weld) {
+    int const parent = botPrefab.links[weld].parentLink;
+    return parent == kIndexNone ? kIndexNone : weldOf(parent);
+  };
+  int const weldA = weldOf(linkA);
+  int const weldB = weldOf(linkB);
+  if (weldA == weldB || parentWeldOf(weldA) == weldB || parentWeldOf(weldB) == weldA) {
+    return true;
+  }
+  return std::any_of(
+      botPrefab.cycles.begin(), botPrefab.cycles.end(), [&](ArticulatedCycleJointParams const& c) {
+        return (c.parentLink == linkA && c.childLink == linkB) ||
+            (c.parentLink == linkB && c.childLink == linkA);
+      });
 }
 
 // Iterate the DOFs of bp in pose order; for each one call fn(jointType, lo_opt, hi_opt)

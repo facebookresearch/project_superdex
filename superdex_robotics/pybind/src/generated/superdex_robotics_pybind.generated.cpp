@@ -42,6 +42,12 @@ void mochi::DeclareSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module
     .value("COUNT", superdex::robotics::BotFileType::Count, "Number of enum values.")
   ;
 
+  nb::enum_<superdex::robotics::SelfContactFilter>(m_bots, "SelfContactFilter", "Which of a bot's own link pairs collide by default, before its\n:attr:`~superdex.robotics.BotPrefab.contact_overrides`.")
+    .value("MOCHI", superdex::robotics::SelfContactFilter::Mochi, "Mochi's rule: links joined directly, through hard joints or through links with\n    no shape do not collide (the rule at articulated actor creation).")
+    .value("MUJOCO", superdex::robotics::SelfContactFilter::Mujoco, "MuJoCo's filterparent rule: links on one weld (hard joints) and a weld and its\n    parent weld do not collide; the bot's root is its own weld, not the world's, and\n    links joined by a cycle joint do not collide either (MJCF models exclude both by\n    hand).")
+    .value("COUNT", superdex::robotics::SelfContactFilter::Count, "Number of enum values.")
+  ;
+
   nb::enum_<superdex::robotics::LinkTransformSpace>(m_bots, "LinkTransformSpace", "Reference space for computed link transforms.")
     .value("PARENT_FROM_LINK", superdex::robotics::LinkTransformSpace::ParentFromLink, "Transform from each link to its parent link.")
     .value("ROOT_FROM_PARENT", superdex::robotics::LinkTransformSpace::RootFromParent, "Transform from each link to the root link.")
@@ -512,7 +518,7 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
   ;
 
   registry.GetClass<superdex::robotics::BotPrefab>()
-    .def("__init__", [](superdex::robotics::BotPrefab* self, nb::object name, nb::object joints, nb::object links, nb::object world_from_root, nb::object scale, nb::object default_pose, nb::object linear_transmissions, nb::object spatial_tendons, nb::object contact_overrides, nb::object cycles, nb::object skin) {
+    .def("__init__", [](superdex::robotics::BotPrefab* self, nb::object name, nb::object joints, nb::object links, nb::object world_from_root, nb::object scale, nb::object default_pose, nb::object linear_transmissions, nb::object spatial_tendons, nb::object contact_overrides, nb::object cycles, nb::object skin, nb::object self_contact_filter) {
       superdex::robotics::BotPrefab result{};
       result.name = nb::cast<mochi::DynamicString>(name);
       result.joints = nb::cast<mochi::DynamicArray<superdex::robotics::BotJointPrefab>>(joints);
@@ -525,6 +531,7 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
       result.contactOverrides = nb::cast<mochi::DynamicArray<superdex::robotics::BotContactOverride>>(contact_overrides);
       result.cycles = nb::cast<mochi::DynamicArray<mochi::ArticulatedCycleJointParams>>(cycles);
       result.skin = nb::cast<std::optional<mochi::prefab::ArticulatedSkinPrefab>>(skin);
+      result.selfContactFilter = nb::cast<std::optional<superdex::robotics::SelfContactFilter>>(self_contact_filter);
       new (self) superdex::robotics::BotPrefab(std::move(result));
     }
       , nb::kw_only()
@@ -539,6 +546,7 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
       , nb::arg("contact_overrides").sig("...") = superdex::robotics::BotPrefab{}.contactOverrides
       , nb::arg("cycles").sig("...") = superdex::robotics::BotPrefab{}.cycles
       , nb::arg("skin").sig("...") = superdex::robotics::BotPrefab{}.skin
+      , nb::arg("self_contact_filter").sig("...") = superdex::robotics::BotPrefab{}.selfContactFilter
     )
     .def(nb::init<>())
     .def("__copy__", [](superdex::robotics::BotPrefab const& self) { return superdex::robotics::BotPrefab(self); })
@@ -554,6 +562,7 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_prop_rw("contact_overrides", [](superdex::robotics::BotPrefab& self) -> mochi::DynamicArray<superdex::robotics::BotContactOverride>& { return self.contactOverrides; }, [](superdex::robotics::BotPrefab& self, nb::object val) { self.contactOverrides = nb::cast<mochi::DynamicArray<superdex::robotics::BotContactOverride>>(val); }, "Array of link-link contact override pairs.")
     .def_prop_rw("cycles", [](superdex::robotics::BotPrefab& self) -> mochi::DynamicArray<mochi::ArticulatedCycleJointParams>& { return self.cycles; }, [](superdex::robotics::BotPrefab& self, nb::object val) { self.cycles = nb::cast<mochi::DynamicArray<mochi::ArticulatedCycleJointParams>>(val); }, "Cycle-closing joints for closed-loop mechanisms (e.g. four-bar linkages,\nparallel grippers). Each entry becomes one mochi::ArticulatedActorParams::cycles\nentry at instantiation time. Link references\n(mochi::ArticulatedCycleJointParams::parentLink /\nmochi::ArticulatedCycleJointParams::childLink) are int indices into\n:attr:`~superdex.robotics.BotPrefab.links`.")
     .def_prop_rw("skin", [](superdex::robotics::BotPrefab& self) -> std::optional<mochi::prefab::ArticulatedSkinPrefab>& { return self.skin; }, [](superdex::robotics::BotPrefab& self, nb::handle val) { self.skin = val.is_none() ? std::optional<mochi::prefab::ArticulatedSkinPrefab>{} : nb::cast<std::optional<mochi::prefab::ArticulatedSkinPrefab>>(val); }, "Optional deformable skin skinned over the articulation's links, acting as a\ncontact collidee. When present, produces the mochi::ArticulatedActorParams::skin\nat instantiation time.", nb::for_setter(nb::arg("value").none()))
+    .def_prop_rw("self_contact_filter", [](superdex::robotics::BotPrefab& self) -> std::optional<superdex::robotics::SelfContactFilter>& { return self.selfContactFilter; }, [](superdex::robotics::BotPrefab& self, nb::handle val) { self.selfContactFilter = val.is_none() ? std::optional<superdex::robotics::SelfContactFilter>{} : nb::cast<std::optional<superdex::robotics::SelfContactFilter>>(val); }, "Which of the bot's own link pairs collide before\n:attr:`~superdex.robotics.BotPrefab.contact_overrides`: Mochi's rule or MuJoCo's\n(see :class:`~superdex.robotics.SelfContactFilter`); unset spawns Mochi's. A\ncombo has one rule: its base's, else the one an attached bot names; a base and\nan attached bot that name different rules refuse the combo.", nb::for_setter(nb::arg("value").none()))
   ;
 
   registry.GetClass<superdex::robotics::RoboticsContext>()

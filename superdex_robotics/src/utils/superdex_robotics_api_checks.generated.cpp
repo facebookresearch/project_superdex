@@ -62,6 +62,11 @@ static_assert(static_cast<int>(superdex::robotics::BotFileType::BotPrefab) == 0,
 static_assert(static_cast<int>(superdex::robotics::BotFileType::ModBotPrefab) == 1, "\n  ERROR: enum value superdex::robotics::BotFileType::ModBotPrefab is out-of-sync with C++.\n  Please check the enum definition, then run mochi_gen_py to regenerate this file.\n");
 static_assert(static_cast<int>(superdex::robotics::BotFileType::Count) == 2, "\n  ERROR: enum value superdex::robotics::BotFileType::Count is out-of-sync with C++.\n  Please check the enum definition, then run mochi_gen_py to regenerate this file.\n");
 
+// enum superdex::robotics::SelfContactFilter
+static_assert(static_cast<int>(superdex::robotics::SelfContactFilter::Mochi) == 0, "\n  ERROR: enum value superdex::robotics::SelfContactFilter::Mochi is out-of-sync with C++.\n  Please check the enum definition, then run mochi_gen_py to regenerate this file.\n");
+static_assert(static_cast<int>(superdex::robotics::SelfContactFilter::Mujoco) == 1, "\n  ERROR: enum value superdex::robotics::SelfContactFilter::Mujoco is out-of-sync with C++.\n  Please check the enum definition, then run mochi_gen_py to regenerate this file.\n");
+static_assert(static_cast<int>(superdex::robotics::SelfContactFilter::Count) == 2, "\n  ERROR: enum value superdex::robotics::SelfContactFilter::Count is out-of-sync with C++.\n  Please check the enum definition, then run mochi_gen_py to regenerate this file.\n");
+
 // enum superdex::robotics::LinkTransformSpace
 static_assert(static_cast<int>(superdex::robotics::LinkTransformSpace::ParentFromLink) == 0, "\n  ERROR: enum value superdex::robotics::LinkTransformSpace::ParentFromLink is out-of-sync with C++.\n  Please check the enum definition, then run mochi_gen_py to regenerate this file.\n");
 static_assert(static_cast<int>(superdex::robotics::LinkTransformSpace::RootFromParent) == 1, "\n  ERROR: enum value superdex::robotics::LinkTransformSpace::RootFromParent is out-of-sync with C++.\n  Please check the enum definition, then run mochi_gen_py to regenerate this file.\n");
@@ -150,6 +155,7 @@ static_assert(std::is_same_v<decltype(&superdex::robotics::BotPrefab::skin), std
 static_assert(std::is_same_v<decltype(&superdex::robotics::BotPrefab::_numDofs), int superdex::robotics::BotPrefab::*>, "\n  ERROR: Field superdex::robotics::BotPrefab::_numDofs is out-of-sync with C++ definition.\n  Please check the field type, then run mochi_gen_py to regenerate this file.\n");
 static_assert(std::is_same_v<decltype(&superdex::robotics::BotPrefab::_dofIndices), mochi::DynamicArray<int> superdex::robotics::BotPrefab::*>, "\n  ERROR: Field superdex::robotics::BotPrefab::_dofIndices is out-of-sync with C++ definition.\n  Please check the field type, then run mochi_gen_py to regenerate this file.\n");
 static_assert(std::is_same_v<decltype(&superdex::robotics::BotPrefab::_skinBoneLinks), mochi::DynamicArray<mochi::DynamicString> superdex::robotics::BotPrefab::*>, "\n  ERROR: Field superdex::robotics::BotPrefab::_skinBoneLinks is out-of-sync with C++ definition.\n  Please check the field type, then run mochi_gen_py to regenerate this file.\n");
+static_assert(std::is_same_v<decltype(&superdex::robotics::BotPrefab::selfContactFilter), std::optional<superdex::robotics::SelfContactFilter> superdex::robotics::BotPrefab::*>, "\n  ERROR: Field superdex::robotics::BotPrefab::selfContactFilter is out-of-sync with C++ definition.\n  Please check the field type, then run mochi_gen_py to regenerate this file.\n");
 
 // struct superdex::robotics::BotModBase
 static_assert(std::is_same_v<decltype(&superdex::robotics::BotModBase::name), mochi::DynamicString superdex::robotics::BotModBase::*>, "\n  ERROR: Field superdex::robotics::BotModBase::name is out-of-sync with C++ definition.\n  Please check the field type, then run mochi_gen_py to regenerate this file.\n");

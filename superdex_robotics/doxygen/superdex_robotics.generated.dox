@@ -22,6 +22,26 @@
 /// @namespace superdex::robotics
 ///
 
+/// @enum superdex::robotics::SelfContactFilter
+///
+/// @brief Which of a bot's own link pairs collide by default, before its @ref superdex::robotics::BotPrefab::contactOverrides "bots::BotPrefab::contactOverrides".
+///
+
+/// @var superdex::robotics::SelfContactFilter::Mochi
+///
+/// @brief Mochi's rule: links joined directly, through hard joints or through links with no shape do not collide (the rule at articulated actor creation).
+///
+
+/// @var superdex::robotics::SelfContactFilter::Mujoco
+///
+/// @brief MuJoCo's filterparent rule: links on one weld (hard joints) and a weld and its parent weld do not collide; the bot's root is its own weld, not the world's, and links joined by a cycle joint do not collide either (MJCF models exclude both by hand).
+///
+
+/// @var superdex::robotics::SelfContactFilter::Count
+///
+/// @brief Number of enum values.
+///
+
 /// @enum superdex::robotics::ControllerInputKind
 ///
 /// @brief What a controller's float input holds (see @ref superdex::robotics::ControllerBase::GetInputKind "ControllerBase::GetInputKind").
@@ -260,6 +280,11 @@
 /// @var superdex::robotics::BotPrefab::_skinBoneLinks
 ///
 /// @brief [Internal] For a bot with a skin, the composed link name each skin bone index binds to (_skinBoneLinks[b] = link name for skin bone b). Empty means identity (bone b -> link b). Set by ApplyMod when a skin (or skinned sub-bot) is attached so the skin's baked bone indices can be remapped onto the reordered composed skeleton at instantiation time. Unlike _numDofs/_dofIndices this is NOT recomputed by RebuildBotData -- it captures composition history that cannot be reconstructed from a flattened bot, so it is serialized. Populated by ApplyMod only; DO NOT set by hand.
+///
+
+/// @var superdex::robotics::BotPrefab::selfContactFilter
+///
+/// @brief Which of the bot's own link pairs collide before @ref superdex::robotics::BotPrefab::contactOverrides "contactOverrides": Mochi's rule or MuJoCo's (see @ref superdex::robotics::SelfContactFilter "bots::SelfContactFilter"); unset spawns Mochi's. A combo has one rule: its base's, else the one an attached bot names; a base and an attached bot that name different rules refuse the combo.
 ///
 
 /// @class superdex::robotics::RoboticsContext
