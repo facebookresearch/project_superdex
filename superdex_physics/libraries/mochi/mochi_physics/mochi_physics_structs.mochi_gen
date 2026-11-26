@@ -1050,6 +1050,7 @@ struct SoftSkinnedActorParams {
 
   // @brief Parameters for the nested soft actors.
   //
+  // @note Must contain at least one entry.
   // @note If a skin shape is provided, the skin mesh acts as the colliding surface,
   // not the surfaces of individual nested soft actors.
   // @note If a skin shape is provided, dynamic hyper-reduction is not allowed on the

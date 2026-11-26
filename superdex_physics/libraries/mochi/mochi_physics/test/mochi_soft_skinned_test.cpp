@@ -64,6 +64,23 @@ class CreateSoftSkinnedActorNameTest : public test::MochiSceneTestBase {
   }
 };
 
+TEST_F(CreateSoftSkinnedActorNameTest, RejectsEmptySoftParamsWithoutMutation) {
+  auto const params = MakeParams({});
+  for (bool const useExperimental : {false, true}) {
+    SCOPED_TRACE(useExperimental);
+    int const numActorsBefore = _scene->GetNumActors();
+    Error error;
+    Actor const* const actor = useExperimental
+        ? experimental::CreateSoftSkinnedActor(_scene, params, {}, error)
+        : _scene->CreateSoftSkinnedActor(params, error);
+    EXPECT_EQ(nullptr, actor);
+    EXPECT_STREQ(
+        "SoftSkinnedActorParams::softParams must contain at least one soft actor.",
+        error.GetDescription());
+    EXPECT_EQ(numActorsBefore, _scene->GetNumActors());
+  }
+}
+
 TEST_F(CreateSoftSkinnedActorNameTest, RejectsInvalidNestedSoftParamsWithoutMutation) {
   auto const expectRejected =
       [&](SoftSkinnedActorParams params,

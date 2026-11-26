@@ -2028,6 +2028,11 @@ static void ValidateSoftSkinnedActorEnergyParams(
 
 static void ValidateAndAutoCorrect(SoftSkinnedActorParams& params, Error& error) {
   MOCHI_ERROR_RETURN(error);
+  MOCHI_ERROR_IF(
+      params.softParams.empty(),
+      error,
+      "SoftSkinnedActorParams::softParams must contain at least one soft actor.");
+  MOCHI_ERROR_RETURN(error);
 
   // Auto-correct before validating: name validation depends on the auto-assigned/corrected skeleton
   // link and nested soft actor names.

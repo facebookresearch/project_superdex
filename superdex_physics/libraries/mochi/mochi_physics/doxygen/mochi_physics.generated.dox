@@ -600,6 +600,7 @@
 ///
 /// @brief Parameters for each nested soft actor.
 ///
+/// @note Must contain at least one entry.
 /// @note The @ref mochi::prefab::SoftActorPrefab::rotation "SoftActorPrefab::rotation" and @ref mochi::prefab::SoftActorPrefab::translation "SoftActorPrefab::translation" fields for each nested soft actor are ignored. Nested soft actor transforms are determined by the skeleton's link attachments (see @ref mochi::prefab::SoftSkinnedActorPrefab::softAttachLinks "softAttachLinks").
 /// @note Each nested soft actor's @ref mochi::prefab::SoftActorPrefab::scale "SoftActorPrefab::scale" must be uniform (three equal, strictly positive, finite values). Non-uniform soft shape scale is not supported for soft-skinned prefabs.
 /// @note If a nested soft actor's @ref mochi::prefab::SoftActorPrefab::flowFile "SoftActorPrefab::flowFile" is set, that entry's @ref mochi::prefab::SoftActorPrefab::scale "SoftActorPrefab::scale" must be (1, 1, 1).
@@ -3448,6 +3449,7 @@
 ///
 /// @brief Parameters for the nested soft actors.
 ///
+/// @note Must contain at least one entry.
 /// @note If a skin shape is provided, the skin mesh acts as the colliding surface, not the surfaces of individual nested soft actors.
 /// @note If a skin shape is provided, dynamic hyper-reduction is not allowed on the nested soft actors.
 /// @note If a @ref mochi::SoftActorParams "SoftActorParams" entry has its hasInertia set to true, inertia is applied in the unposed configuration of that actor (prior to skinning) and this struct's hasInertia must be false.

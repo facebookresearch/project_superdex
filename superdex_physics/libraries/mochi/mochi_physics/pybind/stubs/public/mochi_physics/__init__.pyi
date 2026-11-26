@@ -7145,6 +7145,9 @@ class SoftSkinnedActorParams:
         """Parameters for the nested soft actors.
 
         Note:
+            Must contain at least one entry.
+
+        Note:
             If a skin shape is provided, the skin mesh acts as the colliding surface,
             not the surfaces of individual nested soft actors.
 

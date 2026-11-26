@@ -536,6 +536,7 @@ struct prefab::SoftSkinnedActorPrefab [equality(default)] {
 
   // @brief Parameters for each nested soft actor.
   //
+  // @note Must contain at least one entry.
   // @note The @ref SoftActorPrefab::rotation and @ref SoftActorPrefab::translation fields for each
   // nested soft actor are ignored. Nested soft actor transforms are determined by the skeleton's
   // link attachments (see @ref softAttachLinks).

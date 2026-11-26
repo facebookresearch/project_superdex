@@ -3163,6 +3163,11 @@ TEST_F(CreateSkinnedArticulatedActorTest, SkinWithoutValidShapeIsRejected) {
   EXPECT_EQ(nullptr, _scene->CreateArticulatedActor(params, test::ExpectNotOK{}));
   EXPECT_EQ(numActorsBefore, _scene->GetNumActors());
 
+  SoftActorParams softParams;
+  softParams.shape = test::CreateUnitCubeTetSoftShape(_mochiContext);
+  softParams.hasGravity = false;
+  SoftSkinnedActorParams softSkinnedParams;
+  softSkinnedParams.softParams.push_back(softParams);
   for (ShapeHandle const& shape :
        {CreateUnitCubeTetMeshShapeWithSkinning(
             _mochiContext, /*boneIndex=*/0, /*addUnreferencedNode=*/true),
@@ -3172,8 +3177,9 @@ TEST_F(CreateSkinnedArticulatedActorTest, SkinWithoutValidShapeIsRejected) {
     EXPECT_EQ(nullptr, _scene->CreateArticulatedActor(params, error));
     EXPECT_NOT_OK(error);
     // This skin has no blending data, so only an identical error shows the same check rejected it.
+    softSkinnedParams.skeletonParams = params;
     Error blendedError;
-    EXPECT_EQ(nullptr, _scene->CreateSoftSkinnedActor({.skeletonParams = params}, blendedError));
+    EXPECT_EQ(nullptr, _scene->CreateSoftSkinnedActor(softSkinnedParams, blendedError));
     EXPECT_STREQ(error.GetDescription(), blendedError.GetDescription());
   }
 }

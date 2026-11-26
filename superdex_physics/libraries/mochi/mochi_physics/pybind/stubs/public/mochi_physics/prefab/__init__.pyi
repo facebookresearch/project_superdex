@@ -1877,6 +1877,9 @@ class SoftSkinnedActorPrefab:
         """Parameters for each nested soft actor.
 
         Note:
+            Must contain at least one entry.
+
+        Note:
             The :attr:`~superdex.physics.prefab.SoftActorPrefab.rotation` and
             :attr:`~superdex.physics.prefab.SoftActorPrefab.translation` fields for each
             nested soft actor are ignored. Nested soft actor transforms are determined
