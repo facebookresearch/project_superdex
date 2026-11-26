@@ -10428,9 +10428,12 @@ class Actor:
             For dynamic actors, it does not change velocity. For static actors, it
             prescribes the root transform at the end of the next time step, and the
             actor moves there during the step. Its velocity is implied by the change of
-            root transform over the time step. To move a static actor without velocity,
-            also call :meth:`~superdex.physics.Actor.set_velocity` with zero velocity
-            before the next step.
+            root transform over the time step. BDF2 and BDF3 assume that this velocity
+            also held over the earlier steps they combine, so after it changes, damping
+            and friction against the actor are approximate for one step with BDF2 and
+            for two with BDF3. To move a static actor without velocity, also call
+            :meth:`~superdex.physics.Actor.set_velocity` with zero velocity before the
+            next step.
 
         Note:
             Invalidates the actor history (see :class:`~superdex.physics.Actor`), except
@@ -10543,8 +10546,12 @@ class Actor:
         Note:
             For static actors, the velocity is applied at the beginning of the next time
             step: the actor moves at constant velocity during the step, ending at its
-            root transform (:meth:`~superdex.physics.Actor.set_root_transform`). It is
-            ignored in quasistatic steps.
+            root transform (:meth:`~superdex.physics.Actor.set_root_transform`). BDF2
+            and BDF3 assume that this velocity also held over the earlier steps they
+            combine, so after it changes, damping and friction against the actor are
+            approximate for one step with BDF2 and for two with BDF3. It is ignored in
+            quasistatic steps. An angular velocity that turns the actor by more than pi
+            in one step may give inconsistent results.
 
         Note:
             For standalone soft actors, the angular velocity must be zero.

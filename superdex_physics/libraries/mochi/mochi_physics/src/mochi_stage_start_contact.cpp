@@ -18,6 +18,7 @@
 
 #include "mochi_deformable.h"
 #include "mochi_point_cloud_contact.h"
+#include "mochi_rigid.h"
 #include "mochi_shell.h"
 
 #include <mochi_core/contact/contact_correspondence.h>
@@ -148,6 +149,7 @@ static void AddPerCollisionMissingStageStartContacts(
     entt::entity collider,
     CContactSamples<TimeStep::Current> const& samples,
     TransformRT const& worldFromColliding,
+    TimeIntegratorState const& intState,
     ContactDetectionResult const& stageStart,
     ContactDetectionResult& current,
     CContactCorrespondence<kIsSync>& correspondence) {
@@ -167,7 +169,10 @@ static void AddPerCollisionMissingStageStartContacts(
   bool const isPointCloudCollider = reg.all_of<TagUsePointCloudContact>(collider);
 
   // Get the transform of the collider.
-  auto const& worldFromCollider = reg.get<CRootTransform const>(collider).worldFromLocal;
+  auto const& root = reg.get<CRootTransform const>(collider);
+  TransformRT const worldFromCollider = kIsSync
+      ? root.worldFromLocal
+      : GetStaticColliderTransform<TimeStep::Current>(intState, reg, collider, root);
   auto const colliderFromColliding = Invert(worldFromCollider) * worldFromColliding;
   VMatrix4x4r const colliderFromCollidingT = ToVMatrix4x4Transpose(colliderFromColliding);
 
@@ -262,6 +267,7 @@ static void AddMissingStageStartContacts(
     entt::entity colliding,
     CContactSamples<TimeStep::Current> const& samples,
     TransformRT const& worldFromColliding,
+    TimeIntegratorState const& intState,
     CActiveCollisions<kIsSync, TimeStep::StageStart> const& stageStartCollisions,
     CActiveCollisions<kIsSync, TimeStep::Current>& outCurrentCollisions,
     CContactCorrespondence<kIsSync>& correspondence) {
@@ -281,6 +287,7 @@ static void AddMissingStageStartContacts(
           outCurrentCollisions[c].colliderEntity,
           samples,
           worldFromColliding,
+          intState,
           stageStartCollisions[s].collisionResult,
           outCurrentCollisions[c].collisionResult,
           correspondence);
@@ -294,16 +301,18 @@ void mochi::AddStageStartCollisionDetection(
     entt::registry const& reg,
     entt::entity e,
     CContactSamples<TimeStep::Current> const& samples,
+    CRootTransform const& root,
+    CTimeIntegratorState const& intState,
     CActiveCollisions<kIsSync, TimeStep::StageStart> const& stageStartCollisions,
     CActiveCollisions<kIsSync, TimeStep::Current>& outCurrentCollisions,
     CContactCorrespondence<kIsSync>& correspondence) {
-  auto const& worldFromColliding = reg.get<CRootTransform const>(e).worldFromLocal;
   AddMissingStageStartCollisions(stageStartCollisions, outCurrentCollisions);
   AddMissingStageStartContacts(
       reg,
       e,
       samples,
-      worldFromColliding,
+      root.worldFromLocal,
+      intState,
       stageStartCollisions,
       outCurrentCollisions,
       correspondence);
@@ -314,6 +323,8 @@ template void mochi::AddStageStartCollisionDetection</*kIsSync*/ false>(
     entt::registry const& reg,
     entt::entity e,
     CContactSamples<TimeStep::Current> const& samples,
+    CRootTransform const& root,
+    CTimeIntegratorState const& intState,
     CActiveCollisions</*kIsSync*/ false, TimeStep::StageStart> const& stageStartCollisions,
     CActiveCollisions</*kIsSync*/ false, TimeStep::Current>& outCurrentCollisions,
     CContactCorrespondence</*kIsSync*/ false>& correspondence);
@@ -322,6 +333,8 @@ template void mochi::AddStageStartCollisionDetection</*kIsSync*/ true>(
     entt::registry const& reg,
     entt::entity e,
     CContactSamples<TimeStep::Current> const& samples,
+    CRootTransform const& root,
+    CTimeIntegratorState const& intState,
     CActiveCollisions</*kIsSync*/ true, TimeStep::StageStart> const& stageStartCollisions,
     CActiveCollisions</*kIsSync*/ true, TimeStep::Current>& outCurrentCollisions,
     CContactCorrespondence</*kIsSync*/ true>& correspondence);

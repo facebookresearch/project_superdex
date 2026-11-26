@@ -70,18 +70,21 @@
 using namespace mochi;
 using namespace mochi::experimental;
 
-// Root transform while solving a stage. Rigid actors store their stage start; other actors keep
-// their root transform during a step, e.g., soft actors with recentering express both stage-start
-// and current displacements wrt it.
+// Root transform while solving the stage described by intState. Static actors are sampled at the
+// stage references. Rigid actors store their stage start; other actors keep their root transform
+// during a step, e.g., soft actors with recentering express both stage-start and current
+// displacements wrt it.
 template <TimeStep kTimeStep>
-[[nodiscard]] static TransformRT const& GetRootTransform(
-    ecs::PartialRegistry<TagStaticActor const, TagRigidActor const> reg,
+[[nodiscard]] static TransformRT GetRootTransform(
+    TimeIntegratorState const& intState,
+    ecs::PartialRegistry<TagStaticActor const, TagRigidActor const, CStaticPrescribedMotion const>
+        reg,
     entt::entity e,
     CRootTransform const& root) {
   static_assert(kTimeStep == TimeStep::Current || kTimeStep == TimeStep::StageStart);
   // Note: Order matters. Static links have both TagStaticActor and TagRigidActor.
   if (reg.all_of<TagStaticActor>(e)) {
-    return GetStaticColliderTransform<kTimeStep>(root);
+    return GetStaticColliderTransform<kTimeStep>(intState, reg, e, root);
   }
   if constexpr (kTimeStep == TimeStep::StageStart) {
     if (reg.all_of<TagRigidActor>(e)) {
@@ -333,6 +336,7 @@ static void UpdatePotentialColliders(
     CContactLayer const& layerColliding,
     CIslandMemberInfo const& islandColliding,
     CRootTransform const& rootColliding,
+    CTimeIntegratorState const& intState,
     CPotentialColliders<kIsSync>& potentialColliders) {
   MOCHI_PROFILE_SCOPE();
 
@@ -344,8 +348,8 @@ static void UpdatePotentialColliders(
     return;
   }
 
-  TransformRT const& worldFromColliding =
-      GetRootTransform<kTimeStep>(reg, colliding, rootColliding);
+  TransformRT const worldFromColliding =
+      GetRootTransform<kTimeStep>(intState, reg, colliding, rootColliding);
 
   // The colliding padding pads the colliding bounds, because the collider bounds are shared by all
   // colliding actors. Colliders that ignore it are culled conservatively.
@@ -465,7 +469,7 @@ static void UpdatePotentialColliders(
       auto const& contactParams = reg.storage<CContactParams>();
       for (entt::entity const collider : conservativeColliders) {
         AnyShape const worldBoundsCollider = ComputeColliderWorldBounds(
-            GetRootTransform<kTimeStep>(reg, collider, rootTransforms.get(collider)),
+            GetRootTransform<kTimeStep>(intState, reg, collider, rootTransforms.get(collider)),
             boundingVolumes.get(collider),
             contactParams.get(collider));
         if (HasOverlap(worldBoundsColliding, worldBoundsCollider)) {
@@ -796,10 +800,11 @@ MOCHI_NO_INLINE static VMatrix4x4r ComputeColliderFromCollidingMatT(
 // frame, A p - A0 p0 = (A - A0) p0 + R (p - p0) with A = [R t]. The displacement is formed from
 // differences, so it is exactly zero for a stationary pair however the query rounded positions.
 static void TransformToCollider(
-    entt::registry const& reg,
-    entt::entity collider,
+    [[maybe_unused]] entt::registry const& reg,
+    [[maybe_unused]] entt::entity collider,
     TransformRT const& worldFromColliding,
     TransformRT const& worldFromCollidingStageStart,
+    TransformRT const& worldFromCollider,
     TransformRT const& worldFromColliderStageStart,
     Span<Real3 const> samples,
     Span<Real3 const> samplesStageStart,
@@ -814,9 +819,8 @@ static void TransformToCollider(
       "TransformToCollider must only be called for rigid colliders.");
   MOCHI_ASSERT_VERBOSE(
       posColliding.size() == sampleIndices.size(), "Expected one current position per contact.");
-  VMatrix4x4r const colliderFromCollidingMatT = ComputeColliderFromCollidingMatT(
-      worldFromColliding,
-      GetRootTransform<TimeStep::Current>(reg, collider, reg.get<CRootTransform const>(collider)));
+  VMatrix4x4r const colliderFromCollidingMatT =
+      ComputeColliderFromCollidingMatT(worldFromColliding, worldFromCollider);
   VMatrix4x4r const deltaMatT = colliderFromCollidingMatT -
       ComputeColliderFromCollidingMatT(worldFromCollidingStageStart, worldFromColliderStageStart);
   // Rigid colliding actors share one sample array between time slices, so their samples don't move.
@@ -840,6 +844,7 @@ static void MapToCollider(
     entt::entity collider,
     TransformRT const& /* worldFromColliding */,
     TransformRT const& worldFromCollidingStageStart,
+    TransformRT const& /* worldFromCollider */,
     TransformRT const& worldFromColliderStageStart,
     Span<Real3 const> /* samples */,
     Span<Real3 const> samplesStageStart,
@@ -903,6 +908,7 @@ static void QueryPointCloudPointsOnly(
     entt::entity collider,
     TransformRT const& /* worldFromColliding */,
     TransformRT const& worldFromCollidingStageStart,
+    TransformRT const& /* worldFromCollider */,
     TransformRT const& worldFromColliderStageStart,
     Span<Real3 const> /* samples */,
     Span<Real3 const> samplesStageStart,
@@ -1230,6 +1236,7 @@ template <TimeStep kTimeStep, bool kAllowFarSdfQuery>
  * @param collidingBounds      Bounding shape of the colliding entity
  * @param worldFromColliding   Transform from colliding entity's local space to world space
  * @param collider             Collider entity to check against
+ * @param worldFromCollider    Transform from collider local space to world space
  * @param outResult            Output for collision detection results (one for all the partitions)
  *
  * @note If collision partitions are specified, the results are distributed across the partitions
@@ -1243,12 +1250,11 @@ static void DetectCollisionsWithSingleCollider(
     AnyShape const& collidingBounds,
     TransformRT const& worldFromColliding,
     entt::entity collider,
+    TransformRT const& worldFromCollider,
     ContactDetectionResult& outResult) {
   MOCHI_PROFILE_SCOPE();
 
   auto const& colliderContactParams = reg.get<CContactParams const>(collider);
-  auto const& worldFromCollider =
-      GetRootTransform<kTimeStep>(reg, collider, reg.get<CRootTransform const>(collider));
   auto const& colliderBounds = reg.get<CBoundingVolume const>(collider).localShape;
   AnyShape expandedColliderBounds = ExpandShape(
       colliderBounds,
@@ -1332,13 +1338,11 @@ static void EvalStageStartContactWithSingleCollider(
     TransformRT const& worldFromColliding,
     TransformRT const& worldFromCollidingStageStart,
     entt::entity collider,
+    TransformRT const& worldFromCollider,
+    TransformRT const& worldFromColliderStageStart,
     ContactDetectionResult& outResult) {
   MOCHI_PROFILE_SCOPE();
   MOCHI_ASSERT_VERBOSE(!outResult.sampleIndices.empty(), "Expected at least one collision.");
-
-  // Get the transform of the collider.
-  auto const& worldFromColliderStageStart = GetRootTransform<TimeStep::StageStart>(
-      reg, collider, reg.get<CRootTransform const>(collider));
 
   // Output container for indices. Do not pass outResult.sampleIndices, because the query expects
   // an empty container. Branches that output every contact may leave it empty.
@@ -1398,6 +1402,7 @@ static void EvalStageStartContactWithSingleCollider(
         collider,
         worldFromColliding,
         worldFromCollidingStageStart,
+        worldFromCollider,
         worldFromColliderStageStart,
         contactSamples.positions,
         contactSamplesStageStart.positions,
@@ -1492,6 +1497,7 @@ static void DetectCollisionsWithPotentialColliders(
     CContactSamples<TimeStep::StageStart> const* samplesStageStartDeformable,
     CContactPartitions const* collisionPartitions,
     CRootTransform const& rootColliding,
+    CTimeIntegratorState const& intState,
     CPotentialColliders<kIsSync>& potentialColliders,
     CActiveCollisions<kIsSync, kTimeStep>& outActiveCollisions) {
   MOCHI_PROFILE_SCOPE();
@@ -1536,13 +1542,15 @@ static void DetectCollisionsWithPotentialColliders(
       : static_cast<ContactSamples const&>(samplesCurrent);
 
   // Get the transforms of the colliding actor.
-  auto const& worldFromColliding = GetRootTransform<kTimeStep>(reg, colliding, rootColliding);
-  [[maybe_unused]] auto const& worldFromCollidingStageStart =
-      GetRootTransform<TimeStep::StageStart>(reg, colliding, rootColliding);
+  TransformRT const worldFromColliding =
+      GetRootTransform<kTimeStep>(intState, reg, colliding, rootColliding);
+  [[maybe_unused]] TransformRT const worldFromCollidingStageStart =
+      GetRootTransform<TimeStep::StageStart>(intState, reg, colliding, rootColliding);
 
   // If explicitNormals = true, we also need SDF distance and gradient evaluation at
   // TimeStep::StageStart.
   bool const explicitNormals = reg.ctx<CSimulationParams const>().experimentalEval.explicitNormals;
+  auto const& rootTransforms = reg.storage<CRootTransform>();
 
   // Prepare one narrow-phase output per collider. With one partition, this points directly to the
   // active result. With multiple partitions, it points to an aggregate result that is later
@@ -1570,13 +1578,21 @@ static void DetectCollisionsWithPotentialColliders(
   // Narrow-phase collision detection with all colliders.
   ParallelForN("DetectCollisionsWithSingleCollider", numPotentialColliders, 1, [&](int c) {
     // Perform collision detection with this collider.
+    entt::entity const collider = potentialColliders[c];
+    auto const& root = rootTransforms.get(collider);
+    // The far-SDF pass runs after finalization, at the stored step end.
+    static_assert(!kAllowFarSdfQuery || kTimeStep == TimeStep::Current);
+    TransformRT const worldFromCollider = kAllowFarSdfQuery
+        ? root.worldFromLocal
+        : GetRootTransform<kTimeStep>(intState, reg, collider, root);
     DetectCollisionsWithSingleCollider<kTimeStep, kAllowFarSdfQuery>(
         reg,
         colliding,
         samplesTimeStep,
         /*collidingBounds*/ boundingVolume.localShape,
         worldFromColliding,
-        potentialColliders[c],
+        collider,
+        worldFromCollider,
         *resultPerCollider[c]);
     if constexpr (kTimeStep == TimeStep::Current && !kAllowFarSdfQuery) {
       // For queries in TimeStep::Current and not kAllowFarSdfQuery, complete with data from
@@ -1584,6 +1600,8 @@ static void DetectCollisionsWithPotentialColliders(
       // WARNING: Do not use CBoundingVolume or CSpatialHashTable here. They contain
       // TimeStep::Current data, while this path evaluates TimeStep::StageStart.
       if (!resultPerCollider[c]->sampleIndices.empty()) {
+        TransformRT const worldFromColliderStageStart =
+            GetRootTransform<TimeStep::StageStart>(intState, reg, collider, root);
         EvalStageStartContactWithSingleCollider(
             reg,
             colliding,
@@ -1592,7 +1610,9 @@ static void DetectCollisionsWithPotentialColliders(
             samplesStageStart,
             worldFromColliding,
             worldFromCollidingStageStart,
-            potentialColliders[c],
+            collider,
+            worldFromCollider,
+            worldFromColliderStageStart,
             *resultPerCollider[c]);
       }
     }
@@ -3635,9 +3655,10 @@ void mochi::UpdateQueryActiveContactsWorldSpace(
       auto const forceIsCollidingLocal = IsQueryForceCollidingLocal(reg, colliding, isSync);
       auto const jacCollidingFromWorld = GetQueryForceJacCollidingFromWorld(reg, colliding);
       auto const& rootColliding = reg.get<CRootTransform const>(colliding);
+      auto const& intStateColliding = reg.get<CTimeIntegratorState const>(colliding);
       auto const& transformCurrent = rootColliding.worldFromLocal;
-      auto const& transformStageStart =
-          GetRootTransform<TimeStep::StageStart>(reg, colliding, rootColliding);
+      TransformRT const transformStageStart =
+          GetRootTransform<TimeStep::StageStart>(intStateColliding, reg, colliding, rootColliding);
       auto const& samples = reg.get<CContactSamples<TimeStep::Current> const>(colliding);
       auto const* samplesStageStart =
           reg.try_get<CContactSamples<TimeStep::StageStart> const>(colliding);
@@ -3646,7 +3667,7 @@ void mochi::UpdateQueryActiveContactsWorldSpace(
           reg.try_get<CFemSurfaceDiscretizationLite const>(colliding);
 
       // Fetch dtStage for velocity computation
-      real const dtStage = reg.get<CTimeIntegratorState const>(colliding).dtStage;
+      real const dtStage = intStateColliding.dtStage;
       auto const isRodActor = reg.any_of<TagRodActor>(colliding);
       MOCHI_ASSERT(
           boundaryDiscretization || surfaceDiscretization || isRodActor,
@@ -5431,6 +5452,7 @@ void mochi::contact::UpdateConservativePotentialColliders(entt::registry& reg) {
 
   // Find all static colliders
   // TODO: These rarely change. We could cache this information and update it incrementally.
+  Real2 const stageFractionRange = GetStaticColliderStageFractionRange(reg);
   for (auto&& [e, colliderInfo, root, bounds, contactParams] : reg.view<
                                                                       TagStaticActor,
                                                                       CColliderInfo const,
@@ -5440,7 +5462,12 @@ void mochi::contact::UpdateConservativePotentialColliders(entt::registry& reg) {
                                                                    .each()) {
     if (colliderInfo.type != ColliderType::None) {
       staticColliders.push_back(e);
-      staticBounds.push_back(GetStaticColliderStepBounds(root, bounds, contactParams));
+      staticBounds.push_back(GetStaticColliderStepBounds(
+          root,
+          bounds,
+          contactParams,
+          reg.try_get<CStaticPrescribedMotion const>(e),
+          stageFractionRange));
     }
   }
 
@@ -5711,12 +5738,13 @@ static void UpdateIslandColliderWorldBounds(entt::registry& reg, Span<entt::enti
     return;
   }
   auto const& roots = reg.storage<CRootTransform>();
+  auto const& intStates = reg.storage<CTimeIntegratorState>();
   auto const& boundingVolumes = reg.storage<CBoundingVolume>();
   auto const& contactParams = reg.storage<CContactParams>();
   for (entt::entity const e : actors) {
     if (isPotentialSyncCollider(e)) {
       colliderWorldBounds.get(e).shape = ComputeColliderWorldBounds(
-          GetRootTransform<kTimeStep>(reg, e, roots.get(e)),
+          GetRootTransform<kTimeStep>(intStates.get(e), reg, e, roots.get(e)),
           boundingVolumes.get(e),
           contactParams.get(e));
     }

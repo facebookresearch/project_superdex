@@ -5472,7 +5472,7 @@
 ///
 /// @note Not allowed on nested link actors (@ref mochi::Actor::GetNestedLinkActors "GetNestedLinkActors") or nested soft actors (@ref mochi::Actor::GetNestedSoftActors "GetNestedSoftActors").
 /// @note For a top-level articulated actor, the local frame is the articulation root frame, not the root link's frame.
-/// @note For dynamic actors, it does not change velocity. For static actors, it prescribes the root transform at the end of the next time step, and the actor moves there during the step. Its velocity is implied by the change of root transform over the time step. To move a static actor without velocity, also call @ref mochi::Actor::SetVelocity "SetVelocity" with zero velocity before the next step.
+/// @note For dynamic actors, it does not change velocity. For static actors, it prescribes the root transform at the end of the next time step, and the actor moves there during the step. Its velocity is implied by the change of root transform over the time step. BDF2 and BDF3 assume that this velocity also held over the earlier steps they combine, so after it changes, damping and friction against the actor are approximate for one step with BDF2 and for two with BDF3. To move a static actor without velocity, also call @ref mochi::Actor::SetVelocity "SetVelocity" with zero velocity before the next step.
 /// @note Invalidates the actor history (see @ref mochi::Actor "Actor"), except for static actors.
 ///
 
@@ -5542,7 +5542,7 @@
 /// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
 ///
 /// @note Only supported for standalone rigid actors and standalone soft actors (except ROMs).
-/// @note For static actors, the velocity is applied at the beginning of the next time step: the actor moves at constant velocity during the step, ending at its root transform (@ref mochi::Actor::SetRootTransform "SetRootTransform"). It is ignored in quasistatic steps.
+/// @note For static actors, the velocity is applied at the beginning of the next time step: the actor moves at constant velocity during the step, ending at its root transform (@ref mochi::Actor::SetRootTransform "SetRootTransform"). BDF2 and BDF3 assume that this velocity also held over the earlier steps they combine, so after it changes, damping and friction against the actor are approximate for one step with BDF2 and for two with BDF3. It is ignored in quasistatic steps. An angular velocity that turns the actor by more than pi in one step may give inconsistent results.
 /// @note For standalone soft actors, the angular velocity must be zero.
 /// @note Invalidates the actor history (see @ref mochi::Actor "Actor").
 ///

@@ -62,8 +62,10 @@ GetRigidContactFrame(ContactAssemblyReg reg, entt::entity colliding, entt::entit
     frame.pivot = reg.get<CRigidBodyInertia const>(collider).GetCenterOfMassLocal();
     frame.collidingFromPivot = comColliding - state.VGetTranslation();
   } else {
+    // Differentiable scenes require backward Euler, whose stages take the step's root transforms.
+    auto const& root = reg.get<CRootTransform const>(collider);
     auto const& transform =
-        GetStaticColliderTransform<kTimeStep>(reg.get<CRootTransform const>(collider));
+        kTimeStep == TimeStep::Current ? root.worldFromLocal : root.worldFromLocalPrev;
     std::tie(frame.rot, frame.rotT) = ToVMatrix3x3_WithTranspose(transform.GetRotation());
     frame.collidingFromPivot = comColliding - transform.VGetTranslation();
   }

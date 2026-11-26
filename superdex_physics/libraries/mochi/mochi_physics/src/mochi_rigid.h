@@ -77,6 +77,7 @@ struct CRigidExportParams : NoCopy {
   of the last step. SetRootTransform prescribes the end pose of the next step, moving worldFromLocal
   and setting worldFromLocalPrev to the end pose of the last step. SetVelocity prescribes the start
   pose of the next step: the end pose moved back by the velocity over the time step.
+  Stage poses assume constant velocity in the pivot's Lie coordinates and the shortest rotation.
 */
 struct CStaticPrescribedMotion : NoCopy {
   Real3 pivotLocal{}; // Velocity reference point: the bounding-sphere center
@@ -95,17 +96,62 @@ struct CStaticPrescribedMotion : NoCopy {
   MOCHI_STRUCT_END();
 };
 
-// Root transform of a static collider at a contact time step. Static actors are not solved, but
-// they can move with prescribed transforms; their stage start is the start of the step.
-template <TimeStep kTimeStep>
-[[nodiscard]] TransformRT const& GetStaticColliderTransform(CRootTransform const& root) {
-  static_assert(kTimeStep == TimeStep::Current || kTimeStep == TimeStep::StageStart);
-  if constexpr (kTimeStep == TimeStep::Current) {
-    return root.worldFromLocal;
-  } else {
+namespace details {
+[[nodiscard]] TransformRT InterpolateStaticColliderTransform(
+    CRootTransform const& root,
+    CStaticPrescribedMotion const& motion,
+    real fraction);
+} // namespace details
+
+// Pose of a static collider at a fraction of the step (see CStaticPrescribedMotion).
+[[nodiscard]] inline TransformRT SampleStaticColliderTransform(
+    CRootTransform const& root,
+    CStaticPrescribedMotion const& motion,
+    real fraction) {
+  if (fraction == 0_r) {
     return root.worldFromLocalPrev;
   }
+  if (fraction == 1_r || root.worldFromLocalPrev == root.worldFromLocal) {
+    return root.worldFromLocal;
+  }
+  return details::InterpolateStaticColliderTransform(root, motion, fraction);
 }
+
+// Static contact uses the consuming island's stage references, without modifying shared poses.
+template <TimeStep kTimeStep>
+[[nodiscard]] MOCHI_FORCE_INLINE TransformRT GetStaticColliderTransform(
+    TimeIntegratorState const& intState,
+    ecs::PartialRegistry<CStaticPrescribedMotion const> reg,
+    entt::entity collider,
+    CRootTransform const& root) {
+  real const fraction = GetStageFraction<kTimeStep>(intState);
+  if (fraction == 0_r) {
+    return root.worldFromLocalPrev;
+  }
+  if (fraction == 1_r || root.worldFromLocalPrev == root.worldFromLocal) {
+    return root.worldFromLocal;
+  }
+  // Only standalone static actors move during a step. Others, e.g., static articulated links, start
+  // every step at its end pose.
+  return details::InterpolateStaticColliderTransform(
+      root, reg.get<CStaticPrescribedMotion const>(collider), fraction);
+}
+
+// World-space bounds of a static collider over a step, expanded to include contact penalty falloff.
+// With prescribed motion, they sweep the stage fractions in stageFractionRange, which must contain
+// those of every island, and the rotational arc. Unbounded colliders that turn fail open, except
+// planes that turn about their normal. Without prescribed motion, they enclose the step endpoints.
+[[nodiscard]] Aabb GetStaticColliderStepBounds(
+    CRootTransform const& root,
+    CBoundingVolume const& bounds,
+    ContactParams const& contactParams,
+    CStaticPrescribedMotion const* motion,
+    Real2 stageFractionRange);
+
+// Stage fraction range of the scene's integration method. Islands run this method or fall back to
+// one whose fractions lie in [0, 1], e.g., Backward Euler in quasistatic steps and previews, so it
+// contains the fractions of every island.
+[[nodiscard]] Real2 GetStaticColliderStageFractionRange(entt::registry const& reg);
 
 /**************************************************************************
   ECS Rigid-body Actor Utils

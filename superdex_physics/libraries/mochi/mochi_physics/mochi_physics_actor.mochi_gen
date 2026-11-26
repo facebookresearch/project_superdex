@@ -143,8 +143,11 @@ class Actor [no_init, no_destruct, use_scene] {
   // the root link's frame.
   // @note For dynamic actors, it does not change velocity. For static actors, it prescribes the
   // root transform at the end of the next time step, and the actor moves there during the step.
-  // Its velocity is implied by the change of root transform over the time step. To move a static
-  // actor without velocity, also call @ref SetVelocity with zero velocity before the next step.
+  // Its velocity is implied by the change of root transform over the time step. BDF2 and BDF3
+  // assume that this velocity also held over the earlier steps they combine, so after it changes,
+  // damping and friction against the actor are approximate for one step with BDF2 and for two with
+  // BDF3. To move a static actor without velocity, also call @ref SetVelocity with zero velocity
+  // before the next step.
   // @note Invalidates the actor history (see @ref Actor), except for static actors.
   fn SetRootTransform(TransformRT const& worldFromLocal) -> void [pure, virtual, mochi_error, batchable];
 
@@ -207,7 +210,10 @@ class Actor [no_init, no_destruct, use_scene] {
   // @note Only supported for standalone rigid actors and standalone soft actors (except ROMs).
   // @note For static actors, the velocity is applied at the beginning of the next time step: the
   // actor moves at constant velocity during the step, ending at its root transform
-  // (@ref SetRootTransform). It is ignored in quasistatic steps.
+  // (@ref SetRootTransform). BDF2 and BDF3 assume that this velocity also held over the earlier
+  // steps they combine, so after it changes, damping and friction against the actor are approximate
+  // for one step with BDF2 and for two with BDF3. It is ignored in quasistatic steps. An angular
+  // velocity that turns the actor by more than pi in one step may give inconsistent results.
   // @note For standalone soft actors, the angular velocity must be zero.
   // @note Invalidates the actor history (see @ref Actor).
   fn SetVelocity(Real3 const& linearVel [units("m/s")], Real3 const& angularVel [units("rad/s")]) -> void [pure, virtual, mochi_error, batchable];

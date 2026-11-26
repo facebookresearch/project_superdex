@@ -31,6 +31,7 @@
 
 #include <mochi_core/contact/dmap.h>
 #include <mochi_core/geometry/any_shape.h>
+#include <mochi_core/geometry/geometry_utils.h>
 #include <mochi_core/geometry/grid_sdf.h>
 #include <mochi_core/linear_algebra/krylov_interop.h>
 #include <mochi_core/linear_algebra/utils/assembly.h>
@@ -106,7 +107,7 @@ template <GradTarget kGradTarget>
     ecs::OptionalTag<TagQueryActiveContacts> queryActiveContacts,
     ContactEvalConfig const& config,
     ContactSamples const& sample,
-    real dtStage,
+    CTimeIntegratorState const& intState,
     TransformRT const& pose,
     CActiveCollisions</*kIsSync*/ false, TimeStep::Current>& collisions,
     double* outEnergy,
@@ -181,7 +182,10 @@ template <GradTarget kGradTarget>
 
     // Fetch the collider's world-from-local rotation and precompute the actor COM in the collider's
     // local frame.
-    auto const& colliderTransform = GetStaticColliderTransform<GetTimeStep<kGradTarget>()>(
+    TransformRT const colliderTransform = GetStaticColliderTransform<GetTimeStep<kGradTarget>()>(
+        intState,
+        reg,
+        collision.colliderEntity,
         reg.get<CRootTransform const>(collision.colliderEntity));
     auto const trans = colliderTransform.VGetTranslation();
     auto const [rot, rotT] = ToVMatrix3x3_WithTranspose(colliderTransform.GetRotation());
@@ -201,7 +205,7 @@ template <GradTarget kGradTarget>
         contactQuery,
         contactParams,
         MakeContactEvalConfigForCollider(config, reg, collision.colliderEntity, contactParams),
-        dtStage,
+        intState.dtStage,
         sample.weights,
         comColliderSpace,
         assemEnergy,
@@ -738,7 +742,7 @@ void mochi::rigid::EntityAssemble(
         queryActiveContacts,
         config,
         *contactSample,
-        intState.dtStage,
+        intState,
         pose,
         *activeCollisions,
         energy,
@@ -1476,6 +1480,70 @@ void mochi::rigid::TransportGradient(
   TransportInputOfLieJacobian(
       delta.MiddleRows<RigidSize::kDAll>(dofOffset.dofsOffset, RigidSize::kDAll),
       outGradient.MiddleRows<RigidSize::kDAll>(dofOffset.dofsOffset, RigidSize::kDAll).Transpose());
+}
+
+TransformRT mochi::details::InterpolateStaticColliderTransform(
+    CRootTransform const& root,
+    CStaticPrescribedMotion const& motion,
+    real fraction) {
+  Vec4r linearDelta;
+  Vec4r angularDelta;
+  Vec4r const pivotLocal = ToSimd(motion.pivotLocal, 1_r);
+  FiniteDifferenceRigidTransformLie(
+      1_r, root.worldFromLocal, root.worldFromLocalPrev, pivotLocal, linearDelta, angularDelta);
+  return IntegrateRigidTransformLie(
+      fraction, root.worldFromLocalPrev, pivotLocal, linearDelta, angularDelta);
+}
+
+Aabb mochi::GetStaticColliderStepBounds(
+    CRootTransform const& root,
+    CBoundingVolume const& bounds,
+    ContactParams const& contactParams,
+    CStaticPrescribedMotion const* motion,
+    Real2 stageFractionRange) {
+  TransformRT const first = motion
+      ? SampleStaticColliderTransform(root, *motion, stageFractionRange[0])
+      : root.worldFromLocalPrev;
+  TransformRT const last = motion
+      ? SampleStaticColliderTransform(root, *motion, stageFractionRange[1])
+      : root.worldFromLocal;
+  Aabb stepBounds = GetAabb(TransformShape(last, bounds.localShape));
+  if (first != last) {
+    stepBounds = EncloseShapes(stepBounds, GetAabb(TransformShape(first, bounds.localShape)));
+  }
+  if (motion && root.worldFromLocal.GetRotation() != root.worldFromLocalPrev.GetRotation()) {
+    Quaternion const deltaRotation =
+        root.worldFromLocal.GetRotation() * root.worldFromLocalPrev.GetRotation().GetConjugate();
+    Real3 const rotationVector = deltaRotation.ToRotationVector();
+    real const angle = Norm(rotationVector) * (stageFractionRange[1] - stageFractionRange[0]);
+    Sphere const sphere = GetBoundingSphere(bounds.localShape);
+    real const radius = sphere.radius + Norm(sphere.center - motion->pivotLocal);
+    if (IsFinite(radius)) {
+      // Every point deviates from its endpoint chord by at most the rotational arc's sagitta.
+      real const sagitta =
+          angle < 2_r * kPI ? 2_r * radius * Sqr(Sin(0.25_r * angle)) : 2_r * radius;
+      stepBounds = ExpandShape(stepBounds, sagitta);
+      Aabb const pivotBounds = EncloseShapes(
+          GetAabb(Sphere{first.TransformPoint(motion->pivotLocal), radius}),
+          GetAabb(Sphere{last.TransformPoint(motion->pivotLocal), radius}));
+      stepBounds = Aabb{
+          Max(stepBounds.GetMin(), pivotBounds.GetMin()),
+          Min(stepBounds.GetMax(), pivotBounds.GetMax())};
+    } else {
+      auto const* plane = std::get_if<Plane>(&bounds.localShape);
+      // Only an exactly normal-aligned turn certifies a plane's endpoint half-space bounds.
+      if (!plane ||
+          Cross(rotationVector, root.worldFromLocalPrev.GetRotation() * plane->normal) != Real3{}) {
+        stepBounds = GetAabb(Sphere{Real3{}, kInf});
+      }
+    }
+  }
+  return ExpandColliderBoundsForContact(stepBounds, contactParams);
+}
+
+Real2 mochi::GetStaticColliderStageFractionRange(entt::registry const& reg) {
+  return GetTimeIntegratorParams(reg.ctx<CSimulationParams const>().integrationMethod)
+      .StageFractionRange();
 }
 
 namespace mochi::rigid {

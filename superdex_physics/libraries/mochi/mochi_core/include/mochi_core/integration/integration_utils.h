@@ -104,6 +104,16 @@ struct TimeIntegratorParams final {
     return StageEndFraction(stage) - beta * A(stage, stage);
   }
 
+  // Smallest stage-start and largest stage-end fractions over all stages, including [0, 1].
+  [[nodiscard]] Real2 StageFractionRange() const {
+    Real2 range{0_r, 1_r};
+    for (int stage = 0; stage < numStages; ++stage) {
+      range[0] = Min(range[0], StageStartFraction(stage));
+      range[1] = Max(range[1], StageEndFraction(stage));
+    }
+    return range;
+  }
+
   int const numSteps = {}; // Number of steps. >1 for multi-step methods.
   RowVector<real> const alpha = {}; // 'alpha' coefficients for multi-step methods.
   real const beta = {}; // 'beta' coefficient for multi-step methods.

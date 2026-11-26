@@ -22,6 +22,7 @@
 #include "mochi_differentiable.h"
 #include "mochi_group.h"
 #include "mochi_island.h"
+#include "mochi_rigid.h"
 #include "mochi_scene_recorder.h"
 
 #include <mochi_core/geometry/geometry_utils.h>
@@ -92,8 +93,12 @@ static void AddWakeUpRegionForStaticCollider(entt::registry& reg, entt::entity e
     return; // Cannot touch anything
   }
   // Same swept bounds as the broadphase uses for static colliders.
-  reg.ctx<CWakeUpRequests>().regions.push_back(
-      GetStaticColliderStepBounds(*root, *bounds, *contactParams));
+  reg.ctx<CWakeUpRequests>().regions.push_back(GetStaticColliderStepBounds(
+      *root,
+      *bounds,
+      *contactParams,
+      reg.try_get<CStaticPrescribedMotion const>(e),
+      GetStaticColliderStageFractionRange(reg)));
 }
 
 static void AddWakeUpRegionsForStaticDescendants(entt::registry& reg, entt::entity e) {

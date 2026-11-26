@@ -66,6 +66,7 @@ struct CIslandDofInfo;
 struct CIslandMemberInfo;
 struct CQueryContactSamples;
 struct CQuerySdfSurface;
+struct CStaticPrescribedMotion;
 
 /**************************************************************************
   ECS Collider Components
@@ -787,6 +788,7 @@ using ContactAssemblyRegWith = ecs::PartialRegistry<
     TagUseDeformableContactSkin const,
     TagRodActor const,
     CRootTransform const,
+    CStaticPrescribedMotion const,
     CRigidState<TimeStep::Current> const,
     CRigidState<TimeStep::StageStart> const,
     CRigidBodyInertia const,
@@ -1196,6 +1198,8 @@ void AddStageStartCollisionDetection(
     entt::registry const& reg,
     entt::entity e,
     CContactSamples<TimeStep::Current> const& samples,
+    CRootTransform const& root,
+    CTimeIntegratorState const& intState,
     CActiveCollisions<kIsSync, TimeStep::StageStart> const& stageStartCollisions,
     CActiveCollisions<kIsSync, TimeStep::Current>& outCurrentCollisions,
     CContactCorrespondence<kIsSync>& correspondence);
@@ -1358,19 +1362,6 @@ auto ExpandColliderBoundsForContact(
     ContactParams const& colliderContactParams) {
   // Eroding collider bounds is not conservative when padding a rotated colliding volume.
   return ExpandShape(colliderBounds, Max(0_r, GetColliderPadding(colliderContactParams)));
-}
-
-// World-space bounds of a static collider over a step, swept from its previous to its current root
-// transform and expanded to include contact penalty falloff.
-[[nodiscard]] inline Aabb GetStaticColliderStepBounds(
-    CRootTransform const& root,
-    CBoundingVolume const& bounds,
-    ContactParams const& contactParams) {
-  return ExpandColliderBoundsForContact(
-      EncloseShapes(
-          GetAabb(TransformShape(root.worldFromLocalPrev, bounds.localShape)),
-          GetAabb(TransformShape(root.worldFromLocal, bounds.localShape))),
-      contactParams);
 }
 
 // Warn if an entity has moved outside of its own CConservativeStepBounds.

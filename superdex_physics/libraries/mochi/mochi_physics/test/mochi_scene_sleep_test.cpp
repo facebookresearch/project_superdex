@@ -1288,6 +1288,22 @@ static DynamicArray<WakeCase> const& GetWakeCases() {
        [](WakeContext& c) {
          c.ground->SetRootTransform(TransformRT{Real3{0_r, -0.001_r, 0_r}}, test::ExpectOK{});
        }},
+      {"Static_DIRK23Extrapolation",
+       kRigidOnly,
+       OnRepeat::WakeUp,
+       [](WakeContext& c) {
+         c.ground->SetRootTransform(TransformRT{Real3{1.5_r, 0_r, 0_r}}, test::ExpectOK{});
+       },
+       [](WakeContext& c) {
+         c.scene->SetGravity({});
+         test::SetSceneIntegrationMethod(c.scene, IntegrationMethod::DIRK23);
+         RigidActorParams params;
+         params.isStatic = true;
+         params.shape = test::CreateUnitCubeTetMeshShape(c.scene->GetContext());
+         params.colliderType = ColliderType::Box;
+         params.worldFromLocal.SetTranslation(Real3{0.5_r, 0_r, 0_r});
+         c.ground = c.scene->CreateRigidActor(params, test::ExpectOK{});
+       }},
       {"Ground_SetVelocity",
        kAll,
        OnRepeat::WakeUp,
@@ -1446,10 +1462,22 @@ TEST_F(SceneSleep, MovingStaticActorNearbyWakesActor) {
 
 TEST_F(SceneSleep, ChangingDistantStaticActorLeavesActorAsleep) {
   Actor* farBox = CreateStaticBox(Real3{5_r, 0_r, 5_r}, 0.2_r);
+  auto const shape = _mochiContext->CreatePlaneShape(Real3{0_r, 1_r, 0_r}, 0_r, test::ExpectOK{});
+  MOCHI_DEFER(_mochiContext->ReleaseShape(shape));
+  RigidActorParams params;
+  params.isStatic = true;
+  params.shape = shape;
+  params.worldFromLocal = TransformRT{Real3{0_r, -10_r, 0_r}};
+  Actor* farPlane = _scene->CreateRigidActor(params, test::ExpectOK{});
   Actor const* actor = CreateTestActor(ActorType::Rigid);
   ASSERT_NO_FATAL_FAILURE(StepUntilAsleep(actor));
   farBox->SetContactParams(farBox->GetContactParams(test::ExpectOK{}), test::ExpectOK{});
   farBox->SetRootTransform(TransformRT{Real3{6_r, 0_r, 6_r}}, test::ExpectOK{});
+  Step();
+  EXPECT_FALSE(IsAwake(actor));
+
+  farPlane->SetRootTransform(
+      TransformRT{Quaternion::RotationY(0.5_r), Real3{0_r, -10_r, 0_r}}, test::ExpectOK{});
   Step();
   EXPECT_FALSE(IsAwake(actor));
 }
