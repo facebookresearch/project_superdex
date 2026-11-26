@@ -67,7 +67,8 @@ inline void InvalidateConfigDependentActorConvergenceWeights(
     entt::registry& reg,
     entt::entity actor) {
   if (reg.any_of<TagArticulatedActor, TagRigidActor, TagRomActor, TagRodActor>(actor)) {
-    // - Articulated actors have configuration-dependent Jacobian and generalized masses.
+    // - Articulated actors have configuration-dependent Jacobian and generalized masses, and their
+    //   weights count joint inertia only in dynamic steps.
     // - Rigid actors have rotation-dependent world-frame MOI.
     // - ROM actors may have configuration-dependent Jacobian and generalized masses.
     // - Rod actors have configuration-dependent curvature.

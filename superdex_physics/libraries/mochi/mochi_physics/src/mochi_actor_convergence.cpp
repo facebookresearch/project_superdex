@@ -82,6 +82,28 @@
 //   inertial twist weight, eliminating the curvature-based branch.
 // - Introduce stiffness-based weights for quasi-static simulation, defining characteristic forces
 //   from elastic and geometric properties.
+// - Use 3x3 convergence weights for spherical joints. Per-DoF weights can't represent an
+//   anisotropic M_block whose principal axes are oblique to the DoF axes, e.g. a slender link
+//   pointing between two axes: residuals that differ only in the signs of their components score
+//   the same, though in the per-joint inertia model (other DoFs' accelerations held fixed) the
+//   mass-weighted RMS linear acceleration they cause across the subtree can differ by up to √κ
+//   for positive-definite M_block, with κ the ratio of its largest to smallest principal moment.
+//   For m_subtree > 0 and Q_type > 0, consider scoring the block's squared norm as
+//   αᵀ·M_block·α / (m_subtree·aRef²) times its DoFs' mean share Σ Q_c,i / (3·Q_type), with α
+//   solving (M_block + D·I)·α = r on M_block's positive modes (D = 0 in quasi-static steps), which
+//   matches the current weights on nonzero isotropic blocks. Null modes, e.g. rotation about the
+//   line from the joint to an offset point mass, and massless subtrees need a separate residual
+//   scale. The block weights must reach the per-actor Newton norm and the weighted Krylov stopping
+//   criterion, through forward and adjoint Newton assembly. Free-joint and rigid-actor rotations
+//   share the limitation.
+// - Normalize articulated DoFs with Q_c = 0 and joint inertia D > 0 in dynamic steps, e.g. a
+//   massless subtree. For a prismatic DoF, an acceleration error of aRef gives an inertial force
+//   residual D·aRef, which unit weight leaves unscaled: at default gravity and D = 1e-5 kg, it is
+//   about 1e-4 N and passes Newton's default absolute tolerance (1e-3) on its own. Consider D·aRef
+//   as the translational force scale, and decide whether to include it in Q_type, which can
+//   rescale other translation weights, or to normalize separately, even if Q_type = 0. Rotations
+//   have no link radius of gyration to turn aRef into an angular acceleration: choose a reference
+//   angular acceleration αRef, with torque scale D·αRef.
 
 namespace mochi {
 
@@ -495,8 +517,9 @@ template <int kBlockSize>
  * @brief Compute per-DoF residual weights for an articulated actor.
  *
  * @details Joint-space DoFs with configuration-dependent M(q) = Jᵀ·H·J.
- * - Weight: w = 1/(Q_type · Q_c), where Q_c = aRef·√m_subtree·(√M_block)_{ii} and Q_type = Σ Q_c
- *   over all DoFs of the same type (translational or rotational).
+ * - Weight: w = g²/(Q_type · Q_c), where Q_c = aRef·√m_subtree·(√M_block)_{ii}, Q_type = Σ Q_c over
+ *   all DoFs of the same type (translational or rotational), and g accounts for joint inertia
+ *   (step 5).
  * - Block-wise decomposition (trans/rot separately) avoids unit mixing in matrix sqrt.
  * - ||r||_W = O(1) under characteristic loading.
  *
@@ -518,6 +541,13 @@ template <int kBlockSize>
  *    enables a robust formulation even with massless dummy links.
  * 4. Characteristic Formula: We compute the principal matrix square root per block.
  *    Q_c,i = aRef * m_i¹/² * (M_block¹/²)_{ii}
+ * 5. Joint Inertia: Q_c and Q_type count only the links' inertia. A joint's inertia D (e.g.,
+ *    actuator armature) takes its share of a residual, so only the fraction
+ *    g_i = (M_block)_{ii} / ((M_block)_{ii} + D) accelerates the links, and the weight scales by
+ *    g_i². This is exact for single-DoF joints in the per-joint model (other joints' accelerations
+ *    held fixed), and approximates spherical joints per axis with the block's diagonal entries. D
+ *    counts only in dynamic steps: in quasi-static ones, the weights only scale static loads, which
+ *    joint inertia doesn't bear.
  */
 static void GetArticulatedActorResidualWeights(
     entt::registry const& reg,
@@ -527,30 +557,35 @@ static void GetArticulatedActorResidualWeights(
   MOCHI_ASSERT_VERBOSE(reg.all_of<TagArticulatedActor>(actor), "Expected articulated actor.");
   MOCHI_ASSERT_VERBOSE(aRef > 0_r, "Characteristic acceleration must be positive.");
 
-  // Per-type normalization: w_j = 1/(Q_type · Q_c,j), yielding O(1) weighted norm.
+  // Per-type normalization: w_j = g_j²/(Q_type · Q_c,j), yielding O(1) weighted norm.
   auto const& groupMembers = reg.get<CGroupMembers>(actor);
   auto const& parents = reg.get<CArticulatedParents>(actor);
   auto const* joints = reg.get<CArticulatedBodyShape const>(actor).shape->GetJointsData();
   auto const& jacobian = reg.get<CArticulatedJacobian>(actor).value;
   auto const& linkTransforms = reg.get<CArticulatedLinkTransforms<TimeStep::Current>>(actor);
   auto const& dofInfo = reg.get<CActorDofInfo>(actor);
+  auto const& jointInertias = reg.get<CArticulatedInertiaParams const>(actor);
+  bool const isDynamicStep = IsFinite(reg.get<CTimeIntegratorState const>(actor).dtStage);
   int const numDofs = dofInfo.dofsSize;
 
-  // Stack allocator for temporaries (subtree inertias + Qc per DoF).
+  // Stack allocator for temporaries (subtree inertias + Qc and g per DoF).
   constexpr std::size_t kStackSizeBytes = 16 * 1024;
   MOCHI_FILO_STACK_ALLOCATOR(allocator, kStackSizeBytes);
 
   auto const subtrees =
       ComputeSubtreeInertias(reg, groupMembers, parents, linkTransforms, &allocator);
 
-  // Compute Qc per DoF and accumulate per-type totals. Only the joints of the links have DoFs.
+  // Compute Qc and g per DoF, and accumulate per-type totals. Only the links' joints have DoFs.
   DynamicArray<real> Qc(&allocator);
   Qc.resize_noinit(numDofs);
+  DynamicArray<real> linkFractions(&allocator);
+  linkFractions.resize_noinit(numDofs);
   real Qtrans = 0_r;
   real Qrot = 0_r;
   for (int link = 0; link < jacobian.NumLinks(); ++link) {
     auto const& joint = joints->dofInfo[link];
     real const sqrtSubtreeMass = Sqrt(subtrees[link].mass);
+    real const jointInertia = isDynamicStep ? jointInertias[link] : 0_r;
     // The joint's own DoFs are the trailing columns of the link's block.
     auto const linkBlock = jacobian.Link(link).block;
     int const firstJointCol = linkBlock.Cols() - joint.GetSize();
@@ -562,6 +597,9 @@ static void GetArticulatedActorResidualWeights(
       for (int d = 0; d < kBlockSize; ++d) {
         Qc[offset + d] = aRef * sqrtSubtreeMass * sqrtDiag[d];
         Qtype += Qc[offset + d];
+        linkFractions[offset + d] = (jointInertia > 0_r && block(d, d) > 0_r)
+            ? block(d, d) / (block(d, d) + jointInertia)
+            : 1_r;
       }
     };
 
@@ -586,7 +624,8 @@ static void GetArticulatedActorResidualWeights(
   auto fillWeights = [&](int offset, int size, real Qtype) {
     for (int d = 0; d < size; ++d) {
       int const idx = offset + d;
-      outWeights(idx) = (Qtype > 0_r && Qc[idx] > 0_r) ? (1_r / (Qtype * Qc[idx])) : 1_r;
+      outWeights(idx) =
+          (Qtype > 0_r && Qc[idx] > 0_r) ? (Sqr(linkFractions[idx]) / (Qtype * Qc[idx])) : 1_r;
     }
   };
   for (auto const& joint : joints->dofInfo) {
