@@ -296,10 +296,21 @@ namespace {
 struct CColliderWorldBounds {
   AnyShape shape;
   // Whether some actor's CConservativePotentialColliders</*kIsSync*/ true> holds this collider.
-  // Only then does collision detection read `shape`, so only then does its island compute it.
+  // Only then does collision detection read `shape`, so only then does its island compute it and
+  // update the collider's mapped SDF (see CSdfMapping).
   bool isPotentialSyncCollider = false;
 };
 } // namespace
+
+// Whether some actor's sync conservative potential colliders hold the collider [e]. Async lists
+// need no flag: they hold only static colliders, as DetectCollisionsWithPotentialColliders asserts,
+// and mapped SDFs exist only on soft actors, which are never static.
+[[nodiscard]] static bool IsPotentialSyncCollider(
+    entt::storage<CColliderWorldBounds> const& colliderWorldBounds,
+    entt::entity e) {
+  auto const* bounds = TryGet(colliderWorldBounds, e);
+  return bounds && bounds->isPotentialSyncCollider;
+}
 
 // A collider's world-space bounds, padded for contact.
 [[nodiscard]] static AnyShape ComputeColliderWorldBounds(
@@ -5591,9 +5602,14 @@ void mochi::contact::FlagPotentialSyncColliders(entt::registry& reg) {
 void mochi::UpdateStageStartDataPipeline(
     entt::registry& reg,
     CIslandDescendants const& descendants) {
-  // Update stage-start map for soft actors that have a mapped SDF.
-  ecs::InvokeForEach(&soft::UpdateMap<TimeStep::StageStart>, reg, descendants.softActors);
-  ecs::InvokeForEach(&rom::UpdateMap<TimeStep::StageStart>, reg, descendants.softActors);
+  // Update the stage-start maps that collision detection reads (see CSdfMapping).
+  auto const& colliderWorldBounds = std::as_const(reg).storage<CColliderWorldBounds>();
+  for (entt::entity const e : descendants.softActors) {
+    if (IsPotentialSyncCollider(colliderWorldBounds, e)) {
+      ecs::TryInvokeOnEntity(&soft::UpdateMap<TimeStep::StageStart>, reg, e);
+      ecs::TryInvokeOnEntity(&rom::UpdateMap<TimeStep::StageStart>, reg, e);
+    }
+  }
 
   // Update stage-start contact samples of soft and compound actors (with a tet-mesh skin).
   // TODO: When the Newton solve starts at the stage-start state, the initial current contact
@@ -5689,8 +5705,7 @@ template <TimeStep kTimeStep>
 static void UpdateIslandColliderWorldBounds(entt::registry& reg, Span<entt::entity const> actors) {
   auto& colliderWorldBounds = reg.storage<CColliderWorldBounds>();
   auto const isPotentialSyncCollider = [&](entt::entity e) {
-    auto const* worldBounds = TryGet(colliderWorldBounds, e);
-    return worldBounds && worldBounds->isPotentialSyncCollider;
+    return IsPotentialSyncCollider(colliderWorldBounds, e);
   };
   if (std::ranges::none_of(actors, isPotentialSyncCollider)) {
     return;
@@ -5759,17 +5774,18 @@ void mochi::CollisionDetectionPipeline(entt::registry& reg, CIslandDescendants c
         sem, "rod::UpdateBounds", &rod::UpdateBounds<kTimeStep>, reg, descendants.rodActors);
   }
 
-  // Update Mapped SDFs
+  // Update the mapped SDFs that collision detection reads (see CSdfMapping).
   {
-    MOCHI_PROFILE_SCOPE_N("InvokeForEach UpdateMap");
-    ecs::ScheduleInvokeForEach(
-        sem,
-        "soft::UpdateMap<kTimeStep>",
-        &soft::UpdateMap<kTimeStep>,
-        reg,
-        descendants.softActors);
-    ecs::ScheduleInvokeForEach(
-        sem, "rom::UpdateMap<kTimeStep>", &rom::UpdateMap<kTimeStep>, reg, descendants.softActors);
+    MOCHI_PROFILE_SCOPE_N("UpdateMap");
+    auto const& colliderWorldBounds = std::as_const(reg).storage<CColliderWorldBounds>();
+    for (entt::entity const e : descendants.softActors) {
+      if (IsPotentialSyncCollider(colliderWorldBounds, e)) {
+        ecs::TryScheduleInvokeOnEntity(
+            sem, "soft::UpdateMap<kTimeStep>", &soft::UpdateMap<kTimeStep>, reg, e);
+        ecs::TryScheduleInvokeOnEntity(
+            sem, "rom::UpdateMap<kTimeStep>", &rom::UpdateMap<kTimeStep>, reg, e);
+      }
+    }
   }
 
   // Update spatial hash tables for point-cloud contact. This is a collider-side

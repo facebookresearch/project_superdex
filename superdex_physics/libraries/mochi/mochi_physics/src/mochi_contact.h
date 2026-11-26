@@ -113,6 +113,17 @@ struct CActorAsyncContactSemaphore final : NoCopy {
  * @brief Denotes an entity as requiring SDF samples from all colliders at least maxDistance away.
  * This is used by dynamic hyper reduction (and will likely be used by other systems in the future)
  * to query the SDF (or a lower bound thereof) in order to determine distance to closest surface.
+ *
+ * @warning Far SDF queries can race or read stale state:
+ * - Each island's far pass reads colliders of other islands while those islands step (a data race).
+ *   Dynamic ones also trip the verbose assert "Wrong contact type for this collider".
+ * - It uses the last detection pass's maps, samples and bounds, which can differ from the step-end
+ *   state if the step doesn't end at the integrator's last stage or the last stage diverged.
+ * - After a conservative step-bound misprediction, it can sample a map not updated since its
+ *   collider was last listed (see @ref CSdfMapping), in sleeping islands too.
+ *
+ * @todo Address this by running the far pass on step-end samples, bounds and maps against every
+ * collider within maxDistance, without reading islands that are still stepping.
  */
 struct CRequiresFarSdfEvaluation {
   real maxDistance = 0.0_r;
@@ -129,7 +140,11 @@ struct CSdfColliderPending final : SdfCollider, NoCopy {
   std::shared_ptr<GridSdfShape const> gridSdfShape;
 };
 
-/** @brief Mappings for an SDF collider. */
+/**
+ * @brief Mappings for an SDF collider. A mapping is current only while some actor's sync
+ * conservative potential colliders hold the collider; far SDF queries may read it otherwise (see
+ * @ref CRequiresFarSdfEvaluation).
+ */
 template <TimeStep kStep>
 struct CSdfMapping : std::unique_ptr<BaseMap>, NoCopy {};
 
@@ -1398,8 +1413,8 @@ namespace mochi::contact {
 
 // Flags the potential sync colliders, the colliders that some actor's
 // CConservativePotentialColliders</*kIsSync*/ true> holds, so that their islands compute their
-// contact bounds. UpdateConservativePotentialColliders calls it once it has emplaced their bounds;
-// call it again after editing sync lists.
+// contact bounds and update their mapped SDFs. UpdateConservativePotentialColliders calls it once
+// it has emplaced their bounds; call it again after editing sync lists.
 void FlagPotentialSyncColliders(entt::registry& reg);
 
 // Call this at the beginning of each simulation step to update CConservativePotentialColliders for

@@ -239,9 +239,9 @@ void UpdateSoftMass(
     CMassMatrix* outMassMatrix,
     CActiveVolumeElements const* activeVolElems = nullptr);
 
-// Update CSdfMapping based on the deformation of the soft mesh. Must be called for all soft actors
-// on each assembly (with kTimeStep = TimeStep::Current), and at the beginning of each integration
-// stage (with kTimeStep = TimeStep::StageStart) when ExperimentalEvalParams.explicitNormals = true.
+// Update CSdfMapping from the deformation of the soft mesh: on each assembly with
+// kTimeStep = TimeStep::Current, and at the beginning of each integration stage with
+// kTimeStep = TimeStep::StageStart.
 template <TimeStep kTimeStep>
 void UpdateMap(
     ecs::RequiredTag<TagSoftActor>,

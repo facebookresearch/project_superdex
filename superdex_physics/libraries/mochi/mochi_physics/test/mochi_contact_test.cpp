@@ -21,6 +21,7 @@
 #include <mochi_core/geometry/tetrahedral_mesh.h>
 #include <mochi_core/geometry/triangular_mesh.h>
 #include <mochi_core/linear_algebra/utils/matrix_conversions.h>
+#include <mochi_core/utils/container_utils.h>
 #include <mochi_core/utils/quaternion_utils.h>
 #include <mochi_core/utils/rand_utils.h>
 #include <mochi_core/utils/rigid_body_utils.h>
@@ -754,6 +755,120 @@ INSTANTIATE_TEST_SUITE_P(
         FarCollider::Mesh,
         FarCollider::GridSdf),
     FarColliderName);
+
+// A soft collider skips its map updates while no actor lists it as a potential collider, and
+// updates its maps again once an actor does: a cube in contact range, or a far-SDF actor beyond
+// contact range but within its far distance, whose conservative bounds include that distance.
+enum class MapLister { NearbyCube, FarSdfActor };
+
+class MochiMappedSdfUpdates : public test::MochiSceneTestBase,
+                              public ::testing::WithParamInterface<MapLister> {
+ protected:
+  static constexpr real kCubeSide = 0.2_r;
+  // Map error [m] below which a map is current and above which it is stale.
+  static constexpr real kMapErrorTol = 1e-3_r;
+
+  // Creates a soft cube with kCubeSide [m] sides and its minimum corner at [corner]. Without
+  // recentering, its displacements hold its whole motion since creation.
+  Actor* CreateSoftCube(Real3 const& corner, ColliderType colliderType) {
+    auto [coordinates, connectivity] =
+        test::CreateMinimalTetMeshUnitGrid(Real3{kCubeSide, kCubeSide, kCubeSide}, Int3{3, 3, 3});
+    SoftActorParams params;
+    params.shape = _mochiContext->CreateTetMeshShape(
+        Flatten(MakeSpan(coordinates)), Flatten(MakeSpan(connectivity)), ExpectOK{});
+    params.worldFromLocal.SetTranslation(corner);
+    ExperimentalSoftActorParams experimentalParams;
+    experimentalParams.colliderType = colliderType;
+    experimentalParams.useRecentering = false;
+    return CreateSoftActor(_scene, params, experimentalParams, ExpectOK{});
+  }
+
+  // Whether some actor's conservative potential colliders hold [collider]. Only sync lists can hold
+  // a soft actor: async lists hold only static colliders.
+  bool IsPotentialCollider(entt::entity collider) const {
+    bool isListed = false;
+    GetRegistry().view<CConservativePotentialColliders</*kIsSync*/ true> const>().each(
+        [&](auto const& colliders) { isListed = isListed || Contains(colliders, collider); });
+    return isListed;
+  }
+
+  // The distance [m] from the rest barycenter of the tet of [e] nearest the cube's center to where
+  // its kTimeStep map takes the tet's kTimeStep barycenter, or infinity if the map finds no tet. A
+  // map that missed less than half a cube side of motion still contains that barycenter.
+  template <TimeStep kTimeStep>
+  real GetMapError(entt::entity e) const {
+    auto const& reg = GetRegistry();
+    auto const& mesh = *reg.get<CTetrahedralMesh const>(e).mesh;
+    Real3 const center = mesh.GetAabb().GetCenter();
+    int tet = 0;
+    for (int i = 1; i < isize(mesh.GetElementConnectivity()); ++i) {
+      if (NormSqr(mesh.GetElementBarycenter(i) - center) <
+          NormSqr(mesh.GetElementBarycenter(tet) - center)) {
+        tet = i;
+      }
+    }
+
+    auto const displacements = Unflatten<Real3 const>(
+        reg.get<CDisplacementSlice<real, kTimeStep> const>(e).value.GetConstSpan());
+    Real3 barycenter{};
+    for (int const node : mesh.GetElementConnectivity()[tet]) {
+      barycenter += 0.25_r * (mesh.GetNodeCoordinates()[node] + displacements[node]);
+    }
+
+    int const index = 0;
+    DynamicArray<Real3> mapped;
+    DynamicArray<int> indices;
+    reg.get<CSdfMapping<kTimeStep> const>(e)->MapPoints(
+        MakeSingletonConstSpan(barycenter),
+        MakeSingletonConstSpan(index),
+        mapped,
+        indices,
+        nullptr,
+        nullptr);
+    return mapped.empty() ? kInf : Norm(mapped[0] - mesh.GetElementBarycenter(tet));
+  }
+};
+
+TEST_P(MochiMappedSdfUpdates, SkipsCollidersThatNoActorLists) {
+  // A cube with a mapped SDF falling through empty space.
+  Actor* const cube = CreateSoftCube(Real3{0_r, 1_r, 0_r}, ColliderType::Sdf);
+  entt::entity const e = GetEntity(cube);
+  for (int step = 0; step < 10; ++step) {
+    _scene->Step(0.01_r);
+  }
+  EXPECT_FALSE(IsPotentialCollider(e));
+
+  // No actor lists the cube, so both its maps kept their rest pose while it fell about 5 cm.
+  for (real const error :
+       {GetMapError<TimeStep::Current>(e), GetMapError<TimeStep::StageStart>(e)}) {
+    EXPECT_GT(error, kMapErrorTol);
+    EXPECT_LT(error, 0.5_r * kCubeSide);
+  }
+
+  // An actor that lists the cube makes its maps follow it again.
+  Real3 const cubeMin = cube->GetAabbWorld(ExpectOK{}).GetMin();
+  if (GetParam() == MapLister::NearbyCube) {
+    CreateSoftCube(cubeMin - Real3{0_r, kCubeSide + 0.001_r, 0_r}, ColliderType::None);
+  } else {
+    // 1.5 m below: beyond contact range and a new actor's first-step padding, within its 2 m far
+    // distance.
+    Actor* const farActor =
+        CreateSoftCube(cubeMin - Real3{0_r, kCubeSide + 1.5_r, 0_r}, ColliderType::None);
+    GetRegistry().emplace<CRequiresFarSdfEvaluation>(GetEntity(farActor), 2_r);
+  }
+  _scene->Step(0.01_r);
+  ASSERT_TRUE(IsPotentialCollider(e));
+  EXPECT_LT(GetMapError<TimeStep::Current>(e), kMapErrorTol);
+  EXPECT_LT(GetMapError<TimeStep::StageStart>(e), kMapErrorTol);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    Listers,
+    MochiMappedSdfUpdates,
+    ::testing::Values(MapLister::NearbyCube, MapLister::FarSdfActor),
+    [](::testing::TestParamInfo<MapLister> const& info) {
+      return info.param == MapLister::NearbyCube ? "NearbyCube" : "FarSdfActor";
+    });
 
 // Central-difference step that balances truncation (∝ h²) and rounding (∝ ε / h) errors, and a
 // tolerance that scales like the resulting error (∝ ε^(2/3)).

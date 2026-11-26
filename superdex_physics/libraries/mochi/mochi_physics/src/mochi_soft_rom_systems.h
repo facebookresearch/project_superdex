@@ -33,9 +33,8 @@
 
 namespace mochi::rom {
 
-// Update CSdfMapping based on the ROM state. Must be called for all ROM actors on each assembly
-// (with kTimeStep = TimeStep::Current), and at the beginning of each integration stage (with
-// kTimeStep = TimeStep::StageStart) when ExperimentalEvalParams.explicitNormals = true.
+// Update CSdfMapping from the ROM state: on each assembly with kTimeStep = TimeStep::Current, and
+// at the beginning of each integration stage with kTimeStep = TimeStep::StageStart.
 template <TimeStep kTimeStep>
 void UpdateMap(
     ecs::RequiredTag<TagRomActor>,

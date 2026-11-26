@@ -39,7 +39,8 @@ class BaseMap {
     return _numDoFs;
   }
 
-  // This function receives a vector of dofs, and updates the mapping.
+  // This function receives a vector of dofs, and updates the mapping. The mapping depends only on
+  // [dofs], not on earlier updates.
   virtual void UpdateMap(Span<real const> dofs) = 0;
 
   // This function receives a vector of query points in deformed space (points) and their
