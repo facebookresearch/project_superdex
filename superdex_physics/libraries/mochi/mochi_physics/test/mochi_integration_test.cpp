@@ -57,6 +57,43 @@ static auto GetTestParams() {
       {{0.25_r, 0.75_r}});
 }
 
+TEST(TimeIntegratorState, PrescribedFractionsFollowAlgebraicStageReferences) {
+  auto check = [](TimeIntegratorParams const& params) {
+    real base = 1_r;
+    for (int step = 0; step < params.numSteps; ++step) {
+      base -= (step + 1) * params.alpha(step);
+    }
+    std::array<real, kMaxIntegrationStages> stageEnds{};
+    real constexpr h = 0.02_r;
+    for (int stage = 0; stage < params.numStages; ++stage) {
+      TimeIntegratorState state;
+      state.Set(params, stage, h);
+      real stageStart = base;
+      for (int previous = 0; previous < stage; ++previous) {
+        stageStart += state.aTilde(previous) * (stageEnds[previous] - base);
+      }
+      stageEnds[stage] = stageStart + state.dtStage / h;
+      EXPECT_NEAR(stageStart, state.stageStartFraction, 1e-6_r);
+      EXPECT_NEAR(stageEnds[stage], state.stageEndFraction, 1e-6_r);
+      // Exact step endpoints take the exact-copy paths of prescribed motion.
+      if (stage == 0 && params.numSteps == 1) {
+        EXPECT_EQ(0_r, state.stageStartFraction);
+      }
+      if (params.c(stage) == 1_r) {
+        EXPECT_EQ(1_r, state.stageEndFraction);
+      }
+    }
+  };
+  for (int method = 0; method < static_cast<int>(IntegrationMethod::Count); ++method) {
+    SCOPED_TRACE(method);
+    check(CreateTimeIntegratorParams(static_cast<IntegrationMethod>(method)));
+  }
+  check(GetTestParams());
+  TimeIntegratorState state;
+  state.Set(CreateTimeIntegratorParams(IntegrationMethod::DIRK23), 1, 0.02_r);
+  EXPECT_LT(state.stageStartFraction, 0_r);
+}
+
 namespace {
 // A non-BDF method (or empty history) drives the "fallback" branch of
 // ReconstructPreviousPoseFromHistoryOrExtrapolate / ReconstructPreviousVelocityFromHistoryOrCopy;

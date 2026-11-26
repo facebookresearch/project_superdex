@@ -13013,7 +13013,7 @@ class Actor:
 
         Note:
             Also affects target velocity, which depends on how the target changes
-            between simulation steps.
+            between simulation steps (see :class:`~superdex.physics.Constraint`).
 
         See Also:
             :meth:`~superdex.physics.Actor.reset_articulated_target_link_transforms`,
@@ -13034,7 +13034,7 @@ class Actor:
 
         Note:
             Also affects target velocity, which depends on how the target changes
-            between simulation steps.
+            between simulation steps (see :class:`~superdex.physics.Constraint`).
 
         See Also:
             :meth:`~superdex.physics.Actor.reset_articulated_target_pose`,
@@ -13119,8 +13119,13 @@ class Actor:
 
         Note:
             The velocity override is applied once at the start of the next simulation
-            step to compute damping, then cleared automatically. To maintain a constant
-            target velocity, call this function before each step.
+            step to compute damping (see :class:`~superdex.physics.Constraint`), then
+            cleared automatically. To maintain a constant target velocity, call this
+            function before each step.
+
+        Note:
+            A velocity that turns a target by more than pi in one step may give
+            inconsistent results.
 
         Note:
             :meth:`~superdex.physics.Actor.reset_articulated_target_pose` and
@@ -13498,6 +13503,16 @@ class Constraint:
     Note:
         The type of constraint determines which methods are applicable.
 
+    Note:
+        A target moves at its target velocity during the step. BDF2 and BDF3 assume
+        that this velocity also held over the earlier steps they combine, so after
+        it changes, damping is approximate for one step with BDF2 and for two with
+        BDF3.
+
+    Note:
+        A target velocity that turns a target by more than pi in one step may give
+        inconsistent results.
+
     Warning:
         Concurrent access to a constraint is illegal.
     """
@@ -13735,7 +13750,7 @@ class Constraint:
 
         Note:
             Also affects target velocity, which depends on the difference between
-            current and old target position.
+            current and old target position (see :class:`~superdex.physics.Constraint`).
 
         See Also:
             :meth:`~superdex.physics.Constraint.set_target_rotation`,
@@ -13768,7 +13783,7 @@ class Constraint:
 
         Note:
             Also affects target velocity, which depends on the difference between
-            current and old target rotation.
+            current and old target rotation (see :class:`~superdex.physics.Constraint`).
 
         See Also:
             :meth:`~superdex.physics.Constraint.set_target_position`,
@@ -13791,7 +13806,7 @@ class Constraint:
 
         Note:
             Also affects target velocity, which depends on the difference between
-            current and old target DoF.
+            current and old target DoF (see :class:`~superdex.physics.Constraint`).
 
         See Also:
             :meth:`~superdex.physics.Constraint.set_target_position`,
@@ -13844,7 +13859,8 @@ class Constraint:
 
         Note:
             Also affects target velocity, which depends on the difference between
-            current and old target relative rotation.
+            current and old target relative rotation (see
+            :class:`~superdex.physics.Constraint`).
 
         See Also:
             :meth:`~superdex.physics.Constraint.set_target_rotation`,

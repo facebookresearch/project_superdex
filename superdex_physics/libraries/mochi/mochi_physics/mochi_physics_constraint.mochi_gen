@@ -24,6 +24,11 @@
 // @note Each constraint belongs to exactly one scene.
 // @note Each constraint acts on the degrees of freedom of one or more actors.
 // @note The type of constraint determines which methods are applicable.
+// @note A target moves at its target velocity during the step. BDF2 and BDF3 assume that this
+// velocity also held over the earlier steps they combine, so after it changes, damping is
+// approximate for one step with BDF2 and for two with BDF3.
+// @note A target velocity that turns a target by more than pi in one step may give inconsistent
+// results.
 class Constraint [no_init, no_destruct, use_scene] {
 
   // @brief Get the type of the constraint.
@@ -175,7 +180,7 @@ class Constraint [no_init, no_destruct, use_scene] {
   // ConstraintType::RigidPivotToRigidTarget. For @ref ConstraintType::RigidPivotToRigidTarget,
   // this updates only the translation of the target center-of-mass transform.
   // @note Also affects target velocity, which depends on the difference between current and old
-  // target position.
+  // target position (see @ref Constraint).
   //
   // @see SetTargetRotation, SetTargetDof
   fn SetTargetPosition(Real3 const& position [units("m")]) -> void [pure, virtual, mochi_error];
@@ -199,7 +204,7 @@ class Constraint [no_init, no_destruct, use_scene] {
   // Normalized before use.
   //
   // @note Also affects target velocity, which depends on the difference between current and old
-  // target rotation.
+  // target rotation (see @ref Constraint).
   //
   // @see SetTargetPosition, SetTargetDof, SetRefRelativeRotation
   fn SetTargetRotation(Quaternion const& rotation) -> void [pure, virtual, mochi_error];
@@ -210,7 +215,7 @@ class Constraint [no_init, no_destruct, use_scene] {
   //
   // @note Only applicable to @ref ConstraintType::ArticulatedSingleDofTarget.
   // @note Also affects target velocity, which depends on the difference between current and old
-  // target DoF.
+  // target DoF (see @ref Constraint).
   //
   // @see SetTargetPosition, SetTargetRotation
   fn SetTargetDof(real target) -> void [pure, virtual, mochi_error];
@@ -241,7 +246,7 @@ class Constraint [no_init, no_destruct, use_scene] {
   // @note Only applicable to @ref ConstraintType::JointRotationTracking and @ref
   // ConstraintType::RodElementRotationToRigid.
   // @note Also affects target velocity, which depends on the difference between current and old
-  // target relative rotation.
+  // target relative rotation (see @ref Constraint).
   //
   // @see SetTargetRotation, UpdateOldTarget
   fn SetRefRelativeRotation(Quaternion const& rotationA, Quaternion const& rotationB) -> void [pure, virtual, mochi_error];

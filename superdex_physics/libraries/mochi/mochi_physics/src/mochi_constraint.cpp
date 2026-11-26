@@ -1234,7 +1234,7 @@ static void EvalConstraintImpl(
     DeformableConstraintReg reg,
     CConstraintInfo const& info,
     CConstraintData<ConstraintType::DeformableNodePosition> const& data,
-    CConstraintTarget<Real3, kTimeStep> const& target,
+    Real3 const& target,
     ColumnVector<real, 3>* outC,
     RowMatrix<real, 3, 3>* outJac,
     RowMatrix<real, 3, 3>* outJacTarget,
@@ -1242,8 +1242,7 @@ static void EvalConstraintImpl(
   auto const& transform = reg.get<CRootTransform const>(info.actors[0]).worldFromLocal;
   Real3 disp =
       GetDeformableDisplacement<kTimeStep>(reg, info.actors[0], MakeConstSpan(info.actorDofs[0]));
-  EvalDeformableNodeFixedConstraint(
-      transform, data.rest, disp, target.value, outC, outJac, outJacTarget);
+  EvalDeformableNodeFixedConstraint(transform, data.rest, disp, target, outC, outJac, outJacTarget);
   outActive = true;
 }
 
@@ -1266,14 +1265,14 @@ static void EvalConstraintImpl(
     RigidConstraintReg reg,
     CConstraintInfo const& info,
     CConstraintData<ConstraintType::JointRotationTracking> const& data,
-    CConstraintTarget<Quaternion, kTimeStep> const& target,
+    Quaternion const& target,
     ColumnVector<real, 3>* outC,
     RowMatrix<real, 3, 6>* outJac,
     RowMatrix<real, 3, 3>* outJacTarget,
     bool& outActive) {
   auto const& rotA = reg.get<CRigidState<kTimeStep> const>(info.actors[0]).value.GetRotation();
   auto const& rotB = reg.get<CRigidState<kTimeStep> const>(info.actors[1]).value.GetRotation();
-  EvalJointRotationTargetConstraint(rotA, rotB, data.q0, target.value, outC, outJac, outJacTarget);
+  EvalJointRotationTargetConstraint(rotA, rotB, data.q0, target, outC, outJac, outJacTarget);
   outActive = true;
 }
 
@@ -1282,7 +1281,7 @@ static void EvalConstraintImpl(
     RodAndRigidConstraintReg reg,
     CConstraintInfo const& info,
     CConstraintData<ConstraintType::RodElementRotationToRigid> const& data,
-    CConstraintTarget<Quaternion, kTimeStep> const& target,
+    Quaternion const& target,
     ColumnVector<real, 3>* outC,
     RowMatrix<real, 3, 11>* outJac,
     RowMatrix<real, 3, 3>* outJacTarget,
@@ -1297,7 +1296,7 @@ static void EvalConstraintImpl(
       rod.frameAxis,
       MakeConstSpan(rod.dofs),
       data.q0,
-      target.value,
+      target,
       outC,
       outJac,
       outJacTarget);
@@ -1309,7 +1308,7 @@ static void EvalConstraintImpl(
     RodConstraintReg reg,
     CConstraintInfo const& info,
     CConstraintData<ConstraintType::RodElementRotation> const& data,
-    CConstraintTarget<Quaternion, kTimeStep> const& target,
+    Quaternion const& target,
     ColumnVector<real, 3>* outC,
     RowMatrix<real, 3, 8>* outJac,
     RowMatrix<real, 3, 3>* outJacTarget,
@@ -1322,7 +1321,7 @@ static void EvalConstraintImpl(
       rod.frameAxis,
       MakeConstSpan(rod.dofs),
       data.q0,
-      target.value,
+      target,
       outC,
       outJac,
       outJacTarget);
@@ -1334,7 +1333,7 @@ static void EvalConstraintImpl(
     PivotConstraintReg reg,
     CConstraintInfo const& info,
     CConstraintData<ConstraintType::RigidPivotPosition> const& data,
-    CConstraintTarget<Real3, kTimeStep> const& target,
+    Real3 const& target,
     ColumnVector<real, 3>* outC,
     RowMatrix<real, 3, 6>* outJac,
     RowMatrix<real, 3, 3>* outJacTarget,
@@ -1346,13 +1345,13 @@ static void EvalConstraintImpl(
     EvalRigidPositionFixedConstraint(
         state,
         data.posLocal - ToReal3(inertia->GetCenterOfMassLocal()),
-        target.value,
+        target,
         outC,
         outJac,
         outJacTarget);
   } else {
     EvalRigidPositionFixedConstraint(
-        state, data.posLocal - pivotPos, target.value, outC, outJac, outJacTarget);
+        state, data.posLocal - pivotPos, target, outC, outJac, outJacTarget);
   }
   outActive = true;
 }
@@ -1362,7 +1361,7 @@ static void EvalConstraintImpl(
     PivotConstraintReg reg,
     CConstraintInfo const& info,
     CConstraintData<ConstraintType::RigidPivotToRigidTarget> const& data,
-    CConstraintTarget<TransformRT, kTimeStep> const& target,
+    TransformRT const& target,
     ColumnVector<real, 3>* outC,
     RowMatrix<real, 3, 6>* outJac,
     RowMatrix<real, 3, 6>* outJacTarget,
@@ -1370,7 +1369,7 @@ static void EvalConstraintImpl(
   auto const& state = reg.get<CRigidState<kTimeStep> const>(info.actors[0]).value;
   auto const com = ToReal3(reg.get<CRigidBodyInertia const>(info.actors[0]).GetCenterOfMassLocal());
   EvalRigidPositionToRigidTargetConstraint(
-      state, target.value, data.posLocal - com, outC, outJac, outJacTarget);
+      state, target, data.posLocal - com, outC, outJac, outJacTarget);
   outActive = true;
 }
 
@@ -1379,13 +1378,13 @@ static void EvalConstraintImpl(
     RigidConstraintReg reg,
     CConstraintInfo const& info,
     CConstraintData<ConstraintType::RigidPivotRotation> const& data,
-    CConstraintTarget<Quaternion, kTimeStep> const& target,
+    Quaternion const& target,
     ColumnVector<real, 3>* outC,
     RowMatrix<real, 3, 3>* outJac,
     RowMatrix<real, 3, 3>* outJacTarget,
     bool& outActive) {
   auto const& rot = reg.get<CRigidState<kTimeStep> const>(info.actors[0]).value.GetRotation();
-  EvalRotationFixedConstraint(rot, data.rotLocal, target.value, outC, outJac, outJacTarget);
+  EvalRotationFixedConstraint(rot, data.rotLocal, target, outC, outJac, outJacTarget);
   outActive = true;
 }
 
@@ -1394,7 +1393,7 @@ static void EvalConstraintImpl(
     ArticulatedConstraintReg reg,
     CConstraintInfo const& info,
     CConstraintData<ConstraintType::ArticulatedSingleDofTarget> const& data,
-    CConstraintTarget<real, kTimeStep> const& target,
+    real target,
     ColumnVector<real, 1>* outC,
     RowMatrix<real, 1, 1>* outJac,
     RowMatrix<real, 1, 1>* outJacTarget,
@@ -1411,7 +1410,7 @@ static void EvalConstraintImpl(
   real* outValPtr = outC ? outC->data() : nullptr;
   real* outJacPtr = outJac ? outJac->data() : nullptr;
   real* outJacTargetPtr = outJacTarget ? outJacTarget->data() : nullptr;
-  EvalSingleDofTargetConstraint(dofValue, target.value, outValPtr, outJacPtr, outJacTargetPtr);
+  EvalSingleDofTargetConstraint(dofValue, target, outValPtr, outJacPtr, outJacTargetPtr);
   outActive = true;
 }
 
@@ -1420,7 +1419,7 @@ static void EvalConstraintImpl(
     ArticulatedConstraintReg reg,
     CConstraintInfo const& info,
     CConstraintData<ConstraintType::Articulated3dRotationTarget> const& data,
-    CConstraintTarget<Quaternion, kTimeStep> const& target,
+    Quaternion const& target,
     ColumnVector<real, 3>* outC,
     RowMatrix<real, 3, 3>* outJac,
     RowMatrix<real, 3, 3>* outJacTarget,
@@ -1434,8 +1433,7 @@ static void EvalConstraintImpl(
                        joints->jointAxes[data.jointIdx],
                        poseInfo)
                        .GetRotation();
-  EvalRotationFixedConstraint(
-      rot, Quaternion::Identity(), target.value, outC, outJac, outJacTarget);
+  EvalRotationFixedConstraint(rot, Quaternion::Identity(), target, outC, outJac, outJacTarget);
   outActive = true;
 }
 
@@ -1515,7 +1513,7 @@ static void EvalConstraintT(
     EvalConstraintImpl<kTimeStep>(reg, info, data, cPtr, jacPtr, outActive);
   } else {
     using CTarget = CConstraintTarget<typename ConstraintTraits<kType>::TargetType, kTimeStep>;
-    auto const& target = reg.get<CTarget const>(e);
+    auto const& target = reg.get<CTarget const>(e).value;
     RowMatrix<real, kCSize, kTargetSize> jacTarget;
     auto* jacTargetPtr = outJacTarget ? &jacTarget : nullptr;
     EvalConstraintImpl<kTimeStep>(reg, info, data, target, cPtr, jacPtr, jacTargetPtr, outActive);
@@ -1890,12 +1888,15 @@ static void AssembleConstraintT(
   auto* jacOldPtr = evalJacOld ? &jac : nullptr;
 
   // Evaluate current constraint value and Jacobian
+  auto const& intState = reg.template get<CTimeIntegratorState const>(info.actors[0]);
   bool isActive{};
   if constexpr (std::is_same_v<typename ConstraintTraits<kType>::TargetType, NoTarget>) {
     EvalConstraintImpl<TimeStep::Current>(reg, info, data, cPtr, jacPtr, isActive);
   } else {
-    MOCHI_ASSERT_VERBOSE(target, "Missing target");
-    EvalConstraintImpl<TimeStep::Current>(reg, info, data, *target, cPtr, jacPtr, {}, isActive);
+    MOCHI_ASSERT_VERBOSE(target && targetOld, "Missing target");
+    auto const stageTarget =
+        GetConstraintStageTarget<TimeStep::Current>(intState, *target, *targetOld);
+    EvalConstraintImpl<TimeStep::Current>(reg, info, data, stageTarget, cPtr, jacPtr, {}, isActive);
   }
 
   // Possibly evaluate old constraint value and Jacobian
@@ -1906,9 +1907,10 @@ static void AssembleConstraintT(
     if constexpr (std::is_same_v<typename ConstraintTraits<kType>::TargetType, NoTarget>) {
       EvalConstraintImpl<TimeStep::StageStart>(reg, info, data, cOldPtr, jacOldPtr, isActiveOld);
     } else {
-      MOCHI_ASSERT_VERBOSE(targetOld, "Missing target");
+      auto const stageTargetOld =
+          GetConstraintStageTarget<TimeStep::StageStart>(intState, *target, *targetOld);
       EvalConstraintImpl<TimeStep::StageStart>(
-          reg, info, data, *targetOld, cOldPtr, jacOldPtr, {}, isActiveOld);
+          reg, info, data, stageTargetOld, cOldPtr, jacOldPtr, {}, isActiveOld);
     }
     isActive |= isActiveOld;
   }
@@ -1920,13 +1922,12 @@ static void AssembleConstraintT(
   }
 
   // Compute local terms
-  real const dtStage = reg.template get<CTimeIntegratorState const>(info.actors[0]).dtStage;
   double obj = 0.0;
   ColumnVector<real, kDofsSize> res{}; // Zero-initialized to avoid "-res" UB in handleQuery
   Matrix<real, kDofsSize, kDofsSize> dres MOCHI_NO_INIT;
   ComputeLocalObjResDRes<kGradTarget>(
       info,
-      dtStage,
+      intState.dtStage,
       params.fittedSaturationHessian.constraintSaturation,
       AsConstView(c),
       AsConstView(cOld),
@@ -1990,15 +1991,16 @@ static void AssembleConstraintWrtInputT(
   auto* jacPtr = kGradTarget == GradTarget::CurrentInput ? &jac : nullptr;
   auto* jacOldPtr = kGradTarget == GradTarget::PreviousInput ? &jac : nullptr;
 
-  // Evaluate current constraint value and Jacobian
+  // Evaluate current constraint value and Jacobian. Back-propagation requires backward Euler, whose
+  // stages take the targets of the step.
   bool isActive = false;
-  EvalConstraintImpl<TimeStep::Current>(reg, info, data, target, &c, {}, jacPtr, isActive);
+  EvalConstraintImpl<TimeStep::Current>(reg, info, data, target.value, &c, {}, jacPtr, isActive);
 
   // Possibly evaluate old constraint value and Jacobian
   bool isActiveOld = false;
   if (info.damping > 0_r) {
     EvalConstraintImpl<TimeStep::StageStart>(
-        reg, info, data, targetOld, &cOld, {}, jacOldPtr, isActiveOld);
+        reg, info, data, targetOld.value, &cOld, {}, jacOldPtr, isActiveOld);
   }
 
   if (!isActive && !isActiveOld) {

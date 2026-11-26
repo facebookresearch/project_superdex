@@ -96,6 +96,14 @@ struct TimeIntegratorParams final {
 #endif
   }
 
+  [[nodiscard]] real StageEndFraction(int stage) const {
+    return 1_r - beta + beta * c(stage);
+  }
+
+  [[nodiscard]] real StageStartFraction(int stage) const {
+    return StageEndFraction(stage) - beta * A(stage, stage);
+  }
+
   int const numSteps = {}; // Number of steps. >1 for multi-step methods.
   RowVector<real> const alpha = {}; // 'alpha' coefficients for multi-step methods.
   real const beta = {}; // 'beta' coefficient for multi-step methods.
@@ -117,6 +125,8 @@ struct TimeIntegratorState {
   void Set(TimeIntegratorParams const& params, int iStage, real dt) {
     dtStage = static_cast<real>(params.beta * params.A(iStage, iStage) * dt);
     dtFromStepStart = static_cast<real>(params.c(iStage) * dt);
+    stageEndFraction = params.StageEndFraction(iStage);
+    stageStartFraction = params.StageStartFraction(iStage);
     currentStage = iStage;
     numStages = params.numStages;
     numSteps = params.numSteps;
@@ -131,6 +141,9 @@ struct TimeIntegratorState {
 
   real dtStage = -1_r; // Time increment in the current stage.
   real dtFromStepStart = -1_r; // Time from the start of the step to the current stage, c_i dt.
+  // Algebraic stage references along the prescribed physical-step segment. May lie outside [0, 1].
+  real stageStartFraction = 0_r;
+  real stageEndFraction = 1_r;
   int currentStage = 0; // Current stage, in the range 0, 1, ..., numStages - 1.
   int numSteps = 0; // Number of steps. >1 for multi-step methods.
   RowVector<real> alpha = {}; // 'alpha' coefficients for multi-step methods.

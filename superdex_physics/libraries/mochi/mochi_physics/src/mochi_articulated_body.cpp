@@ -41,6 +41,7 @@
 #include <mochi_core/geometry/model_utils.h>
 #include <mochi_core/linear_algebra/matrix.h>
 #include <mochi_core/memory/filo_allocator.h>
+#include <mochi_core/utils/array_utils.h>
 #include <mochi_core/utils/container_utils.h>
 #include <mochi_core/utils/log.h>
 #include <mochi_core/utils/rigid_body_assembly.h>
@@ -1126,9 +1127,9 @@ void articulated::compound::SetTargetJointVelocities(
   motion.hasVelocity = true;
 }
 
-// Set the old targets of a pose controller, and those of its constraints, to the current targets
-// moved back by the target velocity over the time step.
-static void SetOldTargetsFromVelocity(
+// Set the old targets of a pose controller to the current targets moved back by the target velocity
+// over the time step.
+static void MoveTargetsBackByVelocity(
     entt::registry& reg,
     entt::entity e,
     double dt,
@@ -1164,6 +1165,24 @@ static void SetOldTargetsFromVelocity(
         linkTransformsOld[i] * Invert(linkTransforms[i]) * target.LinkTransformsCom()[i];
   }
   outTargetOld.Set(jointPoseOld, linkTransformsOld);
+}
+
+// Set the old targets of a pose controller, and those of its constraints, to the current targets
+// moved back by the target velocity over the time step. A zero velocity, e.g., after a reset,
+// starts at the current targets exactly, which forward kinematics would not round-trip. So does a
+// quasistatic step, which ignores the velocity.
+static void SetOldTargetsFromVelocity(
+    entt::registry& reg,
+    entt::entity e,
+    double dt,
+    CControllerTarget<TimeStep::Current> const& target,
+    ColumnVector<real> const& targetVelocity,
+    CControllerTarget<TimeStep::Previous>& outTargetOld) {
+  if (!IsFinite(static_cast<real>(dt)) || MaxAbs(targetVelocity.GetConstSpan()) == 0_r) {
+    outTargetOld.CopyFrom(target);
+  } else {
+    MoveTargetsBackByVelocity(reg, e, dt, target, targetVelocity, outTargetOld);
+  }
 
   // Initialize slices with the old target
   InitializeOldTargetImpl(reg, e);
@@ -1181,7 +1200,7 @@ void articulated::compound::ApplyControllerStepStart(
     CControllerTarget<TimeStep::Previous>& outTargetOld,
     CControllerPrescribedMotion& outMotion) {
   auto const dt = time->DeltaTime();
-  if (outMotion.hasVelocity && IsFinite(static_cast<real>(dt))) {
+  if (outMotion.hasVelocity) {
     SetOldTargetsFromVelocity(reg, e, dt, target, outMotion.targetVelocity, outTargetOld);
   } else if (!preserveHistory && !outMotion.newTargetApplied) {
     // Without a new target, a new step stays at the end targets of the last step.

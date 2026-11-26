@@ -1496,7 +1496,7 @@ class Actor [no_init, no_destruct, use_scene] {
   //
   // @note Only supported for articulated actors with a pose controller.
   // @note Also affects target velocity, which depends on how the target changes between simulation
-  // steps.
+  // steps (see @ref Constraint).
   //
   // @see ResetArticulatedTargetLinkTransforms, SetArticulatedTargetPose
   fn SetArticulatedTargetLinkTransforms(Span<TransformRT const> worldFromTargets) -> void [pure, virtual, mochi_error, batchable];
@@ -1507,7 +1507,7 @@ class Actor [no_init, no_destruct, use_scene] {
   //
   // @note Only applicable to articulated actors with a pose controller.
   // @note Also affects target velocity, which depends on how the target changes between simulation
-  // steps.
+  // steps (see @ref Constraint).
   //
   // @see ResetArticulatedTargetPose, SetArticulatedTargetLinkTransforms,
   // GetArticulatedTargetPose, GetArticulatedTargetLinkTransforms, SetArticulatedTargetVelocity
@@ -1550,8 +1550,9 @@ class Actor [no_init, no_destruct, use_scene] {
   // @note Only applicable to articulated actors with a pose controller.
   // @note Does not change target pose.
   // @note The velocity override is applied once at the start of the next simulation step to
-  // compute damping, then cleared automatically. To maintain a constant target velocity, call this
-  // function before each step.
+  // compute damping (see @ref Constraint), then cleared automatically. To maintain a constant target
+  // velocity, call this function before each step.
+  // @note A velocity that turns a target by more than pi in one step may give inconsistent results.
   // @note @ref ResetArticulatedTargetPose and @ref ResetArticulatedTargetLinkTransforms overwrite
   // any pending target velocity with zero. Call this function after reset to use a non-zero target
   // velocity.

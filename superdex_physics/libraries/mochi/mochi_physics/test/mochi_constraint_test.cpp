@@ -17,6 +17,7 @@
 #include "mochi_constraint_test.h"
 
 #include <mochi_core/test/log_suppression.h>
+#include <mochi_physics/src/mochi_rigid.h>
 
 using namespace mochi;
 using namespace mochi::test;
@@ -387,4 +388,131 @@ void ConstraintTestBase::RunAllTests() {
   runTests();
   _saturation = 0.1_r;
   runTests();
+}
+
+namespace {
+using PrescribedTargetTest = test::MochiSceneTestBase;
+
+void ExpectTargetNear(real expected, real actual) {
+  EXPECT_NEAR(expected, actual, 1e-5_r);
+}
+
+void ExpectTargetNear(Real3 const& expected, Real3 const& actual) {
+  EXPECT_NEAR_TOL(expected, actual, 1e-5_r);
+}
+
+void ExpectTargetNear(Quaternion const& expected, Quaternion const& actual) {
+  for (Real3 const axis : {Real3{1_r, 0_r, 0_r}, Real3{0_r, 1_r, 0_r}, Real3{0_r, 0_r, 1_r}}) {
+    ExpectTargetNear(expected * axis, actual * axis);
+  }
+}
+
+void ExpectTargetNear(TransformRT const& expected, TransformRT const& actual) {
+  ExpectTargetNear(expected.GetTranslation(), actual.GetTranslation());
+  ExpectTargetNear(expected.GetRotation(), actual.GetRotation());
+}
+
+template <typename T, typename Sample>
+void CheckStageSamples(T const& start, T const& end, Sample const& expected) {
+  CConstraintTarget<T, TimeStep::Current> target;
+  target.value = end;
+  CConstraintTarget<T, TimeStep::StageStart> targetOld;
+  targetOld.value = start;
+  CTimeIntegratorState state;
+  for (Real2 const fractions :
+       {Real2{0_r, 1_r}, Real2{0_r, 0.5_r}, Real2{-0.6_r, 0.2_r}, Real2{0.4_r, 1_r}}) {
+    state.stageStartFraction = fractions[0];
+    state.stageEndFraction = fractions[1];
+    T const stageStart = GetConstraintStageTarget<TimeStep::StageStart>(state, target, targetOld);
+    T const stageEnd = GetConstraintStageTarget<TimeStep::Current>(state, target, targetOld);
+    ExpectTargetNear(expected(fractions[0]), stageStart);
+    ExpectTargetNear(expected(fractions[1]), stageEnd);
+    if (fractions[0] == 0_r || start == end) {
+      EXPECT_EQ(start, stageStart);
+    }
+    if (fractions[1] == 1_r || start == end) {
+      EXPECT_EQ(end, stageEnd);
+    }
+  }
+}
+} // namespace
+
+TEST(PrescribedTarget, StageSamplesAllTargetTypes) {
+  CheckStageSamples<real>(2_r, 5_r, [](real s) { return 2_r + 3_r * s; });
+  Real3 const position{2_r, -1_r, 3_r};
+  Real3 const deltaPosition{3_r, 2_r, -1_r};
+  auto const samplePosition = [&](real s) { return position + s * deltaPosition; };
+  CheckStageSamples(position, samplePosition(1_r), samplePosition);
+  Quaternion const rotation = Quaternion::FromRotationVector(Real3{0.2_r, -0.3_r, 0.4_r});
+  Real3 const deltaRotation{-0.5_r, 0.6_r, 0.3_r};
+  auto const sampleRotation = [&](real s) {
+    return Normalize(Quaternion::FromRotationVector(s * deltaRotation) * rotation);
+  };
+  // Negating the endpoint tests the shortest rotation path between equivalent quaternions.
+  CheckStageSamples(rotation, -sampleRotation(1_r), sampleRotation);
+  auto const sampleTransform = [&](real s) {
+    return TransformRT{sampleRotation(s), samplePosition(s)};
+  };
+  CheckStageSamples(
+      sampleTransform(0_r),
+      TransformRT{-sampleRotation(1_r), samplePosition(1_r)},
+      sampleTransform);
+}
+
+TEST(PrescribedTarget, UnchangedTargetsAreCopiedExactly) {
+  real const scalar = 2.3_r;
+  Real3 const position{2_r, -1_r, 3_r};
+  Quaternion const rotation = Quaternion::FromRotationVector(Real3{0.2_r, -0.3_r, 0.4_r});
+  TransformRT const transform{rotation, position};
+  CheckStageSamples(scalar, scalar, [&](real) { return scalar; });
+  CheckStageSamples(position, position, [&](real) { return position; });
+  CheckStageSamples(rotation, rotation, [&](real) { return rotation; });
+  CheckStageSamples(transform, transform, [&](real) { return transform; });
+  // The unchanged part of a transform is copied exactly.
+  Real3 const translation{0.11_r, 0.77_r, -3.3_r};
+  TransformRT const start{rotation, translation};
+  TransformRT const turned{
+      Quaternion::FromRotationVector(Real3{-0.5_r, 0.6_r, 0.3_r}), translation};
+  TransformRT const moved{rotation, position};
+  for (real const fraction : {-0.6_r, 1_r / 3_r, 0.7_r}) {
+    EXPECT_EQ(translation, SampleConstraintTarget(start, turned, fraction).GetTranslation());
+    EXPECT_EQ(rotation, SampleConstraintTarget(start, moved, fraction).GetRotation());
+  }
+}
+
+TEST_F(PrescribedTargetTest, SceneStepSamplesOrdinaryCompoundAtMidpoint) {
+  _scene->SetGravity({});
+  test::SetSceneIntegrationMethod(_scene, IntegrationMethod::SymplecticDIRK12);
+  for (Real2 const gains : {Real2{3_r, 0_r}, Real2{0_r, 2_r}, Real2{3_r, 2_r}}) {
+    RigidActorParams actorParams;
+    actorParams.shape = test::CreateUnitCubeTetMeshShape(_mochiContext);
+    actorParams.colliderType = ColliderType::None;
+    actorParams.density = 1_r;
+    Actor* actor = _scene->CreateRigidActor(actorParams, test::ExpectOK{});
+    ASSERT_NE(nullptr, actor);
+    auto const& inertia = GetRegistry().get<CRigidBodyInertia const>(GetEntity(actor));
+    Real3 const pivot = ToReal3(inertia.GetCenterOfMassLocal());
+    Real3 const start = actor->GetRootTransform().TransformPoint(pivot);
+    RigidPivotPositionConstraintParams params;
+    params.actor = actor->GetHandle();
+    params.localPosition = pivot;
+    params.targetPosition = start;
+    params.stiffness = gains[0];
+    params.damping = gains[1];
+    Constraint* constraint = _scene->CreateRigidPivotPositionConstraint(params, test::ExpectOK{});
+    ASSERT_NE(nullptr, constraint);
+    constraint->RegisterQuery(QueryType::ConstraintForce, test::ExpectOK{});
+    constraint->SetTargetPosition(start + Real3{1_r, 0_r, 0_r}, test::ExpectOK{});
+    real constexpr h = 0.2_r;
+    real constexpr stageH = h / 2_r;
+    real const effectiveStiffness = gains[0] + gains[1] / stageH;
+    real const stageDisplacement =
+        (0.5_r * effectiveStiffness) / (inertia.GetMass() / Sqr(stageH) + effectiveStiffness);
+    _scene->Step(h);
+    EXPECT_NEAR(2_r * stageDisplacement, actor->GetRootTransform().GetTranslation()[0], 1e-5_r);
+    auto const force = Unflatten<Real3 const>(constraint->GetForce(test::ExpectOK{}));
+    EXPECT_NEAR(effectiveStiffness * (0.5_r - stageDisplacement), force[0][0], 1e-4_r);
+    _scene->DestroyConstraint(constraint->GetHandle());
+    _scene->DestroyActor(actor);
+  }
 }

@@ -6754,7 +6754,7 @@
 /// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
 ///
 /// @note Only supported for articulated actors with a pose controller.
-/// @note Also affects target velocity, which depends on how the target changes between simulation steps.
+/// @note Also affects target velocity, which depends on how the target changes between simulation steps (see @ref mochi::Constraint "Constraint").
 ///
 /// @see @ref mochi::Actor::ResetArticulatedTargetLinkTransforms "ResetArticulatedTargetLinkTransforms", @ref mochi::Actor::SetArticulatedTargetPose "SetArticulatedTargetPose"
 ///
@@ -6767,7 +6767,7 @@
 /// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
 ///
 /// @note Only applicable to articulated actors with a pose controller.
-/// @note Also affects target velocity, which depends on how the target changes between simulation steps.
+/// @note Also affects target velocity, which depends on how the target changes between simulation steps (see @ref mochi::Constraint "Constraint").
 ///
 /// @see @ref mochi::Actor::ResetArticulatedTargetPose "ResetArticulatedTargetPose", @ref mochi::Actor::SetArticulatedTargetLinkTransforms "SetArticulatedTargetLinkTransforms", @ref mochi::Actor::GetArticulatedTargetPose "GetArticulatedTargetPose", @ref mochi::Actor::GetArticulatedTargetLinkTransforms "GetArticulatedTargetLinkTransforms", @ref mochi::Actor::SetArticulatedTargetVelocity "SetArticulatedTargetVelocity"
 ///
@@ -6809,7 +6809,8 @@
 ///
 /// @note Only applicable to articulated actors with a pose controller.
 /// @note Does not change target pose.
-/// @note The velocity override is applied once at the start of the next simulation step to compute damping, then cleared automatically. To maintain a constant target velocity, call this function before each step.
+/// @note The velocity override is applied once at the start of the next simulation step to compute damping (see @ref mochi::Constraint "Constraint"), then cleared automatically. To maintain a constant target velocity, call this function before each step.
+/// @note A velocity that turns a target by more than pi in one step may give inconsistent results.
 /// @note @ref mochi::Actor::ResetArticulatedTargetPose "ResetArticulatedTargetPose" and @ref mochi::Actor::ResetArticulatedTargetLinkTransforms "ResetArticulatedTargetLinkTransforms" overwrite any pending target velocity with zero. Call this function after reset to use a non-zero target velocity.
 ///
 /// @see @ref mochi::Actor::SetArticulatedTargetPose "SetArticulatedTargetPose", @ref mochi::Actor::ResetArticulatedTargetPose "ResetArticulatedTargetPose"
@@ -7007,6 +7008,8 @@
 /// @note Each constraint belongs to exactly one scene.
 /// @note Each constraint acts on the degrees of freedom of one or more actors.
 /// @note The type of constraint determines which methods are applicable.
+/// @note A target moves at its target velocity during the step. BDF2 and BDF3 assume that this velocity also held over the earlier steps they combine, so after it changes, damping is approximate for one step with BDF2 and for two with BDF3.
+/// @note A target velocity that turns a target by more than pi in one step may give inconsistent results.
 ///
 /// @warning Concurrent access to a constraint is illegal.
 ///
@@ -7168,7 +7171,7 @@
 /// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
 ///
 /// @note Only applicable to position-target constraints: @ref mochi::ConstraintType::RigidPivotPosition "ConstraintType::RigidPivotPosition", @ref mochi::ConstraintType::DeformableNodePosition "ConstraintType::DeformableNodePosition", and @ref mochi::ConstraintType::RigidPivotToRigidTarget "ConstraintType::RigidPivotToRigidTarget". For @ref mochi::ConstraintType::RigidPivotToRigidTarget "ConstraintType::RigidPivotToRigidTarget", this updates only the translation of the target center-of-mass transform.
-/// @note Also affects target velocity, which depends on the difference between current and old target position.
+/// @note Also affects target velocity, which depends on the difference between current and old target position (see @ref mochi::Constraint "Constraint").
 ///
 /// @see @ref mochi::Constraint::SetTargetRotation "SetTargetRotation", @ref mochi::Constraint::SetTargetDof "SetTargetDof"
 ///
@@ -7182,7 +7185,7 @@
 /// @param[in] rotation Target rotation quaternion [x, y, z, w]. Must be finite and non-zero. Normalized before use.
 /// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
 ///
-/// @note Also affects target velocity, which depends on the difference between current and old target rotation.
+/// @note Also affects target velocity, which depends on the difference between current and old target rotation (see @ref mochi::Constraint "Constraint").
 ///
 /// @see @ref mochi::Constraint::SetTargetPosition "SetTargetPosition", @ref mochi::Constraint::SetTargetDof "SetTargetDof", @ref mochi::Constraint::SetRefRelativeRotation "SetRefRelativeRotation"
 ///
@@ -7195,7 +7198,7 @@
 /// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
 ///
 /// @note Only applicable to @ref mochi::ConstraintType::ArticulatedSingleDofTarget "ConstraintType::ArticulatedSingleDofTarget".
-/// @note Also affects target velocity, which depends on the difference between current and old target DoF.
+/// @note Also affects target velocity, which depends on the difference between current and old target DoF (see @ref mochi::Constraint "Constraint").
 ///
 /// @see @ref mochi::Constraint::SetTargetPosition "SetTargetPosition", @ref mochi::Constraint::SetTargetRotation "SetTargetRotation"
 ///
@@ -7222,7 +7225,7 @@
 /// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
 ///
 /// @note Only applicable to @ref mochi::ConstraintType::JointRotationTracking "ConstraintType::JointRotationTracking" and @ref mochi::ConstraintType::RodElementRotationToRigid "ConstraintType::RodElementRotationToRigid".
-/// @note Also affects target velocity, which depends on the difference between current and old target relative rotation.
+/// @note Also affects target velocity, which depends on the difference between current and old target relative rotation (see @ref mochi::Constraint "Constraint").
 ///
 /// @see @ref mochi::Constraint::SetTargetRotation "SetTargetRotation", @ref mochi::Constraint::UpdateOldTarget "UpdateOldTarget"
 ///

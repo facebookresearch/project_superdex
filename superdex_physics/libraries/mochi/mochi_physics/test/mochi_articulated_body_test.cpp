@@ -48,6 +48,7 @@
 #include <array>
 #include <functional>
 #include <iterator>
+#include <limits>
 #include <numeric>
 #include <optional>
 #include <string>
@@ -1213,6 +1214,105 @@ TEST_F(ArticulatedBodyDynamicsTest, PoseControllerTargetMotionOfLastStepIsKept) 
   EXPECT_EQ(target1[0], getConstraintCurrent());
 
   _scene->DestroyActor(actor->GetHandle());
+}
+
+// A reset of the targets of a pose controller starts the next step at rest at the targets, so
+// damping pulls with no force, also where forward kinematics does not round-trip the targets: link
+// drives on a rotated root.
+TEST_F(ArticulatedBodyDynamicsTest, PoseControllerResetStartsAtRest) {
+  real constexpr kDt = 1e-2_r;
+  PoseTrackingParams const drive{.stiffness = 0_r, .damping = 1e6_r};
+  for (bool const prismatic : {false, true}) {
+    SCOPED_TRACE(prismatic ? "prismatic link position" : "revolute link rotation");
+    std::array const joints{
+        prismatic ? ArticulatedJointType::Prismatic : ArticulatedJointType::Revolute};
+    Actor* actor = CreateActor(joints, 0_r, 0_r, 0_r);
+    actor->SetRootTransform(
+        TransformRT{
+            Quaternion::FromAxisAngle(Normalize(Real3{1_r, 2_r, 3_r}), 0.7_r),
+            Real3{0.3_r, -0.7_r, 1.1_r}},
+        test::ExpectOK{});
+    PoseControllerParams params;
+    if (prismatic) {
+      params.linkPosTracking = {drive};
+    } else {
+      params.linkRotTracking = {drive};
+    }
+    actor->AddArticulatedPoseController(params, test::ExpectOK{});
+    actor->RegisterQuery(QueryType::ArticulatedControllerForce, test::ExpectOK{});
+    std::array const dofs{0};
+    std::array const pinnedPose{0_r};
+    actor->AddBoundaryConditionDofsWorld(dofs, pinnedPose, test::ExpectOK{});
+
+    // Targets spread over [0.011, 0.31], reset alternately by pose and by link transforms.
+    for (int i = 0; i < 40; ++i) {
+      std::array const target{0.0137_r * StaticCast<real>(i * 7 % 23) + 0.011_r};
+      actor->SetArticulatedTargetPose(target, test::ExpectOK{});
+      _scene->Step(kDt);
+      if (i % 2 == 0) {
+        std::array<TransformRT, 1> links;
+        actor->GetArticulatedTargetLinkTransforms(links, test::ExpectOK{});
+        actor->ResetArticulatedTargetLinkTransforms(links, test::ExpectOK{});
+      } else {
+        actor->ResetArticulatedTargetPose(target, test::ExpectOK{});
+      }
+      _scene->Step(kDt);
+      EXPECT_EQ(0_r, actor->GetArticulatedControllerForce(test::ExpectOK{})[0]) << i;
+    }
+
+    // A quasistatic step ignores target velocities, so a reset there also starts at rest. A DIRK
+    // preview, which uses the default time step after a quasistatic step, must not see the reset.
+    std::array const resetPose{0.25_r};
+    actor->ResetArticulatedTargetPose(resetPose, test::ExpectOK{});
+    _scene->Step(std::numeric_limits<double>::infinity());
+    test::SetSceneIntegrationMethod(_scene, IntegrationMethod::DIRK22);
+    _scene->UpdateQueries(test::ExpectOK{});
+    EXPECT_EQ(0_r, actor->GetArticulatedControllerForce(test::ExpectOK{})[0]);
+    test::SetSceneIntegrationMethod(_scene, IntegrationMethod::BackwardEuler);
+
+    _scene->DestroyActor(actor->GetHandle());
+  }
+}
+
+// A pinned link drive with damping only pulls with damping times the target speed under every
+// integrator, for a target velocity and for a target that moves between steps. Once the target
+// stops, it pulls with no force.
+TEST_F(ArticulatedBodyDynamicsTest, PoseControllerDampingFollowsTargetSpeedUnderEveryIntegrator) {
+  real constexpr kDt = 1e-2_r;
+  real constexpr kDamping = 1e2_r;
+  real constexpr kSpeed = 2_r;
+  for (int m = 0; m < static_cast<int>(IntegrationMethod::Count); ++m) {
+    SCOPED_TRACE(m);
+    test::SetSceneIntegrationMethod(_scene, static_cast<IntegrationMethod>(m));
+    std::array const joints{ArticulatedJointType::Prismatic};
+    Actor* actor = CreateActor(joints, 0_r, 0_r, 0_r);
+    PoseControllerParams params;
+    params.linkPosTracking = {PoseTrackingParams{.stiffness = 0_r, .damping = kDamping}};
+    actor->AddArticulatedPoseController(params, test::ExpectOK{});
+    actor->RegisterQuery(QueryType::ArticulatedControllerForce, test::ExpectOK{});
+    std::array const dofs{0};
+    std::array const pinnedPose{0_r};
+    actor->AddBoundaryConditionDofsWorld(dofs, pinnedPose, test::ExpectOK{});
+    auto const force = [&] { return actor->GetArticulatedControllerForce(test::ExpectOK{})[0]; };
+    for (int i = 0; i < kMaxIntegrationSteps; ++i) {
+      _scene->Step(kDt);
+    }
+
+    std::array const velocity{kSpeed};
+    actor->SetArticulatedTargetVelocity(velocity, test::ExpectOK{});
+    _scene->Step(kDt);
+    EXPECT_NEAR(kDamping * kSpeed, Abs(force()), 1e-3_r * kDamping * kSpeed);
+    for (int i = 1; i <= 3; ++i) {
+      std::array const target{kSpeed * kDt * StaticCast<real>(i)};
+      actor->SetArticulatedTargetPose(target, test::ExpectOK{});
+      _scene->Step(kDt);
+      EXPECT_NEAR(kDamping * kSpeed, Abs(force()), 1e-3_r * kDamping * kSpeed) << i;
+    }
+    _scene->Step(kDt);
+    EXPECT_EQ(0_r, force());
+
+    _scene->DestroyActor(actor->GetHandle());
+  }
 }
 
 // With dominant joint inertia, a freely spinning revolute joint keeps its angle rate. The

@@ -308,6 +308,14 @@ struct CSceneHandle : public NoCopy {
 // Stores the current state of the time integrator.
 struct CTimeIntegratorState : public TimeIntegratorState, NoCopy {};
 
+// Fraction of the step at the end (TimeStep::Current) or at the start (TimeStep::StageStart) of
+// the current stage.
+template <TimeStep kTimeStep>
+[[nodiscard]] real GetStageFraction(TimeIntegratorState const& intState) {
+  static_assert(kTimeStep == TimeStep::Current || kTimeStep == TimeStep::StageStart);
+  return kTimeStep == TimeStep::Current ? intState.stageEndFraction : intState.stageStartFraction;
+}
+
 using CRecenteringParams = RecenteringParams;
 
 // Index of the node whose motion drives recentering for shell and rod actors.

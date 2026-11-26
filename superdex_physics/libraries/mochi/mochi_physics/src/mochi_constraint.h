@@ -24,10 +24,12 @@
 #include <mochi_core/utils/assembly_params.h>
 #include <mochi_core/utils/constraints.h>
 #include <mochi_core/utils/differentiability.h>
+#include <mochi_core/utils/transform_rt.h>
 #include <mochi_physics/mochi_physics.h>
 
 #include <memory>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 namespace mochi {
@@ -377,7 +379,8 @@ struct CConstraintData<ConstraintType::Articulated3dRotationRange> : public NoCo
 /*
   Component for constraint target data. Templatized for type and time step.
   Targets are captured as part of the state. Between steps, the StageStart and Current targets hold
-  the targets at the start and at the end of the last step.
+  the targets at the start and at the end of the last step. Assembly evaluates them at the stages of
+  the constraint's actors (see GetConstraintStageTarget).
 */
 template <typename T, TimeStep kTimeStep>
 struct CConstraintTarget : public NoCopy {
@@ -561,6 +564,40 @@ void ApplyConstraintTargetStepStart(
     outTargetOld.value = target.value;
   }
   outMotion.newTargetApplied = false;
+}
+
+// Target at a fraction of the step. During a step, the target moves at constant velocity from the
+// old target to the current target, and rotations take the shortest path. The rotation and
+// translation of a transform move separately, so an unchanged one is copied exactly.
+template <typename T>
+[[nodiscard]] T SampleConstraintTarget(T const& targetOld, T const& target, real fraction) {
+  if (fraction == 0_r) {
+    return targetOld;
+  }
+  if (fraction == 1_r || targetOld == target) {
+    return target;
+  }
+  if constexpr (std::is_same_v<T, Quaternion>) {
+    return Normalize(Slerp(targetOld, target, fraction));
+  } else if constexpr (std::is_same_v<T, TransformRT>) {
+    return TransformRT{
+        SampleConstraintTarget(targetOld.GetRotation(), target.GetRotation(), fraction),
+        SampleConstraintTarget(targetOld.GetTranslation(), target.GetTranslation(), fraction)};
+  } else {
+    return targetOld + fraction * (target - targetOld);
+  }
+}
+
+// Target of a constraint at the current stage of its actors: at the stage end for
+// TimeStep::Current, and at the stage start, from which damping measures the rate of the
+// constraint, for TimeStep::StageStart.
+template <TimeStep kTimeStep, typename T>
+[[nodiscard]] T GetConstraintStageTarget(
+    TimeIntegratorState const& intState,
+    CConstraintTarget<T, TimeStep::Current> const& target,
+    CConstraintTarget<T, TimeStep::StageStart> const& targetOld) {
+  return SampleConstraintTarget(
+      targetOld.value, target.value, GetStageFraction<kTimeStep>(intState));
 }
 
 // Function for the evaluation of constraint value, constraint Jacobian wrt dofs, and/or constraint
