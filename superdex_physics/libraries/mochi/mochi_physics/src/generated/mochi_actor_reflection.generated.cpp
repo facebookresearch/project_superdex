@@ -296,7 +296,7 @@ MOCHI_PROPERTY_WITH_ERROR("articulatedJointInertiaParams", (+[](mochi::Actor con
   mochi::reflection::ReflectionArgument<mochi::Span<mochi::real const>> arg0(value0, reflectionScope);
   self.SetArticulatedJointInertiaParams(arg0.Get(), error);
   MOCHI_ERROR_RETURN(error);
-})) MOCHI_ATTRIBUTE(NoSerialize) MOCHI_ATTRIBUTE(Description("Set the per-joint inertia coefficients of the articulated actor.\n\nParameters:\n- inertia [in]: Inertia coefficients, one per joint. Must be of size equal to\n  the number of joints (matching GetArticulatedJointInertiaParams); all values\n  must be finite and non-negative.\n\nNotes:\n- Only applicable to articulated actors.\n\nSee also: GetArticulatedJointInertiaParams\n\nThrows std::runtime_error if the API reports an error."))
+})) MOCHI_ATTRIBUTE(NoSerialize) MOCHI_ATTRIBUTE(Description("Set the per-joint inertia coefficients of the articulated actor.\n\nParameters:\n- inertia [in]: Inertia coefficients, one per joint. Must be of size equal to\n  the number of joints (matching GetArticulatedJointInertiaParams); all values\n  must be finite and non-negative, and free joints must have zero inertia.\n\nNotes:\n- Only applicable to articulated actors.\n\nSee also: GetArticulatedJointInertiaParams\n\nThrows std::runtime_error if the API reports an error."))
 MOCHI_METHOD_WITH_ERROR("SetArticulatedPoseFromLinks(worldFromLinks)", (+[](mochi::Actor& self, mochi::DynamicArray<mochi::TransformRT> const& value0, mochi::Error& error) -> void {
   auto const& reflectionScope = *self.GetScene();
   mochi::reflection::ReflectionArgument<mochi::Span<mochi::TransformRT const>> arg0(value0, reflectionScope);
