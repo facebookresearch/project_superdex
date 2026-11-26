@@ -25,6 +25,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <functional>
 #include <numeric>
 #include <set>
 #include <string_view>
@@ -2193,56 +2194,62 @@ bool superdex::robotics::IsContactImplicitlyDisabled(
   if (linkA < 0 || linkA >= numLinks || linkB < 0 || linkB >= numLinks || linkA == linkB) {
     return false;
   }
+  auto hasShape = [&](int link) { return !botPrefab.links[link].shapeFile.empty(); };
   // Mochi only manages contact between shape-bearing link actors.
-  if (botPrefab.links[linkA].shapeFile.empty() || botPrefab.links[linkB].shapeFile.empty()) {
+  if (!hasShape(linkA) || !hasShape(linkB)) {
     return false;
   }
-  // Mirror Mochi's articulated::compound::CollectDefaultNoContactPairs DFS:
-  // starting at linkA, traverse undirected link graph; we may pass *through* a node only
-  // if it has no shape, or the edge entering it is a Hard joint. The destination
-  // (linkB) counts as reached upon arrival via any edge.
-  auto hasShape = [&](int idx) { return !botPrefab.links[idx].shapeFile.empty(); };
-  auto edgeIsHard = [&](int child) {
-    // The joint at index child is the joint connecting child to its parent.
-    return botPrefab.joints[child].type == ArticulatedJointType::Hard;
+  // Mirror Mochi's articulated::compound::CollectDefaultNoContactPairs, which lists a pair from its
+  // lower link only, so the answer is the same for both argument orders. Its graph has one edge per
+  // joint, first the links' (joint l joins link l to its parent) and then the cycle joints, hard
+  // only for a Hard joint; each link keeps its edges in that order. A depth-first search from the
+  // lower link reaches a link over any edge, and continues past it over a hard edge or when it has
+  // no shape.
+  int const from = std::min(linkA, linkB);
+  int const to = std::max(linkA, linkB);
+  struct Edge {
+    int a;
+    int b;
+    bool hard;
   };
+  DynamicArray<Edge> edges;
+  DynamicArray<DynamicArray<int>> linkEdges(numLinks);
+  auto addEdge = [&](int child, int parent, bool hard) {
+    if (child < 0 || child >= numLinks || parent < 0 || parent >= numLinks) {
+      return;
+    }
+    linkEdges[child].push_back(isize(edges));
+    linkEdges[parent].push_back(isize(edges));
+    edges.push_back(Edge{child, parent, hard});
+  };
+  for (int link = 0; link < numLinks; ++link) {
+    bool const hard =
+        link < isize(botPrefab.joints) && botPrefab.joints[link].type == ArticulatedJointType::Hard;
+    addEdge(link, botPrefab.links[link].parentLink, hard);
+  }
+  for (ArticulatedCycleJointParams const& cycle : botPrefab.cycles) {
+    addEdge(cycle.childLink, cycle.parentLink, /*hard*/ false);
+  }
   DynamicArray<bool> visited(numLinks, false);
-  DynamicArray<int> stack;
-  stack.push_back(linkA);
-  visited[linkA] = true;
-  while (!stack.empty()) {
-    int const current = stack.back();
-    stack.pop_back();
-    // Collect neighbors via the parent/children topology.
-    auto visitNeighbor = [&](int neighbor, bool edgeHard) -> bool {
+  visited[from] = true;
+  std::function<bool(int)> reaches = [&](int current) {
+    for (int const index : linkEdges[current]) {
+      Edge const& edge = edges[index];
+      int const neighbor = edge.a == current ? edge.b : edge.a;
       if (visited[neighbor]) {
-        return false;
+        continue;
       }
       visited[neighbor] = true;
-      if (neighbor == linkB) {
-        return true; // reached destination
+      if (neighbor == to) {
+        return true;
       }
-      // Continue past neighbor only if the edge is hard OR neighbor has no shape.
-      if (edgeHard || !hasShape(neighbor)) {
-        stack.push_back(neighbor);
-      }
-      return false;
-    };
-    // Parent edge: edge entering current from its parent uses joint[current].type.
-    int const parent = botPrefab.links[current].parentLink;
-    if (parent != kIndexNone) {
-      if (visitNeighbor(parent, edgeIsHard(current))) {
+      if ((edge.hard || !hasShape(neighbor)) && reaches(neighbor)) {
         return true;
       }
     }
-    // Child edges: edge from current to child uses joint[child].type.
-    for (int child : botPrefab.links[current]._childrenIndices) {
-      if (visitNeighbor(child, edgeIsHard(child))) {
-        return true;
-      }
-    }
-  }
-  return false;
+    return false;
+  };
+  return reaches(from);
 }
 
 // Iterate the DOFs of bp in pose order; for each one call fn(jointType, lo_opt, hi_opt)

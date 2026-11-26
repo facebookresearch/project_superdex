@@ -478,10 +478,13 @@ MOCHI_API void BakeMassProperties(
  * @brief Check whether contact between two links is implicitly disabled by Mochi's articulated
  * actor creation, mirroring the rule in @ref Scene::CreateArticulatedActor.
  *
- * @details Contact is implicitly disabled between two links iff both have a shape file
- * (@ref BotLinkPrefab::shapeFile) AND they are connected by a path through the link tree where
- * every intermediate node is either shape-less, or the edge entering it is a @ref
- * ArticulatedJointType::Hard joint. Direct parent-child pairs are a special case.
+ * @details Link indices are in the bot's spawn order (@ref SortBotPrefab), which Mochi's rule
+ * depends on. Contact is implicitly disabled between two links iff both have a shape file
+ * (@ref BotLinkPrefab::shapeFile) and a depth-first search from the lower of the two reaches the
+ * higher over the bot's joints, link joints first and then @ref BotPrefab::cycles, passing through
+ * a link only when the joint entering it is @ref ArticulatedJointType::Hard or it has no shape.
+ * Directly joined pairs, cycle joints included, are a special case. The answer is the same for
+ * both argument orders.
  *
  * Returns false if either link is out of range or shape-less.
  *
