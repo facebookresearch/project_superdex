@@ -18,12 +18,15 @@
 
 #include <superdex_recorder/series.h>
 
+#include <mochi_core/geometry/aabb.h>
 #include <mochi_core/utils/log.h>
+#include <mochi_physics/cpp_api/mochi_context.h>
 
 #include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstdint>
+#include <numbers>
 #include <string>
 #include <unordered_set>
 #include <utility>
@@ -107,6 +110,54 @@ std::array<double, kContactParamNames.size()> ContactParamValues(mochi::ContactP
       p.objScale,
       p.collidingPenaltyLengthScale,
   };
+}
+
+// A UV sphere of `rings` latitude bands and `segments` longitude bands: float32 x y z per vertex,
+// poles first and last, and its triangles' vertex indices.
+struct SphereSurface {
+  std::vector<float> vertices;
+  std::vector<uint32_t> triangles;
+};
+
+SphereSurface MakeSphereSurface(mochi::Real3 const& center, mochi::real radius) {
+  constexpr uint32_t kRings = 16;
+  constexpr uint32_t kSegments = 32;
+  SphereSurface out;
+  auto const add = [&](double x, double y, double z) {
+    out.vertices.push_back(static_cast<float>(center[0] + radius * x));
+    out.vertices.push_back(static_cast<float>(center[1] + radius * y));
+    out.vertices.push_back(static_cast<float>(center[2] + radius * z));
+  };
+  add(0.0, 0.0, 1.0);
+  for (uint32_t ring = 1; ring < kRings; ++ring) {
+    double const polar = std::numbers::pi * ring / kRings;
+    for (uint32_t segment = 0; segment < kSegments; ++segment) {
+      double const azimuth = 2.0 * std::numbers::pi * segment / kSegments;
+      add(std::sin(polar) * std::cos(azimuth),
+          std::sin(polar) * std::sin(azimuth),
+          std::cos(polar));
+    }
+  }
+  add(0.0, 0.0, -1.0);
+  uint32_t const south = 1 + (kRings - 1) * kSegments;
+  auto const ringVertex = [](uint32_t ring, uint32_t segment) {
+    return 1 + (ring - 1) * kSegments + segment % kSegments;
+  };
+  for (uint32_t segment = 0; segment < kSegments; ++segment) {
+    out.triangles.insert(
+        out.triangles.end(), {0, ringVertex(1, segment), ringVertex(1, segment + 1)});
+    for (uint32_t ring = 1; ring + 1 < kRings; ++ring) {
+      uint32_t const a = ringVertex(ring, segment);
+      uint32_t const b = ringVertex(ring + 1, segment);
+      uint32_t const c = ringVertex(ring + 1, segment + 1);
+      uint32_t const d = ringVertex(ring, segment + 1);
+      out.triangles.insert(out.triangles.end(), {a, b, c, a, c, d});
+    }
+    out.triangles.insert(
+        out.triangles.end(),
+        {ringVertex(kRings - 1, segment), south, ringVertex(kRings - 1, segment + 1)});
+  }
+  return out;
 }
 
 ComponentField FrameField(std::string component) {
@@ -696,6 +747,18 @@ void PhysicsRecorder::WriteGeometry(
   MOCHI_ERROR_RETURN(error);
   auto const mesh = actor.GetSurfaceMesh();
   if (mesh.nodesPerElement != 3 || mesh.coordinates.empty() || mesh.connectivity.empty()) {
+    // An implicit sphere has no surface mesh; draw the sphere its collider uses.
+    if (actor.GetColliderType() == mochi::ColliderType::Sphere) {
+      mochi::Aabb const bounds =
+          _scene.GetContext()->GetShapeAabb(actor.GetReferenceShape(error), error);
+      MOCHI_ERROR_RETURN(error);
+      mochi::Real3 const halfExtents = mochi::real{0.5} * (bounds.GetMax() - bounds.GetMin());
+      SphereSurface const sphere = MakeSphereSurface(
+          mochi::real{0.5} * (bounds.GetMax() + bounds.GetMin()),
+          std::min({halfExtents[0], halfExtents[1], halfExtents[2]}));
+      _episode.WriteMesh(
+          entityPath, sphere.vertices, sphere.triangles, ColorForId(entityPath), error);
+    }
     return;
   }
 

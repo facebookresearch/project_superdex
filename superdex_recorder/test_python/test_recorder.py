@@ -474,6 +474,48 @@ class RecorderTest(unittest.TestCase):
                     sdp.destroy_scene(scene)
                 sdp.shutdown()
 
+    def test_implicit_spheres_are_drawn_as_their_sphere(self) -> None:
+        with tempfile.TemporaryDirectory() as directory_string:
+            sdp.initialize(num_worker_threads=0)
+            scene = None
+            physics = None
+            try:
+                scene = sdp.create_scene("implicit sphere")
+                center = np.array([0.01, -0.02, 0.03])
+                radius = 0.06
+                ball = scene.create_rigid_actor(
+                    name="ball",
+                    shape=sdp.create_sphere_shape(center=center, radius=radius),
+                    collider_type=sdp.ColliderType.SPHERE,
+                    is_static=True,
+                )
+                assert ball is not None
+                episode = self.make_recorder(Path(directory_string)).begin_episode()
+                physics = recorder.PhysicsRecorder(episode, scene)
+                physics.record(0, 0.0)
+                episode.commit_sync()
+
+                rrd_verify.assert_rerun_accepts(episode.output_path)
+                [positions] = EpisodeReader(episode.output_path).component_samples(
+                    "Mesh3D:vertex_positions", entity_path="world/ball"
+                )
+                vertices = np.asarray(positions.value, dtype=np.float64).reshape(-1, 3)
+                np.testing.assert_allclose(
+                    np.linalg.norm(vertices - center, axis=1), radius, rtol=1e-5
+                )
+                np.testing.assert_allclose(
+                    vertices.min(axis=0), center - radius, atol=1e-6
+                )
+                np.testing.assert_allclose(
+                    vertices.max(axis=0), center + radius, atol=1e-6
+                )
+            finally:
+                physics = None
+                gc.collect()
+                if scene is not None:
+                    sdp.destroy_scene(scene)
+                sdp.shutdown()
+
     def check_surface_recorded_at_every_frame(
         self,
         create_actor: Callable[[sdp.Scene], sdp.Actor],
