@@ -1,0 +1,21 @@
+{
+  "metadata": {
+    "name": "Unitree G1 velocity (flat), tracking-error records",
+    "description": "g1_velocity_flat_mjlab with records of the commanded twist and the pelvis velocities, written by generate_labs.py"
+  },
+  "base": "g1_velocity_flat_mjlab.superdex_lab",
+  "records": [
+    {
+      "name": "twist.command",
+      "feature": "twist.command"
+    },
+    {
+      "name": "pelvis.linear_velocity_from_base",
+      "feature": "pelvis.linear_velocity_from_base"
+    },
+    {
+      "name": "pelvis.angular_velocity_from_base",
+      "feature": "pelvis.angular_velocity_from_base"
+    }
+  ]
+}

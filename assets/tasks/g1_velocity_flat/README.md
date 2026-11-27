@@ -10,6 +10,9 @@ After unitree_rl_mjlab @1425b15 (Apache-2.0) `Unitree-G1-Flat`. The bot and wher
 | `g1_velocity.superdex_task` | No task objects, 200 Hz, 20 s |
 | `g1_velocity_flat.superdex_lab` | Written by `generate_labs.py`: mjlab's MDP without the angular momentum penalty, the torso COM DR and self collision |
 | `g1_velocity_flat_mjlab.superdex_lab` | The same plus the angular momentum penalty and the torso COM DR: all of mjlab's MDP but self collision |
+| `g1_velocity_flat_mjlab_clip.superdex_lab` | `g1_velocity_flat_mjlab` through a fixed 23 s command schedule (stand, walk, turn, arc, sidestep), for clips |
+| `g1_velocity_flat_mjlab_clip_rules.superdex_lab` | The same through the overnight run's pre-registered clip commands: vx 0.5, vx 1.0, vy 0.5 m/s, yaw rate 0.5 rad/s, 5 s each |
+| `g1_velocity_flat_mjlab_eval.superdex_lab` | `g1_velocity_flat_mjlab` plus records of the command and the pelvis velocities, for tracking errors |
 | `g1_velocity_flat.ppo.superdex_learn` | mjlab's rl_cfg.py runner, for both labs |
 | `test/g1_stand.superdex_lab` | The home pose held with zero actions under mjlab's gains |
 | `test/g1_stand_stiff.superdex_lab` | The same with every actuator 30x stiffer and more damped |

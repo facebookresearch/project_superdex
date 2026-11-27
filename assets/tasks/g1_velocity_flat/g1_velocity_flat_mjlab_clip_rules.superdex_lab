@@ -1,0 +1,122 @@
+{
+  "metadata": {
+    "name": "Unitree G1 velocity (flat), registered clip commands",
+    "description": "g1_velocity_flat_mjlab_clip with four fixed commands, 5 s each (vx 0.5, vx 1.0, vy 0.5 m/s, yaw rate 0.5 rad/s), written by generate_labs.py"
+  },
+  "base": "g1_velocity_flat_mjlab.superdex_lab",
+  "episodeS": 20.0,
+  "randomInitialStep": false,
+  "globals": [],
+  "curricula": [],
+  "commands": [
+    {
+      "name": "twist",
+      "kind": "twist_command",
+      "params": {
+        "base": "pelvis",
+        "schedule": [
+          [
+            0.0,
+            0.5,
+            0.0,
+            0.0
+          ],
+          [
+            5.0,
+            1.0,
+            0.0,
+            0.0
+          ],
+          [
+            10.0,
+            0.0,
+            0.5,
+            0.0
+          ],
+          [
+            15.0,
+            0.0,
+            0.0,
+            0.5
+          ]
+        ]
+      }
+    },
+    {
+      "name": "feet",
+      "kind": "foot_contact",
+      "params": {
+        "links": [
+          "links:left_foot?_s?",
+          "links:right_foot?_s?"
+        ],
+        "sites": [
+          "left_foot",
+          "right_foot"
+        ],
+        "ground": "StaticPlane",
+        "base": "pelvis",
+        "forceThreshold": 1.0
+      }
+    }
+  ],
+  "events": [
+    {
+      "name": "foot_friction",
+      "kind": "randomize_field",
+      "params": {
+        "field": "contact.coulombFrictionCoefficient",
+        "target": "bot/g1/links/*_foot?_s?",
+        "distribution": [
+          "uniform",
+          0.3,
+          1.6,
+          {
+            "power": 2
+          }
+        ],
+        "operation": "abs",
+        "temporal": "startup"
+      }
+    },
+    {
+      "name": "encoder_bias",
+      "kind": "randomize_field",
+      "params": {
+        "field": "encoder.offset",
+        "target": "bot/g1/joints/{left,right,waist}_*",
+        "distribution": [
+          "uniform_vec",
+          -0.015,
+          0.015,
+          29
+        ],
+        "operation": "abs",
+        "temporal": "startup"
+      }
+    },
+    {
+      "name": "base_com",
+      "kind": "randomize_field",
+      "params": {
+        "field": "body.com_offset",
+        "target": "bot/g1/links/torso_link",
+        "distribution": [
+          "uniform_box",
+          [
+            -0.05,
+            -0.05,
+            -0.05
+          ],
+          [
+            0.05,
+            0.05,
+            0.05
+          ]
+        ],
+        "operation": "add",
+        "temporal": "startup"
+      }
+    }
+  ]
+}

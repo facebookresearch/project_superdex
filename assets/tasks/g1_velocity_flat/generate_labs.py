@@ -449,6 +449,51 @@ def clip_lab(joints: list[str]) -> dict:
     return lab
 
 
+_RULES_CLIP_SCHEDULE = [
+    # The overnight run's pre-registered clip: vx 0.5, vx 1.0, vy 0.5 m/s, yaw rate 0.5 rad/s.
+    [0.0, 0.5, 0.0, 0.0],
+    [5.0, 1.0, 0.0, 0.0],
+    [10.0, 0.0, 0.5, 0.0],
+    [15.0, 0.0, 0.0, 0.5],
+]
+
+
+def rules_clip_lab(joints: list[str]) -> dict:
+    """clip_lab through _RULES_CLIP_SCHEDULE, 5 s per command, 20 s."""
+    lab = clip_lab(joints)
+    lab["metadata"] = {
+        "name": "Unitree G1 velocity (flat), registered clip commands",
+        "description": (
+            "g1_velocity_flat_mjlab_clip with four fixed commands, 5 s each (vx 0.5, vx 1.0, "
+            "vy 0.5 m/s, yaw rate 0.5 rad/s), written by generate_labs.py"
+        ),
+    }
+    lab["episodeS"] = 20.0
+    lab["commands"][0]["params"]["schedule"] = _RULES_CLIP_SCHEDULE
+    return lab
+
+
+def eval_lab() -> dict:
+    """g1_velocity_flat_mjlab plus records of the command and the base velocities, for tracking
+    errors read off `superdex_lab_cli step --features`."""
+    features = [
+        "twist.command",
+        "pelvis.linear_velocity_from_base",
+        "pelvis.angular_velocity_from_base",
+    ]
+    return {
+        "metadata": {
+            "name": "Unitree G1 velocity (flat), tracking-error records",
+            "description": (
+                "g1_velocity_flat_mjlab with records of the commanded twist and the pelvis "
+                "velocities, written by generate_labs.py"
+            ),
+        },
+        "base": "g1_velocity_flat_mjlab.superdex_lab",
+        "records": [{"name": f, "feature": f} for f in features],
+    }
+
+
 def _reward(
     name: str, weight: float, kind: str | None = None, **params: object
 ) -> dict:
@@ -516,6 +561,10 @@ def main() -> None:
     _write(_HERE / "g1_velocity_flat.superdex_lab", flat_lab(joints))
     _write(_HERE / "g1_velocity_flat_mjlab.superdex_lab", mjlab_lab(joints))
     _write(_HERE / "g1_velocity_flat_mjlab_clip.superdex_lab", clip_lab(joints))
+    _write(
+        _HERE / "g1_velocity_flat_mjlab_clip_rules.superdex_lab", rules_clip_lab(joints)
+    )
+    _write(_HERE / "g1_velocity_flat_mjlab_eval.superdex_lab", eval_lab())
     _write(_HERE / "g1_velocity_flat.ppo.superdex_learn", learn())
 
 
