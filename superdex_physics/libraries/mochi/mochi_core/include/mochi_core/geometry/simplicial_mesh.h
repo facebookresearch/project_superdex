@@ -138,7 +138,8 @@ class SimplicialMesh {
   // GetActiveNodesFlatConnectivity().
   Span<Int2 const> GetActiveNodesEdges() const;
 
-  // Get just the edges on the boundary (edges connected by exactly one element)
+  // Get the edges on the boundary: the edges of exactly one triangle in a triangle mesh, and the
+  // edges of the boundary faces in a tetrahedral mesh
   Span<Int2 const> GetBoundaryEdges() const;
 
   // Get the overall barycenter of the mesh

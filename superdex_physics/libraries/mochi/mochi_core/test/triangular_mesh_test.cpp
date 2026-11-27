@@ -112,7 +112,7 @@ TEST(TriangularMesh, Cube) {
       Int2{0, 5},
   };
   std::vector<Int2> actualEdges(mesh.GetEdges().begin(), mesh.GetEdges().end());
-  for (Int2 edge : actualEdges) {
+  for (Int2& edge : actualEdges) {
     std::ranges::sort(edge);
   }
 

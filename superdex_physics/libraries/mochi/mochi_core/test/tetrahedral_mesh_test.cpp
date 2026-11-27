@@ -139,7 +139,7 @@ TEST(TetrahedralMesh, Cube) {
   std::vector<int> const expectedBoundaryNodes = {0, 1, 2, 3, 4, 5, 6, 7};
   EXPECT_TRUE(test::EqualSpanUnordered(expectedBoundaryNodes, mesh.GetBoundaryNodes()));
 
-  // Edges (any order of the correct pairs will be accepted here)
+  // Edges, sorted, each with its nodes in ascending order
   std::vector<Int2> expectedEdges = {
       Int2{0, 1},
       Int2{1, 5},
@@ -160,25 +160,18 @@ TEST(TetrahedralMesh, Cube) {
       Int2{3, 6},
       Int2{5, 6},
   };
-  std::vector<Int2> actualEdges(mesh.GetEdges().begin(), mesh.GetEdges().end());
-  for (Int2 edge : actualEdges) {
-    std::ranges::sort(edge);
-  }
-
-  auto int2_less = [](Int2 const& a, Int2 const& b) {
-    return (a[0] < b[0]) || (a[0] == b[0] && a[1] < b[1]);
-  };
-  std::ranges::sort(actualEdges, int2_less);
-  std::ranges::sort(expectedEdges, int2_less);
-  EXPECT_SPAN_EQ(expectedEdges, actualEdges);
+  std::ranges::sort(expectedEdges, Int2Less{});
+  EXPECT_SPAN_EQ(expectedEdges, mesh.GetEdges());
 
   // Boundary edges (all edges are boundary edges in this mesh)
-  std::vector<Int2> actualBoundaryEdges(mesh.GetEdges().begin(), mesh.GetEdges().end());
-  for (Int2 edge : actualBoundaryEdges) {
-    std::ranges::sort(edge);
-  }
-  std::ranges::sort(actualBoundaryEdges, int2_less);
-  EXPECT_SPAN_EQ(expectedEdges, actualBoundaryEdges);
+  EXPECT_SPAN_EQ(expectedEdges, mesh.GetBoundaryEdges());
+
+  // Two cubes sharing a face: the 20 triangles of their closed surface have 20 * 3 / 2 = 30 edges,
+  // and the diagonal of the shared face is the only interior edge
+  TetrahedralMesh const twoCubes =
+      test::CreateMinimalTetMeshUnitGrid(Real3{2_r, 1_r, 1_r}, Int3{2, 1, 1});
+  EXPECT_EQ(31, isize(twoCubes.GetEdges()));
+  EXPECT_EQ(30, isize(twoCubes.GetBoundaryEdges()));
 
   // Element barycenters
   EXPECT_NEAR_EQ(Real3(0.25_r, 0.75_r, 0.25_r), mesh.GetElementBarycenter(0));
