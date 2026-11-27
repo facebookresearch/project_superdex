@@ -540,6 +540,37 @@ def eval_lab() -> dict:
     }
 
 
+def full_collision_eval_lab() -> dict:
+    """eval_lab on the full-collision lab, plus the self_collisions penalty's feature (the
+    decision's physics steps with a collider link's self-contact force above 10 N)."""
+    lab = eval_lab()
+    lab["metadata"] = {
+        "name": "Unitree G1 velocity (flat), full collision, tracking-error records",
+        "description": (
+            "g1_velocity_flat_mjlab_full_collision with g1_velocity_flat_mjlab_eval's records "
+            "and the self-contact substep count, written by generate_labs.py"
+        ),
+    }
+    lab["base"] = "g1_velocity_flat_mjlab_full_collision.superdex_lab"
+    feature = f"substeps_above:{_SELF_FORCE_THRESHOLD}:{_SELF_FORCE}"
+    lab["records"].append({"name": feature, "feature": feature})
+    return lab
+
+
+def full_collision_rules_clip_lab(joints: list[str]) -> dict:
+    """rules_clip_lab on the full-collision scene."""
+    lab = rules_clip_lab(joints)
+    lab["metadata"] = {
+        "name": "Unitree G1 velocity (flat), registered clip commands, full collision",
+        "description": (
+            "g1_velocity_flat_mjlab_clip_rules on g1_velocity_full_collision.superdex_scene "
+            "(mjlab's FULL_COLLISION), written by generate_labs.py"
+        ),
+    }
+    lab["scene"] = "g1_velocity_full_collision.superdex_scene"
+    return lab
+
+
 def _reward(
     name: str, weight: float, kind: str | None = None, **params: object
 ) -> dict:
@@ -619,6 +650,14 @@ def main() -> None:
         _HERE / "g1_velocity_flat_mjlab_clip_rules.superdex_lab", rules_clip_lab(joints)
     )
     _write(_HERE / "g1_velocity_flat_mjlab_eval.superdex_lab", eval_lab())
+    _write(
+        _HERE / "g1_velocity_flat_mjlab_full_collision_eval.superdex_lab",
+        full_collision_eval_lab(),
+    )
+    _write(
+        _HERE / "g1_velocity_flat_mjlab_full_collision_clip_rules.superdex_lab",
+        full_collision_rules_clip_lab(joints),
+    )
     _write(_HERE / "g1_velocity_flat.ppo.superdex_learn", learn())
 
 

@@ -1,0 +1,25 @@
+{
+  "metadata": {
+    "name": "Unitree G1 velocity (flat), full collision, tracking-error records",
+    "description": "g1_velocity_flat_mjlab_full_collision with g1_velocity_flat_mjlab_eval's records and the self-contact substep count, written by generate_labs.py"
+  },
+  "base": "g1_velocity_flat_mjlab_full_collision.superdex_lab",
+  "records": [
+    {
+      "name": "twist.command",
+      "feature": "twist.command"
+    },
+    {
+      "name": "pelvis.linear_velocity_from_base",
+      "feature": "pelvis.linear_velocity_from_base"
+    },
+    {
+      "name": "pelvis.angular_velocity_from_base",
+      "feature": "pelvis.angular_velocity_from_base"
+    },
+    {
+      "name": "substeps_above:10:links:*.contact_force_other_than.StaticPlane",
+      "feature": "substeps_above:10:links:*.contact_force_other_than.StaticPlane"
+    }
+  ]
+}
