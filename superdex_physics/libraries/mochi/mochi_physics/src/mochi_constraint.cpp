@@ -23,6 +23,7 @@
 #include "mochi_rigid.h"
 #include "mochi_rod.h"
 #include "mochi_soft.h"
+#include "mochi_soft_rom_components.h"
 
 #include <mochi_core/element_operations/fem_rod.h>
 #include <mochi_core/linear_algebra/krylov_interop.h>
@@ -61,7 +62,11 @@ using namespace mochi;
       (reg).any_of<TagNestedSoftActor>(e),                                                    \
       error,                                                                                  \
       "Deformable node constraints are not supported on nested soft actors, whose nodes are " \
-      "posed by skinning.");
+      "posed by skinning.");                                                                  \
+  MOCHI_ERROR_IF(                                                                             \
+      ((reg).any_of<TagRomActor, CRomFomSwitchingParams>(e)),                                 \
+      error,                                                                                  \
+      "Deformable node constraints are not supported on ROM actors.");
 
 static int DofsPerNode(entt::registry const& reg, entt::entity e) {
   if (reg.any_of<TagSoftActor, TagShellActor>(e)) {

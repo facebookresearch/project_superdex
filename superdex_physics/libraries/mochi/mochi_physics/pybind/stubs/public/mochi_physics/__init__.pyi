@@ -15233,7 +15233,7 @@ class Scene:
 
         Note:
             Not supported on nested soft actors (see
-            :meth:`~superdex.physics.Actor.get_nested_soft_actors`).
+            :meth:`~superdex.physics.Actor.get_nested_soft_actors`) or ROM actors.
 
         See Also:
             :class:`DEFORMABLE_NODE_POSITION <superdex.physics.ConstraintType>`,
@@ -15271,7 +15271,7 @@ class Scene:
 
         Note:
             Not supported on nested soft actors (see
-            :meth:`~superdex.physics.Actor.get_nested_soft_actors`).
+            :meth:`~superdex.physics.Actor.get_nested_soft_actors`) or ROM actors.
 
         See Also:
             :class:`DEFORMABLE_NODE_TO_DEFORMABLE_NODE
@@ -15312,7 +15312,7 @@ class Scene:
 
         Note:
             Not supported on nested soft actors (see
-            :meth:`~superdex.physics.Actor.get_nested_soft_actors`).
+            :meth:`~superdex.physics.Actor.get_nested_soft_actors`) or ROM actors.
 
         See Also:
             :class:`DEFORMABLE_NODE_TO_RIGID <superdex.physics.ConstraintType>`,
