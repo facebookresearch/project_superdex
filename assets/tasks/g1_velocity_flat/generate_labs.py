@@ -571,6 +571,57 @@ def full_collision_rules_clip_lab(joints: list[str]) -> dict:
     return lab
 
 
+def full_collision_full_range_eval_lab(joints: list[str]) -> dict:
+    """full_collision_eval_lab with the command ranges at the curriculum's end (vx -1..2, vy -1..1
+    m/s), the range training reaches at step _COMMAND_STAGE_STEP; without the curricula, so the
+    eval's own step count cannot move them back."""
+    lab = full_collision_eval_lab()
+    lab["metadata"] = {
+        "name": "Unitree G1 velocity (flat), full collision, full command range, tracking-error records",
+        "description": (
+            "g1_velocity_flat_mjlab_full_collision_eval with the twist range globals at the "
+            "curriculum's last stage and no curricula, written by generate_labs.py"
+        ),
+    }
+    curricula = full_collision_lab(joints)["curricula"]
+    last = {c["global"]: c["params"]["stages"][-1]["weight"] for c in curricula}
+    lab["curricula"] = []
+    lab["globals"] = [
+        {"name": name, "default": weight, "eval": weight}
+        for name, weight in last.items()
+    ]
+    return lab
+
+
+_RELEASE_CLIP_SCHEDULE = [
+    # Stand, then the trained range's ends: vx 2.0 and -1.0, vy +-1.0 m/s, yaw rate +-1.0 rad/s,
+    # then vx 1.0 m/s turning at 0.5 rad/s.
+    [0.0, 0.0, 0.0, 0.0],
+    [5.0, 2.0, 0.0, 0.0],
+    [10.0, -1.0, 0.0, 0.0],
+    [15.0, 0.0, 1.0, 0.0],
+    [20.0, 0.0, -1.0, 0.0],
+    [25.0, 0.0, 0.0, 1.0],
+    [30.0, 0.0, 0.0, -1.0],
+    [35.0, 1.0, 0.0, 0.5],
+]
+
+
+def full_collision_release_clip_lab(joints: list[str]) -> dict:
+    """full_collision_rules_clip_lab through _RELEASE_CLIP_SCHEDULE, 5 s per command, 40 s."""
+    lab = full_collision_rules_clip_lab(joints)
+    lab["metadata"] = {
+        "name": "Unitree G1 velocity (flat), release clip commands, full collision",
+        "description": (
+            "g1_velocity_flat_mjlab_full_collision_clip_rules with eight fixed commands, 5 s "
+            "each, over the trained command range, written by generate_labs.py"
+        ),
+    }
+    lab["episodeS"] = 40.0
+    lab["commands"][0]["params"]["schedule"] = _RELEASE_CLIP_SCHEDULE
+    return lab
+
+
 def _reward(
     name: str, weight: float, kind: str | None = None, **params: object
 ) -> dict:
@@ -657,6 +708,14 @@ def main() -> None:
     _write(
         _HERE / "g1_velocity_flat_mjlab_full_collision_clip_rules.superdex_lab",
         full_collision_rules_clip_lab(joints),
+    )
+    _write(
+        _HERE / "g1_velocity_flat_mjlab_full_collision_eval_full_range.superdex_lab",
+        full_collision_full_range_eval_lab(joints),
+    )
+    _write(
+        _HERE / "g1_velocity_flat_mjlab_full_collision_clip_release.superdex_lab",
+        full_collision_release_clip_lab(joints),
     )
     _write(_HERE / "g1_velocity_flat.ppo.superdex_learn", learn())
 

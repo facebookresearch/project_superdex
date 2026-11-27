@@ -1,0 +1,48 @@
+{
+  "metadata": {
+    "name": "Unitree G1 velocity (flat), full collision, full command range, tracking-error records",
+    "description": "g1_velocity_flat_mjlab_full_collision_eval with the twist range globals at the curriculum's last stage and no curricula, written by generate_labs.py"
+  },
+  "base": "g1_velocity_flat_mjlab_full_collision.superdex_lab",
+  "records": [
+    {
+      "name": "twist.command",
+      "feature": "twist.command"
+    },
+    {
+      "name": "pelvis.linear_velocity_from_base",
+      "feature": "pelvis.linear_velocity_from_base"
+    },
+    {
+      "name": "pelvis.angular_velocity_from_base",
+      "feature": "pelvis.angular_velocity_from_base"
+    },
+    {
+      "name": "substeps_above:10:links:*.contact_force_other_than.StaticPlane",
+      "feature": "substeps_above:10:links:*.contact_force_other_than.StaticPlane"
+    }
+  ],
+  "curricula": [],
+  "globals": [
+    {
+      "name": "twist_vx_lo",
+      "default": -1.0,
+      "eval": -1.0
+    },
+    {
+      "name": "twist_vx_hi",
+      "default": 2.0,
+      "eval": 2.0
+    },
+    {
+      "name": "twist_vy_lo",
+      "default": -1.0,
+      "eval": -1.0
+    },
+    {
+      "name": "twist_vy_hi",
+      "default": 1.0,
+      "eval": 1.0
+    }
+  ]
+}
