@@ -8,8 +8,8 @@ After unitree_rl_mjlab @1425b15 (Apache-2.0) `Unitree-G1-Flat`. The bot and wher
 | `g1_velocity.superdex_scene` | The G1 at mjlab's home pose (pelvis z 0.8) with g1_constants.py's actuators as mjlab-style position actuators (`LAB_JOINT_ACTUATORS`, written by the bot's `generate.py`); slot `robot` offers `g1` (sphere feet) and `g1_box_feet` |
 | `scene/g1_flat.mochi_scene` | A ground plane, gravity 9.81 (mjlab's), the G1 collider layers touching only the ground, a 1 mm contact smoothing half-band on the plane |
 | `g1_velocity.superdex_task` | No task objects, 200 Hz, 20 s |
-| `g1_velocity_flat.superdex_lab` | Written by `generate_labs.py`: mjlab's MDP without the angular momentum penalty, the torso COM DR and self collision |
-| `g1_velocity_flat_mjlab.superdex_lab` | The same plus the angular momentum penalty and the torso COM DR: all of mjlab's MDP but self collision |
+| `g1_velocity_flat.superdex_lab` | Written by `generate_labs.py`: mjlab's MDP without the angular momentum penalty, the torso COM DR and the self-collision penalty; feet-only contact |
+| `g1_velocity_flat_mjlab.superdex_lab` | The same plus the angular momentum penalty and the torso COM DR. All of mjlab's MDP except its collisions: upstream's `FULL_COLLISION` (body-ground and self contact) and the self-collision penalty are missing; only the feet touch the ground (see the bot README's Layers) |
 | `g1_velocity_flat_mjlab_clip.superdex_lab` | `g1_velocity_flat_mjlab` through a fixed 23 s command schedule (stand, walk, turn, arc, sidestep), for clips |
 | `g1_velocity_flat_mjlab_clip_rules.superdex_lab` | The same through the overnight run's pre-registered clip commands: vx 0.5, vx 1.0, vy 0.5 m/s, yaw rate 0.5 rad/s, 5 s each |
 | `g1_velocity_flat_mjlab_eval.superdex_lab` | `g1_velocity_flat_mjlab` plus records of the command and the pelvis velocities, for tracking errors |

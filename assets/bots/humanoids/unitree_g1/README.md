@@ -37,8 +37,13 @@ The bot's joints carry no armature or effort limit, as in g1.xml: the actuators 
   MuJoCo's capsule-plane contact is those two points. `--body-colliders` turns each of the 19 body capsules and
   spheres into spheres no more than one radius apart (off by default: the default labs collide the feet only).
 - **Layers.** Foot spheres are layer `G1Foot`, body spheres `G1Body`; the G1 scenes disable contact within and
-  between these layers, so only the ground touches them (mjlab's `FEET_ONLY_COLLISION`; self collision is the
-  parity lab's).
+  between these layers, so only the ground touches them. This is a deviation in every G1 lab, the parity lab
+  included: unitree_rl_mjlab's G1 entity uses `FULL_COLLISION` (`g1_constants.py`, `get_g1_robot_cfg`). Under it,
+  every `*_collision` geom touches the ground and the robot's other links (condim 1, so frictionless, except
+  foot-to-foot; MuJoCo skips parent-child pairs), and the velocity task penalizes self contact
+  (`self_collisions`, weight -1, substeps above 10 N). Our labs build the bot without body colliders, so only the
+  feet touch the ground, and nothing collides with itself. mjlab's `FEET_ONLY_COLLISION` comes closest to what
+  our labs do, but no unitree_rl_mjlab G1 task uses it.
 - **Contact parameters.** Mochi penalty contact, not MuJoCo's soft constraints. The G1 ground plane
   (`tasks/g1_velocity_flat/scene/g1_flat.mochi_scene`) sets a 1 mm smoothing half-band in place of Mochi's 5 mm (the
   band comes from the collider, the plane, which only the G1's feet touch): standing, the 1 cm foot spheres sink
