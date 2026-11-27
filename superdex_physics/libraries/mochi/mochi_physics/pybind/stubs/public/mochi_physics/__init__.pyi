@@ -4860,8 +4860,10 @@ class BoundarySubsamplingStrategy:
         triangles have more samples.
 
     Note:
-        Active boundary faces are selected deterministically using uniformly-spaced
-        indices.
+        Active boundary faces are selected deterministically: one at random from
+        each block of about 1 /
+        :attr:`~superdex.physics.BoundarySubsamplingParams.subsampling_density`
+        consecutive faces.
     """
     AREA_PROPORTIONAL: BoundarySubsamplingStrategy
     """Select boundary faces with probability proportional to their area.

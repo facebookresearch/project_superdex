@@ -19,6 +19,7 @@
 #include <mochi_core/utils/subset_map.h>
 #include <mochi_physics/src/mochi_contact.h>
 #include <mochi_physics/src/mochi_discretization_components.h>
+#include <mochi_physics/src/mochi_discretization_functions.h>
 
 #include <gtest/gtest.h>
 
@@ -566,6 +567,32 @@ TEST(MochiDiscretization, ActiveBoundaryFaces3) {
       }
     }
   });
+}
+
+// Uniform subsampling samples every column of a grid stored row by row with two triangles per cell,
+// like a cylinder stored ring by ring, where a stride of 4 faces would sample only even columns.
+// With 32 rows, a column goes unsampled with probability 2^-32.
+TEST(MochiDiscretization, UniformBoundarySubsamplingSamplesEveryColumn) {
+  int constexpr kNumColumns = 8;
+  auto const mesh = std::make_shared<TriangularMesh const>(
+      UniformSquareTriangularMeshData(Int2{kNumColumns, /*numRows=*/32}));
+  auto const surfaceDisc = CFemSurfaceDiscretization::Create(ActorBoundaryElementType::P1Q1, *mesh);
+  BoundarySubsamplingParams const params{
+      .subsamplingDensity = 0.25_r, .strategy = BoundarySubsamplingStrategy::UniformProbability};
+
+  auto const actBdFaces = CreateActiveBoundaryFaces(params, mesh, surfaceDisc);
+
+  auto const faces = actBdFaces.ViewIndices();
+  EXPECT_EQ(mesh->GetNumElements() / 4, isize(faces));
+  EXPECT_SPAN_EQ(faces, CreateActiveBoundaryFaces(params, mesh, surfaceDisc).ViewIndices());
+
+  // One pick in each window of 4 consecutive faces.
+  std::set<int> sampledColumns;
+  for (int i = 0; i < isize(faces); ++i) {
+    EXPECT_EQ(i, faces[i] / 4);
+    sampledColumns.insert(faces[i] / 2 % kNumColumns);
+  }
+  EXPECT_EQ(kNumColumns, isize(sampledColumns));
 }
 
 // ===================================================================================

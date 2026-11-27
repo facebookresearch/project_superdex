@@ -1010,7 +1010,8 @@ enum class EMochiBoundarySubsamplingStrategy : uint8 {
    *
    * @note Results in sample density following mesh resolution. Areas with more triangles have more
    *   samples.
-   * @note Active boundary faces are selected deterministically using uniformly-spaced indices.
+   * @note Active boundary faces are selected deterministically: one at random from each block of
+   *   about 1 / FMochiBoundarySubsamplingParams::SubsamplingDensity consecutive faces.
    */
   UniformProbability = 0,
   /**

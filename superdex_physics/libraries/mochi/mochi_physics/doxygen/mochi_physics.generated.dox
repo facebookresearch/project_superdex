@@ -1906,7 +1906,7 @@
 /// @brief Select boundary faces with uniform probability.
 ///
 /// @note Results in sample density following mesh resolution. Areas with more triangles have more samples.
-/// @note Active boundary faces are selected deterministically using uniformly-spaced indices.
+/// @note Active boundary faces are selected deterministically: one at random from each block of about 1 / @ref mochi::BoundarySubsamplingParams::subsamplingDensity "BoundarySubsamplingParams::subsamplingDensity" consecutive faces.
 ///
 
 /// @var mochi::BoundarySubsamplingStrategy::AreaProportional

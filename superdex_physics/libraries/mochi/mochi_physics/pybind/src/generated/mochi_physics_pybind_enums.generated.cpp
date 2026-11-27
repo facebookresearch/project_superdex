@@ -45,7 +45,7 @@ void mochi::DeclareMochiPhysics_MochiPhysicsEnums([[maybe_unused]] nb::module_& 
   ;
 
   nb::enum_<mochi::BoundarySubsamplingStrategy>(m, "BoundarySubsamplingStrategy", "Strategy for selecting the active boundary faces when subsampling boundary\nintegrals.")
-    .value("UNIFORM_PROBABILITY", mochi::BoundarySubsamplingStrategy::UniformProbability, "Select boundary faces with uniform probability.\n    \n    Note:\n        Results in sample density following mesh resolution. Areas with more\n        triangles have more samples.\n    \n    Note:\n        Active boundary faces are selected deterministically using uniformly-spaced\n        indices.")
+    .value("UNIFORM_PROBABILITY", mochi::BoundarySubsamplingStrategy::UniformProbability, "Select boundary faces with uniform probability.\n    \n    Note:\n        Results in sample density following mesh resolution. Areas with more\n        triangles have more samples.\n    \n    Note:\n        Active boundary faces are selected deterministically: one at random from\n        each block of about 1 /\n        :attr:`~superdex.physics.BoundarySubsamplingParams.subsampling_density`\n        consecutive faces.")
     .value("AREA_PROPORTIONAL", mochi::BoundarySubsamplingStrategy::AreaProportional, "Select boundary faces with probability proportional to their area.\n    \n    Note:\n        Larger faces have higher selection probability.\n    \n    Note:\n        Results in more uniform spatial distribution of sample points, independent\n        of mesh resolution.")
     .value("COUNT", mochi::BoundarySubsamplingStrategy::Count, "Number of boundary subsampling strategy enum values.")
   ;
