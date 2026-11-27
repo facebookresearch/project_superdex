@@ -1,0 +1,708 @@
+{
+  "metadata": {
+    "name": "Unitree G1 velocity (flat), mjlab parity, full collision",
+    "description": "g1_velocity_flat_mjlab on g1_velocity_full_collision.superdex_scene (mjlab's FULL_COLLISION: body-ground and self contact), written by generate_labs.py"
+  },
+  "scene": "g1_velocity_full_collision.superdex_scene",
+  "task": "g1_velocity.superdex_task",
+  "slots": {
+    "robot": {
+      "bot": "g1",
+      "gravityCompensated": false,
+      "baseLink": "pelvis",
+      "softLimitFactor": 0.9
+    }
+  },
+  "controlHz": 50,
+  "physicsHz": 200,
+  "episodeS": 20.0,
+  "randomInitialStep": true,
+  "settleSteps": 0,
+  "actions": [
+    {
+      "controller": "body",
+      "scale": [
+        0.5475464629911068,
+        0.35066146637882434,
+        0.5475464629911068,
+        0.35066146637882434,
+        0.43857731392336724,
+        0.43857731392336724,
+        0.5475464629911068,
+        0.35066146637882434,
+        0.5475464629911068,
+        0.35066146637882434,
+        0.43857731392336724,
+        0.43857731392336724,
+        0.5475464629911068,
+        0.43857731392336724,
+        0.43857731392336724,
+        0.43857731392336724,
+        0.43857731392336724,
+        0.43857731392336724,
+        0.43857731392336724,
+        0.43857731392336724,
+        0.07450087032950714,
+        0.07450087032950714,
+        0.43857731392336724,
+        0.43857731392336724,
+        0.43857731392336724,
+        0.43857731392336724,
+        0.43857731392336724,
+        0.07450087032950714,
+        0.07450087032950714
+      ]
+    }
+  ],
+  "observations": [
+    {
+      "name": "base_ang_vel",
+      "feature": "pelvis.angular_velocity_from_base",
+      "noise": "Uniform",
+      "noiseLow": -0.2,
+      "noiseHigh": 0.2
+    },
+    {
+      "name": "projected_gravity",
+      "feature": "gravity_from_base",
+      "noise": "Uniform",
+      "noiseLow": -0.05,
+      "noiseHigh": 0.05,
+      "scale": [
+        0.1019367991845056
+      ]
+    },
+    {
+      "name": "command",
+      "feature": "twist.command"
+    },
+    {
+      "name": "phase",
+      "feature": "twist.phase"
+    },
+    {
+      "name": "joint_pos",
+      "feature": "body.joints.from_initial",
+      "noise": "Uniform",
+      "noiseLow": -0.01,
+      "noiseHigh": 0.01
+    },
+    {
+      "name": "joint_vel",
+      "feature": "body.joint_velocities",
+      "noise": "Uniform",
+      "noiseLow": -1.5,
+      "noiseHigh": 1.5
+    },
+    {
+      "name": "actions",
+      "feature": "action"
+    }
+  ],
+  "critic": [
+    {
+      "name": "base_ang_vel",
+      "feature": "pelvis.angular_velocity_from_base"
+    },
+    {
+      "name": "projected_gravity",
+      "feature": "gravity_from_base",
+      "scale": [
+        0.1019367991845056
+      ]
+    },
+    {
+      "name": "command",
+      "feature": "twist.command"
+    },
+    {
+      "name": "phase",
+      "feature": "twist.phase"
+    },
+    {
+      "name": "joint_pos",
+      "feature": "body.joints.from_initial"
+    },
+    {
+      "name": "joint_vel",
+      "feature": "body.joint_velocities"
+    },
+    {
+      "name": "actions",
+      "feature": "action"
+    },
+    {
+      "name": "base_lin_vel",
+      "feature": "pelvis.linear_velocity_from_base"
+    },
+    {
+      "name": "foot_height",
+      "feature": "feet.height"
+    },
+    {
+      "name": "foot_air_time",
+      "feature": "feet.air_time"
+    },
+    {
+      "name": "foot_contact",
+      "feature": "feet.found"
+    },
+    {
+      "name": "foot_contact_forces",
+      "feature": "feet.force_log1p"
+    }
+  ],
+  "commands": [
+    {
+      "name": "twist",
+      "kind": "twist_command",
+      "params": {
+        "base": "pelvis",
+        "linVelX": [
+          -1.0,
+          2.0
+        ],
+        "linVelY": [
+          -1.0,
+          1.0
+        ],
+        "angVelZ": [
+          -1.0,
+          1.0
+        ],
+        "heading": [
+          -3.141592653589793,
+          3.141592653589793
+        ],
+        "resamplingS": [
+          3.0,
+          8.0
+        ],
+        "standingShare": 0.05,
+        "headingShare": 1.0,
+        "headingCommand": true,
+        "headingStiffness": 0.5,
+        "minNorm": 0.1,
+        "phasePeriodS": 0.6,
+        "linVelXGlobals": [
+          "twist_vx_lo",
+          "twist_vx_hi"
+        ],
+        "linVelYGlobals": [
+          "twist_vy_lo",
+          "twist_vy_hi"
+        ]
+      }
+    },
+    {
+      "name": "feet",
+      "kind": "foot_contact",
+      "params": {
+        "links": [
+          "links:left_foot?_s?",
+          "links:right_foot?_s?"
+        ],
+        "sites": [
+          "left_foot",
+          "right_foot"
+        ],
+        "ground": "StaticPlane",
+        "base": "pelvis",
+        "forceThreshold": 1.0
+      }
+    }
+  ],
+  "events": [
+    {
+      "name": "reset_base_position",
+      "kind": "randomize_field",
+      "params": {
+        "field": "bot.root_position",
+        "target": "bot/g1",
+        "distribution": [
+          "uniform_box",
+          [
+            -0.5,
+            -0.5
+          ],
+          [
+            0.5,
+            0.5
+          ]
+        ],
+        "operation": "add",
+        "axes": [
+          0,
+          1
+        ],
+        "temporal": "reset"
+      }
+    },
+    {
+      "name": "reset_base_yaw",
+      "kind": "randomize_field",
+      "params": {
+        "field": "bot.root_rotation",
+        "target": "bot/g1",
+        "distribution": [
+          "uniform_box",
+          [
+            0.0,
+            0.0,
+            -3.14
+          ],
+          [
+            0.0,
+            0.0,
+            3.14
+          ]
+        ],
+        "operation": "add",
+        "temporal": "reset"
+      }
+    },
+    {
+      "name": "push_robot",
+      "kind": "push_robot",
+      "params": {
+        "intervalS": [
+          5.0,
+          6.0
+        ],
+        "linear": [
+          [
+            -0.5,
+            0.5
+          ],
+          [
+            -0.5,
+            0.5
+          ],
+          [
+            -0.4,
+            0.4
+          ]
+        ],
+        "angular": [
+          [
+            -0.52,
+            0.52
+          ],
+          [
+            -0.52,
+            0.52
+          ],
+          [
+            -0.78,
+            0.78
+          ]
+        ]
+      }
+    },
+    {
+      "name": "foot_friction",
+      "kind": "randomize_field",
+      "params": {
+        "field": "contact.coulombFrictionCoefficient",
+        "target": "bot/g1/links/*_foot?_s?",
+        "distribution": [
+          "uniform",
+          0.3,
+          1.6,
+          {
+            "power": 2
+          }
+        ],
+        "operation": "abs",
+        "temporal": "startup"
+      }
+    },
+    {
+      "name": "encoder_bias",
+      "kind": "randomize_field",
+      "params": {
+        "field": "encoder.offset",
+        "target": "bot/g1/joints/{left,right,waist}_*",
+        "distribution": [
+          "uniform_vec",
+          -0.015,
+          0.015,
+          29
+        ],
+        "operation": "abs",
+        "temporal": "startup"
+      }
+    },
+    {
+      "name": "base_com",
+      "kind": "randomize_field",
+      "params": {
+        "field": "body.com_offset",
+        "target": "bot/g1/links/torso_link",
+        "distribution": [
+          "uniform_box",
+          [
+            -0.05,
+            -0.05,
+            -0.05
+          ],
+          [
+            0.05,
+            0.05,
+            0.05
+          ]
+        ],
+        "operation": "add",
+        "temporal": "startup"
+      }
+    }
+  ],
+  "terminations": [
+    {
+      "name": "fell_over",
+      "feature": "gravity_from_base",
+      "compare": "Above",
+      "thresholds": [
+        1000000000.0,
+        1000000000.0,
+        -3.3552176060248113
+      ]
+    }
+  ],
+  "rewards": [
+    {
+      "name": "track_linear_velocity",
+      "kind": "track_linear_velocity",
+      "weight": 1.0,
+      "params": {
+        "command": "twist",
+        "velocity": "pelvis.linear_velocity_from_base",
+        "std": 0.5
+      }
+    },
+    {
+      "name": "track_angular_velocity",
+      "kind": "track_angular_velocity",
+      "weight": 1.0,
+      "params": {
+        "command": "twist",
+        "velocity": "pelvis.angular_velocity_from_base",
+        "std": 0.7071067811865476
+      }
+    },
+    {
+      "name": "body_orientation_l2",
+      "kind": "projected_gravity_xy",
+      "weight": -1.0,
+      "params": {
+        "rotation": "torso_link.rotation_in_task_root.quat"
+      }
+    },
+    {
+      "name": "pose",
+      "kind": "variable_posture",
+      "weight": 1.0,
+      "params": {
+        "command": "twist",
+        "joints": "body.joints.from_initial",
+        "stdStanding": [
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.05
+        ],
+        "stdWalking": [
+          0.5,
+          0.15,
+          0.15,
+          0.5,
+          0.15,
+          0.1,
+          0.5,
+          0.15,
+          0.15,
+          0.5,
+          0.15,
+          0.1,
+          0.15,
+          0.1,
+          0.1,
+          0.15,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.15,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1
+        ],
+        "stdRunning": [
+          0.5,
+          0.25,
+          0.25,
+          0.5,
+          0.25,
+          0.1,
+          0.5,
+          0.25,
+          0.25,
+          0.5,
+          0.25,
+          0.1,
+          0.25,
+          0.1,
+          0.1,
+          0.25,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.25,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1
+        ],
+        "walkingThreshold": 0.1,
+        "runningThreshold": 1.5
+      }
+    },
+    {
+      "name": "body_ang_vel",
+      "kind": "body_angular_velocity_xy",
+      "weight": -0.05,
+      "params": {
+        "velocity": "torso_link.angular_velocity_from_base",
+        "baseRotation": "pelvis.rotation_in_task_root.quat"
+      }
+    },
+    {
+      "name": "angular_momentum",
+      "kind": "squared_norm",
+      "weight": -0.025,
+      "params": {
+        "feature": "links:*.angular_momentum"
+      }
+    },
+    {
+      "name": "is_terminated",
+      "kind": "is_terminated",
+      "weight": -200.0
+    },
+    {
+      "name": "joint_acc_l2",
+      "kind": "joint_acc_l2",
+      "weight": -2.5e-07,
+      "params": {
+        "velocities": "body.joint_velocities"
+      }
+    },
+    {
+      "name": "joint_pos_limits",
+      "kind": "joint_pos_limits",
+      "weight": -10.0,
+      "params": {
+        "joints": "body"
+      }
+    },
+    {
+      "name": "action_rate_l2",
+      "kind": "action_rate_l2",
+      "weight": -0.05
+    },
+    {
+      "name": "foot_gait",
+      "kind": "feet_gait",
+      "weight": 0.5,
+      "params": {
+        "period": 0.6,
+        "offset": [
+          0.0,
+          0.5
+        ],
+        "threshold": 0.56,
+        "command": "twist",
+        "contact": "feet",
+        "commandThreshold": 0.1
+      }
+    },
+    {
+      "name": "foot_clearance",
+      "kind": "feet_clearance",
+      "weight": -1.0,
+      "params": {
+        "targetHeight": 0.1,
+        "command": "twist",
+        "contact": "feet",
+        "commandThreshold": 0.1
+      }
+    },
+    {
+      "name": "foot_slip",
+      "kind": "feet_slip",
+      "weight": -0.25,
+      "params": {
+        "command": "twist",
+        "contact": "feet",
+        "commandThreshold": 0.1
+      }
+    },
+    {
+      "name": "soft_landing",
+      "kind": "soft_landing",
+      "weight": -0.001,
+      "params": {
+        "command": "twist",
+        "contact": "feet",
+        "commandThreshold": 0.1
+      }
+    },
+    {
+      "name": "stand_still",
+      "kind": "stand_still",
+      "weight": -1.0,
+      "params": {
+        "command": "twist",
+        "joints": "body.joints.from_initial",
+        "commandThreshold": 0.1
+      }
+    }
+  ],
+  "curricula": [
+    {
+      "name": "twist_vx_lo",
+      "kind": "reward_curriculum",
+      "global": "twist_vx_lo",
+      "params": {
+        "stages": [
+          {
+            "step": 0,
+            "weight": -0.5
+          },
+          {
+            "step": 120000,
+            "weight": -1.0
+          }
+        ]
+      }
+    },
+    {
+      "name": "twist_vx_hi",
+      "kind": "reward_curriculum",
+      "global": "twist_vx_hi",
+      "params": {
+        "stages": [
+          {
+            "step": 0,
+            "weight": 1.0
+          },
+          {
+            "step": 120000,
+            "weight": 2.0
+          }
+        ]
+      }
+    },
+    {
+      "name": "twist_vy_lo",
+      "kind": "reward_curriculum",
+      "global": "twist_vy_lo",
+      "params": {
+        "stages": [
+          {
+            "step": 0,
+            "weight": -0.5
+          },
+          {
+            "step": 120000,
+            "weight": -1.0
+          }
+        ]
+      }
+    },
+    {
+      "name": "twist_vy_hi",
+      "kind": "reward_curriculum",
+      "global": "twist_vy_hi",
+      "params": {
+        "stages": [
+          {
+            "step": 0,
+            "weight": 0.5
+          },
+          {
+            "step": 120000,
+            "weight": 1.0
+          }
+        ]
+      }
+    }
+  ],
+  "globals": [
+    {
+      "name": "twist_vx_lo",
+      "default": -0.5,
+      "eval": -0.5
+    },
+    {
+      "name": "twist_vx_hi",
+      "default": 1.0,
+      "eval": 1.0
+    },
+    {
+      "name": "twist_vy_lo",
+      "default": -0.5,
+      "eval": -0.5
+    },
+    {
+      "name": "twist_vy_hi",
+      "default": 0.5,
+      "eval": 0.5
+    }
+  ],
+  "variants": {
+    "eval": {
+      "randomInitialStep": false
+    },
+    "play": {
+      "randomInitialStep": false,
+      "dropNoise": true,
+      "dropStartupDr": true
+    }
+  }
+}

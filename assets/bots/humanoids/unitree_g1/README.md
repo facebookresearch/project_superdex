@@ -44,6 +44,15 @@ The bot's joints carry no armature or effort limit, as in g1.xml: the actuators 
   (`self_collisions`, weight -1, substeps above 10 N). Our labs build the bot without body colliders, so only the
   feet touch the ground, and nothing collides with itself. mjlab's `FEET_ONLY_COLLISION` comes closest to what
   our labs do, but no unitree_rl_mjlab G1 task uses it.
+- **Full collision (opt-in).** `unitree_g1_full_collision.superdex_bot` is the sphere-feet bot with the
+  body colliders, frictionless body spheres (condim 1) and 4138 `contactOverrides` that enable
+  FULL_COLLISION's self-contact pairs: spheres of different MJCF bodies, except parent-child pairs
+  (MuJoCo's filterparent) and g1.xml's 4 `<contact><exclude>` pairs. The enables are needed because
+  Mochi disables contact by default between shaped links joined through hard joints or shapeless
+  links, and the MJCF body links carry no shape. The task scene `g1_velocity_full_collision.superdex_scene`
+  offers it as `g1` on `g1_flat_full_collision.mochi_scene` (no G1 layer filter).
+  `g1_velocity_flat_mjlab_full_collision.superdex_lab` opts into it. Remaining differences: foot-body and
+  foot-foot friction (Mochi's geometric mean: 0 and 0.36; MuJoCo's priority gives 0.6 to both).
 - **Contact parameters.** Mochi penalty contact, not MuJoCo's soft constraints. The G1 ground plane
   (`tasks/g1_velocity_flat/scene/g1_flat.mochi_scene`) sets a 1 mm smoothing half-band in place of Mochi's 5 mm (the
   band comes from the collider, the plane, which only the G1's feet touch): standing, the 1 cm foot spheres sink

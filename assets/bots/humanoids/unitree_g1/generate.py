@@ -19,7 +19,12 @@ Source: unitree_rl_mjlab @1425b15 (Apache-2.0), ``src/assets/robots/unitree_g1/x
 Run from this directory: ``python3 generate.py --xml <path to g1.xml>``. It reads the MJCF as XML
 text (nothing of the upstream repo runs) and rewrites ``unitree_g1.superdex_bot``,
 ``unitree_g1_box_feet.superdex_bot`` and ``shapes/``, and the LAB_JOINT_ACTUATORS init args of
-``tasks/g1_velocity_flat/g1_velocity.superdex_scene``. As in g1.xml, the bot's joints carry no armature or
+``tasks/g1_velocity_flat/g1_velocity.superdex_scene``. It also writes the full-collision variant
+(g1_constants.py's FULL_COLLISION, opted into by a lab that names its scene):
+``unitree_g1_full_collision.superdex_bot`` (body colliders, frictionless body spheres, and
+contactOverrides enabling the self-contact pairs, see self_contact_overrides),
+``tasks/g1_velocity_flat/scene/g1_flat_full_collision.mochi_scene`` and
+``tasks/g1_velocity_flat/g1_velocity_full_collision.superdex_scene``. As in g1.xml, the bot's joints carry no armature or
 effort limit: the actuators set them.
 
 Each MJCF body becomes a link, its joint the link's joint (the pelvis's free joint the root). Mochi
@@ -220,9 +225,11 @@ def _add_colliders_and_sites(
     feet: str,
     body_colliders: bool,
     radii: set[float],
+    frictionless_body: bool = False,
 ) -> None:
     """Appends the sites and collider links after the kinematic tree, so the 30 bodies keep MJCF
-    order, and adds the sphere radii used to `radii`."""
+    order, and adds the sphere radii used to `radii`. `frictionless_body`: body spheres get Coulomb
+    friction 0 (FULL_COLLISION's condim 1)."""
     box_done: set[int] = set()
     for parent, element in extras:
         name = element.get("name", "")
@@ -268,12 +275,14 @@ def _add_colliders_and_sites(
             )
             if is_foot:
                 link["contact"] = {"coulombFrictionCoefficient": _FOOT_FRICTION}
+            elif frictionless_body:
+                link["contact"] = {"coulombFrictionCoefficient": 0.0}
             links.append(link)
             joints.append(joint)
 
 
 def build_bot(
-    xml: Path, feet: str, body_colliders: bool
+    xml: Path, feet: str, body_colliders: bool, frictionless_body: bool = False
 ) -> tuple[dict, list[str], set[float]]:
     """The bot, its 29 actuated joints in bot order, and the sphere radii it uses."""
     root = ET.parse(xml).getroot()
@@ -339,7 +348,9 @@ def build_bot(
 
     visit(pelvis, -1)
 
-    _add_colliders_and_sites(links, joints, extras, feet, body_colliders, radii)
+    _add_colliders_and_sites(
+        links, joints, extras, feet, body_colliders, radii, frictionless_body
+    )
     _take_mass(links, joints)
     bot = {
         "name": "unitree_g1_29dof" + ("_box_feet" if feet == "box" else ""),
@@ -506,6 +517,74 @@ def _write(path: Path, content: dict, sort_keys: bool = True) -> None:
     path.write_text(json.dumps(content, indent=2, sort_keys=sort_keys) + "\n")
 
 
+def self_contact_overrides(bot: dict, excludes: list[tuple[str, str]]) -> list[dict]:
+    """Contact enables for the collider pairs g1_constants.py's FULL_COLLISION lets touch: spheres
+    of different MJCF bodies, except a parent-child pair (MuJoCo's filterparent) and g1.xml's
+    `<contact><exclude>` pairs (`excludes`). Mochi disables contact by default between shaped links
+    joined through hard joints or shapeless links; the MJCF body links carry no shape, so without
+    these enables no two G1 spheres touch."""
+    links = bot["links"]
+    body = {
+        link["name"]: links[link["parentLink"]]["name"]
+        for link in links
+        if "colliderType" in link
+    }
+    parent = {
+        link["name"]: links[link["parentLink"]]["name"]
+        for link in links
+        if "parentLink" in link
+    }
+    skip = {frozenset(pair) for pair in excludes}
+    names = list(body)
+    overrides = []
+    for i, a in enumerate(names):
+        for b in names[i + 1 :]:
+            x, y = body[a], body[b]
+            if (
+                x == y
+                or parent.get(x) == y
+                or parent.get(y) == x
+                or frozenset((x, y)) in skip
+            ):
+                continue
+            overrides.append({"linkA": a, "linkB": b, "enable": True})
+    return overrides
+
+
+def _write_full_collision_scenes() -> None:
+    """Writes the full-collision G1 scenes next to the feet-only ones: the Mochi scene without the
+    G1 layer filter (the bot's contactOverrides choose the self-contact pairs), and the superdex
+    scene offering the full-collision bot as `g1`
+    (so the labs' `bot/g1/...` targets hold) with g1_velocity.superdex_scene's controllers."""
+    flat = json.loads((_SCENE_DIR / "scene/g1_flat.mochi_scene").read_text())
+    del flat["contactFilter"]
+    flat["scene"]["description"] = (
+        "Flat ground for the Unitree G1 with g1_constants.py's FULL_COLLISION: as g1_flat.mochi_scene, "
+        "but every G1 collider sphere touches the ground, and the G1 bot's contactOverrides enable "
+        "self contact (FULL_COLLISION's pairs); body spheres are frictionless (condim 1)"
+    )
+    _write(
+        _SCENE_DIR / "scene/g1_flat_full_collision.mochi_scene", flat, sort_keys=False
+    )
+    scene = json.loads((_SCENE_DIR / "g1_velocity.superdex_scene").read_text())
+    g1 = next(entry for entry in scene["bots"] if entry["name"] == "g1")
+    g1["path"] = "@bots/humanoids/unitree_g1/unitree_g1_full_collision.superdex_bot"
+    scene["bots"] = [g1]
+    scene["slots"] = [{"name": "robot", "controlledBots": ["g1"]}]
+    scene["scene"]["baseScene"] = "./scene/g1_flat_full_collision.mochi_scene"
+    scene["metadata"] = {
+        "name": "Unitree G1 on flat ground, full collision",
+        "description": (
+            "g1_velocity.superdex_scene with g1_constants.py's FULL_COLLISION: the slot offers the "
+            "full-collision bot as g1 (body colliders, frictionless body spheres, contactOverrides "
+            "enabling FULL_COLLISION's self-contact pairs) on g1_flat_full_collision.mochi_scene"
+        ),
+    }
+    _write(
+        _SCENE_DIR / "g1_velocity_full_collision.superdex_scene", scene, sort_keys=False
+    )
+
+
 def _write_scene_actuators(init_args: dict) -> None:
     """Writes the actuators into each G1 bot's LAB_JOINT_ACTUATORS entry of the G1 scene, inline:
     a scene entry's init args file would resolve against the process's directory, not the scene's."""
@@ -541,6 +620,19 @@ def main() -> None:
         sort_keys=False,
     )
     _write_scene_actuators(actuators(actuated))
+    full, _, used = build_bot(args.xml, "spheres", True, frictionless_body=True)
+    full["name"] += "_full_collision"
+    excludes = [
+        (e.get("body1"), e.get("body2"))
+        for e in ET.parse(args.xml).getroot().iter("exclude")
+    ]
+    full["contactOverrides"] = full["contactOverrides"] + self_contact_overrides(
+        full, excludes
+    )
+    for radius in sorted(used - radii):
+        _write(args.out / _shape_name(radius), sphere_mesh(radius), sort_keys=False)
+    _write(args.out / "unitree_g1_full_collision.superdex_bot", full)
+    _write_full_collision_scenes()
     print("joints:", json.dumps(actuated))
     print("action scale:", json.dumps([round(s, 6) for s in action_scale(actuated)]))
 

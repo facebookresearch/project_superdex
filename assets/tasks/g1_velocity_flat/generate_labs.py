@@ -403,6 +403,22 @@ def mjlab_lab(joints: list[str]) -> dict:
     return lab
 
 
+def full_collision_lab(joints: list[str]) -> dict:
+    """mjlab_lab on g1_constants.py's FULL_COLLISION (g1_velocity_full_collision.superdex_scene):
+    body colliders, so the whole robot touches the ground, and frictionless self contact except
+    within one MJCF body, across a parent-child pair and across g1.xml's excluded pairs."""
+    lab = mjlab_lab(joints)
+    lab["metadata"] = {
+        "name": "Unitree G1 velocity (flat), mjlab parity, full collision",
+        "description": (
+            "g1_velocity_flat_mjlab on g1_velocity_full_collision.superdex_scene (mjlab's "
+            "FULL_COLLISION: body-ground and self contact), written by generate_labs.py"
+        ),
+    }
+    lab["scene"] = "g1_velocity_full_collision.superdex_scene"
+    return lab
+
+
 _CLIP_SCHEDULE = [
     # [t (s), vx, vy, wz]: stand, walk, walk faster, turn in place, arc, sidestep, stand.
     [0.0, 0.0, 0.0, 0.0],
@@ -446,6 +462,20 @@ def clip_lab(joints: list[str]) -> dict:
         e for e in mjlab["events"]
         if e["name"] not in ("push_robot", "reset_base_position", "reset_base_yaw")
     ]  # fmt: skip
+    return lab
+
+
+def full_collision_clip_lab(joints: list[str]) -> dict:
+    """clip_lab on the full-collision scene (see full_collision_lab)."""
+    lab = clip_lab(joints)
+    lab["metadata"] = {
+        "name": "Unitree G1 velocity (flat), clip schedule, full collision",
+        "description": (
+            "g1_velocity_flat_mjlab_clip on g1_velocity_full_collision.superdex_scene (mjlab's "
+            "FULL_COLLISION), written by generate_labs.py"
+        ),
+    }
+    lab["scene"] = "g1_velocity_full_collision.superdex_scene"
     return lab
 
 
@@ -561,6 +591,14 @@ def main() -> None:
     _write(_HERE / "g1_velocity_flat.superdex_lab", flat_lab(joints))
     _write(_HERE / "g1_velocity_flat_mjlab.superdex_lab", mjlab_lab(joints))
     _write(_HERE / "g1_velocity_flat_mjlab_clip.superdex_lab", clip_lab(joints))
+    _write(
+        _HERE / "g1_velocity_flat_mjlab_full_collision.superdex_lab",
+        full_collision_lab(joints),
+    )
+    _write(
+        _HERE / "g1_velocity_flat_mjlab_full_collision_clip.superdex_lab",
+        full_collision_clip_lab(joints),
+    )
     _write(
         _HERE / "g1_velocity_flat_mjlab_clip_rules.superdex_lab", rules_clip_lab(joints)
     )

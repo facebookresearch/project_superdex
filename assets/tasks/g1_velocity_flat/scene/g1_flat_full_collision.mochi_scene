@@ -1,0 +1,25 @@
+{
+  "actors": {
+    "rigid": [
+      {
+        "colliderType": "Plane",
+        "isStatic": true,
+        "layer": "Environment",
+        "name": "StaticPlane",
+        "shape": "./ground_plane.mochi.json",
+        "contact": {
+          "coulombFrictionCoefficient": 1.0,
+          "penaltySmoothingHalfDistance": 0.001
+        }
+      }
+    ]
+  },
+  "scene": {
+    "description": "Flat ground for the Unitree G1 with g1_constants.py's FULL_COLLISION: as g1_flat.mochi_scene, but every G1 collider sphere touches the ground, and the G1 bot's contactOverrides enable self contact (FULL_COLLISION's pairs); body spheres are frictionless (condim 1)",
+    "gravity": [
+      0,
+      0,
+      -9.81
+    ]
+  }
+}
