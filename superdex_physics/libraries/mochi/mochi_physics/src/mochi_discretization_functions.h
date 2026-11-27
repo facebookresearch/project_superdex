@@ -28,7 +28,6 @@
 
 #include <cstdint>
 #include <memory>
-#include <unordered_set>
 #include <vector>
 
 namespace mochi {
@@ -166,69 +165,6 @@ CActiveBoundaryFaces CreateActiveBoundaryFaces(
     BoundarySubsamplingParams const& params,
     std::shared_ptr<TriangularMesh const> const& triMesh,
     CFemSurfaceDiscretization const& surfaceDiscrVariant);
-
-/**************************************************************************
-Overload set for updating active elements
-*/
-
-template <typename BoundaryTraceT>
-void UpdateActiveElementsAndNodes(
-    experimental::SampleMeshInitFromFile const& /*s*/,
-    TetrahedralMeshShape const& /*tetMeshShape*/,
-    std::vector<BoundaryTraceT> const& /*allBoundaryTraces*/,
-    CActiveVolumeElements& /*activeVolElements*/,
-    CActiveBoundaryFaces& /*activeBdFaces*/,
-    CActiveUniqueNodes& /*activeUniqueNodes*/) {
-  static_assert(
-      BoundaryTraceT::kSpaceDimParam == 3, "BoundaryTraceT must be the trace of a 3D element");
-  MOCHI_ASSERT(false, "missing impl");
-}
-
-template <typename BoundaryTraceT>
-void UpdateActiveElementsAndNodes(
-    experimental::SampleMeshInitRandomSampling const& s,
-    TetrahedralMeshShape const& tetMeshShape,
-    std::vector<BoundaryTraceT> const& allBoundaryTraces,
-    CActiveVolumeElements& activeVolElements,
-    CActiveBoundaryFaces& activeBdFaces,
-    CActiveUniqueNodes& activeUniqueNodes) {
-  static_assert(
-      BoundaryTraceT::kSpaceDimParam == 3, "BoundaryTraceT must be the trace of a 3D element");
-  activeVolElements = CreateActiveVolumeElements(s, tetMeshShape);
-  activeBdFaces = CreateActiveBoundaryFaces(s, *tetMeshShape.GetMesh(), allBoundaryTraces);
-  activeUniqueNodes.Recompute(activeVolElements, activeBdFaces);
-}
-
-template <typename BoundaryTraceT>
-void UpdateActiveElementsAndNodes(
-    experimental::SampleMeshInitFromSpecificVolumeElements const& s,
-    TetrahedralMeshShape const& tetMeshShape,
-    std::vector<BoundaryTraceT> const& allBoundaryTraces,
-    CActiveVolumeElements& activeVolElements,
-    CActiveBoundaryFaces& activeBdFaces,
-    CActiveUniqueNodes& activeUniqueNodes) {
-  static_assert(
-      BoundaryTraceT::kSpaceDimParam == 3, "BoundaryTraceT must be the trace of a 3D element");
-  auto const& tetMesh = *tetMeshShape.GetMesh();
-
-  // Volume elements
-  activeVolElements.Recompute(s.ids);
-
-  // Surface elements
-  std::unordered_set<int> activeVolumeElementInds(s.ids.begin(), s.ids.end());
-  std::vector<int> activeBoundaryFaceInds;
-  int const numBdFaces = tetMesh.GetNumBoundaryFaces();
-  auto const faces = tetMesh.GetBoundaryFaces();
-  for (int i = 0; i < numBdFaces; ++i) {
-    if (activeVolumeElementInds.count(faces[i].element) == 1) {
-      activeBoundaryFaceInds.emplace_back(i);
-    }
-  }
-  activeBdFaces.Recompute(activeBoundaryFaceInds, allBoundaryTraces);
-
-  // Unique volume nodes
-  activeUniqueNodes.Recompute(activeVolElements, activeBdFaces);
-}
 
 namespace discretization {
 void InitializeOnce(entt::registry& reg);
