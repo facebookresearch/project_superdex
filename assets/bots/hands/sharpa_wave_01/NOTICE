@@ -1,0 +1,8 @@
+[Attribution Notice]
+Sharpa Wave (wave_01) dexterous hand models provided by Sharpa Group.
+Product: Sharpa Wave (wave_01), right and left hands
+Copyright 2025 Sharpa Group
+Official repository: https://github.com/sharpa-robotics/sharpa-urdf-usd-xml
+Licensed under the Apache License, Version 2.0 (see LICENSE in this directory).
+The SuperDex bot files, render and collision models in this directory were derived from the
+upstream MJCF and STL meshes by Meta Platforms, Inc. and affiliates; README.md lists the changes.
