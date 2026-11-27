@@ -17,6 +17,7 @@
 #include <mochi_core/geometry/geometry_utils.h>
 #include <mochi_core/geometry/tetrahedral_mesh.h>
 #include <mochi_core/test/mochi_test_helpers.h>
+#include <mochi_core/utils/dynamic_array.h>
 #include <mochi_core/utils/matrix_utils.h>
 #include <mochi_core/utils/nd_array_utils.h>
 
@@ -25,6 +26,16 @@
 #include <vector>
 
 using namespace mochi;
+
+// Returns the (element, local face) of each boundary face
+[[nodiscard]] static DynamicArray<Int2> GetBoundaryFaceInfos(TetrahedralMesh const& mesh) {
+  DynamicArray<Int2> infos;
+  for (auto const& [element, faceNum] : mesh.GetBoundaryFaces()) {
+    infos.push_back({element, faceNum});
+  }
+
+  return infos;
+}
 
 TEST(TetrahedralMesh, Cube) {
   // A solid unit cube with one corner at (0,0,0)
@@ -196,44 +207,39 @@ TEST(TetrahedralMesh, Cube) {
   // Mesh Barycenter
   EXPECT_NEAR_EQ(Real3(0.5_r, 0.5_r, 0.5_r), mesh.GetBarycenter());
 
-  // Boundary faces (any order of the correct indicies will be accepted here)
-  std::vector<Int3> expectedBoundaryFaces = {
-      Int3{2, 3, 6},
-      Int3{0, 2, 3},
-      Int3{0, 2, 6},
-      Int3{3, 6, 7},
-      Int3{3, 5, 7},
-      Int3{5, 6, 7},
-      Int3{0, 1, 3},
-      Int3{1, 3, 5},
-      Int3{0, 1, 5},
-      Int3{0, 4, 5},
+  // Boundary faces, ordered by element, then by local face (TetFaces::kIndices), with the outward
+  // winding of their element. Local face 2 of each corner tet is shared with the interior tet.
+  constexpr std::array kExpectedBoundaryFaces = {
+      Int3{6, 3, 2}, // corner vert 2
+      Int3{6, 2, 0},
+      Int3{2, 3, 0},
+      Int3{3, 6, 7}, // corner vert 7
+      Int3{3, 7, 5},
+      Int3{7, 6, 5},
+      Int3{3, 5, 1}, // corner vert 1
+      Int3{3, 1, 0},
+      Int3{1, 5, 0},
+      Int3{0, 5, 4}, // corner vert 4
       Int3{0, 4, 6},
       Int3{4, 5, 6},
   };
-  std::vector<Int3> actualBoundaryFaces(
-      mesh.GetBoundaryFacesConnectivity().begin(), mesh.GetBoundaryFacesConnectivity().end());
-  EXPECT_EQ(12, expectedBoundaryFaces.size());
-  EXPECT_EQ(12, actualBoundaryFaces.size());
-  for (size_t i = 0; i < 12; ++i) {
-    std::sort(expectedBoundaryFaces[i].begin(), expectedBoundaryFaces[i].end());
-    std::sort(actualBoundaryFaces[i].begin(), actualBoundaryFaces[i].end());
-  }
-  auto int3_less = [](Int3 const& a, Int3 const& b) {
-    return std::ranges::lexicographical_compare(a, b);
-  };
-  std::ranges::sort(expectedBoundaryFaces, int3_less);
-  std::ranges::sort(actualBoundaryFaces, int3_less);
-  EXPECT_SPAN_EQ(MakeSpan(expectedBoundaryFaces), MakeSpan(actualBoundaryFaces));
+  EXPECT_SPAN_EQ(kExpectedBoundaryFaces, mesh.GetBoundaryFacesConnectivity());
 
-  // The test above did not consider the winding order. Now, lets verify that all the
-  // surface faces have a normal that points away from the center.
-  for (Int3 const& face : mesh.GetBoundaryFacesConnectivity()) {
-    Real3 const faceNormal = Normalize(Cross(
-        coordinates[face[1]] - coordinates[face[0]], coordinates[face[2]] - coordinates[face[1]]));
-    Real3 const centerToFace = coordinates[face[0]] - mesh.GetBarycenter();
-    EXPECT_LT(0_r, Dot(faceNormal, centerToFace));
-  }
+  constexpr std::array kExpectedBoundaryFaceInfos = {
+      Int2{0, 0},
+      Int2{0, 1},
+      Int2{0, 3},
+      Int2{1, 0},
+      Int2{1, 1},
+      Int2{1, 3},
+      Int2{2, 0},
+      Int2{2, 1},
+      Int2{2, 3},
+      Int2{3, 0},
+      Int2{3, 1},
+      Int2{3, 3},
+  };
+  EXPECT_SPAN_EQ(kExpectedBoundaryFaceInfos, GetBoundaryFaceInfos(mesh));
 }
 
 TEST(TetrahedralMesh, UnitGridDefaultMatchesUnitCube) {
@@ -263,9 +269,17 @@ TEST(TetrahedralMesh, UnreferencedNodes) {
   constexpr std::array kExpectedActiveEdges = {
       Int2{0, 1}, Int2{0, 2}, Int2{0, 3}, Int2{1, 2}, Int2{1, 3}, Int2{2, 3}};
 
+  // Every local face of the single tetrahedron is a boundary face, wound outward
+  constexpr std::array kExpectedBoundaryFaces = {
+      Int3{1, 4, 2}, Int3{1, 2, 5}, Int3{1, 5, 4}, Int3{2, 4, 5}};
+  constexpr std::array kExpectedBoundaryFaceInfos = {
+      Int2{0, 0}, Int2{0, 1}, Int2{0, 2}, Int2{0, 3}};
+
   EXPECT_SPAN_EQ(kExpectedActiveNodes, mesh.GetActiveNodes());
   EXPECT_SPAN_EQ(kExpectedEdges, mesh.GetEdges());
   EXPECT_SPAN_EQ(kExpectedActiveEdges, mesh.GetActiveNodesEdges());
+  EXPECT_SPAN_EQ(kExpectedBoundaryFaces, mesh.GetBoundaryFacesConnectivity());
+  EXPECT_SPAN_EQ(kExpectedBoundaryFaceInfos, GetBoundaryFaceInfos(mesh));
   EXPECT_NEAR_EQ(Aabb(Real3{}, Real3{1_r, 1_r, 1_r}), mesh.GetAabb());
 }
 
@@ -284,6 +298,7 @@ TEST(TetrahedralMesh, Empty) {
   EXPECT_EQ(0, mesh.GetEdges().size());
   EXPECT_EQ(0, mesh.GetBoundaryEdges().size());
   EXPECT_EQ(0, mesh.GetBoundaryFacesConnectivity().size());
+  EXPECT_EQ(0, mesh.GetBoundaryFaces().size());
   EXPECT_NEAR_TOL(Aabb{}, mesh.GetAabb(), 0_r); // zero tolerance
   EXPECT_NEAR_TOL(Obb{}, mesh.GetObb(), 0_r); // zero tolerance
   EXPECT_EQ(0_r, mesh.GetTotalMeasure());

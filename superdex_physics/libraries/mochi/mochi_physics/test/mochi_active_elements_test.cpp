@@ -15,8 +15,10 @@
  */
 
 #include <mochi_core/test/mochi_test_helpers.h>
+#include <mochi_core/utils/basic_utils.h>
 #include <mochi_core/utils/local_to_global_map.h>
 #include <mochi_core/utils/subset_map.h>
+#include <mochi_physics/mochi_physics_experimental.h>
 #include <mochi_physics/src/mochi_contact.h>
 #include <mochi_physics/src/mochi_discretization_components.h>
 #include <mochi_physics/src/mochi_discretization_functions.h>
@@ -25,6 +27,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cstdint>
 #include <memory>
 #include <numeric>
 #include <set>
@@ -569,30 +572,76 @@ TEST(MochiDiscretization, ActiveBoundaryFaces3) {
   });
 }
 
-// Uniform subsampling samples every column of a grid stored row by row with two triangles per cell,
-// like a cylinder stored ring by ring, where a stride of 4 faces would sample only even columns.
-// With 32 rows, a column goes unsampled with probability 2^-32.
-TEST(MochiDiscretization, UniformBoundarySubsamplingSamplesEveryColumn) {
-  int constexpr kNumColumns = 8;
-  auto const mesh = std::make_shared<TriangularMesh const>(
-      UniformSquareTriangularMeshData(Int2{kNumColumns, /*numRows=*/32}));
-  auto const surfaceDisc = CFemSurfaceDiscretization::Create(ActorBoundaryElementType::P1Q1, *mesh);
-  BoundarySubsamplingParams const params{
-      .subsamplingDensity = 0.25_r, .strategy = BoundarySubsamplingStrategy::UniformProbability};
-
-  auto const actBdFaces = CreateActiveBoundaryFaces(params, mesh, surfaceDisc);
-
-  auto const faces = actBdFaces.ViewIndices();
-  EXPECT_EQ(mesh->GetNumElements() / 4, isize(faces));
-  EXPECT_SPAN_EQ(faces, CreateActiveBoundaryFaces(params, mesh, surfaceDisc).ViewIndices());
-
-  // One pick in each window of 4 consecutive faces.
-  std::set<int> sampledColumns;
-  for (int i = 0; i < isize(faces); ++i) {
-    EXPECT_EQ(i, faces[i] / 4);
-    sampledColumns.insert(faces[i] / 2 % kNumColumns);
+// Expects picks to hold one index in each of the numPicks near-equal windows that partition
+// [0, numItems), the windows of PickOneIndexPerWindow.
+static void ExpectOnePickPerWindow(Span<int const> picks, int numItems, int numPicks) {
+  ASSERT_EQ(numPicks, isize(picks));
+  std::set<int> offsets;
+  for (int i = 0; i < numPicks; ++i) {
+    auto const windowBegin = static_cast<int>(int64_t(i) * numItems / numPicks);
+    auto const windowEnd = static_cast<int>(int64_t(i + 1) * numItems / numPicks);
+    EXPECT_LE(windowBegin, picks[i]);
+    EXPECT_LT(picks[i], windowEnd);
+    offsets.insert(picks[i] - windowBegin);
   }
-  EXPECT_EQ(kNumColumns, isize(sampledColumns));
+
+  // With equal windows, a stride would put every pick at the same offset in its window
+  if (1 < numPicks && numPicks < numItems) {
+    EXPECT_LT(1, isize(offsets));
+  }
+}
+
+// Uniform and ROM boundary subsampling pick one face at random in each window of consecutive faces.
+// On a grid stored row by row with two triangles per cell, like a cylinder stored ring by ring, a
+// stride of 4 faces would sample only even columns. With 32 rows, a column goes unsampled with
+// probability 2^-32 at a density of 0.25.
+TEST(MochiDiscretization, BoundarySubsamplingPicksOneFacePerWindow) {
+  int constexpr kNumColumns = 8;
+  int constexpr kNumRows = 32;
+  auto const triMesh = std::make_shared<TriangularMesh const>(
+      UniformSquareTriangularMeshData(Int2{kNumColumns, kNumRows}));
+  auto const surfaceDisc =
+      CFemSurfaceDiscretization::Create(ActorBoundaryElementType::P1Q1, *triMesh);
+  int const numTriangles = triMesh->GetNumElements();
+
+  // A density of 0.3 rounds the number of picks up and partitions the faces into unequal windows
+  for (real const density : {0.25_r, 0.3_r}) {
+    BoundarySubsamplingParams const params{
+        .subsamplingDensity = density, .strategy = BoundarySubsamplingStrategy::UniformProbability};
+    auto const actBdFaces = CreateActiveBoundaryFaces(params, triMesh, surfaceDisc);
+    auto const faces = actBdFaces.ViewIndices();
+    ExpectOnePickPerWindow(faces, numTriangles, static_cast<int>(Ceil(density * numTriangles)));
+    EXPECT_SPAN_EQ(faces, CreateActiveBoundaryFaces(params, triMesh, surfaceDisc).ViewIndices());
+
+    std::set<int> sampledColumns;
+    for (int const face : faces) {
+      sampledColumns.insert(face / 2 % kNumColumns);
+    }
+    EXPECT_EQ(kNumColumns, isize(sampledColumns));
+  }
+
+  // ROM sampling on the 48 faces of a 2 x 2 x 2 tet grid, whose faces are listed by element. A
+  // step of 5 partitions the faces into unequal windows, and a step of 64 exceeds their number.
+  auto const tetMesh = std::make_shared<TetrahedralMesh>(
+      test::CreateMinimalTetMeshUnitGrid(Real3{1_r, 1_r, 1_r}, Int3{2, 2, 2}));
+  auto const femVolD = CreateFemVolDiscretization(*tetMesh);
+  auto const traces = CreateTraces(*tetMesh, femVolD);
+  int const numFaces = isize(traces);
+
+  for (int const step : {rom::hyper::kAllElements, 3, 5, 64}) {
+    CActiveBoundaryFaces const romFaces = CreateActiveBoundaryFaces(
+        experimental::SampleMeshInitRandomSampling{.stepSizeForBoundaryElementsSelection = step},
+        tetMesh,
+        traces);
+    ExpectOnePickPerWindow(romFaces.ViewIndices(), numFaces, (numFaces + step - 1) / step);
+  }
+
+  CActiveBoundaryFaces const noFaces = CreateActiveBoundaryFaces(
+      experimental::SampleMeshInitRandomSampling{
+          .stepSizeForBoundaryElementsSelection = rom::hyper::kNoElements},
+      tetMesh,
+      traces);
+  EXPECT_TRUE(noFaces.empty());
 }
 
 // ===================================================================================

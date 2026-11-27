@@ -18,16 +18,18 @@
 #include <mochi_core/geometry/model_utils.h>
 #include <mochi_core/geometry/tetrahedral_mesh.h>
 #include <mochi_core/utils/array_utils.h>
+#include <mochi_core/utils/basic_utils.h>
+#include <mochi_core/utils/constants.h>
 #include <mochi_core/utils/math_utils.h>
 #include <mochi_core/utils/nd_array_utils.h>
 
 #include <algorithm>
 #include <fstream>
 #include <functional>
-#include <iterator>
 #include <limits>
 #include <memory>
 #include <string>
+#include <tuple>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -59,30 +61,31 @@ static std::vector<real> CalcElementVolume(
   return elementVolume;
 }
 
+[[nodiscard]] static Int3 GetTetFaceNodes(Int4 const& tet, int faceNum) {
+  auto const& localNodes = TetFaces::kIndices[faceNum];
+  return {tet[localNodes[0]], tet[localNodes[1]], tet[localNodes[2]]};
+}
+
 namespace impl {
 
 namespace {
 
 struct ElementInfo {
-  size_t count = 0; // Number of touching elements
-  size_t element = 0; // Index of a touching element
-  size_t faceNum = 0; // the index of kTetFaceIndices
+  int count = 0; // Number of touching elements
+  int element = 0; // Index of a touching element
+  int faceNum = 0; // Index into TetFaces::kIndices
 };
 
 } // namespace
 
-static std::unordered_map<Int3, ElementInfo, Int3SortAndHash, Int3SortAndCompare>
+[[nodiscard]] static std::unordered_map<Int3, ElementInfo, Int3SortAndHash, Int3SortAndCompare>
 CreateFaceToElementMap(Span<Int4 const> connectivity) {
   // Find the elements that share each unique face
   std::unordered_map<Int3, ElementInfo, Int3SortAndHash, Int3SortAndCompare> faceToElement;
-  for (size_t e = 0; e < connectivity.size(); ++e) {
-    for (size_t f = 0; f < std::size(TetFaces::kIndices); ++f) {
-      auto const& combo = TetFaces::kIndices[f];
-      Int3 faceOrder = {
-          connectivity[e][combo[0]], connectivity[e][combo[1]], connectivity[e][combo[2]]};
-
+  for (int e = 0; e < isize(connectivity); ++e) {
+    for (int f = 0; f < isize(TetFaces::kIndices); ++f) {
       // Add or update map entry
-      ElementInfo& info = faceToElement[faceOrder];
+      ElementInfo& info = faceToElement[GetTetFaceNodes(connectivity[e], f)];
       ++info.count;
       info.element = e;
       info.faceNum = f;
@@ -94,16 +97,16 @@ CreateFaceToElementMap(Span<Int4 const> connectivity) {
 } // namespace impl
 
 // Get the unique triangular faces on the surface of a TetrahedralMesh
-static std::vector<Int3> FindBoundaryFaces(
+[[nodiscard]] static std::vector<Int3> FindBoundaryFaces(
     Span<Real3 const> coordinates,
     Span<Int4 const> connectivity,
     Span<Real3 const> elementBarycenters,
-    int* outNumUniqueFaces,
-    std::vector<TetrahedralMesh::BoundaryFaceInfo>* outBoundaryFaces = nullptr) {
+    int& outNumUniqueFaces,
+    std::vector<TetrahedralMesh::BoundaryFaceInfo>& outBoundaryFaces) {
   auto const faceToElement = impl::CreateFaceToElementMap(connectivity);
 
   // Return the number of unique faces (including interior faces)
-  *outNumUniqueFaces = isize(faceToElement);
+  outNumUniqueFaces = isize(faceToElement);
 
   // Count the boundary faces (faces referenced by exactly one element)
   size_t numBoundaryFaces = 0;
@@ -113,31 +116,37 @@ static std::vector<Int3> FindBoundaryFaces(
     }
   }
 
-  // Build a flat list of boundary faces. Fix the winding order as needed.
-  std::vector<Int3> boundaryFacesConnectivity;
-  boundaryFacesConnectivity.reserve(numBoundaryFaces);
-  if (outBoundaryFaces) {
-    outBoundaryFaces->reserve(numBoundaryFaces);
-  }
+  outBoundaryFaces.clear();
+  outBoundaryFaces.reserve(numBoundaryFaces);
   for (auto const& [face, info] : faceToElement) {
     if (info.count == 1) {
-      // Compute the direction of the normal implied by the current winding
-      // order
-      Real3 const edge[2] = {
-          coordinates[face[1]] - coordinates[face[0]], coordinates[face[2]] - coordinates[face[0]]};
-      Real3 const norm = Cross(edge[0], edge[1]);
-
-      // The normal should point away from the center of the tetrahedron.
-      MOCHI_ASSERT(
-          Dot(norm, coordinates[face[0]] - elementBarycenters[info.element]) > 0_r,
-          "Tet face normal points inward");
-
-      boundaryFacesConnectivity.push_back(face);
-      if (outBoundaryFaces) {
-        outBoundaryFaces->push_back(
-            TetrahedralMesh::BoundaryFaceInfo{(int)info.element, (int)info.faceNum});
-      }
+      outBoundaryFaces.push_back({.element = info.element, .faceNum = info.faceNum});
     }
+  }
+
+  // Sort the boundary faces by element, then by local face, so that they inherit the spatial
+  // locality of the element order
+  std::ranges::sort(outBoundaryFaces, [](auto const& a, auto const& b) {
+    return std::tie(a.element, a.faceNum) < std::tie(b.element, b.faceNum);
+  });
+
+  // Build a flat list of boundary faces
+  std::vector<Int3> boundaryFacesConnectivity;
+  boundaryFacesConnectivity.reserve(numBoundaryFaces);
+  for (auto const& [element, faceNum] : outBoundaryFaces) {
+    Int3 const face = GetTetFaceNodes(connectivity[element], faceNum);
+
+    // Compute the direction of the normal implied by the current winding order
+    Real3 const edge[2] = {
+        coordinates[face[1]] - coordinates[face[0]], coordinates[face[2]] - coordinates[face[0]]};
+    Real3 const norm = Cross(edge[0], edge[1]);
+
+    // The normal should point away from the center of the tetrahedron.
+    MOCHI_ASSERT(
+        Dot(norm, coordinates[face[0]] - elementBarycenters[element]) > 0_r,
+        "Tet face normal points inward");
+
+    boundaryFacesConnectivity.push_back(face);
   }
 
   return boundaryFacesConnectivity;
@@ -260,7 +269,7 @@ TetrahedralMesh::TetrahedralMesh(
   // handle boundaries (faces and edges)
   if (!boundaryFaces && !boundaryFacesConnectivity) {
     _boundaryFacesConnectivity = FindBoundaryFaces(
-        _coordinates, connectivity, _elementBarycenters, &_numFaces, &_boundaryFaces);
+        _coordinates, connectivity, _elementBarycenters, _numFaces, _boundaryFaces);
   } else {
     /*a single else is sufficient here because the assert at the beginning of the method
     guarantees this else can only be the case when they are both valid pointers because of the */

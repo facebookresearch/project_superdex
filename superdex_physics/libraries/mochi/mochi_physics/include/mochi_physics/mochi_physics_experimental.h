@@ -98,8 +98,16 @@ struct SampleMeshInitFromFile {
   MOCHI_STRUCT_END()
 };
 
+// Initializes hyper-reduction by subsampling the actor's boundary faces and volume elements. A step
+// of rom::hyper::kAllElements keeps all of them.
 struct SampleMeshInitRandomSampling {
+  // Partition the boundary faces into the fewest near-equal windows of at most this many
+  // consecutive faces, and keep one face per window, chosen at random with a fixed seed.
+  // rom::hyper::kNoElements keeps none.
   int stepSizeForBoundaryElementsSelection = rom::hyper::kAllElements;
+
+  // Keep the volume elements whose index is a multiple of this step. At least one must be kept.
+  // rom::hyper::kNoElements, which keeps none, makes actor creation fail.
   int stepSizeForInteriorElementsSelection = rom::hyper::kAllElements;
 
 #if MOCHI_LANGUAGE_CPP20

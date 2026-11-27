@@ -461,7 +461,28 @@ CActiveBoundaryFaces mochi::CreateActiveBoundaryFaces(
   });
 }
 
-static std::vector<int> SelectActiveBoundaryFaceIndices(
+// Seed of the random boundary subsampling, fixed so that it's deterministic
+constexpr unsigned int kSubsamplingSeed = 21;
+
+std::vector<int> mochi::PickOneIndexPerWindow(int numItems, int numPicks) {
+  MOCHI_ASSERT_VERBOSE(0 <= numPicks && numPicks <= numItems, "Invalid number of picks.");
+
+  // Jittered sampling: pick a random index in each window of consecutive indices, since a fixed
+  // stride would alias with periodic orders, e.g. faces of meshes stored ring by ring, and leave
+  // entire regions unsampled.
+  auto generator = RandomGenerator(kSubsamplingSeed);
+  std::vector<int> picks;
+  picks.reserve(numPicks);
+  int windowBegin = 0;
+  for (int i = 0; i < numPicks; ++i) {
+    auto const windowEnd = static_cast<int>(int64_t(i + 1) * numItems / numPicks);
+    picks.push_back(RandomUniformValue(generator, windowBegin, windowEnd - 1));
+    windowBegin = windowEnd;
+  }
+  return picks;
+}
+
+[[nodiscard]] static std::vector<int> SelectActiveBoundaryFaceIndices(
     BoundarySubsamplingParams const& params,
     TriangularMesh const& triMesh) {
   MOCHI_ASSERT(
@@ -472,13 +493,12 @@ static std::vector<int> SelectActiveBoundaryFaceIndices(
   int const numActiveBoundaryFaces =
       static_cast<int>(Ceil(numBoundaryFaces * params.subsamplingDensity));
   std::vector<int> activeBoundaryFaceInds;
-  activeBoundaryFaceInds.reserve(numActiveBoundaryFaces);
-
-  constexpr unsigned int kSeed = 21;
-  auto generator = RandomGenerator(kSeed);
 
   if (params.strategy == BoundarySubsamplingStrategy::AreaProportional) {
     // Select active boundary faces using A-Res method for Weighted Reservoir Sampling.
+    auto generator = RandomGenerator(kSubsamplingSeed);
+    activeBoundaryFaceInds.reserve(numActiveBoundaryFaces);
+
     std::vector<std::pair<double, int>> weightedIndices;
     weightedIndices.reserve(numBoundaryFaces);
     for (int i = 0; i < numBoundaryFaces; i++) {
@@ -505,16 +525,7 @@ static std::vector<int> SelectActiveBoundaryFaceIndices(
     }
 
   } else if (params.strategy == BoundarySubsamplingStrategy::UniformProbability) {
-    // Jittered sampling: pick a random face in each window of consecutive indices, since a fixed
-    // stride would alias with periodic face orders, e.g. meshes stored ring by ring, and leave
-    // entire regions unsampled.
-    int windowBegin = 0;
-    for (int i = 0; i < numActiveBoundaryFaces; ++i) {
-      int const windowEnd =
-          static_cast<int>(int64_t(i + 1) * numBoundaryFaces / numActiveBoundaryFaces);
-      activeBoundaryFaceInds.push_back(RandomUniformValue(generator, windowBegin, windowEnd - 1));
-      windowBegin = windowEnd;
-    }
+    activeBoundaryFaceInds = PickOneIndexPerWindow(numBoundaryFaces, numActiveBoundaryFaces);
   } else {
     MOCHI_ASSERT(false, "Unsupported boundary subsampling strategy.");
   }

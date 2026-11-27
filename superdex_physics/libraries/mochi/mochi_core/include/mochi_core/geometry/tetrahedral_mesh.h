@@ -39,13 +39,7 @@ class TetrahedralMesh final : public SimplicialMesh {
  public:
   static constexpr int kNodesPerElement = 4;
 
-  // To keep track of boundary elements
-  // the face num ranges from 0-3 where the faces
-  // are enumerated as follows
-  // 0 -> (0,1,2)
-  // 1 -> (0,1,3)
-  // 2 -> (0,2,3)
-  // 3 -> (1,2,3)
+  // The element of a boundary face, and its local face as an index into TetFaces::kIndices
   struct BoundaryFaceInfo {
     int element;
     int faceNum;
@@ -69,15 +63,16 @@ class TetrahedralMesh final : public SimplicialMesh {
   // Get the node indices for each element
   Span<Int4 const> GetElementConnectivity() const;
 
-  // Get the full volume-mesh node indices for each triangular face that belongs to exactly one
-  // tetrahedral element.
+  // Get the volume-mesh node indices of the boundary faces. Unless the faces were given to the
+  // constructor, they are all the faces that belong to exactly one tetrahedral element, ordered by
+  // element, then by local face, and wound outward, with their nodes in TetFaces::kIndices order.
   Span<Int3 const> GetBoundaryFacesConnectivity() const;
 
   // Returns the number of boundary faces
   size_t GetNumBoundaryFaces() const;
 
-  // Returns a span of BoundaryFaceInfo for each boundary
-  // face on the boundary of the domain
+  // Returns the element and local face of each boundary face, in the order of
+  // GetBoundaryFacesConnectivity()
   Span<BoundaryFaceInfo const> GetBoundaryFaces() const;
 
   // Returns the boundary mesh built on the entire set of volume mesh nodes. Its connectivity uses

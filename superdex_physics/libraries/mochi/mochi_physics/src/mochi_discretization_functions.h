@@ -118,6 +118,10 @@ CActiveVolumeElements CreateActiveVolumeElements(
 Overload set for creating active BOUNDARY faces
 */
 
+// Picks one index at random, with a fixed seed, in each of numPicks near-equal windows of
+// consecutive indices that partition [0, numItems). The picks are ascending.
+[[nodiscard]] std::vector<int> PickOneIndexPerWindow(int numItems, int numPicks);
+
 template <typename BoundaryTraceT>
 CActiveBoundaryFaces CreateActiveBoundaryFaces(
     experimental::SampleMeshInitRandomSampling const& params,
@@ -133,10 +137,9 @@ CActiveBoundaryFaces CreateActiveBoundaryFaces(
         stepSize >= 1,
         "Invalid stepSize: must be kNoElements (%d) or >= 1",
         rom::hyper::kNoElements);
-    activeBoundaryTraceInds.reserve((isize(allBoundaryTraces) + stepSize - 1) / stepSize);
-    for (int i = 0; i < isize(allBoundaryTraces); i += stepSize) {
-      activeBoundaryTraceInds.push_back(i);
-    }
+
+    int const numFaces = isize(allBoundaryTraces);
+    activeBoundaryTraceInds = PickOneIndexPerWindow(numFaces, (numFaces + stepSize - 1) / stepSize);
   }
   return CActiveBoundaryFaces(tetMesh, activeBoundaryTraceInds, MakeConstSpan(allBoundaryTraces));
 }
