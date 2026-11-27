@@ -403,10 +403,18 @@ def mjlab_lab(joints: list[str]) -> dict:
     return lab
 
 
+_SELF_FORCE = "links:*.contact_force_other_than.StaticPlane"
+"""Per collider link, its contact force from anything but the ground: on flat ground, self contact."""
+_SELF_FORCE_THRESHOLD = 10
+"""N: mjlab's self_collision_cost force_threshold (g1 env_cfgs.py)."""
+
+
 def full_collision_lab(joints: list[str]) -> dict:
     """mjlab_lab on g1_constants.py's FULL_COLLISION (g1_velocity_full_collision.superdex_scene):
     body colliders, so the whole robot touches the ground, and frictionless self contact except
-    within one MJCF body, across a parent-child pair and across g1.xml's excluded pairs."""
+    within one MJCF body, across a parent-child pair and across g1.xml's excluded pairs; plus
+    mjlab's self_collisions penalty (weight -1): the decision's physics steps at which a collider
+    link's self-contact force passed 10 N (per link; mjlab reads one contact per body)."""
     lab = mjlab_lab(joints)
     lab["metadata"] = {
         "name": "Unitree G1 velocity (flat), mjlab parity, full collision",
@@ -416,6 +424,14 @@ def full_collision_lab(joints: list[str]) -> dict:
         ),
     }
     lab["scene"] = "g1_velocity_full_collision.superdex_scene"
+    lab["rewards"].append(
+        _reward(
+            "self_collisions",
+            -1.0,
+            kind="feature",
+            feature=f"substeps_above:{_SELF_FORCE_THRESHOLD}:{_SELF_FORCE}",
+        )
+    )
     return lab
 
 

@@ -601,6 +601,14 @@
         "joints": "body.joints.from_initial",
         "commandThreshold": 0.1
       }
+    },
+    {
+      "name": "self_collisions",
+      "kind": "feature",
+      "weight": -1.0,
+      "params": {
+        "feature": "substeps_above:10:links:*.contact_force_other_than.StaticPlane"
+      }
     }
   ],
   "curricula": [
