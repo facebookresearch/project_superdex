@@ -405,6 +405,32 @@ class TestModel(MochiTestBase):
         mochi.model.flip_winding_order(mesh)
         self.assertEqual(model3.mesh, mesh)
 
+    def test_model_reorder_for_locality(self):
+        # The same tet in two numberings, neither of them in the output order.
+        coordinates = [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]
+        mesh = mochi.MeshData(
+            nodes_per_element=4, coordinates=coordinates, connectivity=[0, 1, 2, 3]
+        )
+        relabeled = mochi.MeshData(
+            nodes_per_element=4,
+            coordinates=[0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0],
+            connectivity=[3, 2, 1, 0],
+        )
+        mochi.model.reorder_for_locality(mesh)
+        mochi.model.reorder_for_locality(relabeled)
+
+        # Both are reordered in place into the same mesh.
+        self.assertEqual(mesh, relabeled)
+
+        # An invalid mesh raises an error and is left unchanged.
+        invalid = mochi.MeshData(
+            nodes_per_element=4, coordinates=coordinates, connectivity=[0, 1, 2, 4]
+        )
+        with self.assertRaises(mochi.Error):
+            mochi.model.reorder_for_locality(invalid)
+        self.assertEqual(coordinates, list(invalid.coordinates))
+        self.assertEqual([0, 1, 2, 4], list(invalid.connectivity))
+
     @staticmethod
     def _copy_mesh(mesh):
         # ModelData.mesh is an optional field, so Python reads it back by value. Rebuild the

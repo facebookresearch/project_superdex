@@ -26,11 +26,14 @@
 #include <mochi_core/geometry/tetrahedral_mesh.h>
 #include <mochi_core/geometry/triangular_mesh.h>
 #include <mochi_core/materials/material_params_utils.h>
+#include <mochi_core/numbering/rcm.h>
 #include <mochi_core/utils/array_utils.h>
 #include <mochi_core/utils/basic_utils.h>
 #include <mochi_core/utils/container_utils.h>
 #include <mochi_core/utils/coordinate_space_converter.h>
 #include <mochi_core/utils/file_utils.h>
+#include <mochi_core/utils/graph.h>
+#include <mochi_core/utils/graph_utils.h>
 #include <mochi_core/utils/hdf5_utils.h>
 #include <mochi_core/utils/json_utils.h> // For loading deprecated files
 #include <mochi_core/utils/log.h>
@@ -46,11 +49,14 @@
 #include <mochi_core/utils/vmatrix.h>
 
 #include <algorithm>
+#include <array>
 #include <climits>
 #include <cstdint>
 #include <filesystem>
 #include <limits>
 #include <memory>
+#include <numeric>
+#include <tuple>
 
 using namespace mochi;
 using namespace mochi::model;
@@ -1937,4 +1943,131 @@ void mochi::model::BakeCoordinateSpaceTransform(
 
   CoordinateSpaceConverter const converter{fromSpace, toSpace};
   BakeTransformImpl(data, MakeBakeTransformInput(converter), error);
+}
+
+// Return the new node order of a valid triangle or tetrahedral mesh, as the input index of each
+// output node.
+[[nodiscard]] static DynamicArray<int> ComputeNodeOrder(MeshData const& mesh) {
+  // RCM breaks ties by label, so labeling the distinct node positions in lexicographic order of
+  // their coordinates makes the order independent of the input numbering. The canonical order lists
+  // the nodes in that order, coincident nodes in input order.
+  auto const coordinates = Unflatten<Real3 const>(MakeConstSpan(mesh.coordinates));
+  int const numNodes = isize(coordinates);
+  DynamicArray<int> oldFromCanonical;
+  oldFromCanonical.resize_noinit(numNodes);
+  std::iota(oldFromCanonical.begin(), oldFromCanonical.end(), 0);
+  std::ranges::stable_sort(oldFromCanonical, [&](int a, int b) {
+    return std::ranges::lexicographical_compare(coordinates[a], coordinates[b]);
+  });
+
+  DynamicArray<int> positionFromOld;
+  positionFromOld.resize_noinit(numNodes);
+  DynamicArray<int> positionStarts;
+  for (int canonical = 0; canonical < numNodes; ++canonical) {
+    int const node = oldFromCanonical[canonical];
+    if (canonical == 0 || coordinates[node] != coordinates[oldFromCanonical[canonical - 1]]) {
+      positionStarts.push_back(canonical);
+    }
+    positionFromOld[node] = isize(positionStarts) - 1;
+  }
+  int const numPositions = isize(positionStarts);
+  positionStarts.push_back(numNodes);
+
+  // Coincident nodes share a vertex of the graph of positions that share an element, so the graph
+  // doesn't depend on which of them an element references, and expanding each vertex keeps its
+  // nodes consecutive and in input order.
+  DynamicArray<int> positionConnectivity;
+  positionConnectivity.resize_noinit(mesh.connectivity.size());
+  std::ranges::transform(mesh.connectivity, positionConnectivity.begin(), [&](int node) {
+    return positionFromOld[node];
+  });
+  ImplicitGraph const elementPositions(positionConnectivity, mesh.nodesPerElement);
+
+  DynamicArray<int> oldFromNew;
+  oldFromNew.reserve(numNodes);
+  for (int const position : RenumberByRCM(
+           Traverse(Reverse<int, int>(elementPositions, numPositions), elementPositions))) {
+    oldFromNew.append(
+        oldFromCanonical.begin() + positionStarts[position],
+        oldFromCanonical.begin() + positionStarts[position + 1]);
+  }
+  return oldFromNew;
+}
+
+// Renumber the nodes of a valid connectivity with kNodesPerElement nodes per element, and sort its
+// elements by their new node indices in ascending order, then in corner order, which tells apart
+// elements with the same nodes. Allocates before it writes.
+template <int kNodesPerElement>
+static void RenumberAndSortElements(Span<int> connectivity, Span<int const> newFromOldNodes) {
+  struct Key {
+    std::array<int, kNodesPerElement> ascendingNodes;
+    std::array<int, kNodesPerElement> cornerNodes;
+  };
+  DynamicArray<Key> keys;
+  keys.resize_noinit(connectivity.size() / kNodesPerElement);
+  for (int e = 0; e < isize(keys); ++e) {
+    for (int corner = 0; corner < kNodesPerElement; ++corner) {
+      keys[e].cornerNodes[corner] = newFromOldNodes[connectivity[e * kNodesPerElement + corner]];
+    }
+    keys[e].ascendingNodes = keys[e].cornerNodes;
+    std::ranges::sort(keys[e].ascendingNodes);
+  }
+
+  // Equal keys write identical rows, so the sort needn't be stable.
+  std::ranges::sort(keys, [](Key const& a, Key const& b) {
+    return std::tie(a.ascendingNodes, a.cornerNodes) < std::tie(b.ascendingNodes, b.cornerNodes);
+  });
+  for (int e = 0; e < isize(keys); ++e) {
+    std::ranges::copy(keys[e].cornerNodes, connectivity.begin() + e * kNodesPerElement);
+  }
+}
+
+// Reorder rows of rowSize values in their storage, taking output row i from input row
+// oldFromNew[i]. scratch is a separate buffer with at least rows.size() entries.
+template <class T>
+static void GatherRows(
+    DynamicArray<T>& rows,
+    int rowSize,
+    Span<int const> oldFromNew,
+    DynamicArray<T>& scratch) {
+  MOCHI_ASSERT_VERBOSE(isize(rows) == isize(oldFromNew) * rowSize && scratch.size() >= rows.size());
+  for (int row = 0; row < isize(oldFromNew); ++row) {
+    std::copy_n(rows.begin() + oldFromNew[row] * rowSize, rowSize, scratch.begin() + row * rowSize);
+  }
+  std::copy_n(scratch.begin(), rows.size(), rows.begin());
+}
+
+void mochi::model::ReorderForLocality(MeshData& mesh, Error& error) {
+  MOCHI_ERROR_RETURN(error);
+  ValidateMesh(mesh, /*numSkinningSources=*/INT_MAX, error);
+  MOCHI_ERROR_RETURN(error);
+
+  // Polyline connectivity must stay sequential.
+  if (mesh.nodesPerElement == 2) {
+    return;
+  }
+
+  MOCHI_ASSERT_VERBOSE(mesh.nodesPerElement == 3 || mesh.nodesPerElement == 4);
+  DynamicArray<int> const oldFromNewNodes = ComputeNodeOrder(mesh);
+  DynamicArray<int> const newFromOldNodes = InversePermutation(oldFromNewNodes);
+
+  // Finish every allocation, including the keys of RenumberAndSortElements, before the first write,
+  // so that an allocation failure leaves the mesh untouched.
+  size_t const numSkinningValues = mesh.skinning ? mesh.skinning->weights.size() : 0;
+  DynamicArray<real> realScratch;
+  realScratch.resize_noinit(Max(mesh.coordinates.size(), numSkinningValues));
+  DynamicArray<int> intScratch;
+  intScratch.resize_noinit(numSkinningValues);
+
+  if (mesh.nodesPerElement == 3) {
+    RenumberAndSortElements<3>(mesh.connectivity, newFromOldNodes);
+  } else {
+    RenumberAndSortElements<4>(mesh.connectivity, newFromOldNodes);
+  }
+  GatherRows(mesh.coordinates, kMeshDataSpaceDim, oldFromNewNodes, realScratch);
+  if (mesh.skinning) {
+    // Skinning indices identify sources, not nodes, so only the rows move.
+    GatherRows(mesh.skinning->indices, mesh.skinning->weightsPerNode, oldFromNewNodes, intScratch);
+    GatherRows(mesh.skinning->weights, mesh.skinning->weightsPerNode, oldFromNewNodes, realScratch);
+  }
 }

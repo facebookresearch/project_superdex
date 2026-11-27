@@ -27,6 +27,12 @@
 #include <mochi_core/utils/nd_array_utils.h>
 #include <mochi_core/utils/task_scheduler.h>
 
+#include <algorithm>
+#include <numeric>
+#include <optional>
+#include <tuple>
+#include <utility>
+
 using namespace mochi;
 
 static constexpr std::string_view kTetMeshCubeJson = R"(
@@ -2761,4 +2767,221 @@ TEST(ModelUtils, EmbedInTetrahedralMesh_WarnsOnGrossExtrapolation) {
   // A grossly misaligned node (far outside the mesh) warns; an interior node does not.
   EXPECT_EQ(1, countWarnings(Real3{5_r, 0.5_r, 0.5_r}));
   EXPECT_EQ(0, countWarnings(Real3{0.5_r, 0.5_r, 0.5_r}));
+}
+
+// Skinning whose rows depend only on the node position, with distinct values at each corner of the
+// unit cube. Four values per node, more than the three coordinates, make skinning set the scratch
+// size.
+[[nodiscard]] static SkinningData MakePositionalSkinning(Span<real const> coordinates) {
+  SkinningData skinning;
+  skinning.weightsPerNode = 4;
+  for (Real3 const& position : Unflatten<Real3 const>(coordinates)) {
+    int const corner = static_cast<int>(4_r * position[0] + 2_r * position[1] + position[2]);
+    real const weight = static_cast<real>(corner + 1) / 128_r;
+    skinning.indices.append(Int4{corner, corner + 8, corner + 16, corner + 24});
+    skinning.weights.append(Real4{weight, 2_r * weight, 3_r * weight, 1_r - 6_r * weight});
+  }
+  return skinning;
+}
+
+// The corner positions of each element, in corner order, with the elements sorted.
+[[nodiscard]] static DynamicArray<DynamicArray<real>> GetSortedElementCorners(
+    MeshData const& mesh) {
+  auto const positions = Unflatten<Real3 const>(MakeConstSpan(mesh.coordinates));
+  DynamicArray<DynamicArray<real>> elements(mesh.GetNumElements());
+  for (int e = 0; e < isize(elements); ++e) {
+    for (int corner = 0; corner < mesh.nodesPerElement; ++corner) {
+      elements[e].append(positions[mesh.connectivity[e * mesh.nodesPerElement + corner]]);
+    }
+  }
+  std::ranges::sort(elements, [](auto const& a, auto const& b) {
+    return std::ranges::lexicographical_compare(a, b);
+  });
+  return elements;
+}
+
+[[nodiscard]] static MeshData Reordered(MeshData mesh) {
+  model::ReorderForLocality(mesh, test::ExpectOK{});
+  return mesh;
+}
+
+TEST(ModelUtils, ReorderForLocality_Invariants) {
+  auto const getStorage = [](MeshData const& mesh) {
+    return std::tuple{
+        mesh.coordinates.data(),
+        mesh.connectivity.data(),
+        mesh.skinning ? mesh.skinning->indices.data() : nullptr,
+        mesh.skinning ? mesh.skinning->weights.data() : nullptr};
+  };
+
+  // Five corners of the unit cube with a tet on each four of them, so that every position of the
+  // sorted node indices decides the order of some tets. The first tet repeats the nodes of the
+  // sixth in another corner order, and the seventh repeats them again, differing from the sixth
+  // only from the third corner on.
+  MeshData fiveNodeTets;
+  fiveNodeTets.nodesPerElement = 4;
+  fiveNodeTets.coordinates = {
+      0_r, 0_r, 0_r, 1_r, 0_r, 0_r, 0_r, 1_r, 0_r, 0_r, 0_r, 1_r, 1_r, 1_r, 1_r};
+  fiveNodeTets.connectivity = {4, 2, 3, 0, 2, 1, 3, 4, 2, 0, 1, 4, 1, 0,
+                               3, 4, 1, 2, 0, 3, 0, 2, 3, 4, 0, 2, 4, 3};
+
+  for (MeshData const& original :
+       {MakeUnitCubeTriSurface(), *MakeUnitCubeTetModel().mesh, fiveNodeTets}) {
+    // Shift the numbering of the nodes, and of the elements, by one, which moves the first tet of
+    // fiveNodeTets after its twins.
+    MeshData shifted = original;
+    int const numNodes = original.GetNumNodes();
+    int const nodesPerElement = original.nodesPerElement;
+    std::ranges::rotate(shifted.coordinates, shifted.coordinates.begin() + kMeshDataSpaceDim);
+    for (int& node : shifted.connectivity) {
+      node = (node + numNodes - 1) % numNodes;
+    }
+    std::ranges::rotate(shifted.connectivity, shifted.connectivity.begin() + nodesPerElement);
+
+    for (bool const isSkinned : {false, true}) {
+      auto const withSkinning = [isSkinned](MeshData mesh) {
+        if (isSkinned) {
+          mesh.skinning = MakePositionalSkinning(mesh.coordinates);
+        }
+        return mesh;
+      };
+
+      MeshData const input = withSkinning(shifted);
+      MeshData output = input;
+      auto const storage = getStorage(output);
+      model::ReorderForLocality(output, test::ExpectOK{});
+
+      // The mesh keeps its storage, which views may borrow.
+      EXPECT_EQ(storage, getStorage(output));
+
+      // Elements keep their corners, in order.
+      EXPECT_EQ(GetSortedElementCorners(input), GetSortedElementCorners(output));
+
+      // Elements are sorted by their node indices in ascending order, then in corner order.
+      DynamicArray<DynamicArray<int>> keys(output.GetNumElements());
+      for (int e = 0; e < isize(keys); ++e) {
+        auto* const corners = output.connectivity.begin() + e * nodesPerElement;
+        keys[e].append(corners, corners + nodesPerElement);
+        std::ranges::sort(keys[e]);
+        keys[e].append(corners, corners + nodesPerElement);
+      }
+      EXPECT_TRUE(std::ranges::is_sorted(keys, [](auto const& a, auto const& b) {
+        return std::ranges::lexicographical_compare(a, b);
+      }));
+
+      // Skinning rows follow their nodes.
+      std::optional<SkinningData> const expectedSkinning =
+          isSkinned ? std::optional{MakePositionalSkinning(output.coordinates)} : std::nullopt;
+      EXPECT_EQ(expectedSkinning, output.skinning);
+
+      // With distinct node positions, the output doesn't depend on the input numbering of the
+      // nodes, nor of the elements, and reordering again changes nothing.
+      EXPECT_EQ(output, Reordered(withSkinning(original)));
+      EXPECT_EQ(output, Reordered(output));
+    }
+  }
+}
+
+TEST(ModelUtils, ReorderForLocality_ExactOrders) {
+  // Two triangles that share node P, and an unreferenced node U, numbered P, B, A, D, C, U. In
+  // coordinate order, P, A, B, C, D, U, breadth-first searches from A, the first node of minimum
+  // degree in the triangles, and then from C, the first in its last level, both have 3 levels, so
+  // RCM numbers the triangles from C, visiting D before P by degree and A before B by index, then
+  // U, and reverses that order: U, B, A, P, D, C. Splitting P into 40 coincident nodes, with the
+  // first new one, at -0, in either triangle, puts them in P's place, consecutive and in input
+  // order. They outnumber the small-input cutoffs below which common standard library sorts keep
+  // equal elements in order.
+  MeshData split;
+  split.nodesPerElement = 3;
+  split.coordinates = {
+      0_r, 0_r, 0_r, 1_r, 1_r, 0_r, 1_r, 0_r, 0_r, 2_r, 1_r, 0_r, 2_r, 0_r, 0_r, 3_r, 0_r, 0_r};
+  split.connectivity = {0, 2, 1, 6, 4, 3};
+  DynamicArray<int> splitOrder = {5, 1, 2, 0};
+  for (int i = 1; i < 40; ++i) {
+    splitOrder.push_back(split.GetNumNodes());
+    split.coordinates.append(Real3{});
+  }
+  splitOrder.append(Int2{3, 4});
+  split.coordinates[3 * 6] = -0_r;
+  MeshData swappedSplit = split;
+  swappedSplit.connectivity = {6, 2, 1, 0, 4, 3};
+
+  // A unit tet on the origin and the unit points of x, y and z, whose nodes are 0, 3, 2, 1 in
+  // coordinate order. They all have degree 3, so RCM searches from 0, then from 3, the first node
+  // of the last level, with as many levels, numbers the tet 3, 0, 2, 1 and reverses that order to
+  // 1, 2, 0, 3, which gives connectivity 2, 0, 1, 3. Without elements, each node is its own
+  // component, so the order is reverse coordinate order.
+  MeshData unitTet;
+  unitTet.nodesPerElement = 4;
+  unitTet.coordinates = {0_r, 0_r, 0_r, 1_r, 0_r, 0_r, 0_r, 1_r, 0_r, 0_r, 0_r, 1_r};
+  unitTet.connectivity = {0, 1, 2, 3};
+  MeshData noElements = unitTet;
+  noElements.connectivity.clear();
+
+  struct Case {
+    MeshData mesh;
+    DynamicArray<int> oldFromNew;
+  };
+  for (Case const& testCase :
+       {Case{.mesh = split, .oldFromNew = splitOrder},
+        Case{.mesh = swappedSplit, .oldFromNew = splitOrder},
+        Case{.mesh = unitTet, .oldFromNew = {1, 2, 0, 3}},
+        Case{.mesh = noElements, .oldFromNew = {1, 2, 3, 0}}}) {
+    // Tag the nodes with their input indices by their skinning, which tells coincident nodes apart.
+    MeshData tagged = testCase.mesh;
+    SkinningData& tags = tagged.skinning.emplace();
+    tags.weightsPerNode = 1;
+    tags.indices.resize(tagged.GetNumNodes());
+    std::iota(tags.indices.begin(), tags.indices.end(), 0);
+    tags.weights = DynamicArray<real>(tagged.GetNumNodes(), 1_r);
+
+    MeshData const reordered = Reordered(tagged);
+    EXPECT_EQ(testCase.oldFromNew, reordered.skinning->indices);
+
+    // These fixtures keep their element order, so the elements' corner tags compare row by row.
+    DynamicArray<int> cornerTags;
+    for (int const node : reordered.connectivity) {
+      cornerTags.push_back(reordered.skinning->indices[node]);
+    }
+    EXPECT_EQ(testCase.mesh.connectivity, cornerTags);
+    EXPECT_EQ(reordered, Reordered(reordered));
+  }
+}
+
+TEST(ModelUtils, ReorderForLocality_LeavesPolylinesAndInvalidMeshesUnchanged) {
+  // A polyline whose nodes aren't in coordinate order.
+  MeshData polyline;
+  polyline.nodesPerElement = 2;
+  polyline.coordinates = {0.2_r, 0_r, 0_r, 0.1_r, 0_r, 0_r, 0_r, 0_r, 0_r};
+  polyline.connectivity = {0, 1, 1, 2};
+
+  MeshData nonSequentialPolyline = polyline;
+  nonSequentialPolyline.connectivity = {1, 2, 0, 1};
+
+  MeshData const tets = *MakeUnitCubeTetModel().mesh;
+  MeshData outOfRangeNode = tets;
+  outOfRangeNode.connectivity[0] = tets.GetNumNodes();
+
+  // Valid polylines are left as they are. Invalid meshes, polylines included, are reported, and a
+  // call with an error already set returns without changes.
+  struct Case {
+    MeshData mesh;
+    bool hasPriorError = false;
+    bool isOK = false;
+  };
+  for (Case const& testCase :
+       {Case{.mesh = polyline, .isOK = true},
+        Case{.mesh = nonSequentialPolyline},
+        Case{.mesh = outOfRangeNode},
+        Case{.mesh = tets, .hasPriorError = true}}) {
+    MeshData mesh = testCase.mesh;
+    Error error;
+    if (testCase.hasPriorError) {
+      MOCHI_ERROR_SET(error, "Prior error");
+    }
+
+    model::ReorderForLocality(mesh, error);
+    EXPECT_EQ(testCase.isOK, error.IsOK());
+    EXPECT_EQ(testCase.mesh, mesh);
+  }
 }

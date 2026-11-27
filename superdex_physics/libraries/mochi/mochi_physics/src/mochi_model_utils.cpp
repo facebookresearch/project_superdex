@@ -120,3 +120,7 @@ void model_utils::FlipWindingOrder(MeshData& data, Error& error) {
 void model_utils::FlipWindingOrder(ModelData& data, Error& error) {
   return model::FlipWindingOrder(data, error);
 }
+
+void model_utils::ReorderForLocality(MeshData& mesh, Error& error) {
+  model::ReorderForLocality(mesh, error);
+}

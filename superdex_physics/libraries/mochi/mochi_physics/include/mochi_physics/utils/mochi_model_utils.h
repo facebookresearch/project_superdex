@@ -83,4 +83,5 @@ MOCHI_API void BakeSdf(ModelData& data, GridSdfParams const& params, Error& erro
 MOCHI_API void EmbedInTetrahedralMesh(MeshDataView const& tetMesh, MeshData& outMesh, Error& error);
 MOCHI_API void FlipWindingOrder(MeshData& data, Error& error);
 MOCHI_API void FlipWindingOrder(ModelData& data, Error& error);
+MOCHI_API void ReorderForLocality(MeshData& mesh, Error& error);
 } // namespace mochi::model_utils

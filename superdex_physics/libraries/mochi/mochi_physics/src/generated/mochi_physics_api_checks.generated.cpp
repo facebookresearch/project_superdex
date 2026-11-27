@@ -87,6 +87,9 @@ static_assert(std::is_same_v<decltype(static_cast<void (*)(mochi::MeshData&, moc
 // free function mochi::model::FlipWindingOrder
 static_assert(std::is_same_v<decltype(static_cast<void (*)(mochi::ModelData&, mochi::Error&)>(&mochi::model::FlipWindingOrder)), void (*)(mochi::ModelData&, mochi::Error&)>, "\n  ERROR: Function mochi::model::FlipWindingOrder is out-of-sync with C++.\n  Please check the function signature, then run mochi_gen_py to regenerate this file.\n");
 
+// free function mochi::model::ReorderForLocality
+static_assert(std::is_same_v<decltype(&mochi::model::ReorderForLocality), void (*)(mochi::MeshData&, mochi::Error&)>, "\n  ERROR: Function mochi::model::ReorderForLocality is out-of-sync with C++.\n  Please check the function signature, then run mochi_gen_py to regenerate this file.\n");
+
 // struct mochi::prefab::SceneParams
 static_assert(std::is_same_v<decltype(&mochi::prefab::SceneParams::comment), std::optional<mochi::DynamicString> mochi::prefab::SceneParams::*>, "\n  ERROR: Field mochi::prefab::SceneParams::comment is out-of-sync with C++ definition.\n  Please check the field type, then run mochi_gen_py to regenerate this file.\n");
 static_assert(std::is_same_v<decltype(&mochi::prefab::SceneParams::description), mochi::DynamicString mochi::prefab::SceneParams::*>, "\n  ERROR: Field mochi::prefab::SceneParams::description is out-of-sync with C++ definition.\n  Please check the field type, then run mochi_gen_py to regenerate this file.\n");
