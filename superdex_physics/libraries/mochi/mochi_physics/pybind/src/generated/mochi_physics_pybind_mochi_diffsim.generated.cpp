@@ -40,9 +40,9 @@ void mochi::DeclareMochiPhysics_MochiDiffsim([[maybe_unused]] nb::module_& m, [[
   registry.StoreClass(nb::class_<mochi::diffsim::BackPropagationSceneStats>(m_diffsim, "BackPropagationSceneStats", "Performance metrics for the last back-propagation step."));
 }
 
-void mochi::DefineMochiPhysics_MochiDiffsim([[maybe_unused]] nb::module_& m, [[maybe_unused]] PybindRegistry& registry) {
-  auto m_diffsim = m.def_submodule("diffsim");
+namespace {
 
+MOCHI_NO_INLINE void Define_diffsim_BackPropagationSolverParams(PybindRegistry& registry) {
   registry.GetClass<mochi::diffsim::BackPropagationSolverParams>()
     .def("__init__", [](mochi::diffsim::BackPropagationSolverParams* self, nb::object verbosity, nb::object use_newton_outer_solver, nb::object outer_solver_max_iter, nb::object outer_solver_abs_tol, nb::object outer_solver_rel_tol, nb::object outer_solver_convergence_mode, nb::object inner_solver_abs_tol, nb::object eps_finite_diff, nb::object validate_finite_diff) {
       mochi::diffsim::BackPropagationSolverParams result{};
@@ -82,6 +82,9 @@ void mochi::DefineMochiPhysics_MochiDiffsim([[maybe_unused]] nb::module_& m, [[m
     .def_rw("validate_finite_diff", &mochi::diffsim::BackPropagationSolverParams::validateFiniteDiff, "Validate analytic Hessian-vector products against finite differences\n(diagnostic; slower).")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_diffsim_BackPropagationSceneStats(PybindRegistry& registry) {
   registry.GetClass<mochi::diffsim::BackPropagationSceneStats>()
     .def("__init__", [](mochi::diffsim::BackPropagationSceneStats* self, nb::object total_duration_sec, nb::object solve_duration_sec, nb::object max_outer_iters, nb::object residual_norm, nb::object finite_diff_valid) {
       mochi::diffsim::BackPropagationSceneStats result{};
@@ -109,302 +112,311 @@ void mochi::DefineMochiPhysics_MochiDiffsim([[maybe_unused]] nb::module_& m, [[m
     .def_rw("finite_diff_valid", &mochi::diffsim::BackPropagationSceneStats::finiteDiffValid, "True if every finite-difference Hvp validation check across every island and\nevery Hvp evaluation in this back-prop step passed its tolerance.\n\nNote:\n    Only meaningful when\n    :attr:`~superdex.physics.diffsim.BackPropagationSolverParams.validate_finite_diff`\n    is set; otherwise stays at its default of true.")
   ;
 
-    m_diffsim.def("make_scene_differentiable", [](mochi::Scene* scene) {
-      mochi::Error error;
-      mochi::diffsim::MakeSceneDifferentiable(scene, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-    }
-      , nb::arg("scene").none()
-      , "Make a scene differentiable.\n\nFor accuracy reasons, differentiability is only recommended in double precision.\nDifferentiability is only supported for rigid and articulated actors without\nboundary conditions, and requires\n:attr:`~superdex.physics.SolverParams.integration_method` to be\n:class:`BACKWARD_EULER <superdex.physics.IntegrationMethod>`. It adds internal\ndata to support the invocation of the function\n:func:`~superdex.physics.diffsim.back_propagate`. It also calls\n:func:`~superdex.physics.experimental.apply_improved_convergence_settings`, and\nit logs warnings when overriding non-default scene or actor settings selected by\nthe user. Consider changing those settings to retain the same simulation\nbehavior if the scene is used elsewhere. For more accurate gradients, use\n:attr:`~superdex.physics.ContactParams.friction_with_collider_normal` true (the\ndefault); :func:`~superdex.physics.diffsim.back_propagate` warns otherwise.\n\nArgs:\n    scene (Scene): The scene to make differentiable.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
-    );
+}
 
-    m_diffsim.def("get_back_propagation_solver_params", [](mochi::Scene const* scene) {
-      mochi::Error error;
-      auto result = mochi::diffsim::GetBackPropagationSolverParams(scene, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
-    }
-      , nb::arg("scene").none()
-      , "Get solver parameters.\n\nArgs:\n    scene (Scene): The differentiable scene.\n\nReturns:\n    The back-propagation solver parameters.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
-    );
+} // namespace
 
-    m_diffsim.def("set_back_propagation_solver_params", [](mochi::Scene* scene, mochi::diffsim::BackPropagationSolverParams const& params) {
-      mochi::Error error;
-      mochi::diffsim::SetBackPropagationSolverParams(scene, params, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-    }
-      , nb::arg("scene").none()
-      , nb::arg("params")
-      , "Set solver parameters.\n\nArgs:\n    scene (Scene): The differentiable scene.\n    params (BackPropagationSolverParams): The back-propagation solver parameters\n        to set.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
-    );
+void mochi::DefineMochiPhysics_MochiDiffsim([[maybe_unused]] nb::module_& m, [[maybe_unused]] PybindRegistry& registry) {
+  auto m_diffsim = m.def_submodule("diffsim");
 
-    m_diffsim.def("get_back_propagation_scene_stats", [](mochi::Scene const* scene) {
-      mochi::Error error;
-      auto result = mochi::diffsim::GetBackPropagationSceneStats(scene, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
+  Define_diffsim_BackPropagationSolverParams(registry);
+  Define_diffsim_BackPropagationSceneStats(registry);
+  m_diffsim.def("make_scene_differentiable", [](mochi::Scene* scene) {
+    mochi::Error error;
+    mochi::diffsim::MakeSceneDifferentiable(scene, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("scene").none()
-      , "Get the performance metrics of the last back-propagation step.\n\nArgs:\n    scene (Scene): The differentiable scene.\n\nReturns:\n    The performance metrics of the last back-propagation step.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
-    );
+  }
+    , nb::arg("scene").none()
+    , "Make a scene differentiable.\n\nFor accuracy reasons, differentiability is only recommended in double precision.\nDifferentiability is only supported for rigid and articulated actors without\nboundary conditions, and requires\n:attr:`~superdex.physics.SolverParams.integration_method` to be\n:class:`BACKWARD_EULER <superdex.physics.IntegrationMethod>`. It adds internal\ndata to support the invocation of the function\n:func:`~superdex.physics.diffsim.back_propagate`. It also calls\n:func:`~superdex.physics.experimental.apply_improved_convergence_settings`, and\nit logs warnings when overriding non-default scene or actor settings selected by\nthe user. Consider changing those settings to retain the same simulation\nbehavior if the scene is used elsewhere. For more accurate gradients, use\n:attr:`~superdex.physics.ContactParams.friction_with_collider_normal` true (the\ndefault); :func:`~superdex.physics.diffsim.back_propagate` warns otherwise.\n\nArgs:\n    scene (Scene): The scene to make differentiable.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+  );
 
-    m_diffsim.def("reset_back_propagation", [](mochi::Scene* scene) {
-      mochi::Error error;
-      mochi::diffsim::ResetBackPropagation(scene, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
+  m_diffsim.def("get_back_propagation_solver_params", [](mochi::Scene const* scene) {
+    mochi::Error error;
+    auto result = mochi::diffsim::GetBackPropagationSolverParams(scene, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("scene").none()
-      , "Reset back-propagation state.\n\nMust be called once before a backward pass.\n\nArgs:\n    scene (Scene): The differentiable scene.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
-    );
+    return result;
+  }
+    , nb::arg("scene").none()
+    , "Get solver parameters.\n\nArgs:\n    scene (Scene): The differentiable scene.\n\nReturns:\n    The back-propagation solver parameters.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+  );
 
-    m_diffsim.def("prepare_back_propagate", [](mochi::Scene* scene, mochi::StateHandle state_new, mochi::StateHandle state_old) {
-      mochi::Error error;
-      mochi::diffsim::PrepareBackPropagate(scene, state_new, state_old, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
+  m_diffsim.def("set_back_propagation_solver_params", [](mochi::Scene* scene, mochi::diffsim::BackPropagationSolverParams const& params) {
+    mochi::Error error;
+    mochi::diffsim::SetBackPropagationSolverParams(scene, params, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("scene").none()
-      , nb::arg("state_new")
-      , nb::arg("state_old")
-      , "Prepare one simulation step for backward mode differentiation.\n\nValidates the state pair and marks the scene as ready for per-step output\nbackward functions and :func:`~superdex.physics.diffsim.back_propagate`. Must be\ncalled before accumulating per-step loss gradients with output backward\nfunctions.\n\nArgs:\n    scene (Scene): The differentiable scene.\n    state_new (StateHandle): State handle at step k (q_k).\n    state_old (StateHandle): State handle at step k-1 (q_{k-1}).\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
-      , nb::call_guard<nb::gil_scoped_release>()
-    );
+  }
+    , nb::arg("scene").none()
+    , nb::arg("params")
+    , "Set solver parameters.\n\nArgs:\n    scene (Scene): The differentiable scene.\n    params (BackPropagationSolverParams): The back-propagation solver parameters\n        to set.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+  );
 
-    m_diffsim.def("back_propagate", [](mochi::Scene* scene) {
-      mochi::Error error;
-      mochi::diffsim::BackPropagate(scene, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
+  m_diffsim.def("get_back_propagation_scene_stats", [](mochi::Scene const* scene) {
+    mochi::Error error;
+    auto result = mochi::diffsim::GetBackPropagationSceneStats(scene, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("scene").none()
-      , "Backward mode differentiation through the step function.\n\nSolves the adjoint system to propagate gradients backward through one simulation\nstep. Per-step loss gradients should be accumulated into per-actor adjoint\ncomponents after calling\n:func:`~superdex.physics.diffsim.prepare_back_propagate` and before calling this\nfunction, using output backward functions (e.g.,\n:func:`~superdex.physics.diffsim.get_center_of_mass_transform_backward`,\n:func:`~superdex.physics.diffsim.get_articulated_pose_backward`). The internal\nadjoint buffers are managed by the scene and must be initialized via\n:func:`~superdex.physics.diffsim.reset_back_propagation` before the first call.\nEach call to this function must be preceded by\n:func:`~superdex.physics.diffsim.prepare_back_propagate` for the same state\npair. Per-actor gradients wrt control inputs and initial conditions can be\nextracted via the corresponding backward functions (e.g.,\n:func:`~superdex.physics.diffsim.set_articulated_target_pose_backward`,\n:func:`~superdex.physics.diffsim.set_center_of_mass_transform_backward`) after\neach BackPropagate call. This function assumes that the forward simulation is\nexecuted per step by setting inputs, running the step, and reading outputs. The\nstate handles must be captured right before and after stepping the simulation\nforward, without setting any inputs in between.\n\nArgs:\n    scene (Scene): The differentiable scene.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    TODO: The function is not tested with variable time-stepping yet."
-      , nb::call_guard<nb::gil_scoped_release>()
-    );
+    return result;
+  }
+    , nb::arg("scene").none()
+    , "Get the performance metrics of the last back-propagation step.\n\nArgs:\n    scene (Scene): The differentiable scene.\n\nReturns:\n    The performance metrics of the last back-propagation step.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+  );
 
-    m_diffsim.def("convert_rigid_gradient_lie_to_rotation_vector", [](mochi::TransformRT const& state, mochi::Span<mochi::real> out_grad) {
-      mochi::Error error;
-      mochi::diffsim::ConvertRigidGradientLieToRotationVector(state, out_grad, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
+  m_diffsim.def("reset_back_propagation", [](mochi::Scene* scene) {
+    mochi::Error error;
+    mochi::diffsim::ResetBackPropagation(scene, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("state")
-      , nb::arg("out_grad")
-      , "Convert in-place gradient wrt rigid-actor state from local (Lie-parameterized)\nrepresentation to full rotation-vector representation.\n\nThis conversion is necessary for gradient-based optimization. outGrad must have\nsize 6 (3 translation + 3 rotation DoFs).\n\nArgs:\n    state (TransformRT): The rigid-actor state transform.\n    out_grad (ArrayLikeReal): In: Lie-parameterized gradient. Out:\n        rotation-vector gradient. Size 6.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
-    );
+  }
+    , nb::arg("scene").none()
+    , "Reset back-propagation state.\n\nMust be called once before a backward pass.\n\nArgs:\n    scene (Scene): The differentiable scene.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+  );
 
-    m_diffsim.def("convert_rigid_gradient_lie_to_quaternion", [](mochi::TransformRT const& state, mochi::Span<mochi::real const> in_grad, mochi::Span<mochi::real> out_grad) {
-      mochi::Error error;
-      mochi::diffsim::ConvertRigidGradientLieToQuaternion(state, in_grad, out_grad, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
+  m_diffsim.def("prepare_back_propagate", [](mochi::Scene* scene, mochi::StateHandle state_new, mochi::StateHandle state_old) {
+    mochi::Error error;
+    mochi::diffsim::PrepareBackPropagate(scene, state_new, state_old, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("state")
-      , nb::arg("in_grad")
-      , nb::arg("out_grad")
-      , "Convert gradient wrt rigid-actor state from local (Lie-parameterized) to\nquaternion representation.\n\nThis conversion is necessary for gradient-based optimization. inGrad must have\nsize 6 (3 translation + 3 rotation DoFs). outGrad must have size 7 (3\ntranslation + 4 rotation DoFs).\n\nArgs:\n    state (TransformRT): The rigid-actor state transform.\n    in_grad (ArrayLikeReal): Lie-parameterized gradient. Size 6.\n    out_grad (ArrayLikeReal): Quaternion-parameterized gradient. Size 7.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
-    );
+  }
+    , nb::arg("scene").none()
+    , nb::arg("state_new")
+    , nb::arg("state_old")
+    , "Prepare one simulation step for backward mode differentiation.\n\nValidates the state pair and marks the scene as ready for per-step output\nbackward functions and :func:`~superdex.physics.diffsim.back_propagate`. Must be\ncalled before accumulating per-step loss gradients with output backward\nfunctions.\n\nArgs:\n    scene (Scene): The differentiable scene.\n    state_new (StateHandle): State handle at step k (q_k).\n    state_old (StateHandle): State handle at step k-1 (q_{k-1}).\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+    , nb::call_guard<nb::gil_scoped_release>()
+  );
 
-    m_diffsim.def("convert_articulated_gradient_lie_to_rotation_vector", [](mochi::Actor const* actor, mochi::Span<mochi::real const> pose, mochi::Span<mochi::real> out_grad) {
-      mochi::Error error;
-      mochi::diffsim::ConvertArticulatedGradientLieToRotationVector(actor, pose, out_grad, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
+  m_diffsim.def("back_propagate", [](mochi::Scene* scene) {
+    mochi::Error error;
+    mochi::diffsim::BackPropagate(scene, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("actor").none()
-      , nb::arg("pose")
-      , nb::arg("out_grad")
-      , "Convert in-place gradient wrt articulated-actor pose from local\n(Lie-parameterized) representation to full rotation-vector representation.\n\nThe conversion is applied only to joints with 3D rotations. This conversion is\nnecessary for gradient-based optimization. outGrad must have size equal to the\nnumber of DoFs of the articulated actor.\n\nArgs:\n    actor (Actor): The articulated actor.\n    pose (ArrayLikeReal): The articulated-actor pose.\n    out_grad (ArrayLikeReal): In: Lie-parameterized gradient. Out:\n        rotation-vector gradient.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
-    );
+  }
+    , nb::arg("scene").none()
+    , "Backward mode differentiation through the step function.\n\nSolves the adjoint system to propagate gradients backward through one simulation\nstep. Per-step loss gradients should be accumulated into per-actor adjoint\ncomponents after calling\n:func:`~superdex.physics.diffsim.prepare_back_propagate` and before calling this\nfunction, using output backward functions (e.g.,\n:func:`~superdex.physics.diffsim.get_center_of_mass_transform_backward`,\n:func:`~superdex.physics.diffsim.get_articulated_pose_backward`). The internal\nadjoint buffers are managed by the scene and must be initialized via\n:func:`~superdex.physics.diffsim.reset_back_propagation` before the first call.\nEach call to this function must be preceded by\n:func:`~superdex.physics.diffsim.prepare_back_propagate` for the same state\npair. Per-actor gradients wrt control inputs and initial conditions can be\nextracted via the corresponding backward functions (e.g.,\n:func:`~superdex.physics.diffsim.set_articulated_target_pose_backward`,\n:func:`~superdex.physics.diffsim.set_center_of_mass_transform_backward`) after\neach BackPropagate call. This function assumes that the forward simulation is\nexecuted per step by setting inputs, running the step, and reading outputs. The\nstate handles must be captured right before and after stepping the simulation\nforward, without setting any inputs in between.\n\nArgs:\n    scene (Scene): The differentiable scene.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    TODO: The function is not tested with variable time-stepping yet."
+    , nb::call_guard<nb::gil_scoped_release>()
+  );
 
-    m_diffsim.def("convert_rigid_gradient_quaternion_to_lie", [](mochi::TransformRT const& state, mochi::Span<mochi::real const> in_grad, mochi::Span<mochi::real> out_grad) {
-      mochi::Error error;
-      mochi::diffsim::ConvertRigidGradientQuaternionToLie(state, in_grad, out_grad, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
+  m_diffsim.def("convert_rigid_gradient_lie_to_rotation_vector", [](mochi::TransformRT const& state, mochi::Span<mochi::real> out_grad) {
+    mochi::Error error;
+    mochi::diffsim::ConvertRigidGradientLieToRotationVector(state, out_grad, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("state")
-      , nb::arg("in_grad")
-      , nb::arg("out_grad")
-      , "Convert gradient wrt rigid-actor state from quaternion to local\n(Lie-parameterized) representation.\n\nThis conversion is necessary for gradient-based optimization. inGrad must have\nsize 7 (3 translation + 4 rotation DoFs). outGrad must have size 6 (3\ntranslation + 3 rotation DoFs).\n\nArgs:\n    state (TransformRT): The rigid-actor state transform.\n    in_grad (ArrayLikeReal): Quaternion-parameterized gradient. Size 7.\n    out_grad (ArrayLikeReal): Lie-parameterized gradient. Size 6.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
-    );
+  }
+    , nb::arg("state")
+    , nb::arg("out_grad")
+    , "Convert in-place gradient wrt rigid-actor state from local (Lie-parameterized)\nrepresentation to full rotation-vector representation.\n\nThis conversion is necessary for gradient-based optimization. outGrad must have\nsize 6 (3 translation + 3 rotation DoFs).\n\nArgs:\n    state (TransformRT): The rigid-actor state transform.\n    out_grad (ArrayLikeReal): In: Lie-parameterized gradient. Out:\n        rotation-vector gradient. Size 6.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+  );
 
-    m_diffsim.def("convert_articulated_gradient_rotation_vector_to_lie", [](mochi::Actor const* actor, mochi::Span<mochi::real const> pose, mochi::Span<mochi::real> out_grad) {
-      mochi::Error error;
-      mochi::diffsim::ConvertArticulatedGradientRotationVectorToLie(actor, pose, out_grad, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
+  m_diffsim.def("convert_rigid_gradient_lie_to_quaternion", [](mochi::TransformRT const& state, mochi::Span<mochi::real const> in_grad, mochi::Span<mochi::real> out_grad) {
+    mochi::Error error;
+    mochi::diffsim::ConvertRigidGradientLieToQuaternion(state, in_grad, out_grad, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("actor").none()
-      , nb::arg("pose")
-      , nb::arg("out_grad")
-      , "Convert in-place gradient wrt articulated-actor pose from full rotation-vector\nrepresentation to local (Lie-parameterized) representation.\n\nThe conversion is applied only to joints with 3D rotations. This conversion is\nnecessary for gradient-based optimization. outGrad must have size equal to the\nnumber of DoFs of the articulated actor.\n\nArgs:\n    actor (Actor): The articulated actor.\n    pose (ArrayLikeReal): The articulated-actor pose.\n    out_grad (ArrayLikeReal): In: rotation-vector gradient. Out:\n        Lie-parameterized gradient.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
-    );
+  }
+    , nb::arg("state")
+    , nb::arg("in_grad")
+    , nb::arg("out_grad")
+    , "Convert gradient wrt rigid-actor state from local (Lie-parameterized) to\nquaternion representation.\n\nThis conversion is necessary for gradient-based optimization. inGrad must have\nsize 6 (3 translation + 3 rotation DoFs). outGrad must have size 7 (3\ntranslation + 4 rotation DoFs).\n\nArgs:\n    state (TransformRT): The rigid-actor state transform.\n    in_grad (ArrayLikeReal): Lie-parameterized gradient. Size 6.\n    out_grad (ArrayLikeReal): Quaternion-parameterized gradient. Size 7.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+  );
 
-    m_diffsim.def("get_center_of_mass_transform_backward", [](mochi::Actor* actor, mochi::Span<mochi::real const> grad_output) {
-      mochi::Error error;
-      mochi::diffsim::GetCenterOfMassTransformBackward(actor, grad_output, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
+  m_diffsim.def("convert_articulated_gradient_lie_to_rotation_vector", [](mochi::Actor const* actor, mochi::Span<mochi::real const> pose, mochi::Span<mochi::real> out_grad) {
+    mochi::Error error;
+    mochi::diffsim::ConvertArticulatedGradientLieToRotationVector(actor, pose, out_grad, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("actor").none()
-      , nb::arg("grad_output")
-      , "Backward pass for :meth:`~superdex.physics.Actor.get_center_of_mass_transform`.\n\nConverts the gradient w.r.t. the center-of-mass transform output (translation +\nquaternion) to a Lie-parameterized state gradient and accumulates it into the\nactor. Only rigid actors are supported (standalone or links). Must be called\nbefore :func:`~superdex.physics.diffsim.back_propagate`.\n\nArgs:\n    actor (Actor): The rigid actor (standalone or link).\n    grad_output (ArrayLikeReal): Gradient w.r.t. center-of-mass transform output\n        (3 translation + 4 quaternion XYZW). Must be of size 7.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
-    );
+  }
+    , nb::arg("actor").none()
+    , nb::arg("pose")
+    , nb::arg("out_grad")
+    , "Convert in-place gradient wrt articulated-actor pose from local\n(Lie-parameterized) representation to full rotation-vector representation.\n\nThe conversion is applied only to joints with 3D rotations. This conversion is\nnecessary for gradient-based optimization. outGrad must have size equal to the\nnumber of DoFs of the articulated actor.\n\nArgs:\n    actor (Actor): The articulated actor.\n    pose (ArrayLikeReal): The articulated-actor pose.\n    out_grad (ArrayLikeReal): In: Lie-parameterized gradient. Out:\n        rotation-vector gradient.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+  );
 
-    m_diffsim.def("get_root_transform_backward", [](mochi::Actor* actor, mochi::Span<mochi::real const> grad_output) {
-      mochi::Error error;
-      mochi::diffsim::GetRootTransformBackward(actor, grad_output, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
+  m_diffsim.def("convert_rigid_gradient_quaternion_to_lie", [](mochi::TransformRT const& state, mochi::Span<mochi::real const> in_grad, mochi::Span<mochi::real> out_grad) {
+    mochi::Error error;
+    mochi::diffsim::ConvertRigidGradientQuaternionToLie(state, in_grad, out_grad, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("actor").none()
-      , nb::arg("grad_output")
-      , "Backward pass for :meth:`~superdex.physics.Actor.get_root_transform`.\n\nConverts the gradient w.r.t. the root transform output (translation +\nquaternion) to a Lie-parameterized state gradient and accumulates it into the\nactor. Only rigid actors are supported (standalone or links). Must be called\nbefore :func:`~superdex.physics.diffsim.back_propagate`.\n\nArgs:\n    actor (Actor): The rigid actor (standalone or link).\n    grad_output (ArrayLikeReal): Gradient w.r.t. root transform output (3\n        translation + 4 quaternion XYZW). Must be of size 7.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
-    );
+  }
+    , nb::arg("state")
+    , nb::arg("in_grad")
+    , nb::arg("out_grad")
+    , "Convert gradient wrt rigid-actor state from quaternion to local\n(Lie-parameterized) representation.\n\nThis conversion is necessary for gradient-based optimization. inGrad must have\nsize 7 (3 translation + 4 rotation DoFs). outGrad must have size 6 (3\ntranslation + 3 rotation DoFs).\n\nArgs:\n    state (TransformRT): The rigid-actor state transform.\n    in_grad (ArrayLikeReal): Quaternion-parameterized gradient. Size 7.\n    out_grad (ArrayLikeReal): Lie-parameterized gradient. Size 6.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+  );
 
-    m_diffsim.def("get_contact_force_world_backward", [](mochi::Actor* actor, mochi::Span<mochi::real const> grad_output) {
-      mochi::Error error;
-      mochi::diffsim::GetContactForceWorldBackward(actor, grad_output, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
+  m_diffsim.def("convert_articulated_gradient_rotation_vector_to_lie", [](mochi::Actor const* actor, mochi::Span<mochi::real const> pose, mochi::Span<mochi::real> out_grad) {
+    mochi::Error error;
+    mochi::diffsim::ConvertArticulatedGradientRotationVectorToLie(actor, pose, out_grad, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("actor").none()
-      , nb::arg("grad_output")
-      , "Backward pass for :meth:`~superdex.physics.Actor.get_contact_force_world`.\n\nAccumulates the gradient w.r.t. the world-frame total contact force into\nprepared per-contact force adjoints. Only rigid actors are supported. Must be\ncalled after :func:`~superdex.physics.diffsim.prepare_back_propagate` and before\n:func:`~superdex.physics.diffsim.back_propagate`.\n\nArgs:\n    actor (Actor): The rigid actor.\n    grad_output (ArrayLikeReal): Gradient w.r.t. the total contact force [N] in\n        world frame. Must be of size 3.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
-    );
+  }
+    , nb::arg("actor").none()
+    , nb::arg("pose")
+    , nb::arg("out_grad")
+    , "Convert in-place gradient wrt articulated-actor pose from full rotation-vector\nrepresentation to local (Lie-parameterized) representation.\n\nThe conversion is applied only to joints with 3D rotations. This conversion is\nnecessary for gradient-based optimization. outGrad must have size equal to the\nnumber of DoFs of the articulated actor.\n\nArgs:\n    actor (Actor): The articulated actor.\n    pose (ArrayLikeReal): The articulated-actor pose.\n    out_grad (ArrayLikeReal): In: rotation-vector gradient. Out:\n        Lie-parameterized gradient.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+  );
 
-    m_diffsim.def("get_contact_force_from_actor_world_backward", [](mochi::Actor* actor, mochi::Actor const* other, mochi::Span<mochi::real const> grad_output) {
-      mochi::Error error;
-      mochi::diffsim::GetContactForceFromActorWorldBackward(actor, other, grad_output, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
+  m_diffsim.def("get_center_of_mass_transform_backward", [](mochi::Actor* actor, mochi::Span<mochi::real const> grad_output) {
+    mochi::Error error;
+    mochi::diffsim::GetCenterOfMassTransformBackward(actor, grad_output, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("actor").none()
-      , nb::arg("other").none()
-      , nb::arg("grad_output")
-      , "Backward pass for\n:meth:`~superdex.physics.Actor.get_contact_force_from_actor_world`.\n\nAccumulates the gradient w.r.t. the world-frame contact force from another actor\ninto prepared per-contact force adjoints. Only rigid actors are supported. Must\nbe called after :func:`~superdex.physics.diffsim.prepare_back_propagate` and\nbefore :func:`~superdex.physics.diffsim.back_propagate`.\n\nArgs:\n    actor (Actor): The rigid actor receiving the contact force.\n    other (Actor): The actor exerting the contact force.\n    grad_output (ArrayLikeReal): Gradient w.r.t. the contact force [N] in world\n        frame. Must be of size 3.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
-    );
+  }
+    , nb::arg("actor").none()
+    , nb::arg("grad_output")
+    , "Backward pass for :meth:`~superdex.physics.Actor.get_center_of_mass_transform`.\n\nConverts the gradient w.r.t. the center-of-mass transform output (translation +\nquaternion) to a Lie-parameterized state gradient and accumulates it into the\nactor. Only rigid actors are supported (standalone or links). Must be called\nbefore :func:`~superdex.physics.diffsim.back_propagate`.\n\nArgs:\n    actor (Actor): The rigid actor (standalone or link).\n    grad_output (ArrayLikeReal): Gradient w.r.t. center-of-mass transform output\n        (3 translation + 4 quaternion XYZW). Must be of size 7.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+  );
 
-    m_diffsim.def("get_articulated_pose_backward", [](mochi::Actor* actor, mochi::Span<mochi::real const> grad_output) {
-      mochi::Error error;
-      mochi::diffsim::GetArticulatedPoseBackward(actor, grad_output, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
+  m_diffsim.def("get_root_transform_backward", [](mochi::Actor* actor, mochi::Span<mochi::real const> grad_output) {
+    mochi::Error error;
+    mochi::diffsim::GetRootTransformBackward(actor, grad_output, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("actor").none()
-      , nb::arg("grad_output")
-      , "Backward pass for :meth:`~superdex.physics.Actor.get_articulated_pose`.\n\nConverts the gradient w.r.t. the articulated pose output (joint DOFs in\nrotation-vector representation) to a Lie-parameterized state gradient and\naccumulates it into the actor. Only articulated actors are supported. Must be\ncalled before :func:`~superdex.physics.diffsim.back_propagate`.\n\nArgs:\n    actor (Actor): The articulated actor.\n    grad_output (ArrayLikeReal): Gradient w.r.t. articulated pose output. Must\n        be of size :meth:`~superdex.physics.Actor.get_num_dofs`.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
-    );
+  }
+    , nb::arg("actor").none()
+    , nb::arg("grad_output")
+    , "Backward pass for :meth:`~superdex.physics.Actor.get_root_transform`.\n\nConverts the gradient w.r.t. the root transform output (translation +\nquaternion) to a Lie-parameterized state gradient and accumulates it into the\nactor. Only rigid actors are supported (standalone or links). Must be called\nbefore :func:`~superdex.physics.diffsim.back_propagate`.\n\nArgs:\n    actor (Actor): The rigid actor (standalone or link).\n    grad_output (ArrayLikeReal): Gradient w.r.t. root transform output (3\n        translation + 4 quaternion XYZW). Must be of size 7.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+  );
 
-    m_diffsim.def("set_articulated_target_pose_backward", [](mochi::Actor const* actor, mochi::Span<mochi::real> out_grad_target_pose) {
-      mochi::Error error;
-      mochi::diffsim::SetArticulatedTargetPoseBackward(actor, out_grad_target_pose, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
+  m_diffsim.def("get_contact_force_world_backward", [](mochi::Actor* actor, mochi::Span<mochi::real const> grad_output) {
+    mochi::Error error;
+    mochi::diffsim::GetContactForceWorldBackward(actor, grad_output, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("actor").none()
-      , nb::arg("out_grad_target_pose")
-      , "Backward pass for :meth:`~superdex.physics.Actor.set_articulated_target_pose`.\n\nReads the accumulated gradients wrt current and previous pose-controller targets\n(dg/dgamma_k and dg/dgamma_{k-1}) and sums them into a single output gradient\nwrt the target pose. Must be called after\n:func:`~superdex.physics.diffsim.back_propagate`.\n\nArgs:\n    actor (Actor): The articulated actor with a pose controller.\n    out_grad_target_pose (ArrayLikeReal): Gradient wrt target pose (dg/dgamma_k\n        + dg/dgamma_{k-1}). Must be of size\n        :meth:`~superdex.physics.Actor.get_num_dofs`. The caller is responsible\n        for accumulation.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
-    );
+  }
+    , nb::arg("actor").none()
+    , nb::arg("grad_output")
+    , "Backward pass for :meth:`~superdex.physics.Actor.get_contact_force_world`.\n\nAccumulates the gradient w.r.t. the world-frame total contact force into\nprepared per-contact force adjoints. Only rigid actors are supported. Must be\ncalled after :func:`~superdex.physics.diffsim.prepare_back_propagate` and before\n:func:`~superdex.physics.diffsim.back_propagate`.\n\nArgs:\n    actor (Actor): The rigid actor.\n    grad_output (ArrayLikeReal): Gradient w.r.t. the total contact force [N] in\n        world frame. Must be of size 3.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+  );
 
-    m_diffsim.def("set_articulated_pose_from_joints_backward", [](mochi::Actor const* actor, mochi::Span<mochi::real> out_grad_pose) {
-      mochi::Error error;
-      mochi::diffsim::SetArticulatedPoseFromJointsBackward(actor, out_grad_pose, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
+  m_diffsim.def("get_contact_force_from_actor_world_backward", [](mochi::Actor* actor, mochi::Actor const* other, mochi::Span<mochi::real const> grad_output) {
+    mochi::Error error;
+    mochi::diffsim::GetContactForceFromActorWorldBackward(actor, other, grad_output, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("actor").none()
-      , nb::arg("out_grad_pose")
-      , "Backward pass for\n:meth:`~superdex.physics.Actor.set_articulated_pose_from_joints`.\n\n:meth:`~superdex.physics.Actor.set_articulated_pose_from_joints` sets the body\npose AND initializes the controller targets (both current and previous). This\ndual sums the gradient contributions from all three paths: state, current\ntarget, and previous target. Must be called after\n:func:`~superdex.physics.diffsim.back_propagate`.\n\nArgs:\n    actor (Actor): The articulated actor.\n    out_grad_pose (ArrayLikeReal): Gradient wrt the joint pose. Must be of size\n        :meth:`~superdex.physics.Actor.get_num_dofs`. The caller is responsible\n        for accumulation.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
-    );
+  }
+    , nb::arg("actor").none()
+    , nb::arg("other").none()
+    , nb::arg("grad_output")
+    , "Backward pass for\n:meth:`~superdex.physics.Actor.get_contact_force_from_actor_world`.\n\nAccumulates the gradient w.r.t. the world-frame contact force from another actor\ninto prepared per-contact force adjoints. Only rigid actors are supported. Must\nbe called after :func:`~superdex.physics.diffsim.prepare_back_propagate` and\nbefore :func:`~superdex.physics.diffsim.back_propagate`.\n\nArgs:\n    actor (Actor): The rigid actor receiving the contact force.\n    other (Actor): The actor exerting the contact force.\n    grad_output (ArrayLikeReal): Gradient w.r.t. the contact force [N] in world\n        frame. Must be of size 3.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+  );
 
-    m_diffsim.def("set_articulated_target_velocity_backward", [](mochi::Actor const* actor, mochi::Span<mochi::real> out_grad_target_velocity) {
-      mochi::Error error;
-      mochi::diffsim::SetArticulatedTargetVelocityBackward(actor, out_grad_target_velocity, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
+  m_diffsim.def("get_articulated_pose_backward", [](mochi::Actor* actor, mochi::Span<mochi::real const> grad_output) {
+    mochi::Error error;
+    mochi::diffsim::GetArticulatedPoseBackward(actor, grad_output, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("actor").none()
-      , nb::arg("out_grad_target_velocity")
-      , "Backward pass for\n:meth:`~superdex.physics.Actor.set_articulated_target_velocity`.\n\nThe target velocity is applied by computing the previous controller target as\ntarget_old = target_current - dt * velocity. Therefore, the gradient wrt\nvelocity is -dt * dg/dgamma_{k-1}, where dg/dgamma_{k-1} is the gradient wrt the\nprevious controller target. Must be called after\n:func:`~superdex.physics.diffsim.back_propagate`.\n\nArgs:\n    actor (Actor): The articulated actor with a pose controller.\n    out_grad_target_velocity (ArrayLikeReal): Gradient wrt target velocity. Must\n        be of size :meth:`~superdex.physics.Actor.get_num_dofs`. The caller is\n        responsible for accumulation.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
-    );
+  }
+    , nb::arg("actor").none()
+    , nb::arg("grad_output")
+    , "Backward pass for :meth:`~superdex.physics.Actor.get_articulated_pose`.\n\nConverts the gradient w.r.t. the articulated pose output (joint DOFs in\nrotation-vector representation) to a Lie-parameterized state gradient and\naccumulates it into the actor. Only articulated actors are supported. Must be\ncalled before :func:`~superdex.physics.diffsim.back_propagate`.\n\nArgs:\n    actor (Actor): The articulated actor.\n    grad_output (ArrayLikeReal): Gradient w.r.t. articulated pose output. Must\n        be of size :meth:`~superdex.physics.Actor.get_num_dofs`.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+  );
 
-    m_diffsim.def("set_articulated_joint_velocities_backward", [](mochi::Actor const* actor, mochi::Span<mochi::real> out_grad_velocities) {
-      mochi::Error error;
-      mochi::diffsim::SetArticulatedJointVelocitiesBackward(actor, out_grad_velocities, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
+  m_diffsim.def("set_articulated_target_pose_backward", [](mochi::Actor const* actor, mochi::Span<mochi::real> out_grad_target_pose) {
+    mochi::Error error;
+    mochi::diffsim::SetArticulatedTargetPoseBackward(actor, out_grad_target_pose, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("actor").none()
-      , nb::arg("out_grad_velocities")
-      , "Backward pass for\n:meth:`~superdex.physics.Actor.set_articulated_joint_velocities`.\n\n:meth:`~superdex.physics.Actor.set_articulated_joint_velocities` sets the joint\nvelocities v of an articulated actor. The velocity determines the derived step\ndx = v * dt. Therefore: dL/dv = dt * dL/d(dx) * d(dx)/dq. Additionally, if a\npose controller is present, it also sets the target velocity which determines\nthe previous controller target; therefore it receives a gradient contribution\nfrom the old controller target. Must be called after\n:func:`~superdex.physics.diffsim.back_propagate`.\n\nArgs:\n    actor (Actor): The articulated actor.\n    out_grad_velocities (ArrayLikeReal): Gradient wrt joint velocities. Must be\n        of size :meth:`~superdex.physics.Actor.get_num_dofs`. The caller is\n        responsible for accumulation.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
-    );
+  }
+    , nb::arg("actor").none()
+    , nb::arg("out_grad_target_pose")
+    , "Backward pass for :meth:`~superdex.physics.Actor.set_articulated_target_pose`.\n\nReads the accumulated gradients wrt current and previous pose-controller targets\n(dg/dgamma_k and dg/dgamma_{k-1}) and sums them into a single output gradient\nwrt the target pose. Must be called after\n:func:`~superdex.physics.diffsim.back_propagate`.\n\nArgs:\n    actor (Actor): The articulated actor with a pose controller.\n    out_grad_target_pose (ArrayLikeReal): Gradient wrt target pose (dg/dgamma_k\n        + dg/dgamma_{k-1}). Must be of size\n        :meth:`~superdex.physics.Actor.get_num_dofs`. The caller is responsible\n        for accumulation.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+  );
 
-    m_diffsim.def("set_external_forces_on_dofs_backward", [](mochi::Actor const* actor, mochi::Span<int const> dof_indices, mochi::Span<mochi::real> out_grad_force_values) {
-      mochi::Error error;
-      mochi::diffsim::SetExternalForcesOnDofsBackward(actor, dof_indices, out_grad_force_values, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
+  m_diffsim.def("set_articulated_pose_from_joints_backward", [](mochi::Actor const* actor, mochi::Span<mochi::real> out_grad_pose) {
+    mochi::Error error;
+    mochi::diffsim::SetArticulatedPoseFromJointsBackward(actor, out_grad_pose, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("actor").none()
-      , nb::arg("dof_indices")
-      , nb::arg("out_grad_force_values")
-      , "Backward pass for :meth:`~superdex.physics.Actor.set_external_forces_on_dofs`.\n\nReads the accumulated force gradient at the specified DOF indices. Only\narticulated and standalone rigid actors are supported (not rigid links). Must be\ncalled after :func:`~superdex.physics.diffsim.back_propagate`.\n\nArgs:\n    actor (Actor): The articulated or standalone rigid actor.\n    dof_indices (ArrayLikeInt): DOF indices matching the forward call. Must be\n        unique and match the size of outGradForceValues.\n    out_grad_force_values (ArrayLikeReal): Gradient wrt force values. The caller\n        is responsible for accumulation.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
-    );
+  }
+    , nb::arg("actor").none()
+    , nb::arg("out_grad_pose")
+    , "Backward pass for\n:meth:`~superdex.physics.Actor.set_articulated_pose_from_joints`.\n\n:meth:`~superdex.physics.Actor.set_articulated_pose_from_joints` sets the body\npose AND initializes the controller targets (both current and previous). This\ndual sums the gradient contributions from all three paths: state, current\ntarget, and previous target. Must be called after\n:func:`~superdex.physics.diffsim.back_propagate`.\n\nArgs:\n    actor (Actor): The articulated actor.\n    out_grad_pose (ArrayLikeReal): Gradient wrt the joint pose. Must be of size\n        :meth:`~superdex.physics.Actor.get_num_dofs`. The caller is responsible\n        for accumulation.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+  );
 
-    m_diffsim.def("set_velocity_backward", [](mochi::Actor const* actor, mochi::Span<mochi::real> out_grad_linear_vel, mochi::Span<mochi::real> out_grad_angular_vel) {
-      mochi::Error error;
-      mochi::diffsim::SetVelocityBackward(actor, out_grad_linear_vel, out_grad_angular_vel, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
+  m_diffsim.def("set_articulated_target_velocity_backward", [](mochi::Actor const* actor, mochi::Span<mochi::real> out_grad_target_velocity) {
+    mochi::Error error;
+    mochi::diffsim::SetArticulatedTargetVelocityBackward(actor, out_grad_target_velocity, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("actor").none()
-      , nb::arg("out_grad_linear_vel")
-      , nb::arg("out_grad_angular_vel")
-      , "Backward pass for :meth:`~superdex.physics.Actor.set_velocity`.\n\n:meth:`~superdex.physics.Actor.set_velocity` sets the rigid-body velocity v =\n(v_com, omega). The velocity determines the derived step dx = v * dt. Therefore:\ndL/dv = dt * dL/d(dx), where dL/d(dx) is the derived-state adjoint. Only\nstandalone rigid actors are supported (not articulated links, not soft actors).\nMust be called after :func:`~superdex.physics.diffsim.back_propagate`.\n\nArgs:\n    actor (Actor): The rigid actor.\n    out_grad_linear_vel (ArrayLikeReal): Gradient wrt linear velocity. Must be\n        of size 3. The caller is responsible for accumulation.\n    out_grad_angular_vel (ArrayLikeReal): Gradient wrt angular velocity. Must be\n        of size 3. The caller is responsible for accumulation.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
-    );
+  }
+    , nb::arg("actor").none()
+    , nb::arg("out_grad_target_velocity")
+    , "Backward pass for\n:meth:`~superdex.physics.Actor.set_articulated_target_velocity`.\n\nThe target velocity is applied by computing the previous controller target as\ntarget_old = target_current - dt * velocity. Therefore, the gradient wrt\nvelocity is -dt * dg/dgamma_{k-1}, where dg/dgamma_{k-1} is the gradient wrt the\nprevious controller target. Must be called after\n:func:`~superdex.physics.diffsim.back_propagate`.\n\nArgs:\n    actor (Actor): The articulated actor with a pose controller.\n    out_grad_target_velocity (ArrayLikeReal): Gradient wrt target velocity. Must\n        be of size :meth:`~superdex.physics.Actor.get_num_dofs`. The caller is\n        responsible for accumulation.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+  );
 
-    m_diffsim.def("set_center_of_mass_transform_backward", [](mochi::Actor const* actor, mochi::Span<mochi::real> out_grad_transform) {
-      mochi::Error error;
-      mochi::diffsim::SetCenterOfMassTransformBackward(actor, out_grad_transform, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
+  m_diffsim.def("set_articulated_joint_velocities_backward", [](mochi::Actor const* actor, mochi::Span<mochi::real> out_grad_velocities) {
+    mochi::Error error;
+    mochi::diffsim::SetArticulatedJointVelocitiesBackward(actor, out_grad_velocities, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("actor").none()
-      , nb::arg("out_grad_transform")
-      , "Backward pass for :meth:`~superdex.physics.Actor.set_center_of_mass_transform`.\n\n:meth:`~superdex.physics.Actor.set_center_of_mass_transform` directly sets the\nrigid-body state (pose), so this function reads the gradient dL/d(state). The\noutput is in quaternion representation (7 elements: translation(3) +\nquaternion(4)), matching the forward API. Only standalone rigid actors are\nsupported. Must be called after\n:func:`~superdex.physics.diffsim.back_propagate`.\n\nArgs:\n    actor (Actor): The rigid actor.\n    out_grad_transform (ArrayLikeReal): Gradient wrt the CoM transform. Must be\n        of size 7 (translation(3) + quaternion_XYZW(4)). The caller is\n        responsible for accumulation.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
-    );
+  }
+    , nb::arg("actor").none()
+    , nb::arg("out_grad_velocities")
+    , "Backward pass for\n:meth:`~superdex.physics.Actor.set_articulated_joint_velocities`.\n\n:meth:`~superdex.physics.Actor.set_articulated_joint_velocities` sets the joint\nvelocities v of an articulated actor. The velocity determines the derived step\ndx = v * dt. Therefore: dL/dv = dt * dL/d(dx) * d(dx)/dq. Additionally, if a\npose controller is present, it also sets the target velocity which determines\nthe previous controller target; therefore it receives a gradient contribution\nfrom the old controller target. Must be called after\n:func:`~superdex.physics.diffsim.back_propagate`.\n\nArgs:\n    actor (Actor): The articulated actor.\n    out_grad_velocities (ArrayLikeReal): Gradient wrt joint velocities. Must be\n        of size :meth:`~superdex.physics.Actor.get_num_dofs`. The caller is\n        responsible for accumulation.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+  );
 
-    m.attr("DEFAULT_BACK_PROPAGATION_EPS_FINITE_DIFF") = nb::cast(mochi::kDefaultBackPropagationEpsFiniteDiff);
+  m_diffsim.def("set_external_forces_on_dofs_backward", [](mochi::Actor const* actor, mochi::Span<int const> dof_indices, mochi::Span<mochi::real> out_grad_force_values) {
+    mochi::Error error;
+    mochi::diffsim::SetExternalForcesOnDofsBackward(actor, dof_indices, out_grad_force_values, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
+    }
+  }
+    , nb::arg("actor").none()
+    , nb::arg("dof_indices")
+    , nb::arg("out_grad_force_values")
+    , "Backward pass for :meth:`~superdex.physics.Actor.set_external_forces_on_dofs`.\n\nReads the accumulated force gradient at the specified DOF indices. Only\narticulated and standalone rigid actors are supported (not rigid links). Must be\ncalled after :func:`~superdex.physics.diffsim.back_propagate`.\n\nArgs:\n    actor (Actor): The articulated or standalone rigid actor.\n    dof_indices (ArrayLikeInt): DOF indices matching the forward call. Must be\n        unique and match the size of outGradForceValues.\n    out_grad_force_values (ArrayLikeReal): Gradient wrt force values. The caller\n        is responsible for accumulation.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+  );
+
+  m_diffsim.def("set_velocity_backward", [](mochi::Actor const* actor, mochi::Span<mochi::real> out_grad_linear_vel, mochi::Span<mochi::real> out_grad_angular_vel) {
+    mochi::Error error;
+    mochi::diffsim::SetVelocityBackward(actor, out_grad_linear_vel, out_grad_angular_vel, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
+    }
+  }
+    , nb::arg("actor").none()
+    , nb::arg("out_grad_linear_vel")
+    , nb::arg("out_grad_angular_vel")
+    , "Backward pass for :meth:`~superdex.physics.Actor.set_velocity`.\n\n:meth:`~superdex.physics.Actor.set_velocity` sets the rigid-body velocity v =\n(v_com, omega). The velocity determines the derived step dx = v * dt. Therefore:\ndL/dv = dt * dL/d(dx), where dL/d(dx) is the derived-state adjoint. Only\nstandalone rigid actors are supported (not articulated links, not soft actors).\nMust be called after :func:`~superdex.physics.diffsim.back_propagate`.\n\nArgs:\n    actor (Actor): The rigid actor.\n    out_grad_linear_vel (ArrayLikeReal): Gradient wrt linear velocity. Must be\n        of size 3. The caller is responsible for accumulation.\n    out_grad_angular_vel (ArrayLikeReal): Gradient wrt angular velocity. Must be\n        of size 3. The caller is responsible for accumulation.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+  );
+
+  m_diffsim.def("set_center_of_mass_transform_backward", [](mochi::Actor const* actor, mochi::Span<mochi::real> out_grad_transform) {
+    mochi::Error error;
+    mochi::diffsim::SetCenterOfMassTransformBackward(actor, out_grad_transform, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
+    }
+  }
+    , nb::arg("actor").none()
+    , nb::arg("out_grad_transform")
+    , "Backward pass for :meth:`~superdex.physics.Actor.set_center_of_mass_transform`.\n\n:meth:`~superdex.physics.Actor.set_center_of_mass_transform` directly sets the\nrigid-body state (pose), so this function reads the gradient dL/d(state). The\noutput is in quaternion representation (7 elements: translation(3) +\nquaternion(4)), matching the forward API. Only standalone rigid actors are\nsupported. Must be called after\n:func:`~superdex.physics.diffsim.back_propagate`.\n\nArgs:\n    actor (Actor): The rigid actor.\n    out_grad_transform (ArrayLikeReal): Gradient wrt the CoM transform. Must be\n        of size 7 (translation(3) + quaternion_XYZW(4)). The caller is\n        responsible for accumulation.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+  );
+
+  m.attr("DEFAULT_BACK_PROPAGATION_EPS_FINITE_DIFF") = nb::cast(mochi::kDefaultBackPropagationEpsFiniteDiff);
 
 }
 // clang-format on

@@ -367,7 +367,9 @@ void mochi::DeclareMochiCore_MochiCore([[maybe_unused]] nb::module_& m, [[maybe_
   registry.StoreClass(nb::class_<mochi::CoordinateSpace>(m, "CoordinateSpace", "Coordinate-axis convention and linear unit scale."));
 }
 
-void mochi::DefineMochiCore_MochiCore([[maybe_unused]] nb::module_& m, [[maybe_unused]] PybindRegistry& registry) {
+namespace {
+
+MOCHI_NO_INLINE void Define_ArticulatedCycleJoint(PybindRegistry& registry) {
   registry.GetClass<mochi::ArticulatedCycleJoint>()
     .def("__init__", [](mochi::ArticulatedCycleJoint* self, nb::object child, nb::object parent) {
       mochi::ArticulatedCycleJoint result{};
@@ -388,6 +390,9 @@ void mochi::DefineMochiCore_MochiCore([[maybe_unused]] nb::module_& m, [[maybe_u
     .def_rw("parent", &mochi::ArticulatedCycleJoint::parent, "Parent link index.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_RoutingElement(PybindRegistry& registry) {
   registry.GetClass<mochi::RoutingElement>()
     .def("__init__", [](mochi::RoutingElement* self, nb::object type, nb::object index, nb::object local_position, nb::object coefficient) {
       mochi::RoutingElement result{};
@@ -414,6 +419,9 @@ void mochi::DefineMochiCore_MochiCore([[maybe_unused]] nb::module_& m, [[maybe_u
     .def_rw("coefficient", &mochi::RoutingElement::coefficient, "Signed constant moment arm d(displacement)/d(joint DoF) [m / joint DoF]. Only\nused for linear-joint elements. Its sign sets whether the tendon lengthens or\nshortens with the joint DoF.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_BlendingData(PybindRegistry& registry) {
   registry.GetClass<mochi::BlendingData>()
     .def("__init__", [](mochi::BlendingData* self, nb::object source_shape, nb::object indices, nb::object weights) {
       mochi::BlendingData result{};
@@ -441,6 +449,9 @@ void mochi::DefineMochiCore_MochiCore([[maybe_unused]] nb::module_& m, [[maybe_u
     )
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_BlendingDataView(PybindRegistry& registry) {
   registry.GetClass<mochi::BlendingDataView>()
     .def("__init__", [](mochi::BlendingDataView* self, nb::object source_shape, nb::object indices, nb::object weights) {
       mochi::BlendingDataView result{};
@@ -468,6 +479,9 @@ void mochi::DefineMochiCore_MochiCore([[maybe_unused]] nb::module_& m, [[maybe_u
     )
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_SkinningData(PybindRegistry& registry) {
   registry.GetClass<mochi::SkinningData>()
     .def("__init__", [](mochi::SkinningData* self, nb::object weights_per_node, nb::object indices, nb::object weights) {
       mochi::SkinningData result{};
@@ -495,6 +509,9 @@ void mochi::DefineMochiCore_MochiCore([[maybe_unused]] nb::module_& m, [[maybe_u
     )
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_SkinningDataView(PybindRegistry& registry) {
   registry.GetClass<mochi::SkinningDataView>()
     .def("__init__", [](mochi::SkinningDataView* self, nb::object weights_per_node, nb::object indices, nb::object weights) {
       mochi::SkinningDataView result{};
@@ -522,6 +539,9 @@ void mochi::DefineMochiCore_MochiCore([[maybe_unused]] nb::module_& m, [[maybe_u
     )
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_MeshData(PybindRegistry& registry) {
   registry.GetClass<mochi::MeshData>()
     .def("__init__", [](mochi::MeshData* self, nb::object nodes_per_element, nb::object coordinates, nb::object connectivity, nb::object skinning) {
       mochi::MeshData result{};
@@ -561,6 +581,9 @@ void mochi::DefineMochiCore_MochiCore([[maybe_unused]] nb::module_& m, [[maybe_u
     )
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_MeshDataView(PybindRegistry& registry) {
   registry.GetClass<mochi::MeshDataView>()
     .def("__init__", [](mochi::MeshDataView* self, nb::object nodes_per_element, nb::object coordinates, nb::object connectivity, nb::object skinning) {
       mochi::MeshDataView result{};
@@ -600,6 +623,9 @@ void mochi::DefineMochiCore_MochiCore([[maybe_unused]] nb::module_& m, [[maybe_u
     )
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_GridSdfData(PybindRegistry& registry) {
   registry.GetClass<mochi::GridSdfData>()
     .def("__init__", [](mochi::GridSdfData* self, nb::object dims, nb::object values, nb::object bounds, nb::object negative_value_bounds, nb::object scale, nb::object rotation, nb::object translation) {
       mochi::GridSdfData result{};
@@ -639,6 +665,9 @@ void mochi::DefineMochiCore_MochiCore([[maybe_unused]] nb::module_& m, [[maybe_u
     )
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_GridSdfDataView(PybindRegistry& registry) {
   registry.GetClass<mochi::GridSdfDataView>()
     .def("__init__", [](mochi::GridSdfDataView* self, nb::object dims, nb::object values, nb::object bounds, nb::object negative_value_bounds, nb::object scale, nb::object rotation, nb::object translation) {
       mochi::GridSdfDataView result{};
@@ -678,6 +707,9 @@ void mochi::DefineMochiCore_MochiCore([[maybe_unused]] nb::module_& m, [[maybe_u
     )
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_Box(PybindRegistry& registry) {
   registry.GetClass<mochi::Box>()
     .def("__init__", [](mochi::Box* self, nb::object center, nb::object half_extents, nb::object rotation) {
       mochi::Box result{};
@@ -701,6 +733,9 @@ void mochi::DefineMochiCore_MochiCore([[maybe_unused]] nb::module_& m, [[maybe_u
     .def_prop_rw("rotation", [](mochi::Box& self) -> mochi::Quaternion& { return self.rotation; }, [](mochi::Box& self, nb::object val) { self.rotation = nb::cast<mochi::Quaternion>(val); }, "Orientation of the box local frame.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_Plane(PybindRegistry& registry) {
   registry.GetClass<mochi::Plane>()
     .def("__init__", [](mochi::Plane* self, nb::object normal, nb::object distance) {
       mochi::Plane result{};
@@ -721,6 +756,9 @@ void mochi::DefineMochiCore_MochiCore([[maybe_unused]] nb::module_& m, [[maybe_u
     .def_rw("distance", &mochi::Plane::distance, "Signed distance from the origin [m].")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_Sphere(PybindRegistry& registry) {
   registry.GetClass<mochi::Sphere>()
     .def("__init__", [](mochi::Sphere* self, nb::object center, nb::object radius) {
       mochi::Sphere result{};
@@ -741,6 +779,9 @@ void mochi::DefineMochiCore_MochiCore([[maybe_unused]] nb::module_& m, [[maybe_u
     .def_rw("radius", &mochi::Sphere::radius, "Radius [m].")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_ModelData(PybindRegistry& registry) {
   registry.GetClass<mochi::ModelData>()
     .def("__init__", [](mochi::ModelData* self, nb::object mesh, nb::object visual_mesh, nb::object contact_skin_mesh, nb::object blending, nb::object constrained_nodes, nb::object element_frame_axes, nb::object box, nb::object plane, nb::object sphere, nb::object sdf, nb::object material) {
       mochi::ModelData result{};
@@ -792,6 +833,9 @@ void mochi::DefineMochiCore_MochiCore([[maybe_unused]] nb::module_& m, [[maybe_u
     )
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_ModelDataView(PybindRegistry& registry) {
   registry.GetClass<mochi::ModelDataView>()
     .def("__init__", [](mochi::ModelDataView* self, nb::object mesh, nb::object visual_mesh, nb::object contact_skin_mesh, nb::object blending, nb::object constrained_nodes, nb::object element_frame_axes, nb::object box, nb::object plane, nb::object sphere, nb::object sdf, nb::object material) {
       mochi::ModelDataView result{};
@@ -843,6 +887,9 @@ void mochi::DefineMochiCore_MochiCore([[maybe_unused]] nb::module_& m, [[maybe_u
     )
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_GridSdfParams(PybindRegistry& registry) {
   registry.GetClass<mochi::GridSdfParams>()
     .def("__init__", [](mochi::GridSdfParams* self, nb::object resolution_mode, nb::object resolution_delta, nb::object boundary_padding_dist, nb::object min_grid_resolution) {
       mochi::GridSdfParams result{};
@@ -869,6 +916,9 @@ void mochi::DefineMochiCore_MochiCore([[maybe_unused]] nb::module_& m, [[maybe_u
     .def_prop_rw("min_grid_resolution", [](mochi::GridSdfParams& self) -> mochi::Int3& { return self.minGridResolution; }, [](mochi::GridSdfParams& self, nb::object val) { self.minGridResolution = nb::cast<mochi::Int3>(val); }, "The minimum grid resolution measured in number of voxels per axis.\n\nNote:\n    This may override the voxel count (and voxel size) computed using\n    :attr:`~superdex.physics.GridSdfParams.resolution_mode` and\n    :attr:`~superdex.physics.GridSdfParams.resolution_delta`.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_LinearElasticMaterialParams(PybindRegistry& registry) {
   registry.GetClass<mochi::LinearElasticMaterialParams>()
     .def("__init__", [](mochi::LinearElasticMaterialParams* self, nb::object youngs_modulus, nb::object poisson_ratio) {
       mochi::LinearElasticMaterialParams result{};
@@ -889,6 +939,9 @@ void mochi::DefineMochiCore_MochiCore([[maybe_unused]] nb::module_& m, [[maybe_u
     .def_rw("poisson_ratio", &mochi::LinearElasticMaterialParams::poissonRatio, "Poisson's ratio (dimensionless).\n\nNote:\n    Must be in (-1, 0.5). Near 0.5 = nearly incompressible.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_StVenantKirchhoffMaterialParams(PybindRegistry& registry) {
   registry.GetClass<mochi::StVenantKirchhoffMaterialParams>()
     .def("__init__", [](mochi::StVenantKirchhoffMaterialParams* self, nb::object youngs_modulus, nb::object poisson_ratio, nb::object psd_strategy) {
       mochi::StVenantKirchhoffMaterialParams result{};
@@ -912,6 +965,9 @@ void mochi::DefineMochiCore_MochiCore([[maybe_unused]] nb::module_& m, [[maybe_u
     .def_rw("psd_strategy", &mochi::StVenantKirchhoffMaterialParams::psdStrategy, "Strategy for ensuring positive semi-definite Hessian matrices.\n\nSee Also:\n    :class:`~superdex.physics.MaterialPsdStrategy`")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_NeoHookeanMaterialParams(PybindRegistry& registry) {
   registry.GetClass<mochi::NeoHookeanMaterialParams>()
     .def("__init__", [](mochi::NeoHookeanMaterialParams* self, nb::object youngs_modulus, nb::object poisson_ratio, nb::object psd_strategy) {
       mochi::NeoHookeanMaterialParams result{};
@@ -933,6 +989,9 @@ void mochi::DefineMochiCore_MochiCore([[maybe_unused]] nb::module_& m, [[maybe_u
     .def_rw("psd_strategy", &mochi::NeoHookeanMaterialParams::psdStrategy, "Strategy for ensuring positive semi-definite Hessian matrices.\n\nSee Also:\n    :class:`~superdex.physics.MaterialPsdStrategy`")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_ActiveAnisoArapMaterialParams(PybindRegistry& registry) {
   registry.GetClass<mochi::ActiveAnisoArapMaterialParams>()
     .def("__init__", [](mochi::ActiveAnisoArapMaterialParams* self, nb::object alpha, nb::object length, nb::object aniso_dir, nb::object psd_strategy) {
       mochi::ActiveAnisoArapMaterialParams result{};
@@ -970,6 +1029,9 @@ void mochi::DefineMochiCore_MochiCore([[maybe_unused]] nb::module_& m, [[maybe_u
     )
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_ActiveNeoHookeanMaterialParams(PybindRegistry& registry) {
   registry.GetClass<mochi::ActiveNeoHookeanMaterialParams>()
     .def("__init__", [](mochi::ActiveNeoHookeanMaterialParams* self, nb::object passive_isotropic, nb::object active_anisotropic) {
       mochi::ActiveNeoHookeanMaterialParams result{};
@@ -990,6 +1052,9 @@ void mochi::DefineMochiCore_MochiCore([[maybe_unused]] nb::module_& m, [[maybe_u
     .def_rw("active_anisotropic", &mochi::ActiveNeoHookeanMaterialParams::activeAnisotropic, "Active anisotropic fiber contraction component parameters (Active Aniso ARAP).\n\nSee Also:\n    :class:`~superdex.physics.ActiveAnisoArapMaterialParams`")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_ArapMaterialParams(PybindRegistry& registry) {
   registry.GetClass<mochi::ArapMaterialParams>()
     .def("__init__", [](mochi::ArapMaterialParams* self, nb::object stiffness, nb::object psd_strategy) {
       mochi::ArapMaterialParams result{};
@@ -1010,6 +1075,9 @@ void mochi::DefineMochiCore_MochiCore([[maybe_unused]] nb::module_& m, [[maybe_u
     .def_rw("psd_strategy", &mochi::ArapMaterialParams::psdStrategy, "Strategy for ensuring positive semi-definite Hessian matrices.\n\nSee Also:\n    :class:`~superdex.physics.MaterialPsdStrategy`")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_ActiveShapeTargetingArapMaterialParams(PybindRegistry& registry) {
   registry.GetClass<mochi::ActiveShapeTargetingArapMaterialParams>()
     .def("__init__", [](mochi::ActiveShapeTargetingArapMaterialParams* self, nb::object stiffness, nb::object shape_target_tensor, nb::object psd_strategy) {
       mochi::ActiveShapeTargetingArapMaterialParams result{};
@@ -1033,6 +1101,9 @@ void mochi::DefineMochiCore_MochiCore([[maybe_unused]] nb::module_& m, [[maybe_u
     .def_rw("psd_strategy", &mochi::ActiveShapeTargetingArapMaterialParams::psdStrategy, "Strategy for ensuring positive semi-definite Hessian matrices.\n\nSee Also:\n    :class:`~superdex.physics.MaterialPsdStrategy`")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_SoftMaterialParams(PybindRegistry& registry) {
   registry.GetClass<mochi::SoftMaterialParams>()
     .def("__init__", [](mochi::SoftMaterialParams* self, nb::object type, nb::object neo_hookean, nb::object st_venant_kirchhoff, nb::object linear_elastic, nb::object active_neo_hookean, nb::object active_shape_targeting_arap, nb::object arap, nb::object density, nb::object mass_damping_coefficient, nb::object stiffness_damping_coefficient, nb::object stiffness_damping_include_geometric_term) {
       mochi::SoftMaterialParams result{};
@@ -1080,6 +1151,9 @@ void mochi::DefineMochiCore_MochiCore([[maybe_unused]] nb::module_& m, [[maybe_u
     .def_rw("stiffness_damping_include_geometric_term", &mochi::SoftMaterialParams::stiffnessDampingIncludeGeometricTerm, "[Experimental] Include the geometric term in the stiffness-damping tangent.\nDefaults to `false`.\n\nOnly affects the Jacobian for Newton iteration, not the energy, residual, or\nconverged solution. When `false` (default), the viscous tangent uses a cheaper\nquasi-Newton approximation. When `true`, the Newton Jacobian includes a\ngeometric term, which is proportional to the per-stage strain increment and may\nimprove nonlinear solver convergence in certain scenarios.\n\nWarning:\n    This is an experimental feature. It may be changed or removed in the future.\n    Use at your own risk.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_PerElementSoftMaterialData(PybindRegistry& registry) {
   registry.GetClass<mochi::PerElementSoftMaterialData>()
     .def("__init__", [](mochi::PerElementSoftMaterialData* self, nb::object type, nb::object psd_strategy, nb::object youngs_modulus, nb::object poisson_ratio, nb::object aniso_alpha, nb::object aniso_length, nb::object aniso_theta, nb::object aniso_phi, nb::object arap_stiffness, nb::object shape_target_tensor) {
       mochi::PerElementSoftMaterialData result{};
@@ -1131,6 +1205,9 @@ void mochi::DefineMochiCore_MochiCore([[maybe_unused]] nb::module_& m, [[maybe_u
     )
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_PerElementSoftMaterialDataView(PybindRegistry& registry) {
   registry.GetClass<mochi::PerElementSoftMaterialDataView>()
     .def("__init__", [](mochi::PerElementSoftMaterialDataView* self, nb::object type, nb::object psd_strategy, nb::object youngs_modulus, nb::object poisson_ratio, nb::object aniso_alpha, nb::object aniso_length, nb::object aniso_theta, nb::object aniso_phi, nb::object arap_stiffness, nb::object shape_target_tensor) {
       mochi::PerElementSoftMaterialDataView result{};
@@ -1179,6 +1256,9 @@ void mochi::DefineMochiCore_MochiCore([[maybe_unused]] nb::module_& m, [[maybe_u
     )
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_ContactParams(PybindRegistry& registry) {
   registry.GetClass<mochi::ContactParams>()
     .def("__init__", [](mochi::ContactParams* self, nb::object penalty_coefficient, nb::object penalty_smoothing_half_distance, nb::object penalty_threshold_default, nb::object penalty_threshold_extra_padding, nb::object colliding_penalty_threshold_padding, nb::object friction_with_collider_normal, nb::object max_alignment_normals, nb::object alignment_smoothing_fraction, nb::object viscous_friction_coefficient, nb::object coulomb_friction_coefficient, nb::object prefer_elasto_plastic_friction, nb::object friction_falloff_vel, nb::object presliding_displacement, nb::object normal_viscous_damping_coefficient, nb::object distance_error_bound, nb::object obj_scale, nb::object colliding_penalty_length_scale) {
       mochi::ContactParams result{};
@@ -1248,6 +1328,9 @@ void mochi::DefineMochiCore_MochiCore([[maybe_unused]] nb::module_& m, [[maybe_u
     )
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_ArticulatedJointFrictionParams(PybindRegistry& registry) {
   registry.GetClass<mochi::ArticulatedJointFrictionParams>()
     .def("__init__", [](mochi::ArticulatedJointFrictionParams* self, nb::object viscous, nb::object coulomb, nb::object presliding_displacement, nb::object falloff_vel, nb::object stiction_extra, nb::object stribeck_vel) {
       mochi::ArticulatedJointFrictionParams result{};
@@ -1280,6 +1363,9 @@ void mochi::DefineMochiCore_MochiCore([[maybe_unused]] nb::module_& m, [[maybe_u
     .def_rw("stribeck_vel", &mochi::ArticulatedJointFrictionParams::stribeckVel, "[Experimental] Stribeck velocity [m/s or rad/s] governing how sharply friction\ntransitions from static to dynamic coefficients as the sliding velocity\nincreases.\n\nNote:\n    Must not be negative. A smaller value means a sharper transition.\n\nNote:\n    Defaults to zero.\n\nNote:\n    This has no effect if\n    :attr:`~superdex.physics.ArticulatedJointFrictionParams.stiction_extra` is\n    zero.\n\nNote:\n    The sliding velocity is the slip since the start of the step divided by the\n    time since then, so higher-order integrators may be only first-order\n    accurate while the joint slides.\n\nWarning:\n    This is an experimental feature. It may be changed or removed in the future.\n    Use at your own risk.\n\nWarning:\n    Nonzero values may harm convergence.\n\nWarning:\n    Nonzero extra stiction with zero Stribeck velocity results in a nonsmooth\n    force.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_ArticulatedDofInfo(PybindRegistry& registry) {
   registry.GetClass<mochi::ArticulatedDofInfo>()
     .def("__init__", [](mochi::ArticulatedDofInfo* self, nb::object offset, nb::object trans_size, nb::object rot_size) {
       mochi::ArticulatedDofInfo result{};
@@ -1312,6 +1398,9 @@ void mochi::DefineMochiCore_MochiCore([[maybe_unused]] nb::module_& m, [[maybe_u
     )
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_SaturationHessianParams(PybindRegistry& registry) {
   registry.GetClass<mochi::SaturationHessianParams>()
     .def("__init__", [](mochi::SaturationHessianParams* self, nb::object contact_friction, nb::object joint_friction, nb::object constraint_saturation) {
       mochi::SaturationHessianParams result{};
@@ -1342,6 +1431,9 @@ void mochi::DefineMochiCore_MochiCore([[maybe_unused]] nb::module_& m, [[maybe_u
     )
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_ExperimentalEvalParams(PybindRegistry& registry) {
   registry.GetClass<mochi::ExperimentalEvalParams>()
     .def("__init__", [](mochi::ExperimentalEvalParams* self, nb::object explicit_normals, nb::object fade_friction, nb::object implicit_normal_force_for_dissipation, nb::object fitted_saturation_hessian, nb::object consistency_res_norm, nb::object consistency_res_norm_step) {
       mochi::ExperimentalEvalParams result{};
@@ -1374,6 +1466,9 @@ void mochi::DefineMochiCore_MochiCore([[maybe_unused]] nb::module_& m, [[maybe_u
     .def_rw("consistency_res_norm_step", &mochi::ExperimentalEvalParams::consistencyResNormStep, "Step size for finite-difference consistency check.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_NonLinearSolverParams(PybindRegistry& registry) {
   registry.GetClass<mochi::NonLinearSolverParams>()
     .def("__init__", [](mochi::NonLinearSolverParams* self, nb::object solver_type, nb::object d_residual_assembly_period, nb::object max_iter, nb::object max_elapsed_time_seconds, nb::object convergence_mode, nb::object abs_tol, nb::object rel_tol, nb::object rel_step_tol, nb::object stop_if_no_improvement, nb::object psd_proj_mode, nb::object explosion_control, nb::object abs_div_tol, nb::object rel_div_tol, nb::object line_search_max_iter, nb::object line_search_alpha, nb::object line_search_wolfe1, nb::object line_search_wolfe2, nb::object line_search_max_rel_increase, nb::object line_search_type, nb::object linear_tolerance_strategy, nb::object verbosity) {
       mochi::NonLinearSolverParams result{};
@@ -1451,6 +1546,9 @@ void mochi::DefineMochiCore_MochiCore([[maybe_unused]] nb::module_& m, [[maybe_u
     .def_rw("verbosity", &mochi::NonLinearSolverParams::verbosity, "Verbosity level for logging output.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_LinearSolverParams(PybindRegistry& registry) {
   registry.GetClass<mochi::LinearSolverParams>()
     .def("__init__", [](mochi::LinearSolverParams* self, nb::object solver_type, nb::object preconditioner_type, nb::object norm_type, nb::object abs_tol, nb::object rel_tol, nb::object rel_div_tol, nb::object max_iter, nb::object restart_size, nb::object abort_if_not_spd, nb::object verbosity) {
       mochi::LinearSolverParams result{};
@@ -1495,6 +1593,9 @@ void mochi::DefineMochiCore_MochiCore([[maybe_unused]] nb::module_& m, [[maybe_u
     .def_rw("verbosity", &mochi::LinearSolverParams::verbosity, "Verbosity level for logging output.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_CoordinateSpace(PybindRegistry& registry) {
   registry.GetClass<mochi::CoordinateSpace>()
     .def("__init__", [](mochi::CoordinateSpace* self, nb::object axes, nb::object units_per_meter) {
       mochi::CoordinateSpace result{};
@@ -1548,29 +1649,68 @@ void mochi::DefineMochiCore_MochiCore([[maybe_unused]] nb::module_& m, [[maybe_u
     )
   ;
 
-    m.attr("REAL3_ZEROS") = nb::cast(mochi::kReal3Zeros);
+}
 
-    m.attr("REAL3_ONES") = nb::cast(mochi::kReal3Ones);
+} // namespace
 
-    m.attr("REAL3_X_AXIS") = nb::cast(mochi::kReal3XAxis);
+void mochi::DefineMochiCore_MochiCore([[maybe_unused]] nb::module_& m, [[maybe_unused]] PybindRegistry& registry) {
+  Define_ArticulatedCycleJoint(registry);
+  Define_RoutingElement(registry);
+  Define_BlendingData(registry);
+  Define_BlendingDataView(registry);
+  Define_SkinningData(registry);
+  Define_SkinningDataView(registry);
+  Define_MeshData(registry);
+  Define_MeshDataView(registry);
+  Define_GridSdfData(registry);
+  Define_GridSdfDataView(registry);
+  Define_Box(registry);
+  Define_Plane(registry);
+  Define_Sphere(registry);
+  Define_ModelData(registry);
+  Define_ModelDataView(registry);
+  Define_GridSdfParams(registry);
+  Define_LinearElasticMaterialParams(registry);
+  Define_StVenantKirchhoffMaterialParams(registry);
+  Define_NeoHookeanMaterialParams(registry);
+  Define_ActiveAnisoArapMaterialParams(registry);
+  Define_ActiveNeoHookeanMaterialParams(registry);
+  Define_ArapMaterialParams(registry);
+  Define_ActiveShapeTargetingArapMaterialParams(registry);
+  Define_SoftMaterialParams(registry);
+  Define_PerElementSoftMaterialData(registry);
+  Define_PerElementSoftMaterialDataView(registry);
+  Define_ContactParams(registry);
+  Define_ArticulatedJointFrictionParams(registry);
+  Define_ArticulatedDofInfo(registry);
+  Define_SaturationHessianParams(registry);
+  Define_ExperimentalEvalParams(registry);
+  Define_NonLinearSolverParams(registry);
+  Define_LinearSolverParams(registry);
+  Define_CoordinateSpace(registry);
+  m.attr("REAL3_ZEROS") = nb::cast(mochi::kReal3Zeros);
 
-    m.attr("REAL3_Y_AXIS") = nb::cast(mochi::kReal3YAxis);
+  m.attr("REAL3_ONES") = nb::cast(mochi::kReal3Ones);
 
-    m.attr("REAL3_Z_AXIS") = nb::cast(mochi::kReal3ZAxis);
+  m.attr("REAL3_X_AXIS") = nb::cast(mochi::kReal3XAxis);
 
-    m.attr("MINUS2_PI_PLUS2_PI") = nb::cast(mochi::kMinus2PiPlus2Pi);
+  m.attr("REAL3_Y_AXIS") = nb::cast(mochi::kReal3YAxis);
 
-    m.attr("UNIT_INTERVAL") = nb::cast(mochi::kUnitInterval);
+  m.attr("REAL3_Z_AXIS") = nb::cast(mochi::kReal3ZAxis);
 
-    m.attr("MESH_DATA_SPACE_DIM") = nb::cast(mochi::kMeshDataSpaceDim);
+  m.attr("MINUS2_PI_PLUS2_PI") = nb::cast(mochi::kMinus2PiPlus2Pi);
 
-    m.attr("GRID_SDF_DEFAULT_BOUNDARY_PADDING") = nb::cast(mochi::kGridSdfDefaultBoundaryPadding);
+  m.attr("UNIT_INTERVAL") = nb::cast(mochi::kUnitInterval);
 
-    m.attr("DEFAULT_DENSITY") = nb::cast(mochi::kDefaultDensity);
+  m.attr("MESH_DATA_SPACE_DIM") = nb::cast(mochi::kMeshDataSpaceDim);
 
-    m.attr("DEFAULT_REL_STEP_TOL") = nb::cast(mochi::kDefaultRelStepTol);
+  m.attr("GRID_SDF_DEFAULT_BOUNDARY_PADDING") = nb::cast(mochi::kGridSdfDefaultBoundaryPadding);
 
-    m.attr("AUTO_LINEAR_SOLVER_MAX_ITER") = nb::cast(mochi::kAutoLinearSolverMaxIter);
+  m.attr("DEFAULT_DENSITY") = nb::cast(mochi::kDefaultDensity);
+
+  m.attr("DEFAULT_REL_STEP_TOL") = nb::cast(mochi::kDefaultRelStepTol);
+
+  m.attr("AUTO_LINEAR_SOLVER_MAX_ITER") = nb::cast(mochi::kAutoLinearSolverMaxIter);
 
 }
 // clang-format on

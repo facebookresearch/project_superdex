@@ -76,9 +76,9 @@ void mochi::DeclareMochiPhysics_MochiPhysicsPrefab([[maybe_unused]] nb::module_&
   registry.StoreClass(nb::class_<mochi::prefab::ExportParams>(m_prefab, "ExportParams", "Options for :func:`~superdex.physics.prefab.export_scene` and\n:func:`~superdex.physics.prefab.export_actor`."));
 }
 
-void mochi::DefineMochiPhysics_MochiPhysicsPrefab([[maybe_unused]] nb::module_& m, [[maybe_unused]] PybindRegistry& registry) {
-  auto m_prefab = m.def_submodule("prefab");
+namespace {
 
+MOCHI_NO_INLINE void Define_prefab_SceneParams(PybindRegistry& registry) {
   registry.GetClass<mochi::prefab::SceneParams>()
     .def("__init__", [](mochi::prefab::SceneParams* self, nb::object comment, nb::object description, nb::object gravity, nb::object solver) {
       mochi::prefab::SceneParams result{};
@@ -105,6 +105,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsPrefab([[maybe_unused]] nb::module_& 
     .def_prop_rw("solver", [](mochi::prefab::SceneParams& self) -> std::optional<mochi::SolverParams>& { return self.solver; }, [](mochi::prefab::SceneParams& self, nb::handle val) { self.solver = val.is_none() ? std::optional<mochi::SolverParams>{} : nb::cast<std::optional<mochi::SolverParams>>(val); }, "Optional solver parameters.\n\n:func:`~superdex.physics.prefab.add_to_scene` replaces the scene's complete\nsolver parameters only when this value is provided by the top-level prefab and\n:attr:`~superdex.physics.prefab.PrefabParams.apply_scene_settings` is true. In\nall other cases, the existing scene solver parameters are preserved. When\nreplacement occurs, fields omitted from the solver object use their default\nvalues, e.g. `\"solver\": {}` resets all solver parameters to their defaults.", nb::for_setter(nb::arg("value").none()))
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_prefab_RigidActorPrefab(PybindRegistry& registry) {
   registry.GetClass<mochi::prefab::RigidActorPrefab, mochi::RigidActorParams>()
     .def("__init__", [](mochi::prefab::RigidActorPrefab* self, nb::object name, nb::object layer, nb::object shape, nb::object world_from_local, nb::object collider_type, nb::object is_static, nb::object contact, nb::object sdf, nb::object has_gravity, nb::object density, nb::object mass, nb::object center_of_mass, nb::object moment_of_inertia, nb::object boundary_element_type, nb::object boundary_subsampling, nb::object linear_velocity, nb::object angular_velocity, nb::object comment, nb::object shape_file, nb::object scale, nb::object shape_rotation, nb::object shape_translation, nb::object rotation, nb::object translation, nb::object render_model_file, nb::object render_model_scale, nb::object render_model_rotation, nb::object render_model_translation) {
       mochi::prefab::RigidActorPrefab result{};
@@ -186,6 +189,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsPrefab([[maybe_unused]] nb::module_& 
     .def_prop_rw("render_model_translation", [](mochi::prefab::RigidActorPrefab& self) -> mochi::Real3& { return self.renderModelTranslation; }, [](mochi::prefab::RigidActorPrefab& self, nb::object val) { self.renderModelTranslation = nb::cast<mochi::Real3>(val); }, "Translation [x, y, z] to apply to the render model.\n\nNote:\n    Ignored if\n    :attr:`~superdex.physics.prefab.RigidActorPrefab.render_model_file` is\n    empty.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_prefab_SoftActorPrefab(PybindRegistry& registry) {
   registry.GetClass<mochi::prefab::SoftActorPrefab, mochi::SoftActorParams>()
     .def("__init__", [](mochi::prefab::SoftActorPrefab* self, nb::object name, nb::object layer, nb::object world_from_local, nb::object shape, nb::object material, nb::object contact, nb::object has_gravity, nb::object has_inertia, nb::object has_stress, nb::object use_contact_skin, nb::object boundary_element_type, nb::object comment, nb::object shape_file, nb::object collider_type, nb::object sdf, nb::object flow_file, nb::object flow, nb::object use_recentering, nb::object scale, nb::object shape_rotation, nb::object shape_translation, nb::object rotation, nb::object translation, nb::object render_model_file, nb::object render_model_scale, nb::object render_model_rotation, nb::object render_model_translation, nb::object node_displacements) {
       mochi::prefab::SoftActorPrefab result{};
@@ -273,6 +279,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsPrefab([[maybe_unused]] nb::module_& 
     .def_prop_rw("node_displacements", [](mochi::prefab::SoftActorPrefab& self) -> std::optional<mochi::DynamicArray<mochi::real>>& { return self.nodeDisplacements; }, [](mochi::prefab::SoftActorPrefab& self, nb::handle val) { self.nodeDisplacements = val.is_none() ? std::optional<mochi::DynamicArray<mochi::real>>{} : nb::cast<std::optional<mochi::DynamicArray<mochi::real>>>(val); }, "Optional initial nodal displacements in model space, flattened as [x0, y0, z0,\nx1, y1, z1, ...].\n\nValues are expressed in the model frame of\n:attr:`~superdex.physics.prefab.SoftActorPrefab.shape_file`, the same frame as\nits node positions. The model transform baked into the shape\n(:attr:`~superdex.physics.prefab.SoftActorPrefab.scale`,\n:attr:`~superdex.physics.prefab.SoftActorPrefab.shape_rotation`, and the\neffective prefab scale) is applied to the displacements too.\n:attr:`~superdex.physics.prefab.SoftActorPrefab.shape_translation` does not\naffect them. Displacements for a preset\n:attr:`~superdex.physics.SoftActorParams.shape` are applied unchanged, like its\ngeometry. Applied right after the actor is created, see\n:meth:`~superdex.physics.Actor.set_displacements`.\n\nNote:\n    Ignored if unset or empty. Otherwise, must contain 3 finite values per\n    simulation node.\n\nNote:\n    For nested soft actors in\n    :attr:`~superdex.physics.prefab.SoftSkinnedActorPrefab.soft_params`, values\n    are the soft displacements in the unposed (bind-pose) frame, before skinning\n    is applied.", nb::for_setter(nb::arg("value").none()))
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_prefab_RodPose(PybindRegistry& registry) {
   registry.GetClass<mochi::prefab::RodPose>()
     .def("__init__", [](mochi::prefab::RodPose* self, nb::object node_displacements, nb::object element_frame_axes) {
       mochi::prefab::RodPose result{};
@@ -293,6 +302,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsPrefab([[maybe_unused]] nb::module_& 
     .def_prop_rw("element_frame_axes", [](mochi::prefab::RodPose& self) -> mochi::DynamicArray<mochi::real>& { return self.elementFrameAxes; }, [](mochi::prefab::RodPose& self, nb::object val) { self.elementFrameAxes = nb::cast<mochi::DynamicArray<mochi::real>>(val); }, "Element frame axes, flattened as [x0, y0, z0, x1, y1, z1, ...]. Must contain 3\nfinite values per element. After the model transform is applied, each axis is\nexpected to be a unit vector orthogonal to its deformed element, within a\ntolerance of 1e-3. Geometry violations emit warnings; the supplied pose is still\napplied.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_prefab_RodActorPrefab(PybindRegistry& registry) {
   registry.GetClass<mochi::prefab::RodActorPrefab, mochi::RodActorParams>()
     .def("__init__", [](mochi::prefab::RodActorPrefab* self, nb::object name, nb::object layer, nb::object world_from_local, nb::object shape, nb::object contact, nb::object contact_element_type, nb::object material, nb::object collider_type, nb::object point_cloud_collider, nb::object has_gravity, nb::object use_contact_skin, nb::object contact_skin_element_type, nb::object comment, nb::object shape_file, nb::object scale, nb::object shape_rotation, nb::object shape_translation, nb::object rotation, nb::object translation, nb::object render_model_file, nb::object render_model_scale, nb::object render_model_rotation, nb::object render_model_translation, nb::object pose) {
       mochi::prefab::RodActorPrefab result{};
@@ -367,6 +379,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsPrefab([[maybe_unused]] nb::module_& 
     .def_prop_rw("pose", [](mochi::prefab::RodActorPrefab& self) -> std::optional<mochi::prefab::RodPose>& { return self.pose; }, [](mochi::prefab::RodActorPrefab& self, nb::handle val) { self.pose = val.is_none() ? std::optional<mochi::prefab::RodPose>{} : nb::cast<std::optional<mochi::prefab::RodPose>>(val); }, "Optional initial pose. Applied right after the actor is created, see\n:meth:`~superdex.physics.Actor.set_rod_pose`.", nb::for_setter(nb::arg("value").none()))
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_prefab_ArticulatedJointPrefab(PybindRegistry& registry) {
   registry.GetClass<mochi::prefab::ArticulatedJointPrefab, mochi::ArticulatedJointParams>()
     .def("__init__", [](mochi::prefab::ArticulatedJointPrefab* self, nb::object name, nb::object type, nb::object parent_link_from_joint, nb::object axis, nb::object friction, nb::object inertia, nb::object min_limit, nb::object max_limit, nb::object limit_stiffness, nb::object limit_damping) {
       mochi::prefab::ArticulatedJointPrefab result{};
@@ -401,6 +416,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsPrefab([[maybe_unused]] nb::module_& 
     .def("__deepcopy__", [](mochi::prefab::ArticulatedJointPrefab const& self, nb::dict) { return mochi::prefab::ArticulatedJointPrefab(self); })
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_prefab_ArticulatedLinkPrefab(PybindRegistry& registry) {
   registry.GetClass<mochi::prefab::ArticulatedLinkPrefab, mochi::ArticulatedLinkParams>()
     .def("__init__", [](mochi::prefab::ArticulatedLinkPrefab* self, nb::object name, nb::object parent_link, nb::object parent_joint_from_link, nb::object shape, nb::object layer, nb::object collider_type, nb::object contact, nb::object has_gravity, nb::object density, nb::object mass, nb::object center_of_mass, nb::object moment_of_inertia, nb::object boundary_element_type, nb::object boundary_subsampling, nb::object shape_file, nb::object shape_scale, nb::object shape_rotation, nb::object shape_translation, nb::object render_model_file, nb::object render_model_scale, nb::object render_model_rotation, nb::object render_model_translation) {
       mochi::prefab::ArticulatedLinkPrefab result{};
@@ -467,6 +485,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsPrefab([[maybe_unused]] nb::module_& 
     .def_prop_rw("render_model_translation", [](mochi::prefab::ArticulatedLinkPrefab& self) -> mochi::Real3& { return self.renderModelTranslation; }, [](mochi::prefab::ArticulatedLinkPrefab& self, nb::object val) { self.renderModelTranslation = nb::cast<mochi::Real3>(val); }, "Translation [x, y, z] to apply to the render model.\n\nNote:\n    Ignored if\n    :attr:`~superdex.physics.prefab.ArticulatedLinkPrefab.render_model_file` is\n    empty.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_prefab_ArticulatedSkinPrefab(PybindRegistry& registry) {
   registry.GetClass<mochi::prefab::ArticulatedSkinPrefab, mochi::ArticulatedSkinParams>()
     .def("__init__", [](mochi::prefab::ArticulatedSkinPrefab* self, nb::object shape, nb::object layer, nb::object contact, nb::object boundary_element_type, nb::object boundary_subsampling, nb::object non_colliding_links, nb::object shape_file, nb::object render_model_file, nb::object render_model_scale, nb::object render_model_rotation, nb::object render_model_translation, nb::object hidden_links) {
       mochi::prefab::ArticulatedSkinPrefab result{};
@@ -511,6 +532,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsPrefab([[maybe_unused]] nb::module_& 
     .def_prop_rw("hidden_links", [](mochi::prefab::ArticulatedSkinPrefab& self) -> std::optional<mochi::DynamicArray<mochi::DynamicString>>& { return self.hiddenLinks; }, [](mochi::prefab::ArticulatedSkinPrefab& self, nb::handle val) { self.hiddenLinks = val.is_none() ? std::optional<mochi::DynamicArray<mochi::DynamicString>>{} : nb::cast<std::optional<mochi::DynamicArray<mochi::DynamicString>>>(val); }, "Local names of links whose render models the skin's render model stands in for.\n\nVisualization tools hide the render models of the listed links wherever they\ndraw the skin's render model.\n\nNote:\n    Unset means the skin's render model stands in for every link, while an empty\n    list means every link keeps its render model. Names that match no link are\n    ignored.\n\nNote:\n    Independent of\n    :attr:`~superdex.physics.ArticulatedSkinParams.non_colliding_links`.\n\nNote:\n    Ignored if\n    :attr:`~superdex.physics.prefab.ArticulatedSkinPrefab.render_model_file` is\n    empty.", nb::for_setter(nb::arg("value").none()))
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_prefab_ArticulatedActorPrefab(PybindRegistry& registry) {
   registry.GetClass<mochi::prefab::ArticulatedActorPrefab>()
     .def("__init__", [](mochi::prefab::ArticulatedActorPrefab* self, nb::object comment, nb::object name, nb::object scale, nb::object rotation, nb::object translation, nb::object cycles, nb::object joints, nb::object links, nb::object skin, nb::object joint_velocities, nb::object joint_pose) {
       mochi::prefab::ArticulatedActorPrefab result{};
@@ -558,6 +582,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsPrefab([[maybe_unused]] nb::module_& 
     .def_prop_rw("joint_pose", [](mochi::prefab::ArticulatedActorPrefab& self) -> std::optional<mochi::DynamicArray<mochi::real>>& { return self.jointPose; }, [](mochi::prefab::ArticulatedActorPrefab& self, nb::handle val) { self.jointPose = val.is_none() ? std::optional<mochi::DynamicArray<mochi::real>>{} : nb::cast<std::optional<mochi::DynamicArray<mochi::real>>>(val); }, "Optional initial joint pose, one value per DoF in joint order.\n\nUnits depend on joint type: [rad] for revolute, [m] for prismatic, and a\nrotation vector [rad] for spherical joints and the rotational part of free\njoints. The translational part of free joints is in [m]. Translational DoFs\nscale with the articulated effective scale\n(:attr:`~superdex.physics.prefab.ArticulatedActorPrefab.scale` times the\neffective prefab scale). Rotational DoFs are not scaled. Applied right after the\nactor is created, see\n:meth:`~superdex.physics.Actor.set_articulated_pose_from_joints`.\n\nNote:\n    Ignored if unset or empty. Otherwise, must contain\n    :meth:`~superdex.physics.Actor.get_num_dofs` finite values.", nb::for_setter(nb::arg("value").none()))
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_prefab_SoftSkinnedActorPrefab(PybindRegistry& registry) {
   registry.GetClass<mochi::prefab::SoftSkinnedActorPrefab>()
     .def("__init__", [](mochi::prefab::SoftSkinnedActorPrefab* self, nb::object comment, nb::object skeleton_params, nb::object soft_params, nb::object soft_attach_links, nb::object enable_colliding_links, nb::object has_gravity, nb::object has_inertia, nb::object has_stress) {
       mochi::prefab::SoftSkinnedActorPrefab result{};
@@ -596,6 +623,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsPrefab([[maybe_unused]] nb::module_& 
     .def_rw("has_stress", &mochi::prefab::SoftSkinnedActorPrefab::hasStress, "Whether soft material stress is applied.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_prefab_ActorLists(PybindRegistry& registry) {
   registry.GetClass<mochi::prefab::ActorLists>()
     .def("__init__", [](mochi::prefab::ActorLists* self, nb::object comment, nb::object articulated, nb::object rigid, nb::object soft, nb::object soft_skinned, nb::object rod) {
       mochi::prefab::ActorLists result{};
@@ -628,6 +658,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsPrefab([[maybe_unused]] nb::module_& 
     .def_prop_rw("rod", [](mochi::prefab::ActorLists& self) -> mochi::DynamicArray<mochi::prefab::RodActorPrefab>& { return self.rod; }, [](mochi::prefab::ActorLists& self, nb::object val) { self.rod = nb::cast<mochi::DynamicArray<mochi::prefab::RodActorPrefab>>(val); }, "Rod actors.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_prefab_RigidSphericalJointConstraintPrefab(PybindRegistry& registry) {
   registry.GetClass<mochi::prefab::RigidSphericalJointConstraintPrefab, mochi::RigidSphericalJointConstraintParams>()
     .def("__init__", [](mochi::prefab::RigidSphericalJointConstraintPrefab* self, nb::object stiffness, nb::object damping, nb::object saturation, nb::object local_pos_a, nb::object local_pos_b, nb::object actor_a, nb::object actor_b, nb::object actor_name_a, nb::object actor_name_b) {
       mochi::prefab::RigidSphericalJointConstraintPrefab result{};
@@ -662,6 +695,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsPrefab([[maybe_unused]] nb::module_& 
     .def_rw("actor_name_b", &mochi::prefab::RigidSphericalJointConstraintPrefab::actorNameB, "Name or hierarchy path identifying rigid actor B.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_prefab_RigidPrismaticJointConstraintPrefab(PybindRegistry& registry) {
   registry.GetClass<mochi::prefab::RigidPrismaticJointConstraintPrefab, mochi::RigidPrismaticJointConstraintParams>()
     .def("__init__", [](mochi::prefab::RigidPrismaticJointConstraintPrefab* self, nb::object stiffness, nb::object damping, nb::object saturation, nb::object free_axis, nb::object actor_a, nb::object actor_b, nb::object max, nb::object min, nb::object actor_name_a, nb::object actor_name_b) {
       mochi::prefab::RigidPrismaticJointConstraintPrefab result{};
@@ -698,6 +734,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsPrefab([[maybe_unused]] nb::module_& 
     .def_rw("actor_name_b", &mochi::prefab::RigidPrismaticJointConstraintPrefab::actorNameB, "Name or hierarchy path identifying rigid actor B.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_prefab_DeformableNodeToDeformableNodeConstraintPrefab(PybindRegistry& registry) {
   registry.GetClass<mochi::prefab::DeformableNodeToDeformableNodeConstraintPrefab, mochi::DeformableNodeToDeformableNodeConstraintParams>()
     .def("__init__", [](mochi::prefab::DeformableNodeToDeformableNodeConstraintPrefab* self, nb::object stiffness, nb::object damping, nb::object saturation, nb::object node_index_a, nb::object node_index_b, nb::object actor_a, nb::object actor_b, nb::object find_closest, nb::object actor_name_a, nb::object actor_name_b) {
       mochi::prefab::DeformableNodeToDeformableNodeConstraintPrefab result{};
@@ -734,6 +773,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsPrefab([[maybe_unused]] nb::module_& 
     .def_rw("actor_name_b", &mochi::prefab::DeformableNodeToDeformableNodeConstraintPrefab::actorNameB, "Name or hierarchy path identifying deformable actor B.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_prefab_RodElementRotationConstraintPrefab(PybindRegistry& registry) {
   registry.GetClass<mochi::prefab::RodElementRotationConstraintPrefab, mochi::RodElementRotationConstraintParams>()
     .def("__init__", [](mochi::prefab::RodElementRotationConstraintPrefab* self, nb::object stiffness, nb::object damping, nb::object saturation, nb::object ref_frame_rot_vec, nb::object actor, nb::object element_index, nb::object actor_name) {
       mochi::prefab::RodElementRotationConstraintPrefab result{};
@@ -763,6 +805,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsPrefab([[maybe_unused]] nb::module_& 
     .def_rw("actor_name", &mochi::prefab::RodElementRotationConstraintPrefab::actorName, "Name or hierarchy path identifying the rod actor.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_prefab_RodElementRotationToRigidConstraintPrefab(PybindRegistry& registry) {
   registry.GetClass<mochi::prefab::RodElementRotationToRigidConstraintPrefab, mochi::RodElementRotationToRigidConstraintParams>()
     .def("__init__", [](mochi::prefab::RodElementRotationToRigidConstraintPrefab* self, nb::object stiffness, nb::object damping, nb::object saturation, nb::object ref_frame_rot_vec, nb::object rigid_actor, nb::object rod_actor, nb::object element_index, nb::object rigid_actor_name, nb::object rod_actor_name) {
       mochi::prefab::RodElementRotationToRigidConstraintPrefab result{};
@@ -797,6 +842,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsPrefab([[maybe_unused]] nb::module_& 
     .def_rw("rod_actor_name", &mochi::prefab::RodElementRotationToRigidConstraintPrefab::rodActorName, "Name or hierarchy path identifying the rod actor.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_prefab_DeformableNodeToRigidConstraintPrefab(PybindRegistry& registry) {
   registry.GetClass<mochi::prefab::DeformableNodeToRigidConstraintPrefab, mochi::DeformableNodeToRigidConstraintParams>()
     .def("__init__", [](mochi::prefab::DeformableNodeToRigidConstraintPrefab* self, nb::object stiffness, nb::object damping, nb::object saturation, nb::object rigid_local_pos, nb::object deformable_node_index, nb::object rigid_actor, nb::object deformable_actor, nb::object find_closest, nb::object fix_to_deformable_pos, nb::object rigid_actor_name, nb::object deformable_actor_name) {
       mochi::prefab::DeformableNodeToRigidConstraintPrefab result{};
@@ -835,6 +883,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsPrefab([[maybe_unused]] nb::module_& 
     .def_rw("deformable_actor_name", &mochi::prefab::DeformableNodeToRigidConstraintPrefab::deformableActorName, "Name or hierarchy path identifying the deformable actor.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_prefab_JointRotationRangeConstraintPrefab(PybindRegistry& registry) {
   registry.GetClass<mochi::prefab::JointRotationRangeConstraintPrefab, mochi::JointRotationRangeConstraintParams>()
     .def("__init__", [](mochi::prefab::JointRotationRangeConstraintPrefab* self, nb::object stiffness, nb::object damping, nb::object saturation, nb::object ref_frame_rot_vec, nb::object angle_range_x, nb::object angle_range_y, nb::object angle_range_z, nb::object actor_a, nb::object actor_b, nb::object range_around_rest, nb::object actor_name_a, nb::object actor_name_b) {
       mochi::prefab::JointRotationRangeConstraintPrefab result{};
@@ -875,6 +926,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsPrefab([[maybe_unused]] nb::module_& 
     .def_rw("actor_name_b", &mochi::prefab::JointRotationRangeConstraintPrefab::actorNameB, "Name or hierarchy path identifying rigid actor B.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_prefab_RigidPivotPositionConstraintPrefab(PybindRegistry& registry) {
   registry.GetClass<mochi::prefab::RigidPivotPositionConstraintPrefab, mochi::RigidPivotPositionConstraintParams>()
     .def("__init__", [](mochi::prefab::RigidPivotPositionConstraintPrefab* self, nb::object stiffness, nb::object damping, nb::object saturation, nb::object target_position, nb::object local_position, nb::object actor, nb::object actor_name) {
       mochi::prefab::RigidPivotPositionConstraintPrefab result{};
@@ -904,6 +958,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsPrefab([[maybe_unused]] nb::module_& 
     .def_rw("actor_name", &mochi::prefab::RigidPivotPositionConstraintPrefab::actorName, "Name or hierarchy path identifying the rigid actor.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_prefab_RigidPivotToRigidTargetConstraintPrefab(PybindRegistry& registry) {
   registry.GetClass<mochi::prefab::RigidPivotToRigidTargetConstraintPrefab, mochi::RigidPivotToRigidTargetConstraintParams>()
     .def("__init__", [](mochi::prefab::RigidPivotToRigidTargetConstraintPrefab* self, nb::object stiffness, nb::object damping, nb::object saturation, nb::object target_transform, nb::object local_position, nb::object actor, nb::object actor_name) {
       mochi::prefab::RigidPivotToRigidTargetConstraintPrefab result{};
@@ -933,6 +990,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsPrefab([[maybe_unused]] nb::module_& 
     .def_rw("actor_name", &mochi::prefab::RigidPivotToRigidTargetConstraintPrefab::actorName, "Name or hierarchy path identifying the rigid actor.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_prefab_RigidPivotRotationConstraintPrefab(PybindRegistry& registry) {
   registry.GetClass<mochi::prefab::RigidPivotRotationConstraintPrefab, mochi::RigidPivotRotationConstraintParams>()
     .def("__init__", [](mochi::prefab::RigidPivotRotationConstraintPrefab* self, nb::object stiffness, nb::object damping, nb::object saturation, nb::object target_rotation, nb::object local_rotation, nb::object actor, nb::object actor_name) {
       mochi::prefab::RigidPivotRotationConstraintPrefab result{};
@@ -962,6 +1022,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsPrefab([[maybe_unused]] nb::module_& 
     .def_rw("actor_name", &mochi::prefab::RigidPivotRotationConstraintPrefab::actorName, "Name or hierarchy path identifying the rigid actor.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_prefab_DeformableNodePositionConstraintPrefab(PybindRegistry& registry) {
   registry.GetClass<mochi::prefab::DeformableNodePositionConstraintPrefab, mochi::DeformableNodePositionConstraintParams>()
     .def("__init__", [](mochi::prefab::DeformableNodePositionConstraintPrefab* self, nb::object stiffness, nb::object damping, nb::object saturation, nb::object node_index, nb::object position, nb::object actor, nb::object actor_name) {
       mochi::prefab::DeformableNodePositionConstraintPrefab result{};
@@ -991,6 +1054,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsPrefab([[maybe_unused]] nb::module_& 
     .def_rw("actor_name", &mochi::prefab::DeformableNodePositionConstraintPrefab::actorName, "Name or hierarchy path identifying the deformable actor.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_prefab_JointRotationTrackingConstraintPrefab(PybindRegistry& registry) {
   registry.GetClass<mochi::prefab::JointRotationTrackingConstraintPrefab, mochi::JointRotationTrackingConstraintParams>()
     .def("__init__", [](mochi::prefab::JointRotationTrackingConstraintPrefab* self, nb::object stiffness, nb::object damping, nb::object saturation, nb::object ref_frame_rot_vec, nb::object actor_a, nb::object actor_b, nb::object actor_name_a, nb::object actor_name_b) {
       mochi::prefab::JointRotationTrackingConstraintPrefab result{};
@@ -1023,6 +1089,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsPrefab([[maybe_unused]] nb::module_& 
     .def_rw("actor_name_b", &mochi::prefab::JointRotationTrackingConstraintPrefab::actorNameB, "Name or hierarchy path identifying rigid actor B.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_prefab_ArticulatedSingleDofTargetConstraintPrefab(PybindRegistry& registry) {
   registry.GetClass<mochi::prefab::ArticulatedSingleDofTargetConstraintPrefab, mochi::ArticulatedSingleDofTargetConstraintParams>()
     .def("__init__", [](mochi::prefab::ArticulatedSingleDofTargetConstraintPrefab* self, nb::object stiffness, nb::object damping, nb::object saturation, nb::object actor, nb::object joint_index, nb::object dof_index, nb::object target_value, nb::object actor_name) {
       mochi::prefab::ArticulatedSingleDofTargetConstraintPrefab result{};
@@ -1054,6 +1123,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsPrefab([[maybe_unused]] nb::module_& 
     .def_rw("actor_name", &mochi::prefab::ArticulatedSingleDofTargetConstraintPrefab::actorName, "Name or hierarchy path identifying the articulated actor.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_prefab_Articulated3dRotationTargetConstraintPrefab(PybindRegistry& registry) {
   registry.GetClass<mochi::prefab::Articulated3dRotationTargetConstraintPrefab, mochi::Articulated3dRotationTargetConstraintParams>()
     .def("__init__", [](mochi::prefab::Articulated3dRotationTargetConstraintPrefab* self, nb::object stiffness, nb::object damping, nb::object saturation, nb::object actor, nb::object joint_index, nb::object target, nb::object actor_name) {
       mochi::prefab::Articulated3dRotationTargetConstraintPrefab result{};
@@ -1083,6 +1155,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsPrefab([[maybe_unused]] nb::module_& 
     .def_rw("actor_name", &mochi::prefab::Articulated3dRotationTargetConstraintPrefab::actorName, "Name or hierarchy path identifying the articulated actor.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_prefab_ArticulatedSingleDofRangeConstraintPrefab(PybindRegistry& registry) {
   registry.GetClass<mochi::prefab::ArticulatedSingleDofRangeConstraintPrefab, mochi::ArticulatedSingleDofRangeConstraintParams>()
     .def("__init__", [](mochi::prefab::ArticulatedSingleDofRangeConstraintPrefab* self, nb::object stiffness, nb::object damping, nb::object saturation, nb::object actor, nb::object joint_index, nb::object dof_index, nb::object min_value, nb::object max_value, nb::object actor_name) {
       mochi::prefab::ArticulatedSingleDofRangeConstraintPrefab result{};
@@ -1116,6 +1191,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsPrefab([[maybe_unused]] nb::module_& 
     .def_rw("actor_name", &mochi::prefab::ArticulatedSingleDofRangeConstraintPrefab::actorName, "Name or hierarchy path identifying the articulated actor.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_prefab_Articulated3dRotationRangeConstraintPrefab(PybindRegistry& registry) {
   registry.GetClass<mochi::prefab::Articulated3dRotationRangeConstraintPrefab, mochi::Articulated3dRotationRangeConstraintParams>()
     .def("__init__", [](mochi::prefab::Articulated3dRotationRangeConstraintPrefab* self, nb::object stiffness, nb::object damping, nb::object saturation, nb::object actor, nb::object joint_index, nb::object min_values, nb::object max_values, nb::object actor_name) {
       mochi::prefab::Articulated3dRotationRangeConstraintPrefab result{};
@@ -1147,6 +1225,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsPrefab([[maybe_unused]] nb::module_& 
     .def_rw("actor_name", &mochi::prefab::Articulated3dRotationRangeConstraintPrefab::actorName, "Name or hierarchy path identifying the articulated actor.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_prefab_ConstraintLists(PybindRegistry& registry) {
   registry.GetClass<mochi::prefab::ConstraintLists>()
     .def("__init__", [](mochi::prefab::ConstraintLists* self, nb::object comment, nb::object articulated3d_rotation_range, nb::object articulated_single_dof_range, nb::object articulated3d_rotation_target, nb::object articulated_single_dof_target, nb::object joint_rotation_range, nb::object joint_rotation_tracking, nb::object rigid_pivot_position, nb::object rigid_pivot_to_rigid_target, nb::object rigid_pivot_rotation, nb::object rigid_prismatic_joint, nb::object rigid_spherical_joint, nb::object deformable_node_position, nb::object deformable_node_to_rigid, nb::object deformable_node_to_deformable_node, nb::object rod_element_rotation, nb::object rod_element_rotation_to_rigid) {
       mochi::prefab::ConstraintLists result{};
@@ -1212,6 +1293,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsPrefab([[maybe_unused]] nb::module_& 
     .def_prop_rw("rod_element_rotation_to_rigid", [](mochi::prefab::ConstraintLists& self) -> mochi::DynamicArray<mochi::prefab::RodElementRotationToRigidConstraintPrefab>& { return self.rodElementRotationToRigid; }, [](mochi::prefab::ConstraintLists& self, nb::object val) { self.rodElementRotationToRigid = nb::cast<mochi::DynamicArray<mochi::prefab::RodElementRotationToRigidConstraintPrefab>>(val); }, "Relative-rotation tracking constraints between rod elements and rigid actors.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_prefab_PoseControllerPrefab(PybindRegistry& registry) {
   registry.GetClass<mochi::prefab::PoseControllerPrefab>()
     .def("__init__", [](mochi::prefab::PoseControllerPrefab* self, nb::object comment, nb::object articulated_actor, nb::object link_pos_tracking, nb::object link_rot_tracking, nb::object joint_tracking) {
       mochi::prefab::PoseControllerPrefab result{};
@@ -1241,6 +1325,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsPrefab([[maybe_unused]] nb::module_& 
     .def_prop_rw("joint_tracking", [](mochi::prefab::PoseControllerPrefab& self) -> mochi::DynamicArray<mochi::PoseTrackingParams>& { return self.jointTracking; }, [](mochi::prefab::PoseControllerPrefab& self, nb::object val) { self.jointTracking = nb::cast<mochi::DynamicArray<mochi::PoseTrackingParams>>(val); }, "Per-joint pose tracking parameters.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_prefab_PrefabReference(PybindRegistry& registry) {
   registry.GetClass<mochi::prefab::PrefabReference>()
     .def("__init__", [](mochi::prefab::PrefabReference* self, nb::object comment, nb::object name, nb::object path, nb::object scale, nb::object rotation, nb::object translation) {
       mochi::prefab::PrefabReference result{};
@@ -1273,6 +1360,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsPrefab([[maybe_unused]] nb::module_& 
     .def_prop_rw("translation", [](mochi::prefab::PrefabReference& self) -> mochi::Real3& { return self.translation; }, [](mochi::prefab::PrefabReference& self, nb::object val) { self.translation = nb::cast<mochi::Real3>(val); }, "Translation [x, y, z] of the nested prefab in the parent's local space.\n\nNote:\n    Must be finite.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_prefab_ActorContactEntry(PybindRegistry& registry) {
   registry.GetClass<mochi::prefab::ActorContactEntry>()
     .def("__init__", [](mochi::prefab::ActorContactEntry* self, nb::object enable, nb::object actors, nb::object include_nested_actors) {
       mochi::prefab::ActorContactEntry result{};
@@ -1296,6 +1386,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsPrefab([[maybe_unused]] nb::module_& 
     .def_rw("include_nested_actors", &mochi::prefab::ActorContactEntry::includeNestedActors, "Whether expandable parent actor names should include nested actors.\n\nWhen true, a parent actor name resolves to the parent actor plus nested actors.\nThe contact setting is applied to every ordered pair in the cross-product of the\ntwo resolved actor sets; no pairs outside that cross-product are affected. If\nthe resolved sets overlap, pairs in the overlap, including self-pairs, are\naffected. When false, the contact setting applies only to the exact named\nactors.\n\nNote:\n    Actors without nested actors are affected as exact actors irrespective of\n    this setting.\n\nNote:\n    Default contact filtering disables contact between adjacent links in\n    articulated and soft-skinned actors. Actor-contact entries override those\n    defaults for pairs included in the resolved actor sets. If\n    :attr:`~superdex.physics.prefab.ActorContactEntry.include_nested_actors` is\n    true and both actor names resolve to the same parent actor, the entry also\n    covers pairs between that parent's nested actors, including adjacent links.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_prefab_ContactPairParamsOverrideEntry(PybindRegistry& registry) {
   registry.GetClass<mochi::prefab::ContactPairParamsOverrideEntry>()
     .def("__init__", [](mochi::prefab::ContactPairParamsOverrideEntry* self, nb::object actors, nb::object params_override) {
       mochi::prefab::ContactPairParamsOverrideEntry result{};
@@ -1316,6 +1409,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsPrefab([[maybe_unused]] nb::module_& 
     .def_rw("params_override", &mochi::prefab::ContactPairParamsOverrideEntry::paramsOverride, "Partial contact parameter override for the actor pair.\n\nNote:\n    At least one field must be present.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_prefab_LayerContactEntry(PybindRegistry& registry) {
   registry.GetClass<mochi::prefab::LayerContactEntry>()
     .def("__init__", [](mochi::prefab::LayerContactEntry* self, nb::object enable, nb::object layers) {
       mochi::prefab::LayerContactEntry result{};
@@ -1336,6 +1432,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsPrefab([[maybe_unused]] nb::module_& 
     .def_prop_rw("layers", [](mochi::prefab::LayerContactEntry& self) -> mochi::DynamicArray<mochi::DynamicString>& { return self.layers; }, [](mochi::prefab::LayerContactEntry& self, nb::object val) { self.layers = nb::cast<mochi::DynamicArray<mochi::DynamicString>>(val); }, "Identifies two contact layer names.\n\nNote:\n    Order matters when contact settings are applied asymmetrically. In that\n    case, the first layer is the \"colliding\" layer and the second layer is the\n    \"collider\". When contact is enabled, the contact sample points on an actor\n    in the first layer will be tested against the collider geometry of an actor\n    in the second layer.\n\nNote:\n    Both layer names can be the same. In that case, the setting applies between\n    actors within the same layer.\n\nWarning:\n    Must contain exactly 2 elements.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_prefab_ContactFilter(PybindRegistry& registry) {
   registry.GetClass<mochi::prefab::ContactFilter>()
     .def("__init__", [](mochi::prefab::ContactFilter* self, nb::object comment, nb::object actor_contact_asymmetric, nb::object actor_contact_symmetric, nb::object layer_contact_asymmetric, nb::object layer_contact_symmetric) {
       mochi::prefab::ContactFilter result{};
@@ -1365,6 +1464,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsPrefab([[maybe_unused]] nb::module_& 
     .def_prop_rw("layer_contact_symmetric", [](mochi::prefab::ContactFilter& self) -> std::optional<mochi::DynamicArray<mochi::prefab::LayerContactEntry>>& { return self.layerContactSymmetric; }, [](mochi::prefab::ContactFilter& self, nb::handle val) { self.layerContactSymmetric = val.is_none() ? std::optional<mochi::DynamicArray<mochi::prefab::LayerContactEntry>>{} : nb::cast<std::optional<mochi::DynamicArray<mochi::prefab::LayerContactEntry>>>(val); }, "Enables or disables contact symmetrically for each pair of layers.\n\nSee Also:\n    :class:`~superdex.physics.prefab.ContactFilter`,\n    :class:`~superdex.physics.prefab.LayerContactEntry`,\n    :meth:`~superdex.physics.Scene.enable_layer_contact_symmetric`", nb::for_setter(nb::arg("value").none()))
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_prefab_ScenePrefab(PybindRegistry& registry) {
   registry.GetClass<mochi::prefab::ScenePrefab>()
     .def("__init__", [](mochi::prefab::ScenePrefab* self, nb::object comment, nb::object actors, nb::object constraints, nb::object controllers, nb::object prefabs, nb::object scene, nb::object contact_filter, nb::object contact_pair_params_overrides) {
       mochi::prefab::ScenePrefab result{};
@@ -1403,6 +1505,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsPrefab([[maybe_unused]] nb::module_& 
     .def_prop_rw("contact_pair_params_overrides", [](mochi::prefab::ScenePrefab& self) -> std::optional<mochi::DynamicArray<mochi::prefab::ContactPairParamsOverrideEntry>>& { return self.contactPairParamsOverrides; }, [](mochi::prefab::ScenePrefab& self, nb::handle val) { self.contactPairParamsOverrides = val.is_none() ? std::optional<mochi::DynamicArray<mochi::prefab::ContactPairParamsOverrideEntry>>{} : nb::cast<std::optional<mochi::DynamicArray<mochi::prefab::ContactPairParamsOverrideEntry>>>(val); }, "Optional actor-pair contact parameter overrides.\n\nEntries are applied in array order after all actors in their prefab have been\ncreated. A later entry for the same unordered actor pair replaces the earlier\noverride rather than merging with it. Nested child prefab entries are applied\nbefore parent entries.", nb::for_setter(nb::arg("value").none()))
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_prefab_PrefabParams(PybindRegistry& registry) {
   registry.GetClass<mochi::prefab::PrefabParams>()
     .def("__init__", [](mochi::prefab::PrefabParams* self, nb::object name, nb::object scale, nb::object rotation, nb::object translation, nb::object apply_scene_settings) {
       mochi::prefab::PrefabParams result{};
@@ -1430,6 +1535,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsPrefab([[maybe_unused]] nb::module_& 
     .def_rw("apply_scene_settings", &mochi::prefab::PrefabParams::applySceneSettings, "Whether to apply top-level scene settings.\n\nWhen true, :func:`~superdex.physics.prefab.add_to_scene` applies gravity and\nsolver overrides from the :class:`~superdex.physics.prefab.SceneParams` of the\ntop-level prefab. Omitted overrides preserve existing scene values. When false,\nneither override is applied. Scene settings from nested prefabs are always\nignored.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_prefab_AddToSceneResult(PybindRegistry& registry) {
   registry.GetClass<mochi::prefab::AddToSceneResult>()
     .def("__init__", [](mochi::prefab::AddToSceneResult* self, nb::object actors, nb::object constraints) {
       mochi::prefab::AddToSceneResult result{};
@@ -1456,6 +1564,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsPrefab([[maybe_unused]] nb::module_& 
     )
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_prefab_ExportParams(PybindRegistry& registry) {
   registry.GetClass<mochi::prefab::ExportParams>()
     .def("__init__", [](mochi::prefab::ExportParams* self, nb::object exclude_actors, nb::object export_current_pose) {
       mochi::prefab::ExportParams result{};
@@ -1474,243 +1585,288 @@ void mochi::DefineMochiPhysics_MochiPhysicsPrefab([[maybe_unused]] nb::module_& 
     .def_rw("export_current_pose", &mochi::prefab::ExportParams::exportCurrentPose, "Whether to export the current pose of soft, articulated, and rod actors.\n\nWhen true, the current elastic displacements of soft actors (including nested\nsoft actors of soft-skinned actors) are written to\n:attr:`~superdex.physics.prefab.SoftActorPrefab.node_displacements`, the current\njoint pose of articulated actors (including soft-skinned skeletons) is written\nto :attr:`~superdex.physics.prefab.ArticulatedActorPrefab.joint_pose`, and the\ncurrent node displacements and element frame axes of rod actors are written to\n:attr:`~superdex.physics.prefab.RodActorPrefab.pose`. Adding the exported prefab\nto a scene then restores that pose. Actors exactly at rest omit these fields.\n\nNote:\n    When false (the default), soft displacement, articulated joint pose, and rod\n    pose fields are omitted. Actor transforms are exported regardless of this\n    option.\n\nNote:\n    Displacements of ROM soft actors are never exported.\n\nNote:\n    Velocities (soft nodal, articulated joint, and rod) are never exported.\n\nNote:\n    A prefab with exported soft displacements cannot be added to a scene with\n    ``mochi::experimental::RomParams``. Set this to false to export a prefab for\n    that use.\n\nWarning:\n    This documentation references the following C++ API, which is not available\n    in Python: ``mochi::experimental::RomParams``.")
   ;
 
-    m_prefab.def("load_from_file", [](std::string_view prefab_path, std::string_view root_path) {
-      CheckContext();
-      mochi::Error error;
-      auto result = mochi::prefab::LoadFromFile(prefab_path, root_path, GetContext(), error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
-    }
-      , nb::arg("prefab_path")
-      , nb::arg("root_path")
-      , "Fully load a :class:`~superdex.physics.prefab.ScenePrefab` from a file,\nincluding all nested prefabs and shapes.\n\nArgs:\n    prefab_path (str): File path to the prefab file.\n    root_path (str): Root directory for resolving relative paths, except those\n        resolved against a prefab file.\n\nReturns:\n    The fully loaded :class:`~superdex.physics.prefab.ScenePrefab`, or a\n    default-constructed :class:`~superdex.physics.prefab.ScenePrefab` on error.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    Prefab files are in JSON format.\n\nNote:\n    A prefab must not reference itself, directly or indirectly.\n\nSee Also:\n    :func:`~superdex.physics.prefab.load_from_json_string`,\n    :func:`~superdex.physics.prefab.shallow_load_from_file`,\n    :func:`~superdex.physics.prefab.shallow_load_from_json_string`"
-    );
+}
 
-    m_prefab.def("load_from_json_string", [](std::string_view json, std::string_view root_path) {
-      CheckContext();
-      mochi::Error error;
-      auto result = mochi::prefab::LoadFromJsonString(json, root_path, GetContext(), error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
-    }
-      , nb::arg("json")
-      , nb::arg("root_path")
-      , "Fully load a :class:`~superdex.physics.prefab.ScenePrefab` from a JSON string,\nincluding all nested prefabs and shapes.\n\nArgs:\n    json (str): JSON string containing the serialized prefab.\n    root_path (str): Root directory for resolving relative paths, except those\n        resolved against a prefab file.\n\nReturns:\n    The fully loaded :class:`~superdex.physics.prefab.ScenePrefab`, or a\n    default-constructed :class:`~superdex.physics.prefab.ScenePrefab` on error.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    The top-level prefab has no source file, so prefab-relative (\"./\"-prefixed)\n    nested prefab and shape paths written in ``json`` resolve against\n    ``root_path``, not against a prefab directory. Nested prefabs that are\n    loaded from files resolve their own \"./\"-prefixed paths relative to the\n    directory containing the nested prefab file. Use\n    :func:`~superdex.physics.prefab.load_from_file` if you need prefab-relative\n    resolution at the top level.\n\nNote:\n    A prefab must not reference itself, directly or indirectly.\n\nSee Also:\n    :func:`~superdex.physics.prefab.load_from_file`,\n    :func:`~superdex.physics.prefab.shallow_load_from_file`,\n    :func:`~superdex.physics.prefab.shallow_load_from_json_string`"
-    );
+} // namespace
 
-    m_prefab.def("save_to_json_file", [](mochi::prefab::ScenePrefab const& prefab, std::string_view path) {
-      mochi::Error error;
-      mochi::prefab::SaveToJsonFile(prefab, path, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-    }
-      , nb::arg("prefab")
-      , nb::arg("path")
-      , "Serialize a :class:`~superdex.physics.prefab.ScenePrefab` to a JSON file.\n\nArgs:\n    prefab (ScenePrefab): The :class:`~superdex.physics.prefab.ScenePrefab` to\n        serialize.\n    path (str): Output file path.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    Does NOT serialize nested prefabs. Only the top-level prefab data is\n    written.\n\nNote:\n    Automatically creates the output directory path, as needed.\n\nSee Also:\n    :func:`~superdex.physics.prefab.save_to_json_string`"
-    );
+void mochi::DefineMochiPhysics_MochiPhysicsPrefab([[maybe_unused]] nb::module_& m, [[maybe_unused]] PybindRegistry& registry) {
+  auto m_prefab = m.def_submodule("prefab");
 
-    m_prefab.def("save_to_json_string", [](mochi::prefab::ScenePrefab const& prefab) {
-      mochi::Error error;
-      auto result = mochi::prefab::SaveToJsonString(prefab, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
+  Define_prefab_SceneParams(registry);
+  Define_prefab_RigidActorPrefab(registry);
+  Define_prefab_SoftActorPrefab(registry);
+  Define_prefab_RodPose(registry);
+  Define_prefab_RodActorPrefab(registry);
+  Define_prefab_ArticulatedJointPrefab(registry);
+  Define_prefab_ArticulatedLinkPrefab(registry);
+  Define_prefab_ArticulatedSkinPrefab(registry);
+  Define_prefab_ArticulatedActorPrefab(registry);
+  Define_prefab_SoftSkinnedActorPrefab(registry);
+  Define_prefab_ActorLists(registry);
+  Define_prefab_RigidSphericalJointConstraintPrefab(registry);
+  Define_prefab_RigidPrismaticJointConstraintPrefab(registry);
+  Define_prefab_DeformableNodeToDeformableNodeConstraintPrefab(registry);
+  Define_prefab_RodElementRotationConstraintPrefab(registry);
+  Define_prefab_RodElementRotationToRigidConstraintPrefab(registry);
+  Define_prefab_DeformableNodeToRigidConstraintPrefab(registry);
+  Define_prefab_JointRotationRangeConstraintPrefab(registry);
+  Define_prefab_RigidPivotPositionConstraintPrefab(registry);
+  Define_prefab_RigidPivotToRigidTargetConstraintPrefab(registry);
+  Define_prefab_RigidPivotRotationConstraintPrefab(registry);
+  Define_prefab_DeformableNodePositionConstraintPrefab(registry);
+  Define_prefab_JointRotationTrackingConstraintPrefab(registry);
+  Define_prefab_ArticulatedSingleDofTargetConstraintPrefab(registry);
+  Define_prefab_Articulated3dRotationTargetConstraintPrefab(registry);
+  Define_prefab_ArticulatedSingleDofRangeConstraintPrefab(registry);
+  Define_prefab_Articulated3dRotationRangeConstraintPrefab(registry);
+  Define_prefab_ConstraintLists(registry);
+  Define_prefab_PoseControllerPrefab(registry);
+  Define_prefab_PrefabReference(registry);
+  Define_prefab_ActorContactEntry(registry);
+  Define_prefab_ContactPairParamsOverrideEntry(registry);
+  Define_prefab_LayerContactEntry(registry);
+  Define_prefab_ContactFilter(registry);
+  Define_prefab_ScenePrefab(registry);
+  Define_prefab_PrefabParams(registry);
+  Define_prefab_AddToSceneResult(registry);
+  Define_prefab_ExportParams(registry);
+  m_prefab.def("load_from_file", [](std::string_view prefab_path, std::string_view root_path) {
+    CheckContext();
+    mochi::Error error;
+    auto result = mochi::prefab::LoadFromFile(prefab_path, root_path, GetContext(), error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("prefab")
-      , "Serialize a :class:`~superdex.physics.prefab.ScenePrefab` to a JSON string.\n\nArgs:\n    prefab (ScenePrefab): The :class:`~superdex.physics.prefab.ScenePrefab` to\n        serialize.\n\nReturns:\n    The JSON string, or an empty string on error.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    Does NOT serialize nested prefabs. Only the top-level prefab data is\n    written.\n\nSee Also:\n    :func:`~superdex.physics.prefab.save_to_json_file`"
-    );
+    return result;
+  }
+    , nb::arg("prefab_path")
+    , nb::arg("root_path")
+    , "Fully load a :class:`~superdex.physics.prefab.ScenePrefab` from a file,\nincluding all nested prefabs and shapes.\n\nArgs:\n    prefab_path (str): File path to the prefab file.\n    root_path (str): Root directory for resolving relative paths, except those\n        resolved against a prefab file.\n\nReturns:\n    The fully loaded :class:`~superdex.physics.prefab.ScenePrefab`, or a\n    default-constructed :class:`~superdex.physics.prefab.ScenePrefab` on error.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    Prefab files are in JSON format.\n\nNote:\n    A prefab must not reference itself, directly or indirectly.\n\nSee Also:\n    :func:`~superdex.physics.prefab.load_from_json_string`,\n    :func:`~superdex.physics.prefab.shallow_load_from_file`,\n    :func:`~superdex.physics.prefab.shallow_load_from_json_string`"
+  );
 
-    m_prefab.def("add_to_scene", [](mochi::prefab::ScenePrefab const& prefab, mochi::Scene* scene, mochi::prefab::PrefabParams const& params) {
-      mochi::Error error;
-      auto result = mochi::prefab::AddToScene(prefab, scene, params, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
+  m_prefab.def("load_from_json_string", [](std::string_view json, std::string_view root_path) {
+    CheckContext();
+    mochi::Error error;
+    auto result = mochi::prefab::LoadFromJsonString(json, root_path, GetContext(), error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("prefab")
-      , nb::arg("scene").none()
-      , nb::arg("params")
-      , "Instantiate a :class:`~superdex.physics.prefab.ScenePrefab` and add it to a\n:class:`~superdex.physics.Scene`.\n\nCreates the prefab's actors, constraints, and controllers, applies any scene\nsettings enabled by\n:attr:`~superdex.physics.prefab.PrefabParams.apply_scene_settings`, contact\nfilter entries, and contact-pair parameter overrides.\n\nArgs:\n    prefab (ScenePrefab): The fully loaded\n        :class:`~superdex.physics.prefab.ScenePrefab` to instantiate.\n    scene (Scene): The :class:`~superdex.physics.Scene` to add things to.\n    params (PrefabParams): Parameters for how and where to instantiate the\n        prefab. Can optionally be omitted in Python.\n\nReturns:\n    An :class:`~superdex.physics.prefab.AddToSceneResult` containing pointers to\n    all created actors and constraints.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    The prefab must be fully loaded (nested prefabs and shapes) before calling\n    this function. If you're not sure, then call\n    :func:`~superdex.physics.prefab.ensure_fully_loaded`.\n\nWarning:\n    This function is not transactional. If it returns an error, the prefab may\n    have been partially instantiated in the scene.\n\nWarning:\n    Only supported with :attr:`~superdex.physics.prefab.PrefabParams.scale` = 1.\n    To instantiate at a non-identity scale, use the file-path\n    :func:`~superdex.physics.prefab.add_to_scene` overload or a nested\n    :attr:`~superdex.physics.prefab.PrefabReference.scale`.\n\nSee Also:\n    :func:`~superdex.physics.prefab.load_from_file`,\n    :func:`~superdex.physics.prefab.ensure_fully_loaded`,\n    :class:`~superdex.physics.prefab.PrefabParams`"
-    );
-    m_prefab.def("add_to_scene", [](mochi::prefab::ScenePrefab const& prefab, mochi::Scene* scene) {
-      mochi::Error error;
-      auto result = mochi::prefab::AddToScene(prefab, scene, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
-    }
-      , nb::arg("prefab")
-      , nb::arg("scene").none()
-      , "Overload of :func:`~superdex.physics.prefab.add_to_scene` that instantiates a\n:class:`~superdex.physics.prefab.ScenePrefab` using default\n:class:`~superdex.physics.prefab.PrefabParams`.\n\nArgs:\n    prefab (ScenePrefab): The fully loaded\n        :class:`~superdex.physics.prefab.ScenePrefab` to instantiate.\n    scene (Scene): The :class:`~superdex.physics.Scene` to add things to.\n\nReturns:\n    An :class:`~superdex.physics.prefab.AddToSceneResult` containing pointers to\n    all created actors and constraints.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nWarning:\n    This function is not transactional. If it returns an error, the prefab may\n    have been partially instantiated in the scene.\n\nSee Also:\n    :func:`~superdex.physics.prefab.add_to_scene`"
-    );
-    m_prefab.def("add_to_scene", [](std::string_view prefab_path, std::string_view root_path, mochi::Scene* scene, mochi::prefab::PrefabParams const& params) {
-      mochi::Error error;
-      auto result = mochi::prefab::AddToScene(prefab_path, root_path, scene, params, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
-    }
-      , nb::arg("prefab_path")
-      , nb::arg("root_path")
-      , nb::arg("scene").none()
-      , nb::arg("params")
-      , "Load a scene prefab from a file and create an instance of it in the\n:class:`~superdex.physics.Scene`.\n\nThis is a convenience function that loads the prefab, including all nested\nprefabs and shapes, and immediately adds it to the scene. All loaded shape\nhandles are released automatically afterward.\n\nArgs:\n    prefab_path (str): File path to the prefab file.\n    root_path (str): Root directory for resolving relative paths, except those\n        resolved against a prefab file.\n    scene (Scene): The :class:`~superdex.physics.Scene` to add things to.\n    params (PrefabParams): Parameters for how and where to instantiate the\n        prefab.\n\nReturns:\n    An :class:`~superdex.physics.prefab.AddToSceneResult` containing pointers to\n    all created actors and constraints.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    If you intend to add multiple copies of the prefab to a scene, or to\n    multiple scenes, then consider using\n    :func:`~superdex.physics.prefab.load_from_file` to load a\n    :class:`~superdex.physics.prefab.ScenePrefab` object. You can use that\n    :class:`~superdex.physics.prefab.ScenePrefab` multiple times.\n\nNote:\n    Unlike the :class:`~superdex.physics.prefab.ScenePrefab` overload, this\n    overload supports non-identity\n    :attr:`~superdex.physics.prefab.PrefabParams.scale` by baking it into actor\n    geometry during load.\n\nWarning:\n    This function is not transactional. If it returns an error, the prefab may\n    have been partially instantiated in the scene.\n\nSee Also:\n    :func:`~superdex.physics.prefab.load_from_file`,\n    :func:`~superdex.physics.prefab.add_to_scene`,\n    :class:`~superdex.physics.prefab.PrefabParams`"
-    );
-    m_prefab.def("add_to_scene", [](std::string_view prefab_path, std::string_view root_path, mochi::Scene* scene) {
-      mochi::Error error;
-      auto result = mochi::prefab::AddToScene(prefab_path, root_path, scene, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
-    }
-      , nb::arg("prefab_path")
-      , nb::arg("root_path")
-      , nb::arg("scene").none()
-      , "Overload of :func:`~superdex.physics.prefab.add_to_scene` that loads a prefab\nfrom a file and instantiates it using default\n:class:`~superdex.physics.prefab.PrefabParams`.\n\nArgs:\n    prefab_path (str): File path to the prefab file.\n    root_path (str): Root directory for resolving relative paths, except those\n        resolved against a prefab file.\n    scene (Scene): The :class:`~superdex.physics.Scene` to add things to.\n\nReturns:\n    An :class:`~superdex.physics.prefab.AddToSceneResult` containing pointers to\n    all created actors and constraints.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nWarning:\n    This function is not transactional. If it returns an error, the prefab may\n    have been partially instantiated in the scene.\n\nSee Also:\n    :func:`~superdex.physics.prefab.add_to_scene`"
-    );
+    return result;
+  }
+    , nb::arg("json")
+    , nb::arg("root_path")
+    , "Fully load a :class:`~superdex.physics.prefab.ScenePrefab` from a JSON string,\nincluding all nested prefabs and shapes.\n\nArgs:\n    json (str): JSON string containing the serialized prefab.\n    root_path (str): Root directory for resolving relative paths, except those\n        resolved against a prefab file.\n\nReturns:\n    The fully loaded :class:`~superdex.physics.prefab.ScenePrefab`, or a\n    default-constructed :class:`~superdex.physics.prefab.ScenePrefab` on error.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    The top-level prefab has no source file, so prefab-relative (\"./\"-prefixed)\n    nested prefab and shape paths written in ``json`` resolve against\n    ``root_path``, not against a prefab directory. Nested prefabs that are\n    loaded from files resolve their own \"./\"-prefixed paths relative to the\n    directory containing the nested prefab file. Use\n    :func:`~superdex.physics.prefab.load_from_file` if you need prefab-relative\n    resolution at the top level.\n\nNote:\n    A prefab must not reference itself, directly or indirectly.\n\nSee Also:\n    :func:`~superdex.physics.prefab.load_from_file`,\n    :func:`~superdex.physics.prefab.shallow_load_from_file`,\n    :func:`~superdex.physics.prefab.shallow_load_from_json_string`"
+  );
 
-    m_prefab.def("get_prefab_full_path", &mochi::prefab::GetPrefabFullPath
-      , nb::arg("input_path")
-      , nb::arg("root_for_relative_path")
-      , nb::arg("prefab_file_path")
-      , "Resolve a path referenced inside a prefab to a full path.\n\nArgs:\n    input_path (str): The path to resolve, as stored in the prefab (may be\n        prefixed with \"./\" to indicate it is relative to the prefab file).\n    root_for_relative_path (str): Root directory used to resolve paths that are\n        not prefixed with \"./\".\n    prefab_file_path (str): Path to the prefab file that references inputPath,\n        used to resolve \"./\"-prefixed paths relative to its location.\n\nReturns:\n    The resolved full path.\n\nNote:\n    Absolute paths are returned unchanged. Paths starting with \"./\" are resolved\n    relative to the directory containing ``prefab_file_path`` when provided.\n    Other relative paths are resolved against ``root_for_relative_path``."
-    );
+  m_prefab.def("save_to_json_file", [](mochi::prefab::ScenePrefab const& prefab, std::string_view path) {
+    mochi::Error error;
+    mochi::prefab::SaveToJsonFile(prefab, path, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
+    }
+  }
+    , nb::arg("prefab")
+    , nb::arg("path")
+    , "Serialize a :class:`~superdex.physics.prefab.ScenePrefab` to a JSON file.\n\nArgs:\n    prefab (ScenePrefab): The :class:`~superdex.physics.prefab.ScenePrefab` to\n        serialize.\n    path (str): Output file path.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    Does NOT serialize nested prefabs. Only the top-level prefab data is\n    written.\n\nNote:\n    Automatically creates the output directory path, as needed.\n\nSee Also:\n    :func:`~superdex.physics.prefab.save_to_json_string`"
+  );
 
-    m_prefab.def("scale_articulated_actor_params", [](mochi::ArticulatedActorParams& params, mochi::real scale) {
-      mochi::Error error;
-      mochi::prefab::ScaleArticulatedActorParams(params, scale, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
+  m_prefab.def("save_to_json_string", [](mochi::prefab::ScenePrefab const& prefab) {
+    mochi::Error error;
+    auto result = mochi::prefab::SaveToJsonString(prefab, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("params")
-      , nb::arg("scale")
-      , "Uniformly scale the geometry of articulated actor params in place, as\ninstantiating an :class:`~superdex.physics.prefab.ArticulatedActorPrefab` at a\nuniform :attr:`~superdex.physics.prefab.ArticulatedActorPrefab.scale` does.\n\nScales the translations of\n:attr:`~superdex.physics.ArticulatedJointParams.parent_link_from_joint`,\n:attr:`~superdex.physics.ArticulatedLinkParams.parent_joint_from_link` and\n:attr:`~superdex.physics.ArticulatedCycleJointParams.joint_from_child_link`, and\nthe limits of prismatic joints. Explicit link inertia scales as a solid of\nconstant density: :attr:`~superdex.physics.ArticulatedLinkParams.center_of_mass`\nby scale, :attr:`~superdex.physics.ArticulatedLinkParams.mass` by scale^3 and\n:attr:`~superdex.physics.ArticulatedLinkParams.moment_of_inertia` by scale^5.\n\nArgs:\n    params (ArticulatedActorParams): The params to scale.\n    scale (float): The uniform scale factor. Must be strictly positive and\n        finite.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    Shapes are not modified: bake the scale into the link and skin shapes when\n    creating them. Rotations, joint limits of rotational joints, gains,\n    friction, stiffnesses and joint inertia\n    (:attr:`~superdex.physics.ArticulatedJointParams.inertia`) are unchanged.\n\nNote:\n    :attr:`~superdex.physics.ArticulatedActorParams.joint_velocities` is not\n    modified either, so the translational DoFs of the initial velocities stay in\n    unscaled units."
-    );
+    return result;
+  }
+    , nb::arg("prefab")
+    , "Serialize a :class:`~superdex.physics.prefab.ScenePrefab` to a JSON string.\n\nArgs:\n    prefab (ScenePrefab): The :class:`~superdex.physics.prefab.ScenePrefab` to\n        serialize.\n\nReturns:\n    The JSON string, or an empty string on error.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    Does NOT serialize nested prefabs. Only the top-level prefab data is\n    written.\n\nSee Also:\n    :func:`~superdex.physics.prefab.save_to_json_file`"
+  );
 
-    m_prefab.def("shallow_load_from_file", [](std::string_view path) {
-      mochi::Error error;
-      auto result = mochi::prefab::ShallowLoadFromFile(path, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
+  m_prefab.def("add_to_scene", [](mochi::prefab::ScenePrefab const& prefab, mochi::Scene* scene, mochi::prefab::PrefabParams const& params) {
+    mochi::Error error;
+    auto result = mochi::prefab::AddToScene(prefab, scene, params, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("path")
-      , "Deserialize a single :class:`~superdex.physics.prefab.ScenePrefab` from a file,\nwithout loading any nested files.\n\nArgs:\n    path (str): File path to the prefab file.\n\nReturns:\n    The deserialized :class:`~superdex.physics.prefab.ScenePrefab`, or a\n    default-constructed :class:`~superdex.physics.prefab.ScenePrefab` on error.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    Use this if you want to modify the\n    :class:`~superdex.physics.prefab.ScenePrefab` data before nested content is\n    loaded, or if you simply want to edit and re-save the prefab file.\n\nNote:\n    If you intend to add the :class:`~superdex.physics.prefab.ScenePrefab` to a\n    :class:`~superdex.physics.Scene`, then you will need to load any nested\n    prefabs and shapes first.\n\nSee Also:\n    :func:`~superdex.physics.prefab.ensure_fully_loaded`,\n    :func:`~superdex.physics.prefab.load_nested_prefabs`,\n    :func:`~superdex.physics.prefab.load_shapes`,\n    :func:`~superdex.physics.prefab.shallow_load_from_json_string`"
-    );
+    return result;
+  }
+    , nb::arg("prefab")
+    , nb::arg("scene").none()
+    , nb::arg("params")
+    , "Instantiate a :class:`~superdex.physics.prefab.ScenePrefab` and add it to a\n:class:`~superdex.physics.Scene`.\n\nCreates the prefab's actors, constraints, and controllers, applies any scene\nsettings enabled by\n:attr:`~superdex.physics.prefab.PrefabParams.apply_scene_settings`, contact\nfilter entries, and contact-pair parameter overrides.\n\nArgs:\n    prefab (ScenePrefab): The fully loaded\n        :class:`~superdex.physics.prefab.ScenePrefab` to instantiate.\n    scene (Scene): The :class:`~superdex.physics.Scene` to add things to.\n    params (PrefabParams): Parameters for how and where to instantiate the\n        prefab. Can optionally be omitted in Python.\n\nReturns:\n    An :class:`~superdex.physics.prefab.AddToSceneResult` containing pointers to\n    all created actors and constraints.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    The prefab must be fully loaded (nested prefabs and shapes) before calling\n    this function. If you're not sure, then call\n    :func:`~superdex.physics.prefab.ensure_fully_loaded`.\n\nWarning:\n    This function is not transactional. If it returns an error, the prefab may\n    have been partially instantiated in the scene.\n\nWarning:\n    Only supported with :attr:`~superdex.physics.prefab.PrefabParams.scale` = 1.\n    To instantiate at a non-identity scale, use the file-path\n    :func:`~superdex.physics.prefab.add_to_scene` overload or a nested\n    :attr:`~superdex.physics.prefab.PrefabReference.scale`.\n\nSee Also:\n    :func:`~superdex.physics.prefab.load_from_file`,\n    :func:`~superdex.physics.prefab.ensure_fully_loaded`,\n    :class:`~superdex.physics.prefab.PrefabParams`"
+  );
+  m_prefab.def("add_to_scene", [](mochi::prefab::ScenePrefab const& prefab, mochi::Scene* scene) {
+    mochi::Error error;
+    auto result = mochi::prefab::AddToScene(prefab, scene, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
+    }
+    return result;
+  }
+    , nb::arg("prefab")
+    , nb::arg("scene").none()
+    , "Overload of :func:`~superdex.physics.prefab.add_to_scene` that instantiates a\n:class:`~superdex.physics.prefab.ScenePrefab` using default\n:class:`~superdex.physics.prefab.PrefabParams`.\n\nArgs:\n    prefab (ScenePrefab): The fully loaded\n        :class:`~superdex.physics.prefab.ScenePrefab` to instantiate.\n    scene (Scene): The :class:`~superdex.physics.Scene` to add things to.\n\nReturns:\n    An :class:`~superdex.physics.prefab.AddToSceneResult` containing pointers to\n    all created actors and constraints.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nWarning:\n    This function is not transactional. If it returns an error, the prefab may\n    have been partially instantiated in the scene.\n\nSee Also:\n    :func:`~superdex.physics.prefab.add_to_scene`"
+  );
+  m_prefab.def("add_to_scene", [](std::string_view prefab_path, std::string_view root_path, mochi::Scene* scene, mochi::prefab::PrefabParams const& params) {
+    mochi::Error error;
+    auto result = mochi::prefab::AddToScene(prefab_path, root_path, scene, params, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
+    }
+    return result;
+  }
+    , nb::arg("prefab_path")
+    , nb::arg("root_path")
+    , nb::arg("scene").none()
+    , nb::arg("params")
+    , "Load a scene prefab from a file and create an instance of it in the\n:class:`~superdex.physics.Scene`.\n\nThis is a convenience function that loads the prefab, including all nested\nprefabs and shapes, and immediately adds it to the scene. All loaded shape\nhandles are released automatically afterward.\n\nArgs:\n    prefab_path (str): File path to the prefab file.\n    root_path (str): Root directory for resolving relative paths, except those\n        resolved against a prefab file.\n    scene (Scene): The :class:`~superdex.physics.Scene` to add things to.\n    params (PrefabParams): Parameters for how and where to instantiate the\n        prefab.\n\nReturns:\n    An :class:`~superdex.physics.prefab.AddToSceneResult` containing pointers to\n    all created actors and constraints.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    If you intend to add multiple copies of the prefab to a scene, or to\n    multiple scenes, then consider using\n    :func:`~superdex.physics.prefab.load_from_file` to load a\n    :class:`~superdex.physics.prefab.ScenePrefab` object. You can use that\n    :class:`~superdex.physics.prefab.ScenePrefab` multiple times.\n\nNote:\n    Unlike the :class:`~superdex.physics.prefab.ScenePrefab` overload, this\n    overload supports non-identity\n    :attr:`~superdex.physics.prefab.PrefabParams.scale` by baking it into actor\n    geometry during load.\n\nWarning:\n    This function is not transactional. If it returns an error, the prefab may\n    have been partially instantiated in the scene.\n\nSee Also:\n    :func:`~superdex.physics.prefab.load_from_file`,\n    :func:`~superdex.physics.prefab.add_to_scene`,\n    :class:`~superdex.physics.prefab.PrefabParams`"
+  );
+  m_prefab.def("add_to_scene", [](std::string_view prefab_path, std::string_view root_path, mochi::Scene* scene) {
+    mochi::Error error;
+    auto result = mochi::prefab::AddToScene(prefab_path, root_path, scene, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
+    }
+    return result;
+  }
+    , nb::arg("prefab_path")
+    , nb::arg("root_path")
+    , nb::arg("scene").none()
+    , "Overload of :func:`~superdex.physics.prefab.add_to_scene` that loads a prefab\nfrom a file and instantiates it using default\n:class:`~superdex.physics.prefab.PrefabParams`.\n\nArgs:\n    prefab_path (str): File path to the prefab file.\n    root_path (str): Root directory for resolving relative paths, except those\n        resolved against a prefab file.\n    scene (Scene): The :class:`~superdex.physics.Scene` to add things to.\n\nReturns:\n    An :class:`~superdex.physics.prefab.AddToSceneResult` containing pointers to\n    all created actors and constraints.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nWarning:\n    This function is not transactional. If it returns an error, the prefab may\n    have been partially instantiated in the scene.\n\nSee Also:\n    :func:`~superdex.physics.prefab.add_to_scene`"
+  );
 
-    m_prefab.def("shallow_load_from_json_string", [](std::string_view json) {
-      mochi::Error error;
-      auto result = mochi::prefab::ShallowLoadFromJsonString(json, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
-    }
-      , nb::arg("json")
-      , "Deserialize a single :class:`~superdex.physics.prefab.ScenePrefab` from a JSON\nstring, without loading any nested files.\n\nArgs:\n    json (str): JSON string containing the serialized prefab.\n\nReturns:\n    The deserialized :class:`~superdex.physics.prefab.ScenePrefab`, or a\n    default-constructed :class:`~superdex.physics.prefab.ScenePrefab` on error.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    Same as :func:`~superdex.physics.prefab.shallow_load_from_file` except that\n    the JSON string is provided in memory.\n\nNote:\n    Unlike :func:`~superdex.physics.prefab.shallow_load_from_file`, this\n    function is not given a source file for the top-level prefab. Its\n    \"./\"-prefixed nested prefab and shape paths therefore resolve against the\n    root path passed to :func:`~superdex.physics.prefab.load_nested_prefabs`,\n    :func:`~superdex.physics.prefab.load_shapes`, or\n    :func:`~superdex.physics.prefab.ensure_fully_loaded`. Pass the prefab\n    directory as the root path to preserve prefab-relative resolution.\n\nSee Also:\n    :func:`~superdex.physics.prefab.shallow_load_from_file`,\n    :func:`~superdex.physics.prefab.load_from_json_string`"
-    );
+  m_prefab.def("get_prefab_full_path", &mochi::prefab::GetPrefabFullPath
+    , nb::arg("input_path")
+    , nb::arg("root_for_relative_path")
+    , nb::arg("prefab_file_path")
+    , "Resolve a path referenced inside a prefab to a full path.\n\nArgs:\n    input_path (str): The path to resolve, as stored in the prefab (may be\n        prefixed with \"./\" to indicate it is relative to the prefab file).\n    root_for_relative_path (str): Root directory used to resolve paths that are\n        not prefixed with \"./\".\n    prefab_file_path (str): Path to the prefab file that references inputPath,\n        used to resolve \"./\"-prefixed paths relative to its location.\n\nReturns:\n    The resolved full path.\n\nNote:\n    Absolute paths are returned unchanged. Paths starting with \"./\" are resolved\n    relative to the directory containing ``prefab_file_path`` when provided.\n    Other relative paths are resolved against ``root_for_relative_path``."
+  );
 
-    m_prefab.def("load_nested_prefabs", [](mochi::prefab::ScenePrefab& prefab, std::string_view root_path) {
-      mochi::Error error;
-      mochi::prefab::LoadNestedPrefabs(prefab, root_path, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
+  m_prefab.def("scale_articulated_actor_params", [](mochi::ArticulatedActorParams& params, mochi::real scale) {
+    mochi::Error error;
+    mochi::prefab::ScaleArticulatedActorParams(params, scale, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("prefab")
-      , nb::arg("root_path")
-      , "Load nested prefab files recursively.\n\nArgs:\n    prefab (ScenePrefab): The :class:`~superdex.physics.prefab.ScenePrefab`\n        whose nested prefab references will be loaded.\n    root_path (str): Root directory for resolving relative paths, except those\n        resolved against a prefab file.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    Use this if the file was loaded via\n    :func:`~superdex.physics.prefab.shallow_load_from_file` or\n    :func:`~superdex.physics.prefab.shallow_load_from_json_string` or if the\n    :class:`~superdex.physics.prefab.ScenePrefab` was created procedurally.\n\nNote:\n    You do not need to call this after\n    :func:`~superdex.physics.prefab.load_from_file` or\n    :func:`~superdex.physics.prefab.load_from_json_string` because they load all\n    nested content for you.\n\nNote:\n    A reference with a non-empty path is reloaded from its file on every call. A\n    reference with an empty path must already contain a loaded prefab; this\n    function keeps that prefab and loads all prefabs nested within it. See\n    :attr:`~superdex.physics.prefab.PrefabReference.path` for when a path is\n    required. Use :func:`~superdex.physics.prefab.ensure_fully_loaded` to avoid\n    reloading prefabs that are already loaded.\n\nNote:\n    A prefab must not reference itself, directly or indirectly.\n\nWarning:\n    If this function returns an error, the input prefab may remain partially\n    loaded. A reference with a non-empty path keeps its previously loaded prefab\n    if its file or any prefab nested within it fails to load; if it had no\n    loaded prefab, it remains unloaded.\n\nSee Also:\n    :func:`~superdex.physics.prefab.ensure_fully_loaded`,\n    :func:`~superdex.physics.prefab.load_shapes`"
-    );
+  }
+    , nb::arg("params")
+    , nb::arg("scale")
+    , "Uniformly scale the geometry of articulated actor params in place, as\ninstantiating an :class:`~superdex.physics.prefab.ArticulatedActorPrefab` at a\nuniform :attr:`~superdex.physics.prefab.ArticulatedActorPrefab.scale` does.\n\nScales the translations of\n:attr:`~superdex.physics.ArticulatedJointParams.parent_link_from_joint`,\n:attr:`~superdex.physics.ArticulatedLinkParams.parent_joint_from_link` and\n:attr:`~superdex.physics.ArticulatedCycleJointParams.joint_from_child_link`, and\nthe limits of prismatic joints. Explicit link inertia scales as a solid of\nconstant density: :attr:`~superdex.physics.ArticulatedLinkParams.center_of_mass`\nby scale, :attr:`~superdex.physics.ArticulatedLinkParams.mass` by scale^3 and\n:attr:`~superdex.physics.ArticulatedLinkParams.moment_of_inertia` by scale^5.\n\nArgs:\n    params (ArticulatedActorParams): The params to scale.\n    scale (float): The uniform scale factor. Must be strictly positive and\n        finite.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    Shapes are not modified: bake the scale into the link and skin shapes when\n    creating them. Rotations, joint limits of rotational joints, gains,\n    friction, stiffnesses and joint inertia\n    (:attr:`~superdex.physics.ArticulatedJointParams.inertia`) are unchanged.\n\nNote:\n    :attr:`~superdex.physics.ArticulatedActorParams.joint_velocities` is not\n    modified either, so the translational DoFs of the initial velocities stay in\n    unscaled units."
+  );
 
-    m_prefab.def("load_shapes", [](mochi::prefab::ScenePrefab& prefab, std::string_view root_path) {
-      CheckContext();
-      mochi::Error error;
-      mochi::prefab::LoadShapes(prefab, root_path, GetContext(), error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
+  m_prefab.def("shallow_load_from_file", [](std::string_view path) {
+    mochi::Error error;
+    auto result = mochi::prefab::ShallowLoadFromFile(path, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("prefab")
-      , nb::arg("root_path")
-      , "Load shape files referenced by ``prefab`` and its loaded nested prefabs.\n\nArgs:\n    prefab (ScenePrefab): The :class:`~superdex.physics.prefab.ScenePrefab`\n        whose shape references will be loaded.\n    root_path (str): Root directory for resolving relative paths, except those\n        resolved against a prefab file.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    Returns an error if the input prefab or any loaded nested prefab references\n    itself, directly or indirectly.\n\nNote:\n    Use this if the file was loaded via\n    :func:`~superdex.physics.prefab.shallow_load_from_file` or\n    :func:`~superdex.physics.prefab.shallow_load_from_json_string` or if the\n    :class:`~superdex.physics.prefab.ScenePrefab` was created procedurally.\n\nNote:\n    You do not need to call this after\n    :func:`~superdex.physics.prefab.load_from_file` or\n    :func:`~superdex.physics.prefab.load_from_json_string` because they load all\n    nested content for you.\n\nNote:\n    Calling this function again reloads previously loaded shapes to reflect\n    changes to shape file paths or transforms. Use\n    :func:`~superdex.physics.prefab.ensure_fully_loaded` to avoid reloading\n    them.\n\nWarning:\n    Shapes are loaded from nested prefabs only if those prefabs are already\n    loaded. Use :func:`~superdex.physics.prefab.ensure_fully_loaded` if any\n    nested prefabs may be unloaded.\n\nSee Also:\n    :func:`~superdex.physics.prefab.ensure_fully_loaded`,\n    :func:`~superdex.physics.prefab.load_nested_prefabs`,\n    :func:`~superdex.physics.prefab.add_to_scene`"
-    );
+    return result;
+  }
+    , nb::arg("path")
+    , "Deserialize a single :class:`~superdex.physics.prefab.ScenePrefab` from a file,\nwithout loading any nested files.\n\nArgs:\n    path (str): File path to the prefab file.\n\nReturns:\n    The deserialized :class:`~superdex.physics.prefab.ScenePrefab`, or a\n    default-constructed :class:`~superdex.physics.prefab.ScenePrefab` on error.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    Use this if you want to modify the\n    :class:`~superdex.physics.prefab.ScenePrefab` data before nested content is\n    loaded, or if you simply want to edit and re-save the prefab file.\n\nNote:\n    If you intend to add the :class:`~superdex.physics.prefab.ScenePrefab` to a\n    :class:`~superdex.physics.Scene`, then you will need to load any nested\n    prefabs and shapes first.\n\nSee Also:\n    :func:`~superdex.physics.prefab.ensure_fully_loaded`,\n    :func:`~superdex.physics.prefab.load_nested_prefabs`,\n    :func:`~superdex.physics.prefab.load_shapes`,\n    :func:`~superdex.physics.prefab.shallow_load_from_json_string`"
+  );
 
-    m_prefab.def("ensure_fully_loaded", [](mochi::prefab::ScenePrefab& prefab, std::string_view root_path) {
-      CheckContext();
-      mochi::Error error;
-      mochi::prefab::EnsureFullyLoaded(prefab, root_path, GetContext(), error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
+  m_prefab.def("shallow_load_from_json_string", [](std::string_view json) {
+    mochi::Error error;
+    auto result = mochi::prefab::ShallowLoadFromJsonString(json, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("prefab")
-      , nb::arg("root_path")
-      , "Ensure that all nested prefabs and shape files are loaded, skipping any that are\nalready loaded.\n\nArgs:\n    prefab (ScenePrefab): The :class:`~superdex.physics.prefab.ScenePrefab`\n        whose nested prefabs and shapes will be loaded.\n    root_path (str): Root directory for resolving relative paths, except those\n        resolved against a prefab file.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    Use this if the file was loaded via\n    :func:`~superdex.physics.prefab.shallow_load_from_file` or\n    :func:`~superdex.physics.prefab.shallow_load_from_json_string` or if the\n    :class:`~superdex.physics.prefab.ScenePrefab` was created procedurally.\n\nNote:\n    You do not need to call this after\n    :func:`~superdex.physics.prefab.load_from_file` or\n    :func:`~superdex.physics.prefab.load_from_json_string` because they load all\n    nested content for you.\n\nNote:\n    A prefab must not reference itself, directly or indirectly.\n\nNote:\n    If a reference already contains a loaded prefab, this function does not\n    reload its file, even when its path is non-empty; it still loads any missing\n    nested prefabs. A reference with neither a path nor a loaded prefab is\n    invalid. See :attr:`~superdex.physics.prefab.PrefabReference.path` for when\n    a path is required.\n\nWarning:\n    If this function returns an error, the input prefab may remain partially\n    loaded. A reference that was unloaded when the call began remains unloaded\n    if its file or any prefab nested within it fails to load.\n\nSee Also:\n    :func:`~superdex.physics.prefab.load_nested_prefabs`,\n    :func:`~superdex.physics.prefab.load_shapes`,\n    :func:`~superdex.physics.prefab.add_to_scene`"
-    );
+    return result;
+  }
+    , nb::arg("json")
+    , "Deserialize a single :class:`~superdex.physics.prefab.ScenePrefab` from a JSON\nstring, without loading any nested files.\n\nArgs:\n    json (str): JSON string containing the serialized prefab.\n\nReturns:\n    The deserialized :class:`~superdex.physics.prefab.ScenePrefab`, or a\n    default-constructed :class:`~superdex.physics.prefab.ScenePrefab` on error.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    Same as :func:`~superdex.physics.prefab.shallow_load_from_file` except that\n    the JSON string is provided in memory.\n\nNote:\n    Unlike :func:`~superdex.physics.prefab.shallow_load_from_file`, this\n    function is not given a source file for the top-level prefab. Its\n    \"./\"-prefixed nested prefab and shape paths therefore resolve against the\n    root path passed to :func:`~superdex.physics.prefab.load_nested_prefabs`,\n    :func:`~superdex.physics.prefab.load_shapes`, or\n    :func:`~superdex.physics.prefab.ensure_fully_loaded`. Pass the prefab\n    directory as the root path to preserve prefab-relative resolution.\n\nSee Also:\n    :func:`~superdex.physics.prefab.shallow_load_from_file`,\n    :func:`~superdex.physics.prefab.load_from_json_string`"
+  );
 
-    m_prefab.def("export_scene", [](mochi::Scene const* scene, std::string_view export_name, std::string_view output_dir, mochi::prefab::ExportParams const& params) {
-      mochi::Error error;
-      mochi::prefab::ExportScene(scene, export_name, output_dir, params, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
+  m_prefab.def("load_nested_prefabs", [](mochi::prefab::ScenePrefab& prefab, std::string_view root_path) {
+    mochi::Error error;
+    mochi::prefab::LoadNestedPrefabs(prefab, root_path, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("scene").none()
-      , nb::arg("export_name")
-      , nb::arg("output_dir")
-      , nb::arg("params")
-      , "Export a :class:`~superdex.physics.Scene` to a folder containing a prefab file\nand all generated mesh files.\n\nArgs:\n    scene (Scene): The :class:`~superdex.physics.Scene` to export.\n    export_name (str): Name for the exported prefab. Used both for the export\n        subdirectory and for the prefab filename (``<exportName>.mochi_scene``).\n    output_dir (str): Directory where the export folder will be created. The\n        subdirectories ``<outputDir>/<exportName>`` and\n        ``<outputDir>/<exportName>/generated_assets`` are created automatically.\n    params (ExportParams): Export options, see\n        :class:`~superdex.physics.prefab.ExportParams`. Can optionally be\n        omitted in Python.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    Generated mesh files (.mochi.h5) are written under generated_assets/ and\n    referenced from the prefab using \"./generated_assets/\" paths.\n\nNote:\n    The actor contact filter omits the pairs whose contact is disabled when an\n    articulated or soft-skinned actor is created, as adding the prefab to a\n    scene disables them again. Such pairs whose contact was enabled after\n    creation are exported as enabling entries.\n\nNote:\n    Exported actor names are made unique: when two actors share a name, later\n    ones receive a numeric suffix (e.g. \"box\", \"box1\"), so an exported name may\n    differ from the runtime name.\n\nNote:\n    Scene export reconstructs supported creation and configuration data from\n    effective runtime state. It is not a lossless or structure-preserving round\n    trip of any prefab used to create the scene.\n\nWarning:\n    Currently exports only rigid, soft, articulated, soft-skinned, and rod\n    actors. Constraints, pose controllers, shell actors, and implicit (non-mesh)\n    shapes are NOT exported. A link with an implicit shape is exported without a\n    shape, so its articulated actor may get different default contact filtering\n    when the prefab is added to a scene.\n\nWarning:\n    Velocities are NOT exported. Soft actor displacements, articulated joint\n    poses, and rod poses are exported only when\n    :attr:`~superdex.physics.prefab.ExportParams.export_current_pose` is true.\n\nSee Also:\n    :class:`~superdex.physics.prefab.ExportParams`,\n    :func:`~superdex.physics.prefab.export_actor`"
-    );
-    m_prefab.def("export_scene", [](mochi::Scene const* scene, std::string_view export_name, std::string_view output_dir) {
-      mochi::Error error;
-      mochi::prefab::ExportScene(scene, export_name, output_dir, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-    }
-      , nb::arg("scene").none()
-      , nb::arg("export_name")
-      , nb::arg("output_dir")
-      , "Overload of :func:`~superdex.physics.prefab.export_scene` that uses default\n:class:`~superdex.physics.prefab.ExportParams`.\n\nArgs:\n    scene (Scene): The :class:`~superdex.physics.Scene` to export.\n    export_name (str): Name for the exported prefab.\n    output_dir (str): Directory where the export folder will be created.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nSee Also:\n    :func:`~superdex.physics.prefab.export_scene`"
-    );
+  }
+    , nb::arg("prefab")
+    , nb::arg("root_path")
+    , "Load nested prefab files recursively.\n\nArgs:\n    prefab (ScenePrefab): The :class:`~superdex.physics.prefab.ScenePrefab`\n        whose nested prefab references will be loaded.\n    root_path (str): Root directory for resolving relative paths, except those\n        resolved against a prefab file.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    Use this if the file was loaded via\n    :func:`~superdex.physics.prefab.shallow_load_from_file` or\n    :func:`~superdex.physics.prefab.shallow_load_from_json_string` or if the\n    :class:`~superdex.physics.prefab.ScenePrefab` was created procedurally.\n\nNote:\n    You do not need to call this after\n    :func:`~superdex.physics.prefab.load_from_file` or\n    :func:`~superdex.physics.prefab.load_from_json_string` because they load all\n    nested content for you.\n\nNote:\n    A reference with a non-empty path is reloaded from its file on every call. A\n    reference with an empty path must already contain a loaded prefab; this\n    function keeps that prefab and loads all prefabs nested within it. See\n    :attr:`~superdex.physics.prefab.PrefabReference.path` for when a path is\n    required. Use :func:`~superdex.physics.prefab.ensure_fully_loaded` to avoid\n    reloading prefabs that are already loaded.\n\nNote:\n    A prefab must not reference itself, directly or indirectly.\n\nWarning:\n    If this function returns an error, the input prefab may remain partially\n    loaded. A reference with a non-empty path keeps its previously loaded prefab\n    if its file or any prefab nested within it fails to load; if it had no\n    loaded prefab, it remains unloaded.\n\nSee Also:\n    :func:`~superdex.physics.prefab.ensure_fully_loaded`,\n    :func:`~superdex.physics.prefab.load_shapes`"
+  );
 
-    m_prefab.def("export_actor", [](mochi::Actor const* actor, std::string_view export_name, std::string_view output_dir, mochi::prefab::ExportParams const& params) {
-      mochi::Error error;
-      mochi::prefab::ExportActor(actor, export_name, output_dir, params, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
+  m_prefab.def("load_shapes", [](mochi::prefab::ScenePrefab& prefab, std::string_view root_path) {
+    CheckContext();
+    mochi::Error error;
+    mochi::prefab::LoadShapes(prefab, root_path, GetContext(), error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("actor").none()
-      , nb::arg("export_name")
-      , nb::arg("output_dir")
-      , nb::arg("params")
-      , "Export a single actor to a prefab file under\n``outputDir/exportName/<exportName>.mochi_scene``.\n\nExtracts creation parameters from the actor and writes the prefab plus any\ngenerated mesh assets to disk.\n\nArgs:\n    actor (Actor): The actor to export. Must not be None.\n    export_name (str): Label used for the actor's name, the export subdirectory,\n        and the prefab filename (``<exportName>.mochi_scene``).\n    output_dir (str): Parent directory for the export. The subdirectories\n        ``<outputDir>/<exportName>`` and\n        ``<outputDir>/<exportName>/generated_assets`` are created automatically.\n    params (ExportParams): Export options, see\n        :class:`~superdex.physics.prefab.ExportParams`. Can optionally be\n        omitted in Python.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    Any limitations documented in :func:`~superdex.physics.prefab.export_scene`\n    also apply here.\n\nNote:\n    When exporting an articulated actor, pass the articulated actor itself (the\n    one returned by :meth:`~superdex.physics.Scene.create_articulated_actor` or\n    by :meth:`~superdex.physics.Actor.get_articulated_actor` on a nested link),\n    not a nested actor.\n\nNote:\n    Generated mesh files (.mochi.h5) are written under generated_assets/ and\n    referenced from the prefab using \"./generated_assets/\" paths.\n\nWarning:\n    Only supported for standalone rigid actors, standalone soft actors,\n    articulated actors, and rod actors. Soft-skinned actors are not supported.\n\nWarning:\n    Scene-level contact-filter settings and contact-pair parameter overrides are\n    not exported. Adding an exported articulated actor to a scene applies\n    automatic adjacent-link filtering, even if contact between adjacent links\n    was explicitly enabled before export. To preserve this behavior, add an\n    equivalent enabling entry to the exported prefab or re-enable the pair after\n    adding the prefab to a scene.\n\nSee Also:\n    :class:`~superdex.physics.prefab.ExportParams`,\n    :func:`~superdex.physics.prefab.export_scene`"
-    );
-    m_prefab.def("export_actor", [](mochi::Actor const* actor, std::string_view export_name, std::string_view output_dir) {
-      mochi::Error error;
-      mochi::prefab::ExportActor(actor, export_name, output_dir, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
+  }
+    , nb::arg("prefab")
+    , nb::arg("root_path")
+    , "Load shape files referenced by ``prefab`` and its loaded nested prefabs.\n\nArgs:\n    prefab (ScenePrefab): The :class:`~superdex.physics.prefab.ScenePrefab`\n        whose shape references will be loaded.\n    root_path (str): Root directory for resolving relative paths, except those\n        resolved against a prefab file.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    Returns an error if the input prefab or any loaded nested prefab references\n    itself, directly or indirectly.\n\nNote:\n    Use this if the file was loaded via\n    :func:`~superdex.physics.prefab.shallow_load_from_file` or\n    :func:`~superdex.physics.prefab.shallow_load_from_json_string` or if the\n    :class:`~superdex.physics.prefab.ScenePrefab` was created procedurally.\n\nNote:\n    You do not need to call this after\n    :func:`~superdex.physics.prefab.load_from_file` or\n    :func:`~superdex.physics.prefab.load_from_json_string` because they load all\n    nested content for you.\n\nNote:\n    Calling this function again reloads previously loaded shapes to reflect\n    changes to shape file paths or transforms. Use\n    :func:`~superdex.physics.prefab.ensure_fully_loaded` to avoid reloading\n    them.\n\nWarning:\n    Shapes are loaded from nested prefabs only if those prefabs are already\n    loaded. Use :func:`~superdex.physics.prefab.ensure_fully_loaded` if any\n    nested prefabs may be unloaded.\n\nSee Also:\n    :func:`~superdex.physics.prefab.ensure_fully_loaded`,\n    :func:`~superdex.physics.prefab.load_nested_prefabs`,\n    :func:`~superdex.physics.prefab.add_to_scene`"
+  );
+
+  m_prefab.def("ensure_fully_loaded", [](mochi::prefab::ScenePrefab& prefab, std::string_view root_path) {
+    CheckContext();
+    mochi::Error error;
+    mochi::prefab::EnsureFullyLoaded(prefab, root_path, GetContext(), error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("actor").none()
-      , nb::arg("export_name")
-      , nb::arg("output_dir")
-      , "Overload of :func:`~superdex.physics.prefab.export_actor` that uses default\n:class:`~superdex.physics.prefab.ExportParams`.\n\nArgs:\n    actor (Actor): The actor to export. Must not be None.\n    export_name (str): Label used for the actor's name, the export subdirectory,\n        and the prefab filename.\n    output_dir (str): Parent directory for the export.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nSee Also:\n    :func:`~superdex.physics.prefab.export_actor`"
-    );
+  }
+    , nb::arg("prefab")
+    , nb::arg("root_path")
+    , "Ensure that all nested prefabs and shape files are loaded, skipping any that are\nalready loaded.\n\nArgs:\n    prefab (ScenePrefab): The :class:`~superdex.physics.prefab.ScenePrefab`\n        whose nested prefabs and shapes will be loaded.\n    root_path (str): Root directory for resolving relative paths, except those\n        resolved against a prefab file.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    Use this if the file was loaded via\n    :func:`~superdex.physics.prefab.shallow_load_from_file` or\n    :func:`~superdex.physics.prefab.shallow_load_from_json_string` or if the\n    :class:`~superdex.physics.prefab.ScenePrefab` was created procedurally.\n\nNote:\n    You do not need to call this after\n    :func:`~superdex.physics.prefab.load_from_file` or\n    :func:`~superdex.physics.prefab.load_from_json_string` because they load all\n    nested content for you.\n\nNote:\n    A prefab must not reference itself, directly or indirectly.\n\nNote:\n    If a reference already contains a loaded prefab, this function does not\n    reload its file, even when its path is non-empty; it still loads any missing\n    nested prefabs. A reference with neither a path nor a loaded prefab is\n    invalid. See :attr:`~superdex.physics.prefab.PrefabReference.path` for when\n    a path is required.\n\nWarning:\n    If this function returns an error, the input prefab may remain partially\n    loaded. A reference that was unloaded when the call began remains unloaded\n    if its file or any prefab nested within it fails to load.\n\nSee Also:\n    :func:`~superdex.physics.prefab.load_nested_prefabs`,\n    :func:`~superdex.physics.prefab.load_shapes`,\n    :func:`~superdex.physics.prefab.add_to_scene`"
+  );
+
+  m_prefab.def("export_scene", [](mochi::Scene const* scene, std::string_view export_name, std::string_view output_dir, mochi::prefab::ExportParams const& params) {
+    mochi::Error error;
+    mochi::prefab::ExportScene(scene, export_name, output_dir, params, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
+    }
+  }
+    , nb::arg("scene").none()
+    , nb::arg("export_name")
+    , nb::arg("output_dir")
+    , nb::arg("params")
+    , "Export a :class:`~superdex.physics.Scene` to a folder containing a prefab file\nand all generated mesh files.\n\nArgs:\n    scene (Scene): The :class:`~superdex.physics.Scene` to export.\n    export_name (str): Name for the exported prefab. Used both for the export\n        subdirectory and for the prefab filename (``<exportName>.mochi_scene``).\n    output_dir (str): Directory where the export folder will be created. The\n        subdirectories ``<outputDir>/<exportName>`` and\n        ``<outputDir>/<exportName>/generated_assets`` are created automatically.\n    params (ExportParams): Export options, see\n        :class:`~superdex.physics.prefab.ExportParams`. Can optionally be\n        omitted in Python.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    Generated mesh files (.mochi.h5) are written under generated_assets/ and\n    referenced from the prefab using \"./generated_assets/\" paths.\n\nNote:\n    The actor contact filter omits the pairs whose contact is disabled when an\n    articulated or soft-skinned actor is created, as adding the prefab to a\n    scene disables them again. Such pairs whose contact was enabled after\n    creation are exported as enabling entries.\n\nNote:\n    Exported actor names are made unique: when two actors share a name, later\n    ones receive a numeric suffix (e.g. \"box\", \"box1\"), so an exported name may\n    differ from the runtime name.\n\nNote:\n    Scene export reconstructs supported creation and configuration data from\n    effective runtime state. It is not a lossless or structure-preserving round\n    trip of any prefab used to create the scene.\n\nWarning:\n    Currently exports only rigid, soft, articulated, soft-skinned, and rod\n    actors. Constraints, pose controllers, shell actors, and implicit (non-mesh)\n    shapes are NOT exported. A link with an implicit shape is exported without a\n    shape, so its articulated actor may get different default contact filtering\n    when the prefab is added to a scene.\n\nWarning:\n    Velocities are NOT exported. Soft actor displacements, articulated joint\n    poses, and rod poses are exported only when\n    :attr:`~superdex.physics.prefab.ExportParams.export_current_pose` is true.\n\nSee Also:\n    :class:`~superdex.physics.prefab.ExportParams`,\n    :func:`~superdex.physics.prefab.export_actor`"
+  );
+  m_prefab.def("export_scene", [](mochi::Scene const* scene, std::string_view export_name, std::string_view output_dir) {
+    mochi::Error error;
+    mochi::prefab::ExportScene(scene, export_name, output_dir, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
+    }
+  }
+    , nb::arg("scene").none()
+    , nb::arg("export_name")
+    , nb::arg("output_dir")
+    , "Overload of :func:`~superdex.physics.prefab.export_scene` that uses default\n:class:`~superdex.physics.prefab.ExportParams`.\n\nArgs:\n    scene (Scene): The :class:`~superdex.physics.Scene` to export.\n    export_name (str): Name for the exported prefab.\n    output_dir (str): Directory where the export folder will be created.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nSee Also:\n    :func:`~superdex.physics.prefab.export_scene`"
+  );
+
+  m_prefab.def("export_actor", [](mochi::Actor const* actor, std::string_view export_name, std::string_view output_dir, mochi::prefab::ExportParams const& params) {
+    mochi::Error error;
+    mochi::prefab::ExportActor(actor, export_name, output_dir, params, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
+    }
+  }
+    , nb::arg("actor").none()
+    , nb::arg("export_name")
+    , nb::arg("output_dir")
+    , nb::arg("params")
+    , "Export a single actor to a prefab file under\n``outputDir/exportName/<exportName>.mochi_scene``.\n\nExtracts creation parameters from the actor and writes the prefab plus any\ngenerated mesh assets to disk.\n\nArgs:\n    actor (Actor): The actor to export. Must not be None.\n    export_name (str): Label used for the actor's name, the export subdirectory,\n        and the prefab filename (``<exportName>.mochi_scene``).\n    output_dir (str): Parent directory for the export. The subdirectories\n        ``<outputDir>/<exportName>`` and\n        ``<outputDir>/<exportName>/generated_assets`` are created automatically.\n    params (ExportParams): Export options, see\n        :class:`~superdex.physics.prefab.ExportParams`. Can optionally be\n        omitted in Python.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    Any limitations documented in :func:`~superdex.physics.prefab.export_scene`\n    also apply here.\n\nNote:\n    When exporting an articulated actor, pass the articulated actor itself (the\n    one returned by :meth:`~superdex.physics.Scene.create_articulated_actor` or\n    by :meth:`~superdex.physics.Actor.get_articulated_actor` on a nested link),\n    not a nested actor.\n\nNote:\n    Generated mesh files (.mochi.h5) are written under generated_assets/ and\n    referenced from the prefab using \"./generated_assets/\" paths.\n\nWarning:\n    Only supported for standalone rigid actors, standalone soft actors,\n    articulated actors, and rod actors. Soft-skinned actors are not supported.\n\nWarning:\n    Scene-level contact-filter settings and contact-pair parameter overrides are\n    not exported. Adding an exported articulated actor to a scene applies\n    automatic adjacent-link filtering, even if contact between adjacent links\n    was explicitly enabled before export. To preserve this behavior, add an\n    equivalent enabling entry to the exported prefab or re-enable the pair after\n    adding the prefab to a scene.\n\nSee Also:\n    :class:`~superdex.physics.prefab.ExportParams`,\n    :func:`~superdex.physics.prefab.export_scene`"
+  );
+  m_prefab.def("export_actor", [](mochi::Actor const* actor, std::string_view export_name, std::string_view output_dir) {
+    mochi::Error error;
+    mochi::prefab::ExportActor(actor, export_name, output_dir, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
+    }
+  }
+    , nb::arg("actor").none()
+    , nb::arg("export_name")
+    , nb::arg("output_dir")
+    , "Overload of :func:`~superdex.physics.prefab.export_actor` that uses default\n:class:`~superdex.physics.prefab.ExportParams`.\n\nArgs:\n    actor (Actor): The actor to export. Must not be None.\n    export_name (str): Label used for the actor's name, the export subdirectory,\n        and the prefab filename.\n    output_dir (str): Parent directory for the export.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nSee Also:\n    :func:`~superdex.physics.prefab.export_actor`"
+  );
 
 }
 // clang-format on

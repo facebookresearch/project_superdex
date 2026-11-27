@@ -37,7 +37,9 @@ void mochi::DeclareMochiPhysics_MochiPhysicsDebugServer([[maybe_unused]] nb::mod
   registry.StoreClass(nb::class_<mochi::DebugServer>(m, "DebugServer", "Server API to enable remote debugging and visualization.\n\nSee Also:\n    :func:`~superdex.physics.get_debug_server`", nb::never_destruct()));
 }
 
-void mochi::DefineMochiPhysics_MochiPhysicsDebugServer([[maybe_unused]] nb::module_& m, [[maybe_unused]] PybindRegistry& registry) {
+namespace {
+
+MOCHI_NO_INLINE void Define_DebugServer(PybindRegistry& registry) {
   registry.GetClass<mochi::DebugServer>()
     .def("start", &mochi::DebugServer::Start
       , nb::arg("preferred_port") = int(7333)
@@ -62,5 +64,11 @@ void mochi::DefineMochiPhysics_MochiPhysicsDebugServer([[maybe_unused]] nb::modu
     )
   ;
 
+}
+
+} // namespace
+
+void mochi::DefineMochiPhysics_MochiPhysicsDebugServer([[maybe_unused]] nb::module_& m, [[maybe_unused]] PybindRegistry& registry) {
+  Define_DebugServer(registry);
 }
 // clang-format on

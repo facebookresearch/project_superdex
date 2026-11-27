@@ -37,7 +37,9 @@ void mochi::DeclareMochiPhysics_MochiPhysicsConstraint([[maybe_unused]] nb::modu
   registry.StoreClass(nb::class_<mochi::Constraint>(m, "Constraint", "Represents a constraint that restricts the degrees of freedom of one or more\nactors.\n\nConstraints enforce relationships between actor degrees of freedom (DoFs), such\nas fixing positions, limiting joint angles, or tracking target poses. They apply\nforces to maintain desired configurations using spring-damper mechanics\ncontrolled by stiffness and damping parameters.\n\nNote:\n    Each constraint belongs to exactly one scene.\n\nNote:\n    Each constraint acts on the degrees of freedom of one or more actors.\n\nNote:\n    The type of constraint determines which methods are applicable.\n\nNote:\n    A target moves at its target velocity during the step. BDF2 and BDF3 assume\n    that this velocity also held over the earlier steps they combine, so after\n    it changes, damping is approximate for one step with BDF2 and for two with\n    BDF3.\n\nNote:\n    A target velocity that turns a target by more than pi in one step may give\n    inconsistent results.\n\nWarning:\n    Concurrent access to a constraint is illegal.", nb::never_destruct()));
 }
 
-void mochi::DefineMochiPhysics_MochiPhysicsConstraint([[maybe_unused]] nb::module_& m, [[maybe_unused]] PybindRegistry& registry) {
+namespace {
+
+MOCHI_NO_INLINE void Define_Constraint(PybindRegistry& registry) {
   registry.GetClass<mochi::Constraint>()
     .def("get_type", &mochi::Constraint::GetType
       , "Get the type of the constraint.\n\nReturns:\n    Type of the constraint.\n\nNote:\n    Some methods are only valid for certain constraint types.\n\nSee Also:\n    :class:`~superdex.physics.ConstraintType`"
@@ -200,5 +202,11 @@ void mochi::DefineMochiPhysics_MochiPhysicsConstraint([[maybe_unused]] nb::modul
     )
   ;
 
+}
+
+} // namespace
+
+void mochi::DefineMochiPhysics_MochiPhysicsConstraint([[maybe_unused]] nb::module_& m, [[maybe_unused]] PybindRegistry& registry) {
+  Define_Constraint(registry);
 }
 // clang-format on

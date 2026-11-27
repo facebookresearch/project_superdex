@@ -178,9 +178,9 @@ void mochi::DeclareSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module
   registry.StoreClass(nb::class_<superdex::robotics::SensorLinkContactForce, superdex::robotics::SensorBase>(m_bots, "SensorLinkContactForce", "Total contact force on a link, in the sensor frame, including contacts sampled\non the other body.", nb::never_destruct()));
 }
 
-void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_& m, [[maybe_unused]] PybindRegistry& registry) {
-  auto m_bots = m.def_submodule("bots");
+namespace {
 
+MOCHI_NO_INLINE void Define_bots_RoboticsHandle(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::RoboticsHandle>()
     .def("__init__", [](superdex::robotics::RoboticsHandle* self, nb::object value) {
       superdex::robotics::RoboticsHandle result{};
@@ -202,6 +202,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     )
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_BotHandle(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::BotHandle, superdex::robotics::RoboticsHandle>()
     .def("__init__", [](superdex::robotics::BotHandle* self, nb::object value) {
       superdex::robotics::BotHandle result{};
@@ -216,6 +219,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def("__deepcopy__", [](superdex::robotics::BotHandle const& self, nb::dict) { return superdex::robotics::BotHandle(self); })
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_ControllerHandle(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::ControllerHandle, superdex::robotics::RoboticsHandle>()
     .def("__init__", [](superdex::robotics::ControllerHandle* self, nb::object value) {
       superdex::robotics::ControllerHandle result{};
@@ -230,6 +236,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def("__deepcopy__", [](superdex::robotics::ControllerHandle const& self, nb::dict) { return superdex::robotics::ControllerHandle(self); })
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_SensorHandle(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::SensorHandle, superdex::robotics::RoboticsHandle>()
     .def("__init__", [](superdex::robotics::SensorHandle* self, nb::object value) {
       superdex::robotics::SensorHandle result{};
@@ -244,6 +253,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def("__deepcopy__", [](superdex::robotics::SensorHandle const& self, nb::dict) { return superdex::robotics::SensorHandle(self); })
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_ActuatorHandle(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::ActuatorHandle, superdex::robotics::RoboticsHandle>()
     .def("__init__", [](superdex::robotics::ActuatorHandle* self, nb::object value) {
       superdex::robotics::ActuatorHandle result{};
@@ -258,6 +270,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def("__deepcopy__", [](superdex::robotics::ActuatorHandle const& self, nb::dict) { return superdex::robotics::ActuatorHandle(self); })
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_BotJointPrefab(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::BotJointPrefab, mochi::prefab::ArticulatedJointPrefab>()
     .def("__init__", [](superdex::robotics::BotJointPrefab* self, nb::object name, nb::object type, nb::object parent_link_from_joint, nb::object axis, nb::object friction, nb::object inertia, nb::object min_limit, nb::object max_limit, nb::object limit_stiffness, nb::object limit_damping, nb::object effort_limit) {
       superdex::robotics::BotJointPrefab result{};
@@ -295,6 +310,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_rw("effort_limit", &superdex::robotics::BotJointPrefab::effortLimit, "Maximum effort magnitude that may be applied to actuate this joint [N·m for\nrevolute, N for prismatic]. Interpreted by regime: a negative value (default\n:const:`~superdex.robotics.EFFORT_UNBOUNDED`) is unbounded; 0 is non-actuated\n(no effort can be applied, though the joint still moves freely within its range\nunder external forces); a positive value is a finite limit. This is advisory\nmetadata — it is not copied into the physics articulation, so the sim enforces\nnothing on its own; controllers may read it (e.g. to clamp their output).")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_BotSensorPrefab(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::BotSensorPrefab>()
     .def("__init__", [](superdex::robotics::BotSensorPrefab* self, nb::object type, nb::object name, nb::object inputs, nb::object parent_from_sensor, nb::object params) {
       superdex::robotics::BotSensorPrefab result{};
@@ -324,6 +342,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_rw("params", &superdex::robotics::BotSensorPrefab::params, "Sensor parameters: a path to a .superdex_sensor JSON file or inline JSON. Empty\nuses defaults.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_BotActuatorPrefab(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::BotActuatorPrefab>()
     .def("__init__", [](superdex::robotics::BotActuatorPrefab* self, nb::object type, nb::object name, nb::object params) {
       superdex::robotics::BotActuatorPrefab result{};
@@ -347,6 +368,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_rw("params", &superdex::robotics::BotActuatorPrefab::params, "Actuator parameters: a path to a params JSON file or inline JSON. Empty uses\ndefaults.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_BotLinkPrefab(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::BotLinkPrefab, mochi::prefab::ArticulatedLinkPrefab>()
     .def("__init__", [](superdex::robotics::BotLinkPrefab* self, nb::object name, nb::object parent_link, nb::object parent_joint_from_link, nb::object shape, nb::object layer, nb::object collider_type, nb::object contact, nb::object has_gravity, nb::object density, nb::object mass, nb::object center_of_mass, nb::object moment_of_inertia, nb::object boundary_element_type, nb::object boundary_subsampling, nb::object shape_file, nb::object shape_scale, nb::object shape_rotation, nb::object shape_translation, nb::object render_model_file, nb::object render_model_scale, nb::object render_model_rotation, nb::object render_model_translation, nb::object sensors, nb::object actuators) {
       superdex::robotics::BotLinkPrefab result{};
@@ -411,6 +435,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_prop_rw("actuators", [](superdex::robotics::BotLinkPrefab& self) -> mochi::DynamicArray<superdex::robotics::BotActuatorPrefab>& { return self.actuators; }, [](superdex::robotics::BotLinkPrefab& self, nb::object val) { self.actuators = nb::cast<mochi::DynamicArray<superdex::robotics::BotActuatorPrefab>>(val); }, "Actuators attached to this link. Optional; may be empty.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_BotContactOverride(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::BotContactOverride>()
     .def("__init__", [](superdex::robotics::BotContactOverride* self, nb::object link_a, nb::object link_b, nb::object enable) {
       superdex::robotics::BotContactOverride result{};
@@ -432,6 +459,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_rw("enable", &superdex::robotics::BotContactOverride::enable, "Should contact between the pair be enabled?")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_BotTransmissionPrefab(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::BotTransmissionPrefab, mochi::experimental::DisplacementControlActuatorParams>()
     .def("__init__", [](superdex::robotics::BotTransmissionPrefab* self, nb::object target_displacement, nb::object stiffness, nb::object damping, nb::object allow_compressive_force, nb::object name) {
       superdex::robotics::BotTransmissionPrefab result{};
@@ -457,6 +487,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_rw("name", &superdex::robotics::BotTransmissionPrefab::name, "Human-readable label (used by the editor UI; not consumed by the runtime API).")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_BotLinearTransmissionPrefab(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::BotLinearTransmissionPrefab, superdex::robotics::BotTransmissionPrefab>()
     .def("__init__", [](superdex::robotics::BotLinearTransmissionPrefab* self, nb::object target_displacement, nb::object stiffness, nb::object damping, nb::object allow_compressive_force, nb::object name, nb::object joint_indices, nb::object joint_coefficients, nb::object joint_axis_disps) {
       superdex::robotics::BotLinearTransmissionPrefab result{};
@@ -490,6 +523,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_prop_rw("joint_axis_disps", [](superdex::robotics::BotLinearTransmissionPrefab& self) -> mochi::DynamicArray<mochi::real>& { return self.jointAxisDisps; }, [](superdex::robotics::BotLinearTransmissionPrefab& self, nb::object val) { self.jointAxisDisps = nb::cast<mochi::DynamicArray<mochi::real>>(val); }, "Displacement along the joint axis [m] for the transmission attachment point at\neach joint. This allows the transmission to be offset from the joint origin\nalong the axis.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_BotSpatialTendonPrefab(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::BotSpatialTendonPrefab, superdex::robotics::BotTransmissionPrefab>()
     .def("__init__", [](superdex::robotics::BotSpatialTendonPrefab* self, nb::object target_displacement, nb::object stiffness, nb::object damping, nb::object allow_compressive_force, nb::object name, nb::object routing_elements) {
       superdex::robotics::BotSpatialTendonPrefab result{};
@@ -517,6 +553,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_prop_rw("routing_elements", [](superdex::robotics::BotSpatialTendonPrefab& self) -> mochi::DynamicArray<mochi::RoutingElement>& { return self.routingElements; }, [](superdex::robotics::BotSpatialTendonPrefab& self, nb::object val) { self.routingElements = nb::cast<mochi::DynamicArray<mochi::RoutingElement>>(val); }, "Ordered routing elements defining the tendon path. Must contain at least one\nelement, and every waypoint must be adjacent to another waypoint.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_BotPrefab(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::BotPrefab>()
     .def("__init__", [](superdex::robotics::BotPrefab* self, nb::object name, nb::object joints, nb::object links, nb::object world_from_root, nb::object scale, nb::object default_pose, nb::object linear_transmissions, nb::object spatial_tendons, nb::object contact_overrides, nb::object cycles, nb::object skin, nb::object self_contact_filter) {
       superdex::robotics::BotPrefab result{};
@@ -565,6 +604,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_prop_rw("self_contact_filter", [](superdex::robotics::BotPrefab& self) -> std::optional<superdex::robotics::SelfContactFilter>& { return self.selfContactFilter; }, [](superdex::robotics::BotPrefab& self, nb::handle val) { self.selfContactFilter = val.is_none() ? std::optional<superdex::robotics::SelfContactFilter>{} : nb::cast<std::optional<superdex::robotics::SelfContactFilter>>(val); }, "Which of the bot's own link pairs collide before\n:attr:`~superdex.robotics.BotPrefab.contact_overrides`: Mochi's rule or MuJoCo's\n(see :class:`~superdex.robotics.SelfContactFilter`); unset spawns Mochi's. A\ncombo has one rule: its base's, else the one an attached bot names; a base and\nan attached bot that name different rules refuse the combo.", nb::for_setter(nb::arg("value").none()))
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_RoboticsContext(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::RoboticsContext>()
     .def("create_controller", [](superdex::robotics::RoboticsContext& self, std::string_view type_name, superdex::robotics::BotPrefab const* prefab, mochi::Actor* robot, std::string_view name) {
       mochi::Error error;
@@ -703,6 +745,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     )
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_ComponentBase(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::ComponentBase>()
     .def("is_valid", &superdex::robotics::ComponentBase::IsValid
       , "Whether this component remains usable. Returns false after its owning\n:class:`~superdex.robotics.RoboticsContext` destroys it.\n\nReturns:\n    True while the component is live."
@@ -726,6 +771,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     )
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_ControllerBase(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::ControllerBase, superdex::robotics::ComponentBase>()
     .def("get_input_size", &superdex::robotics::ControllerBase::GetInputSize
       , "How many floats ComputeOutputFromInput takes; 0 when floats cannot drive it.\n\nReturns:\n    The input size."
@@ -771,6 +819,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     )
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_ControllerBasicOscPdParams(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::ControllerBasicOscPdParams>()
     .def("__init__", [](superdex::robotics::ControllerBasicOscPdParams* self, nb::object kp_p, nb::object kd_p, nb::object kp_r, nb::object kd_r, nb::object b_apply_max_error_magnitude_normalization, nb::object max_translation_error, nb::object max_rotation_error, nb::object ee_link_from_ee, nb::object b_apply_max_osc_torque_normalization) {
       superdex::robotics::ControllerBasicOscPdParams result{};
@@ -831,6 +882,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     )
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_ControllerBasicOscPdObsv(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::ControllerBasicOscPdObsv>()
     .def("__init__", [](superdex::robotics::ControllerBasicOscPdObsv* self, nb::object dof_positions, nb::object dof_velocities, nb::object world_from_root, nb::object world_from_ee_link, nb::object ee_jacobian) {
       superdex::robotics::ControllerBasicOscPdObsv result{};
@@ -858,6 +912,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_prop_rw("ee_jacobian", [](superdex::robotics::ControllerBasicOscPdObsv& self) -> mochi::DynamicArray<mochi::real>& { return self.eeJacobian; }, [](superdex::robotics::ControllerBasicOscPdObsv& self, nb::object val) { self.eeJacobian = nb::cast<mochi::DynamicArray<mochi::real>>(val); }, "6×numDofs EE Jacobian in world frame (row-major)")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_ControllerBasicOscPdTarget(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::ControllerBasicOscPdTarget>()
     .def("__init__", [](superdex::robotics::ControllerBasicOscPdTarget* self, nb::object root_from_target_ee) {
       superdex::robotics::ControllerBasicOscPdTarget result{};
@@ -873,6 +930,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_rw("root_from_target_ee", &superdex::robotics::ControllerBasicOscPdTarget::rootFromTargetEE, "Target EE pose in root frame")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_ControllerBasicOscPd(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::ControllerBasicOscPd, superdex::robotics::ControllerBase>()
     .def_static("type_name", &superdex::robotics::ControllerBasicOscPd::TypeName
       , "Registration type name for this controller (see\nRoboticsContext::RegisterControllerType).\n\nReturns:\n    This controller's registration type name."
@@ -935,6 +995,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     )
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_ControllerMochiArticulatedPoseParams(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::ControllerMochiArticulatedPoseParams>()
     .def("__init__", [](superdex::robotics::ControllerMochiArticulatedPoseParams* self, nb::object pose_controller_params) {
       superdex::robotics::ControllerMochiArticulatedPoseParams result{};
@@ -971,12 +1034,18 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     )
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_ControllerMochiArticulatedPoseObsv(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::ControllerMochiArticulatedPoseObsv>()
     .def(nb::init<>())
     .def("__copy__", [](superdex::robotics::ControllerMochiArticulatedPoseObsv const& self) { return superdex::robotics::ControllerMochiArticulatedPoseObsv(self); })
     .def("__deepcopy__", [](superdex::robotics::ControllerMochiArticulatedPoseObsv const& self, nb::dict) { return superdex::robotics::ControllerMochiArticulatedPoseObsv(self); })
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_ControllerMochiArticulatedPoseTarget(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::ControllerMochiArticulatedPoseTarget>()
     .def("__init__", [](superdex::robotics::ControllerMochiArticulatedPoseTarget* self, nb::object world_from_root, nb::object local_to_parent_transforms, nb::object pose_dofs) {
       superdex::robotics::ControllerMochiArticulatedPoseTarget result{};
@@ -998,6 +1067,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_prop_rw("pose_dofs", [](superdex::robotics::ControllerMochiArticulatedPoseTarget& self) -> mochi::DynamicArray<mochi::real>& { return self.poseDofs; }, [](superdex::robotics::ControllerMochiArticulatedPoseTarget& self, nb::object val) { self.poseDofs = nb::cast<mochi::DynamicArray<mochi::real>>(val); }, "Non-root joint DOFs; root DOFs are derived from worldFromRoot")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_ControllerMochiArticulatedPose(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::ControllerMochiArticulatedPose, superdex::robotics::ControllerBase>()
     .def_static("type_name", &superdex::robotics::ControllerMochiArticulatedPose::TypeName
       , "Registration type name for this controller (see\nRoboticsContext::RegisterControllerType).\n\nReturns:\n    This controller's registration type name."
@@ -1040,6 +1112,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     )
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_Bot(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::Bot>()
     .def("get_handle", &superdex::robotics::Bot::GetHandle
       , "Handle identifying this bot in its owning\n:class:`~superdex.robotics.RoboticsContext`.\n\nReturns:\n    Handle identifying this bot."
@@ -1195,6 +1270,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     )
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_ControllerBasicJscPdParams(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::ControllerBasicJscPdParams>()
     .def("__init__", [](superdex::robotics::ControllerBasicJscPdParams* self, nb::object kp, nb::object kd, nb::object saturation, nb::object deadband) {
       superdex::robotics::ControllerBasicJscPdParams result{};
@@ -1240,6 +1318,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     )
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_ControllerBasicJscPdObsv(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::ControllerBasicJscPdObsv>()
     .def("__init__", [](superdex::robotics::ControllerBasicJscPdObsv* self, nb::object dof_positions, nb::object dof_velocities, nb::object dt) {
       superdex::robotics::ControllerBasicJscPdObsv result{};
@@ -1261,6 +1342,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_rw("dt", &superdex::robotics::ControllerBasicJscPdObsv::dt, "Time since the last ComputeOutput call [s]")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_ControllerBasicJscPdTarget(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::ControllerBasicJscPdTarget>()
     .def("__init__", [](superdex::robotics::ControllerBasicJscPdTarget* self, nb::object target_pose) {
       superdex::robotics::ControllerBasicJscPdTarget result{};
@@ -1276,6 +1360,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_prop_rw("target_pose", [](superdex::robotics::ControllerBasicJscPdTarget& self) -> mochi::DynamicArray<mochi::real>& { return self.targetPose; }, [](superdex::robotics::ControllerBasicJscPdTarget& self, nb::object val) { self.targetPose = nb::cast<mochi::DynamicArray<mochi::real>>(val); }, "Target joint positions [m or rad]")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_SensorCameraParams(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::SensorCameraParams>()
     .def("__init__", [](superdex::robotics::SensorCameraParams* self, nb::object name, nb::object image_width, nb::object image_height, nb::object fov_vertical_deg, nb::object near_clip, nb::object far_clip, nb::object look_at, nb::object offset_local, nb::object forward_axis, nb::object up_axis_local, nb::object look_distance) {
       superdex::robotics::SensorCameraParams result{};
@@ -1321,6 +1408,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_rw("look_distance", &superdex::robotics::SensorCameraParams::lookDistance, "Distance ahead of offset point to place look-at target (wrist cameras only).")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_SensorSeedRectMapParams(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::SensorSeedRectMapParams>()
     .def("__init__", [](superdex::robotics::SensorSeedRectMapParams* self, nb::object center, nb::object tip_direction, nb::object zero_longitude_direction, nb::object width, nb::object height, nb::object max_polar_latitude, nb::object projection, nb::object rasterization, nb::object voronoi_oversampling, nb::object outside_policy) {
       superdex::robotics::SensorSeedRectMapParams result{};
@@ -1363,6 +1453,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_rw("outside_policy", &superdex::robotics::SensorSeedRectMapParams::outsidePolicy)
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_SensorSeedV1MLPParams(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::SensorSeedV1MLPParams>()
     .def("__init__", [](superdex::robotics::SensorSeedV1MLPParams* self, nb::object weights_path, nb::object hemisphere_center_offset, nb::object bypass_model) {
       superdex::robotics::SensorSeedV1MLPParams result{};
@@ -1384,6 +1477,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_rw("bypass_model", &superdex::robotics::SensorSeedV1MLPParams::bypassModel, "When true, output = raw contact force (skip MLP inference).")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_SensorSeedV1MLPResult(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::SensorSeedV1MLPResult>()
     .def("__init__", [](superdex::robotics::SensorSeedV1MLPResult* self, nb::object input_force, nb::object input_normal, nb::object output_force, nb::object contact_centroid, nb::object contact_normal, nb::object num_contacts) {
       superdex::robotics::SensorSeedV1MLPResult result{};
@@ -1414,6 +1510,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_rw("num_contacts", &superdex::robotics::SensorSeedV1MLPResult::numContacts)
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_SensorTemporalWindowParams(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::SensorTemporalWindowParams>()
     .def("__init__", [](superdex::robotics::SensorTemporalWindowParams* self, nb::object history_length, nb::object pad_with_first) {
       superdex::robotics::SensorTemporalWindowParams result{};
@@ -1432,6 +1531,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_rw("pad_with_first", &superdex::robotics::SensorTemporalWindowParams::padWithFirst, "Rows before the first sample since a reset repeat that sample, its capture and\npublication included, instead of holding zeros.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_SensorRandomParams(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::SensorRandomParams>()
     .def("__init__", [](superdex::robotics::SensorRandomParams* self, nb::object episode_seed, nb::object process_key) {
       superdex::robotics::SensorRandomParams result{};
@@ -1450,6 +1552,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_rw("process_key", &superdex::robotics::SensorRandomParams::processKey, "Names the node's streams. Empty keys them by the node's graph name, the name its\nSensorGraph node was added under, so each node declared in an asset draws its\nown.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_SensorDelayLineParams(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::SensorDelayLineParams>()
     .def("__init__", [](superdex::robotics::SensorDelayLineParams* self, nb::object delay_ms, nb::object buffer_ms, nb::object buffer_assumed_frequency_hz_estimate, nb::object jitter_ms, nb::object random) {
       superdex::robotics::SensorDelayLineParams result{};
@@ -1477,6 +1582,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_rw("random", &superdex::robotics::SensorDelayLineParams::random, "The jitter's stream, drawn once per sample keyed by its capture step; needed\nwhen jitterMs > 0.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_SensorGaussianNoiseParams(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::SensorGaussianNoiseParams>()
     .def("__init__", [](superdex::robotics::SensorGaussianNoiseParams* self, nb::object std, nb::object random) {
       superdex::robotics::SensorGaussianNoiseParams result{};
@@ -1495,6 +1603,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_rw("random", &superdex::robotics::SensorGaussianNoiseParams::random)
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_SensorJointEncoderParams(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::SensorJointEncoderParams>()
     .def("__init__", [](superdex::robotics::SensorJointEncoderParams* self, nb::object joints, nb::object offset) {
       superdex::robotics::SensorJointEncoderParams result{};
@@ -1513,6 +1624,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_prop_rw("offset", [](superdex::robotics::SensorJointEncoderParams& self) -> mochi::DynamicArray<mochi::real>& { return self.offset; }, [](superdex::robotics::SensorJointEncoderParams& self, nb::object val) { self.offset = nb::cast<mochi::DynamicArray<mochi::real>>(val); }, "Calibration offset added to each joint's position [rad or m], in output order;\nempty is zeros.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_SensorUniformNoiseParams(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::SensorUniformNoiseParams>()
     .def("__init__", [](superdex::robotics::SensorUniformNoiseParams* self, nb::object low, nb::object high, nb::object random) {
       superdex::robotics::SensorUniformNoiseParams result{};
@@ -1534,6 +1648,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_rw("random", &superdex::robotics::SensorUniformNoiseParams::random)
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_SensorOutlierInjectionParams(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::SensorOutlierInjectionParams>()
     .def("__init__", [](superdex::robotics::SensorOutlierInjectionParams* self, nb::object probability, nb::object range, nb::object rotation, nb::object random) {
       superdex::robotics::SensorOutlierInjectionParams result{};
@@ -1558,6 +1675,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_rw("random", &superdex::robotics::SensorOutlierInjectionParams::random)
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_TactileTaxelLayout(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::TactileTaxelLayout>()
     .def("__init__", [](superdex::robotics::TactileTaxelLayout* self, nb::object positions) {
       superdex::robotics::TactileTaxelLayout result{};
@@ -1573,6 +1693,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_prop_rw("positions", [](superdex::robotics::TactileTaxelLayout& self) -> mochi::DynamicArray<mochi::Real3>& { return self.positions; }, [](superdex::robotics::TactileTaxelLayout& self, nb::object val) { self.positions = nb::cast<mochi::DynamicArray<mochi::Real3>>(val); }, "Taxel positions [m] in the sensor link frame. Their order is the taxel identity.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_TactileTaxelForces(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::TactileTaxelForces>()
     .def("__init__", [](superdex::robotics::TactileTaxelForces* self, nb::object forces) {
       superdex::robotics::TactileTaxelForces result{};
@@ -1588,6 +1711,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_prop_rw("forces", [](superdex::robotics::TactileTaxelForces& self) -> mochi::DynamicArray<mochi::Real3>& { return self.forces; }, [](superdex::robotics::TactileTaxelForces& self, nb::object val) { self.forces = nb::cast<mochi::DynamicArray<mochi::Real3>>(val); }, "One force [N] per layout taxel, in the sensor link frame.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_TactileAggregateForce(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::TactileAggregateForce>()
     .def("__init__", [](superdex::robotics::TactileAggregateForce* self, nb::object force) {
       superdex::robotics::TactileAggregateForce result{};
@@ -1603,6 +1729,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_prop_rw("force", [](superdex::robotics::TactileAggregateForce& self) -> mochi::Real3& { return self.force; }, [](superdex::robotics::TactileAggregateForce& self, nb::object val) { self.force = nb::cast<mochi::Real3>(val); }, "Sum of the taxel forces [N], in the sensor link frame.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_TactileAggregateWrench(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::TactileAggregateWrench>()
     .def("__init__", [](superdex::robotics::TactileAggregateWrench* self, nb::object force, nb::object torque, nb::object reference_point) {
       superdex::robotics::TactileAggregateWrench result{};
@@ -1624,6 +1753,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_prop_rw("reference_point", [](superdex::robotics::TactileAggregateWrench& self) -> mochi::Real3& { return self.referencePoint; }, [](superdex::robotics::TactileAggregateWrench& self, nb::object val) { self.referencePoint = nb::cast<mochi::Real3>(val); }, "Point about which torque is resolved [m], in the sensor link frame.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_TactileHemisphereRectParams(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::TactileHemisphereRectParams>()
     .def("__init__", [](superdex::robotics::TactileHemisphereRectParams* self, nb::object center, nb::object tip_direction, nb::object zero_longitude_direction, nb::object width, nb::object height, nb::object max_polar_latitude, nb::object projection, nb::object rasterization, nb::object voronoi_oversampling, nb::object outside_policy) {
       superdex::robotics::TactileHemisphereRectParams result{};
@@ -1666,6 +1798,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_rw("outside_policy", &superdex::robotics::TactileHemisphereRectParams::outsidePolicy, "Handling for source taxels beyond maxPolarLatitude.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_TactileRectProjectionMap(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::TactileRectProjectionMap>()
     .def("__init__", [](superdex::robotics::TactileRectProjectionMap* self, nb::object coordinates, nb::object taxel_cells, nb::object taxel_contribution_offsets, nb::object contribution_cells, nb::object contribution_weights, nb::object width, nb::object height, nb::object selected_taxel_count, nb::object rasterization, nb::object voronoi_oversampling) {
       superdex::robotics::TactileRectProjectionMap result{};
@@ -1708,6 +1843,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_rw("voronoi_oversampling", &superdex::robotics::TactileRectProjectionMap::voronoiOversampling, "Fine-grid scale used for Voronoi resampling, or one for nearest-cell mode.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_TactileForceGrid(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::TactileForceGrid>()
     .def("__init__", [](superdex::robotics::TactileForceGrid* self, nb::object forces, nb::object taxel_counts, nb::object width, nb::object height) {
       superdex::robotics::TactileForceGrid result{};
@@ -1732,6 +1870,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_rw("height", &superdex::robotics::TactileForceGrid::height, "Number of grid rows.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_ControllerBasicJscPd(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::ControllerBasicJscPd, superdex::robotics::ControllerBase>()
     .def_static("type_name", &superdex::robotics::ControllerBasicJscPd::TypeName
       , "Registration type name for this controller (see\nRoboticsContext::RegisterControllerType).\n\nReturns:\n    This controller's registration type name."
@@ -1774,6 +1915,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     )
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_SensorAxis(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::SensorAxis>()
     .def("__init__", [](superdex::robotics::SensorAxis* self, nb::object name, nb::object labels, nb::object units) {
       superdex::robotics::SensorAxis result{};
@@ -1795,6 +1939,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_prop_rw("units", [](superdex::robotics::SensorAxis& self) -> mochi::DynamicArray<mochi::DynamicString>& { return self.units; }, [](superdex::robotics::SensorAxis& self, nb::object val) { self.units = nb::cast<mochi::DynamicArray<mochi::DynamicString>>(val); })
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_SensorFormat(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::SensorFormat>()
     .def("__init__", [](superdex::robotics::SensorFormat* self, nb::object kind, nb::object shape, nb::object dtype, nb::object axes) {
       superdex::robotics::SensorFormat result{};
@@ -1819,6 +1966,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_prop_rw("axes", [](superdex::robotics::SensorFormat& self) -> mochi::DynamicArray<superdex::robotics::SensorAxis>& { return self.axes; }, [](superdex::robotics::SensorFormat& self, nb::object val) { self.axes = nb::cast<mochi::DynamicArray<superdex::robotics::SensorAxis>>(val); })
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_SensorSample(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::SensorSample>()
     .def("__init__", [](superdex::robotics::SensorSample* self, nb::object capture_step, nb::object capture_time) {
       superdex::robotics::SensorSample result{};
@@ -1837,6 +1987,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_rw("capture_time", &superdex::robotics::SensorSample::captureTime, "Source capture time in seconds.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_SensorBase(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::SensorBase, superdex::robotics::ComponentBase>()
     .def("get_format", &superdex::robotics::SensorBase::GetFormat
       , "Return the immutable tensor contract prepared when this sensor was initialized.\n\nReturns:\n    Shape, element type, semantic kind, labels and units for the sensor output."
@@ -1861,12 +2014,18 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     )
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_SensorArticulatedJointWrench(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::SensorArticulatedJointWrench, superdex::robotics::SensorBase>()
     .def_static("type_name", &superdex::robotics::SensorArticulatedJointWrench::TypeName
       , "Registration type name for this sensor (pass to RoboticsContext.create_sensor).\n\nReturns:\n    This sensor's canonical registration type name."
     )
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_SensorLinkVertexForceParams(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::SensorLinkVertexForceParams>()
     .def("__init__", [](superdex::robotics::SensorLinkVertexForceParams* self, nb::object sample_rate_hz) {
       superdex::robotics::SensorLinkVertexForceParams result{};
@@ -1882,6 +2041,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_rw("sample_rate_hz", &superdex::robotics::SensorLinkVertexForceParams::sampleRateHz, "Samples per second, or zero to capture every graph step.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_SensorLinkVertexForce(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::SensorLinkVertexForce, superdex::robotics::SensorBase>()
     .def_static("type_name", &superdex::robotics::SensorLinkVertexForce::TypeName
       , "Canonical serialized sensor type identifier.\n\nReturns:\n    Stable type identifier."
@@ -1892,12 +2054,18 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     )
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_SensorAggregateForceParams(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::SensorAggregateForceParams>()
     .def(nb::init<>())
     .def("__copy__", [](superdex::robotics::SensorAggregateForceParams const& self) { return superdex::robotics::SensorAggregateForceParams(self); })
     .def("__deepcopy__", [](superdex::robotics::SensorAggregateForceParams const& self, nb::dict) { return superdex::robotics::SensorAggregateForceParams(self); })
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_SensorAggregateForce(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::SensorAggregateForce, superdex::robotics::SensorBase>()
     .def_static("type_name", &superdex::robotics::SensorAggregateForce::TypeName
       , "Canonical serialized sensor type identifier.\n\nReturns:\n    Stable type identifier."
@@ -1908,6 +2076,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     )
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_SensorConcatParams(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::SensorConcatParams>()
     .def("__init__", [](superdex::robotics::SensorConcatParams* self, nb::object axis_name, nb::object input_labels) {
       superdex::robotics::SensorConcatParams result{};
@@ -1926,6 +2097,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_prop_rw("input_labels", [](superdex::robotics::SensorConcatParams& self) -> mochi::DynamicArray<mochi::DynamicString>& { return self.inputLabels; }, [](superdex::robotics::SensorConcatParams& self, nb::object val) { self.inputLabels = nb::cast<mochi::DynamicArray<mochi::DynamicString>>(val); }, "Optional labels, one per input in input order.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_SensorConcat(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::SensorConcat, superdex::robotics::SensorBase>()
     .def_static("type_name", &superdex::robotics::SensorConcat::TypeName
       , "Canonical serialized sensor type identifier.\n\nReturns:\n    Stable type identifier."
@@ -1939,9 +2113,15 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     )
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_ActuatorBase(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::ActuatorBase, superdex::robotics::ComponentBase>()
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_SensorCamera(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::SensorCamera, superdex::robotics::SensorBase>()
     .def_static("type_name", &superdex::robotics::SensorCamera::TypeName
       , "Registration type name for this sensor (see\nRoboticsContext::RegisterSensorType).\n\nReturns:\n    This sensor's registration type name."
@@ -1962,6 +2142,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     )
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_SensorSeedRectMap(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::SensorSeedRectMap, superdex::robotics::SensorBase>()
     .def_static("type_name", &superdex::robotics::SensorSeedRectMap::TypeName
     )
@@ -1970,6 +2153,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     )
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_SensorSeedV1MLP(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::SensorSeedV1MLP, superdex::robotics::SensorBase>()
     .def_static("type_name", &superdex::robotics::SensorSeedV1MLP::TypeName
     )
@@ -2006,6 +2192,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     )
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_SensorTemporalWindow(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::SensorTemporalWindow, superdex::robotics::SensorBase>()
     .def_static("type_name", &superdex::robotics::SensorTemporalWindow::TypeName
     )
@@ -2014,6 +2203,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     )
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_SensorDelayLine(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::SensorDelayLine, superdex::robotics::SensorBase>()
     .def_static("type_name", &superdex::robotics::SensorDelayLine::TypeName
     )
@@ -2031,6 +2223,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     )
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_SensorGaussianNoise(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::SensorGaussianNoise, superdex::robotics::SensorBase>()
     .def_static("type_name", &superdex::robotics::SensorGaussianNoise::TypeName
     )
@@ -2047,6 +2242,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     )
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_SensorUniformNoise(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::SensorUniformNoise, superdex::robotics::SensorBase>()
     .def_static("type_name", &superdex::robotics::SensorUniformNoise::TypeName
     )
@@ -2063,6 +2261,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     )
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_SensorOutlierInjection(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::SensorOutlierInjection, superdex::robotics::SensorBase>()
     .def_static("type_name", &superdex::robotics::SensorOutlierInjection::TypeName
     )
@@ -2079,6 +2280,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     )
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_SensorJointEncoder(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::SensorJointEncoder, superdex::robotics::SensorBase>()
     .def_static("type_name", &superdex::robotics::SensorJointEncoder::TypeName
     )
@@ -2097,11 +2301,17 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     )
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_SensorFunction(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::SensorFunction, superdex::robotics::SensorBase>()
     .def_static("type_name", &superdex::robotics::SensorFunction::TypeName
     )
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_BotSceneMetadata(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::BotSceneMetadata>()
     .def("__init__", [](superdex::robotics::BotSceneMetadata* self, nb::object name, nb::object description, nb::object version, nb::object author) {
       superdex::robotics::BotSceneMetadata result{};
@@ -2126,6 +2336,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_rw("author", &superdex::robotics::BotSceneMetadata::author, "Author name or unixname.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_PrefabEntry(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::PrefabEntry>()
     .def("__init__", [](superdex::robotics::PrefabEntry* self, nb::object name, nb::object path) {
       superdex::robotics::PrefabEntry result{};
@@ -2144,6 +2357,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_rw("path", &superdex::robotics::PrefabEntry::path, "Relative path to a .mochi_scene, .mochi_prefab, .superdex_bot, or\n.superdex_bot_archive file.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_BaseSceneParams(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::BaseSceneParams>()
     .def("__init__", [](superdex::robotics::BaseSceneParams* self, nb::object base_scene, nb::object spawnable_prefabs, nb::object task_root) {
       superdex::robotics::BaseSceneParams result{};
@@ -2165,6 +2381,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_prop_rw("task_root", [](superdex::robotics::BaseSceneParams& self) -> std::optional<mochi::TransformRT>& { return self.taskRoot; }, [](superdex::robotics::BaseSceneParams& self, nb::handle val) { self.taskRoot = val.is_none() ? std::optional<mochi::TransformRT>{} : nb::cast<std::optional<mochi::TransformRT>>(val); }, "Where this scene's task frame (the nominal table top) is in the world. Every\ntask's root-level spawns are placed onto it, through the task's taskRootOffset\nwhen it declares one. Unset leaves every task where its own coordinates put it.", nb::for_setter(nb::arg("value").none()))
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_ControllerEntry(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::ControllerEntry>()
     .def("__init__", [](superdex::robotics::ControllerEntry* self, nb::object type, nb::object name, nb::object params, nb::object init_args) {
       superdex::robotics::ControllerEntry result{};
@@ -2189,6 +2408,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_rw("init_args", &superdex::robotics::ControllerEntry::initArgs, "The controller's init args as a serialized JSON object -- the contents of the\nscene entry's nested \"initArgs\" object (e.g. {\"baseLinkName\":..,\"eeLinkName\":..}\nfor link-resolved controllers, or a model path for a learned controller). Passed\nverbatim to ControllerBase::ConfigureFromSceneEntry, which deserializes it into\na controller-specific struct, so the scene loader never needs to know a\ncontroller's fields. Reflected with the JsonString attribute: on load the nested\n\"initArgs\" object is captured into this string, and on save it is re-emitted as\na nested object (round-trip identity), so no bespoke parsing is needed. May also\nbe set or modified directly (e.g. from Python) before LoadBotScene. Defaults to\nan empty object (\"{}\"), which NoSerializeDefaults omits from the saved file.\n(Legacy scenes that interleave flat controller fields instead of a nested\n\"initArgs\" object are folded into this string at load time -- see\nLoadBotScenePrefabFromFile; new scenes and all saves use the nested form.)")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_BotEntry(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::BotEntry>()
     .def("__init__", [](superdex::robotics::BotEntry* self, nb::object name, nb::object path, nb::object parent_from_bot, nb::object initial_pose, nb::object has_gravity, nb::object controllers, nb::object roboperator_class) {
       superdex::robotics::BotEntry result{};
@@ -2222,6 +2444,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_rw("roboperator_class", &superdex::robotics::BotEntry::roboperatorClass, "Key naming the teleoperator rig that drives this bot; the consumer maps it to a\nconcrete class. Empty means use the consumer's default for the slot this bot\nfills.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_SensorGraphNodeView(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::SensorGraphNodeView>()
     .def("__init__", [](superdex::robotics::SensorGraphNodeView* self, nb::object name, nb::object handle) {
       superdex::robotics::SensorGraphNodeView result{};
@@ -2240,6 +2465,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_rw("handle", &superdex::robotics::SensorGraphNodeView::handle, "Sensor handle in the owning robotics context.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_SlotEntry(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::SlotEntry>()
     .def("__init__", [](superdex::robotics::SlotEntry* self, nb::object name, nb::object controlled_bots) {
       superdex::robotics::SlotEntry result{};
@@ -2258,6 +2486,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_prop_rw("controlled_bots", [](superdex::robotics::SlotEntry& self) -> mochi::DynamicArray<mochi::DynamicString>& { return self.controlledBots; }, [](superdex::robotics::SlotEntry& self, nb::object val) { self.controlledBots = nb::cast<mochi::DynamicArray<mochi::DynamicString>>(val); }, "Names of bot entries that may fill this slot. A consumer picks at most one per\nslot; superdex validates that each named bot exists and is listed once, and\nnothing else. Which slots a scene has, and what they mean, is the scene's\nbusiness, not superdex's.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_SceneSensorEntry(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::SceneSensorEntry>()
     .def("__init__", [](superdex::robotics::SceneSensorEntry* self, nb::object type, nb::object name, nb::object inputs, nb::object parent_from_sensor, nb::object params) {
       superdex::robotics::SceneSensorEntry result{};
@@ -2285,6 +2516,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_rw("params", &superdex::robotics::SceneSensorEntry::params, "Sensor-specific parameters: a path to a .superdex_sensor JSON file or inline\nJSON. Omit to use defaults.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_BotScenePrefab(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::BotScenePrefab>()
     .def("__init__", [](superdex::robotics::BotScenePrefab* self, nb::object metadata, nb::object scene, nb::object bots, nb::object sensors, nb::object slots) {
       superdex::robotics::BotScenePrefab result{};
@@ -2312,6 +2546,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_prop_rw("slots", [](superdex::robotics::BotScenePrefab& self) -> mochi::DynamicArray<superdex::robotics::SlotEntry>& { return self.slots; }, [](superdex::robotics::BotScenePrefab& self, nb::object val) { self.slots = nb::cast<mochi::DynamicArray<superdex::robotics::SlotEntry>>(val); }, "Slots this scene offers, and which bots may fill each. A map in meaning, an\narray of named entries in the file, as every other named collection in this\nschema is. Empty means the scene declares no slots and offers no choice.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_SceneUrdfJointVelocityLimit(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::SceneUrdfJointVelocityLimit>()
     .def("__init__", [](superdex::robotics::SceneUrdfJointVelocityLimit* self, nb::object joint, nb::object velocity) {
       superdex::robotics::SceneUrdfJointVelocityLimit result{};
@@ -2330,6 +2567,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_rw("velocity", &superdex::robotics::SceneUrdfJointVelocityLimit::velocity, "Velocity limit [rad/s or m/s].")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_SceneUrdfLinkAlias(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::SceneUrdfLinkAlias>()
     .def("__init__", [](superdex::robotics::SceneUrdfLinkAlias* self, nb::object link, nb::object alias) {
       superdex::robotics::SceneUrdfLinkAlias result{};
@@ -2348,6 +2588,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_rw("alias", &superdex::robotics::SceneUrdfLinkAlias::alias, "Alias name, prefixed like the link it is attached to.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_SceneUrdfOptions(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::SceneUrdfOptions>()
     .def("__init__", [](superdex::robotics::SceneUrdfOptions* self, nb::object robot_name, nb::object instance_name, nb::object strip_index_prefixes, nb::object joint_velocity_limits, nb::object require_velocity_limits, nb::object link_aliases) {
       superdex::robotics::SceneUrdfOptions result{};
@@ -2378,6 +2621,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_prop_rw("link_aliases", [](superdex::robotics::SceneUrdfOptions& self) -> mochi::DynamicArray<superdex::robotics::SceneUrdfLinkAlias>& { return self.linkAliases; }, [](superdex::robotics::SceneUrdfOptions& self, nb::object val) { self.linkAliases = nb::cast<mochi::DynamicArray<superdex::robotics::SceneUrdfLinkAlias>>(val); }, "Extra frames to add, e.g. ROS names for a bot's base and tool links.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_BotScene(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::BotScene>()
     .def("get_scene", &superdex::robotics::BotScene::GetScene
       , "Get the physics scene.\n\nReturns:\n    Physics scene, or None if it is unavailable."
@@ -2561,6 +2807,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     )
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_SpawnEntry(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::SpawnEntry>()
     .def("__init__", [](superdex::robotics::SpawnEntry* self, nb::object name, nb::object prefab_name, nb::object parent, nb::object parent_from_spawn) {
       superdex::robotics::SpawnEntry result{};
@@ -2585,6 +2834,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_rw("parent_from_spawn", &superdex::robotics::SpawnEntry::parentFromSpawn, "Local pose relative to :attr:`~superdex.robotics.SpawnEntry.parent` (aFromB\nconvention: maps spawn-frame coordinates into the parent frame). Default:\nidentity.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_BotTaskPrefab(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::BotTaskPrefab>()
     .def("__init__", [](superdex::robotics::BotTaskPrefab* self, nb::object metadata, nb::object reset_state, nb::object task_root_offset, nb::object physics_hz, nb::object time_limit_s) {
       superdex::robotics::BotTaskPrefab result{};
@@ -2612,6 +2864,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_rw("time_limit_s", &superdex::robotics::BotTaskPrefab::timeLimitS, "How long an episode may run before it ends with neither outcome, in seconds of\nsim time. 0 means the task sets no limit.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_TerminationOutcome(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::TerminationOutcome>()
     .def("__init__", [](superdex::robotics::TerminationOutcome* self, nb::object success_authored, nb::object success, nb::object failure_authored, nb::object failure) {
       superdex::robotics::TerminationOutcome result{};
@@ -2636,6 +2891,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_rw("failure", &superdex::robotics::TerminationOutcome::failure, "Whether the failure criteria have held for their validation time.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_DREpisodeEntry(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::DREpisodeEntry>()
     .def("__init__", [](superdex::robotics::DREpisodeEntry* self, nb::object key, nb::object scalar, nb::object value) {
       superdex::robotics::DREpisodeEntry result{};
@@ -2657,6 +2915,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_prop_rw("value", [](superdex::robotics::DREpisodeEntry& self) -> mochi::DynamicArray<mochi::real>& { return self.value; }, [](superdex::robotics::DREpisodeEntry& self, nb::object val) { self.value = nb::cast<mochi::DynamicArray<mochi::real>>(val); })
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_DREpisode(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::DREpisode>()
     .def("__init__", [](superdex::robotics::DREpisode* self, nb::object index, nb::object episode_seed, nb::object values, nb::object applied_keys) {
       superdex::robotics::DREpisode result{};
@@ -2681,6 +2942,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_prop_rw("applied_keys", [](superdex::robotics::DREpisode& self) -> std::optional<mochi::DynamicArray<mochi::DynamicString>>& { return self.appliedKeys; }, [](superdex::robotics::DREpisode& self, nb::handle val) { self.appliedKeys = val.is_none() ? std::optional<mochi::DynamicArray<mochi::DynamicString>>{} : nb::cast<std::optional<mochi::DynamicArray<mochi::DynamicString>>>(val); }, "Observed application keys. Absent means unknown; an empty list means coverage\nwas recorded but no quantities were applied. Keys must occur in values.", nb::for_setter(nb::arg("value").none()))
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_DREpisodeList(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::DREpisodeList>()
     .def("__init__", [](superdex::robotics::DREpisodeList* self, nb::object schema_version, nb::object spec_version, nb::object master_seed, nb::object episodes, nb::object provenance, nb::object metadata) {
       superdex::robotics::DREpisodeList result{};
@@ -2711,6 +2975,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_rw("metadata", &superdex::robotics::DREpisodeList::metadata, "Opaque producer JSON object, emitted under metadata in schema 2. Empty means no\nextra fields. Numeric metadata uses signed-int64 or binary64; encode full uint64\nIDs as strings.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_ResolvedSpawn(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::ResolvedSpawn>()
     .def("__init__", [](superdex::robotics::ResolvedSpawn* self, nb::object name, nb::object prefab_name, nb::object parent, nb::object parent_from_spawn, nb::object world_from_spawn) {
       superdex::robotics::ResolvedSpawn result{};
@@ -2738,6 +3005,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_rw("world_from_spawn", &superdex::robotics::ResolvedSpawn::worldFromSpawn, "The entry's pose composed through its parent chain, with the task root at the\nworldFromTask passed to ResolveResetState.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_AssetSnapshotEntry(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::AssetSnapshotEntry>()
     .def("__init__", [](superdex::robotics::AssetSnapshotEntry* self, nb::object file, nb::object version) {
       superdex::robotics::AssetSnapshotEntry result{};
@@ -2756,6 +3026,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_rw("version", &superdex::robotics::AssetSnapshotEntry::version)
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_AssetSnapshot(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::AssetSnapshot>()
     .def("__init__", [](superdex::robotics::AssetSnapshot* self, nb::object scene, nb::object created_at, nb::object source_revision, nb::object files) {
       superdex::robotics::AssetSnapshot result{};
@@ -2780,6 +3053,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_prop_rw("files", [](superdex::robotics::AssetSnapshot& self) -> mochi::DynamicArray<superdex::robotics::AssetSnapshotEntry>& { return self.files; }, [](superdex::robotics::AssetSnapshot& self, nb::object val) { self.files = nb::cast<mochi::DynamicArray<superdex::robotics::AssetSnapshotEntry>>(val); })
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_SensorLinkContactForceParams(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::SensorLinkContactForceParams>()
     .def("__init__", [](superdex::robotics::SensorLinkContactForceParams* self, nb::object sample_rate_hz) {
       superdex::robotics::SensorLinkContactForceParams result{};
@@ -2795,6 +3071,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_rw("sample_rate_hz", &superdex::robotics::SensorLinkContactForceParams::sampleRateHz, "Samples per second, or zero to capture every graph step.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_bots_SensorLinkContactForce(PybindRegistry& registry) {
   registry.GetClass<superdex::robotics::SensorLinkContactForce, superdex::robotics::SensorBase>()
     .def_static("type_name", &superdex::robotics::SensorLinkContactForce::TypeName
       , "Canonical serialized sensor type identifier.\n\nReturns:\n    Stable type identifier."
@@ -2805,414 +3084,515 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     )
   ;
 
-    m_bots.attr("EFFORT_UNBOUNDED") = nb::cast(superdex::robotics::kEffortUnbounded);
+}
 
-    m_bots.def("derive", &superdex::robotics::Derive
-      , nb::arg("seed")
-      , nb::arg("key")
-      , nb::arg("index").sig("...") = std::optional<uint64_t>{}
-      , "Deterministic 64-bit sub-seed from a master seed and a stable key.\n\nStateless and order-independent. Returns a seed for the caller's random\ngenerator; it does not sample values. Uses the FNV-1a key hash XOR seed,\nSplitMix64-finalized. Parity-locked to the Python DR derivation: both must match\nbit-for-bit, and the C++ and Python golden-vector sets must stay in sync. The\ngolden vectors in test/derive_test.cpp define the seed contract. Different keys\ncan collide; this is not a cryptographic hash.\n\nArgs:\n    seed (int): Master seed.\n    key (str): Stable string key, hashed as UTF-8 bytes.\n    index (Optional[int]): Optional index; None and 0 are distinct.\n\nReturns:\n    Deterministic 64-bit sub-seed in [0, 2^64)."
-    );
+} // namespace
 
-    m_bots.def("load_bot_prefab_from_file", [](std::string_view path) {
-      mochi::Error error;
-      auto result = superdex::robotics::LoadBotPrefabFromFile(path, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
+void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_& m, [[maybe_unused]] PybindRegistry& registry) {
+  auto m_bots = m.def_submodule("bots");
+
+  Define_bots_RoboticsHandle(registry);
+  Define_bots_BotHandle(registry);
+  Define_bots_ControllerHandle(registry);
+  Define_bots_SensorHandle(registry);
+  Define_bots_ActuatorHandle(registry);
+  Define_bots_BotJointPrefab(registry);
+  Define_bots_BotSensorPrefab(registry);
+  Define_bots_BotActuatorPrefab(registry);
+  Define_bots_BotLinkPrefab(registry);
+  Define_bots_BotContactOverride(registry);
+  Define_bots_BotTransmissionPrefab(registry);
+  Define_bots_BotLinearTransmissionPrefab(registry);
+  Define_bots_BotSpatialTendonPrefab(registry);
+  Define_bots_BotPrefab(registry);
+  Define_bots_RoboticsContext(registry);
+  Define_bots_ComponentBase(registry);
+  Define_bots_ControllerBase(registry);
+  Define_bots_ControllerBasicOscPdParams(registry);
+  Define_bots_ControllerBasicOscPdObsv(registry);
+  Define_bots_ControllerBasicOscPdTarget(registry);
+  Define_bots_ControllerBasicOscPd(registry);
+  Define_bots_ControllerMochiArticulatedPoseParams(registry);
+  Define_bots_ControllerMochiArticulatedPoseObsv(registry);
+  Define_bots_ControllerMochiArticulatedPoseTarget(registry);
+  Define_bots_ControllerMochiArticulatedPose(registry);
+  Define_bots_Bot(registry);
+  Define_bots_ControllerBasicJscPdParams(registry);
+  Define_bots_ControllerBasicJscPdObsv(registry);
+  Define_bots_ControllerBasicJscPdTarget(registry);
+  Define_bots_SensorCameraParams(registry);
+  Define_bots_SensorSeedRectMapParams(registry);
+  Define_bots_SensorSeedV1MLPParams(registry);
+  Define_bots_SensorSeedV1MLPResult(registry);
+  Define_bots_SensorTemporalWindowParams(registry);
+  Define_bots_SensorRandomParams(registry);
+  Define_bots_SensorDelayLineParams(registry);
+  Define_bots_SensorGaussianNoiseParams(registry);
+  Define_bots_SensorJointEncoderParams(registry);
+  Define_bots_SensorUniformNoiseParams(registry);
+  Define_bots_SensorOutlierInjectionParams(registry);
+  Define_bots_TactileTaxelLayout(registry);
+  Define_bots_TactileTaxelForces(registry);
+  Define_bots_TactileAggregateForce(registry);
+  Define_bots_TactileAggregateWrench(registry);
+  Define_bots_TactileHemisphereRectParams(registry);
+  Define_bots_TactileRectProjectionMap(registry);
+  Define_bots_TactileForceGrid(registry);
+  Define_bots_ControllerBasicJscPd(registry);
+  Define_bots_SensorAxis(registry);
+  Define_bots_SensorFormat(registry);
+  Define_bots_SensorSample(registry);
+  Define_bots_SensorBase(registry);
+  Define_bots_SensorArticulatedJointWrench(registry);
+  Define_bots_SensorLinkVertexForceParams(registry);
+  Define_bots_SensorLinkVertexForce(registry);
+  Define_bots_SensorAggregateForceParams(registry);
+  Define_bots_SensorAggregateForce(registry);
+  Define_bots_SensorConcatParams(registry);
+  Define_bots_SensorConcat(registry);
+  Define_bots_ActuatorBase(registry);
+  Define_bots_SensorCamera(registry);
+  Define_bots_SensorSeedRectMap(registry);
+  Define_bots_SensorSeedV1MLP(registry);
+  Define_bots_SensorTemporalWindow(registry);
+  Define_bots_SensorDelayLine(registry);
+  Define_bots_SensorGaussianNoise(registry);
+  Define_bots_SensorUniformNoise(registry);
+  Define_bots_SensorOutlierInjection(registry);
+  Define_bots_SensorJointEncoder(registry);
+  Define_bots_SensorFunction(registry);
+  Define_bots_BotSceneMetadata(registry);
+  Define_bots_PrefabEntry(registry);
+  Define_bots_BaseSceneParams(registry);
+  Define_bots_ControllerEntry(registry);
+  Define_bots_BotEntry(registry);
+  Define_bots_SensorGraphNodeView(registry);
+  Define_bots_SlotEntry(registry);
+  Define_bots_SceneSensorEntry(registry);
+  Define_bots_BotScenePrefab(registry);
+  Define_bots_SceneUrdfJointVelocityLimit(registry);
+  Define_bots_SceneUrdfLinkAlias(registry);
+  Define_bots_SceneUrdfOptions(registry);
+  Define_bots_BotScene(registry);
+  Define_bots_SpawnEntry(registry);
+  Define_bots_BotTaskPrefab(registry);
+  Define_bots_TerminationOutcome(registry);
+  Define_bots_DREpisodeEntry(registry);
+  Define_bots_DREpisode(registry);
+  Define_bots_DREpisodeList(registry);
+  Define_bots_ResolvedSpawn(registry);
+  Define_bots_AssetSnapshotEntry(registry);
+  Define_bots_AssetSnapshot(registry);
+  Define_bots_SensorLinkContactForceParams(registry);
+  Define_bots_SensorLinkContactForce(registry);
+  m_bots.attr("EFFORT_UNBOUNDED") = nb::cast(superdex::robotics::kEffortUnbounded);
+
+  m_bots.def("derive", &superdex::robotics::Derive
+    , nb::arg("seed")
+    , nb::arg("key")
+    , nb::arg("index").sig("...") = std::optional<uint64_t>{}
+    , "Deterministic 64-bit sub-seed from a master seed and a stable key.\n\nStateless and order-independent. Returns a seed for the caller's random\ngenerator; it does not sample values. Uses the FNV-1a key hash XOR seed,\nSplitMix64-finalized. Parity-locked to the Python DR derivation: both must match\nbit-for-bit, and the C++ and Python golden-vector sets must stay in sync. The\ngolden vectors in test/derive_test.cpp define the seed contract. Different keys\ncan collide; this is not a cryptographic hash.\n\nArgs:\n    seed (int): Master seed.\n    key (str): Stable string key, hashed as UTF-8 bytes.\n    index (Optional[int]): Optional index; None and 0 are distinct.\n\nReturns:\n    Deterministic 64-bit sub-seed in [0, 2^64)."
+  );
+
+  m_bots.def("load_bot_prefab_from_file", [](std::string_view path) {
+    mochi::Error error;
+    auto result = superdex::robotics::LoadBotPrefabFromFile(path, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("path")
-      , "Load bot parameters from a .superdex_bot file using the default file-based\nloader. Automatically resolves ModBotPrefab files by building the final\n:class:`~superdex.robotics.BotPrefab`.\n\nIf path is a .superdex_bot_archive file (see ArchiveBot), the archive is\ntransparently extracted and cached into a temp directory and the embedded target\nbot is loaded.\n\nArgs:\n    path (str): File path to the .superdex_bot or .superdex_bot_archive file.\n\nReturns:\n    Loaded or built :class:`~superdex.robotics.BotPrefab`, or\n    default-constructed on failure.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
-    );
+    return result;
+  }
+    , nb::arg("path")
+    , "Load bot parameters from a .superdex_bot file using the default file-based\nloader. Automatically resolves ModBotPrefab files by building the final\n:class:`~superdex.robotics.BotPrefab`.\n\nIf path is a .superdex_bot_archive file (see ArchiveBot), the archive is\ntransparently extracted and cached into a temp directory and the embedded target\nbot is loaded.\n\nArgs:\n    path (str): File path to the .superdex_bot or .superdex_bot_archive file.\n\nReturns:\n    Loaded or built :class:`~superdex.robotics.BotPrefab`, or\n    default-constructed on failure.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+  );
 
-    m_bots.def("load_bot_prefab_from_urdf_file", [](std::string_view path) {
-      mochi::Error error;
-      auto result = superdex::robotics::LoadBotPrefabFromUrdfFile(path, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
+  m_bots.def("load_bot_prefab_from_urdf_file", [](std::string_view path) {
+    mochi::Error error;
+    auto result = superdex::robotics::LoadBotPrefabFromUrdfFile(path, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("path")
-      , "Load bot parameters from a URDF file.\n\nParses the URDF and resolves each link's visual and collision mesh references\nrelative to the URDF location (ROS `package://` URIs are supported), storing the\nresolved on-disk paths in the returned prefab. Collision meshes may be any\nformat the shape loader accepts (e.g. .stl, .obj, .ply, .off, .mochi.h5); when a\ncollision mesh carries no baked SDF, one is generated on demand at bot creation.\nA free `world_joint` is injected at index 0. A link with several mesh\n``<collision>`` or ``<visual>`` elements gets one Hard-jointed child link per\nextra mesh, named after the link with a `_collision_k` or `_visual_k` suffix and\nappended after the existing links.\n\nArgs:\n    path (str): Path to the .urdf file.\n\nReturns:\n    The loaded or built :class:`~superdex.robotics.BotPrefab`.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    Only ``<mesh>`` geometry is assigned. Primitive URDF shapes (``<box>``,\n    ``<cylinder>``, ``<sphere>``) have no file to point at and are skipped."
-    );
+    return result;
+  }
+    , nb::arg("path")
+    , "Load bot parameters from a URDF file.\n\nParses the URDF and resolves each link's visual and collision mesh references\nrelative to the URDF location (ROS `package://` URIs are supported), storing the\nresolved on-disk paths in the returned prefab. Collision meshes may be any\nformat the shape loader accepts (e.g. .stl, .obj, .ply, .off, .mochi.h5); when a\ncollision mesh carries no baked SDF, one is generated on demand at bot creation.\nA free `world_joint` is injected at index 0. A link with several mesh\n``<collision>`` or ``<visual>`` elements gets one Hard-jointed child link per\nextra mesh, named after the link with a `_collision_k` or `_visual_k` suffix and\nappended after the existing links.\n\nArgs:\n    path (str): Path to the .urdf file.\n\nReturns:\n    The loaded or built :class:`~superdex.robotics.BotPrefab`.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    Only ``<mesh>`` geometry is assigned. Primitive URDF shapes (``<box>``,\n    ``<cylinder>``, ``<sphere>``) have no file to point at and are skipped."
+  );
 
-    m_bots.def("load_bot_prefab_from_mjcf_file", [](std::string_view path) {
-      mochi::Error error;
-      auto result = superdex::robotics::LoadBotPrefabFromMjcfFile(path, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
+  m_bots.def("load_bot_prefab_from_mjcf_file", [](std::string_view path) {
+    mochi::Error error;
+    auto result = superdex::robotics::LoadBotPrefabFromMjcfFile(path, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("path")
-      , "Load bot parameters from an MJCF (MuJoCo XML) file.\n\nBodies become links and joints, ``<inertial>`` becomes explicit link inertia,\nand mesh geoms are assigned as link shapes and render models. A body with\nseveral collision or visual geoms gets one Hard-jointed child link per extra\ngeom. Primitive geoms (boxes, capsules, ...) are not assigned; import the MJCF\nin SuperDex Studio to convert them. MJCF content without a SuperDex equivalent\n(tendons, sites, sensors, actuator gains, ...) is skipped with a logged warning.\n\nArgs:\n    path (str): Path to the MJCF file.\n\nReturns:\n    The loaded :class:`~superdex.robotics.BotPrefab`.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
-    );
+    return result;
+  }
+    , nb::arg("path")
+    , "Load bot parameters from an MJCF (MuJoCo XML) file.\n\nBodies become links and joints, ``<inertial>`` becomes explicit link inertia,\nand mesh geoms are assigned as link shapes and render models. A body with\nseveral collision or visual geoms gets one Hard-jointed child link per extra\ngeom. Primitive geoms (boxes, capsules, ...) are not assigned; import the MJCF\nin SuperDex Studio to convert them. MJCF content without a SuperDex equivalent\n(tendons, sites, sensors, actuator gains, ...) is skipped with a logged warning.\n\nArgs:\n    path (str): Path to the MJCF file.\n\nReturns:\n    The loaded :class:`~superdex.robotics.BotPrefab`.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+  );
 
-    m_bots.def("build_articulated_pose_from_bot_pose", [](superdex::robotics::BotPrefab const& bot_prefab, mochi::Span<mochi::real const> src_pose, int num_actor_dofs) {
-      mochi::Error error;
-      auto result = superdex::robotics::BuildArticulatedPoseFromBotPose(bot_prefab, src_pose, num_actor_dofs, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
+  m_bots.def("build_articulated_pose_from_bot_pose", [](superdex::robotics::BotPrefab const& bot_prefab, mochi::Span<mochi::real const> src_pose, int num_actor_dofs) {
+    mochi::Error error;
+    auto result = superdex::robotics::BuildArticulatedPoseFromBotPose(bot_prefab, src_pose, num_actor_dofs, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("bot_prefab")
-      , nb::arg("src_pose")
-      , nb::arg("num_actor_dofs")
-      , "Convert a bot-space pose to an articulated-actor pose.\n\nBot DOFs never include the root joint's, whether or not the articulation has\nany: a Free root contributes 6 actor DOFs that bot space excludes, and a Hard\nroot contributes none. The two spaces therefore share an order and differ only\nby that leading offset, so this copies srcPose to pose[i + numBaseDofs] and\nzero-fills the base DOFs, producing the actor-DOF layout\n:meth:`~superdex.physics.Actor.set_articulated_pose_from_joints` expects. It\nnever permutes.\n\nArgs:\n    bot_prefab (BotPrefab): Bot describing the articulation.\n    src_pose (ArrayLikeReal): Bot-space pose (must have\n        ``superdex::robotics::BotPrefab::_numDofs`` entries).\n    num_actor_dofs (int): The actor's DOF count\n        (:meth:`~superdex.physics.Actor.get_num_dofs`).\n\nReturns:\n    Pose in actor-DOF layout, sized to numActorDofs.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nWarning:\n    This documentation references the following C++ API, which is not available\n    in Python: ``superdex::robotics::BotPrefab::_numDofs``."
-    );
+    return result;
+  }
+    , nb::arg("bot_prefab")
+    , nb::arg("src_pose")
+    , nb::arg("num_actor_dofs")
+    , "Convert a bot-space pose to an articulated-actor pose.\n\nBot DOFs never include the root joint's, whether or not the articulation has\nany: a Free root contributes 6 actor DOFs that bot space excludes, and a Hard\nroot contributes none. The two spaces therefore share an order and differ only\nby that leading offset, so this copies srcPose to pose[i + numBaseDofs] and\nzero-fills the base DOFs, producing the actor-DOF layout\n:meth:`~superdex.physics.Actor.set_articulated_pose_from_joints` expects. It\nnever permutes.\n\nArgs:\n    bot_prefab (BotPrefab): Bot describing the articulation.\n    src_pose (ArrayLikeReal): Bot-space pose (must have\n        ``superdex::robotics::BotPrefab::_numDofs`` entries).\n    num_actor_dofs (int): The actor's DOF count\n        (:meth:`~superdex.physics.Actor.get_num_dofs`).\n\nReturns:\n    Pose in actor-DOF layout, sized to numActorDofs.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nWarning:\n    This documentation references the following C++ API, which is not available\n    in Python: ``superdex::robotics::BotPrefab::_numDofs``."
+  );
 
-    m_bots.def("make_tactile_taxel_layout", [](mochi::Span<mochi::Real3 const> positions) {
-      mochi::Error error;
-      auto result = superdex::robotics::MakeTactileTaxelLayout(positions, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
+  m_bots.def("make_tactile_taxel_layout", [](mochi::Span<mochi::Real3 const> positions) {
+    mochi::Error error;
+    auto result = superdex::robotics::MakeTactileTaxelLayout(positions, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("positions")
-      , "Build an ordered tactile taxel layout.\n\nArgs:\n    positions (ArrayLikeReal3): Taxel positions [m] in sensor link frame, in\n        stable taxel order.\n\nReturns:\n    Validated layout. Empty layouts and non-finite positions raise an error.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
-    );
+    return result;
+  }
+    , nb::arg("positions")
+    , "Build an ordered tactile taxel layout.\n\nArgs:\n    positions (ArrayLikeReal3): Taxel positions [m] in sensor link frame, in\n        stable taxel order.\n\nReturns:\n    Validated layout. Empty layouts and non-finite positions raise an error.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+  );
 
-    m_bots.def("read_tactile_taxel_forces", [](mochi::Actor const* actor, mochi::TransformRT const& world_from_sensor, superdex::robotics::TactileTaxelLayout const& layout) {
-      mochi::Error error;
-      auto result = superdex::robotics::ReadTactileTaxelForces(actor, world_from_sensor, layout, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
+  m_bots.def("read_tactile_taxel_forces", [](mochi::Actor const* actor, mochi::TransformRT const& world_from_sensor, superdex::robotics::TactileTaxelLayout const& layout) {
+    mochi::Error error;
+    auto result = superdex::robotics::ReadTactileTaxelForces(actor, world_from_sensor, layout, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("actor").none()
-      , nb::arg("world_from_sensor")
-      , nb::arg("layout")
-      , "Read a dense per-taxel force observation from a Mochi actor.\n\nThe caller must register QueryType::NodeContactForces before stepping the scene\nand keep that query registered while reading.\n\nArgs:\n    actor (Actor): Actor whose node-force query is read.\n    world_from_sensor (TransformRT): Sensor-frame pose in world space. Pass the\n        actor root transform when the actor and sensor frames coincide.\n    layout (TactileTaxelLayout): Ordered taxel layout matching the actor's node\n        indices.\n\nReturns:\n    One sensor-link-frame force per layout taxel.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
-    );
+    return result;
+  }
+    , nb::arg("actor").none()
+    , nb::arg("world_from_sensor")
+    , nb::arg("layout")
+    , "Read a dense per-taxel force observation from a Mochi actor.\n\nThe caller must register QueryType::NodeContactForces before stepping the scene\nand keep that query registered while reading.\n\nArgs:\n    actor (Actor): Actor whose node-force query is read.\n    world_from_sensor (TransformRT): Sensor-frame pose in world space. Pass the\n        actor root transform when the actor and sensor frames coincide.\n    layout (TactileTaxelLayout): Ordered taxel layout matching the actor's node\n        indices.\n\nReturns:\n    One sensor-link-frame force per layout taxel.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+  );
 
-    m_bots.def("aggregate_tactile_force", [](superdex::robotics::TactileTaxelForces const& taxel_forces) {
-      mochi::Error error;
-      auto result = superdex::robotics::AggregateTactileForce(taxel_forces, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
+  m_bots.def("aggregate_tactile_force", [](superdex::robotics::TactileTaxelForces const& taxel_forces) {
+    mochi::Error error;
+    auto result = superdex::robotics::AggregateTactileForce(taxel_forces, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("taxel_forces")
-      , "Sum per-taxel forces into one aggregate force observation.\n\nNo learned response, calibration, threshold, or torque model is applied.\n\nArgs:\n    taxel_forces (TactileTaxelForces): Dense per-taxel force observation.\n\nReturns:\n    Sum of all taxel forces.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
-    );
+    return result;
+  }
+    , nb::arg("taxel_forces")
+    , "Sum per-taxel forces into one aggregate force observation.\n\nNo learned response, calibration, threshold, or torque model is applied.\n\nArgs:\n    taxel_forces (TactileTaxelForces): Dense per-taxel force observation.\n\nReturns:\n    Sum of all taxel forces.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+  );
 
-    m_bots.def("aggregate_tactile_wrench", [](superdex::robotics::TactileTaxelLayout const& layout, superdex::robotics::TactileTaxelForces const& taxel_forces, mochi::Real3 const& reference_point) {
-      mochi::Error error;
-      auto result = superdex::robotics::AggregateTactileWrench(layout, taxel_forces, reference_point, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
+  m_bots.def("aggregate_tactile_wrench", [](superdex::robotics::TactileTaxelLayout const& layout, superdex::robotics::TactileTaxelForces const& taxel_forces, mochi::Real3 const& reference_point) {
+    mochi::Error error;
+    auto result = superdex::robotics::AggregateTactileWrench(layout, taxel_forces, reference_point, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("layout")
-      , nb::arg("taxel_forces")
-      , nb::arg("reference_point")
-      , "Aggregate per-taxel forces into a wrench about referencePoint.\n\nArgs:\n    layout (TactileTaxelLayout): Ordered taxel positions in the sensor link\n        frame.\n    taxel_forces (TactileTaxelForces): Per-taxel forces indexed by layout.\n    reference_point (Real3Like): Torque reference point [m] in the sensor link\n        frame.\n\nReturns:\n    Force and torque about the configured reference point.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
-    );
+    return result;
+  }
+    , nb::arg("layout")
+    , nb::arg("taxel_forces")
+    , nb::arg("reference_point")
+    , "Aggregate per-taxel forces into a wrench about referencePoint.\n\nArgs:\n    layout (TactileTaxelLayout): Ordered taxel positions in the sensor link\n        frame.\n    taxel_forces (TactileTaxelForces): Per-taxel forces indexed by layout.\n    reference_point (Real3Like): Torque reference point [m] in the sensor link\n        frame.\n\nReturns:\n    Force and torque about the configured reference point.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+  );
 
-    m_bots.def("build_tactile_rect_projection", [](superdex::robotics::TactileTaxelLayout const& layout, superdex::robotics::TactileHemisphereRectParams const& params) {
-      mochi::Error error;
-      auto result = superdex::robotics::BuildTactileRectProjection(layout, params, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
+  m_bots.def("build_tactile_rect_projection", [](superdex::robotics::TactileTaxelLayout const& layout, superdex::robotics::TactileHemisphereRectParams const& params) {
+    mochi::Error error;
+    auto result = superdex::robotics::BuildTactileRectProjection(layout, params, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("layout")
-      , nb::arg("params")
-      , "Resolve a tactile spherical-cap layout into a rectangular projection.\n\nArgs:\n    layout (TactileTaxelLayout): Ordered taxel positions in the sensor link\n        frame.\n    params (TactileHemisphereRectParams): Projection frame, geometry, selection\n        and output grid shape.\n\nReturns:\n    Stable coordinates, nearest cells and a force-conserving contribution map.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
-    );
+    return result;
+  }
+    , nb::arg("layout")
+    , nb::arg("params")
+    , "Resolve a tactile spherical-cap layout into a rectangular projection.\n\nArgs:\n    layout (TactileTaxelLayout): Ordered taxel positions in the sensor link\n        frame.\n    params (TactileHemisphereRectParams): Projection frame, geometry, selection\n        and output grid shape.\n\nReturns:\n    Stable coordinates, nearest cells and a force-conserving contribution map.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+  );
 
-    m_bots.def("rasterize_tactile_rect_projection", [](superdex::robotics::TactileRectProjectionMap const& projection, superdex::robotics::TactileTaxelForces const& taxel_forces) {
-      mochi::Error error;
-      auto result = superdex::robotics::RasterizeTactileRectProjection(projection, taxel_forces, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
+  m_bots.def("rasterize_tactile_rect_projection", [](superdex::robotics::TactileRectProjectionMap const& projection, superdex::robotics::TactileTaxelForces const& taxel_forces) {
+    mochi::Error error;
+    auto result = superdex::robotics::RasterizeTactileRectProjection(projection, taxel_forces, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("projection")
-      , nb::arg("taxel_forces")
-      , "Rasterize per-taxel forces through a resolved tactile projection.\n\nArgs:\n    projection (TactileRectProjectionMap): Resolved mapping built for the source\n        layout.\n    taxel_forces (TactileTaxelForces): Per-taxel forces indexed by that layout.\n\nReturns:\n    Row-major rectangular force grid and per-cell taxel counts.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
-    );
+    return result;
+  }
+    , nb::arg("projection")
+    , nb::arg("taxel_forces")
+    , "Rasterize per-taxel forces through a resolved tactile projection.\n\nArgs:\n    projection (TactileRectProjectionMap): Resolved mapping built for the source\n        layout.\n    taxel_forces (TactileTaxelForces): Per-taxel forces indexed by that layout.\n\nReturns:\n    Row-major rectangular force grid and per-cell taxel counts.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+  );
 
-    m_bots.def("map_tactile_hemisphere_to_rect", [](superdex::robotics::TactileTaxelLayout const& layout, superdex::robotics::TactileTaxelForces const& taxel_forces, superdex::robotics::TactileHemisphereRectParams const& params) {
-      mochi::Error error;
-      auto result = superdex::robotics::MapTactileHemisphereToRect(layout, taxel_forces, params, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
+  m_bots.def("map_tactile_hemisphere_to_rect", [](superdex::robotics::TactileTaxelLayout const& layout, superdex::robotics::TactileTaxelForces const& taxel_forces, superdex::robotics::TactileHemisphereRectParams const& params) {
+    mochi::Error error;
+    auto result = superdex::robotics::MapTactileHemisphereToRect(layout, taxel_forces, params, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("layout")
-      , nb::arg("taxel_forces")
-      , nb::arg("params")
-      , "Resolve and rasterize a per-taxel force observation in one call.\n\nArgs:\n    layout (TactileTaxelLayout): Ordered taxel positions in the sensor link\n        frame.\n    taxel_forces (TactileTaxelForces): Per-taxel forces indexed by layout.\n    params (TactileHemisphereRectParams): Hemisphere frame and output grid\n        shape.\n\nReturns:\n    Row-major rectangular force grid and per-cell taxel counts.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
-    );
+    return result;
+  }
+    , nb::arg("layout")
+    , nb::arg("taxel_forces")
+    , nb::arg("params")
+    , "Resolve and rasterize a per-taxel force observation in one call.\n\nArgs:\n    layout (TactileTaxelLayout): Ordered taxel positions in the sensor link\n        frame.\n    taxel_forces (TactileTaxelForces): Per-taxel forces indexed by layout.\n    params (TactileHemisphereRectParams): Hemisphere frame and output grid\n        shape.\n\nReturns:\n    Row-major rectangular force grid and per-cell taxel counts.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+  );
 
-    m_bots.def("create_bot", [](mochi::Scene* scene, superdex::robotics::BotPrefab const& bot_prefab, superdex::robotics::RoboticsContext* bots_context) {
-      mochi::Error error;
-      auto result = superdex::robotics::CreateBot(scene, bot_prefab, bots_context, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
+  m_bots.def("create_bot", [](mochi::Scene* scene, superdex::robotics::BotPrefab const& bot_prefab, superdex::robotics::RoboticsContext* bots_context) {
+    mochi::Error error;
+    auto result = superdex::robotics::CreateBot(scene, bot_prefab, bots_context, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("scene").none()
-      , nb::arg("bot_prefab")
-      , nb::arg("bots_context").none()
-      , "Create a :class:`~superdex.robotics.Bot` runtime object from a\n:class:`~superdex.robotics.BotPrefab`. Builds the underlying articulated actor\nin scene and seeds its default pose. The returned\n:class:`~superdex.robotics.Bot` owns no scene resources beyond the actor —\ndestroy it with :func:`~superdex.robotics.destroy_bot`. This must be in the\nscene thread (i.e. in an async callback if using async scenes.)\n\nArgs:\n    scene (Scene): Target scene in which to create the bot and its components.\n    bot_prefab (BotPrefab): Bot parameters describing the articulation.\n    bots_context (RoboticsContext): Bots context used for components created on\n        the bot. Must outlive the returned :class:`~superdex.robotics.Bot`.\n\nReturns:\n    Pointer to the created :class:`~superdex.robotics.Bot`.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
-      , nb::rv_policy::reference
-    );
+    return result;
+  }
+    , nb::arg("scene").none()
+    , nb::arg("bot_prefab")
+    , nb::arg("bots_context").none()
+    , "Create a :class:`~superdex.robotics.Bot` runtime object from a\n:class:`~superdex.robotics.BotPrefab`. Builds the underlying articulated actor\nin scene and seeds its default pose. The returned\n:class:`~superdex.robotics.Bot` owns no scene resources beyond the actor —\ndestroy it with :func:`~superdex.robotics.destroy_bot`. This must be in the\nscene thread (i.e. in an async callback if using async scenes.)\n\nArgs:\n    scene (Scene): Target scene in which to create the bot and its components.\n    bot_prefab (BotPrefab): Bot parameters describing the articulation.\n    bots_context (RoboticsContext): Bots context used for components created on\n        the bot. Must outlive the returned :class:`~superdex.robotics.Bot`.\n\nReturns:\n    Pointer to the created :class:`~superdex.robotics.Bot`.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+    , nb::rv_policy::reference
+  );
 
-    m_bots.def("destroy_bot", &superdex::robotics::DestroyBot
-      , nb::arg("scene").none()
-      , nb::arg("bot").none()
-      , "Destroy a :class:`~superdex.robotics.Bot` previously created by\n:func:`~superdex.robotics.create_bot`. Destroys the underlying articulated actor\nin its owning scene and any controllers, sensors, and actuators the bot created.\nThis must be in the scene thread (i.e. in an async callback if using async\nscenes.)\n\nArgs:\n    scene (Scene): Scene to remove the bot from. Must be the same scene used to\n        create the bot.\n    bot (Optional[Bot]): Pointer to the bot to be destroyed."
-    );
+  m_bots.def("destroy_bot", &superdex::robotics::DestroyBot
+    , nb::arg("scene").none()
+    , nb::arg("bot").none()
+    , "Destroy a :class:`~superdex.robotics.Bot` previously created by\n:func:`~superdex.robotics.create_bot`. Destroys the underlying articulated actor\nin its owning scene and any controllers, sensors, and actuators the bot created.\nThis must be in the scene thread (i.e. in an async callback if using async\nscenes.)\n\nArgs:\n    scene (Scene): Scene to remove the bot from. Must be the same scene used to\n        create the bot.\n    bot (Optional[Bot]): Pointer to the bot to be destroyed."
+  );
 
-    m_bots.def("load_bot_scene_prefab_from_file", [](std::string_view path) {
-      mochi::Error error;
-      auto result = superdex::robotics::LoadBotScenePrefabFromFile(path, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
+  m_bots.def("load_bot_scene_prefab_from_file", [](std::string_view path) {
+    mochi::Error error;
+    auto result = superdex::robotics::LoadBotScenePrefabFromFile(path, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("path")
-      , "Load bot scene parameters from a .superdex_scene JSON file.\n\nDeserializes the file, validates that bot, controller, and spawnable-prefab\nnames are non-empty and unique, and resolves relative paths to absolute. A scene\nwith no base scene and no bots is valid — that is the state of a newly created\nscene.\n\nArgs:\n    path (str): File path to the .superdex_scene file.\n\nReturns:\n    Loaded :class:`~superdex.robotics.BotScenePrefab`, or default-constructed on\n    failure.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
-    );
+    return result;
+  }
+    , nb::arg("path")
+    , "Load bot scene parameters from a .superdex_scene JSON file.\n\nDeserializes the file, validates that bot, controller, and spawnable-prefab\nnames are non-empty and unique, and resolves relative paths to absolute. A scene\nwith no base scene and no bots is valid — that is the state of a newly created\nscene.\n\nArgs:\n    path (str): File path to the .superdex_scene file.\n\nReturns:\n    Loaded :class:`~superdex.robotics.BotScenePrefab`, or default-constructed on\n    failure.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+  );
 
-    m_bots.def("save_bot_scene_to_urdf_string", [](superdex::robotics::BotScenePrefab const& scene, std::string_view root_path, superdex::robotics::SceneUrdfOptions const& options) {
-      mochi::Error error;
-      auto result = superdex::robotics::SaveBotSceneToUrdfString(scene, root_path, options, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
+  m_bots.def("save_bot_scene_to_urdf_string", [](superdex::robotics::BotScenePrefab const& scene, std::string_view root_path, superdex::robotics::SceneUrdfOptions const& options) {
+    mochi::Error error;
+    auto result = superdex::robotics::SaveBotSceneToUrdfString(scene, root_path, options, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("scene")
-      , nb::arg("root_path")
-      , nb::arg("options")
-      , "Export a bot scene to a URDF XML string, without meshes.\n\nThe URDF is rooted at a `world` link, the scene root. Each bot entry, base-scene\narticulated actor and static rigid actor hangs from it by a `fixed` joint named\n`{root link}_placement`, with its own links and joints unchanged below. Dynamic\nand soft actors, tasks and spawnable prefabs are skipped, and skins are not\nexported, so a skinned hand is rigid. SuperDex, unlike URDF, needs joint names\nto differ from link names, so a joint named like a link (e.g. \"joint_01_wrist\"\nbeside \"link_01_wrist\", with\n:attr:`~superdex.robotics.SceneUrdfOptions.strip_index_prefixes`) gets a\n`_joint` suffix.\n\nEach sensor becomes a `{name}_frame` link at its parentFromSensor on its link\n(bot sensors) or on `world` (scene sensors). A sensor whose name another sensor\nshares takes its bot's prefix, as the bot's links do, and an unnamed sensor is\nnamed `{link}_sensor_{index}`, after its URDF link and its index on that link. A\ncamera's parentFromSensor is its optical frame (Z forward, X right, Y down): it\ngets a `{name}_optical_frame` link there, and `{name}_frame` follows ROS REP-103\n(X forward, Z up). Intrinsics are not exported.\n\nNo ``<visual>`` or ``<collision>`` elements are written. SuperDex Studio's\n`scene_to_urdf` exports the meshes too, as STL.\n\nArgs:\n    scene (BotScenePrefab): Path-resolved scene, as returned by\n        :func:`~superdex.robotics.load_bot_scene_prefab_from_file`.\n    root_path (str): Root directory for the base scene's relative paths (see\n        `GetBotSceneBaseRoot`).\n    options (SceneUrdfOptions): Export options.\n\nReturns:\n    The URDF XML.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
-    );
+    return result;
+  }
+    , nb::arg("scene")
+    , nb::arg("root_path")
+    , nb::arg("options")
+    , "Export a bot scene to a URDF XML string, without meshes.\n\nThe URDF is rooted at a `world` link, the scene root. Each bot entry, base-scene\narticulated actor and static rigid actor hangs from it by a `fixed` joint named\n`{root link}_placement`, with its own links and joints unchanged below. Dynamic\nand soft actors, tasks and spawnable prefabs are skipped, and skins are not\nexported, so a skinned hand is rigid. SuperDex, unlike URDF, needs joint names\nto differ from link names, so a joint named like a link (e.g. \"joint_01_wrist\"\nbeside \"link_01_wrist\", with\n:attr:`~superdex.robotics.SceneUrdfOptions.strip_index_prefixes`) gets a\n`_joint` suffix.\n\nEach sensor becomes a `{name}_frame` link at its parentFromSensor on its link\n(bot sensors) or on `world` (scene sensors). A sensor whose name another sensor\nshares takes its bot's prefix, as the bot's links do, and an unnamed sensor is\nnamed `{link}_sensor_{index}`, after its URDF link and its index on that link. A\ncamera's parentFromSensor is its optical frame (Z forward, X right, Y down): it\ngets a `{name}_optical_frame` link there, and `{name}_frame` follows ROS REP-103\n(X forward, Z up). Intrinsics are not exported.\n\nNo ``<visual>`` or ``<collision>`` elements are written. SuperDex Studio's\n`scene_to_urdf` exports the meshes too, as STL.\n\nArgs:\n    scene (BotScenePrefab): Path-resolved scene, as returned by\n        :func:`~superdex.robotics.load_bot_scene_prefab_from_file`.\n    root_path (str): Root directory for the base scene's relative paths (see\n        `GetBotSceneBaseRoot`).\n    options (SceneUrdfOptions): Export options.\n\nReturns:\n    The URDF XML.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+  );
 
-    m_bots.def("load_bot_scene", [](std::string_view path, superdex::robotics::RoboticsContext* bots_ctx) {
-      CheckContext();
-      mochi::Error error;
-      auto result = superdex::robotics::LoadBotScene(path, GetContext(), bots_ctx, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
+  m_bots.def("load_bot_scene", [](std::string_view path, superdex::robotics::RoboticsContext* bots_ctx) {
+    CheckContext();
+    mochi::Error error;
+    auto result = superdex::robotics::LoadBotScene(path, GetContext(), bots_ctx, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("path")
-      , nb::arg("bots_ctx").none()
-      , "Load a .superdex_scene file and instantiate all scene objects.\n\nCreates the physics scene from the base_scene, instantiates all bots with\nplacement and initial pose, and creates controllers via the provided\nRoboticsContext.\n\nArgs:\n    path (str): File path to the .superdex_scene file.\n    bots_ctx (RoboticsContext): RoboticsContext for controller creation and\n        lifetime management.\n\nReturns:\n    The loaded BotScene.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
-    );
-    m_bots.def("load_bot_scene", [](std::string_view path, mochi::DynamicArray<mochi::DynamicString> const& bots, std::string_view edits, superdex::robotics::RoboticsContext* bots_ctx) {
-      CheckContext();
-      mochi::Error error;
-      auto result = superdex::robotics::LoadBotScene(path, bots, edits, GetContext(), bots_ctx, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
+    return result;
+  }
+    , nb::arg("path")
+    , nb::arg("bots_ctx").none()
+    , "Load a .superdex_scene file and instantiate all scene objects.\n\nCreates the physics scene from the base_scene, instantiates all bots with\nplacement and initial pose, and creates controllers via the provided\nRoboticsContext.\n\nArgs:\n    path (str): File path to the .superdex_scene file.\n    bots_ctx (RoboticsContext): RoboticsContext for controller creation and\n        lifetime management.\n\nReturns:\n    The loaded BotScene.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+  );
+  m_bots.def("load_bot_scene", [](std::string_view path, mochi::DynamicArray<mochi::DynamicString> const& bots, std::string_view edits, superdex::robotics::RoboticsContext* bots_ctx) {
+    CheckContext();
+    mochi::Error error;
+    auto result = superdex::robotics::LoadBotScene(path, bots, edits, GetContext(), bots_ctx, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("path")
-      , nb::arg("bots")
-      , nb::arg("edits")
-      , nb::arg("bots_ctx").none()
-      , "Like the path overload above, but instantiates only the declared bots named in\nbots, each with its edit set in its prefab before the bot is created, e.g. to\nrebuild the bots a recording was made with.\n\nThe rest stay declared, and :meth:`~superdex.robotics.BotScene.initialize_bot`\nbrings them up unedited. Errors if bots names a bot the scene does not declare,\nor an edit is for a bot not in bots or does not fit it.\n\nArgs:\n    path (str): File path to the .superdex_scene file.\n    bots (ArrayLikeString): The bots to instantiate.\n    edits (str): The fields to set in each bot's prefab, as a JSON object of\n        edits by bot name (`DiffPrefab` writes each), or empty for none.\n    bots_ctx (RoboticsContext): RoboticsContext for controller creation and\n        lifetime management.\n\nReturns:\n    The loaded BotScene.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
-    );
-    m_bots.def("load_bot_scene", [](mochi::Scene* scene, superdex::robotics::BotScenePrefab const& prefab, std::string_view root_path, superdex::robotics::RoboticsContext* bots_ctx) {
-      CheckContext();
-      mochi::Error error;
-      auto result = superdex::robotics::LoadBotScene(scene, prefab, root_path, GetContext(), bots_ctx, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
+    return result;
+  }
+    , nb::arg("path")
+    , nb::arg("bots")
+    , nb::arg("edits")
+    , nb::arg("bots_ctx").none()
+    , "Like the path overload above, but instantiates only the declared bots named in\nbots, each with its edit set in its prefab before the bot is created, e.g. to\nrebuild the bots a recording was made with.\n\nThe rest stay declared, and :meth:`~superdex.robotics.BotScene.initialize_bot`\nbrings them up unedited. Errors if bots names a bot the scene does not declare,\nor an edit is for a bot not in bots or does not fit it.\n\nArgs:\n    path (str): File path to the .superdex_scene file.\n    bots (ArrayLikeString): The bots to instantiate.\n    edits (str): The fields to set in each bot's prefab, as a JSON object of\n        edits by bot name (`DiffPrefab` writes each), or empty for none.\n    bots_ctx (RoboticsContext): RoboticsContext for controller creation and\n        lifetime management.\n\nReturns:\n    The loaded BotScene.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+  );
+  m_bots.def("load_bot_scene", [](mochi::Scene* scene, superdex::robotics::BotScenePrefab const& prefab, std::string_view root_path, superdex::robotics::RoboticsContext* bots_ctx) {
+    CheckContext();
+    mochi::Error error;
+    auto result = superdex::robotics::LoadBotScene(scene, prefab, root_path, GetContext(), bots_ctx, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("scene").none()
-      , nb::arg("prefab")
-      , nb::arg("root_path")
-      , nb::arg("bots_ctx").none()
-      , "Load a bot scene into a caller-provided scene from an already-loaded prefab.\n\nLike the path-based :func:`~superdex.robotics.load_bot_scene` overload but does\nnot create or own the scene: bots and controllers are created in scene and the\nbase prefab (already loaded and path-resolved, e.g. by an asset) is added\ndirectly. The returned :class:`~superdex.robotics.BotScene` destroys the bots\nand controllers it created but leaves scene intact (the caller retains ownership\nof the scene).\n\nArgs:\n    scene (Scene): Caller-owned scene to populate.\n    prefab (BotScenePrefab): Already-loaded, path-resolved bot scene parameters.\n    root_path (str): Root directory used to resolve the base scene's relative\n        shape/prefab paths.\n    bots_ctx (RoboticsContext): RoboticsContext for controller creation and\n        lifetime management.\n\nReturns:\n    The loaded BotScene (non-owning of scene).\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
-    );
-    m_bots.def("load_bot_scene", [](mochi::Scene* scene, std::string_view path, superdex::robotics::RoboticsContext* bots_ctx) {
-      CheckContext();
-      mochi::Error error;
-      auto result = superdex::robotics::LoadBotScene(scene, path, GetContext(), bots_ctx, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
+    return result;
+  }
+    , nb::arg("scene").none()
+    , nb::arg("prefab")
+    , nb::arg("root_path")
+    , nb::arg("bots_ctx").none()
+    , "Load a bot scene into a caller-provided scene from an already-loaded prefab.\n\nLike the path-based :func:`~superdex.robotics.load_bot_scene` overload but does\nnot create or own the scene: bots and controllers are created in scene and the\nbase prefab (already loaded and path-resolved, e.g. by an asset) is added\ndirectly. The returned :class:`~superdex.robotics.BotScene` destroys the bots\nand controllers it created but leaves scene intact (the caller retains ownership\nof the scene).\n\nArgs:\n    scene (Scene): Caller-owned scene to populate.\n    prefab (BotScenePrefab): Already-loaded, path-resolved bot scene parameters.\n    root_path (str): Root directory used to resolve the base scene's relative\n        shape/prefab paths.\n    bots_ctx (RoboticsContext): RoboticsContext for controller creation and\n        lifetime management.\n\nReturns:\n    The loaded BotScene (non-owning of scene).\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+  );
+  m_bots.def("load_bot_scene", [](mochi::Scene* scene, std::string_view path, superdex::robotics::RoboticsContext* bots_ctx) {
+    CheckContext();
+    mochi::Error error;
+    auto result = superdex::robotics::LoadBotScene(scene, path, GetContext(), bots_ctx, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("scene").none()
-      , nb::arg("path")
-      , nb::arg("bots_ctx").none()
-      , "Load a bot scene into a caller-provided scene from a file or archive path.\n\nLike the prefab overload but loads and validates the\n:class:`~superdex.robotics.BotScenePrefab` through LoadBotScenePrefabFromFile so\narchive extraction remains transparent. The base-scene-relative root is derived\nanalogously to the path overload (bots root with a resolved base-scene\nfallback), then delegates to the prefab overload. The returned\n:class:`~superdex.robotics.BotScene` owns the bots, controllers, and base-scene\nactors it added but leaves the caller-owned :class:`~superdex.physics.Scene`\nintact.\n\nArgs:\n    scene (Scene): Caller-owned :class:`~superdex.physics.Scene` to populate.\n    path (str): File path to the .superdex_scene file or\n        .superdex_scene_archive.\n    bots_ctx (RoboticsContext): :class:`~superdex.robotics.RoboticsContext` for\n        controller creation and lifetime management.\n\nReturns:\n    The loaded :class:`~superdex.robotics.BotScene` (non-owning of the caller\n    scene).\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
-    );
+    return result;
+  }
+    , nb::arg("scene").none()
+    , nb::arg("path")
+    , nb::arg("bots_ctx").none()
+    , "Load a bot scene into a caller-provided scene from a file or archive path.\n\nLike the prefab overload but loads and validates the\n:class:`~superdex.robotics.BotScenePrefab` through LoadBotScenePrefabFromFile so\narchive extraction remains transparent. The base-scene-relative root is derived\nanalogously to the path overload (bots root with a resolved base-scene\nfallback), then delegates to the prefab overload. The returned\n:class:`~superdex.robotics.BotScene` owns the bots, controllers, and base-scene\nactors it added but leaves the caller-owned :class:`~superdex.physics.Scene`\nintact.\n\nArgs:\n    scene (Scene): Caller-owned :class:`~superdex.physics.Scene` to populate.\n    path (str): File path to the .superdex_scene file or\n        .superdex_scene_archive.\n    bots_ctx (RoboticsContext): :class:`~superdex.robotics.RoboticsContext` for\n        controller creation and lifetime management.\n\nReturns:\n    The loaded :class:`~superdex.robotics.BotScene` (non-owning of the caller\n    scene).\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+  );
 
-    m_bots.def("load_bot_task_prefab_from_file", [](std::string_view path) {
-      mochi::Error error;
-      auto result = superdex::robotics::LoadBotTaskPrefabFromFile(path, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
+  m_bots.def("load_bot_task_prefab_from_file", [](std::string_view path) {
+    mochi::Error error;
+    auto result = superdex::robotics::LoadBotTaskPrefabFromFile(path, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("path")
-      , "Load task parameters from a .superdex_task JSON file.\n\nDeserializes the file and validates that spawn names are non-empty, unique, and\nnot equal to kTaskRootParentName; that each spawn references a non-empty prefab\nname; and that :attr:`~superdex.robotics.SpawnEntry.parent` references either\nkTaskRootParentName or the name of another spawn in this task. Parent graphs\nmust be acyclic. Existence of :attr:`~superdex.robotics.SpawnEntry.prefab_name`\nin any scene is intentionally NOT validated here (loose binding) — that is\nchecked at apply time against the loaded scene.\n\nArgs:\n    path (str): File path to the .superdex_task file.\n\nReturns:\n    Loaded :class:`~superdex.robotics.BotTaskPrefab`, or default-constructed on\n    failure.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
-    );
+    return result;
+  }
+    , nb::arg("path")
+    , "Load task parameters from a .superdex_task JSON file.\n\nDeserializes the file and validates that spawn names are non-empty, unique, and\nnot equal to kTaskRootParentName; that each spawn references a non-empty prefab\nname; and that :attr:`~superdex.robotics.SpawnEntry.parent` references either\nkTaskRootParentName or the name of another spawn in this task. Parent graphs\nmust be acyclic. Existence of :attr:`~superdex.robotics.SpawnEntry.prefab_name`\nin any scene is intentionally NOT validated here (loose binding) — that is\nchecked at apply time against the loaded scene.\n\nArgs:\n    path (str): File path to the .superdex_task file.\n\nReturns:\n    Loaded :class:`~superdex.robotics.BotTaskPrefab`, or default-constructed on\n    failure.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+  );
 
-    m_bots.def("load_dr_episode_list_from_file", [](std::string_view path) {
-      mochi::Error error;
-      auto result = superdex::robotics::LoadDREpisodeListFromFile(path, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
+  m_bots.def("load_dr_episode_list_from_file", [](std::string_view path) {
+    mochi::Error error;
+    auto result = superdex::robotics::LoadDREpisodeListFromFile(path, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("path")
-      , "Load and validate schema-2 resolved episodes using standard reflection.\n\nSchema 1 requires an explicit internal importer. Schema 2 uses an explicit\nmetadata object. Provenance is retained without interpreting its keys. Episode\nstructures are checked independently of task-specific specification, shape and\nrange rules.\n\nArgs:\n    path (str): Manifest file path.\n\nReturns:\n    Validated episode list; malformed input raises a Python exception.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
-    );
+    return result;
+  }
+    , nb::arg("path")
+    , "Load and validate schema-2 resolved episodes using standard reflection.\n\nSchema 1 requires an explicit internal importer. Schema 2 uses an explicit\nmetadata object. Provenance is retained without interpreting its keys. Episode\nstructures are checked independently of task-specific specification, shape and\nrange rules.\n\nArgs:\n    path (str): Manifest file path.\n\nReturns:\n    Validated episode list; malformed input raises a Python exception.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+  );
 
-    m_bots.def("save_dr_episode_list_to_file", [](superdex::robotics::DREpisodeList const& list, std::string_view path) {
-      mochi::Error error;
-      superdex::robotics::SaveDREpisodeListToFile(list, path, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
+  m_bots.def("save_dr_episode_list_to_file", [](superdex::robotics::DREpisodeList const& list, std::string_view path) {
+    mochi::Error error;
+    superdex::robotics::SaveDREpisodeListToFile(list, path, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("list")
-      , nb::arg("path")
-      , "Validate and save resolved episodes, preserving provenance and metadata.\n\nJSON formatting and key order may change. Saving does not preserve source bytes.\n\nArgs:\n    list (DREpisodeList): Resolved episodes and opaque metadata.\n    path (str): Destination manifest file path.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
-    );
+  }
+    , nb::arg("list")
+    , nb::arg("path")
+    , "Validate and save resolved episodes, preserving provenance and metadata.\n\nJSON formatting and key order may change. Saving does not preserve source bytes.\n\nArgs:\n    list (DREpisodeList): Resolved episodes and opaque metadata.\n    path (str): Destination manifest file path.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+  );
 
-    m_bots.def("parse_seed", [](std::string_view seed) {
-      mochi::Error error;
-      auto result = superdex::robotics::ParseSeed(seed, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
+  m_bots.def("parse_seed", [](std::string_view seed) {
+    mochi::Error error;
+    auto result = superdex::robotics::ParseSeed(seed, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("seed")
-      , "Parse a decimal uint64 seed string.\n\nArgs:\n    seed (str): Decimal string; leading zeros are accepted here but rejected by\n        list validation.\n\nReturns:\n    Parsed unsigned seed.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
-    );
+    return result;
+  }
+    , nb::arg("seed")
+    , "Parse a decimal uint64 seed string.\n\nArgs:\n    seed (str): Decimal string; leading zeros are accepted here but rejected by\n        list validation.\n\nReturns:\n    Parsed unsigned seed.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+  );
 
-    m_bots.def("validate_dr_episode_list", [](superdex::robotics::DREpisodeList const& list) {
-      mochi::Error error;
-      superdex::robotics::ValidateDREpisodeList(list, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
+  m_bots.def("validate_dr_episode_list", [](superdex::robotics::DREpisodeList const& list) {
+    mochi::Error error;
+    superdex::robotics::ValidateDREpisodeList(list, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("list")
-      , "Check supported schema, unique episode indices, nonempty keys/values, scalar\nlength and finite values. Schema 2 requires a nonempty spec and canonical\ndecimal seeds. Distinct episode indices may reuse a seed.\n\nProvenance must be a JSON object of strings. Metadata must be a JSON object with\nopaque meaning. Task-specific semantics remain the applier's responsibility.\n\nArgs:\n    list (DREpisodeList): Episode list to validate.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
-    );
+  }
+    , nb::arg("list")
+    , "Check supported schema, unique episode indices, nonempty keys/values, scalar\nlength and finite values. Schema 2 requires a nonempty spec and canonical\ndecimal seeds. Distinct episode indices may reuse a seed.\n\nProvenance must be a JSON object of strings. Metadata must be a JSON object with\nopaque meaning. Task-specific semantics remain the applier's responsibility.\n\nArgs:\n    list (DREpisodeList): Episode list to validate.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+  );
 
-    m_bots.def("spawn_pose_dr_key", &superdex::robotics::SpawnPoseDRKey
-      , nb::arg("spawn_name")
-      , nb::arg("domain_randomization_class")
-      , "The DR episode key an entry's PoseRandomization offset is drawn under.\n\nArgs:\n    spawn_name (str): The reset-state entry's name.\n    domain_randomization_class (str): Its PoseRandomization class.\n\nReturns:\n    ``dr/spawn/<spawnName>/<domainRandomizationClass>/pose``"
-    );
+  m_bots.def("spawn_pose_dr_key", &superdex::robotics::SpawnPoseDRKey
+    , nb::arg("spawn_name")
+    , nb::arg("domain_randomization_class")
+    , "The DR episode key an entry's PoseRandomization offset is drawn under.\n\nArgs:\n    spawn_name (str): The reset-state entry's name.\n    domain_randomization_class (str): Its PoseRandomization class.\n\nReturns:\n    ``dr/spawn/<spawnName>/<domainRandomizationClass>/pose``"
+  );
 
-    m_bots.def("spawn_prefab_dr_key", &superdex::robotics::SpawnPrefabDRKey
-      , nb::arg("spawn_name")
-      , "The DR episode key an entry's PrefabSelection is drawn under.\n\nArgs:\n    spawn_name (str): The reset-state entry's name.\n\nReturns:\n    ``dr/spawn/<spawnName>/prefab``"
-    );
+  m_bots.def("spawn_prefab_dr_key", &superdex::robotics::SpawnPrefabDRKey
+    , nb::arg("spawn_name")
+    , "The DR episode key an entry's PrefabSelection is drawn under.\n\nArgs:\n    spawn_name (str): The reset-state entry's name.\n\nReturns:\n    ``dr/spawn/<spawnName>/prefab``"
+  );
 
-    m_bots.def("get_pose_randomization_class", &superdex::robotics::GetPoseRandomizationClass
-      , nb::arg("entry")
-      , "The DR class of an entry's PoseRandomization.\n\nArgs:\n    entry (SpawnEntry): The reset-state entry.\n\nReturns:\n    The class, or empty if the entry has no PoseRandomization."
-    );
+  m_bots.def("get_pose_randomization_class", &superdex::robotics::GetPoseRandomizationClass
+    , nb::arg("entry")
+    , "The DR class of an entry's PoseRandomization.\n\nArgs:\n    entry (SpawnEntry): The reset-state entry.\n\nReturns:\n    The class, or empty if the entry has no PoseRandomization."
+  );
 
-    m_bots.def("get_prefab_selection", &superdex::robotics::GetPrefabSelection
-      , nb::arg("entry")
-      , "The candidates of an entry's PrefabSelection.\n\nArgs:\n    entry (SpawnEntry): The reset-state entry.\n\nReturns:\n    The prefab names, or empty if the entry has no PrefabSelection."
-    );
+  m_bots.def("get_prefab_selection", &superdex::robotics::GetPrefabSelection
+    , nb::arg("entry")
+    , "The candidates of an entry's PrefabSelection.\n\nArgs:\n    entry (SpawnEntry): The reset-state entry.\n\nReturns:\n    The prefab names, or empty if the entry has no PrefabSelection."
+  );
 
-    m_bots.def("compute_world_from_task", &superdex::robotics::ComputeWorldFromTask
-      , nb::arg("scene")
-      , nb::arg("task")
-      , "Where a task's root-level spawns go on a scene: scene.taskRoot *\ntask.taskRootOffset, with an absent offset taken as identity; identity when the\nscene declares no task root.\n\nArgs:\n    scene (BaseSceneParams): The bot scene's scene block.\n    task (BotTaskPrefab): The task.\n\nReturns:\n    The world-from-task transform to pass to ResolveResetState."
-    );
+  m_bots.def("compute_world_from_task", &superdex::robotics::ComputeWorldFromTask
+    , nb::arg("scene")
+    , nb::arg("task")
+    , "Where a task's root-level spawns go on a scene: scene.taskRoot *\ntask.taskRootOffset, with an absent offset taken as identity; identity when the\nscene declares no task root.\n\nArgs:\n    scene (BaseSceneParams): The bot scene's scene block.\n    task (BotTaskPrefab): The task.\n\nReturns:\n    The world-from-task transform to pass to ResolveResetState."
+  );
 
-    m_bots.def("resolve_reset_state", [](superdex::robotics::BotTaskPrefab const& task, mochi::DynamicArray<superdex::robotics::DREpisodeEntry> const& values, mochi::TransformRT const& world_from_task) {
-      mochi::Error error;
-      auto result = superdex::robotics::ResolveResetState(task, values, world_from_task, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
+  m_bots.def("resolve_reset_state", [](superdex::robotics::BotTaskPrefab const& task, mochi::DynamicArray<superdex::robotics::DREpisodeEntry> const& values, mochi::TransformRT const& world_from_task) {
+    mochi::Error error;
+    auto result = superdex::robotics::ResolveResetState(task, values, world_from_task, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("task")
-      , nb::arg("values")
-      , nb::arg("world_from_task")
-      , "Resolve a task's reset state for one episode from that episode's DR values.\n\nEntries whose DR key is absent are placed as declared, so empty values resolve\nthe nominal state. Root-level entries are composed onto worldFromTask.\n\nArgs:\n    task (BotTaskPrefab): The task.\n    values (bots.ArrayLikeDREpisodeEntry): The episode's DR values; keys this\n        does not read are ignored.\n    world_from_task (TransformRT): Where the task's root-level spawns go; see\n        ComputeWorldFromTask.\n\nReturns:\n    One entry per reset-state entry, parents before their children.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
-    );
-    m_bots.def("resolve_reset_state", [](superdex::robotics::BotTaskPrefab const& task, mochi::DynamicArray<superdex::robotics::DREpisodeEntry> const& values) {
-      mochi::Error error;
-      auto result = superdex::robotics::ResolveResetState(task, values, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
+    return result;
+  }
+    , nb::arg("task")
+    , nb::arg("values")
+    , nb::arg("world_from_task")
+    , "Resolve a task's reset state for one episode from that episode's DR values.\n\nEntries whose DR key is absent are placed as declared, so empty values resolve\nthe nominal state. Root-level entries are composed onto worldFromTask.\n\nArgs:\n    task (BotTaskPrefab): The task.\n    values (bots.ArrayLikeDREpisodeEntry): The episode's DR values; keys this\n        does not read are ignored.\n    world_from_task (TransformRT): Where the task's root-level spawns go; see\n        ComputeWorldFromTask.\n\nReturns:\n    One entry per reset-state entry, parents before their children.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+  );
+  m_bots.def("resolve_reset_state", [](superdex::robotics::BotTaskPrefab const& task, mochi::DynamicArray<superdex::robotics::DREpisodeEntry> const& values) {
+    mochi::Error error;
+    auto result = superdex::robotics::ResolveResetState(task, values, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("task")
-      , nb::arg("values")
-      , "ResolveResetState with the task in its own coordinates (identity worldFromTask).\n\nArgs:\n    task (BotTaskPrefab): The task.\n    values (bots.ArrayLikeDREpisodeEntry): The episode's DR values; keys this\n        does not read are ignored.\n\nReturns:\n    One entry per reset-state entry, parents before their children.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
-    );
+    return result;
+  }
+    , nb::arg("task")
+    , nb::arg("values")
+    , "ResolveResetState with the task in its own coordinates (identity worldFromTask).\n\nArgs:\n    task (BotTaskPrefab): The task.\n    values (bots.ArrayLikeDREpisodeEntry): The episode's DR values; keys this\n        does not read are ignored.\n\nReturns:\n    One entry per reset-state entry, parents before their children.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+  );
 
-    m_bots.def("load_asset_snapshot", [](std::string_view path) {
-      mochi::Error error;
-      auto result = superdex::robotics::LoadAssetSnapshot(path, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
+  m_bots.def("load_asset_snapshot", [](std::string_view path) {
+    mochi::Error error;
+    auto result = superdex::robotics::LoadAssetSnapshot(path, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("path")
-      , "Read a .superdex_scene_snapshot file. Fails unless its formatVersion is the one\nthis reader supports.\n\nArgs:\n    path (str): The snapshot file.\n\nReturns:\n    The snapshot, or a default-constructed one on failure.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
-    );
+    return result;
+  }
+    , nb::arg("path")
+    , "Read a .superdex_scene_snapshot file. Fails unless its formatVersion is the one\nthis reader supports.\n\nArgs:\n    path (str): The snapshot file.\n\nReturns:\n    The snapshot, or a default-constructed one on failure.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+  );
 
-    m_bots.def("save_asset_snapshot", [](superdex::robotics::AssetSnapshot const& snapshot, std::string_view path) {
-      mochi::Error error;
-      superdex::robotics::SaveAssetSnapshot(snapshot, path, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
+  m_bots.def("save_asset_snapshot", [](superdex::robotics::AssetSnapshot const& snapshot, std::string_view path) {
+    mochi::Error error;
+    superdex::robotics::SaveAssetSnapshot(snapshot, path, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("snapshot")
-      , nb::arg("path")
-      , "Write a snapshot to a file as JSON.\n\nArgs:\n    snapshot (AssetSnapshot): The snapshot to write.\n    path (str): Destination file.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
-    );
+  }
+    , nb::arg("snapshot")
+    , nb::arg("path")
+    , "Write a snapshot to a file as JSON.\n\nArgs:\n    snapshot (AssetSnapshot): The snapshot to write.\n    path (str): Destination file.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+  );
 
-    m_bots.def("apply_asset_snapshot", [](superdex::robotics::AssetSnapshot const& snapshot, std::string_view asset_root) {
-      mochi::Error error;
-      auto result = superdex::robotics::ApplyAssetSnapshot(snapshot, asset_root, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
+  m_bots.def("apply_asset_snapshot", [](superdex::robotics::AssetSnapshot const& snapshot, std::string_view asset_root) {
+    mochi::Error error;
+    auto result = superdex::robotics::ApplyAssetSnapshot(snapshot, asset_root, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("snapshot")
-      , nb::arg("asset_root")
-      , "Pin every file in a snapshot for the rest of the process, so each loads from its\nversion instead, replacing any snapshot already applied.\n\nEntries are resolved against assetRoot, the directory holding the scene's\n.superdex_root, wherever its asset tree is mounted. Every version must exist,\nbeside the file it pins, and no version may itself be a pinned file. Then load\nthe scene from the returned path as usual: the scene and every file it\nreferences, however deeply, load from their pinned versions. A file under\nassetRoot, or under the .superdex_root directory of any pinned file, that the\nsnapshot does not pin fails to load instead of loading its tip. Applying fails\nif a pinned .superdex_root no longer matches its version. Loaded assets carry\nthe versions' paths, so don't save assets while a snapshot is applied; archiving\nis refused. Call :func:`~superdex.robotics.clear_asset_snapshot` to stop\napplying it. On failure no snapshot is applied, including any applied before.\n\nArgs:\n    snapshot (AssetSnapshot): The snapshot to apply.\n    asset_root (str): Directory containing the .superdex_root the snapshot's\n        paths are relative to.\n\nReturns:\n    Absolute path of the snapshot's scene, to load as usual.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
-    );
+    return result;
+  }
+    , nb::arg("snapshot")
+    , nb::arg("asset_root")
+    , "Pin every file in a snapshot for the rest of the process, so each loads from its\nversion instead, replacing any snapshot already applied.\n\nEntries are resolved against assetRoot, the directory holding the scene's\n.superdex_root, wherever its asset tree is mounted. Every version must exist,\nbeside the file it pins, and no version may itself be a pinned file. Then load\nthe scene from the returned path as usual: the scene and every file it\nreferences, however deeply, load from their pinned versions. A file under\nassetRoot, or under the .superdex_root directory of any pinned file, that the\nsnapshot does not pin fails to load instead of loading its tip. Applying fails\nif a pinned .superdex_root no longer matches its version. Loaded assets carry\nthe versions' paths, so don't save assets while a snapshot is applied; archiving\nis refused. Call :func:`~superdex.robotics.clear_asset_snapshot` to stop\napplying it. On failure no snapshot is applied, including any applied before.\n\nArgs:\n    snapshot (AssetSnapshot): The snapshot to apply.\n    asset_root (str): Directory containing the .superdex_root the snapshot's\n        paths are relative to.\n\nReturns:\n    Absolute path of the snapshot's scene, to load as usual.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+  );
 
-    m_bots.def("clear_asset_snapshot", &superdex::robotics::ClearAssetSnapshot
-      , "Stop applying the snapshot :func:`~superdex.robotics.apply_asset_snapshot`\napplied, so files load from their tips again. Loads already done are unaffected."
-    );
+  m_bots.def("clear_asset_snapshot", &superdex::robotics::ClearAssetSnapshot
+    , "Stop applying the snapshot :func:`~superdex.robotics.apply_asset_snapshot`\napplied, so files load from their tips again. Loads already done are unaffected."
+  );
 
 }
 // clang-format on

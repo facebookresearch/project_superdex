@@ -81,7 +81,9 @@ void mochi::DeclareMochiPhysics_MochiPhysicsStructs([[maybe_unused]] nb::module_
   registry.StoreClass(nb::class_<mochi::DebugDrawData>(m, "DebugDrawData", "Collection of debug draw primitives.\n\nContains all geometric primitives to be rendered by the client's rendering\nsystem. Data is valid until the next call to\n:meth:`~superdex.physics.DebugDraw.gather_data` or\n:class:`~superdex.physics.Scene` modification."));
 }
 
-void mochi::DefineMochiPhysics_MochiPhysicsStructs([[maybe_unused]] nb::module_& m, [[maybe_unused]] PybindRegistry& registry) {
+namespace {
+
+MOCHI_NO_INLINE void Define_SolverParams(PybindRegistry& registry) {
   registry.GetClass<mochi::SolverParams>()
     .def("__init__", [](mochi::SolverParams* self, nb::object non_linear_solver, nb::object linear_solver, nb::object integration_method, nb::object experimental_eval) {
       mochi::SolverParams result{};
@@ -108,6 +110,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsStructs([[maybe_unused]] nb::module_&
     .def_rw("experimental_eval", &mochi::SolverParams::experimentalEval, "[Experimental] Evaluation settings common to the full scene.\n\nWarning:\n    This is an experimental feature. It may be changed or removed in the future.\n    Use at your own risk.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_RecenteringParams(PybindRegistry& registry) {
   registry.GetClass<mochi::RecenteringParams>()
     .def("__init__", [](mochi::RecenteringParams* self, nb::object use_recentering, nb::object rotation_epsilon_deg, nb::object translation_epsilon) {
       mochi::RecenteringParams result{};
@@ -131,6 +136,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsStructs([[maybe_unused]] nb::module_&
     .def_rw("translation_epsilon", &mochi::RecenteringParams::translationEpsilon, "Minimum translation threshold [m] to apply recentering.\n\nNote:\n    Recentering is applied if either rotation or translation change more than\n    their respective thresholds.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_BoundarySubsamplingParams(PybindRegistry& registry) {
   registry.GetClass<mochi::BoundarySubsamplingParams>()
     .def("__init__", [](mochi::BoundarySubsamplingParams* self, nb::object subsampling_density, nb::object strategy) {
       mochi::BoundarySubsamplingParams result{};
@@ -151,6 +159,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsStructs([[maybe_unused]] nb::module_&
     .def_rw("strategy", &mochi::BoundarySubsamplingParams::strategy, "Strategy for determining which sample points to use.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_ContactPairParamsOverride(PybindRegistry& registry) {
   registry.GetClass<mochi::ContactPairParamsOverride>()
     .def("__init__", [](mochi::ContactPairParamsOverride* self, nb::object penalty_coefficient, nb::object prefer_elasto_plastic_friction, nb::object friction_falloff_vel, nb::object presliding_displacement, nb::object viscous_friction_coefficient, nb::object coulomb_friction_coefficient, nb::object normal_viscous_damping_coefficient) {
       mochi::ContactPairParamsOverride result{};
@@ -186,6 +197,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsStructs([[maybe_unused]] nb::module_&
     .def_prop_rw("normal_viscous_damping_coefficient", [](mochi::ContactPairParamsOverride& self) -> std::optional<mochi::real>& { return self.normalViscousDampingCoefficient; }, [](mochi::ContactPairParamsOverride& self, nb::handle val) { self.normalViscousDampingCoefficient = val.is_none() ? std::optional<mochi::real>{} : nb::cast<std::optional<mochi::real>>(val); }, "Pair normal viscous damping coefficient [s/m].\n\nSee Also:\n    :attr:`~superdex.physics.ContactParams.normal_viscous_damping_coefficient`", nb::for_setter(nb::arg("value").none()))
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_ArticulatedShapeInfo(PybindRegistry& registry) {
   registry.GetClass<mochi::ArticulatedShapeInfo>()
     .def("__init__", [](mochi::ArticulatedShapeInfo* self, nb::object root_from_links_at_rest, nb::object link_names, nb::object parents, nb::object joint_types, nb::object cycles, nb::object joint_axes, nb::object dof_info, nb::object joint_from_child_link, nb::object parent_link_from_joint, nb::object joint_min_limits, nb::object joint_max_limits, nb::object joint_names) {
       mochi::ArticulatedShapeInfo result{};
@@ -234,6 +248,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsStructs([[maybe_unused]] nb::module_&
     .def_prop_rw("joint_names", [](mochi::ArticulatedShapeInfo& self) -> mochi::Span<mochi::DynamicString const>& { return self.jointNames; }, [](mochi::ArticulatedShapeInfo& self, nb::object val) { self.jointNames = nb::cast<mochi::Span<mochi::DynamicString const>>(val); }, "Name of each joint. Size must be numLinks + numCycles.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_StepInfo(PybindRegistry& registry) {
   registry.GetClass<mochi::StepInfo>()
     .def("__init__", [](mochi::StepInfo* self, nb::handle scene, nb::object time_step_sec) {
       mochi::StepInfo result{};
@@ -252,6 +269,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsStructs([[maybe_unused]] nb::module_&
     .def_rw("time_step_sec", &mochi::StepInfo::timeStepSec, "Time step size [s] for this simulation step.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_RigidActorParams(PybindRegistry& registry) {
   registry.GetClass<mochi::RigidActorParams>()
     .def("__init__", [](mochi::RigidActorParams* self, nb::object name, nb::object layer, nb::object shape, nb::object world_from_local, nb::object collider_type, nb::object is_static, nb::object contact, nb::object sdf, nb::object has_gravity, nb::object density, nb::object mass, nb::object center_of_mass, nb::object moment_of_inertia, nb::object boundary_element_type, nb::object boundary_subsampling, nb::object linear_velocity, nb::object angular_velocity) {
       mochi::RigidActorParams result{};
@@ -317,6 +337,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsStructs([[maybe_unused]] nb::module_&
     .def_prop_rw("angular_velocity", [](mochi::RigidActorParams& self) -> std::optional<mochi::Real3>& { return self.angularVelocity; }, [](mochi::RigidActorParams& self, nb::handle val) { self.angularVelocity = val.is_none() ? std::optional<mochi::Real3>{} : nb::cast<std::optional<mochi::Real3>>(val); }, "Optional initial angular velocity in world frame [rad/s], zero otherwise.\n\nNote:\n    Not valid for static rigid actors.\n\nSee Also:\n    :meth:`~superdex.physics.Actor.get_angular_velocity`,\n    :meth:`~superdex.physics.Actor.set_velocity`", nb::for_setter(nb::arg("value").none()))
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_SoftActorParams(PybindRegistry& registry) {
   registry.GetClass<mochi::SoftActorParams>()
     .def("__init__", [](mochi::SoftActorParams* self, nb::object name, nb::object layer, nb::object world_from_local, nb::object shape, nb::object material, nb::object contact, nb::object has_gravity, nb::object has_inertia, nb::object has_stress, nb::object use_contact_skin, nb::object boundary_element_type) {
       mochi::SoftActorParams result{};
@@ -364,6 +387,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsStructs([[maybe_unused]] nb::module_&
     .def_rw("boundary_element_type", &mochi::SoftActorParams::boundaryElementType, "Finite element type for contact discretization.\n\nNote:\n    Selects quadrature on the tetrahedral boundary, or on the authored contact\n    skin when :attr:`~superdex.physics.SoftActorParams.use_contact_skin` is\n    true.\n\nSee Also:\n    :class:`~superdex.physics.ActorBoundaryElementType`")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_RodMaterialParams(PybindRegistry& registry) {
   registry.GetClass<mochi::RodMaterialParams>()
     .def("__init__", [](mochi::RodMaterialParams* self, nb::object linear_density, nb::object linear_rotational_inertia, nb::object axial_stiffness, nb::object torsional_stiffness, nb::object flexural_stiffness, nb::object mass_damping_coefficient, nb::object stiffness_damping_coefficient, nb::object axial_collapse_barrier_scale) {
       mochi::RodMaterialParams result{};
@@ -402,6 +428,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsStructs([[maybe_unused]] nb::module_&
     .def_rw("axial_collapse_barrier_scale", &mochi::RodMaterialParams::axialCollapseBarrierScale, "Dimensionless scale of an optional barrier against axial collapse. Must be\nnon-negative.\n\nThe barrier energy per unit undeformed length is `η·kₐ·max(1/λ² - 1, 0)³`, where\n`η` is :attr:`~superdex.physics.RodMaterialParams.axial_collapse_barrier_scale`,\n`kₐ` is :attr:`~superdex.physics.RodMaterialParams.axial_stiffness`, and `λ` is\nthe axial stretch of the centerline. It is active only under compression, adds\nno stiffness at rest, and diverges as the rod collapses. Zero disables it,\nleaving the plain St. Venant-Kirchhoff axial response.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_PointCloudColliderParams(PybindRegistry& registry) {
   registry.GetClass<mochi::PointCloudColliderParams>()
     .def("__init__", [](mochi::PointCloudColliderParams* self, nb::object radius, nb::object self_contact_exclusion_ratio, nb::object spatial_hash_load_factor, nb::object self_contact, nb::object collider_triangle_element_type, nb::object collider_segment_element_type) {
       mochi::PointCloudColliderParams result{};
@@ -434,6 +463,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsStructs([[maybe_unused]] nb::module_&
     .def_prop_rw("collider_segment_element_type", [](mochi::PointCloudColliderParams& self) -> std::optional<mochi::ActorSegmentElementType>& { return self.colliderSegmentElementType; }, [](mochi::PointCloudColliderParams& self, nb::handle val) { self.colliderSegmentElementType = val.is_none() ? std::optional<mochi::ActorSegmentElementType>{} : nb::cast<std::optional<mochi::ActorSegmentElementType>>(val); }, "Segment element type for collider discretization on a curve.\n\nWhen unset, uses nodal collider placement. When set, uses quadrature-based\nplacement with the specified segment element type. Only used for curve collider\ngeometries (e.g., rods).", nb::for_setter(nb::arg("value").none()))
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_RodActorParams(PybindRegistry& registry) {
   registry.GetClass<mochi::RodActorParams>()
     .def("__init__", [](mochi::RodActorParams* self, nb::object name, nb::object layer, nb::object world_from_local, nb::object shape, nb::object contact, nb::object contact_element_type, nb::object material, nb::object collider_type, nb::object point_cloud_collider, nb::object has_gravity, nb::object use_contact_skin, nb::object contact_skin_element_type) {
       mochi::RodActorParams result{};
@@ -484,6 +516,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsStructs([[maybe_unused]] nb::module_&
     .def_rw("contact_skin_element_type", &mochi::RodActorParams::contactSkinElementType, "Triangle element type for contact-skin quadrature.\n\nNote:\n    :attr:`~superdex.physics.RodActorParams.contact_element_type` controls\n    centerline sampling instead.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_ArticulatedJointParams(PybindRegistry& registry) {
   registry.GetClass<mochi::ArticulatedJointParams>()
     .def("__init__", [](mochi::ArticulatedJointParams* self, nb::object name, nb::object type, nb::object parent_link_from_joint, nb::object axis, nb::object friction, nb::object inertia, nb::object min_limit, nb::object max_limit, nb::object limit_stiffness, nb::object limit_damping) {
       mochi::ArticulatedJointParams result{};
@@ -528,6 +563,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsStructs([[maybe_unused]] nb::module_&
     .def_rw("limit_damping", &mochi::ArticulatedJointParams::limitDamping, "Damping coefficient [N·s/m or N·m·s/rad] for the joint limit constraints.\n\nNote:\n    Must be non-negative and finite.\n\nNote:\n    Ignored for joints without limits.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_ArticulatedLinkParams(PybindRegistry& registry) {
   registry.GetClass<mochi::ArticulatedLinkParams>()
     .def("__init__", [](mochi::ArticulatedLinkParams* self, nb::object name, nb::object parent_link, nb::object parent_joint_from_link, nb::object shape, nb::object layer, nb::object collider_type, nb::object contact, nb::object has_gravity, nb::object density, nb::object mass, nb::object center_of_mass, nb::object moment_of_inertia, nb::object boundary_element_type, nb::object boundary_subsampling) {
       mochi::ArticulatedLinkParams result{};
@@ -584,6 +622,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsStructs([[maybe_unused]] nb::module_&
     .def_prop_rw("boundary_subsampling", [](mochi::ArticulatedLinkParams& self) -> std::optional<mochi::BoundarySubsamplingParams>& { return self.boundarySubsampling; }, [](mochi::ArticulatedLinkParams& self, nb::handle val) { self.boundarySubsampling = val.is_none() ? std::optional<mochi::BoundarySubsamplingParams>{} : nb::cast<std::optional<mochi::BoundarySubsamplingParams>>(val); }, "Optional subsampling for boundary integrals such as contact.\n\nNote:\n    Reduces computational cost by using fewer sample points.\n\nNote:\n    For best performance, combine subsampling with\n    :attr:`~superdex.physics.ArticulatedLinkParams.boundary_element_type` =\n    :class:`P1Q1 <superdex.physics.ActorBoundaryElementType>`.", nb::for_setter(nb::arg("value").none()))
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_ArticulatedSkinParams(PybindRegistry& registry) {
   registry.GetClass<mochi::ArticulatedSkinParams>()
     .def("__init__", [](mochi::ArticulatedSkinParams* self, nb::object shape, nb::object layer, nb::object contact, nb::object boundary_element_type, nb::object boundary_subsampling, nb::object non_colliding_links) {
       mochi::ArticulatedSkinParams result{};
@@ -616,6 +657,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsStructs([[maybe_unused]] nb::module_&
     .def_prop_rw("non_colliding_links", [](mochi::ArticulatedSkinParams& self) -> std::optional<mochi::DynamicArray<mochi::DynamicString>>& { return self.nonCollidingLinks; }, [](mochi::ArticulatedSkinParams& self, nb::handle val) { self.nonCollidingLinks = val.is_none() ? std::optional<mochi::DynamicArray<mochi::DynamicString>>{} : nb::cast<std::optional<mochi::DynamicArray<mochi::DynamicString>>>(val); }, "Local names of links that do not act as colliding actors.\n\nNote:\n    A listed link contributes no rigid contact; the skin collides in its place.\n    A link that is not listed keeps its own rigid contact, and the skin still\n    collides over it, so both can generate contact in the same region.\n\nNote:\n    On an articulated actor, unset means no link collides and the skin is the\n    sole colliding actor, while an empty list means every link collides.\n\nNote:\n    Each entry must be non-empty and must match a skeleton link local name.\n\nNote:\n    On a soft-skinned actor,\n    :attr:`~superdex.physics.SoftSkinnedActorParams.enable_colliding_links`\n    governs every link this list does not name: a link collides only when that\n    flag is true and the link is not listed here. Unset therefore leaves that\n    flag in sole control.\n\nNote:\n    This setting does not affect whether the links act as colliders; see\n    :attr:`~superdex.physics.ArticulatedLinkParams.collider_type`.", nb::for_setter(nb::arg("value").none()))
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_ArticulatedCycleJointParams(PybindRegistry& registry) {
   registry.GetClass<mochi::ArticulatedCycleJointParams>()
     .def("__init__", [](mochi::ArticulatedCycleJointParams* self, nb::object parent_link, nb::object child_link, nb::object joint_from_child_link, nb::object stiffness) {
       mochi::ArticulatedCycleJointParams result{};
@@ -642,6 +686,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsStructs([[maybe_unused]] nb::module_&
     .def_rw("stiffness", &mochi::ArticulatedCycleJointParams::stiffness, "Stiffness [N/m] for the cycle joint constraint.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_ArticulatedActorParams(PybindRegistry& registry) {
   registry.GetClass<mochi::ArticulatedActorParams>()
     .def("__init__", [](mochi::ArticulatedActorParams* self, nb::object name, nb::object world_from_root, nb::object cycles, nb::object joints, nb::object links, nb::object skin, nb::object joint_velocities) {
       mochi::ArticulatedActorParams result{};
@@ -677,6 +724,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsStructs([[maybe_unused]] nb::module_&
     .def_prop_rw("joint_velocities", [](mochi::ArticulatedActorParams& self) -> std::optional<mochi::DynamicArray<mochi::real>>& { return self.jointVelocities; }, [](mochi::ArticulatedActorParams& self, nb::handle val) { self.jointVelocities = val.is_none() ? std::optional<mochi::DynamicArray<mochi::real>>{} : nb::cast<std::optional<mochi::DynamicArray<mochi::real>>>(val); }, "Optional initial joint velocity per DoF [m/s or rad/s].\n\nSee Also:\n    :meth:`~superdex.physics.Actor.get_articulated_joint_velocities`,\n    :meth:`~superdex.physics.Actor.set_articulated_joint_velocities`", nb::for_setter(nb::arg("value").none()))
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_SoftSkinnedActorParams(PybindRegistry& registry) {
   registry.GetClass<mochi::SoftSkinnedActorParams>()
     .def("__init__", [](mochi::SoftSkinnedActorParams* self, nb::object skeleton_params, nb::object soft_params, nb::object soft_attach_links, nb::object enable_colliding_links, nb::object has_gravity, nb::object has_inertia, nb::object has_stress) {
       mochi::SoftSkinnedActorParams result{};
@@ -710,6 +760,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsStructs([[maybe_unused]] nb::module_&
     .def_rw("has_stress", &mochi::SoftSkinnedActorParams::hasStress, "Enable elasticity evaluation of nested soft actors on posed/skinned positions.\n\nNote:\n    If true, each :class:`~superdex.physics.SoftActorParams` entry must have its\n    hasStress set to false.\n\nNote:\n    If true, stress forces are applied in the posed (post-skinning)\n    configuration. This is the physically correct behavior.\n\nNote:\n    If false, stress forces are applied in the unposed configuration for each\n    :class:`~superdex.physics.SoftActorParams` entry that has its hasStress set\n    to true. This is an approximation but may improve performance.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_ConstraintParams(PybindRegistry& registry) {
   registry.GetClass<mochi::ConstraintParams>()
     .def("__init__", [](mochi::ConstraintParams* self, nb::object stiffness, nb::object damping, nb::object saturation) {
       mochi::ConstraintParams result{};
@@ -733,6 +786,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsStructs([[maybe_unused]] nb::module_&
     .def_rw("saturation", &mochi::ConstraintParams::saturation, "Saturation distance [m] or angle [rad]. A negative value disables saturation.\nMust be finite and non-zero.\n\nNote:\n    When enabled, saturation smoothly limits the magnitude of the elastic\n    (stiffness) contribution to\n    :attr:`~superdex.physics.ConstraintParams.stiffness` *\n    :attr:`~superdex.physics.ConstraintParams.saturation`. The damping\n    contribution is separate and is not limited by saturation.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_RigidSphericalJointConstraintParams(PybindRegistry& registry) {
   registry.GetClass<mochi::RigidSphericalJointConstraintParams, mochi::ConstraintParams>()
     .def("__init__", [](mochi::RigidSphericalJointConstraintParams* self, nb::object stiffness, nb::object damping, nb::object saturation, nb::object local_pos_a, nb::object local_pos_b, nb::object actor_a, nb::object actor_b) {
       mochi::RigidSphericalJointConstraintParams result{};
@@ -765,6 +821,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsStructs([[maybe_unused]] nb::module_&
     .def_rw("actor_b", &mochi::RigidSphericalJointConstraintParams::actorB, "Actor handle identifying rigid actor B.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_RigidPrismaticJointConstraintParams(PybindRegistry& registry) {
   registry.GetClass<mochi::RigidPrismaticJointConstraintParams, mochi::ConstraintParams>()
     .def("__init__", [](mochi::RigidPrismaticJointConstraintParams* self, nb::object stiffness, nb::object damping, nb::object saturation, nb::object free_axis, nb::object actor_a, nb::object actor_b, nb::object max, nb::object min) {
       mochi::RigidPrismaticJointConstraintParams result{};
@@ -800,6 +859,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsStructs([[maybe_unused]] nb::module_&
     .def_prop_rw("min", [](mochi::RigidPrismaticJointConstraintParams& self) -> std::optional<mochi::real>& { return self.min; }, [](mochi::RigidPrismaticJointConstraintParams& self, nb::handle val) { self.min = val.is_none() ? std::optional<mochi::real>{} : nb::cast<std::optional<mochi::real>>(val); }, "Minimum translation [m] relative to rest position. Empty means unbounded.", nb::for_setter(nb::arg("value").none()))
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_DeformableNodeToDeformableNodeConstraintParams(PybindRegistry& registry) {
   registry.GetClass<mochi::DeformableNodeToDeformableNodeConstraintParams, mochi::ConstraintParams>()
     .def("__init__", [](mochi::DeformableNodeToDeformableNodeConstraintParams* self, nb::object stiffness, nb::object damping, nb::object saturation, nb::object node_index_a, nb::object node_index_b, nb::object actor_a, nb::object actor_b, nb::object find_closest) {
       mochi::DeformableNodeToDeformableNodeConstraintParams result{};
@@ -835,6 +897,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsStructs([[maybe_unused]] nb::module_&
     .def_rw("find_closest", &mochi::DeformableNodeToDeformableNodeConstraintParams::findClosest, "Whether to automatically select a boundary node on each actor.\n\nNote:\n    When true, selection is based on proximity to the world-space midpoint of\n    the actors' root-frame origins and occurs at constraint creation using their\n    undeformed reference simulation meshes.\n    :attr:`~superdex.physics.DeformableNodeToDeformableNodeConstraintParams.node_index_a`\n    and\n    :attr:`~superdex.physics.DeformableNodeToDeformableNodeConstraintParams.node_index_b`\n    are ignored.\n\nNote:\n    When true, both actors must be soft actors (shell and rod actors are not\n    supported).")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_RodElementRotationToRigidConstraintParams(PybindRegistry& registry) {
   registry.GetClass<mochi::RodElementRotationToRigidConstraintParams, mochi::ConstraintParams>()
     .def("__init__", [](mochi::RodElementRotationToRigidConstraintParams* self, nb::object stiffness, nb::object damping, nb::object saturation, nb::object ref_frame_rot_vec, nb::object rigid_actor, nb::object rod_actor, nb::object element_index) {
       mochi::RodElementRotationToRigidConstraintParams result{};
@@ -867,6 +932,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsStructs([[maybe_unused]] nb::module_&
     .def_rw("element_index", &mochi::RodElementRotationToRigidConstraintParams::elementIndex, "Index of the element in the rod actor.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_RodElementRotationConstraintParams(PybindRegistry& registry) {
   registry.GetClass<mochi::RodElementRotationConstraintParams, mochi::ConstraintParams>()
     .def("__init__", [](mochi::RodElementRotationConstraintParams* self, nb::object stiffness, nb::object damping, nb::object saturation, nb::object ref_frame_rot_vec, nb::object actor, nb::object element_index) {
       mochi::RodElementRotationConstraintParams result{};
@@ -896,6 +964,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsStructs([[maybe_unused]] nb::module_&
     .def_rw("element_index", &mochi::RodElementRotationConstraintParams::elementIndex, "Index of the element in the rod actor.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_DeformableNodeToRigidConstraintParams(PybindRegistry& registry) {
   registry.GetClass<mochi::DeformableNodeToRigidConstraintParams, mochi::ConstraintParams>()
     .def("__init__", [](mochi::DeformableNodeToRigidConstraintParams* self, nb::object stiffness, nb::object damping, nb::object saturation, nb::object rigid_local_pos, nb::object deformable_node_index, nb::object rigid_actor, nb::object deformable_actor, nb::object find_closest, nb::object fix_to_deformable_pos) {
       mochi::DeformableNodeToRigidConstraintParams result{};
@@ -934,6 +1005,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsStructs([[maybe_unused]] nb::module_&
     .def_rw("fix_to_deformable_pos", &mochi::DeformableNodeToRigidConstraintParams::fixToDeformablePos, "When true, the coupling position on the rigid actor is auto-computed to match\nthe deformable node's initial position (in the rigid actor's frame), so the\nconstraint starts at zero deviation, and\n:attr:`~superdex.physics.DeformableNodeToRigidConstraintParams.rigid_local_pos`\nis ignored.\n\nNote:\n    When\n    :attr:`~superdex.physics.DeformableNodeToRigidConstraintParams.find_closest`\n    is also true,\n    :attr:`~superdex.physics.DeformableNodeToRigidConstraintParams.rigid_local_pos`\n    is still used as the search point that selects which deformable node is\n    picked.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_JointRotationRangeConstraintParams(PybindRegistry& registry) {
   registry.GetClass<mochi::JointRotationRangeConstraintParams, mochi::ConstraintParams>()
     .def("__init__", [](mochi::JointRotationRangeConstraintParams* self, nb::object stiffness, nb::object damping, nb::object saturation, nb::object ref_frame_rot_vec, nb::object angle_range_x, nb::object angle_range_y, nb::object angle_range_z, nb::object actor_a, nb::object actor_b, nb::object range_around_rest) {
       mochi::JointRotationRangeConstraintParams result{};
@@ -975,6 +1049,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsStructs([[maybe_unused]] nb::module_&
     .def_rw("range_around_rest", &mochi::JointRotationRangeConstraintParams::rangeAroundRest, "When true, angle limits are relative to the actors' relative rotation at\nconstraint creation time. When false, limits are absolute in the joint reference\nframe.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_RigidPivotPositionConstraintParams(PybindRegistry& registry) {
   registry.GetClass<mochi::RigidPivotPositionConstraintParams, mochi::ConstraintParams>()
     .def("__init__", [](mochi::RigidPivotPositionConstraintParams* self, nb::object stiffness, nb::object damping, nb::object saturation, nb::object target_position, nb::object local_position, nb::object actor) {
       mochi::RigidPivotPositionConstraintParams result{};
@@ -1004,6 +1081,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsStructs([[maybe_unused]] nb::module_&
     .def_rw("actor", &mochi::RigidPivotPositionConstraintParams::actor, "Actor handle identifying the rigid actor.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_RigidPivotToRigidTargetConstraintParams(PybindRegistry& registry) {
   registry.GetClass<mochi::RigidPivotToRigidTargetConstraintParams, mochi::ConstraintParams>()
     .def("__init__", [](mochi::RigidPivotToRigidTargetConstraintParams* self, nb::object stiffness, nb::object damping, nb::object saturation, nb::object target_transform, nb::object local_position, nb::object actor) {
       mochi::RigidPivotToRigidTargetConstraintParams result{};
@@ -1033,6 +1113,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsStructs([[maybe_unused]] nb::module_&
     .def_rw("actor", &mochi::RigidPivotToRigidTargetConstraintParams::actor, "Actor handle identifying the rigid actor.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_RigidPivotRotationConstraintParams(PybindRegistry& registry) {
   registry.GetClass<mochi::RigidPivotRotationConstraintParams, mochi::ConstraintParams>()
     .def("__init__", [](mochi::RigidPivotRotationConstraintParams* self, nb::object stiffness, nb::object damping, nb::object saturation, nb::object target_rotation, nb::object local_rotation, nb::object actor) {
       mochi::RigidPivotRotationConstraintParams result{};
@@ -1062,6 +1145,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsStructs([[maybe_unused]] nb::module_&
     .def_rw("actor", &mochi::RigidPivotRotationConstraintParams::actor, "Actor handle identifying the rigid actor.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_DeformableNodePositionConstraintParams(PybindRegistry& registry) {
   registry.GetClass<mochi::DeformableNodePositionConstraintParams, mochi::ConstraintParams>()
     .def("__init__", [](mochi::DeformableNodePositionConstraintParams* self, nb::object stiffness, nb::object damping, nb::object saturation, nb::object node_index, nb::object position, nb::object actor) {
       mochi::DeformableNodePositionConstraintParams result{};
@@ -1091,6 +1177,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsStructs([[maybe_unused]] nb::module_&
     .def_rw("actor", &mochi::DeformableNodePositionConstraintParams::actor, "Actor handle identifying the deformable actor.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_JointRotationTrackingConstraintParams(PybindRegistry& registry) {
   registry.GetClass<mochi::JointRotationTrackingConstraintParams, mochi::ConstraintParams>()
     .def("__init__", [](mochi::JointRotationTrackingConstraintParams* self, nb::object stiffness, nb::object damping, nb::object saturation, nb::object ref_frame_rot_vec, nb::object actor_a, nb::object actor_b) {
       mochi::JointRotationTrackingConstraintParams result{};
@@ -1120,6 +1209,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsStructs([[maybe_unused]] nb::module_&
     .def_rw("actor_b", &mochi::JointRotationTrackingConstraintParams::actorB, "Actor handle identifying rigid actor B.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_ArticulatedSingleDofTargetConstraintParams(PybindRegistry& registry) {
   registry.GetClass<mochi::ArticulatedSingleDofTargetConstraintParams, mochi::ConstraintParams>()
     .def("__init__", [](mochi::ArticulatedSingleDofTargetConstraintParams* self, nb::object stiffness, nb::object damping, nb::object saturation, nb::object actor, nb::object joint_index, nb::object dof_index, nb::object target_value) {
       mochi::ArticulatedSingleDofTargetConstraintParams result{};
@@ -1152,6 +1244,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsStructs([[maybe_unused]] nb::module_&
     .def_rw("target_value", &mochi::ArticulatedSingleDofTargetConstraintParams::targetValue, "Target value for the joint DoF. Units are [m] for translation DoFs, [rad] for\nrotation DoFs.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_Articulated3dRotationTargetConstraintParams(PybindRegistry& registry) {
   registry.GetClass<mochi::Articulated3dRotationTargetConstraintParams, mochi::ConstraintParams>()
     .def("__init__", [](mochi::Articulated3dRotationTargetConstraintParams* self, nb::object stiffness, nb::object damping, nb::object saturation, nb::object actor, nb::object joint_index, nb::object target) {
       mochi::Articulated3dRotationTargetConstraintParams result{};
@@ -1181,6 +1276,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsStructs([[maybe_unused]] nb::module_&
     .def_prop_rw("target", [](mochi::Articulated3dRotationTargetConstraintParams& self) -> mochi::Quaternion& { return self.target; }, [](mochi::Articulated3dRotationTargetConstraintParams& self, nb::object val) { self.target = nb::cast<mochi::Quaternion>(val); }, "Target rotation relative to the joint's rest orientation, expressed in the\njoint's local frame as a quaternion [x, y, z, w]. The identity quaternion\ncorresponds to the rest orientation.\n\nNote:\n    Must be finite and non-zero. Normalized before use.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_ArticulatedSingleDofRangeConstraintParams(PybindRegistry& registry) {
   registry.GetClass<mochi::ArticulatedSingleDofRangeConstraintParams, mochi::ConstraintParams>()
     .def("__init__", [](mochi::ArticulatedSingleDofRangeConstraintParams* self, nb::object stiffness, nb::object damping, nb::object saturation, nb::object actor, nb::object joint_index, nb::object dof_index, nb::object min_value, nb::object max_value) {
       mochi::ArticulatedSingleDofRangeConstraintParams result{};
@@ -1216,6 +1314,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsStructs([[maybe_unused]] nb::module_&
     .def_rw("max_value", &mochi::ArticulatedSingleDofRangeConstraintParams::maxValue, "Maximum value for the DoF. [m] for translation DoFs, [rad] for rotation DoFs.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_Articulated3dRotationRangeConstraintParams(PybindRegistry& registry) {
   registry.GetClass<mochi::Articulated3dRotationRangeConstraintParams, mochi::ConstraintParams>()
     .def("__init__", [](mochi::Articulated3dRotationRangeConstraintParams* self, nb::object stiffness, nb::object damping, nb::object saturation, nb::object actor, nb::object joint_index, nb::object min_values, nb::object max_values) {
       mochi::Articulated3dRotationRangeConstraintParams result{};
@@ -1248,6 +1349,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsStructs([[maybe_unused]] nb::module_&
     .def_prop_rw("max_values", [](mochi::Articulated3dRotationRangeConstraintParams& self) -> mochi::Real3& { return self.maxValues; }, [](mochi::Articulated3dRotationRangeConstraintParams& self, nb::object val) { self.maxValues = nb::cast<mochi::Real3>(val); }, "Maximum allowed value [rad] for each component of the joint-local rotation\nvector.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_ContactPoint(PybindRegistry& registry) {
   registry.GetClass<mochi::ContactPoint>()
     .def("__init__", [](mochi::ContactPoint* self, nb::object actor_a, nb::object actor_b, nb::object distance, nb::object pos_a, nb::object pos_b, nb::object normal, nb::object force, nb::object point_velocity_a, nb::object point_velocity_b, nb::object sample_index, nb::object int_weight, nb::object element_index, nb::object parametric_coords) {
       mochi::ContactPoint result{};
@@ -1299,6 +1403,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsStructs([[maybe_unused]] nb::module_&
     .def_prop_rw("parametric_coords", [](mochi::ContactPoint& self) -> mochi::Real3& { return self.parametricCoords; }, [](mochi::ContactPoint& self, nb::object val) { self.parametricCoords = nb::cast<mochi::Real3>(val); }, "Parametric coordinates within the surface element of\n:attr:`~superdex.physics.ContactPoint.actor_a`.\n\nNote:\n    Corresponds to finite-element basis function values at the contact sample\n    quadrature point.\n\nNote:\n    For linear finite elements, these match barycentric coordinates.\n\nNote:\n    Allows interpolation of functions defined on triangle vertices.\n\nNote:\n    For rod actors, this field is not populated and is reported as {0, 0, 0}.\n    Use :attr:`~superdex.physics.ContactPoint.sample_index` to identify the\n    contact location.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_NodeContactForce(PybindRegistry& registry) {
   registry.GetClass<mochi::NodeContactForce>()
     .def("__init__", [](mochi::NodeContactForce* self, nb::object index, nb::object force) {
       mochi::NodeContactForce result{};
@@ -1317,6 +1424,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsStructs([[maybe_unused]] nb::module_&
     .def_prop_rw("force", [](mochi::NodeContactForce& self) -> mochi::Real3& { return self.force; }, [](mochi::NodeContactForce& self, nb::object val) { self.force = nb::cast<mochi::Real3>(val); }, "Contact force [N] applied to the node.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_SdfDistances(PybindRegistry& registry) {
   registry.GetClass<mochi::SdfDistances>()
     .def("__init__", [](mochi::SdfDistances* self, nb::object sample_indices, nb::object world_positions, nb::object distances, nb::object distance_grads, nb::object max_sdf_far_distance_evaluation) {
       mochi::SdfDistances result{};
@@ -1344,6 +1454,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsStructs([[maybe_unused]] nb::module_&
     .def_rw("max_sdf_far_distance_evaluation", &mochi::SdfDistances::maxSdfFarDistanceEvaluation, "Maximum distance [m] at which SDF evaluation was performed.\n\nNote:\n    Non-zero only if the actor has far SDF evaluation enabled.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_PerformanceStats(PybindRegistry& registry) {
   registry.GetClass<mochi::PerformanceStats>()
     .def("__init__", [](mochi::PerformanceStats* self, nb::object total_step_duration_sec, nb::object solve_step_duration_sec, nb::object pre_step_callbacks_duration_sec, nb::object post_step_callbacks_duration_sec, nb::object recording_step_duration_sec) {
       mochi::PerformanceStats result{};
@@ -1373,6 +1486,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsStructs([[maybe_unused]] nb::module_&
     .def_rw("recording_step_duration_sec", &mochi::PerformanceStats::recordingStepDurationSec, "Wall-clock time [s] spent on recording in the last call to\n:meth:`~superdex.physics.Scene.step`.\n\nWarning:\n    Recording is an experimental feature. It may be changed or removed without\n    notice.\n\nSee Also:\n    :func:`~superdex.physics.experimental.start_recording`,\n    :class:`~superdex.physics.experimental.RecordingParams`")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_SolverStats(PybindRegistry& registry) {
   registry.GetClass<mochi::SolverStats>()
     .def("__init__", [](mochi::SolverStats* self, nb::object max_non_linear_iters, nb::object residual_norm, nb::object max_line_search_iters, nb::object convergence_status) {
       mochi::SolverStats result{};
@@ -1399,6 +1515,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsStructs([[maybe_unused]] nb::module_&
     .def_rw("convergence_status", &mochi::SolverStats::convergenceStatus, "Aggregate convergence status of the scene in the last call to\n:meth:`~superdex.physics.Scene.step`.\n\nReturns the worst convergence status across all dynamic actors in awake islands:\n:class:`DIVERGED <superdex.physics.ConvergenceStatus>` if any actor diverged,\n:class:`STOPPED <superdex.physics.ConvergenceStatus>` if any actor's solver was\nstopped, :class:`CONVERGED <superdex.physics.ConvergenceStatus>` if all dynamic\nactors in awake islands converged, :class:`NONE\n<superdex.physics.ConvergenceStatus>` if no dynamic actors exist, all islands\nare asleep, :meth:`~superdex.physics.Scene.step` has not been called yet or the\nlast call to :meth:`~superdex.physics.Scene.step` was with zero time step.\n\nNote:\n    Unlike :class:`DIVERGED <superdex.physics.ConvergenceStatus>`,\n    :class:`STOPPED <superdex.physics.ConvergenceStatus>` does not indicate that\n    the step failed. It means that the nonlinear solve reached a stopping\n    criterion, such as the maximum number of iterations, before meeting its\n    residual tolerances, which may be stricter than the scene requires.\n\nSee Also:\n    :class:`~superdex.physics.ConvergenceStatus`,\n    :meth:`~superdex.physics.Actor.get_convergence_status`")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_PoseTrackingParams(PybindRegistry& registry) {
   registry.GetClass<mochi::PoseTrackingParams>()
     .def("__init__", [](mochi::PoseTrackingParams* self, nb::object stiffness, nb::object damping, nb::object saturation) {
       mochi::PoseTrackingParams result{};
@@ -1422,6 +1541,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsStructs([[maybe_unused]] nb::module_&
     .def_rw("saturation", &mochi::PoseTrackingParams::saturation, "Saturation distance [m] or angle [rad]. A negative value disables saturation.\n\nNote:\n    When enabled, saturation smoothly limits the magnitude of the elastic\n    (stiffness) contribution to\n    :attr:`~superdex.physics.PoseTrackingParams.stiffness` *\n    :attr:`~superdex.physics.PoseTrackingParams.saturation`. The damping\n    contribution is separate and is not limited by saturation.\n\nNote:\n    Must be finite and non-zero.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_PoseControllerParams(PybindRegistry& registry) {
   registry.GetClass<mochi::PoseControllerParams>()
     .def("__init__", [](mochi::PoseControllerParams* self, nb::object link_pos_tracking, nb::object link_rot_tracking, nb::object joint_tracking) {
       mochi::PoseControllerParams result{};
@@ -1447,6 +1569,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsStructs([[maybe_unused]] nb::module_&
     )
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_PoseConstraintInfo(PybindRegistry& registry) {
   registry.GetClass<mochi::PoseConstraintInfo>()
     .def("__init__", [](mochi::PoseConstraintInfo* self, nb::object handle, nb::object type, nb::object link, nb::object parent) {
       mochi::PoseConstraintInfo result{};
@@ -1471,6 +1596,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsStructs([[maybe_unused]] nb::module_&
     .def_rw("parent", &mochi::PoseConstraintInfo::parent, "Index of the parent link, or -1 if none.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_DebugDrawSpheres(PybindRegistry& registry) {
   registry.GetClass<mochi::DebugDrawSpheres>()
     .def("__init__", [](mochi::DebugDrawSpheres* self, nb::object positions, nb::object radii, nb::object colors) {
       mochi::DebugDrawSpheres result{};
@@ -1494,6 +1622,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsStructs([[maybe_unused]] nb::module_&
     .def_prop_rw("colors", [](mochi::DebugDrawSpheres& self) -> mochi::Span<mochi::Color const>& { return self.colors; }, [](mochi::DebugDrawSpheres& self, nb::object val) { self.colors = nb::cast<mochi::Span<mochi::Color const>>(val); }, "Sphere colors.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_DebugDrawLineVertices(PybindRegistry& registry) {
   registry.GetClass<mochi::DebugDrawLineVertices>()
     .def("__init__", [](mochi::DebugDrawLineVertices* self, nb::object positions, nb::object colors) {
       mochi::DebugDrawLineVertices result{};
@@ -1514,6 +1645,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsStructs([[maybe_unused]] nb::module_&
     .def_prop_rw("colors", [](mochi::DebugDrawLineVertices& self) -> mochi::Span<mochi::Color const>& { return self.colors; }, [](mochi::DebugDrawLineVertices& self, nb::object val) { self.colors = nb::cast<mochi::Span<mochi::Color const>>(val); }, "Line vertex colors.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_DebugDrawData(PybindRegistry& registry) {
   registry.GetClass<mochi::DebugDrawData>()
     .def("__init__", [](mochi::DebugDrawData* self, nb::object line_vertices, nb::object spheres) {
       mochi::DebugDrawData result{};
@@ -1534,5 +1668,55 @@ void mochi::DefineMochiPhysics_MochiPhysicsStructs([[maybe_unused]] nb::module_&
     .def_rw("spheres", &mochi::DebugDrawData::spheres, "Sphere primitives.")
   ;
 
+}
+
+} // namespace
+
+void mochi::DefineMochiPhysics_MochiPhysicsStructs([[maybe_unused]] nb::module_& m, [[maybe_unused]] PybindRegistry& registry) {
+  Define_SolverParams(registry);
+  Define_RecenteringParams(registry);
+  Define_BoundarySubsamplingParams(registry);
+  Define_ContactPairParamsOverride(registry);
+  Define_ArticulatedShapeInfo(registry);
+  Define_StepInfo(registry);
+  Define_RigidActorParams(registry);
+  Define_SoftActorParams(registry);
+  Define_RodMaterialParams(registry);
+  Define_PointCloudColliderParams(registry);
+  Define_RodActorParams(registry);
+  Define_ArticulatedJointParams(registry);
+  Define_ArticulatedLinkParams(registry);
+  Define_ArticulatedSkinParams(registry);
+  Define_ArticulatedCycleJointParams(registry);
+  Define_ArticulatedActorParams(registry);
+  Define_SoftSkinnedActorParams(registry);
+  Define_ConstraintParams(registry);
+  Define_RigidSphericalJointConstraintParams(registry);
+  Define_RigidPrismaticJointConstraintParams(registry);
+  Define_DeformableNodeToDeformableNodeConstraintParams(registry);
+  Define_RodElementRotationToRigidConstraintParams(registry);
+  Define_RodElementRotationConstraintParams(registry);
+  Define_DeformableNodeToRigidConstraintParams(registry);
+  Define_JointRotationRangeConstraintParams(registry);
+  Define_RigidPivotPositionConstraintParams(registry);
+  Define_RigidPivotToRigidTargetConstraintParams(registry);
+  Define_RigidPivotRotationConstraintParams(registry);
+  Define_DeformableNodePositionConstraintParams(registry);
+  Define_JointRotationTrackingConstraintParams(registry);
+  Define_ArticulatedSingleDofTargetConstraintParams(registry);
+  Define_Articulated3dRotationTargetConstraintParams(registry);
+  Define_ArticulatedSingleDofRangeConstraintParams(registry);
+  Define_Articulated3dRotationRangeConstraintParams(registry);
+  Define_ContactPoint(registry);
+  Define_NodeContactForce(registry);
+  Define_SdfDistances(registry);
+  Define_PerformanceStats(registry);
+  Define_SolverStats(registry);
+  Define_PoseTrackingParams(registry);
+  Define_PoseControllerParams(registry);
+  Define_PoseConstraintInfo(registry);
+  Define_DebugDrawSpheres(registry);
+  Define_DebugDrawLineVertices(registry);
+  Define_DebugDrawData(registry);
 }
 // clang-format on

@@ -44,7 +44,9 @@ void mochi::DeclareMochiPhysics_MochiPhysicsHandle([[maybe_unused]] nb::module_&
   registry.StoreClass(nb::class_<mochi::QueryHandle, mochi::Handle>(m, "QueryHandle", "Unique identifier for a query within a :class:`~superdex.physics.Scene`.\n\nNote:\n    A :class:`~superdex.physics.QueryHandle` can only be used with the\n    :class:`~superdex.physics.Scene` that created it.\n\nSee Also:\n    :meth:`~superdex.physics.Actor.register_query`,\n    :meth:`~superdex.physics.Actor.cancel_query`,\n    :meth:`~superdex.physics.Constraint.register_query`,\n    :meth:`~superdex.physics.Constraint.cancel_query`"));
 }
 
-void mochi::DefineMochiPhysics_MochiPhysicsHandle([[maybe_unused]] nb::module_& m, [[maybe_unused]] PybindRegistry& registry) {
+namespace {
+
+MOCHI_NO_INLINE void Define_Handle(PybindRegistry& registry) {
   registry.GetClass<mochi::Handle>()
     .def("__init__", [](mochi::Handle* self, nb::object value) {
       mochi::Handle result{};
@@ -76,6 +78,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsHandle([[maybe_unused]] nb::module_& 
   registry.GetClass<mochi::Handle>().attr("ValueType") = nb::module_::import_("builtins").attr("int");
   registry.GetClass<mochi::Handle>().attr("ValueTypeLike") = nb::module_::import_("builtins").attr("int");
 
+}
+
+MOCHI_NO_INLINE void Define_SceneHandle(PybindRegistry& registry) {
   registry.GetClass<mochi::SceneHandle, mochi::Handle>()
     .def("__init__", [](mochi::SceneHandle* self, nb::object value) {
       mochi::SceneHandle result{};
@@ -91,6 +96,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsHandle([[maybe_unused]] nb::module_& 
     .def("__deepcopy__", [](mochi::SceneHandle const& self, nb::dict) { return mochi::SceneHandle(self); })
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_ActorHandle(PybindRegistry& registry) {
   registry.GetClass<mochi::ActorHandle, mochi::Handle>()
     .def("__init__", [](mochi::ActorHandle* self, nb::object value) {
       mochi::ActorHandle result{};
@@ -106,6 +114,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsHandle([[maybe_unused]] nb::module_& 
     .def("__deepcopy__", [](mochi::ActorHandle const& self, nb::dict) { return mochi::ActorHandle(self); })
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_ShapeHandle(PybindRegistry& registry) {
   registry.GetClass<mochi::ShapeHandle, mochi::Handle>()
     .def("__init__", [](mochi::ShapeHandle* self, nb::object value) {
       mochi::ShapeHandle result{};
@@ -121,6 +132,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsHandle([[maybe_unused]] nb::module_& 
     .def("__deepcopy__", [](mochi::ShapeHandle const& self, nb::dict) { return mochi::ShapeHandle(self); })
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_CallbackHandle(PybindRegistry& registry) {
   registry.GetClass<mochi::CallbackHandle, mochi::Handle>()
     .def("__init__", [](mochi::CallbackHandle* self, nb::object value) {
       mochi::CallbackHandle result{};
@@ -136,6 +150,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsHandle([[maybe_unused]] nb::module_& 
     .def("__deepcopy__", [](mochi::CallbackHandle const& self, nb::dict) { return mochi::CallbackHandle(self); })
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_ConstraintHandle(PybindRegistry& registry) {
   registry.GetClass<mochi::ConstraintHandle, mochi::Handle>()
     .def("__init__", [](mochi::ConstraintHandle* self, nb::object value) {
       mochi::ConstraintHandle result{};
@@ -151,6 +168,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsHandle([[maybe_unused]] nb::module_& 
     .def("__deepcopy__", [](mochi::ConstraintHandle const& self, nb::dict) { return mochi::ConstraintHandle(self); })
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_StateHandle(PybindRegistry& registry) {
   registry.GetClass<mochi::StateHandle, mochi::Handle>()
     .def("__init__", [](mochi::StateHandle* self, nb::object value) {
       mochi::StateHandle result{};
@@ -166,6 +186,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsHandle([[maybe_unused]] nb::module_& 
     .def("__deepcopy__", [](mochi::StateHandle const& self, nb::dict) { return mochi::StateHandle(self); })
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_QueryHandle(PybindRegistry& registry) {
   registry.GetClass<mochi::QueryHandle, mochi::Handle>()
     .def("__init__", [](mochi::QueryHandle* self, nb::object value) {
       mochi::QueryHandle result{};
@@ -181,7 +204,20 @@ void mochi::DefineMochiPhysics_MochiPhysicsHandle([[maybe_unused]] nb::module_& 
     .def("__deepcopy__", [](mochi::QueryHandle const& self, nb::dict) { return mochi::QueryHandle(self); })
   ;
 
-    m.attr("INVALID_HANDLE") = nb::cast(mochi::kInvalidHandle);
+}
+
+} // namespace
+
+void mochi::DefineMochiPhysics_MochiPhysicsHandle([[maybe_unused]] nb::module_& m, [[maybe_unused]] PybindRegistry& registry) {
+  Define_Handle(registry);
+  Define_SceneHandle(registry);
+  Define_ActorHandle(registry);
+  Define_ShapeHandle(registry);
+  Define_CallbackHandle(registry);
+  Define_ConstraintHandle(registry);
+  Define_StateHandle(registry);
+  Define_QueryHandle(registry);
+  m.attr("INVALID_HANDLE") = nb::cast(mochi::kInvalidHandle);
 
 }
 // clang-format on

@@ -37,7 +37,9 @@ void mochi::DeclareMochiPhysics_MochiPhysicsDebugDraw([[maybe_unused]] nb::modul
   registry.StoreClass(nb::class_<mochi::DebugDraw>(m, "DebugDraw", "Manages debug visualization features for a scene.\n\nProvides a feature-based system for visualizing various aspects of the physics\nsimulation. The client application is responsible for rendering the generated\nprimitives using its own graphics API. Features can be individually enabled or\ndisabled, such as visualizing contact points, normals, velocities, or AABBs.\n\nNote:\n    Must be accessed on the same thread as the owning\n    :class:`~superdex.physics.Scene`.\n\nNote:\n    Debug draw is disabled by default.\n\nNote:\n    If consuming the data on a different thread, the client must deep-copy the\n    underlying data into client-owned buffers before the scene thread calls\n    :meth:`gather_data` again or modifies the :class:`~superdex.physics.Scene`.\n    Copying :class:`~superdex.physics.DebugDrawData` itself is a shallow copy of\n    ``mochi::Span`` views into internal buffers and does not transfer ownership.\n\nWarning:\n    This documentation references the following C++ API, which is not available\n    in Python: ``mochi::Span``.\n\nWarning:\n    Debug drawing has significant performance overhead due to geometry\n    generation and data gathering.\n\nSee Also:\n    :meth:`~superdex.physics.Scene.get_debug_draw`,\n    :class:`~superdex.physics.DebugDrawData`", nb::never_destruct()));
 }
 
-void mochi::DefineMochiPhysics_MochiPhysicsDebugDraw([[maybe_unused]] nb::module_& m, [[maybe_unused]] PybindRegistry& registry) {
+namespace {
+
+MOCHI_NO_INLINE void Define_DebugDraw(PybindRegistry& registry) {
   registry.GetClass<mochi::DebugDraw>()
     .def("is_enabled", &mochi::DebugDraw::IsEnabled
       , "Check if debug drawing is enabled for the scene.\n\nReturns:\n    True if debug drawing is enabled, false otherwise.\n\nNote:\n    When disabled, :meth:`~superdex.physics.DebugDraw.gather_data` returns empty\n    data regardless of feature settings.\n\nSee Also:\n    :meth:`~superdex.physics.DebugDraw.enable`"
@@ -86,5 +88,11 @@ void mochi::DefineMochiPhysics_MochiPhysicsDebugDraw([[maybe_unused]] nb::module
     )
   ;
 
+}
+
+} // namespace
+
+void mochi::DefineMochiPhysics_MochiPhysicsDebugDraw([[maybe_unused]] nb::module_& m, [[maybe_unused]] PybindRegistry& registry) {
+  Define_DebugDraw(registry);
 }
 // clang-format on

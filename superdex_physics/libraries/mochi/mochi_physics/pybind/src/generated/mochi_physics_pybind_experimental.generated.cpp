@@ -61,9 +61,9 @@ void mochi::DeclareMochiPhysics_MochiPhysicsExperimental([[maybe_unused]] nb::mo
   registry.StoreClass(nb::class_<mochi::experimental::RecordingParams>(m_experimental, "RecordingParams", "[Experimental] Parameters controlling what data gets included in a scene\nrecording.\n\nThis includes per-actor information (meshes, local-to-global maps) recorded at\nactor creation, and per-step information (actor state, controller targets, query\nresults) recorded every step.\n\nWarning:\n    Experimental and may change or be removed without warning.\n\nWarning:\n    The recorded file format may change in future releases.\n\nSee Also:\n    :func:`~superdex.physics.experimental.start_recording`,\n    :func:`~superdex.physics.experimental.stop_recording`,\n    :func:`~superdex.physics.experimental.is_recording`"));
 }
 
-void mochi::DefineMochiPhysics_MochiPhysicsExperimental([[maybe_unused]] nb::module_& m, [[maybe_unused]] PybindRegistry& registry) {
-  auto m_experimental = m.def_submodule("experimental");
+namespace {
 
+MOCHI_NO_INLINE void Define_experimental_LinearTransmissionParams(PybindRegistry& registry) {
   registry.GetClass<mochi::experimental::LinearTransmissionParams>()
     .def("__init__", [](mochi::experimental::LinearTransmissionParams* self, nb::object joint_indices, nb::object joint_coefficients) {
       mochi::experimental::LinearTransmissionParams result{};
@@ -82,6 +82,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsExperimental([[maybe_unused]] nb::mod
     .def_prop_rw("joint_coefficients", [](mochi::experimental::LinearTransmissionParams& self) -> mochi::DynamicArray<mochi::real>& { return self.jointCoefficients; }, [](mochi::experimental::LinearTransmissionParams& self, nb::object val) { self.jointCoefficients = nb::cast<mochi::DynamicArray<mochi::real>>(val); })
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_experimental_SpatialTendonParams(PybindRegistry& registry) {
   registry.GetClass<mochi::experimental::SpatialTendonParams>()
     .def("__init__", [](mochi::experimental::SpatialTendonParams* self, nb::object routing_elements) {
       mochi::experimental::SpatialTendonParams result{};
@@ -97,6 +100,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsExperimental([[maybe_unused]] nb::mod
     .def_prop_rw("routing_elements", [](mochi::experimental::SpatialTendonParams& self) -> mochi::DynamicArray<mochi::RoutingElement>& { return self.routingElements; }, [](mochi::experimental::SpatialTendonParams& self, nb::object val) { self.routingElements = nb::cast<mochi::DynamicArray<mochi::RoutingElement>>(val); })
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_experimental_DisplacementControlActuatorParams(PybindRegistry& registry) {
   registry.GetClass<mochi::experimental::DisplacementControlActuatorParams>()
     .def("__init__", [](mochi::experimental::DisplacementControlActuatorParams* self, nb::object target_displacement, nb::object stiffness, nb::object damping, nb::object allow_compressive_force) {
       mochi::experimental::DisplacementControlActuatorParams result{};
@@ -123,6 +129,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsExperimental([[maybe_unused]] nb::mod
     .def_rw("allow_compressive_force", &mochi::experimental::DisplacementControlActuatorParams::allowCompressiveForce)
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_experimental_ForceControlActuatorParams(PybindRegistry& registry) {
   registry.GetClass<mochi::experimental::ForceControlActuatorParams>()
     .def("__init__", [](mochi::experimental::ForceControlActuatorParams* self, nb::object force, nb::object allow_compressive_force) {
       mochi::experimental::ForceControlActuatorParams result{};
@@ -141,6 +150,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsExperimental([[maybe_unused]] nb::mod
     .def_rw("allow_compressive_force", &mochi::experimental::ForceControlActuatorParams::allowCompressiveForce)
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_experimental_McKibbenActuatorParams(PybindRegistry& registry) {
   registry.GetClass<mochi::experimental::McKibbenActuatorParams>()
     .def("__init__", [](mochi::experimental::McKibbenActuatorParams* self, nb::object pressure, nb::object minimum_pressure, nb::object thread_length, nb::object number_of_wraps, nb::object deflated_stiffness, nb::object deflated_equilibrium_length) {
       mochi::experimental::McKibbenActuatorParams result{};
@@ -171,6 +183,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsExperimental([[maybe_unused]] nb::mod
     .def_rw("deflated_equilibrium_length", &mochi::experimental::McKibbenActuatorParams::deflatedEquilibriumLength)
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_experimental_IKSolverParams(PybindRegistry& registry) {
   registry.GetClass<mochi::experimental::IKSolverParams>()
     .def("__init__", [](mochi::experimental::IKSolverParams* self, nb::object max_iter, nb::object verbosity, nb::object abs_tol, nb::object rel_tol, nb::object position_error_thres, nb::object rotation_error_thres, nb::object line_search_max_iter, nb::object max_elapsed_time_seconds) {
       mochi::experimental::IKSolverParams result{};
@@ -207,6 +222,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsExperimental([[maybe_unused]] nb::mod
     .def_rw("max_elapsed_time_seconds", &mochi::experimental::IKSolverParams::maxElapsedTimeSeconds, "Maximum elapsed wall-clock time [s] before the solver stops.\n\nWhen set to a positive value, the solver will stop after this many seconds have\nelapsed, regardless of convergence. Useful for real-time applications where a\ntime budget must be enforced.\n\nNote:\n    A value of 0 (default) means no time limit.\n\nSee Also:\n    :attr:`~superdex.physics.NonLinearSolverParams.max_elapsed_time_seconds`")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_experimental_IKSolver(PybindRegistry& registry) {
   registry.GetClass<mochi::experimental::IKSolver>()
     .def("set_solver_params", &mochi::experimental::IKSolver::SetSolverParams
       , nb::arg("params")
@@ -277,6 +295,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsExperimental([[maybe_unused]] nb::mod
     )
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_experimental_NewtonEulerTerms(PybindRegistry& registry) {
   registry.GetClass<mochi::experimental::NewtonEulerTerms>()
     .def("compute", [](mochi::experimental::NewtonEulerTerms& self, mochi::real dt, mochi::Span<mochi::real const> q, mochi::Span<mochi::real const> dq, mochi::Span<mochi::real> out_m, mochi::Span<mochi::real> out_c, mochi::Span<mochi::real> out_j, mochi::Span<mochi::real> out_jt_f) {
       mochi::Error error;
@@ -295,6 +316,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsExperimental([[maybe_unused]] nb::mod
     )
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_experimental_ExperimentalSoftActorParams(PybindRegistry& registry) {
   registry.GetClass<mochi::experimental::ExperimentalSoftActorParams>()
     .def("__init__", [](mochi::experimental::ExperimentalSoftActorParams* self, nb::object collider_type, nb::object sdf, nb::object flow, nb::object use_recentering) {
       mochi::experimental::ExperimentalSoftActorParams result{};
@@ -321,6 +345,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsExperimental([[maybe_unused]] nb::mod
     .def_rw("use_recentering", &mochi::experimental::ExperimentalSoftActorParams::useRecentering)
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_experimental_ExperimentalSoftSkinnedActorParams(PybindRegistry& registry) {
   registry.GetClass<mochi::experimental::ExperimentalSoftSkinnedActorParams>()
     .def("__init__", [](mochi::experimental::ExperimentalSoftSkinnedActorParams* self, nb::object soft_params) {
       mochi::experimental::ExperimentalSoftSkinnedActorParams result{};
@@ -338,6 +365,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsExperimental([[maybe_unused]] nb::mod
     .def_prop_rw("soft_params", [](mochi::experimental::ExperimentalSoftSkinnedActorParams& self) -> mochi::DynamicArray<mochi::experimental::ExperimentalSoftActorParams>& { return self.softParams; }, [](mochi::experimental::ExperimentalSoftSkinnedActorParams& self, nb::object val) { self.softParams = nb::cast<mochi::DynamicArray<mochi::experimental::ExperimentalSoftActorParams>>(val); })
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_experimental_ShellMaterialParams(PybindRegistry& registry) {
   registry.GetClass<mochi::experimental::ShellMaterialParams>()
     .def("__init__", [](mochi::experimental::ShellMaterialParams* self, nb::object membrane_lambda, nb::object membrane_mu, nb::object bending_alpha, nb::object bending_beta, nb::object density, nb::object mass_damping_coefficient, nb::object stiffness_damping_coefficient, nb::object membrane_collapse_barrier_scale, nb::object membrane_strain_stiffening_scale) {
       mochi::experimental::ShellMaterialParams result{};
@@ -377,6 +407,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsExperimental([[maybe_unused]] nb::mod
     .def_rw("membrane_strain_stiffening_scale", &mochi::experimental::ShellMaterialParams::membraneStrainStiffeningScale)
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_experimental_ShellActorParams(PybindRegistry& registry) {
   registry.GetClass<mochi::experimental::ShellActorParams>()
     .def("__init__", [](mochi::experimental::ShellActorParams* self, nb::object name, nb::object layer, nb::object world_from_local, nb::object shape, nb::object material, nb::object collider_type, nb::object contact, nb::object point_cloud_collider, nb::object has_gravity, nb::object contact_element_type, nb::object use_contact_skin) {
       mochi::experimental::ShellActorParams result{};
@@ -422,6 +455,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsExperimental([[maybe_unused]] nb::mod
     .def_rw("use_contact_skin", &mochi::experimental::ShellActorParams::useContactSkin, "Use the shape's authored contact skin for colliding contact samples.\n\nActor creation fails unless the shape has a contact skin. This changes the\nshell's colliding contact samples. The point-cloud collider, when enabled,\nremains discretized on the physics mesh.\n\nNote:\n    The contact skin is exposed through\n    :meth:`~superdex.physics.Actor.get_contact_skin_mesh` and\n    :class:`CONTACT_SKIN_NODE_POSITIONS <superdex.physics.QueryType>` /\n    :class:`CONTACT_SKIN_NODE_NORMALS <superdex.physics.QueryType>`\n    independently of this flag.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_experimental_SleepParams(PybindRegistry& registry) {
   registry.GetClass<mochi::experimental::SleepParams>()
     .def("__init__", [](mochi::experimental::SleepParams* self, nb::object can_sleep, nb::object sleep_threshold, nb::object min_steps_before_sleep) {
       mochi::experimental::SleepParams result{};
@@ -445,6 +481,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsExperimental([[maybe_unused]] nb::mod
     .def_rw("min_steps_before_sleep", &mochi::experimental::SleepParams::minStepsBeforeSleep, "Number of consecutive rest steps required before an island goes to sleep.\n\nNote:\n    Must be at least 2.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_experimental_DebugStats(PybindRegistry& registry) {
   registry.GetClass<mochi::experimental::DebugStats>()
     .def("__init__", [](mochi::experimental::DebugStats* self, nb::object max_residual_norm_relative_error) {
       mochi::experimental::DebugStats result{};
@@ -460,6 +499,9 @@ void mochi::DefineMochiPhysics_MochiPhysicsExperimental([[maybe_unused]] nb::mod
     .def_rw("max_residual_norm_relative_error", &mochi::experimental::DebugStats::maxResidualNormRelativeError, "Largest relative error of the residual norm across integration stages, awake\nsimulation islands and Newton iterations, in the last call to\n:meth:`~superdex.physics.Scene.step`. The error is computed by finite-difference\nconsistency check. It is disabled by default due to its computational cost, but\nit can be activated with\n:attr:`~superdex.physics.ExperimentalEvalParams.consistency_res_norm`.")
   ;
 
+}
+
+MOCHI_NO_INLINE void Define_experimental_RecordingParams(PybindRegistry& registry) {
   registry.GetClass<mochi::experimental::RecordingParams>()
     .def("__init__", [](mochi::experimental::RecordingParams* self, nb::object record_actor_meshes, nb::object record_actor_local_to_global_map, nb::object record_target_state, nb::object record_dynamic_actor_state, nb::object record_static_actor_state, nb::object record_contact_points, nb::object record_node_contact_forces, nb::object record_sdf_distances) {
       mochi::experimental::RecordingParams result{};
@@ -500,460 +542,482 @@ void mochi::DefineMochiPhysics_MochiPhysicsExperimental([[maybe_unused]] nb::mod
     )
   ;
 
-    m_experimental.def("restore_state_from_scene", [](mochi::Scene* scene_to, mochi::Scene const* scene_from, mochi::StateHandle handle_from) {
-      mochi::Error error;
-      mochi::experimental::RestoreStateFromScene(scene_to, scene_from, handle_from, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-    }
-      , nb::arg("scene_to").none()
-      , nb::arg("scene_from").none()
-      , nb::arg("handle_from")
-    );
+}
 
-    m_experimental.def("apply_improved_convergence_settings", [](mochi::Scene* scene) {
-      mochi::Error error;
-      mochi::experimental::ApplyImprovedConvergenceSettings(scene, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-    }
-      , nb::arg("scene").none()
-    );
+} // namespace
 
-    m_experimental.def("get_contact_force_world_batch", [](mochi::Span<mochi::Actor const* const> actors, mochi::Span<mochi::Actor const* const> colliders) {
-      mochi::Error error;
-      auto result = mochi::experimental::GetContactForceWorldBatch(actors, colliders, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
-    }
-      , nb::arg("actors")
-      , nb::arg("colliders")
-    );
+void mochi::DefineMochiPhysics_MochiPhysicsExperimental([[maybe_unused]] nb::module_& m, [[maybe_unused]] PybindRegistry& registry) {
+  auto m_experimental = m.def_submodule("experimental");
 
-    m_experimental.def("set_actor_preconditioner_type", [](mochi::Actor* actor, mochi::PreconditionerType preconditioner_type) {
-      mochi::Error error;
-      mochi::experimental::SetActorPreconditionerType(actor, preconditioner_type, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
+  Define_experimental_LinearTransmissionParams(registry);
+  Define_experimental_SpatialTendonParams(registry);
+  Define_experimental_DisplacementControlActuatorParams(registry);
+  Define_experimental_ForceControlActuatorParams(registry);
+  Define_experimental_McKibbenActuatorParams(registry);
+  Define_experimental_IKSolverParams(registry);
+  Define_experimental_IKSolver(registry);
+  Define_experimental_NewtonEulerTerms(registry);
+  Define_experimental_ExperimentalSoftActorParams(registry);
+  Define_experimental_ExperimentalSoftSkinnedActorParams(registry);
+  Define_experimental_ShellMaterialParams(registry);
+  Define_experimental_ShellActorParams(registry);
+  Define_experimental_SleepParams(registry);
+  Define_experimental_DebugStats(registry);
+  Define_experimental_RecordingParams(registry);
+  m_experimental.def("restore_state_from_scene", [](mochi::Scene* scene_to, mochi::Scene const* scene_from, mochi::StateHandle handle_from) {
+    mochi::Error error;
+    mochi::experimental::RestoreStateFromScene(scene_to, scene_from, handle_from, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("actor").none()
-      , nb::arg("preconditioner_type")
-      , "Set the preconditioner type for an actor.\n\nArgs:\n    actor (Actor): Actor to configure.\n    preconditioner_type (PreconditionerType | int): Preconditioner to use.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    This setting takes effect only when the scene uses :class:`PER_ACTOR\n    <superdex.physics.PreconditionerType>` or :class:`ADAPTIVE_PER_ACTOR\n    <superdex.physics.PreconditionerType>`, and overrides the adaptive selection\n    for this actor.\n\nNote:\n    For a ROM actor that switches between reduced and full order, the setting\n    applies only to its current representation. Each representation keeps its\n    own setting across switches.\n\nNote:\n    Supported combinations are:\n\n    - Standalone dynamic rigid actors, ROM actors (including nested soft\n      actors), and articulated actors with at least one degree of freedom:\n      :class:`JACOBI <superdex.physics.PreconditionerType>` and\n      :class:`SYM_INVERSE <superdex.physics.PreconditionerType>`.\n    - Full-order soft actors (including nested soft actors) and shell actors:\n      :class:`JACOBI <superdex.physics.PreconditionerType>`,\n      :class:`BLOCK_JACOBI <superdex.physics.PreconditionerType>`, :class:`AMG\n      <superdex.physics.PreconditionerType>`, and :class:`SYM_INVERSE\n      <superdex.physics.PreconditionerType>`.\n    - Rod actors: :class:`JACOBI <superdex.physics.PreconditionerType>`,\n      :class:`BLOCK_JACOBI <superdex.physics.PreconditionerType>`, :class:`ILU0\n      <superdex.physics.PreconditionerType>`, and :class:`SYM_INVERSE\n      <superdex.physics.PreconditionerType>`.\n\nNote:\n    All other actors are unsupported, including static actors and nested link\n    actors.\n\nWarning:\n    :class:`SYM_INVERSE <superdex.physics.PreconditionerType>` may be\n    prohibitively expensive for full-order deformable actors."
-    );
+  }
+    , nb::arg("scene_to").none()
+    , nb::arg("scene_from").none()
+    , nb::arg("handle_from")
+  );
 
-    m_experimental.def("enable_newton_euler_inertia", [](mochi::Actor* actor, bool enable) {
-      mochi::Error error;
-      mochi::experimental::EnableNewtonEulerInertia(actor, enable, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
+  m_experimental.def("apply_improved_convergence_settings", [](mochi::Scene* scene) {
+    mochi::Error error;
+    mochi::experimental::ApplyImprovedConvergenceSettings(scene, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("actor").none()
-      , nb::arg("enable")
-    );
+  }
+    , nb::arg("scene").none()
+  );
 
-    m_experimental.def("is_newton_euler_inertia_enabled", [](mochi::Actor const* actor) {
-      mochi::Error error;
-      auto result = mochi::experimental::IsNewtonEulerInertiaEnabled(actor, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
+  m_experimental.def("get_contact_force_world_batch", [](mochi::Span<mochi::Actor const* const> actors, mochi::Span<mochi::Actor const* const> colliders) {
+    mochi::Error error;
+    auto result = mochi::experimental::GetContactForceWorldBatch(actors, colliders, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("actor").none()
-    );
+    return result;
+  }
+    , nb::arg("actors")
+    , nb::arg("colliders")
+  );
 
-    m_experimental.def("set_soft_material_params_field", [](mochi::Actor* actor, mochi::SoftMaterialParams const& params, int element_index) {
-      mochi::Error error;
-      mochi::experimental::SetSoftMaterialParamsField(actor, params, element_index, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
+  m_experimental.def("set_actor_preconditioner_type", [](mochi::Actor* actor, mochi::PreconditionerType preconditioner_type) {
+    mochi::Error error;
+    mochi::experimental::SetActorPreconditionerType(actor, preconditioner_type, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("actor").none()
-      , nb::arg("params")
-      , nb::arg("element_index")
-    );
+  }
+    , nb::arg("actor").none()
+    , nb::arg("preconditioner_type")
+    , "Set the preconditioner type for an actor.\n\nArgs:\n    actor (Actor): Actor to configure.\n    preconditioner_type (PreconditionerType | int): Preconditioner to use.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    This setting takes effect only when the scene uses :class:`PER_ACTOR\n    <superdex.physics.PreconditionerType>` or :class:`ADAPTIVE_PER_ACTOR\n    <superdex.physics.PreconditionerType>`, and overrides the adaptive selection\n    for this actor.\n\nNote:\n    For a ROM actor that switches between reduced and full order, the setting\n    applies only to its current representation. Each representation keeps its\n    own setting across switches.\n\nNote:\n    Supported combinations are:\n\n    - Standalone dynamic rigid actors, ROM actors (including nested soft\n      actors), and articulated actors with at least one degree of freedom:\n      :class:`JACOBI <superdex.physics.PreconditionerType>` and\n      :class:`SYM_INVERSE <superdex.physics.PreconditionerType>`.\n    - Full-order soft actors (including nested soft actors) and shell actors:\n      :class:`JACOBI <superdex.physics.PreconditionerType>`,\n      :class:`BLOCK_JACOBI <superdex.physics.PreconditionerType>`, :class:`AMG\n      <superdex.physics.PreconditionerType>`, and :class:`SYM_INVERSE\n      <superdex.physics.PreconditionerType>`.\n    - Rod actors: :class:`JACOBI <superdex.physics.PreconditionerType>`,\n      :class:`BLOCK_JACOBI <superdex.physics.PreconditionerType>`, :class:`ILU0\n      <superdex.physics.PreconditionerType>`, and :class:`SYM_INVERSE\n      <superdex.physics.PreconditionerType>`.\n\nNote:\n    All other actors are unsupported, including static actors and nested link\n    actors.\n\nWarning:\n    :class:`SYM_INVERSE <superdex.physics.PreconditionerType>` may be\n    prohibitively expensive for full-order deformable actors."
+  );
 
-    m_experimental.def("get_soft_material_params_field", [](mochi::Actor const* actor, int element_index) {
-      mochi::Error error;
-      auto result = mochi::experimental::GetSoftMaterialParamsField(actor, element_index, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
+  m_experimental.def("enable_newton_euler_inertia", [](mochi::Actor* actor, bool enable) {
+    mochi::Error error;
+    mochi::experimental::EnableNewtonEulerInertia(actor, enable, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("actor").none()
-      , nb::arg("element_index")
-    );
+  }
+    , nb::arg("actor").none()
+    , nb::arg("enable")
+  );
 
-    m_experimental.def("set_articulated_force_and_target_pose", [](mochi::Actor* actor, mochi::Span<mochi::real const> target, mochi::Span<mochi::experimental::ControlType const> control_types, mochi::Span<int const> dof_or_link_indices) {
-      mochi::Error error;
-      mochi::experimental::SetArticulatedForceAndTargetPose(actor, target, control_types, dof_or_link_indices, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
+  m_experimental.def("is_newton_euler_inertia_enabled", [](mochi::Actor const* actor) {
+    mochi::Error error;
+    auto result = mochi::experimental::IsNewtonEulerInertiaEnabled(actor, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("actor").none()
-      , nb::arg("target")
-      , nb::arg("control_types")
-      , nb::arg("dof_or_link_indices")
-      , "Set force, target pose, or other control modes for an articulated actor.\n\nArgs:\n    actor (Actor): Articulated actor to control.\n    target (ArrayLikeReal): The combined control values. Size must match the sum\n        of values consumed by each control type (1 for single-DoF modes, 3 for\n        3D modes).\n    control_types (experimental.ArrayLikeControlType): A span indicating the\n        control type for each control channel.\n    dof_or_link_indices (ArrayLikeInt): A span indicating the DoF index (for\n        single-DoF modes) or link index (for 3D modes) for each control channel.\n        Must be same size as controlTypes.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    Only applicable to articulated actors.\n\nNote:\n    Supports 4 control types: :class:`SINGLE_DOF\n    <superdex.physics.experimental.ControlType>`, :class:`LINK_POS\n    <superdex.physics.experimental.ControlType>`, :class:`LINK_ROT\n    <superdex.physics.experimental.ControlType>`, :class:`FORCE\n    <superdex.physics.experimental.ControlType>`.\n\nNote:\n    For 3D rotation mode (:class:`LINK_ROT\n    <superdex.physics.experimental.ControlType>`), values are rotation vectors\n    (axis * angle in radians).\n\nNote:\n    :class:`SINGLE_DOF <superdex.physics.experimental.ControlType>`,\n    :class:`LINK_POS <superdex.physics.experimental.ControlType>`, and\n    :class:`LINK_ROT <superdex.physics.experimental.ControlType>` control types\n    require a pose controller. :class:`FORCE\n    <superdex.physics.experimental.ControlType>` does not require a pose\n    controller.\n\nNote:\n    A link-joint pair cannot be controlled by both link-level (:class:`LINK_POS\n    <superdex.physics.experimental.ControlType>`, :class:`LINK_ROT\n    <superdex.physics.experimental.ControlType>`) and DoF-level\n    (:class:`SINGLE_DOF <superdex.physics.experimental.ControlType>`) controls\n    simultaneously.\n\nNote:\n    Control indices must be unique within their control groups.\n    :class:`SINGLE_DOF <superdex.physics.experimental.ControlType>` and\n    :class:`FORCE <superdex.physics.experimental.ControlType>` share DoF\n    indices, so a DoF may appear at most once across those modes.\n    :class:`LINK_POS <superdex.physics.experimental.ControlType>` and\n    :class:`LINK_ROT <superdex.physics.experimental.ControlType>` are checked\n    separately, so each link may have at most one position target and at most\n    one rotation target.\n\nSee Also:\n    :class:`~superdex.physics.experimental.ControlType`,\n    :meth:`~superdex.physics.Actor.set_articulated_target_pose`,\n    :meth:`~superdex.physics.Actor.set_articulated_target_link_transforms`,\n    :meth:`~superdex.physics.Actor.set_external_forces_on_dofs`"
-    );
+    return result;
+  }
+    , nb::arg("actor").none()
+  );
 
-    m_experimental.def("add_linear_transmission", [](mochi::Actor* actor, mochi::experimental::LinearTransmissionParams const& params) {
-      mochi::Error error;
-      auto result = mochi::experimental::AddLinearTransmission(actor, params, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
+  m_experimental.def("set_soft_material_params_field", [](mochi::Actor* actor, mochi::SoftMaterialParams const& params, int element_index) {
+    mochi::Error error;
+    mochi::experimental::SetSoftMaterialParamsField(actor, params, element_index, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("actor").none()
-      , nb::arg("params")
-    );
+  }
+    , nb::arg("actor").none()
+    , nb::arg("params")
+    , nb::arg("element_index")
+  );
 
-    m_experimental.def("add_spatial_tendon", [](mochi::Actor* actor, mochi::experimental::SpatialTendonParams const& params) {
-      mochi::Error error;
-      auto result = mochi::experimental::AddSpatialTendon(actor, params, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
+  m_experimental.def("get_soft_material_params_field", [](mochi::Actor const* actor, int element_index) {
+    mochi::Error error;
+    auto result = mochi::experimental::GetSoftMaterialParamsField(actor, element_index, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("actor").none()
-      , nb::arg("params")
-    );
+    return result;
+  }
+    , nb::arg("actor").none()
+    , nb::arg("element_index")
+  );
 
-    m_experimental.def("attach_displacement_control_actuator", [](mochi::Actor* actor, int transmission_index, mochi::experimental::DisplacementControlActuatorParams const& params) {
-      mochi::Error error;
-      mochi::experimental::AttachDisplacementControlActuator(actor, transmission_index, params, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
+  m_experimental.def("set_articulated_force_and_target_pose", [](mochi::Actor* actor, mochi::Span<mochi::real const> target, mochi::Span<mochi::experimental::ControlType const> control_types, mochi::Span<int const> dof_or_link_indices) {
+    mochi::Error error;
+    mochi::experimental::SetArticulatedForceAndTargetPose(actor, target, control_types, dof_or_link_indices, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("actor").none()
-      , nb::arg("transmission_index")
-      , nb::arg("params")
-    );
+  }
+    , nb::arg("actor").none()
+    , nb::arg("target")
+    , nb::arg("control_types")
+    , nb::arg("dof_or_link_indices")
+    , "Set force, target pose, or other control modes for an articulated actor.\n\nArgs:\n    actor (Actor): Articulated actor to control.\n    target (ArrayLikeReal): The combined control values. Size must match the sum\n        of values consumed by each control type (1 for single-DoF modes, 3 for\n        3D modes).\n    control_types (experimental.ArrayLikeControlType): A span indicating the\n        control type for each control channel.\n    dof_or_link_indices (ArrayLikeInt): A span indicating the DoF index (for\n        single-DoF modes) or link index (for 3D modes) for each control channel.\n        Must be same size as controlTypes.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    Only applicable to articulated actors.\n\nNote:\n    Supports 4 control types: :class:`SINGLE_DOF\n    <superdex.physics.experimental.ControlType>`, :class:`LINK_POS\n    <superdex.physics.experimental.ControlType>`, :class:`LINK_ROT\n    <superdex.physics.experimental.ControlType>`, :class:`FORCE\n    <superdex.physics.experimental.ControlType>`.\n\nNote:\n    For 3D rotation mode (:class:`LINK_ROT\n    <superdex.physics.experimental.ControlType>`), values are rotation vectors\n    (axis * angle in radians).\n\nNote:\n    :class:`SINGLE_DOF <superdex.physics.experimental.ControlType>`,\n    :class:`LINK_POS <superdex.physics.experimental.ControlType>`, and\n    :class:`LINK_ROT <superdex.physics.experimental.ControlType>` control types\n    require a pose controller. :class:`FORCE\n    <superdex.physics.experimental.ControlType>` does not require a pose\n    controller.\n\nNote:\n    A link-joint pair cannot be controlled by both link-level (:class:`LINK_POS\n    <superdex.physics.experimental.ControlType>`, :class:`LINK_ROT\n    <superdex.physics.experimental.ControlType>`) and DoF-level\n    (:class:`SINGLE_DOF <superdex.physics.experimental.ControlType>`) controls\n    simultaneously.\n\nNote:\n    Control indices must be unique within their control groups.\n    :class:`SINGLE_DOF <superdex.physics.experimental.ControlType>` and\n    :class:`FORCE <superdex.physics.experimental.ControlType>` share DoF\n    indices, so a DoF may appear at most once across those modes.\n    :class:`LINK_POS <superdex.physics.experimental.ControlType>` and\n    :class:`LINK_ROT <superdex.physics.experimental.ControlType>` are checked\n    separately, so each link may have at most one position target and at most\n    one rotation target.\n\nSee Also:\n    :class:`~superdex.physics.experimental.ControlType`,\n    :meth:`~superdex.physics.Actor.set_articulated_target_pose`,\n    :meth:`~superdex.physics.Actor.set_articulated_target_link_transforms`,\n    :meth:`~superdex.physics.Actor.set_external_forces_on_dofs`"
+  );
 
-    m_experimental.def("attach_force_control_actuator", [](mochi::Actor* actor, int transmission_index, mochi::experimental::ForceControlActuatorParams const& params) {
-      mochi::Error error;
-      mochi::experimental::AttachForceControlActuator(actor, transmission_index, params, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
+  m_experimental.def("add_linear_transmission", [](mochi::Actor* actor, mochi::experimental::LinearTransmissionParams const& params) {
+    mochi::Error error;
+    auto result = mochi::experimental::AddLinearTransmission(actor, params, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("actor").none()
-      , nb::arg("transmission_index")
-      , nb::arg("params")
-    );
+    return result;
+  }
+    , nb::arg("actor").none()
+    , nb::arg("params")
+  );
 
-    m_experimental.def("attach_mc_kibben_actuator", [](mochi::Actor* actor, int transmission_index, mochi::experimental::McKibbenActuatorParams const& params) {
-      mochi::Error error;
-      mochi::experimental::AttachMcKibbenActuator(actor, transmission_index, params, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
+  m_experimental.def("add_spatial_tendon", [](mochi::Actor* actor, mochi::experimental::SpatialTendonParams const& params) {
+    mochi::Error error;
+    auto result = mochi::experimental::AddSpatialTendon(actor, params, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("actor").none()
-      , nb::arg("transmission_index")
-      , nb::arg("params")
-    );
+    return result;
+  }
+    , nb::arg("actor").none()
+    , nb::arg("params")
+  );
 
-    m_experimental.def("set_transmission_actuator_state_variables", [](mochi::Actor* actor, int transmission_index, mochi::Span<mochi::real const> state_variables) {
-      mochi::Error error;
-      mochi::experimental::SetTransmissionActuatorStateVariables(actor, transmission_index, state_variables, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
+  m_experimental.def("attach_displacement_control_actuator", [](mochi::Actor* actor, int transmission_index, mochi::experimental::DisplacementControlActuatorParams const& params) {
+    mochi::Error error;
+    mochi::experimental::AttachDisplacementControlActuator(actor, transmission_index, params, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("actor").none()
-      , nb::arg("transmission_index")
-      , nb::arg("state_variables")
-    );
+  }
+    , nb::arg("actor").none()
+    , nb::arg("transmission_index")
+    , nb::arg("params")
+  );
 
-    m_experimental.def("get_transmission_displacement", [](mochi::Actor const* actor, int transmission_index) {
-      mochi::Error error;
-      auto result = mochi::experimental::GetTransmissionDisplacement(actor, transmission_index, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
+  m_experimental.def("attach_force_control_actuator", [](mochi::Actor* actor, int transmission_index, mochi::experimental::ForceControlActuatorParams const& params) {
+    mochi::Error error;
+    mochi::experimental::AttachForceControlActuator(actor, transmission_index, params, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("actor").none()
-      , nb::arg("transmission_index")
-    );
+  }
+    , nb::arg("actor").none()
+    , nb::arg("transmission_index")
+    , nb::arg("params")
+  );
 
-    m_experimental.def("get_transmission_displacement_jacobian", [](mochi::Actor const* actor, int transmission_index, mochi::Span<mochi::real> out_jacobian) {
-      mochi::Error error;
-      mochi::experimental::GetTransmissionDisplacementJacobian(actor, transmission_index, out_jacobian, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
+  m_experimental.def("attach_mc_kibben_actuator", [](mochi::Actor* actor, int transmission_index, mochi::experimental::McKibbenActuatorParams const& params) {
+    mochi::Error error;
+    mochi::experimental::AttachMcKibbenActuator(actor, transmission_index, params, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("actor").none()
-      , nb::arg("transmission_index")
-      , nb::arg("out_jacobian")
-      , "Get a transmission's displacement Jacobian at the actor's current pose.\n\n`outJacobian[j]` is the derivative of transmission displacement with respect to\nreduced DoF `j`, using the articulated solver's reduced tangent/Lie convention\nand DoF ordering. Each entry is the transmission moment arm for that DoF.\n\nArgs:\n    actor (Actor): Articulated actor that owns the transmission.\n    transmission_index (int): Transmission index returned by\n        :func:`~superdex.physics.experimental.add_linear_transmission` or\n        :func:`~superdex.physics.experimental.add_spatial_tendon`.\n    out_jacobian (ArrayLikeReal): Scalar-output transmission Jacobian. Its size\n        must equal :meth:`~superdex.physics.Actor.get_num_dofs`, and every entry\n        is overwritten.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    A joint's entries begin at the offset in the corresponding item returned by\n    :meth:`~superdex.physics.Actor.get_articulated_shape_info`. A revolute joint\n    has one entry at that offset."
-    );
+  }
+    , nb::arg("actor").none()
+    , nb::arg("transmission_index")
+    , nb::arg("params")
+  );
 
-    m_experimental.def("get_transmission_actuator_state_variables", [](mochi::Actor const* actor, int transmission_index, mochi::Span<mochi::real> out_state_variables) {
-      mochi::Error error;
-      mochi::experimental::GetTransmissionActuatorStateVariables(actor, transmission_index, out_state_variables, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
+  m_experimental.def("set_transmission_actuator_state_variables", [](mochi::Actor* actor, int transmission_index, mochi::Span<mochi::real const> state_variables) {
+    mochi::Error error;
+    mochi::experimental::SetTransmissionActuatorStateVariables(actor, transmission_index, state_variables, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("actor").none()
-      , nb::arg("transmission_index")
-      , nb::arg("out_state_variables")
-    );
+  }
+    , nb::arg("actor").none()
+    , nb::arg("transmission_index")
+    , nb::arg("state_variables")
+  );
 
-    m_experimental.def("get_num_transmission_actuator_state_variables", [](mochi::Actor const* actor, int transmission_index) {
-      mochi::Error error;
-      auto result = mochi::experimental::GetNumTransmissionActuatorStateVariables(actor, transmission_index, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
+  m_experimental.def("get_transmission_displacement", [](mochi::Actor const* actor, int transmission_index) {
+    mochi::Error error;
+    auto result = mochi::experimental::GetTransmissionDisplacement(actor, transmission_index, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("actor").none()
-      , nb::arg("transmission_index")
-    );
+    return result;
+  }
+    , nb::arg("actor").none()
+    , nb::arg("transmission_index")
+  );
 
-    m_experimental.def("create_ik_solver", [](mochi::Scene* scene) {
-      CheckContext();
-      mochi::Error error;
-      auto result = mochi::experimental::CreateIKSolver(scene, GetContext(), error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
+  m_experimental.def("get_transmission_displacement_jacobian", [](mochi::Actor const* actor, int transmission_index, mochi::Span<mochi::real> out_jacobian) {
+    mochi::Error error;
+    mochi::experimental::GetTransmissionDisplacementJacobian(actor, transmission_index, out_jacobian, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("scene").none()
-      , "Create a new inverse kinematics (IK) solver.\n\nArgs:\n    scene (Scene): Scene containing the articulated and/or rigid actor(s) to\n        perform IK on.\n\nReturns:\n    Pointer to the created :class:`~superdex.physics.experimental.IKSolver`, or\n    None on error.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    The scene must have been created with :func:`~superdex.physics.create_scene`\n    and must not be owned or managed by another API.\n\nNote:\n    On success, ownership transfers to the\n    :class:`~superdex.physics.experimental.IKSolver`, which assumes exclusive\n    control and destroys the scene when\n    :func:`~superdex.physics.experimental.destroy_ik_solver` is called. Do not\n    use the scene directly after ownership transfers. On error, ownership is\n    unchanged.\n\nNote:\n    Returns an error if scene ownership has already been claimed.\n\nNote:\n    The scene must contain only :class:`ARTICULATED\n    <superdex.physics.ActorType>` and :class:`RIGID\n    <superdex.physics.ActorType>` actors.\n\nNote:\n    The scene's solver parameters, gravity, single-island setting, contact and\n    constraint dissipation, and articulated inertia/joint-friction terms are\n    reconfigured for IK and cannot be relied upon afterwards. Pending\n    pose-controller target velocities are ignored.\n\nNote:\n    Sleeping is disabled in the owned scene, and\n    :func:`~superdex.physics.experimental.set_sleep_params` rejects enabling it\n    again.\n\nSee Also:\n    :func:`~superdex.physics.experimental.destroy_ik_solver`"
-      , nb::rv_policy::reference
-    );
+  }
+    , nb::arg("actor").none()
+    , nb::arg("transmission_index")
+    , nb::arg("out_jacobian")
+    , "Get a transmission's displacement Jacobian at the actor's current pose.\n\n`outJacobian[j]` is the derivative of transmission displacement with respect to\nreduced DoF `j`, using the articulated solver's reduced tangent/Lie convention\nand DoF ordering. Each entry is the transmission moment arm for that DoF.\n\nArgs:\n    actor (Actor): Articulated actor that owns the transmission.\n    transmission_index (int): Transmission index returned by\n        :func:`~superdex.physics.experimental.add_linear_transmission` or\n        :func:`~superdex.physics.experimental.add_spatial_tendon`.\n    out_jacobian (ArrayLikeReal): Scalar-output transmission Jacobian. Its size\n        must equal :meth:`~superdex.physics.Actor.get_num_dofs`, and every entry\n        is overwritten.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    A joint's entries begin at the offset in the corresponding item returned by\n    :meth:`~superdex.physics.Actor.get_articulated_shape_info`. A revolute joint\n    has one entry at that offset."
+  );
 
-    m_experimental.def("destroy_ik_solver", [](mochi::experimental::IKSolver* solver) {
-      CheckContext();
-      mochi::Error error;
-      mochi::experimental::DestroyIKSolver(solver, GetContext(), error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
+  m_experimental.def("get_transmission_actuator_state_variables", [](mochi::Actor const* actor, int transmission_index, mochi::Span<mochi::real> out_state_variables) {
+    mochi::Error error;
+    mochi::experimental::GetTransmissionActuatorStateVariables(actor, transmission_index, out_state_variables, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("solver").none()
-      , "Destroy an IK solver and the scene it owns.\n\nArgs:\n    solver (Optional[IKSolver]): :class:`~superdex.physics.experimental.IKSolver`\n        to destroy.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    No-op if ``solver`` is None or unknown to this Mochi context.\n\nNote:\n    Call on any thread.\n\nNote:\n    Any remaining IK solvers will be cleaned up automatically when the Mochi\n    context is destroyed.\n\nWarning:\n    Do not destroy the IK solver's scene directly with\n    :func:`~superdex.physics.destroy_scene` while the\n    :class:`~superdex.physics.experimental.IKSolver` exists. Destroy the IK\n    solver with :func:`~superdex.physics.experimental.destroy_ik_solver`\n    instead.\n\nWarning:\n    Do not dereference pointers to the IK solver, its owned scene, or the\n    scene's actors and constraints after this call.\n\nSee Also:\n    :func:`~superdex.physics.experimental.create_ik_solver`"
-    );
+  }
+    , nb::arg("actor").none()
+    , nb::arg("transmission_index")
+    , nb::arg("out_state_variables")
+  );
 
-    m_experimental.def("is_valid_ik_solver", [](mochi::experimental::IKSolver const* solver) {
-      CheckContext();
-      mochi::Error error;
-      auto result = mochi::experimental::IsValidIKSolver(solver, GetContext(), error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
+  m_experimental.def("get_num_transmission_actuator_state_variables", [](mochi::Actor const* actor, int transmission_index) {
+    mochi::Error error;
+    auto result = mochi::experimental::GetNumTransmissionActuatorStateVariables(actor, transmission_index, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("solver").none()
-      , "Check if an IK solver pointer is valid.\n\nArgs:\n    solver (Optional[IKSolver]): :class:`~superdex.physics.experimental.IKSolver`\n        pointer to check.\n\nReturns:\n    True if the solver is valid (not destroyed) and belongs to this Mochi\n    context, false otherwise.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    Call on any thread.\n\nSee Also:\n    :func:`~superdex.physics.experimental.create_ik_solver`,\n    :func:`~superdex.physics.experimental.destroy_ik_solver`"
-    );
+    return result;
+  }
+    , nb::arg("actor").none()
+    , nb::arg("transmission_index")
+  );
 
-    m_experimental.def("create_newton_euler_terms", [](mochi::Actor* robot) {
-      CheckContext();
-      mochi::Error error;
-      auto result = mochi::experimental::CreateNewtonEulerTerms(robot, GetContext(), error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
+  m_experimental.def("create_ik_solver", [](mochi::Scene* scene) {
+    CheckContext();
+    mochi::Error error;
+    auto result = mochi::experimental::CreateIKSolver(scene, GetContext(), error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("robot").none()
-      , nb::rv_policy::reference
-    );
+    return result;
+  }
+    , nb::arg("scene").none()
+    , "Create a new inverse kinematics (IK) solver.\n\nArgs:\n    scene (Scene): Scene containing the articulated and/or rigid actor(s) to\n        perform IK on.\n\nReturns:\n    Pointer to the created :class:`~superdex.physics.experimental.IKSolver`, or\n    None on error.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    The scene must have been created with :func:`~superdex.physics.create_scene`\n    and must not be owned or managed by another API.\n\nNote:\n    On success, ownership transfers to the\n    :class:`~superdex.physics.experimental.IKSolver`, which assumes exclusive\n    control and destroys the scene when\n    :func:`~superdex.physics.experimental.destroy_ik_solver` is called. Do not\n    use the scene directly after ownership transfers. On error, ownership is\n    unchanged.\n\nNote:\n    Returns an error if scene ownership has already been claimed.\n\nNote:\n    The scene must contain only :class:`ARTICULATED\n    <superdex.physics.ActorType>` and :class:`RIGID\n    <superdex.physics.ActorType>` actors.\n\nNote:\n    The scene's solver parameters, gravity, single-island setting, contact and\n    constraint dissipation, and articulated inertia/joint-friction terms are\n    reconfigured for IK and cannot be relied upon afterwards. Pending\n    pose-controller target velocities are ignored.\n\nNote:\n    Sleeping is disabled in the owned scene, and\n    :func:`~superdex.physics.experimental.set_sleep_params` rejects enabling it\n    again.\n\nSee Also:\n    :func:`~superdex.physics.experimental.destroy_ik_solver`"
+    , nb::rv_policy::reference
+  );
 
-    m_experimental.def("destroy_newton_euler_terms", [](mochi::experimental::NewtonEulerTerms* newton_euler_terms) {
-      CheckContext();
-      mochi::Error error;
-      mochi::experimental::DestroyNewtonEulerTerms(newton_euler_terms, GetContext(), error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
+  m_experimental.def("destroy_ik_solver", [](mochi::experimental::IKSolver* solver) {
+    CheckContext();
+    mochi::Error error;
+    mochi::experimental::DestroyIKSolver(solver, GetContext(), error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("newton_euler_terms").none()
-    );
+  }
+    , nb::arg("solver").none()
+    , "Destroy an IK solver and the scene it owns.\n\nArgs:\n    solver (Optional[IKSolver]): :class:`~superdex.physics.experimental.IKSolver`\n        to destroy.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    No-op if ``solver`` is None or unknown to this Mochi context.\n\nNote:\n    Call on any thread.\n\nNote:\n    Any remaining IK solvers will be cleaned up automatically when the Mochi\n    context is destroyed.\n\nWarning:\n    Do not destroy the IK solver's scene directly with\n    :func:`~superdex.physics.destroy_scene` while the\n    :class:`~superdex.physics.experimental.IKSolver` exists. Destroy the IK\n    solver with :func:`~superdex.physics.experimental.destroy_ik_solver`\n    instead.\n\nWarning:\n    Do not dereference pointers to the IK solver, its owned scene, or the\n    scene's actors and constraints after this call.\n\nSee Also:\n    :func:`~superdex.physics.experimental.create_ik_solver`"
+  );
 
-    m_experimental.def("is_valid_newton_euler_terms", [](mochi::experimental::NewtonEulerTerms const* newton_euler_terms) {
-      CheckContext();
-      mochi::Error error;
-      auto result = mochi::experimental::IsValidNewtonEulerTerms(newton_euler_terms, GetContext(), error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
+  m_experimental.def("is_valid_ik_solver", [](mochi::experimental::IKSolver const* solver) {
+    CheckContext();
+    mochi::Error error;
+    auto result = mochi::experimental::IsValidIKSolver(solver, GetContext(), error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("newton_euler_terms").none()
-    );
+    return result;
+  }
+    , nb::arg("solver").none()
+    , "Check if an IK solver pointer is valid.\n\nArgs:\n    solver (Optional[IKSolver]): :class:`~superdex.physics.experimental.IKSolver`\n        pointer to check.\n\nReturns:\n    True if the solver is valid (not destroyed) and belongs to this Mochi\n    context, false otherwise.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    Call on any thread.\n\nSee Also:\n    :func:`~superdex.physics.experimental.create_ik_solver`,\n    :func:`~superdex.physics.experimental.destroy_ik_solver`"
+  );
 
-    m_experimental.def("create_soft_actor", [](mochi::Scene* scene, mochi::SoftActorParams const& params, mochi::experimental::ExperimentalSoftActorParams const& experimental_params) {
-      mochi::Error error;
-      auto result = mochi::experimental::CreateSoftActor(scene, params, experimental_params, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
+  m_experimental.def("create_newton_euler_terms", [](mochi::Actor* robot) {
+    CheckContext();
+    mochi::Error error;
+    auto result = mochi::experimental::CreateNewtonEulerTerms(robot, GetContext(), error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("scene").none()
-      , nb::arg("params")
-      , nb::arg("experimental_params")
-      , nb::rv_policy::reference
-    );
+    return result;
+  }
+    , nb::arg("robot").none()
+    , nb::rv_policy::reference
+  );
 
-    m_experimental.def("generate_tubular_rod_model_data", [](mochi::Span<mochi::Real3 const> nodes, mochi::Span<mochi::Real3 const> element_frame_axes, mochi::real radius, int num_cross_section_segments, bool is_closed_loop) {
-      mochi::Error error;
-      auto result = mochi::experimental::GenerateTubularRodModelData(nodes, element_frame_axes, radius, num_cross_section_segments, is_closed_loop, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
+  m_experimental.def("destroy_newton_euler_terms", [](mochi::experimental::NewtonEulerTerms* newton_euler_terms) {
+    CheckContext();
+    mochi::Error error;
+    mochi::experimental::DestroyNewtonEulerTerms(newton_euler_terms, GetContext(), error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("nodes")
-      , nb::arg("element_frame_axes")
-      , nb::arg("radius")
-      , nb::arg("num_cross_section_segments")
-      , nb::arg("is_closed_loop")
-    );
+  }
+    , nb::arg("newton_euler_terms").none()
+  );
 
-    m_experimental.def("create_shell_actor", [](mochi::Scene* scene, mochi::experimental::ShellActorParams const& params) {
-      mochi::Error error;
-      auto result = mochi::experimental::CreateShellActor(scene, params, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
+  m_experimental.def("is_valid_newton_euler_terms", [](mochi::experimental::NewtonEulerTerms const* newton_euler_terms) {
+    CheckContext();
+    mochi::Error error;
+    auto result = mochi::experimental::IsValidNewtonEulerTerms(newton_euler_terms, GetContext(), error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("scene").none()
-      , nb::arg("params")
-      , nb::rv_policy::reference
-    );
+    return result;
+  }
+    , nb::arg("newton_euler_terms").none()
+  );
 
-    m_experimental.def("shell_material_params_from3d_isotropic", [](mochi::real youngs_modulus3d, mochi::real poissons_ratio3d, mochi::real density3d, mochi::real thickness) {
-      mochi::Error error;
-      auto result = mochi::experimental::ShellMaterialParamsFrom3dIsotropic(youngs_modulus3d, poissons_ratio3d, density3d, thickness, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
+  m_experimental.def("create_soft_actor", [](mochi::Scene* scene, mochi::SoftActorParams const& params, mochi::experimental::ExperimentalSoftActorParams const& experimental_params) {
+    mochi::Error error;
+    auto result = mochi::experimental::CreateSoftActor(scene, params, experimental_params, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("youngs_modulus3d")
-      , nb::arg("poissons_ratio3d")
-      , nb::arg("density3d")
-      , nb::arg("thickness")
-    );
+    return result;
+  }
+    , nb::arg("scene").none()
+    , nb::arg("params")
+    , nb::arg("experimental_params")
+    , nb::rv_policy::reference
+  );
 
-    m_experimental.def("calibrate_normal_viscous_damping_coefficient", [](mochi::real cor, mochi::real impact_velocity) {
-      mochi::Error error;
-      auto result = mochi::experimental::CalibrateNormalViscousDampingCoefficient(cor, impact_velocity, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
+  m_experimental.def("generate_tubular_rod_model_data", [](mochi::Span<mochi::Real3 const> nodes, mochi::Span<mochi::Real3 const> element_frame_axes, mochi::real radius, int num_cross_section_segments, bool is_closed_loop) {
+    mochi::Error error;
+    auto result = mochi::experimental::GenerateTubularRodModelData(nodes, element_frame_axes, radius, num_cross_section_segments, is_closed_loop, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("cor")
-      , nb::arg("impact_velocity")
-      , "Calibrate the normal viscous damping coefficient to approximate a target\ncoefficient of restitution (CoR).\n\nThe effective CoR of normal viscous damping is velocity-dependent. For damping\ncoefficient c and impact velocity v, let ``alpha = c * v``. The approximate CoR\ne satisfies ``alpha = (1 - e) * (1 + a*e) / (e * (1 + b*e))``, where ``a = 9/2``\nand ``b = 8/3`` define a rational fit that matches the analytic limits.\nEvaluating this relation for the requested CoR gives alpha and hence ``c = alpha\n/ v``.\n:func:`~superdex.physics.experimental.effective_coefficient_of_restitution` is\nits exact inverse. As ``e -> 0``, ``alpha -> 1/e``, so c diverges for fully\ninelastic collisions.\n\nArgs:\n    cor (float): Target coefficient of restitution. Must be finite and in (0,\n        1].\n    impact_velocity (float): Characteristic impact velocity [m/s]. Must be\n        finite and positive.\n\nReturns:\n    Normal viscous damping coefficient [s/m]; 0 on error.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nSee Also:\n    :func:`~superdex.physics.experimental.effective_coefficient_of_restitution`,\n    :attr:`~superdex.physics.ContactParams.normal_viscous_damping_coefficient`"
-    );
+    return result;
+  }
+    , nb::arg("nodes")
+    , nb::arg("element_frame_axes")
+    , nb::arg("radius")
+    , nb::arg("num_cross_section_segments")
+    , nb::arg("is_closed_loop")
+  );
 
-    m_experimental.def("effective_coefficient_of_restitution", [](mochi::real normal_viscous_damping_coefficient, mochi::real impact_velocity) {
-      mochi::Error error;
-      auto result = mochi::experimental::EffectiveCoefficientOfRestitution(normal_viscous_damping_coefficient, impact_velocity, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
+  m_experimental.def("create_shell_actor", [](mochi::Scene* scene, mochi::experimental::ShellActorParams const& params) {
+    mochi::Error error;
+    auto result = mochi::experimental::CreateShellActor(scene, params, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("normal_viscous_damping_coefficient")
-      , nb::arg("impact_velocity")
-      , "Effective coefficient of restitution (CoR) produced by a normal viscous damping\ncoefficient at an impact velocity.\n\nExact inverse of\n:func:`~superdex.physics.experimental.calibrate_normal_viscous_damping_coefficient`:\nsolves the calibration relation for the positive root:\n\n::\n\n    e = (-B + sqrt(B^2 + 4A)) / (2A)\n    A = a + b*alpha\n    B = alpha + 1 - a\n    alpha = c * v\n\nwhere a = 9/2 and b = 8/3.\n\nArgs:\n    normal_viscous_damping_coefficient (float): Normal viscous damping\n        coefficient [s/m]. Must be finite and non-negative.\n    impact_velocity (float): Characteristic impact velocity [m/s]. Must be\n        finite and positive.\n\nReturns:\n    Effective coefficient of restitution; 0 on error.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nSee Also:\n    :func:`~superdex.physics.experimental.calibrate_normal_viscous_damping_coefficient`,\n    :attr:`~superdex.physics.ContactParams.normal_viscous_damping_coefficient`"
-    );
+    return result;
+  }
+    , nb::arg("scene").none()
+    , nb::arg("params")
+    , nb::rv_policy::reference
+  );
 
-    m_experimental.def("get_sleep_params", [](mochi::Scene const* scene) {
-      mochi::Error error;
-      auto result = mochi::experimental::GetSleepParams(scene, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
+  m_experimental.def("shell_material_params_from3d_isotropic", [](mochi::real youngs_modulus3d, mochi::real poissons_ratio3d, mochi::real density3d, mochi::real thickness) {
+    mochi::Error error;
+    auto result = mochi::experimental::ShellMaterialParamsFrom3dIsotropic(youngs_modulus3d, poissons_ratio3d, density3d, thickness, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("scene").none()
-      , "[Experimental] Get the island sleeping parameters of a scene.\n\nArgs:\n    scene (Scene): Scene to query.\n\nReturns:\n    Current sleep parameters.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nSee Also:\n    :func:`~superdex.physics.experimental.set_sleep_params`,\n    :class:`~superdex.physics.experimental.SleepParams`"
-    );
+    return result;
+  }
+    , nb::arg("youngs_modulus3d")
+    , nb::arg("poissons_ratio3d")
+    , nb::arg("density3d")
+    , nb::arg("thickness")
+  );
 
-    m_experimental.def("set_sleep_params", [](mochi::Scene* scene, mochi::experimental::SleepParams const& params) {
-      mochi::Error error;
-      mochi::experimental::SetSleepParams(scene, params, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
+  m_experimental.def("calibrate_normal_viscous_damping_coefficient", [](mochi::real cor, mochi::real impact_velocity) {
+    mochi::Error error;
+    auto result = mochi::experimental::CalibrateNormalViscousDampingCoefficient(cor, impact_velocity, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("scene").none()
-      , nb::arg("params")
-      , "[Experimental] Set the island sleeping parameters of a scene.\n\nArgs:\n    scene (Scene): Scene to modify.\n    params (SleepParams): Sleep parameters to set.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    Wakes all islands if the parameters change.\n\nSee Also:\n    :func:`~superdex.physics.experimental.get_sleep_params`,\n    :class:`~superdex.physics.experimental.SleepParams`"
-    );
+    return result;
+  }
+    , nb::arg("cor")
+    , nb::arg("impact_velocity")
+    , "Calibrate the normal viscous damping coefficient to approximate a target\ncoefficient of restitution (CoR).\n\nThe effective CoR of normal viscous damping is velocity-dependent. For damping\ncoefficient c and impact velocity v, let ``alpha = c * v``. The approximate CoR\ne satisfies ``alpha = (1 - e) * (1 + a*e) / (e * (1 + b*e))``, where ``a = 9/2``\nand ``b = 8/3`` define a rational fit that matches the analytic limits.\nEvaluating this relation for the requested CoR gives alpha and hence ``c = alpha\n/ v``.\n:func:`~superdex.physics.experimental.effective_coefficient_of_restitution` is\nits exact inverse. As ``e -> 0``, ``alpha -> 1/e``, so c diverges for fully\ninelastic collisions.\n\nArgs:\n    cor (float): Target coefficient of restitution. Must be finite and in (0,\n        1].\n    impact_velocity (float): Characteristic impact velocity [m/s]. Must be\n        finite and positive.\n\nReturns:\n    Normal viscous damping coefficient [s/m]; 0 on error.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nSee Also:\n    :func:`~superdex.physics.experimental.effective_coefficient_of_restitution`,\n    :attr:`~superdex.physics.ContactParams.normal_viscous_damping_coefficient`"
+  );
 
-    m_experimental.def("get_debug_stats", [](mochi::Scene const* scene) {
-      mochi::Error error;
-      auto result = mochi::experimental::GetDebugStats(scene, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
+  m_experimental.def("effective_coefficient_of_restitution", [](mochi::real normal_viscous_damping_coefficient, mochi::real impact_velocity) {
+    mochi::Error error;
+    auto result = mochi::experimental::EffectiveCoefficientOfRestitution(normal_viscous_damping_coefficient, impact_velocity, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("scene").none()
-    );
+    return result;
+  }
+    , nb::arg("normal_viscous_damping_coefficient")
+    , nb::arg("impact_velocity")
+    , "Effective coefficient of restitution (CoR) produced by a normal viscous damping\ncoefficient at an impact velocity.\n\nExact inverse of\n:func:`~superdex.physics.experimental.calibrate_normal_viscous_damping_coefficient`:\nsolves the calibration relation for the positive root:\n\n::\n\n    e = (-B + sqrt(B^2 + 4A)) / (2A)\n    A = a + b*alpha\n    B = alpha + 1 - a\n    alpha = c * v\n\nwhere a = 9/2 and b = 8/3.\n\nArgs:\n    normal_viscous_damping_coefficient (float): Normal viscous damping\n        coefficient [s/m]. Must be finite and non-negative.\n    impact_velocity (float): Characteristic impact velocity [m/s]. Must be\n        finite and positive.\n\nReturns:\n    Effective coefficient of restitution; 0 on error.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nSee Also:\n    :func:`~superdex.physics.experimental.calibrate_normal_viscous_damping_coefficient`,\n    :attr:`~superdex.physics.ContactParams.normal_viscous_damping_coefficient`"
+  );
 
-    m_experimental.def("is_recording", [](mochi::Scene const* scene) {
-      mochi::Error error;
-      auto result = mochi::experimental::IsRecording(scene, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
+  m_experimental.def("get_sleep_params", [](mochi::Scene const* scene) {
+    mochi::Error error;
+    auto result = mochi::experimental::GetSleepParams(scene, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("scene").none()
-      , "[Experimental] Check if the scene is currently recording.\n\nArgs:\n    scene (Scene): Scene to query.\n\nReturns:\n    True if recording is active, false otherwise.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    A recording write failure does not end the recording session.\n\nWarning:\n    Experimental and may change or be removed without warning.\n\nSee Also:\n    :func:`~superdex.physics.experimental.start_recording`,\n    :func:`~superdex.physics.experimental.stop_recording`"
-    );
+    return result;
+  }
+    , nb::arg("scene").none()
+    , "[Experimental] Get the island sleeping parameters of a scene.\n\nArgs:\n    scene (Scene): Scene to query.\n\nReturns:\n    Current sleep parameters.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nSee Also:\n    :func:`~superdex.physics.experimental.set_sleep_params`,\n    :class:`~superdex.physics.experimental.SleepParams`"
+  );
 
-    m_experimental.def("start_recording", [](mochi::Scene* scene, std::string_view file_path, mochi::experimental::RecordingParams const& params) {
-      mochi::Error error;
-      mochi::experimental::StartRecording(scene, file_path, params, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
+  m_experimental.def("set_sleep_params", [](mochi::Scene* scene, mochi::experimental::SleepParams const& params) {
+    mochi::Error error;
+    mochi::experimental::SetSleepParams(scene, params, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("scene").none()
-      , nb::arg("file_path")
-      , nb::arg("params")
-      , "[Experimental] Create or replace the specified file and start recording the\nscene to an HDF5 file.\n\nArgs:\n    scene (Scene): Scene to record.\n    file_path (str): Path to the output recording file (case sensitive on some\n        filesystems). File will be created or replaced.\n    params (RecordingParams): Parameters controlling what data to record.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    Enabling additional recording features will generally increase the recording\n    file size and degrade performance.\n\nNote:\n    If the scene is already recording, the previous recording is stopped before\n    starting the new one.\n\nNote:\n    Islands do not sleep while the scene is recording, so recording can change\n    the simulation results.\n\nWarning:\n    Experimental and may change or be removed without warning.\n\nWarning:\n    The recorded file format may change in future releases.\n\nWarning:\n    Requires a build with HDF5 support.\n\nSee Also:\n    :func:`~superdex.physics.experimental.stop_recording`,\n    :func:`~superdex.physics.experimental.is_recording`,\n    :class:`~superdex.physics.experimental.RecordingParams`"
-    );
+  }
+    , nb::arg("scene").none()
+    , nb::arg("params")
+    , "[Experimental] Set the island sleeping parameters of a scene.\n\nArgs:\n    scene (Scene): Scene to modify.\n    params (SleepParams): Sleep parameters to set.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    Wakes all islands if the parameters change.\n\nSee Also:\n    :func:`~superdex.physics.experimental.get_sleep_params`,\n    :class:`~superdex.physics.experimental.SleepParams`"
+  );
 
-    m_experimental.def("stop_recording", [](mochi::Scene* scene) {
-      mochi::Error error;
-      mochi::experimental::StopRecording(scene, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
+  m_experimental.def("get_debug_stats", [](mochi::Scene const* scene) {
+    mochi::Error error;
+    auto result = mochi::experimental::GetDebugStats(scene, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
     }
-      , nb::arg("scene").none()
-      , "[Experimental] Stop recording the scene and close the recording file.\n\nArgs:\n    scene (Scene): Scene to stop recording.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nWarning:\n    Experimental and may change or be removed without warning.\n\nSee Also:\n    :func:`~superdex.physics.experimental.start_recording`,\n    :func:`~superdex.physics.experimental.is_recording`"
-    );
+    return result;
+  }
+    , nb::arg("scene").none()
+  );
+
+  m_experimental.def("is_recording", [](mochi::Scene const* scene) {
+    mochi::Error error;
+    auto result = mochi::experimental::IsRecording(scene, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
+    }
+    return result;
+  }
+    , nb::arg("scene").none()
+    , "[Experimental] Check if the scene is currently recording.\n\nArgs:\n    scene (Scene): Scene to query.\n\nReturns:\n    True if recording is active, false otherwise.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    A recording write failure does not end the recording session.\n\nWarning:\n    Experimental and may change or be removed without warning.\n\nSee Also:\n    :func:`~superdex.physics.experimental.start_recording`,\n    :func:`~superdex.physics.experimental.stop_recording`"
+  );
+
+  m_experimental.def("start_recording", [](mochi::Scene* scene, std::string_view file_path, mochi::experimental::RecordingParams const& params) {
+    mochi::Error error;
+    mochi::experimental::StartRecording(scene, file_path, params, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
+    }
+  }
+    , nb::arg("scene").none()
+    , nb::arg("file_path")
+    , nb::arg("params")
+    , "[Experimental] Create or replace the specified file and start recording the\nscene to an HDF5 file.\n\nArgs:\n    scene (Scene): Scene to record.\n    file_path (str): Path to the output recording file (case sensitive on some\n        filesystems). File will be created or replaced.\n    params (RecordingParams): Parameters controlling what data to record.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    Enabling additional recording features will generally increase the recording\n    file size and degrade performance.\n\nNote:\n    If the scene is already recording, the previous recording is stopped before\n    starting the new one.\n\nNote:\n    Islands do not sleep while the scene is recording, so recording can change\n    the simulation results.\n\nWarning:\n    Experimental and may change or be removed without warning.\n\nWarning:\n    The recorded file format may change in future releases.\n\nWarning:\n    Requires a build with HDF5 support.\n\nSee Also:\n    :func:`~superdex.physics.experimental.stop_recording`,\n    :func:`~superdex.physics.experimental.is_recording`,\n    :class:`~superdex.physics.experimental.RecordingParams`"
+  );
+
+  m_experimental.def("stop_recording", [](mochi::Scene* scene) {
+    mochi::Error error;
+    mochi::experimental::StopRecording(scene, error);
+    if (!error.IsOK()) {
+      throw MochiErrorException(error);
+    }
+  }
+    , nb::arg("scene").none()
+    , "[Experimental] Stop recording the scene and close the recording file.\n\nArgs:\n    scene (Scene): Scene to stop recording.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nWarning:\n    Experimental and may change or be removed without warning.\n\nSee Also:\n    :func:`~superdex.physics.experimental.start_recording`,\n    :func:`~superdex.physics.experimental.is_recording`"
+  );
 
 }
 // clang-format on

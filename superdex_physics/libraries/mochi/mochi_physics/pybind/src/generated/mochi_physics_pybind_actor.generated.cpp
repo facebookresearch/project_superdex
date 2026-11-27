@@ -37,7 +37,9 @@ void mochi::DeclareMochiPhysics_MochiPhysicsActor([[maybe_unused]] nb::module_& 
   registry.StoreClass(nb::class_<mochi::Actor>(m, "Actor", "Represents a simulated body (actor) in a scene.\n\nThe actor history is the state that an actor carries over from its previous time\nsteps, besides its current state: the previous states of multi-step time\nintegrators, the friction preload of the joints of articulated actors (see\n:class:`~superdex.physics.ArticulatedJointFrictionParams`), and the friction\npreload of its contacts and of contacts on it, with elasto-plastic friction (see\n:attr:`~superdex.physics.ContactParams.prefer_elasto_plastic_friction`). Setters\nthat change the state discontinuously invalidate the actor history: in the next\ntime step, multi-step time integrators restart (e.g. BDF2 falls back to backward\nEuler), and the contacts restart without friction preload. Joints restart\nwithout friction preload only when their positions are set\n(:meth:`set_articulated_pose_from_joints`,\n:meth:`set_articulated_pose_from_links`) or their dry friction is enabled\n(:meth:`set_articulated_joint_friction_params`).\n\nNote:\n    Every body in the simulation is an actor.\n\nNote:\n    Actors always belong to exactly one scene.\n\nNote:\n    Actors can be static or dynamic.\n\nWarning:\n    Concurrent access to the actor or its scene is illegal.", nb::never_destruct()));
 }
 
-void mochi::DefineMochiPhysics_MochiPhysicsActor([[maybe_unused]] nb::module_& m, [[maybe_unused]] PybindRegistry& registry) {
+namespace {
+
+MOCHI_NO_INLINE void Define_Actor(PybindRegistry& registry) {
   registry.GetClass<mochi::Actor>()
     .def("get_handle", &mochi::Actor::GetHandle
       , "Get the actor's handle.\n\nReturns:\n    Actor's handle.\n\nNote:\n    Handles are safe to store and remain valid throughout the actor lifespan.\n\nNote:\n    Call :meth:`~superdex.physics.Scene.get_actor` to look up the actor's\n    pointer from the actor's handle.\n\nSee Also:\n    :meth:`~superdex.physics.Scene.get_actor`"
@@ -1097,5 +1099,11 @@ void mochi::DefineMochiPhysics_MochiPhysicsActor([[maybe_unused]] nb::module_& m
     )
   ;
 
+}
+
+} // namespace
+
+void mochi::DefineMochiPhysics_MochiPhysicsActor([[maybe_unused]] nb::module_& m, [[maybe_unused]] PybindRegistry& registry) {
+  Define_Actor(registry);
 }
 // clang-format on

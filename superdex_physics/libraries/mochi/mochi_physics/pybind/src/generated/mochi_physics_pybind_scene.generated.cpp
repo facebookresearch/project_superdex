@@ -37,7 +37,9 @@ void mochi::DeclareMochiPhysics_MochiPhysicsScene([[maybe_unused]] nb::module_& 
   registry.StoreClass(nb::class_<mochi::Scene>(m, "Scene", "Represents a simulation scene.\n\nNote:\n    Each scene manages the simulation of a series of actors.\n\nNote:\n    Actors from different scenes do not interact with each other.\n\nWarning:\n    Concurrent access to the scene and its actors and constraints is illegal.", nb::never_destruct()));
 }
 
-void mochi::DefineMochiPhysics_MochiPhysicsScene([[maybe_unused]] nb::module_& m, [[maybe_unused]] PybindRegistry& registry) {
+namespace {
+
+MOCHI_NO_INLINE void Define_Scene(PybindRegistry& registry) {
   registry.GetClass<mochi::Scene>()
     .def_ro_static("DEFAULT_CALLBACK_PRIORITY", &mochi::Scene::kDefaultCallbackPriority, "Default priority for callback ordering. Lower values execute earlier (higher\npriority).")
     .def("get_handle", &mochi::Scene::GetHandle
@@ -1166,7 +1168,13 @@ void mochi::DefineMochiPhysics_MochiPhysicsScene([[maybe_unused]] nb::module_& m
     )
   ;
 
-    m.attr("DEFAULT_GRAVITY") = nb::cast(mochi::kDefaultGravity);
+}
+
+} // namespace
+
+void mochi::DefineMochiPhysics_MochiPhysicsScene([[maybe_unused]] nb::module_& m, [[maybe_unused]] PybindRegistry& registry) {
+  Define_Scene(registry);
+  m.attr("DEFAULT_GRAVITY") = nb::cast(mochi::kDefaultGravity);
 
 }
 // clang-format on
