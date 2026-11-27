@@ -25,7 +25,7 @@ from importlib import resources
 from pathlib import Path
 
 import imageio_ffmpeg
-from rrd_video.executables import ensure_executable
+from rrd_video.executables import ensure_executable, packaged_executable
 
 ENCODE_TIMEOUT_S = 3600.0
 # Renders are sRGB: convert and tag as BT.709, limited range, as browsers expect.
@@ -51,20 +51,19 @@ class Encoded:
 def find_ffmpeg(work_dir: Path) -> Path:
     """The static ffmpeg of the imageio-ffmpeg package (RRD_VIDEO_FFMPEG overrides it)."""
     override = os.environ.get("RRD_VIDEO_FFMPEG")
-    return ensure_executable(
-        Path(override) if override else _bundled_ffmpeg(), work_dir
-    )
+    if override:
+        return ensure_executable(Path(override), work_dir)
+    return _bundled_ffmpeg(work_dir)
 
 
-def _bundled_ffmpeg() -> Path:
+def _bundled_ffmpeg(work_dir: Path) -> Path:
     # imageio_ffmpeg.get_ffmpeg_exe() prefers any `ffmpeg` on PATH when the packaged binary
     # is not executable, and a system ffmpeg may lack libvpx-vp9.
     binaries = resources.files("imageio_ffmpeg.binaries")
     names = sorted(p.name for p in binaries.iterdir() if p.name.startswith("ffmpeg-"))
     if not names:
-        return Path(imageio_ffmpeg.get_ffmpeg_exe())
-    with resources.as_file(binaries.joinpath(names[-1])) as path:
-        return Path(path)
+        return ensure_executable(Path(imageio_ffmpeg.get_ffmpeg_exe()), work_dir)
+    return packaged_executable(binaries.joinpath(names[-1]), work_dir)
 
 
 def ffmpeg_version(ffmpeg: Path) -> str:

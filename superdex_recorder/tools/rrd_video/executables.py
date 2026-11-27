@@ -18,6 +18,8 @@ from __future__ import annotations
 
 import os
 import shutil
+from importlib import resources
+from importlib.resources.abc import Traversable
 from pathlib import Path
 
 
@@ -28,5 +30,22 @@ def ensure_executable(path: Path, work_dir: Path) -> Path:
     copy = work_dir / "bin" / path.name
     copy.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
     shutil.copyfile(path, copy)
+    copy.chmod(0o700)
+    return copy
+
+
+def packaged_executable(resource: Traversable, work_dir: Path) -> Path:
+    """A package's executable `resource` as a file that outlasts this call: an installed file
+    as `ensure_executable` gives it, a zip-imported package's as a copy in `work_dir`."""
+    if isinstance(resource, Path):
+        return ensure_executable(resource, work_dir)
+    copy = work_dir / "bin" / resource.name
+    copy.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    # as_file's temporary file is deleted when its context exits; a hard link outlives it.
+    with resources.as_file(resource) as path:
+        try:
+            os.link(path, copy)
+        except OSError:
+            shutil.copyfile(path, copy)
     copy.chmod(0o700)
     return copy

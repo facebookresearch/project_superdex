@@ -36,7 +36,7 @@ import numpy as np
 import rerun.blueprint as rrb  # @manual
 from PIL import Image
 from rrd_video.camera import CameraPose
-from rrd_video.executables import ensure_executable
+from rrd_video.executables import ensure_executable, packaged_executable
 from rrd_video.recording import FRAME, Recording
 
 RERUN_VERSION_PREFIX = "rerun-cli 0.33."
@@ -75,7 +75,8 @@ class Toolchain:
 def find_toolchain(work_dir: Path) -> Toolchain:
     """The Rerun 0.33 CLI of the rerun-sdk package (RRD_VIDEO_RERUN_CLI overrides it), and
     lavapipe when RRD_VIDEO_LAVAPIPE names an install."""
-    cli = Path(os.environ.get("RRD_VIDEO_RERUN_CLI") or _bundled_rerun_cli())
+    override = os.environ.get("RRD_VIDEO_RERUN_CLI")
+    cli = Path(override) if override else _bundled_rerun_cli(work_dir)
     if not cli.is_file():
         raise RenderError(f"No Rerun CLI at {cli}")
     work_dir.mkdir(parents=True, exist_ok=True)
@@ -105,11 +106,10 @@ def _find_lavapipe(root: Path) -> Lavapipe:
     return Lavapipe(libraries[0].parent, icds[0])
 
 
-def _bundled_rerun_cli() -> Path:
+def _bundled_rerun_cli(work_dir: Path) -> Path:
     package = resources.files("rerun_cli")
     name = "rerun.exe" if package.joinpath("rerun.exe").is_file() else "rerun"
-    with resources.as_file(package.joinpath(name)) as path:
-        return Path(path)
+    return packaged_executable(package.joinpath(name), work_dir)
 
 
 def _run_cli(toolchain: Toolchain, arguments: list[str]) -> str:
