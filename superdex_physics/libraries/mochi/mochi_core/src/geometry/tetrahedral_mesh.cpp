@@ -130,7 +130,7 @@ CreateFaceToElementMap(Span<Int4 const> connectivity) {
     return std::tie(a.element, a.faceNum) < std::tie(b.element, b.faceNum);
   });
 
-  // Build a flat list of boundary faces
+  // Build the boundary triangles
   std::vector<Int3> boundaryFacesConnectivity;
   boundaryFacesConnectivity.reserve(numBoundaryFaces);
   for (auto const& [element, faceNum] : outBoundaryFaces) {

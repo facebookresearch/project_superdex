@@ -22,13 +22,11 @@
 #include "mochi_query.h"
 #include "mochi_shape.h"
 
-#include <mochi_core/utils/basic_utils.h>
 #include <mochi_core/utils/dynamic_array.h>
 #include <mochi_physics/mochi_physics_experimental.h>
 
 #include <cstdint>
 #include <memory>
-#include <vector>
 
 namespace mochi {
 
@@ -117,32 +115,6 @@ CActiveVolumeElements CreateActiveVolumeElements(
 /**************************************************************************
 Overload set for creating active BOUNDARY faces
 */
-
-// Picks one index at random, with a fixed seed, in each of numPicks near-equal windows of
-// consecutive indices that partition [0, numItems). The picks are ascending.
-[[nodiscard]] std::vector<int> PickOneIndexPerWindow(int numItems, int numPicks);
-
-template <typename BoundaryTraceT>
-CActiveBoundaryFaces CreateActiveBoundaryFaces(
-    experimental::SampleMeshInitRandomSampling const& params,
-    std::shared_ptr<TetrahedralMesh const> const& tetMesh,
-    std::vector<BoundaryTraceT> const& allBoundaryTraces) {
-  static_assert(
-      BoundaryTraceT::kSpaceDimParam == 3,
-      "Overload requires BoundaryTraceT to be the trace of a 3D element");
-  std::vector<int> activeBoundaryTraceInds;
-  int const stepSize = params.stepSizeForBoundaryElementsSelection;
-  if (stepSize != rom::hyper::kNoElements) {
-    MOCHI_ASSERT(
-        stepSize >= 1,
-        "Invalid stepSize: must be kNoElements (%d) or >= 1",
-        rom::hyper::kNoElements);
-
-    int const numFaces = isize(allBoundaryTraces);
-    activeBoundaryTraceInds = PickOneIndexPerWindow(numFaces, (numFaces + stepSize - 1) / stepSize);
-  }
-  return CActiveBoundaryFaces(tetMesh, activeBoundaryTraceInds, MakeConstSpan(allBoundaryTraces));
-}
 
 CActiveBoundaryFaces CreateActiveBoundaryFaces(
     experimental::SampleMeshInitFromFile const& params,

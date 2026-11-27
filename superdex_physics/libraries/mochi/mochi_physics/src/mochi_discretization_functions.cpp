@@ -362,6 +362,46 @@ void mochi::UpdateQueryContactSkinNodePositionsAndNormals(
 }
 
 /**************************************************************************
+  Subsampling shared by the VOLUME and BOUNDARY overload sets
+*/
+
+// Seed of the random subsampling, fixed so that it's deterministic
+constexpr unsigned int kSubsamplingSeed = 21;
+
+// Picks one index at random, with a fixed seed, in each of numPicks near-equal windows of
+// consecutive indices that partition [0, numItems). The picks are ascending.
+[[nodiscard]] static std::vector<int> PickOneIndexPerWindow(int numItems, int numPicks) {
+  MOCHI_ASSERT_VERBOSE(0 <= numPicks && numPicks <= numItems, "Invalid number of picks.");
+
+  // Jittered sampling: pick a random index in each window of consecutive indices, since a fixed
+  // stride would alias with periodic orders, e.g. faces of meshes stored ring by ring, and leave
+  // entire regions unsampled.
+  auto generator = RandomGenerator(kSubsamplingSeed);
+  std::vector<int> picks;
+  picks.reserve(numPicks);
+  int windowBegin = 0;
+  for (int i = 0; i < numPicks; ++i) {
+    auto const windowEnd = static_cast<int>(int64_t(i + 1) * numItems / numPicks);
+    picks.push_back(RandomUniformValue(generator, windowBegin, windowEnd - 1));
+    windowBegin = windowEnd;
+  }
+  return picks;
+}
+
+// Picks one index in each of the fewest near-equal windows of at most stepSize consecutive indices
+// that partition [0, numItems), or none for rom::hyper::kNoElements.
+[[nodiscard]] static std::vector<int> PickOneIndexPerStep(int numItems, int stepSize) {
+  if (stepSize == rom::hyper::kNoElements) {
+    return {};
+  }
+
+  MOCHI_ASSERT(
+      stepSize >= 1, "Invalid stepSize: must be kNoElements (%d) or >= 1", rom::hyper::kNoElements);
+
+  return PickOneIndexPerWindow(numItems, (numItems + stepSize - 1) / stepSize);
+}
+
+/**************************************************************************
   Overload set for creating active VOLUME elements
 */
 
@@ -382,18 +422,9 @@ CActiveVolumeElements mochi::CreateActiveVolumeElements(
     SampleMeshInitRandomSampling const& params,
     TetrahedralMeshShape const& tetMeshShape) {
   auto const& tetMesh = tetMeshShape.GetMesh();
-
-  // if no elements are requested, then we need to still create the object
-  // but it contains an empty set of indices
-  int const stepSize = params.stepSizeForInteriorElementsSelection;
-  if (stepSize == rom::hyper::kNoElements) {
-    return {tetMesh, Span<int const>{}};
-  }
-  MOCHI_ASSERT(
-      stepSize >= 1, "Invalid stepSize: must be kNoElements (%d) or >= 1", rom::hyper::kNoElements);
-
-  int const numElements = tetMesh->GetNumElements();
-  return {tetMesh, PickOneIndexPerWindow(numElements, (numElements + stepSize - 1) / stepSize)};
+  return {
+      tetMesh,
+      PickOneIndexPerStep(tetMesh->GetNumElements(), params.stepSizeForInteriorElementsSelection)};
 }
 
 CActiveVolumeElements mochi::CreateActiveVolumeElements(
@@ -431,7 +462,10 @@ CActiveBoundaryFaces mochi::CreateActiveBoundaryFaces(
     TetrahedralMeshShape const& tetMeshShape,
     CFemBoundaryDiscretization const& boundaryDiscrVariant) {
   return boundaryDiscrVariant.Visit([&](auto& boundaryDiscr) -> auto {
-    return CreateActiveBoundaryFaces(params, tetMeshShape.GetMesh(), boundaryDiscr.femElements);
+    auto const activeBoundaryFaceInds = PickOneIndexPerStep(
+        isize(boundaryDiscr.femElements), params.stepSizeForBoundaryElementsSelection);
+    return CActiveBoundaryFaces(
+        tetMeshShape.GetMesh(), activeBoundaryFaceInds, MakeConstSpan(boundaryDiscr.femElements));
   });
 }
 
@@ -454,27 +488,6 @@ CActiveBoundaryFaces mochi::CreateActiveBoundaryFaces(
     return CActiveBoundaryFaces(
         tetMesh, activeBoundaryFaceIndices, MakeConstSpan(boundaryDiscr.femElements));
   });
-}
-
-// Seed of the random subsampling, fixed so that it's deterministic
-constexpr unsigned int kSubsamplingSeed = 21;
-
-std::vector<int> mochi::PickOneIndexPerWindow(int numItems, int numPicks) {
-  MOCHI_ASSERT_VERBOSE(0 <= numPicks && numPicks <= numItems, "Invalid number of picks.");
-
-  // Jittered sampling: pick a random index in each window of consecutive indices, since a fixed
-  // stride would alias with periodic orders, e.g. faces of meshes stored ring by ring, and leave
-  // entire regions unsampled.
-  auto generator = RandomGenerator(kSubsamplingSeed);
-  std::vector<int> picks;
-  picks.reserve(numPicks);
-  int windowBegin = 0;
-  for (int i = 0; i < numPicks; ++i) {
-    auto const windowEnd = static_cast<int>(int64_t(i + 1) * numItems / numPicks);
-    picks.push_back(RandomUniformValue(generator, windowBegin, windowEnd - 1));
-    windowBegin = windowEnd;
-  }
-  return picks;
 }
 
 [[nodiscard]] static std::vector<int> SelectActiveBoundaryFaceIndices(

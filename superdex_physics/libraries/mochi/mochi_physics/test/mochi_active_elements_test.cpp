@@ -628,8 +628,9 @@ TEST(MochiDiscretization, SubsamplingPicksOnePerWindow) {
       test::CreateMinimalTetMeshUnitGrid(Real3{1_r, 1_r, 1_r}, Int3{2, 2, 2}));
   TetrahedralMeshShape const tetShape(tetMesh);
   auto const femVolD = CreateFemVolDiscretization(*tetMesh);
-  auto const traces = CreateTraces(*tetMesh, femVolD);
-  int const numFaces = isize(traces);
+  auto const boundaryDisc =
+      CFemBoundaryDiscretization::Create(*tetMesh, femVolD, ActorBoundaryElementType::P1Q1);
+  int const numFaces = tetMesh->GetBoundaryMesh()->GetNumElements();
   int const numTets = tetMesh->GetNumElements();
 
   for (auto const& [faceStep, tetStep] :
@@ -640,18 +641,18 @@ TEST(MochiDiscretization, SubsamplingPicksOnePerWindow) {
     experimental::SampleMeshInitRandomSampling const params{
         .stepSizeForBoundaryElementsSelection = faceStep,
         .stepSizeForInteriorElementsSelection = tetStep};
-    CActiveBoundaryFaces const romFaces = CreateActiveBoundaryFaces(params, tetMesh, traces);
+    CActiveBoundaryFaces const romFaces = CreateActiveBoundaryFaces(params, tetShape, boundaryDisc);
     ExpectOnePickPerWindow(romFaces.ViewIndices(), numFaces, (numFaces + faceStep - 1) / faceStep);
     CActiveVolumeElements const romTets = CreateActiveVolumeElements(params, tetShape);
     ExpectOnePickPerWindow(romTets.ViewIndices(), numTets, (numTets + tetStep - 1) / tetStep);
   }
 
-  // Each field alone keeps none at rom::hyper::kNoElements, while the other one keeps all
+  // Each field alone keeps none at rom::hyper::kNoElements
   EXPECT_TRUE(CreateActiveBoundaryFaces(
                   experimental::SampleMeshInitRandomSampling{
                       .stepSizeForBoundaryElementsSelection = rom::hyper::kNoElements},
-                  tetMesh,
-                  traces)
+                  tetShape,
+                  boundaryDisc)
                   .empty());
   EXPECT_TRUE(CreateActiveVolumeElements(
                   experimental::SampleMeshInitRandomSampling{
