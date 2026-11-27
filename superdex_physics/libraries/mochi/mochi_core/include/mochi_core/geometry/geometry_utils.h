@@ -1064,12 +1064,6 @@ VClosestPtPointShape(Vec4r p, Obb const& oobb, Vec4r* outPar = nullptr);
 [[nodiscard]] MOCHI_FORCE_INLINE Real3 ClosestPtPointShape(Real3 const& p, Sphere const& sphere);
 [[nodiscard]] MOCHI_FORCE_INLINE Vec4r VClosestPtPointShape(Vec4r p, Sphere const& sphere);
 
-/**
- * Find the index of the closest triangle (face) in a triangular mesh.
- */
-[[nodiscard]] int
-ClosestFacePointTriangularMesh(Real3 const& p, Span<Real3 const> nodes, Span<Int3 const> faces);
-
 } // namespace mochi
 
 #include "geometry_utils_inl.h"

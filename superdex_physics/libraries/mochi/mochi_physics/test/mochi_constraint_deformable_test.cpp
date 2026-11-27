@@ -16,6 +16,7 @@
 
 #include "mochi_constraint_test.h"
 
+#include <array>
 #include <limits>
 
 using namespace mochi;
@@ -278,6 +279,75 @@ TEST_F(ConstraintDeformableNodeToRigidAttachment, StartsAtZeroDeviationFarFromOr
         _scene->CreateDeformableNodeToRigidConstraint(params, ExpectOK{});
     EXPECT_TRUE(test::NearEqualSpan(Real3{}, constraint->GetDeviation(), kTol));
   }
+}
+
+namespace {
+class ConstraintDeformableFindClosest : public test::MochiSceneTestBase {};
+} // namespace
+
+// findClosest selects the boundary node of each soft actor nearest to the search point, the
+// lowest-index one on ties. In each case below, the coupling of soft actors A and B and the
+// attachment of B to a rigid actor search at the same world point.
+TEST_F(ConstraintDeformableFindClosest, SelectsNearestBoundaryNode) {
+  // Node (i, j, k) of this grid of the unit cube is at (i, j, k) / 2 and has index i + 3j + 9k
+  auto const [coordinates, connectivity] =
+      CreateMinimalTetMeshUnitGrid(Real3{1_r, 1_r, 1_r}, Int3{2, 2, 2});
+  SoftActorParams paramsSoft;
+  paramsSoft.shape = _scene->GetContext()->CreateTetMeshShape(
+      Flatten(MakeSpan(coordinates)), Flatten(MakeSpan(connectivity)), ExpectOK{});
+  Actor* const softA = _scene->CreateSoftActor(paramsSoft, ExpectOK{});
+  Actor* const softB = _scene->CreateSoftActor(paramsSoft, ExpectOK{});
+  // findClosest searches the reference mesh, so B's displacements don't change its picks.
+  softB->SetDisplacements(DynamicArray<real>(softB->GetNumDofs(), 0.3_r), ExpectOK{});
+
+  RigidActorParams paramsRigid;
+  paramsRigid.shape = GetUnitCubeShape(_scene->GetContext());
+  paramsRigid.colliderType = ColliderType::None;
+  paramsRigid.worldFromLocal = TransformRT(
+      Quaternion::FromAxisAngle(Normalize(Real3{1_r, -2_r, -5_r}), 0.6_r),
+      Real3{0.3_r, -0.2_r, 0.7_r});
+  Actor* const rigid = _scene->CreateRigidActor(paramsRigid, ExpectOK{});
+
+  DeformableNodeToDeformableNodeConstraintParams toDeformable;
+  toDeformable.actorA = softA->GetHandle();
+  toDeformable.actorB = softB->GetHandle();
+  toDeformable.findClosest = true;
+
+  DeformableNodeToRigidConstraintParams toRigid;
+  toRigid.rigidActor = rigid->GetHandle();
+  toRigid.deformableActor = softB->GetHandle();
+  toRigid.findClosest = true;
+
+  auto const nodeDofs = [](int node) {
+    return std::array<int, 3>{3 * node, 3 * node + 1, 3 * node + 2};
+  };
+
+  // The coupling searches at the midpoint of the actors' origins. A stays at the world origin,
+  // which keeps its tie in the first case exact. B, rotated a quarter turn about Z, moves to twice
+  // the search point, so it sees the point mirrored through its origin and turned back.
+  Quaternion const quarterTurnZ = Quaternion::FromAxisAngle(kReal3ZAxis, 0.5_r * kPI);
+  auto const expectNodes = [&](Real3 const& point, int nodeA, int nodeB) {
+    softB->SetRootTransform(TransformRT(quarterTurnZ, 2_r * point), ExpectOK{});
+    toRigid.rigidLocalPos = paramsRigid.worldFromLocal.TransformPointInverse(point);
+    Constraint const* const coupling =
+        _scene->CreateDeformableNodeToDeformableNodeConstraint(toDeformable, ExpectOK{});
+    Constraint const* const attachment =
+        _scene->CreateDeformableNodeToRigidConstraint(toRigid, ExpectOK{});
+    ASSERT_NE(nullptr, coupling);
+    ASSERT_NE(nullptr, attachment);
+    EXPECT_SPAN_EQ(nodeDofs(nodeA), coupling->GetDofIndicesForActor(0));
+    EXPECT_SPAN_EQ(nodeDofs(nodeB), coupling->GetDofIndicesForActor(1));
+    EXPECT_SPAN_EQ(nodeDofs(nodeB), attachment->GetDofIndicesForActor(1));
+  };
+
+  // At the grid's center, an interior node, A's six face centers tie, and the lowest-index one,
+  // node 4 at (0.5, 0.5, 0), wins. B sees the point at (-0.5, 0.5, -0.5), nearest to its node 3 at
+  // (0, 0.5, 0).
+  expectNodes(Real3{0.5_r, 0.5_r, 0.5_r}, 4, 3);
+
+  // At A's node 5 at (1, 0.5, 0), B sees the point at (-0.5, 1, 0), nearest to its node 6 at
+  // (0, 1, 0).
+  expectNodes(Real3{1_r, 0.5_r, 0_r}, 5, 6);
 }
 
 /********************************************************************************

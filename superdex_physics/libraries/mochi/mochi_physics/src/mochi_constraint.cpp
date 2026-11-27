@@ -208,18 +208,35 @@ void mochi::InitConstraint_RigidPrismaticJoint(
   data.max = params.max;
 }
 
-static int
-GetNodeOnClosestFace(entt::registry const& reg, entt::entity e, Real3 const& point, Error& error) {
+// Returns the boundary node of a soft actor's reference mesh nearest to a world-space point. Ties
+// go to the lowest node index, as boundary nodes are in ascending order.
+static int FindClosestBoundaryNode(
+    entt::registry const& reg,
+    entt::entity e,
+    Real3 const& point,
+    Error& error) {
   MOCHI_ERROR_IF(
-      !reg.all_of<TagSoftActor>(e), error, "Find closest only supported for soft actors.");
+      !reg.all_of<TagSoftActor>(e), error, "findClosest is only supported for soft actors.");
   MOCHI_ERROR_RETURN(error, {});
+
   auto const& mesh = reg.get<CTetrahedralMesh>(e).mesh;
   auto const& softTrans = reg.get<CRootTransform const>(e).worldFromLocal;
   auto nodes = mesh->GetNodeCoordinates();
-  auto faces = mesh->GetBoundaryFacesConnectivity();
   auto pointMeshLocal = softTrans.TransformPointInverse(point);
-  int nearestFace = mochi::ClosestFacePointTriangularMesh(pointMeshLocal, nodes, faces);
-  return faces[nearestFace][0];
+
+  int closestNode = -1;
+  real closestDistSqr = kInf;
+  for (int node : mesh->GetBoundaryNodes()) {
+    real const distSqr = NormSqr(nodes[node] - pointMeshLocal);
+    if (distSqr < closestDistSqr) {
+      closestNode = node;
+      closestDistSqr = distSqr;
+    }
+  }
+
+  MOCHI_ERROR_IF(
+      closestNode < 0, error, "findClosest found no boundary node in the soft actor's mesh.");
+  return closestNode;
 }
 
 // This function assumes that displacement DoFs are the first 3 DoFs of each node
@@ -277,8 +294,8 @@ void mochi::InitConstraint_DeformableNodeToDeformableNode(
     auto const* softTransA = &reg.get<CRootTransform>(objA).worldFromLocal;
     auto const* softTransB = &reg.get<CRootTransform>(objB).worldFromLocal;
     Real3 midPoint = 0.5_r * (softTransA->GetTranslation() + softTransB->GetTranslation());
-    paramsIn.nodeIndexA = GetNodeOnClosestFace(reg, objA, midPoint, error);
-    paramsIn.nodeIndexB = GetNodeOnClosestFace(reg, objB, midPoint, error);
+    paramsIn.nodeIndexA = FindClosestBoundaryNode(reg, objA, midPoint, error);
+    paramsIn.nodeIndexB = FindClosestBoundaryNode(reg, objB, midPoint, error);
     MOCHI_ERROR_RETURN(error);
   }
 
@@ -414,7 +431,7 @@ void mochi::InitConstraint_DeformableNodeToRigid(
   DeformableNodeToRigidConstraintParams paramsIn = params;
   if (params.findClosest) {
     Real3 point = rbState.TransformPoint(params.rigidLocalPos - ToReal3(rbLocalCom));
-    paramsIn.deformableNodeIndex = GetNodeOnClosestFace(reg, objDeformable, point, error);
+    paramsIn.deformableNodeIndex = FindClosestBoundaryNode(reg, objDeformable, point, error);
     MOCHI_ERROR_RETURN(error);
   }
 

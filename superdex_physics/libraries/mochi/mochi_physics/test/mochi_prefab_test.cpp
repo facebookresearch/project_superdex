@@ -2174,13 +2174,13 @@ TEST(Prefab, RodActor_AddToScene_Errors) {
     SCOPED_TRACE("findClosest to rigid");
     auto scenePrefab = makeRodPrefab();
     scenePrefab.constraints.deformableNodeToRigid[0].findClosest = true;
-    expectError(scenePrefab, "Find closest only supported for soft actors.");
+    expectError(scenePrefab, "findClosest is only supported for soft actors.");
   }
   {
     SCOPED_TRACE("findClosest between deformables");
     auto scenePrefab = makeRodPrefab();
     scenePrefab.constraints.deformableNodeToDeformableNode[0].findClosest = true;
-    expectError(scenePrefab, "Find closest only supported for soft actors.");
+    expectError(scenePrefab, "findClosest is only supported for soft actors.");
   }
 }
 

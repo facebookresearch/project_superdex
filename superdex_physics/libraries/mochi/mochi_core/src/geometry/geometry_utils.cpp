@@ -769,34 +769,3 @@ Sphere mochi::CalcBoundingSphereIndexed(
   MOCHI_ASSERT(false, "Invalid BoundingSphereAlgorithm");
   return {};
 }
-
-/*************************************************************************************************
-  Closest face computation for meshes
-*/
-
-int mochi::ClosestFacePointTriangularMesh(
-    Real3 const& p,
-    Span<Real3 const> nodes,
-    Span<Int3 const> faces) {
-  Vec4r vp = ToSimd(p);
-  int nearestFace = -1;
-  real nearestDist = std::numeric_limits<real>::infinity();
-
-  VDistanceSignParams signParams;
-  signParams.computeSign = false;
-
-  for (size_t i = 0; i < faces.size(); ++i) {
-    // Get face geometry
-    Int3 const& face = faces[i];
-    Vec4r A = ToSimd(nodes[face[0]]);
-    Vec4r B = ToSimd(nodes[face[1]]);
-    Vec4r C = ToSimd(nodes[face[2]]);
-    real dist = Get0(VDistancePointTriangle(vp, A, B, C, signParams, nullptr));
-    if (dist < nearestDist) {
-      nearestDist = dist;
-      nearestFace = static_cast<int>(i);
-    }
-  }
-
-  return nearestFace;
-}

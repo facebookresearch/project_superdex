@@ -123,7 +123,7 @@ class SimplicialMesh {
   // active nodes, indices in this connectivity are in [0, n).
   Span<int const> GetActiveNodesFlatConnectivity() const;
 
-  // Get the indices of all unique nodes on the boundary
+  // Get the indices of all unique nodes on the boundary, in ascending order
   Span<int const> GetBoundaryNodes() const;
 
   // Get the indices of all active nodes in ascending full-mesh node-index order.
