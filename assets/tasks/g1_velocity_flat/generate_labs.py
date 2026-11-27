@@ -403,6 +403,52 @@ def mjlab_lab(joints: list[str]) -> dict:
     return lab
 
 
+_CLIP_SCHEDULE = [
+    # [t (s), vx, vy, wz]: stand, walk, walk faster, turn in place, arc, sidestep, stand.
+    [0.0, 0.0, 0.0, 0.0],
+    [2.0, 0.5, 0.0, 0.0],
+    [6.0, 1.0, 0.0, 0.0],
+    [10.0, 0.0, 0.0, 0.8],
+    [14.0, 0.5, 0.0, 0.5],
+    [17.0, 0.0, 0.4, 0.0],
+    [20.0, 0.0, 0.0, 0.0],
+]
+
+
+def clip_lab(joints: list[str]) -> dict:
+    """g1_velocity_flat_mjlab for clips and fixed-command looks: one 23 s episode through
+    _CLIP_SCHEDULE (twist_command's schedule: no draws, heading control or standing envs), no pushes
+    and no base pose draw, from the episode's start; its `play` variant drops the observation noise
+    and the startup DR."""
+    lab = {
+        "metadata": {
+            "name": "Unitree G1 velocity (flat), clip schedule",
+            "description": (
+                "g1_velocity_flat_mjlab with fixed commands for clips (stand, walk 0.5 and "
+                "1.0 m/s, turn in place, arc, sidestep, stand), written by generate_labs.py"
+            ),
+        },
+        "base": "g1_velocity_flat_mjlab.superdex_lab",
+        "episodeS": _CLIP_SCHEDULE[-1][0] + 3.0,
+        "randomInitialStep": False,
+        # The schedule reads no command-range globals, so neither they nor their curricula stay.
+        "globals": [],
+        "curricula": [],
+    }
+    mjlab = mjlab_lab(joints)
+    twist, feet = mjlab["commands"]
+    lab["commands"] = [
+        {"name": "twist", "kind": "twist_command",
+         "params": {"base": "pelvis", "schedule": _CLIP_SCHEDULE}},
+        feet,
+    ]  # fmt: skip
+    lab["events"] = [
+        e for e in mjlab["events"]
+        if e["name"] not in ("push_robot", "reset_base_position", "reset_base_yaw")
+    ]  # fmt: skip
+    return lab
+
+
 def _reward(
     name: str, weight: float, kind: str | None = None, **params: object
 ) -> dict:
@@ -469,6 +515,7 @@ def main() -> None:
     assert len(joints) == 29, len(joints)
     _write(_HERE / "g1_velocity_flat.superdex_lab", flat_lab(joints))
     _write(_HERE / "g1_velocity_flat_mjlab.superdex_lab", mjlab_lab(joints))
+    _write(_HERE / "g1_velocity_flat_mjlab_clip.superdex_lab", clip_lab(joints))
     _write(_HERE / "g1_velocity_flat.ppo.superdex_learn", learn())
 
 

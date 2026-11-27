@@ -182,6 +182,25 @@ TEST_F(TwistCommandTest, HeadingControlSetsTheYawRate) {
   EXPECT_NEAR(test::Record(env)[kCommand + 2], 0.5 * (1.0 - heading), 1e-4);
 }
 
+/* With a schedule, the command is the last row whose time has come: stand, then 0.5 m/s forward
+   from 0.1 s, then a 0.5 rad/s turn from 0.2 s, with no draws, heading control or standing. */
+TEST_F(TwistCommandTest, FollowsASchedule) {
+  TaskEnv& env = Make(CommandConfig(
+      R"({"base": "pelvis", "headingCommand": true, "standingShare": 1.0,
+          "schedule": [[0.0, 0.0, 0.0, 0.0], [0.1, 0.5, 0.0, 0.0], [0.2, 0.0, 0.0, 0.5]]})"));
+  env.Reset(0, mochi::ErrorAssert{});
+  double const dt = env.Spec().controlDt;
+  for (int k = 1; k <= 15; ++k) {
+    Step();
+    // The step's record holds the command the update after k - 1 decisions set.
+    double const t = (k - 1) * dt;
+    std::vector<float> const r = test::Record(env);
+    EXPECT_FLOAT_EQ(r[kCommand], t >= 0.1 - 1e-9 && t < 0.2 - 1e-9 ? 0.5f : 0.0f) << "k " << k;
+    EXPECT_FLOAT_EQ(r[kCommand + 1], 0.0f);
+    EXPECT_FLOAT_EQ(r[kCommand + 2], t >= 0.2 - 1e-9 ? 0.5f : 0.0f) << "k " << k;
+  }
+}
+
 /* The two tracking rewards are mjlab's kernels of the step's base velocities and the command the
    step was taken under (terms run before the command's update, as mjlab's rewards before its
    command compute), both of which the step's record holds: reward = weight x value x dt. Over

@@ -28,6 +28,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <iterator>
 #include <memory>
 #include <numbers>
 #include <optional>
@@ -68,6 +69,7 @@ struct TwistCommandParams {
   std::optional<Globals> linVelXGlobals;
   std::optional<Globals> linVelYGlobals;
   std::optional<Globals> angVelZGlobals;
+  std::vector<std::array<double, 4>> schedule;
 
   MOCHI_STRUCT_BEGIN(superdex::lab::locomotion::TwistCommandParams)
   MOCHI_FIELD(base)
@@ -85,6 +87,7 @@ struct TwistCommandParams {
   MOCHI_FIELD(linVelXGlobals)
   MOCHI_FIELD(linVelYGlobals)
   MOCHI_FIELD(angVelZGlobals)
+  MOCHI_FIELD(schedule)
   MOCHI_STRUCT_END()
 };
 
@@ -177,7 +180,16 @@ class TwistCommand final : public Component {
           "0 and a phasePeriodS above 0");
       return nullptr;
     }
+    bool scheduleFits = p.schedule.empty() || p.schedule.front()[0] == 0.0;
+    for (std::size_t i = 1; i < p.schedule.size(); ++i) {
+      scheduleFits = scheduleFits && p.schedule[i][0] > p.schedule[i - 1][0];
+    }
+    if (!scheduleFits) {
+      ctx.Fail("takes a schedule of [t, vx, vy, wz] rows, the first at t 0, times increasing");
+      return nullptr;
+    }
     auto command = std::make_unique<TwistCommand>();
+    command->_schedule = p.schedule;
     command->_ranges = {p.linVelX, p.linVelY, p.angVelZ};
     std::array<std::optional<Globals> const*, 3> const globals{
         &p.linVelXGlobals, &p.linVelYGlobals, &p.angVelZGlobals};
@@ -206,12 +218,21 @@ class TwistCommand final : public Component {
   void Reset(StepContext& ctx) override {
     _draws = 0;
     _elapsed = 0.0;
-    Resample(ctx);
+    if (_schedule.empty()) {
+      Resample(ctx);
+    } else {
+      FollowSchedule(ctx);
+    }
     WritePhase(ctx);
   }
 
   void Update(StepContext& ctx) override {
     _elapsed += ctx.Dt();
+    if (!_schedule.empty()) {
+      FollowSchedule(ctx);
+      WritePhase(ctx);
+      return;
+    }
     _timeLeft -= ctx.Dt();
     if (_timeLeft <= 0.0) {
       Resample(ctx);
@@ -229,6 +250,17 @@ class TwistCommand final : public Component {
   }
 
  private:
+  /* The scheduled command at the episode's time: the last row whose time has come. */
+  void FollowSchedule(StepContext& ctx) const {
+    auto const row = std::ranges::find_if(
+        _schedule, [this](std::array<double, 4> const& r) { return r[0] > _elapsed + 1e-9; });
+    std::array<double, 4> const& now = *std::prev(row);
+    mochi::Span<float> const command = ctx.Output(_command);
+    for (int axis = 0; axis < 3; ++axis) {
+      command[axis] = static_cast<float>(now[axis + 1]);
+    }
+  }
+
   /* mjlab's _resample: the period, then _resample_command, from the ranges now (the globals'
      values for an axis that reads globals). */
   void Resample(StepContext& ctx) {
@@ -270,6 +302,7 @@ class TwistCommand final : public Component {
     phase[1] = static_cast<float>(std::cos(2.0 * std::numbers::pi * cycle));
   }
 
+  std::vector<std::array<double, 4>> _schedule;
   std::array<Range, 3> _ranges{};
   /// The ranges of the current command, as drawn.
   std::array<Range, 3> _current{};

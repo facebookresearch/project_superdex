@@ -36,7 +36,10 @@ class LabKinds;
 ///   Reset draws the first command; the env's update after a reset (advancing no time) then applies
 ///   the heading and standing rules, as mjlab's command compute after its resets. Outputs:
 ///   "command" (vx, vy, wz) and "phase" (sin, cos of 2 pi t / phasePeriodS, t the episode's time;
-///   zeros when |command| < 0.1), mjlab velocity's `phase` observation.
+///   zeros when |command| < 0.1), mjlab velocity's `phase` observation. With "schedule"
+///   ([[t, vx, vy, wz], ...], t in s from the episode's start, the first at 0, increasing), the
+///   command is the last row whose time has come, with no draws, heading control or standing envs:
+///   fixed commands for clips and evaluations.
 /// - `foot_contact` {"links" (one link set per foot, e.g. "links:left_foot?_s?"), "sites" (one
 ///   site link per foot, e.g. "left_foot"), "ground" (the scene actor, e.g. "StaticPlane"),
 ///   "base" (the robot's base link), "forceThreshold" (N, default 1)}: mjlab's ContactSensor with
