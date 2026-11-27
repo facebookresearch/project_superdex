@@ -1,0 +1,373 @@
+{
+  "metadata": {
+    "name": "Unitree G1 on flat ground",
+    "description": "unitree_rl_mjlab's G1 (29 DoF, rev 1.0) standing at mjlab's HOME_KEYFRAME, pelvis at z 0.8, Z-up, its 29 joints driven by g1_constants.py's six BuiltinPositionActuatorCfg as mjlab-style position actuators (LAB_JOINT_ACTUATORS: stiffness, damping, effort limit and armature from mjlab). The slot offers the sphere-feet bot (g1) and the box-feet bot (g1_box_feet)"
+  },
+  "scene": {
+    "baseScene": "./scene/g1_flat.mochi_scene",
+    "spawnablePrefabs": []
+  },
+  "bots": [
+    {
+      "name": "g1",
+      "path": "@bots/humanoids/unitree_g1/unitree_g1.superdex_bot",
+      "parentFromBot": {
+        "translation": [
+          0,
+          0,
+          0.8
+        ]
+      },
+      "controllers": [
+        {
+          "type": "LAB_JOINT_ACTUATORS",
+          "name": "body",
+          "initArgs": {
+            "joints": [
+              "left_hip_pitch_joint",
+              "left_hip_roll_joint",
+              "left_hip_yaw_joint",
+              "left_knee_joint",
+              "left_ankle_pitch_joint",
+              "left_ankle_roll_joint",
+              "right_hip_pitch_joint",
+              "right_hip_roll_joint",
+              "right_hip_yaw_joint",
+              "right_knee_joint",
+              "right_ankle_pitch_joint",
+              "right_ankle_roll_joint",
+              "waist_yaw_joint",
+              "waist_roll_joint",
+              "waist_pitch_joint",
+              "left_shoulder_pitch_joint",
+              "left_shoulder_roll_joint",
+              "left_shoulder_yaw_joint",
+              "left_elbow_joint",
+              "left_wrist_roll_joint",
+              "left_wrist_pitch_joint",
+              "left_wrist_yaw_joint",
+              "right_shoulder_pitch_joint",
+              "right_shoulder_roll_joint",
+              "right_shoulder_yaw_joint",
+              "right_elbow_joint",
+              "right_wrist_roll_joint",
+              "right_wrist_pitch_joint",
+              "right_wrist_yaw_joint"
+            ],
+            "actuators": [
+              {
+                "name": "g1_5020",
+                "type": "position",
+                "joints": [
+                  ".*_elbow_joint",
+                  ".*_shoulder_pitch_joint",
+                  ".*_shoulder_roll_joint",
+                  ".*_shoulder_yaw_joint",
+                  ".*_wrist_roll_joint"
+                ],
+                "stiffness": [
+                  14.25062309787429
+                ],
+                "damping": [
+                  0.907222843292423
+                ],
+                "effortLimit": [
+                  25.0
+                ],
+                "armature": [
+                  0.003609725
+                ]
+              },
+              {
+                "name": "g1_7520_14",
+                "type": "position",
+                "joints": [
+                  ".*_hip_pitch_joint",
+                  ".*_hip_yaw_joint",
+                  "waist_yaw_joint"
+                ],
+                "stiffness": [
+                  40.17923863450712
+                ],
+                "damping": [
+                  2.557889775413375
+                ],
+                "effortLimit": [
+                  88.0
+                ],
+                "armature": [
+                  0.01017752004132231
+                ]
+              },
+              {
+                "name": "g1_7520_22",
+                "type": "position",
+                "joints": [
+                  ".*_hip_roll_joint",
+                  ".*_knee_joint"
+                ],
+                "stiffness": [
+                  99.09842777666111
+                ],
+                "damping": [
+                  6.308801853496639
+                ],
+                "effortLimit": [
+                  139.0
+                ],
+                "armature": [
+                  0.025101924999999997
+                ]
+              },
+              {
+                "name": "g1_4010",
+                "type": "position",
+                "joints": [
+                  ".*_wrist_pitch_joint",
+                  ".*_wrist_yaw_joint"
+                ],
+                "stiffness": [
+                  16.77832748089279
+                ],
+                "damping": [
+                  1.06814150219
+                ],
+                "effortLimit": [
+                  5.0
+                ],
+                "armature": [
+                  0.00425
+                ]
+              },
+              {
+                "name": "g1_waist",
+                "type": "position",
+                "joints": [
+                  "waist_pitch_joint",
+                  "waist_roll_joint"
+                ],
+                "stiffness": [
+                  28.50124619574858
+                ],
+                "damping": [
+                  1.814445686584846
+                ],
+                "effortLimit": [
+                  50.0
+                ],
+                "armature": [
+                  0.00721945
+                ]
+              },
+              {
+                "name": "g1_ankle",
+                "type": "position",
+                "joints": [
+                  ".*_ankle_pitch_joint",
+                  ".*_ankle_roll_joint"
+                ],
+                "stiffness": [
+                  28.50124619574858
+                ],
+                "damping": [
+                  1.814445686584846
+                ],
+                "effortLimit": [
+                  50.0
+                ],
+                "armature": [
+                  0.00721945
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "g1_box_feet",
+      "path": "@bots/humanoids/unitree_g1/unitree_g1_box_feet.superdex_bot",
+      "parentFromBot": {
+        "translation": [
+          0,
+          0,
+          0.8
+        ]
+      },
+      "controllers": [
+        {
+          "type": "LAB_JOINT_ACTUATORS",
+          "name": "body",
+          "initArgs": {
+            "joints": [
+              "left_hip_pitch_joint",
+              "left_hip_roll_joint",
+              "left_hip_yaw_joint",
+              "left_knee_joint",
+              "left_ankle_pitch_joint",
+              "left_ankle_roll_joint",
+              "right_hip_pitch_joint",
+              "right_hip_roll_joint",
+              "right_hip_yaw_joint",
+              "right_knee_joint",
+              "right_ankle_pitch_joint",
+              "right_ankle_roll_joint",
+              "waist_yaw_joint",
+              "waist_roll_joint",
+              "waist_pitch_joint",
+              "left_shoulder_pitch_joint",
+              "left_shoulder_roll_joint",
+              "left_shoulder_yaw_joint",
+              "left_elbow_joint",
+              "left_wrist_roll_joint",
+              "left_wrist_pitch_joint",
+              "left_wrist_yaw_joint",
+              "right_shoulder_pitch_joint",
+              "right_shoulder_roll_joint",
+              "right_shoulder_yaw_joint",
+              "right_elbow_joint",
+              "right_wrist_roll_joint",
+              "right_wrist_pitch_joint",
+              "right_wrist_yaw_joint"
+            ],
+            "actuators": [
+              {
+                "name": "g1_5020",
+                "type": "position",
+                "joints": [
+                  ".*_elbow_joint",
+                  ".*_shoulder_pitch_joint",
+                  ".*_shoulder_roll_joint",
+                  ".*_shoulder_yaw_joint",
+                  ".*_wrist_roll_joint"
+                ],
+                "stiffness": [
+                  14.25062309787429
+                ],
+                "damping": [
+                  0.907222843292423
+                ],
+                "effortLimit": [
+                  25.0
+                ],
+                "armature": [
+                  0.003609725
+                ]
+              },
+              {
+                "name": "g1_7520_14",
+                "type": "position",
+                "joints": [
+                  ".*_hip_pitch_joint",
+                  ".*_hip_yaw_joint",
+                  "waist_yaw_joint"
+                ],
+                "stiffness": [
+                  40.17923863450712
+                ],
+                "damping": [
+                  2.557889775413375
+                ],
+                "effortLimit": [
+                  88.0
+                ],
+                "armature": [
+                  0.01017752004132231
+                ]
+              },
+              {
+                "name": "g1_7520_22",
+                "type": "position",
+                "joints": [
+                  ".*_hip_roll_joint",
+                  ".*_knee_joint"
+                ],
+                "stiffness": [
+                  99.09842777666111
+                ],
+                "damping": [
+                  6.308801853496639
+                ],
+                "effortLimit": [
+                  139.0
+                ],
+                "armature": [
+                  0.025101924999999997
+                ]
+              },
+              {
+                "name": "g1_4010",
+                "type": "position",
+                "joints": [
+                  ".*_wrist_pitch_joint",
+                  ".*_wrist_yaw_joint"
+                ],
+                "stiffness": [
+                  16.77832748089279
+                ],
+                "damping": [
+                  1.06814150219
+                ],
+                "effortLimit": [
+                  5.0
+                ],
+                "armature": [
+                  0.00425
+                ]
+              },
+              {
+                "name": "g1_waist",
+                "type": "position",
+                "joints": [
+                  "waist_pitch_joint",
+                  "waist_roll_joint"
+                ],
+                "stiffness": [
+                  28.50124619574858
+                ],
+                "damping": [
+                  1.814445686584846
+                ],
+                "effortLimit": [
+                  50.0
+                ],
+                "armature": [
+                  0.00721945
+                ]
+              },
+              {
+                "name": "g1_ankle",
+                "type": "position",
+                "joints": [
+                  ".*_ankle_pitch_joint",
+                  ".*_ankle_roll_joint"
+                ],
+                "stiffness": [
+                  28.50124619574858
+                ],
+                "damping": [
+                  1.814445686584846
+                ],
+                "effortLimit": [
+                  50.0
+                ],
+                "armature": [
+                  0.00721945
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "slots": [
+    {
+      "name": "robot",
+      "controlledBots": [
+        "g1",
+        "g1_box_feet"
+      ]
+    }
+  ]
+}

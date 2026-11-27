@@ -1,0 +1,140 @@
+{
+  "metadata": {
+    "name": "G1 push after a yaw (test)",
+    "description": "g1_push raised 6 m, spun about z at 0.6 s (pi/2 in 0.4 s) and pushed at 1.0 s, so the root has turned since its placement when it is pushed"
+  },
+  "base": "g1_stand.superdex_lab",
+  "events": [
+    {
+      "name": "raise",
+      "kind": "randomize_field",
+      "params": {
+        "field": "bot.root_position",
+        "target": "bot/g1",
+        "distribution": [
+          "uniform",
+          6.0,
+          6.0
+        ],
+        "operation": "add",
+        "axes": [
+          2
+        ],
+        "temporal": "reset"
+      }
+    },
+    {
+      "name": "turn",
+      "kind": "randomize_field",
+      "params": {
+        "field": "bot.root_rotation",
+        "target": "bot/g1",
+        "distribution": [
+          "gaussian_vec",
+          [
+            0.0,
+            0.0,
+            1.5707963267948966
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ]
+        ],
+        "operation": "add",
+        "temporal": "reset"
+      }
+    },
+    {
+      "name": "spin",
+      "kind": "push_robot",
+      "params": {
+        "intervalS": [
+          0.6,
+          0.6
+        ],
+        "linear": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ]
+        ],
+        "angular": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            3.9269908169872414,
+            3.9269908169872414
+          ]
+        ]
+      }
+    },
+    {
+      "name": "push",
+      "kind": "push_robot",
+      "params": {
+        "intervalS": [
+          1.0,
+          1.0
+        ],
+        "linear": [
+          [
+            2.0,
+            2.0
+          ],
+          [
+            -1.0,
+            -1.0
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ],
+        "angular": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ]
+        ]
+      }
+    }
+  ],
+  "records": [
+    {
+      "name": "pelvis.linear_velocity_from_base",
+      "feature": "pelvis.linear_velocity_from_base"
+    },
+    {
+      "name": "pelvis.angular_velocity_from_base",
+      "feature": "pelvis.angular_velocity_from_base"
+    },
+    {
+      "name": "pelvis.rotation_in_task_root.quat",
+      "feature": "pelvis.rotation_in_task_root.quat"
+    }
+  ]
+}

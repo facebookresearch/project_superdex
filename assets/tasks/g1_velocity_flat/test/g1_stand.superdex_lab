@@ -1,0 +1,108 @@
+{
+  "metadata": {
+    "name": "G1 stand (test)",
+    "description": "The G1 holding mjlab's HOME_KEYFRAME under mjlab's actuators with zero actions: in MuJoCo (superdex_lab/tasks/locomotion/tools/mujoco_stand.py) it falls forward within 1.5 s, and the stand test checks that it falls the same way here"
+  },
+  "scene": "../g1_velocity.superdex_scene",
+  "task": "../g1_velocity.superdex_task",
+  "slots": {
+    "robot": {
+      "bot": "g1",
+      "gravityCompensated": false,
+      "baseLink": "pelvis",
+      "softLimitFactor": 0.9
+    }
+  },
+  "controlHz": 50,
+  "physicsHz": 200,
+  "episodeS": 20.0,
+  "randomInitialStep": false,
+  "settleSteps": 0,
+  "actions": [
+    {
+      "controller": "body",
+      "scale": [
+        0.547546,
+        0.350661,
+        0.547546,
+        0.350661,
+        0.438577,
+        0.438577,
+        0.547546,
+        0.350661,
+        0.547546,
+        0.350661,
+        0.438577,
+        0.438577,
+        0.547546,
+        0.438577,
+        0.438577,
+        0.438577,
+        0.438577,
+        0.438577,
+        0.438577,
+        0.438577,
+        0.074501,
+        0.074501,
+        0.438577,
+        0.438577,
+        0.438577,
+        0.438577,
+        0.438577,
+        0.074501,
+        0.074501
+      ]
+    }
+  ],
+  "observations": [
+    {
+      "name": "joint_pos",
+      "feature": "body.joints.from_initial"
+    },
+    {
+      "name": "joint_vel",
+      "feature": "body.joint_velocities"
+    },
+    {
+      "name": "base_ang_vel",
+      "feature": "pelvis.angular_velocity_from_base"
+    },
+    {
+      "name": "projected_gravity",
+      "feature": "gravity_from_base",
+      "scale": [
+        0.10193679918450561
+      ]
+    },
+    {
+      "name": "actions",
+      "feature": "action"
+    }
+  ],
+  "records": [
+    {
+      "name": "pelvis_pos",
+      "feature": "pelvis.translation_in_task_root"
+    },
+    {
+      "name": "pelvis_quat",
+      "feature": "pelvis.rotation_in_task_root.quat"
+    },
+    {
+      "name": "pelvis_lin_vel",
+      "feature": "pelvis.linear_velocity_from_base"
+    },
+    {
+      "name": "effort",
+      "feature": "body.effort"
+    },
+    {
+      "name": "foot_force",
+      "feature": "links:*foot*.contact_force.StaticPlane"
+    },
+    {
+      "name": "foot_pos",
+      "feature": "links:*foot*.translation_in_task_root"
+    }
+  ]
+}

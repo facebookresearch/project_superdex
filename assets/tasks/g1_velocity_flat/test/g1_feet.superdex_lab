@@ -1,0 +1,438 @@
+{
+  "metadata": {
+    "name": "G1 feet (test)",
+    "description": "g1_stand with g1_stand_stiff's 30x actuators (the statue; a base names no base), a fixed twist command, foot_contact on the 14-sphere feet and the foot, posture and body terms, recording the command, the joints and the torso's rotation"
+  },
+  "base": "g1_stand.superdex_lab",
+  "commands": [
+    {
+      "name": "twist",
+      "kind": "twist_command",
+      "params": {
+        "base": "pelvis",
+        "linVelX": [
+          0.5,
+          0.5
+        ],
+        "linVelY": [
+          0.0,
+          0.0
+        ],
+        "angVelZ": [
+          0.2,
+          0.2
+        ],
+        "resamplingS": [
+          100.0,
+          100.0
+        ]
+      }
+    },
+    {
+      "name": "feet",
+      "kind": "foot_contact",
+      "params": {
+        "links": [
+          "links:left_foot?_s?",
+          "links:right_foot?_s?"
+        ],
+        "sites": [
+          "left_foot",
+          "right_foot"
+        ],
+        "ground": "StaticPlane",
+        "base": "pelvis",
+        "forceThreshold": 1.0
+      }
+    }
+  ],
+  "rewards": [
+    {
+      "name": "feet_gait",
+      "kind": "feet_gait",
+      "weight": 1.0,
+      "params": {
+        "command": "twist",
+        "contact": "feet",
+        "period": 0.6,
+        "offset": [
+          0.0,
+          0.5
+        ],
+        "threshold": 0.56,
+        "commandThreshold": 0.1
+      }
+    },
+    {
+      "name": "feet_clearance",
+      "kind": "feet_clearance",
+      "weight": 1.0,
+      "params": {
+        "command": "twist",
+        "contact": "feet",
+        "targetHeight": 0.1,
+        "commandThreshold": 0.1
+      }
+    },
+    {
+      "name": "feet_slip",
+      "kind": "feet_slip",
+      "weight": 1.0,
+      "params": {
+        "command": "twist",
+        "contact": "feet",
+        "commandThreshold": 0.1
+      }
+    },
+    {
+      "name": "soft_landing",
+      "kind": "soft_landing",
+      "weight": 1.0,
+      "params": {
+        "command": "twist",
+        "contact": "feet",
+        "commandThreshold": 0.1
+      }
+    },
+    {
+      "name": "variable_posture",
+      "kind": "variable_posture",
+      "weight": 1.0,
+      "params": {
+        "command": "twist",
+        "joints": "body.joints.from_initial",
+        "stdStanding": [
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.05
+        ],
+        "stdWalking": [
+          0.3,
+          0.3,
+          0.3,
+          0.3,
+          0.3,
+          0.3,
+          0.3,
+          0.3,
+          0.3,
+          0.3,
+          0.3,
+          0.3,
+          0.3,
+          0.3,
+          0.3,
+          0.3,
+          0.3,
+          0.3,
+          0.3,
+          0.3,
+          0.3,
+          0.3,
+          0.3,
+          0.3,
+          0.3,
+          0.3,
+          0.3,
+          0.3,
+          0.3
+        ],
+        "stdRunning": [
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5
+        ],
+        "walkingThreshold": 0.1,
+        "runningThreshold": 1.5
+      }
+    },
+    {
+      "name": "stand_still",
+      "kind": "stand_still",
+      "weight": 1.0,
+      "params": {
+        "command": "twist",
+        "joints": "body.joints.from_initial",
+        "commandThreshold": 0.1
+      }
+    },
+    {
+      "name": "is_terminated",
+      "kind": "is_terminated",
+      "weight": 1.0
+    },
+    {
+      "name": "body_orientation_l2",
+      "kind": "projected_gravity_xy",
+      "weight": 1.0,
+      "params": {
+        "rotation": "torso_link.rotation_in_task_root.quat"
+      }
+    },
+    {
+      "name": "body_ang_vel",
+      "kind": "body_angular_velocity_xy",
+      "weight": 1.0,
+      "params": {
+        "velocity": "torso_link.angular_velocity_from_base",
+        "baseRotation": "pelvis.rotation_in_task_root.quat"
+      }
+    },
+    {
+      "name": "joint_acc_l2",
+      "kind": "joint_acc_l2",
+      "weight": 1.0,
+      "params": {
+        "velocities": "body.joint_velocities"
+      }
+    }
+  ],
+  "records": [
+    {
+      "name": "twist.command",
+      "feature": "twist.command"
+    },
+    {
+      "name": "joints",
+      "feature": "body.joints.from_initial"
+    },
+    {
+      "name": "torso_quat",
+      "feature": "torso_link.rotation_in_task_root.quat"
+    }
+  ],
+  "events": [
+    {
+      "name": "stiff_g1_5020_stiffness",
+      "kind": "randomize_field",
+      "params": {
+        "field": "actuator.stiffness",
+        "target": "actuator/robot/g1_5020",
+        "distribution": [
+          "uniform",
+          30.0,
+          30.0
+        ],
+        "operation": "scale",
+        "temporal": "startup"
+      }
+    },
+    {
+      "name": "stiff_g1_5020_damping",
+      "kind": "randomize_field",
+      "params": {
+        "field": "actuator.damping",
+        "target": "actuator/robot/g1_5020",
+        "distribution": [
+          "uniform",
+          30.0,
+          30.0
+        ],
+        "operation": "scale",
+        "temporal": "startup"
+      }
+    },
+    {
+      "name": "stiff_g1_7520_14_stiffness",
+      "kind": "randomize_field",
+      "params": {
+        "field": "actuator.stiffness",
+        "target": "actuator/robot/g1_7520_14",
+        "distribution": [
+          "uniform",
+          30.0,
+          30.0
+        ],
+        "operation": "scale",
+        "temporal": "startup"
+      }
+    },
+    {
+      "name": "stiff_g1_7520_14_damping",
+      "kind": "randomize_field",
+      "params": {
+        "field": "actuator.damping",
+        "target": "actuator/robot/g1_7520_14",
+        "distribution": [
+          "uniform",
+          30.0,
+          30.0
+        ],
+        "operation": "scale",
+        "temporal": "startup"
+      }
+    },
+    {
+      "name": "stiff_g1_7520_22_stiffness",
+      "kind": "randomize_field",
+      "params": {
+        "field": "actuator.stiffness",
+        "target": "actuator/robot/g1_7520_22",
+        "distribution": [
+          "uniform",
+          30.0,
+          30.0
+        ],
+        "operation": "scale",
+        "temporal": "startup"
+      }
+    },
+    {
+      "name": "stiff_g1_7520_22_damping",
+      "kind": "randomize_field",
+      "params": {
+        "field": "actuator.damping",
+        "target": "actuator/robot/g1_7520_22",
+        "distribution": [
+          "uniform",
+          30.0,
+          30.0
+        ],
+        "operation": "scale",
+        "temporal": "startup"
+      }
+    },
+    {
+      "name": "stiff_g1_4010_stiffness",
+      "kind": "randomize_field",
+      "params": {
+        "field": "actuator.stiffness",
+        "target": "actuator/robot/g1_4010",
+        "distribution": [
+          "uniform",
+          30.0,
+          30.0
+        ],
+        "operation": "scale",
+        "temporal": "startup"
+      }
+    },
+    {
+      "name": "stiff_g1_4010_damping",
+      "kind": "randomize_field",
+      "params": {
+        "field": "actuator.damping",
+        "target": "actuator/robot/g1_4010",
+        "distribution": [
+          "uniform",
+          30.0,
+          30.0
+        ],
+        "operation": "scale",
+        "temporal": "startup"
+      }
+    },
+    {
+      "name": "stiff_g1_waist_stiffness",
+      "kind": "randomize_field",
+      "params": {
+        "field": "actuator.stiffness",
+        "target": "actuator/robot/g1_waist",
+        "distribution": [
+          "uniform",
+          30.0,
+          30.0
+        ],
+        "operation": "scale",
+        "temporal": "startup"
+      }
+    },
+    {
+      "name": "stiff_g1_waist_damping",
+      "kind": "randomize_field",
+      "params": {
+        "field": "actuator.damping",
+        "target": "actuator/robot/g1_waist",
+        "distribution": [
+          "uniform",
+          30.0,
+          30.0
+        ],
+        "operation": "scale",
+        "temporal": "startup"
+      }
+    },
+    {
+      "name": "stiff_g1_ankle_stiffness",
+      "kind": "randomize_field",
+      "params": {
+        "field": "actuator.stiffness",
+        "target": "actuator/robot/g1_ankle",
+        "distribution": [
+          "uniform",
+          30.0,
+          30.0
+        ],
+        "operation": "scale",
+        "temporal": "startup"
+      }
+    },
+    {
+      "name": "stiff_g1_ankle_damping",
+      "kind": "randomize_field",
+      "params": {
+        "field": "actuator.damping",
+        "target": "actuator/robot/g1_ankle",
+        "distribution": [
+          "uniform",
+          30.0,
+          30.0
+        ],
+        "operation": "scale",
+        "temporal": "startup"
+      }
+    }
+  ]
+}

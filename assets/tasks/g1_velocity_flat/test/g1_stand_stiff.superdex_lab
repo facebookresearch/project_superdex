@@ -1,0 +1,189 @@
+{
+  "metadata": {
+    "name": "G1 stand, stiff (test)",
+    "description": "g1_stand with every actuator's stiffness and damping 30x mjlab's, so the G1 stands as a statue on its feet: the 10 s contact test (no jitter, no fault, the ground carrying m g)"
+  },
+  "base": "g1_stand.superdex_lab",
+  "events": [
+    {
+      "name": "stiff_g1_5020_stiffness",
+      "kind": "randomize_field",
+      "params": {
+        "field": "actuator.stiffness",
+        "target": "actuator/robot/g1_5020",
+        "distribution": [
+          "uniform",
+          30.0,
+          30.0
+        ],
+        "operation": "scale",
+        "temporal": "startup"
+      }
+    },
+    {
+      "name": "stiff_g1_5020_damping",
+      "kind": "randomize_field",
+      "params": {
+        "field": "actuator.damping",
+        "target": "actuator/robot/g1_5020",
+        "distribution": [
+          "uniform",
+          30.0,
+          30.0
+        ],
+        "operation": "scale",
+        "temporal": "startup"
+      }
+    },
+    {
+      "name": "stiff_g1_7520_14_stiffness",
+      "kind": "randomize_field",
+      "params": {
+        "field": "actuator.stiffness",
+        "target": "actuator/robot/g1_7520_14",
+        "distribution": [
+          "uniform",
+          30.0,
+          30.0
+        ],
+        "operation": "scale",
+        "temporal": "startup"
+      }
+    },
+    {
+      "name": "stiff_g1_7520_14_damping",
+      "kind": "randomize_field",
+      "params": {
+        "field": "actuator.damping",
+        "target": "actuator/robot/g1_7520_14",
+        "distribution": [
+          "uniform",
+          30.0,
+          30.0
+        ],
+        "operation": "scale",
+        "temporal": "startup"
+      }
+    },
+    {
+      "name": "stiff_g1_7520_22_stiffness",
+      "kind": "randomize_field",
+      "params": {
+        "field": "actuator.stiffness",
+        "target": "actuator/robot/g1_7520_22",
+        "distribution": [
+          "uniform",
+          30.0,
+          30.0
+        ],
+        "operation": "scale",
+        "temporal": "startup"
+      }
+    },
+    {
+      "name": "stiff_g1_7520_22_damping",
+      "kind": "randomize_field",
+      "params": {
+        "field": "actuator.damping",
+        "target": "actuator/robot/g1_7520_22",
+        "distribution": [
+          "uniform",
+          30.0,
+          30.0
+        ],
+        "operation": "scale",
+        "temporal": "startup"
+      }
+    },
+    {
+      "name": "stiff_g1_4010_stiffness",
+      "kind": "randomize_field",
+      "params": {
+        "field": "actuator.stiffness",
+        "target": "actuator/robot/g1_4010",
+        "distribution": [
+          "uniform",
+          30.0,
+          30.0
+        ],
+        "operation": "scale",
+        "temporal": "startup"
+      }
+    },
+    {
+      "name": "stiff_g1_4010_damping",
+      "kind": "randomize_field",
+      "params": {
+        "field": "actuator.damping",
+        "target": "actuator/robot/g1_4010",
+        "distribution": [
+          "uniform",
+          30.0,
+          30.0
+        ],
+        "operation": "scale",
+        "temporal": "startup"
+      }
+    },
+    {
+      "name": "stiff_g1_waist_stiffness",
+      "kind": "randomize_field",
+      "params": {
+        "field": "actuator.stiffness",
+        "target": "actuator/robot/g1_waist",
+        "distribution": [
+          "uniform",
+          30.0,
+          30.0
+        ],
+        "operation": "scale",
+        "temporal": "startup"
+      }
+    },
+    {
+      "name": "stiff_g1_waist_damping",
+      "kind": "randomize_field",
+      "params": {
+        "field": "actuator.damping",
+        "target": "actuator/robot/g1_waist",
+        "distribution": [
+          "uniform",
+          30.0,
+          30.0
+        ],
+        "operation": "scale",
+        "temporal": "startup"
+      }
+    },
+    {
+      "name": "stiff_g1_ankle_stiffness",
+      "kind": "randomize_field",
+      "params": {
+        "field": "actuator.stiffness",
+        "target": "actuator/robot/g1_ankle",
+        "distribution": [
+          "uniform",
+          30.0,
+          30.0
+        ],
+        "operation": "scale",
+        "temporal": "startup"
+      }
+    },
+    {
+      "name": "stiff_g1_ankle_damping",
+      "kind": "randomize_field",
+      "params": {
+        "field": "actuator.damping",
+        "target": "actuator/robot/g1_ankle",
+        "distribution": [
+          "uniform",
+          30.0,
+          30.0
+        ],
+        "operation": "scale",
+        "temporal": "startup"
+      }
+    }
+  ]
+}

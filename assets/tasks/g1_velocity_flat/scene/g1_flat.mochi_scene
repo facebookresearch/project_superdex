@@ -1,0 +1,50 @@
+{
+  "actors": {
+    "rigid": [
+      {
+        "colliderType": "Plane",
+        "isStatic": true,
+        "layer": "Environment",
+        "name": "StaticPlane",
+        "shape": "./ground_plane.mochi.json",
+        "contact": {
+          "coulombFrictionCoefficient": 1.0,
+          "penaltySmoothingHalfDistance": 0.001
+        }
+      }
+    ]
+  },
+  "contactFilter": {
+    "layerContactSymmetric": [
+      {
+        "enable": false,
+        "layers": [
+          "G1Foot",
+          "G1Foot"
+        ]
+      },
+      {
+        "enable": false,
+        "layers": [
+          "G1Foot",
+          "G1Body"
+        ]
+      },
+      {
+        "enable": false,
+        "layers": [
+          "G1Body",
+          "G1Body"
+        ]
+      }
+    ]
+  },
+  "scene": {
+    "description": "Flat ground for the Unitree G1: Z-up, MuJoCo's gravity (9.81, as mjlab), a ground plane at z = 0; the G1's collider spheres touch the ground only; ground friction 1, so the foot-ground friction is the foot's square root (Mochi's geometric mean)",
+    "gravity": [
+      0,
+      0,
+      -9.81
+    ]
+  }
+}

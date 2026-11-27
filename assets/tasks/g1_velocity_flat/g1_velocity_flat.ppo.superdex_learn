@@ -1,0 +1,58 @@
+{
+  "num_steps_per_env": 24,
+  "max_iterations": 10001,
+  "save_interval": 100,
+  "obs_groups": {
+    "actor": [
+      "actor"
+    ],
+    "critic": [
+      "critic"
+    ]
+  },
+  "actor": {
+    "class_name": "rsl_rl.models.MLPModel",
+    "hidden_dims": [
+      512,
+      256,
+      128
+    ],
+    "activation": "elu",
+    "obs_normalization": true,
+    "distribution_cfg": {
+      "class_name": "rsl_rl.modules.GaussianDistribution",
+      "init_std": 1.0,
+      "std_type": "scalar"
+    }
+  },
+  "critic": {
+    "class_name": "rsl_rl.models.MLPModel",
+    "hidden_dims": [
+      512,
+      256,
+      128
+    ],
+    "activation": "elu",
+    "obs_normalization": true
+  },
+  "algorithm": {
+    "class_name": "rsl_rl.algorithms.PPO",
+    "clip_param": 0.2,
+    "desired_kl": 0.01,
+    "entropy_coef": 0.01,
+    "gamma": 0.99,
+    "lam": 0.95,
+    "learning_rate": 0.001,
+    "max_grad_norm": 1.0,
+    "normalize_advantage_per_mini_batch": false,
+    "num_learning_epochs": 5,
+    "num_mini_batches": 4,
+    "optimizer": "adam",
+    "rnd_cfg": null,
+    "schedule": "adaptive",
+    "share_cnn_encoders": false,
+    "symmetry_cfg": null,
+    "use_clipped_value_loss": true,
+    "value_loss_coef": 1.0
+  }
+}

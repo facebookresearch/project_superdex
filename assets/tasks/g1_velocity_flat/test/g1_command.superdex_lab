@@ -1,0 +1,82 @@
+{
+  "metadata": {
+    "name": "G1 twist command (test)",
+    "description": "g1_stand with mjlab's twist command (UniformVelocityCommand) and its two tracking rewards, recording the command, the phase and the pelvis's velocities and rotation"
+  },
+  "base": "g1_stand.superdex_lab",
+  "commands": [
+    {
+      "name": "twist",
+      "kind": "twist_command",
+      "params": {
+        "base": "pelvis",
+        "linVelX": [
+          -1.0,
+          2.0
+        ],
+        "linVelY": [
+          -1.0,
+          1.0
+        ],
+        "angVelZ": [
+          -1.0,
+          1.0
+        ],
+        "resamplingS": [
+          3.0,
+          8.0
+        ],
+        "standingShare": 0.0,
+        "headingShare": 1.0,
+        "headingCommand": false,
+        "headingStiffness": 0.5,
+        "minNorm": 0.1,
+        "phasePeriodS": 0.6
+      }
+    }
+  ],
+  "rewards": [
+    {
+      "name": "track_linear_velocity",
+      "kind": "track_linear_velocity",
+      "weight": 1.0,
+      "params": {
+        "command": "twist",
+        "velocity": "pelvis.linear_velocity_from_base",
+        "std": 0.5
+      }
+    },
+    {
+      "name": "track_angular_velocity",
+      "kind": "track_angular_velocity",
+      "weight": 1.0,
+      "params": {
+        "command": "twist",
+        "velocity": "pelvis.angular_velocity_from_base",
+        "std": 0.7071067811865476
+      }
+    }
+  ],
+  "records": [
+    {
+      "name": "twist.command",
+      "feature": "twist.command"
+    },
+    {
+      "name": "twist.phase",
+      "feature": "twist.phase"
+    },
+    {
+      "name": "pelvis.linear_velocity_from_base",
+      "feature": "pelvis.linear_velocity_from_base"
+    },
+    {
+      "name": "pelvis.angular_velocity_from_base",
+      "feature": "pelvis.angular_velocity_from_base"
+    },
+    {
+      "name": "pelvis.rotation_in_task_root.quat",
+      "feature": "pelvis.rotation_in_task_root.quat"
+    }
+  ]
+}

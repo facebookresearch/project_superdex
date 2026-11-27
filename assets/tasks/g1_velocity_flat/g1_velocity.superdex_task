@@ -1,0 +1,9 @@
+{
+  "metadata": {
+    "name": "Unitree G1 velocity tracking (flat)",
+    "description": "No task objects: the G1 alone on flat ground, after unitree_rl_mjlab's Unitree-G1-Flat; the twist command, the rewards and the fall termination live in the lab files"
+  },
+  "physicsHz": 200,
+  "timeLimitS": 20.0,
+  "resetState": []
+}
