@@ -427,6 +427,20 @@ static void InitializeHyperReductionIfApplicable(
     return;
   }
 
+  if (auto const* sampling =
+          std::get_if<SampleMeshInitRandomSampling>(&hypRedParamsOpt->initializationStrategy)) {
+    int const boundaryStep = sampling->stepSizeForBoundaryElementsSelection;
+    MOCHI_ERROR_IF_NOT(
+        boundaryStep == rom::hyper::kNoElements || boundaryStep >= 1,
+        error,
+        "SampleMeshInitRandomSampling::stepSizeForBoundaryElementsSelection must be rom::hyper::kNoElements (-1) or at least 1.");
+    MOCHI_ERROR_IF_NOT(
+        sampling->stepSizeForInteriorElementsSelection >= 1,
+        error,
+        "SampleMeshInitRandomSampling::stepSizeForInteriorElementsSelection must be at least 1.");
+    MOCHI_ERROR_RETURN(error);
+  }
+
   // the CShape is emplaced by the soft actor initialization which is done before
   // this ROM initialization, so this component is/should be present.
   auto const& shapeComp = reg.get<CShape const>(e);
