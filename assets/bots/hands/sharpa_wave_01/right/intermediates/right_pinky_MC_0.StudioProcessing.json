@@ -1,0 +1,97 @@
+{
+  "editorState": {
+    "cadRotation": [
+      0,
+      0,
+      0,
+      1
+    ],
+    "cadScale": [
+      1,
+      1,
+      1
+    ],
+    "cadTranslation": [
+      0,
+      0,
+      0
+    ]
+  },
+  "modifiers": [
+    {
+      "collapsed": true,
+      "enabled": true,
+      "method": "From Model Viewer",
+      "modifier": "Source from CAD Model",
+      "properties": {
+        "allowPartialFailure": true,
+        "angularDeflection": 0.25,
+        "backend": "Isotropic",
+        "combineTouchingSolids": true,
+        "edgeSampling": "Uniform",
+        "faceColorSizing": [],
+        "linearDeflection": 0.05,
+        "targetEdgeLength": 0,
+        "targetEdgeLengthFraction": 0.02
+      }
+    },
+    {
+      "collapsed": true,
+      "enabled": true,
+      "method": "Alpha Wrap",
+      "modifier": "Wrap Mesh",
+      "properties": {
+        "edgeSize": 0.05,
+        "relativeAlpha": 1,
+        "relativeOffset": 0,
+        "relativeToMeshSize": true
+      }
+    },
+    {
+      "collapsed": true,
+      "enabled": true,
+      "method": "Incremental Isotropic Remesh",
+      "modifier": "Remesh",
+      "properties": {
+        "adaptiveSizingTolerance": 0.01,
+        "detectFeatures": true,
+        "edgeSize": 0.05,
+        "maxEdgeSizeFactor": 2,
+        "minEdgeSizeFactor": 0.25,
+        "protectConstraints": false,
+        "relativeToMeshSize": true,
+        "relaxConstraints": false,
+        "relaxationStepsPerIteration": 3,
+        "sharpFeatureAngle": 60,
+        "smoothingIterations": 3,
+        "useAdaptiveSizing": false
+      }
+    },
+    {
+      "collapsed": true,
+      "enabled": true,
+      "method": "SDF",
+      "modifier": "Export Mochi Model",
+      "properties": {
+        "bakeSdf": true,
+        "exportPath": "../collision/right_pinky_MC_0.mochi.h5",
+        "sdf": {
+          "boundaryPaddingDist": 0.005000000353902578,
+          "minGridResolution": [
+            6,
+            6,
+            6
+          ],
+          "resolutionDelta": [
+            1,
+            1,
+            1
+          ],
+          "resolutionMode": "MeanEdge"
+        }
+      }
+    }
+  ],
+  "referenceModels": [],
+  "version": 1
+}
