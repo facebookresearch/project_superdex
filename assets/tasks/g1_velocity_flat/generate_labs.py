@@ -470,8 +470,10 @@ def clip_lab(joints: list[str]) -> dict:
     mjlab = mjlab_lab(joints)
     twist, feet = mjlab["commands"]
     lab["commands"] = [
+        # The schedule leaves the draw constants unread; they stay as trained.
         {"name": "twist", "kind": "twist_command",
-         "params": {"base": "pelvis", "schedule": _CLIP_SCHEDULE}},
+         "params": {k: v for k, v in twist["params"].items() if not k.endswith("Globals")}
+         | {"schedule": _CLIP_SCHEDULE}},
         feet,
     ]  # fmt: skip
     lab["events"] = [

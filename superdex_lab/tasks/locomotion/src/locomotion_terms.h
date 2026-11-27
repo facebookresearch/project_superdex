@@ -44,6 +44,10 @@ class LabKinds;
 ///   "runningThreshold"}: exp(-mean(offset² / std²)), the std by the command's speed: standing
 ///   below walkingThreshold, running from runningThreshold on.
 /// - `stand_still` {"command", "joints"}: the sum of the joint offsets squared.
+///
+/// With "body.joints.from_initial" as "joints", the offsets are from the joints' reset positions,
+/// where upstream's are from its default_joint_pos: the same while a lab's reset adds no joint
+/// offsets (the G1 labs').
 /// - `is_terminated` {}: 1 on a step that ended the episode as a failure (not a time limit).
 /// - `projected_gravity_xy` {"rotation" (a link's rotation quaternion in the world, e.g.
 ///   "torso_link.rotation_in_task_root.quat")}: the squared x and y of the unit gravity in the

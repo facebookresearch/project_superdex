@@ -14,6 +14,32 @@
       "kind": "twist_command",
       "params": {
         "base": "pelvis",
+        "linVelX": [
+          -1.0,
+          2.0
+        ],
+        "linVelY": [
+          -1.0,
+          1.0
+        ],
+        "angVelZ": [
+          -1.0,
+          1.0
+        ],
+        "heading": [
+          -3.141592653589793,
+          3.141592653589793
+        ],
+        "resamplingS": [
+          3.0,
+          8.0
+        ],
+        "standingShare": 0.05,
+        "headingShare": 1.0,
+        "headingCommand": true,
+        "headingStiffness": 0.5,
+        "minNorm": 0.1,
+        "phasePeriodS": 0.6,
         "schedule": [
           [
             0.0,

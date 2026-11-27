@@ -59,6 +59,36 @@ constexpr int kLinear = 5;
 constexpr int kAngular = 8;
 constexpr int kRotation = 11;
 
+/* twist_command's params, each a JSON value as text; the defaults are a fixed command of 0. */
+struct TwistParams {
+  std::string linVelX{"[0.0, 0.0]"};
+  std::string linVelY{"[0.0, 0.0]"};
+  std::string angVelZ{"[0.0, 0.0]"};
+  std::string heading{"[-3.141592653589793, 3.141592653589793]"};
+  std::string resamplingS{"[3.0, 8.0]"};
+  std::string standingShare{"0.0"};
+  std::string headingShare{"1.0"};
+  std::string headingCommand{"false"};
+  std::string headingStiffness{"1.0"};
+  std::string minNorm{"0.1"};
+  std::string phasePeriodS{"0.6"};
+  std::string schedule;
+};
+
+/* `p` as twist_command's params on the pelvis. */
+std::string Json(TwistParams const& p) {
+  std::string json = R"({"base": "pelvis", "linVelX": )" + p.linVelX + R"(, "linVelY": )" +
+      p.linVelY + R"(, "angVelZ": )" + p.angVelZ + R"(, "heading": )" + p.heading +
+      R"(, "resamplingS": )" + p.resamplingS + R"(, "standingShare": )" + p.standingShare +
+      R"(, "headingShare": )" + p.headingShare + R"(, "headingCommand": )" + p.headingCommand +
+      R"(, "headingStiffness": )" + p.headingStiffness + R"(, "minNorm": )" + p.minNorm +
+      R"(, "phasePeriodS": )" + p.phasePeriodS;
+  if (!p.schedule.empty()) {
+    json += R"(, "schedule": )" + p.schedule;
+  }
+  return json + "}";
+}
+
 /* g1_command with the twist command's params replaced by `params`, when given. */
 LabConfig CommandConfig(std::string const& params = {}) {
   LabConfig config;
@@ -140,9 +170,8 @@ TEST_F(TwistCommandTest, ResamplesAfterItsPeriodAndClocksThePhase) {
 
 /* The phase after k decisions is (sin, cos) of 2 pi (k dt mod 0.6) / 0.6. */
 TEST_F(TwistCommandTest, PhaseFollowsTheEpisodeClock) {
-  TaskEnv& env = Make(CommandConfig(
-      R"({"base": "pelvis", "linVelX": [1.0, 1.0], "linVelY": [0.0, 0.0], "angVelZ": [0.0, 0.0],
-          "resamplingS": [100.0, 100.0]})"));
+  TaskEnv& env =
+      Make(CommandConfig(Json({.linVelX = "[1.0, 1.0]", .resamplingS = "[100.0, 100.0]"})));
   env.Reset(0, mochi::ErrorAssert{});
   double const dt = env.Spec().controlDt;
   for (int k = 1; k <= 40; ++k) {
@@ -156,9 +185,11 @@ TEST_F(TwistCommandTest, PhaseFollowsTheEpisodeClock) {
 
 /* A standing env's command is zero from the reset's update on, and so is its phase. */
 TEST_F(TwistCommandTest, StandingEnvsCommandZero) {
-  TaskEnv& env = Make(CommandConfig(
-      R"({"base": "pelvis", "linVelX": [1.0, 1.0], "linVelY": [0.5, 0.5], "angVelZ": [0.5, 0.5],
-          "standingShare": 1.0})"));
+  TaskEnv& env = Make(CommandConfig(Json(
+      {.linVelX = "[1.0, 1.0]",
+       .linVelY = "[0.5, 0.5]",
+       .angVelZ = "[0.5, 0.5]",
+       .standingShare = "1.0"})));
   env.Reset(0, mochi::ErrorAssert{});
   std::vector<float> const r = test::Record(env);
   for (int i = 0; i < 5; ++i) {
@@ -169,9 +200,12 @@ TEST_F(TwistCommandTest, StandingEnvsCommandZero) {
 /* A heading env's wz is 0.5 times the heading error, clipped to angVelZ: with the heading target
    fixed at 1 rad, wz is 0.5 (1 - h), h the yaw of the pelvis's x axis when the update ran. */
 TEST_F(TwistCommandTest, HeadingControlSetsTheYawRate) {
-  TaskEnv& env = Make(CommandConfig(
-      R"({"base": "pelvis", "linVelX": [0.5, 0.5], "linVelY": [0.0, 0.0], "angVelZ": [-1.0, 1.0],
-          "heading": [1.0, 1.0], "headingCommand": true, "headingStiffness": 0.5})"));
+  TaskEnv& env = Make(CommandConfig(Json(
+      {.linVelX = "[0.5, 0.5]",
+       .angVelZ = "[-1.0, 1.0]",
+       .heading = "[1.0, 1.0]",
+       .headingCommand = "true",
+       .headingStiffness = "0.5"})));
   env.Reset(0, mochi::ErrorAssert{});
   Step();
   std::vector<float> const record = test::Record(env);
@@ -185,9 +219,10 @@ TEST_F(TwistCommandTest, HeadingControlSetsTheYawRate) {
 /* With a schedule, the command is the last row whose time has come: stand, then 0.5 m/s forward
    from 0.1 s, then a 0.5 rad/s turn from 0.2 s, with no draws, heading control or standing. */
 TEST_F(TwistCommandTest, FollowsASchedule) {
-  TaskEnv& env = Make(CommandConfig(
-      R"({"base": "pelvis", "headingCommand": true, "standingShare": 1.0,
-          "schedule": [[0.0, 0.0, 0.0, 0.0], [0.1, 0.5, 0.0, 0.0], [0.2, 0.0, 0.0, 0.5]]})"));
+  TaskEnv& env = Make(CommandConfig(Json(
+      {.standingShare = "1.0",
+       .headingCommand = "true",
+       .schedule = "[[0.0, 0.0, 0.0, 0.0], [0.1, 0.5, 0.0, 0.0], [0.2, 0.0, 0.0, 0.5]]"})));
   env.Reset(0, mochi::ErrorAssert{});
   double const dt = env.Spec().controlDt;
   for (int k = 1; k <= 15; ++k) {
@@ -228,6 +263,30 @@ TEST_F(TwistCommandTest, TrackingRewardsAreMjlabsKernels) {
     EXPECT_NEAR(rewards[0], std::exp(-lin / 0.25) * dt, 1e-5) << "step " << step;
     EXPECT_NEAR(rewards[1], std::exp(-ang / 0.5) * dt, 1e-5) << "step " << step;
   }
+}
+
+/* Each of twist_command's constants is required: a lab that leaves out phasePeriodS is refused,
+   naming the key. */
+TEST(TwistCommandParamsTest, AMissingConstantRefusesTheLab) {
+  std::string const full = Json({});
+  std::string const key = R"(, "phasePeriodS": 0.6)";
+  std::string const missing =
+      full.substr(0, full.find(key)) + full.substr(full.find(key) + key.size());
+  std::string error;
+  mochi::LogFn const previous = mochi::GetLogCallback();
+  mochi::SetLogCallback([&error](mochi::LogChannel channel, char const* message, char const*, int) {
+    if (channel == mochi::LogChannel::Error) {
+      error += message;
+    }
+  });
+  mochi::Context* const context = mochi::CreateContext(0);
+  mochi::Error status;
+  std::unique_ptr<TaskEnv> env = TaskEnv::Create(context, CommandConfig(missing), Kinds(), status);
+  mochi::SetLogCallback(previous);
+  EXPECT_EQ(env, nullptr);
+  EXPECT_NE(error.find("params: missing key 'phasePeriodS'"), std::string::npos) << error;
+  env.reset();
+  mochi::DestroyContext(context);
 }
 
 } // namespace

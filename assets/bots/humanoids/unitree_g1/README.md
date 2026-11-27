@@ -56,7 +56,7 @@ The bot's joints carry no armature or effort limit, as in g1.xml: the actuators 
 - **Contact parameters.** Mochi penalty contact, not MuJoCo's soft constraints. The G1 ground plane
   (`tasks/g1_velocity_flat/scene/g1_flat.mochi_scene`) sets a 1 mm smoothing half-band in place of Mochi's 5 mm (the
   band comes from the collider, the plane, which only the G1's feet touch): standing, the 1 cm foot spheres sink
-  0.8 mm (3.6 mm at the default). Foot friction: the foot colliders' 0.36 against the ground's 1 is 0.6, g1_constants.py's (Mochi takes the geometric mean). Stiffness is Mochi's default for now; flagged for the
+  0.8 mm (3.6 mm at the default). Foot friction: the foot colliders' 0.36 against the ground's 1 is 0.6, g1_constants.py's (Mochi takes the geometric mean); the 0.36 assumes a ground of friction 1: on a ground of friction f the pair's is sqrt(0.36 f). Stiffness is Mochi's default for now; flagged for the
   foot-ground pair once labs set contact pairs.
 - **Render models.** None yet (training needs none).
 

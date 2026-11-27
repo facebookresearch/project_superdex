@@ -98,7 +98,7 @@
     },
     {
       "name": "foot_force",
-      "feature": "links:*foot*.contact_force.StaticPlane"
+      "feature": "links:*_foot?_s?.contact_force.StaticPlane"
     },
     {
       "name": "foot_pos",

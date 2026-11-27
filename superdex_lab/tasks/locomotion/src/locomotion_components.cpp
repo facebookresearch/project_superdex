@@ -164,7 +164,19 @@ std::array<double, 3> ToWorld(mochi::Span<float const> q, mochi::Span<float cons
 class TwistCommand final : public Component {
  public:
   static std::unique_ptr<Component> Make(BindContext& ctx) {
-    auto const p = ctx.Params<locomotion::TwistCommandParams>();
+    auto const p = ctx.Params<locomotion::TwistCommandParams>(
+        {"base",
+         "linVelX",
+         "linVelY",
+         "angVelZ",
+         "heading",
+         "resamplingS",
+         "standingShare",
+         "headingShare",
+         "headingCommand",
+         "headingStiffness",
+         "minNorm",
+         "phasePeriodS"});
     if (ctx.Failed()) {
       return nullptr;
     }
@@ -331,7 +343,8 @@ class TwistCommand final : public Component {
 class FootContact final : public Component {
  public:
   static std::unique_ptr<Component> Make(BindContext& ctx) {
-    auto const p = ctx.Params<locomotion::FootContactParams>();
+    auto const p = ctx.Params<locomotion::FootContactParams>(
+        {"links", "sites", "ground", "base", "forceThreshold"});
     if (ctx.Failed()) {
       return nullptr;
     }
@@ -427,7 +440,7 @@ class FootContact final : public Component {
 class PushRobot final : public Component {
  public:
   static std::unique_ptr<Component> Make(BindContext& ctx) {
-    auto const p = ctx.Params<locomotion::PushRobotParams>();
+    auto const p = ctx.Params<locomotion::PushRobotParams>({"intervalS", "linear", "angular"});
     if (ctx.Failed()) {
       return nullptr;
     }
