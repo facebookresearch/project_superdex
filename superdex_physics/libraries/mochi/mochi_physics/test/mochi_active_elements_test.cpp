@@ -591,11 +591,11 @@ static void ExpectOnePickPerWindow(Span<int const> picks, int numItems, int numP
   }
 }
 
-// Uniform and ROM boundary subsampling pick one face at random in each window of consecutive faces.
-// On a grid stored row by row with two triangles per cell, like a cylinder stored ring by ring, a
-// stride of 4 faces would sample only even columns. With 32 rows, a column goes unsampled with
-// probability 2^-32 at a density of 0.25.
-TEST(MochiDiscretization, BoundarySubsamplingPicksOneFacePerWindow) {
+// Uniform boundary subsampling and ROM sampling pick one face or element at random in each window
+// of consecutive indices. On a grid stored row by row with two triangles per cell, like a cylinder
+// stored ring by ring, a stride of 4 faces would sample only even columns. With 32 rows, a column
+// goes unsampled with probability 2^-32 at a density of 0.25.
+TEST(MochiDiscretization, SubsamplingPicksOnePerWindow) {
   int constexpr kNumColumns = 8;
   int constexpr kNumRows = 32;
   auto const triMesh = std::make_shared<TriangularMesh const>(
@@ -620,28 +620,44 @@ TEST(MochiDiscretization, BoundarySubsamplingPicksOneFacePerWindow) {
     EXPECT_EQ(kNumColumns, isize(sampledColumns));
   }
 
-  // ROM sampling on the 48 faces of a 2 x 2 x 2 tet grid, whose faces are listed by element. A
-  // step of 5 partitions the faces into unequal windows, and a step of 64 exceeds their number.
+  // ROM sampling on the 48 faces and 40 tets of a 2 x 2 x 2 tet grid, whose faces are listed by
+  // element and whose tets are listed five per cell. Each pair gives faces and tets different
+  // steps, so that mixing up the two fields fails: 3 for faces and 5 for tets partition both into
+  // equal windows, 5 and 3 into unequal ones, and 64 exceeds both counts.
   auto const tetMesh = std::make_shared<TetrahedralMesh>(
       test::CreateMinimalTetMeshUnitGrid(Real3{1_r, 1_r, 1_r}, Int3{2, 2, 2}));
+  TetrahedralMeshShape const tetShape(tetMesh);
   auto const femVolD = CreateFemVolDiscretization(*tetMesh);
   auto const traces = CreateTraces(*tetMesh, femVolD);
   int const numFaces = isize(traces);
+  int const numTets = tetMesh->GetNumElements();
 
-  for (int const step : {rom::hyper::kAllElements, 3, 5, 64}) {
-    CActiveBoundaryFaces const romFaces = CreateActiveBoundaryFaces(
-        experimental::SampleMeshInitRandomSampling{.stepSizeForBoundaryElementsSelection = step},
-        tetMesh,
-        traces);
-    ExpectOnePickPerWindow(romFaces.ViewIndices(), numFaces, (numFaces + step - 1) / step);
+  for (auto const& [faceStep, tetStep] :
+       {std::pair{rom::hyper::kAllElements, 64},
+        std::pair{3, 5},
+        std::pair{5, 3},
+        std::pair{64, rom::hyper::kAllElements}}) {
+    experimental::SampleMeshInitRandomSampling const params{
+        .stepSizeForBoundaryElementsSelection = faceStep,
+        .stepSizeForInteriorElementsSelection = tetStep};
+    CActiveBoundaryFaces const romFaces = CreateActiveBoundaryFaces(params, tetMesh, traces);
+    ExpectOnePickPerWindow(romFaces.ViewIndices(), numFaces, (numFaces + faceStep - 1) / faceStep);
+    CActiveVolumeElements const romTets = CreateActiveVolumeElements(params, tetShape);
+    ExpectOnePickPerWindow(romTets.ViewIndices(), numTets, (numTets + tetStep - 1) / tetStep);
   }
 
-  CActiveBoundaryFaces const noFaces = CreateActiveBoundaryFaces(
-      experimental::SampleMeshInitRandomSampling{
-          .stepSizeForBoundaryElementsSelection = rom::hyper::kNoElements},
-      tetMesh,
-      traces);
-  EXPECT_TRUE(noFaces.empty());
+  // Each field alone keeps none at rom::hyper::kNoElements, while the other one keeps all
+  EXPECT_TRUE(CreateActiveBoundaryFaces(
+                  experimental::SampleMeshInitRandomSampling{
+                      .stepSizeForBoundaryElementsSelection = rom::hyper::kNoElements},
+                  tetMesh,
+                  traces)
+                  .empty());
+  EXPECT_TRUE(CreateActiveVolumeElements(
+                  experimental::SampleMeshInitRandomSampling{
+                      .stepSizeForInteriorElementsSelection = rom::hyper::kNoElements},
+                  tetShape)
+                  .empty());
 }
 
 // ===================================================================================

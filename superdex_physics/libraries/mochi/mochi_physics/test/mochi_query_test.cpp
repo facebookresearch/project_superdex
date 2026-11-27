@@ -1304,7 +1304,7 @@ TEST_IF_F(MOCHI_TEST_ROM_HDF5, ActorQueryTest, ElasticEnergy) {
 TEST_IF_F(MOCHI_TEST_ROM_HDF5, ActorQueryTest, RomNodeVelocitiesCoverInactiveNodes) {
   test::SetSceneIntegrationMethod(_scene, IntegrationMethod::BackwardEuler);
   auto& reg = GetRegistry();
-  // Sampling every 40th element leaves most nodes outside the hyper-reduction sample mesh.
+  // Sampling one element out of every 40 leaves most nodes outside the hyper-reduction sample mesh.
   Actor* const duck = CreateRomDuck(_mochiContext, _scene, 2_r, Real3{}, 40);
   entt::entity const entity = mochi::GetEntity(reg, duck->GetHandle(), test::ExpectOK{});
   reg.get<CVelocitySlice<real, TimeStep::Current>>(entity).value.SetRandom(234, -1_r, 1_r);

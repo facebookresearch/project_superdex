@@ -393,12 +393,7 @@ CActiveVolumeElements mochi::CreateActiveVolumeElements(
       stepSize >= 1, "Invalid stepSize: must be kNoElements (%d) or >= 1", rom::hyper::kNoElements);
 
   int const numElements = tetMesh->GetNumElements();
-  std::vector<int> activeVolElems;
-  activeVolElems.reserve((numElements + stepSize - 1) / stepSize);
-  for (int i = 0; i < numElements; i += stepSize) {
-    activeVolElems.emplace_back(i);
-  }
-  return {tetMesh, activeVolElems};
+  return {tetMesh, PickOneIndexPerWindow(numElements, (numElements + stepSize - 1) / stepSize)};
 }
 
 CActiveVolumeElements mochi::CreateActiveVolumeElements(
@@ -461,7 +456,7 @@ CActiveBoundaryFaces mochi::CreateActiveBoundaryFaces(
   });
 }
 
-// Seed of the random boundary subsampling, fixed so that it's deterministic
+// Seed of the random subsampling, fixed so that it's deterministic
 constexpr unsigned int kSubsamplingSeed = 21;
 
 std::vector<int> mochi::PickOneIndexPerWindow(int numItems, int numPicks) {
