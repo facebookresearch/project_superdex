@@ -19,6 +19,7 @@ from test.conftest import (
     find_assets_dir,
     mochi,
     MochiTestBase,
+    requires_hdf5,
     requires_internal_assets,
 )
 
@@ -454,6 +455,7 @@ class TestPrefab(MochiTestBase):
         mochi.destroy_scene(scene)
 
     @requires_internal_assets
+    @requires_hdf5
     def test_export_scene_exclude_actors(self):
         """Verify export_scene with default params and with ExportParams(exclude_actors=...)."""
         prefab_json = """{
@@ -486,6 +488,7 @@ class TestPrefab(MochiTestBase):
         mochi.destroy_scene(scene)
 
     @requires_internal_assets
+    @requires_hdf5
     def test_export_actor_with_and_without_params(self):
         """Verify export_actor with default params and exclude_actors, which it ignores."""
         prefab_json = """{
