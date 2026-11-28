@@ -145,6 +145,8 @@ def flat_lab(joints: list[str]) -> dict:  # noqa: C901
     gravity_scale = [1.0 / 9.81]
     actor = [
         _noisy("base_ang_vel", "pelvis.angular_velocity_from_base", 0.2),
+        # HB-7 (known deviation): the noise is in m/s², before the scale, so ±0.0051 on the unit
+        # gravity where upstream's is ±0.05.
         _noisy("projected_gravity", "gravity_from_base", 0.05, scale=gravity_scale),
         {"name": "command", "feature": "twist.command"},
         {"name": "phase", "feature": "twist.phase"},

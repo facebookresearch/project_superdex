@@ -3,6 +3,20 @@
 After unitree_rl_mjlab @1425b15 (Apache-2.0) `Unitree-G1-Flat`. The bot and where its constants come from:
 `bots/humanoids/unitree_g1/README.md`.
 
+**Known deviation in every lab `generate_labs.py` writes: projected-gravity obs noise ±0.005 (upstream ±0.05;
+port units bug, HB-7).** The actor's `projected_gravity` adds Uniform ±0.05 to `gravity_from_base` in m/s², before
+the 1/9.81 scale, so the policy sees ±0.0051 on the unit gravity, where upstream's is ±0.05. "mjlab's MDP" and
+"All of Unitree-G1-Flat's MDP" below hold except for this.
+
+**Variants are not upstream's play; every G1 number and clip names its variant.**
+- Upstream's play has no obs noise, no pushes and no curriculum, and keeps the startup DR.
+- Here `eval` (`randomInitialStep` false) keeps the obs noise, `push_robot`, the reset events and all DR (startup:
+  `foot_friction`, `encoder_bias`, and `base_com` in the `_mjlab` labs).
+- `play` drops the obs noise and the startup DR, but keeps `push_robot` and the reset events.
+- The clip labs list only the three startup events (no pushes), so their noise and DR follow the variant.
+- The registered evaluations (self contact, tracking errors, time-limit counts) use `--variant eval`; the clips use
+  `--variant play`.
+
 | File | What |
 |---|---|
 | `g1_velocity.superdex_scene` | The G1 at mjlab's home pose (pelvis z 0.8) with g1_constants.py's actuators as mjlab-style position actuators (`LAB_JOINT_ACTUATORS`, written by the bot's `generate.py`); slot `robot` offers `g1` (sphere feet) and `g1_box_feet` |
@@ -10,7 +24,7 @@ After unitree_rl_mjlab @1425b15 (Apache-2.0) `Unitree-G1-Flat`. The bot and wher
 | `g1_velocity.superdex_task` | No task objects, 200 Hz, 20 s |
 | `g1_velocity_flat.superdex_lab` | Written by `generate_labs.py`: mjlab's MDP without the angular momentum penalty, the torso COM DR and the self-collision penalty; feet-only contact |
 | `g1_velocity_flat_mjlab.superdex_lab` | The same plus the angular momentum penalty and the torso COM DR. All of mjlab's MDP except its collisions: upstream's `FULL_COLLISION` (body-ground and self contact) and the self-collision penalty are missing; only the feet touch the ground (see the bot README's Layers) |
-| `g1_velocity_flat_mjlab_full_collision.superdex_lab` | `g1_velocity_flat_mjlab` on `g1_velocity_full_collision.superdex_scene`: upstream's FULL_COLLISION (body-ground and self contact; see the bot README) plus its `self_collisions` penalty (-1 per physics step with a collider link's self-contact force above 10 N: `substeps_above:10:links:*.contact_force_other_than.StaticPlane`; mjlab reads one contact per body, we read each collider link). All of Unitree-G1-Flat's MDP |
+| `g1_velocity_flat_mjlab_full_collision.superdex_lab` | `g1_velocity_flat_mjlab` on `g1_velocity_full_collision.superdex_scene`: upstream's FULL_COLLISION (body-ground and self contact; see the bot README) plus its `self_collisions` penalty (-1 per physics step with a collider link's self-contact force above 10 N: `substeps_above:10:links:*.contact_force_other_than.StaticPlane`; mjlab reads one contact per body, we read each collider link). All of Unitree-G1-Flat's MDP (except HB-7's projected-gravity noise, above) |
 | `g1_velocity_flat_mjlab_full_collision_clip.superdex_lab` | The clip lab (23 s schedule) on the full-collision scene |
 | `g1_velocity_flat_mjlab_full_collision_eval.superdex_lab`, `g1_velocity_flat_mjlab_full_collision_clip_rules.superdex_lab` | The eval records lab (plus the self-contact substep count) and the registered clip lab, on full collision |
 | `g1_velocity_flat_mjlab_full_collision_eval_full_range.superdex_lab` | The full-collision eval records lab at the trained command range (vx -1..2, vy -1..1 m/s: the curriculum's last stage, without the curricula). The other eval labs keep the range where training starts (vx -0.5..1, vy -0.5..0.5) |
