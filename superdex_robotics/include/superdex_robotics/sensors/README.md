@@ -8,10 +8,10 @@ Public callers construct and step the graph programmatically.
 that transform other sensor outputs. [`SensorGraph`](./sensor_graph.h) connects them into a directed
 acyclic graph and steps them in dependency order. Sources and transforms are both called sensors.
 
-A graph can model the path from SuperDex physics to the observations a policy receives:
+A graph can model the path from SuperDex physics to the observations a policy receives. For example:
 
 ```text
-surface forces → spatial force map → selected output
+surface forces → noise model → selected output
 ```
 
 Some measurement models acquire physics data themselves; they do not need a separate source node.
@@ -320,6 +320,92 @@ SensorFunction mirror(
 
 `SensorFunction::ValuesFormat(width)` is the format of `width` plain values.
 
+## Python and sensor graphs
+
+### Sensors implemented in C++
+
+The common Python workflow keeps every graph sensor in C++: built-in types, or custom types
+registered from C++. Python needs no binding for a particular sensor to use it. It selects the
+sensor by graph name and reads it through `SensorBase`: `latest()`, `copy_latest_values()` and
+`get_format()`. The built-in sensors and their `Params` are also declared in
+`superdex_robotics.mochi_gen`, which generates typed Python classes with `get_params()` and
+`set_params()`. A custom C++ sensor gets typed Python access only when it is declared there or in
+bindings of its own; see [Creating sensors](#creating-sensors).
+
+The order of operations is:
+
+1. Register custom types before loading. The loader skips an unregistered type with a warning.
+2. Load the scene. Loading creates each bot's declared sensors and the scene-level sensors, builds
+   the graph with no outputs selected, and resets acquisition.
+3. Select outputs with `add_sensor_outputs()`.
+4. Step the physics scene. BotScene steps the graph after each physics step.
+5. Check for graph errors, then read the selected outputs.
+
+```python
+import superdex.physics as sdp
+import superdex.robotics as sdr
+from superdex.physics.utils.scene_helpers import load_bot_scene
+
+sdp.initialize(num_worker_threads=0)
+bots_context = sdr.create_context()  # Must outlive the BotScene.
+bot_scene = load_bot_scene("hand.superdex_scene", bots_context)
+bot_scene.add_sensor_outputs(["hand/tip/noisy_force"])
+
+scene = bot_scene.get_scene()
+for _ in range(100):
+    scene.step(0.005)  # Physics, then one graph step.
+bot_scene.check_sensor_graph()  # Raises the first graph error since the last reset.
+for output in bot_scene.get_sensor_outputs():
+    sample = output.sensor.latest()
+    if sample.capture_step >= 0:  # -1 means nothing has been published yet.
+        values = output.sensor.copy_latest_values()  # An owning copy.
+```
+
+Points to note:
+
+- **Python does not build or step a `SensorGraph`.** BotScene builds it from the declared sensors and
+  steps it once after every `scene.step()`, with that physics step's time, so graph steps and
+  physics steps are in lockstep. A source with a positive `sampleRateHz` samples more slowly than
+  physics, never faster. Graph timing independent of physics requires a standalone C++ graph.
+- **Graph errors do not interrupt `scene.step()`.** BotScene records the first error, stops stepping
+  the graph and keeps the last published samples. `check_sensor_graph()` raises the recorded error
+  until `reset_sensors()` or `rebuild_sensor_graph()` clears it, so one check before consuming
+  observations covers every step since the last check. The explicit check trades streamlining for
+  control: the application decides when to look, and whether to end the episode or reset the
+  sensors and continue.
+- **Only declared sensors join the BotScene graph.** A sensor created at runtime with
+  `create_sensor()` is owned by the context but is not a graph node, and `rebuild_sensor_graph()`
+  rebuilds from declarations only.
+- **Some interfaces are C++-only:** constructing a `SensorGraph` or a `SensorFunction`, the
+  `RegisterSensor<T>()` templates (including registering `SENSOR_TEMPORAL_WINDOW`), the native
+  publication timestamps (Python exposes `capture_step` and `capture_time`), and typed metadata
+  such as `VertexListMeta`.
+
+### Python-only sensors
+
+`register_python_sensor(context, typeName, factory)` adds a Python class to the same factory table
+as C++ types. Link entries in `.superdex_bot` files and `sensors` entries in `.superdex_scene` files
+can then declare the type, and `RoboticsContext.create_sensor` or `Bot.create_sensor` creates it at
+runtime. The factory receives the link actor, or `None` for an unattached sensor, and the params
+string. Creation fails if the instance has no `reset()` method. The context owns a `PythonSensor`
+adapter that holds a strong reference to the instance and is destroyed with its bot or the
+context; `get_python_sensor(context, handle)` returns the instance.
+
+The adapter is not graph-enabled. Its `InitSensor()` fails with "Python sensor is not
+graph-enabled" and its `Step()` always returns `NoUpdate`. A declared Python sensor is therefore an
+inactive graph node: selecting it as an output, or naming it as another node's input, fails graph
+initialization. It has no `SensorFormat`, publishes no `SensorSample`, carries no capture or
+publication time, and is not reached by recording hooks. The application calls the instance's own
+methods to compute its signal.
+
+`SensorGraph::Reset()` is the only framework path that resets sensors, and it resets initialized
+nodes only. No framework path therefore calls a Python sensor's `reset()`; call it from the
+application between episodes.
+
+A bot or scene file that declares a Python type loads that sensor only where the type is
+registered. Runtimes without it, such as SuperDex Unreal or a C++-only application, skip the entry
+with a warning.
+
 ## Bot-relative inputs
 
 The planned combined scene structure resolves bot-relative inputs such as `./force` and
@@ -339,8 +425,8 @@ operations and borrowed sample reads must remain serialized by the caller.
 
 Some sensors retain specialized `ComputeSignal()` methods for compatibility. Deriving from
 `SensorBase` alone does not make an existing implementation usable in a graph; unsupported graph
-initialization is rejected explicitly. Python sensors keep the required `reset()` method, invoked
-through the shared adapter after the common publication has been cleared.
+initialization is rejected explicitly. Python sensors are not graph-enabled; see
+[Python and sensor graphs](#python-and-sensor-graphs).
 
 ### Force aggregation
 
