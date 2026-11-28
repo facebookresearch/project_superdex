@@ -28,8 +28,9 @@ Sensors, and the graph that connects them, are specified **declaratively** or
 list in a `.superdex_scene` file declares scene-level ones; loading the scene
 builds the graph from both. Parameters are inline JSON or a path to a
 `.superdex_sensor` file. Programmatically, `create_sensor` on the
-`RoboticsContext` or on a bot creates a sensor at runtime, from C++ or Python,
-and C++ can also assemble a `SensorGraph` directly. See
+`RoboticsContext` or on a bot creates a sensor at runtime, from C++ or Python.
+A sensor created this way is not part of a loaded scene's graph, but C++ can
+add it to a `SensorGraph` it assembles itself. See
 [Making a Sensor](./making_a_sensor.mdx) to add a new type.
 
 **Ownership.** The `RoboticsContext` owns every sensor; the graph only uses

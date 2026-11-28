@@ -516,14 +516,20 @@ measures rather than drives. The signal type is yours: there is no common
 yours to author. A `SENSOR_CAMERA` only carries params and a pose for a renderer
 to use when rendering frames.
 
+A Python sensor is created, owned and found like a C++ one, but it is not a
+[sensor graph](./sensor_graphs.mdx) node and the framework does not reset it;
+see [Python sensors](./making_a_sensor.mdx#python-sensors) for what it does and
+does not do.
+
 <Tabs groupId="language">
 <TabItem value="python" label="Python">
 
 ```python
 # There is no base class to inherit. You register a plain Python class, and the C++ shim
 # PythonSensor -- a PythonComponent<SensorBase> that the RoboticsContext owns -- wraps your
-# instance and stands in as the SensorBase the framework sees. It forwards only the virtuals
-# the framework invokes: reset() and the registered type name. Everything else is your own
+# instance and stands in as the SensorBase the framework sees. It reports the registered
+# type name. It is not a graph node, so it publishes nothing and nothing in the framework
+# calls its reset(): call reset() yourself between episodes. Everything else is your own
 # API, called straight on your instance.
 from dataclasses import dataclass
 
@@ -555,7 +561,8 @@ class MySensor:
         self.set_params(...)  # decoded param args
         # Anything else stateful in your sensor
 
-    # Required -- clears internal state, leaving params alone.
+    # Required at creation -- clears internal state, leaving params alone. Call it
+    # yourself between episodes.
     def reset(self) -> None: ...
 
     # Your own API. You call these, not the framework. Observations come in as an

@@ -99,14 +99,29 @@ construction; use BotScene from Python.
 
 ## Stepping
 
-BotScene advances the graph automatically in its **post-physics callback**;
-do not manually step the same graph as well. Call
-`bot_scene.check_sensor_graph()` after stepping to surface native post-step
-acquisition errors. A graph built without BotScene is stepped with `Step`
-**after** each physics step.
+- **With BotScene**, the graph steps once at the end of every `scene.step()`,
+  after physics, with that physics step's time and duration. Graph steps and
+  physics steps are always in lockstep, and from Python this is the only
+  option. Do not step the same graph manually as well. A source with a positive
+  `sampleRateHz` captures on the graph steps that fall due at its rate, so it
+  can sample more slowly than physics, but not faster and without
+  interpolation.
+- **Without BotScene**, C++ calls `Step` itself, after a physics step, with a
+  `StepTime` it supplies. It can step the graph on every physics step or less
+  often, provided time never goes backwards. Sources read the physics state as
+  it is when `Step` runs.
+- Serialize graph mutation, physics stepping and borrowed sensor reads on the
+  stepping thread.
 
-Serialize graph mutation, physics stepping and borrowed sensor reads on the
-stepping thread.
+### Errors during stepping
+
+BotScene steps the sensor graph at the end of each `scene.step()`, after
+physics, so a sensor failure does not interrupt the call. BotScene records the
+first error, stops stepping the graph, and leaves the last published samples in
+place. `check_sensor_graph()` raises the recorded error. It stays recorded until
+`reset_sensors()` or `rebuild_sensor_graph()`, so you can check once before consuming observations rather
+than after every step, and decide whether to end the episode or reset the
+sensors and continue.
 
 ## Reading the latest sample
 

@@ -18,7 +18,8 @@ the built-in types do not cover.
 | A new pipeline built from registered types | Declare it in a `.superdex_bot` or `.superdex_scene` file. |
 | Values computed by a C++ function at every graph step | A `SensorFunction`; no class of your own. |
 | A new source or transform that can be declared in files | A C++ class derived from `SensorBase`, registered on the `RoboticsContext`. |
-| A component you call from your own Python loop | A Python sensor; see [Controllers, Sensors & Actuators](./bot_components.mdx#a-sensor). It cannot be a graph node. |
+| Sensor observations in Python | Built-in or C++ sensors, read from Python; see [C++ sensors, driven from Python](#c-sensors-driven-from-python). |
+| A Python object created and owned with the bot, whose methods you call yourself | A Python-only sensor; see [Sensors written in Python](#sensors-written-in-python). It is not a graph node. |
 
 ## Writing a C++ sensor
 
@@ -107,11 +108,71 @@ Add the function node to a graph like any other sensor.
 
 ## Python sensors
 
-Python sensors are registered and created on the context like C++ ones, but they
-are components you call from your own loop. They do not publish samples into a
-sensor graph: graph initialization rejects them. For a Python-defined
-observation, call the sensor yourself alongside the graph's outputs, or write
-the measurement as a C++ sensor when it needs to feed other sensors.
+### C++ sensors, driven from Python
+
+Most Python code uses sensors with a C++ implementation, either built-in types
+or your own C++ types, and does not define sensors of its own. A sensor does not
+need Python bindings of its own to be used this way: Python refers to it by its
+graph name and reads it through the methods every sensor shares, such as
+`latest()`, `copy_latest_values()` and `get_format()`. The built-in sensors also
+have typed Python classes, so their parameters can be read and changed with
+`get_params()` and `set_params()`.
+
+A typical session runs in this order:
+
+1. Register any custom C++ type from C++. A scene that declares an unregistered
+   type loads without that sensor and logs a warning.
+2. Load the scene with BotScene. This creates the declared sensors and builds
+   the graph, with no outputs selected yet.
+3. Select outputs with `add_sensor_outputs`.
+4. Step the physics scene, and read samples as shown in
+   [Reading the latest sample](./sensor_graphs.mdx#reading-the-latest-sample).
+
+Python never steps the graph itself. BotScene steps it once after every
+`scene.step()`, so sensors and physics advance together; see
+[Stepping](./sensor_graphs.mdx#stepping). A sensor failure does not interrupt
+`scene.step()`: call `check_sensor_graph()` before using the observations, as
+described in [Errors during stepping](./sensor_graphs.mdx#errors-during-stepping).
+Only sensors declared in bot and scene files take part in the graph; one created
+later with `create_sensor` does not.
+
+Some parts of the sensor system are available only from C++: building a
+`SensorGraph` directly, `SensorFunction`, registering C++ types, the
+publication timestamps, and typed metadata such as vertex positions.
+
+### Sensors written in Python
+
+A Python-only sensor is a plain Python class registered with
+`register_python_sensor(context, type_name, factory)`. What that gives you:
+
+- **Declaration and creation.** The type joins the same table as C++ types, so a
+  link's `sensors` list or a scene's `sensors` list can declare it, and
+  `create_sensor` on the context or a bot creates it at runtime. The factory
+  receives the link actor, or `None` for a scene-level sensor, and the params
+  string.
+- **Ownership.** The context owns the sensor, destroys it with its bot or the
+  context, and finds it by name or type like any other sensor.
+  `get_python_sensor(context, handle)` returns your instance.
+
+What it does not do:
+
+- **It is not a graph node.** It declares no output format and publishes no
+  samples, so it has no capture or publication time, cannot be selected with
+  `add_sensor_outputs`, cannot feed another sensor, and is not recorded by the
+  graph's recording hooks. Selecting it or naming it as an input fails when the
+  graph initializes. Declared but unselected, it is ignored by the graph.
+- **The framework does not reset it.** A Python sensor must define `reset()`, and
+  creation fails without one, but only the sensor graph resets sensors. Call
+  `reset()` yourself between episodes.
+- **It is not portable.** A bot or scene file that declares a Python type gets
+  that sensor only where the type is registered. SuperDex Unreal and C++-only
+  applications skip it with a warning.
+
+Use a Python-only sensor to prototype a measurement, or to keep Python
+measurement code with the bot that owns it, calling its methods from your own
+loop after stepping, alongside the graph's outputs. When the measurement must
+feed other sensors, be recorded with the graph, or run outside Python, write it
+as a C++ sensor.
 
 ## Before you rely on it
 
