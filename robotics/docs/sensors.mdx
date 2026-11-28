@@ -33,11 +33,12 @@ A sensor created this way is not part of a loaded scene's graph, but C++ can
 add it to a `SensorGraph` it assembles itself. See
 [Making a Sensor](./making_a_sensor.mdx) to add a new type.
 
-**Ownership.** The `RoboticsContext` owns every sensor; the graph only uses
-them. A bot-level sensor is destroyed with its bot, and BotScene first removes
-it and everything downstream of it from the graph. A scene-level sensor
-declared in a scene lives as long as the scene, and one you create on the
-context lives until you destroy it or the context is torn down. Reading the
+**Ownership.** The `RoboticsContext` owns sensors created through its factories;
+the graph borrows them. Before destroying a bot's sensors, the scene loader
+unbinds them and downstream sensors from the graph. Their declared nodes remain
+for later loading. A scene-level sensor can be destroyed and recreated when a
+dependency unloads and loads again. A sensor created directly on the context
+lives until you destroy it or the context is torn down. Reading the
 latest sample in C++ returns a borrowed view: consume or copy it before the
 sensor publishes again, resets or is destroyed. Python's `copy_latest_values()`
 returns an owning copy. See [Bot Context & Lifetime](./bot_context_lifetime.mdx)

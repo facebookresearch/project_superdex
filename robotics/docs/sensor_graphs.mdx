@@ -82,9 +82,22 @@ and is recorded.
 
 ### Building from a scene
 
-[BotScene](./superdex_scenes.mdx) builds the declared graph from the scene's bots
-and scene-level sensors when it loads, with **no selected outputs**. Select what
-the application needs before stepping; see
+The [SuperDex scene](./superdex_scenes.mdx) loader prepares the chosen bots'
+prefabs and validates their sensor dependencies before constructing any bots.
+Nodes initially hold their names and inputs; live sensors are bound as the bots
+load. Scene-level sensors are constructed when their inputs are available.
+The graph begins with **no selected outputs**.
+
+Loading normally prepares and loads every declared bot. An explicit nonempty
+initialization list chooses which bots to prepare and load. To load them later,
+pass `bots_to_initialize=[]` to the Python scene helper, then call
+`prepare_bots(names)` with the complete selection before `initialize_bot(name)`.
+Include every bot referenced by the selected sensors' inputs; unused slot
+alternatives are not read.
+
+A valid graph may still have unbound nodes. Independent outputs can run while
+another selected bot remains unloaded. Selecting an output whose dependencies
+are unavailable returns an error; select it again after those bots load. See
 [Changing the graph](#changing-the-graph).
 
 ### Building a graph without BotScene
@@ -92,7 +105,9 @@ the application needs before stepping; see
 C++ callers can construct a graph directly: `Add` the borrowed sensors and
 their input names, select outputs with `SetOutputEnabled`, `Build` with a
 `SensorScope`, then `Reset`. Sensor objects must outlive the graph's use of
-them.
+them. To validate wiring before constructing sensors, use `AddNode` and `Build`
+with no outputs selected. Then attach sensors with `BindNode`, select ready
+outputs and build again.
 
 Python exposes sensor parameter types and accessors, but not `SensorGraph`
 construction; use BotScene from Python.
@@ -122,6 +137,10 @@ place. `check_sensor_graph()` raises the recorded error. It stays recorded until
 `reset_sensors()` or `rebuild_sensor_graph()`, so you can check once before consuming observations rather
 than after every step, and decide whether to end the episode or reset the
 sensors and continue.
+
+Missing bindings are checked when an output is enabled. That error returns from
+`add_sensor_outputs()` and leaves the running outputs unchanged; it is not a
+post-step acquisition error.
 
 ## Reading the latest sample
 
@@ -182,15 +201,23 @@ read time as a substitute for either timestamp.
   map above activates its source dependency without selecting the source as a
   separate output. Only newly active nodes are initialized; existing
   acquisition state and selections are preserved.
-- Removing a bot prunes its sensors and downstream dependants, including
-  scene-level sensors that read them. Initializing an alternative bot adds its
-  own declared nodes without resetting surviving sensors; select its new outputs
-  explicitly. Pruned scene-level sensors return only when the graph is rebuilt.
+- Removing a loaded bot releases its sensor bindings and downstream bindings,
+  including scene-level sensors that read them. The prepared nodes remain.
+  Loading that selected bot again binds fresh sensors; ready scene sensors can
+  be constructed again without a full rebuild. Select the affected outputs
+  again. Sensors that neither belong to that bot nor depend on its sensors
+  retain their state and clock.
+- Changing the selected bots is a configuration boundary: stop stepping, remove
+  all loaded bots, then `prepare_bots(names)` with the new complete selection.
+  This rebuilds and resets the graph; load the chosen bots and select outputs
+  again. Repeating the same selection leaves the graph unchanged.
 - `bot_scene.reset_sensors()` clears sensor state and restarts the acquisition
   clock without resetting physics, controllers or task state.
 - `rebuild_sensor_graph(outputs)` explicitly reconstructs the declared graph,
-  selects outputs and resets acquisition. Use it for a full acquisition
-  restart, not routine reads.
+  selects outputs and resets acquisition. It reuses the prepared prefab
+  snapshots, including their edits. Later entry-path changes are rejected;
+  load a new scene to pick up changed files or edits. Use rebuilding for a full
+  acquisition restart, not routine reads.
 
 ## Noise, Delay and History
 
@@ -231,9 +258,9 @@ For example, add a noise node after the `map` declared above, then select
 }
 ```
 
-`random.processKey` must be nonempty and stable. Noise is derived from the
-**episode seed, process key and input publication step**, so repeated reads
-do not redraw it. Supply the next episode's parameters before resetting the
+Noise is derived from the **episode seed, stream key and input publication
+step**, so repeated reads do not redraw it. The stream key defaults to the
+canonical graph name; `random.processKey` can supply an explicit stable key. Supply the next episode's parameters before resetting the
 graph; resetting alone does not choose a new seed. Retain these parameters with
 the experiment when comparing observations.
 

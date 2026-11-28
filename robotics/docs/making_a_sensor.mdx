@@ -122,8 +122,10 @@ A typical session runs in this order:
 
 1. Register any custom C++ type from C++. A scene that declares an unregistered
    type loads without that sensor and logs a warning.
-2. Load the scene with BotScene. This creates the declared sensors and builds
-   the graph, with no outputs selected yet.
+2. Load the SuperDex scene. Its selected prefabs define a graph that is checked
+   before bots are constructed. Loading then binds their sensors and any ready
+   scene-level sensors, with no outputs selected yet. Selected bots may load
+   later; see [Building from a scene](./sensor_graphs.mdx#building-from-a-scene).
 3. Select outputs with `add_sensor_outputs`.
 4. Step the physics scene, and read samples as shown in
    [Reading the latest sample](./sensor_graphs.mdx#reading-the-latest-sample).
