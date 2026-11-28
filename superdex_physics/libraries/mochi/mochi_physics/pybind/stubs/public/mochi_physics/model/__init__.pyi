@@ -421,18 +421,22 @@ def flip_winding_order(data: mochi_physics.ModelData) -> None:
         :class:`~superdex.physics.Error`: If an error occurs.
     """
 
-def reorder_for_locality(mesh: mochi_physics.MeshData) -> None:
+def reorder_for_locality(mesh: mochi_physics.MeshData) -> mochi_physics.DynamicArrayInt:
     """Reorder the nodes and elements of a mesh for memory locality.
 
     For a triangle or tetrahedral mesh, the nodes are numbered by reverse
     Cuthill-McKee and the elements are sorted by their node indices. Each node keeps
     its coordinates and its skinning weights and indices, and each element keeps its
     corner order, so orientation and winding are preserved. Reordering a mesh twice
-    gives the same result as once. Polylines are left unchanged.
+    gives the same mesh as once. Polylines are left unchanged.
 
     Args:
         mesh (MeshData): :class:`~superdex.physics.MeshData` to reorder. Unchanged
             on error.
+
+    Returns:
+        For each node of the reordered mesh, its index in the input mesh. Empty on
+        error.
 
     Raises:
         :class:`~superdex.physics.Error`: If an error occurs.

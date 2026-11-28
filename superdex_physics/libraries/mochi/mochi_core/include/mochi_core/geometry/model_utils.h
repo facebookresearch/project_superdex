@@ -523,10 +523,11 @@ void FlipWindingOrder(ModelData& data, Error& error);
  * @details For a triangle or tetrahedral mesh, the nodes are numbered by reverse Cuthill-McKee and
  * the elements are sorted by their node indices. Each node keeps its coordinates and its skinning
  * weights and indices, and each element keeps its corner order, so orientation and winding are
- * preserved. Reordering a mesh twice gives the same result as once. Polylines are left unchanged.
+ * preserved. Reordering a mesh twice gives the same mesh as once. Polylines are left unchanged.
  *
  * @param[in,out] mesh @ref MeshData to reorder. Unchanged on error.
  * @param[in,out] error Error status. Check @ref Error::IsOK for success.
+ * @return For each node of the reordered mesh, its index in the input mesh. Empty on error.
  *
  * @note Reordering can speed up the simulation of poorly numbered meshes. Well-numbered meshes see
  * little or no change.
@@ -536,6 +537,6 @@ void FlipWindingOrder(ModelData& data, Error& error);
  * @ref ModelData::material, @ref ModelData::blending or the skinning of meshes embedded in this
  * one. Reordering invalidates such data.
  */
-void ReorderForLocality(MeshData& mesh, Error& error);
+DynamicArray<int> ReorderForLocality(MeshData& mesh, Error& error);
 
 } // namespace mochi::model

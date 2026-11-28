@@ -121,6 +121,6 @@ void model_utils::FlipWindingOrder(ModelData& data, Error& error) {
   return model::FlipWindingOrder(data, error);
 }
 
-void model_utils::ReorderForLocality(MeshData& mesh, Error& error) {
-  model::ReorderForLocality(mesh, error);
+DynamicArray<int> model_utils::ReorderForLocality(MeshData& mesh, Error& error) {
+  return model::ReorderForLocality(mesh, error);
 }

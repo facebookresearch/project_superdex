@@ -261,13 +261,14 @@ void mochi::DefineMochiPhysics_MochiPhysicsModel([[maybe_unused]] nb::module_& m
 
   m_model.def("reorder_for_locality", [](mochi::MeshData& mesh) {
     mochi::Error error;
-    mochi::model::ReorderForLocality(mesh, error);
+    auto result = mochi::model::ReorderForLocality(mesh, error);
     if (!error.IsOK()) {
       throw MochiErrorException(error);
     }
+    return result;
   }
     , nb::arg("mesh")
-    , "Reorder the nodes and elements of a mesh for memory locality.\n\nFor a triangle or tetrahedral mesh, the nodes are numbered by reverse\nCuthill-McKee and the elements are sorted by their node indices. Each node keeps\nits coordinates and its skinning weights and indices, and each element keeps its\ncorner order, so orientation and winding are preserved. Reordering a mesh twice\ngives the same result as once. Polylines are left unchanged.\n\nArgs:\n    mesh (MeshData): :class:`~superdex.physics.MeshData` to reorder. Unchanged\n        on error.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    Reordering can speed up the simulation of poorly numbered meshes.\n    Well-numbered meshes see little or no change.\n\nWarning:\n    Reorder the mesh before creating data that refers to its nodes, elements or\n    boundary faces by index, e.g.\n    :attr:`~superdex.physics.ModelData.constrained_nodes`, per-element values in\n    :attr:`~superdex.physics.ModelData.material`,\n    :attr:`~superdex.physics.ModelData.blending` or the skinning of meshes\n    embedded in this one. Reordering invalidates such data."
+    , "Reorder the nodes and elements of a mesh for memory locality.\n\nFor a triangle or tetrahedral mesh, the nodes are numbered by reverse\nCuthill-McKee and the elements are sorted by their node indices. Each node keeps\nits coordinates and its skinning weights and indices, and each element keeps its\ncorner order, so orientation and winding are preserved. Reordering a mesh twice\ngives the same mesh as once. Polylines are left unchanged.\n\nArgs:\n    mesh (MeshData): :class:`~superdex.physics.MeshData` to reorder. Unchanged\n        on error.\n\nReturns:\n    For each node of the reordered mesh, its index in the input mesh. Empty on\n    error.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    Reordering can speed up the simulation of poorly numbered meshes.\n    Well-numbered meshes see little or no change.\n\nWarning:\n    Reorder the mesh before creating data that refers to its nodes, elements or\n    boundary faces by index, e.g.\n    :attr:`~superdex.physics.ModelData.constrained_nodes`, per-element values in\n    :attr:`~superdex.physics.ModelData.material`,\n    :attr:`~superdex.physics.ModelData.blending` or the skinning of meshes\n    embedded in this one. Reordering invalidates such data."
   );
 
 }

@@ -2037,18 +2037,21 @@ static void GatherRows(
   std::copy_n(scratch.begin(), rows.size(), rows.begin());
 }
 
-void mochi::model::ReorderForLocality(MeshData& mesh, Error& error) {
-  MOCHI_ERROR_RETURN(error);
+DynamicArray<int> mochi::model::ReorderForLocality(MeshData& mesh, Error& error) {
+  MOCHI_ERROR_RETURN(error, {});
   ValidateMesh(mesh, /*numSkinningSources=*/INT_MAX, error);
-  MOCHI_ERROR_RETURN(error);
+  MOCHI_ERROR_RETURN(error, {});
 
   // Polyline connectivity must stay sequential.
   if (mesh.nodesPerElement == 2) {
-    return;
+    DynamicArray<int> identity;
+    identity.resize_noinit(mesh.GetNumNodes());
+    std::iota(identity.begin(), identity.end(), 0);
+    return identity;
   }
 
   MOCHI_ASSERT_VERBOSE(mesh.nodesPerElement == 3 || mesh.nodesPerElement == 4);
-  DynamicArray<int> const oldFromNewNodes = ComputeNodeOrder(mesh);
+  DynamicArray<int> oldFromNewNodes = ComputeNodeOrder(mesh);
   DynamicArray<int> const newFromOldNodes = InversePermutation(oldFromNewNodes);
 
   // Finish every allocation, including the keys of RenumberAndSortElements, before the first write,
@@ -2070,4 +2073,5 @@ void mochi::model::ReorderForLocality(MeshData& mesh, Error& error) {
     GatherRows(mesh.skinning->indices, mesh.skinning->weightsPerNode, oldFromNewNodes, intScratch);
     GatherRows(mesh.skinning->weights, mesh.skinning->weightsPerNode, oldFromNewNodes, realScratch);
   }
+  return oldFromNewNodes;
 }

@@ -407,20 +407,25 @@ class TestModel(MochiTestBase):
 
     def test_model_reorder_for_locality(self):
         # The same tet in two numberings, neither of them in the output order.
-        coordinates = [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]
+        coordinates = [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]
         mesh = mochi.MeshData(
-            nodes_per_element=4, coordinates=coordinates, connectivity=[0, 1, 2, 3]
+            nodes_per_element=4, coordinates=coordinates, connectivity=[1, 0, 2, 3]
         )
         relabeled = mochi.MeshData(
             nodes_per_element=4,
             coordinates=[0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0],
             connectivity=[3, 2, 1, 0],
         )
-        mochi.model.reorder_for_locality(mesh)
+        old_from_new = mochi.model.reorder_for_locality(mesh)
         mochi.model.reorder_for_locality(relabeled)
 
-        # Both are reordered in place into the same mesh.
+        # Both are reordered in place into the same mesh, whose nodes come from the returned input
+        # indices.
         self.assertEqual(mesh, relabeled)
+        np.testing.assert_array_equal(
+            np.reshape(coordinates, (-1, 3))[np.array(old_from_new)],
+            np.array(mesh.coordinates).reshape(-1, 3),
+        )
 
         # An invalid mesh raises an error and is left unchanged.
         invalid = mochi.MeshData(

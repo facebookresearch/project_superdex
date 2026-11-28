@@ -2927,7 +2927,8 @@ TEST(ModelUtils, ReorderForLocality_ExactOrders) {
         Case{.mesh = swappedSplit, .oldFromNew = splitOrder},
         Case{.mesh = unitTet, .oldFromNew = {1, 2, 0, 3}},
         Case{.mesh = noElements, .oldFromNew = {1, 2, 3, 0}}}) {
-    // Tag the nodes with their input indices by their skinning, which tells coincident nodes apart.
+    // Tag the nodes with their input indices by their skinning, which tells coincident nodes apart,
+    // so that the reordered tags must match the returned order.
     MeshData tagged = testCase.mesh;
     SkinningData& tags = tagged.skinning.emplace();
     tags.weightsPerNode = 1;
@@ -2935,8 +2936,10 @@ TEST(ModelUtils, ReorderForLocality_ExactOrders) {
     std::iota(tags.indices.begin(), tags.indices.end(), 0);
     tags.weights = DynamicArray<real>(tagged.GetNumNodes(), 1_r);
 
-    MeshData const reordered = Reordered(tagged);
-    EXPECT_EQ(testCase.oldFromNew, reordered.skinning->indices);
+    MeshData reordered = tagged;
+    DynamicArray<int> const oldFromNew = model::ReorderForLocality(reordered, test::ExpectOK{});
+    EXPECT_EQ(testCase.oldFromNew, oldFromNew);
+    EXPECT_EQ(oldFromNew, reordered.skinning->indices);
 
     // These fixtures keep their element order, so the elements' corner tags compare row by row.
     DynamicArray<int> cornerTags;
@@ -2962,15 +2965,17 @@ TEST(ModelUtils, ReorderForLocality_LeavesPolylinesAndInvalidMeshesUnchanged) {
   MeshData outOfRangeNode = tets;
   outOfRangeNode.connectivity[0] = tets.GetNumNodes();
 
-  // Valid polylines are left as they are. Invalid meshes, polylines included, are reported, and a
-  // call with an error already set returns without changes.
+  // Valid polylines are left as they are, so their nodes keep their indices. Invalid meshes,
+  // polylines included, are reported, and a call with an error already set returns without changes.
+  // Both return no indices.
   struct Case {
     MeshData mesh;
     bool hasPriorError = false;
     bool isOK = false;
+    DynamicArray<int> oldFromNew = {};
   };
   for (Case const& testCase :
-       {Case{.mesh = polyline, .isOK = true},
+       {Case{.mesh = polyline, .isOK = true, .oldFromNew = {0, 1, 2}},
         Case{.mesh = nonSequentialPolyline},
         Case{.mesh = outOfRangeNode},
         Case{.mesh = tets, .hasPriorError = true}}) {
@@ -2980,8 +2985,9 @@ TEST(ModelUtils, ReorderForLocality_LeavesPolylinesAndInvalidMeshesUnchanged) {
       MOCHI_ERROR_SET(error, "Prior error");
     }
 
-    model::ReorderForLocality(mesh, error);
+    DynamicArray<int> const oldFromNew = model::ReorderForLocality(mesh, error);
     EXPECT_EQ(testCase.isOK, error.IsOK());
     EXPECT_EQ(testCase.mesh, mesh);
+    EXPECT_EQ(testCase.oldFromNew, oldFromNew);
   }
 }

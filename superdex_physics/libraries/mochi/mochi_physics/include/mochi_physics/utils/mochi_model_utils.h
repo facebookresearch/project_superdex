@@ -28,6 +28,7 @@
 
 #include <mochi_core/geometry/grid_sdf_params.h>
 #include <mochi_core/geometry/model_data.h>
+#include <mochi_core/utils/dynamic_array.h>
 #include <mochi_core/utils/dynamic_string.h>
 #include <mochi_core/utils/error.h>
 #include <mochi_core/utils/nd_array.h>
@@ -83,5 +84,5 @@ MOCHI_API void BakeSdf(ModelData& data, GridSdfParams const& params, Error& erro
 MOCHI_API void EmbedInTetrahedralMesh(MeshDataView const& tetMesh, MeshData& outMesh, Error& error);
 MOCHI_API void FlipWindingOrder(MeshData& data, Error& error);
 MOCHI_API void FlipWindingOrder(ModelData& data, Error& error);
-MOCHI_API void ReorderForLocality(MeshData& mesh, Error& error);
+MOCHI_API DynamicArray<int> ReorderForLocality(MeshData& mesh, Error& error);
 } // namespace mochi::model_utils
