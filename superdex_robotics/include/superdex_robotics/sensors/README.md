@@ -2,7 +2,8 @@
 
 SensorGraph provides synchronous numeric CPU observations with separate capture and
 publication timestamps. Each sensor publishes one fixed-shape Float32 tensor.
-Public callers construct and step the graph programmatically.
+C++ callers can construct and step a graph directly; BotScene assembles declared sensors and
+steps them after physics.
 
 [`SensorBase`](./sensor_base.h) is the common interface for numeric observation sources and nodes
 that transform other sensor outputs. [`SensorGraph`](./sensor_graph.h) connects them into a directed
@@ -209,6 +210,12 @@ Programmatic construction supplies an explicit graph-unique name and the names o
 to `Add()`. A standalone node can be named `source` or `map`; bot-attached callers can use
 `bot/link/sensor-instance`. Programmatic names have no attachment-based enforcement.
 
+`AddNode(name, inputs, error)` can instead declare a node without constructing its sensor.
+`Build()` with no outputs selected validates that topology before sensors are available. `BindNode(node, error)` later
+attaches a live sensor with matching input names; another `Build()` initializes newly active,
+ready nodes without resetting existing sensor state. See [Loading sensors](./SENSOR_LOADING.md)
+for the BotScene workflow.
+
 `Add()` rejects empty or duplicate names and null sensors. `Build()` rejects missing inputs,
 duplicate nonzero handles, reuse of a sensor under multiple names and dependency cycles. It resolves
 names to a topological execution order and initializes newly active sensors with the supplied
@@ -243,14 +250,21 @@ when an unselected node is needed as a dependency.
 in dependency order. A standalone node may have an invalid handle. Fetch this list again after
 changing enablement or topology; graph mutation or destruction invalidates the view. Selection
 can precede activation, so the list alone does not imply that a new output has acquired a sample.
-`Find(name)` returns null while the graph is unbuilt or when the name is absent.
+`Find(name)` returns null while the graph is unbuilt, when the name is absent, or when that node
+has no bound sensor. A bound sensor need not be initialized or have published a sample.
 
-`Extend(nodes, enabledNames, error)` adds explicit declarations to a built graph and optionally
-selects additional outputs. An empty enabled-name list preserves existing selections.
-`Remove(handles, error)` prunes those sensors and their downstream dependants, returning owned
-identities for removed enabled outputs. It does not destroy sensors. These operations preserve
-surviving sensor state and the graph clock. `Clear()` removes all nodes and output requests;
-changing the graph's initialization scope requires clearing it.
+`AddOutputs(names, error)` enables existing nodes and initializes newly active dependencies in a
+built graph. An empty list does nothing; errors restore the previous output selections.
+Use `Add()` or `AddNode()` followed by `Build()` to change the declarations.
+`UnbindNode(handles, error)` releases those sensors and their downstream bindings and output
+selections, returning owned identities for affected enabled outputs. It retains the nodes' names
+and inputs so sensors can be bound again later; unrelated sensor state and the graph clock survive.
+It does not destroy sensors. `Clear()` removes all nodes and output requests; changing the graph's
+initialization scope requires clearing it.
+
+BotScene uses these declared nodes to load and unload within its prepared selection. Enabling
+an output requires a fully bound dependency chain. Changing the selected bots requires unloading
+all loaded bots, then preparation, rebuild and reset; see [Loading sensors](./SENSOR_LOADING.md).
 
 See [`sensor_graph.h`](./sensor_graph.h) for the complete graph interface.
 
@@ -335,8 +349,10 @@ bindings of its own; see [Creating sensors](#creating-sensors).
 The order of operations is:
 
 1. Register custom types before loading. The loader skips an unregistered type with a warning.
-2. Load the scene. Loading creates each bot's declared sensors and the scene-level sensors, builds
-   the graph with no outputs selected, and resets acquisition.
+2. Load the scene. Preparation reads the selected bots' prefabs and validates their declared graph
+   before constructing bots. Loading binds the bot sensors and any ready scene-level sensors,
+   with no outputs selected. The default loads all bots; an explicit empty initialization list
+   defers selection to `prepare_bots()` and loading to `initialize_bot()`.
 3. Select outputs with `add_sensor_outputs()`.
 4. Step the physics scene. BotScene steps the graph after each physics step.
 5. Check for graph errors, then read the selected outputs.
@@ -373,9 +389,12 @@ Points to note:
   observations covers every step since the last check. The explicit check trades streamlining for
   control: the application decides when to look, and whether to end the episode or reset the
   sensors and continue.
-- **Only declared sensors join the BotScene graph.** A sensor created at runtime with
-  `create_sensor()` is owned by the context but is not a graph node, and `rebuild_sensor_graph()`
-  rebuilds from declarations only.
+- **Only selected declarations join the BotScene graph.** Selected bot declarations and scene
+  sensor declarations define the topology before their sensors are bound. An input referring to
+  an unselected bot is invalid; a selected but unloaded dependency prevents output enablement.
+  A sensor created at runtime with `create_sensor()` is owned by the context but is not added to
+  this graph. `rebuild_sensor_graph()` uses the prepared declarations, not new file contents.
+  See [Loading sensors](./SENSOR_LOADING.md) for deferred loading and selection changes.
 - **Some interfaces are C++-only:** constructing a `SensorGraph` or a `SensorFunction`, the
   `RegisterSensor<T>()` templates (including registering `SENSOR_TEMPORAL_WINDOW`), the native
   publication timestamps (Python exposes `capture_step` and `capture_time`), and typed metadata
@@ -408,9 +427,9 @@ with a warning.
 
 ## Bot-relative inputs
 
-The planned combined scene structure resolves bot-relative inputs such as `./force` and
-`../front_pad/force` into complete `bot/link/sensor` graph names. This declarative integration
-is future work; public callers currently supply graph names programmatically.
+The loader resolves an unqualified same-link input, `./force`, or `../front_pad/force` into a
+complete `bot/link/sensor` graph name. A bot file therefore need not know the scene's bot instance
+name. C++ callers constructing a graph directly supply the resolved names themselves.
 Scene-owned sensors use complete names. Other relative path shapes are rejected; missing
 inputs and cycles fail graph construction. Graph node declarations own their input-name strings.
 
@@ -419,9 +438,9 @@ inputs and cycles fail graph construction. Graph node declarations own their inp
 SensorGraph supports synchronous numeric CPU observations, including image-like tactile tensors.
 Camera image samples, asynchronous graph execution and GPU processing are future work.
 
-Public callers advance physics and then step their graph explicitly, as shown above. A combined
-scene structure with declarative sensors and automatic acquisition is future work. All graph
-operations and borrowed sample reads must remain serialized by the caller.
+Standalone C++ callers advance physics and then step their graph explicitly, as shown above.
+BotScene assembles declared sensors and steps their graph after physics; Python uses this route.
+All graph operations and borrowed sample reads must remain serialized by the caller.
 
 Some sensors retain specialized `ComputeSignal()` methods for compatibility. Deriving from
 `SensorBase` alone does not make an existing implementation usable in a graph; unsupported graph

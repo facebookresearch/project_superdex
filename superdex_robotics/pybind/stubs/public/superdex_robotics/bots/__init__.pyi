@@ -3815,12 +3815,21 @@ class BotScene:
         Raises:
             :class:`~superdex.physics.Error`: If an error occurs.
         """
+    def prepare_bots(self, selected_bot_names: mochi_physics.ArrayLikeString) -> None:
+        """Prepare selected bot prefabs and validate their sensor DAG before loading
+        bots.
+        Changing selection requires removing loaded bots first; rebuilds and resets the
+        graph.
+
+        Raises:
+            :class:`~superdex.physics.Error`: If an error occurs.
+        """
     def initialize_bot(self, name: str) -> Bot:
-        """Instantiate a bot the .superdex_scene declares but that is not loaded -- one
-        removed with RemoveBot, or left out when the scene was loaded -- together with
-        its controllers, at its declared placement and initial pose. Errors, creating
-        nothing, if no bot named `name` is declared, it is already loaded, or it fails
-        to instantiate.
+        """Instantiate a selected bot that is not loaded -- one removed with RemoveBot,
+        or
+        left out when the scene was loaded -- together with its controllers, at its
+        declared placement and initial pose. Errors, creating nothing, if no bot named
+        `name` is selected, it is already loaded, or it fails to instantiate.
 
         Args:
             name (str): Exact declared name of the bot to initialize.

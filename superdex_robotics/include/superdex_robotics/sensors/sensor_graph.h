@@ -76,20 +76,25 @@ class MOCHI_API SensorGraph {
       SensorBase* sensor,
       Span<DynamicString const> inputs,
       superdex::Error& error);
-  /* @brief Select a canonical node name while constructing the graph. */
-  void SetOutputEnabled(std::string_view nodeName, bool enabled, superdex::Error& error);
-  /* @brief Extend a built graph with explicit nodes and optional enabled output names.
-   * Preserves existing sensor state and clock. Empty enabledNames adds no output selections. */
-  void Extend(
-      Span<SensorGraphNode const> nodes,
-      Span<DynamicString const> enabledNames,
-      superdex::Error& error);
-  /* @brief Remove member sensors and their downstream dependants, preserving other sensor state.
-   * Requires a built graph; nonmember handles are ignored, invalid handles are errors.
-   * Returns owned identities of removed enabled nodes. Does not destroy sensors. */
-  DynamicArray<SensorGraphNodeIdentity> Remove(
+  /* Copy input names into a graph node without constructing a sensor. */
+  void AddNode(std::string_view name, Span<DynamicString const> inputs, superdex::Error& error);
+  /* Attach a sensor to a built node and refresh readiness; Build initializes active sensors. */
+  void BindNode(SensorGraphNode const& binding, superdex::Error& error);
+  /* Release bindings in a built graph and their dependants, retaining their input names. */
+  DynamicArray<SensorGraphNodeIdentity> UnbindNode(
       Span<SensorHandle const> handles,
       superdex::Error& error);
+  /* Whether all upstream bindings of a built node are ready; false while unbuilt. */
+  [[nodiscard]] bool InputsReady(std::string_view name) const;
+  /* Built node names in dependency order, borrowed until topology changes; empty while unbuilt. */
+  [[nodiscard]] DynamicArray<std::string_view> GetDependencyOrder() const;
+
+  /* @brief Select a canonical node name while constructing the graph. */
+  void SetOutputEnabled(std::string_view nodeName, bool enabled, superdex::Error& error);
+  /* @brief Enable existing outputs and initialize newly active dependencies in a built graph.
+   * Empty names do nothing. Failure restores the previous selections; running state and clock
+   * are preserved. */
+  void AddOutputs(Span<DynamicString const> names, superdex::Error& error);
   void Clear();
   /* @brief Resolve topology and initialize newly active nodes. Existing state and clock survive;
    * changing the scope requires Clear(). */
@@ -107,6 +112,10 @@ class MOCHI_API SensorGraph {
   /* @brief Set the episode seed of every member sensor that draws random streams (noise, outliers,
    * delay jitter, see SensorBase::SetEpisodeSeed). Apply before Reset(). */
   void SetEpisodeSeed(uint64_t episodeSeed);
+  /* The graph-wide seed override, if set; Clear removes it. */
+  [[nodiscard]] std::optional<uint64_t> GetEpisodeSeed() const {
+    return _episodeSeed;
+  }
   bool Step(StepTime const& now, superdex::Error& error);
   /* @brief The time of the last successful Step(); absent before the first and after Reset(). */
   [[nodiscard]] std::optional<StepTime> LastStep() const {
@@ -120,13 +129,22 @@ class MOCHI_API SensorGraph {
   [[nodiscard]] DynamicArray<std::string_view> GetNodeNames() const;
 
  private:
+  struct NodeNameHash {
+    using is_transparent = void;
+    std::size_t operator()(std::string_view name) const noexcept {
+      return std::hash<std::string_view>{}(name);
+    }
+  };
+
   struct Node {
     std::string name;
     SensorBase* sensor = nullptr;
-    std::vector<std::string> inputNames;
+    DynamicArray<DynamicString> inputNames;
+    bool ready = false;
     std::vector<std::size_t> inputIndices;
     SensorHandle handle;
     bool requestedOutput = false;
+    bool activeOutput = false;
     bool active = false;
     bool initialized = false;
   };
@@ -134,19 +152,24 @@ class MOCHI_API SensorGraph {
   /* Releases the graph's borrow of the node's sensor and the graph name the node gave it. */
   static void Release(Node const& node);
   void RebuildActiveOrder();
+  void RefreshActiveOrder();
   void ResolveTopology(superdex::Error& error);
+  /* Recompute readiness from live bindings and upstream readiness; preserves sensor history. */
+  void ComputeReadiness();
   void RebuildEnabledNodes();
-  void InitializeActiveSensors(superdex::Error& error);
+  void InitializeActiveSensors(superdex::Error& error, bool resetNewSensors);
 
   std::vector<Node> _nodes;
   std::vector<std::string> _requestedOutputNames;
   std::vector<std::size_t> _topologicalOrder;
   std::vector<std::size_t> _activeOrder;
   std::vector<SensorGraphNodeView> _enabledNodes;
-  std::unordered_map<std::string, std::size_t> _byName;
+  std::unordered_map<std::string, std::size_t, NodeNameHash, std::equal_to<>> _byName;
   std::unordered_map<SensorHandle, std::size_t> _byHandle;
   SensorScope _scope;
+  std::optional<uint64_t> _episodeSeed;
   StepTime _lastStep;
+  bool _topologyNeedsRebuild = true;
   bool _built = false;
   bool _hasLastStep = false;
   bool _activeOrderNeedsRebuild = false;

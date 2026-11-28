@@ -2735,6 +2735,16 @@ MOCHI_NO_INLINE void Define_bots_BotScene(PybindRegistry& registry) {
       , nb::arg("name")
       , "Retire a bot loaded from the .superdex_scene: destroy its controllers,\nactuators, sensors, and articulated actor (actuators and sensors hold link-actor\npointers, so they are destroyed before the actor), then erase it from the bot\nregistry so scene teardown does not double-destroy it. Errors if no bot named\n`name` is loaded.\n\nArgs:\n    name (str): Exact declared name of the loaded bot to remove.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
     )
+    .def("prepare_bots", [](superdex::robotics::BotScene& self, mochi::Span<mochi::DynamicString const> selected_bot_names) {
+      mochi::Error error;
+      self.PrepareBots(selected_bot_names, error);
+      if (!error.IsOK()) {
+        throw MochiErrorException(error);
+      }
+    }
+      , nb::arg("selected_bot_names")
+      , "Prepare selected bot prefabs and validate their sensor DAG before loading bots.\nChanging selection requires removing loaded bots first; rebuilds and resets the\ngraph.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+    )
     .def("initialize_bot", [](superdex::robotics::BotScene& self, std::string_view name) {
       mochi::Error error;
       auto result = self.InitializeBot(name, error);
@@ -2744,7 +2754,7 @@ MOCHI_NO_INLINE void Define_bots_BotScene(PybindRegistry& registry) {
       return result;
     }
       , nb::arg("name")
-      , "Instantiate a bot the .superdex_scene declares but that is not loaded -- one\nremoved with RemoveBot, or left out when the scene was loaded -- together with\nits controllers, at its declared placement and initial pose. Errors, creating\nnothing, if no bot named `name` is declared, it is already loaded, or it fails\nto instantiate.\n\nArgs:\n    name (str): Exact declared name of the bot to initialize.\n\nReturns:\n    The loaded bot, or None on error.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+      , "Instantiate a selected bot that is not loaded -- one removed with RemoveBot, or\nleft out when the scene was loaded -- together with its controllers, at its\ndeclared placement and initial pose. Errors, creating nothing, if no bot named\n`name` is selected, it is already loaded, or it fails to instantiate.\n\nArgs:\n    name (str): Exact declared name of the bot to initialize.\n\nReturns:\n    The loaded bot, or None on error.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
       , nb::rv_policy::reference
     )
     .def("add_sensor_outputs", [](superdex::robotics::BotScene& self, mochi::Span<mochi::DynamicString const> sensor_outputs) {

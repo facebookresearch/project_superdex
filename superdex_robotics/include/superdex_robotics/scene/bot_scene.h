@@ -506,19 +506,28 @@ class MOCHI_API BotScene {
    * and articulated actor (actuators and sensors hold link-actor pointers, so they are destroyed
    * before the actor), then erase it from the bot registry so scene teardown does not
    * double-destroy it. Prunes its sensor nodes and downstream dependants before destruction,
-   * preserving other sensors, enabled outputs and the acquisition clock.
+   * destroying dependent scene sensor instances and preserving unrelated sensors, enabled outputs
+   * and the acquisition clock. Unrelated sensors neither belong to that bot nor depend on its
+   * sensors, directly or indirectly. Scene declarations remain available for later initialization.
    * Errors if no bot named `name` is loaded.
    * @param name Exact declared name of the loaded bot to remove.
    * @param error Error status. */
   void RemoveBot(std::string_view name, superdex::Error& error);
 
-  /* Instantiate a bot the .superdex_scene declares but that is not loaded -- one left out of the
-   * scene's botsToInitialize, or removed with @ref RemoveBot -- together with its controllers, at
-   * its declared placement and initial pose. Its prefab is loaded from file, and changed by the
-   * @ref BotPrefabEdit the scene was loaded with, if any. Errors, creating nothing, if no bot named
-   * `name` is declared, it is already loaded, or it fails to instantiate. Extends the graph without
-   * resetting existing sensors or changing enabled outputs. Added nodes start disabled.
-   * @param name Exact declared name of the bot to initialize.
+  /* @brief Read and edit selected bot prefabs, then validate their sensor DAG without loading bots.
+   * Unselected alternatives are not read. Every input must resolve in the selected graph.
+   * Changing selection requires removing loaded bots first, and rebuilds/resets the graph.
+   * Preparing the same selection again does nothing. Prefabs are cached per entry.
+   * @param selectedBotNames Complete selection, including dependencies that will load later.
+   * @param error Error status. */
+  void PrepareBots(Span<DynamicString const> selectedBotNames, superdex::Error& error);
+
+  /* Instantiate a prepared, selected bot that is not loaded, together with its controllers.
+   * Uses the cached edited prefab; file changes require loading a new scene. Binds existing graph
+   * nodes without resetting unrelated sensors or changing output selections. Ready scene sensors
+   * are constructed and bound too. Errors if the bot is not selected, already loaded, or fails
+   * construction. Removed selected bots may be initialized again from the same snapshot.
+   * @param name Exact declared name of the selected bot to initialize.
    * @param error Error status.
    * @return The loaded bot, or nullptr on error. */
   Bot* InitializeBot(std::string_view name, superdex::Error& error);
@@ -809,8 +818,9 @@ MOCHI_API BotScene LoadBotScene(
 /**
  * @brief Like @ref LoadBotScene(Scene*, std::string_view, Context*, RoboticsContext*,
  * superdex::Error&), but instantiates only the declared bots named in @p botsToInitialize. The
- * rest stay declared and can be instantiated later with @ref BotScene::InitializeBot, so a caller
- * choosing between alternative bots never simulates the ones it did not choose. Errors if
+ * rest remain unselected. An empty list defers selection to @ref BotScene::PrepareBots, allowing
+ * selected dependencies to be prepared together and loaded later with @ref BotScene::InitializeBot.
+ * Errors if
  * @p botsToInitialize names a bot the scene does not declare. C++ only.
  */
 MOCHI_API BotScene LoadBotScene(
@@ -824,8 +834,8 @@ MOCHI_API BotScene LoadBotScene(
 /**
  * @brief Like @ref LoadBotScene(Scene*, std::string_view, Span<std::string_view const>, Context*,
  * RoboticsContext*, superdex::Error&), with @p edit changing each bot's prefab before the bot is
- * created: the bots in @p botsToInitialize, and those brought up later with
- * @ref BotScene::InitializeBot. The BotScene keeps @p edit for that, so whatever it refers to must
+ * prepared: the bots in @p botsToInitialize, and those selected later with
+ * @ref BotScene::PrepareBots. The BotScene keeps @p edit for that, so whatever it refers to must
  * outlive the BotScene. C++ only.
  */
 MOCHI_API BotScene LoadBotScene(

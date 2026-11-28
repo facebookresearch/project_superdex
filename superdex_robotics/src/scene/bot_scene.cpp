@@ -678,6 +678,8 @@ Actor const* FindActorByName(Scene const& scene, std::string_view spawn, std::st
   return exactMatch != nullptr ? exactMatch : firstPrefixed;
 }
 
+void DestroySceneSensors(BotScene::Impl& impl);
+
 } // namespace
 
 struct BotScene::Impl {
@@ -693,12 +695,19 @@ struct BotScene::Impl {
   void OnRoboticsContextDestroyed() {
     CancelSensorStepCallback();
     sensorGraph.Clear();
+    sceneSensors.clear();
     botsCtx = nullptr;
   }
 
   BotScenePrefab params;
-  /* Changes each declared bot's prefab before the bot is created, at load and in InitializeBot. */
+  /* Changes a selected bot's prefab once, before declaring or constructing its sensors. */
   BotPrefabEdit editBot;
+  struct PreparedBot {
+    DynamicString path;
+    BotPrefab prefab;
+  };
+  std::unordered_map<std::string, PreparedBot> preparedBots;
+  std::optional<DynamicArray<DynamicString>> selectedBots;
   Context* context = nullptr;
   RoboticsContext* botsCtx = nullptr;
   /* Token for our RoboticsContext teardown callback (see RegisterOnDestroy); cancelled in ~Impl
@@ -791,8 +800,9 @@ struct BotScene::Impl {
    * Lifetime is managed by the RoboticsContext — handles are destroyed in ~Impl. */
   std::unordered_map<std::string, ControllerHandle> controllers;
 
-  /* Scene-level sensor handles keyed by their declared name. These belong to no bot (they are
-   * created with no link actor), so DestroyBot never reaches them and ~Impl must. */
+  /* Instantiated scene sensors keyed by their declaration name. They have no link actor and are
+   * posed relative to the scene root. RemoveBot destroys detached dependants; ~Impl releases the
+   * remainder. Declarations awaiting inputs live only in params.sensors. */
   std::unordered_map<std::string, SensorHandle> sceneSensors;
 
   /* The termination criteria being decided, written by any thread and evaluated on the stepping
@@ -915,9 +925,7 @@ struct BotScene::Impl {
       for (auto& [key, handle] : controllers) {
         botsCtx->DestroyController(handle);
       }
-      for (auto& [name, handle] : sceneSensors) {
-        botsCtx->DestroySensor(handle);
-      }
+      DestroySceneSensors(*this);
       for (auto& [name, bot] : bots) {
         DestroyBot(resolvedScene, bot);
       }
@@ -1051,6 +1059,16 @@ BotSensorPrefab const* FindBotSensorPrefab(
   return nullptr;
 }
 
+DynamicString MakeBotSensorNodeName(
+    std::string_view botName,
+    std::string_view linkName,
+    std::string_view sensorName) {
+  DynamicString name;
+  name.reserve(botName.size() + linkName.size() + sensorName.size() + 2);
+  name.append(botName).append("/").append(linkName).append("/").append(sensorName);
+  return name;
+}
+
 /* @brief Resolve one declared bot-sensor input against its owner `bot/link`. A relative input has
  * exactly one of two shapes: `./<sensor>` (same link) or `../<link>/<sensor>` (same bot). Any other
  * input starting with `.` is rejected; other inputs are returned unchanged and resolved by the
@@ -1066,18 +1084,17 @@ DynamicString ResolveBotSensorInput(
   if (input.starts_with("./")) {
     std::string_view const sensor = input.substr(2);
     if (isName(sensor)) {
-      return DynamicString(
-          std::string(botName) + "/" + std::string(linkName) + "/" + std::string(sensor));
+      return MakeBotSensorNodeName(botName, linkName, sensor);
     }
   } else if (input.starts_with("../")) {
     std::string_view const rest = input.substr(3);
     size_t const slash = rest.find('/');
     if (slash != std::string_view::npos && isName(rest.substr(0, slash)) &&
         isName(rest.substr(slash + 1))) {
-      return DynamicString(std::string(botName) + "/" + std::string(rest));
+      return MakeBotSensorNodeName(botName, rest.substr(0, slash), rest.substr(slash + 1));
     }
   } else if (!input.starts_with(".")) {
-    return DynamicString(std::string(input));
+    return DynamicString(input);
   }
   MOCHI_LOG_ERROR(
       "Bot sensor input '%.*s' on '%.*s/%.*s' is not './<sensor>', '../<link>/<sensor>' or complete",
@@ -1130,8 +1147,7 @@ void CollectBotSensorNodes(
       ValidateNodeNamePart("link", linkName, error);
       ValidateNodeNamePart("sensor", sensor->GetName(), error);
       MOCHI_ERROR_RETURN(error);
-      std::string const name =
-          std::string(botName) + "/" + linkName + "/" + std::string(sensor->GetName());
+      DynamicString name = MakeBotSensorNodeName(botName, linkName, sensor->GetName());
       DynamicArray<DynamicString> inputs;
       inputs.reserve(entry->inputs.size());
       for (DynamicString const& input : entry->inputs) {
@@ -1139,75 +1155,269 @@ void CollectBotSensorNodes(
             botName, linkName, std::string_view(input.c_str(), input.size()), error));
         MOCHI_ERROR_RETURN(error);
       }
-      nodes.push_back({DynamicString(name), handle, sensor, std::move(inputs)});
+      nodes.push_back({std::move(name), handle, sensor, std::move(inputs)});
     }
   }
 }
 
+SensorGraphNode
+GetOrCreateSceneSensorNode(BotScene::Impl& impl, SceneSensorEntry const& entry, Error& error) {
+  std::string name(entry.name);
+  auto handle = impl.sceneSensors.find(name);
+  if (handle == impl.sceneSensors.end()) {
+    SensorHandle const created = impl.botsCtx->CreateSensor(
+        std::string_view(entry.type.c_str(), entry.type.size()),
+        /*linkActor=*/nullptr,
+        name,
+        std::string_view(entry.params.c_str(), entry.params.size()),
+        error);
+    MOCHI_ERROR_RETURN(error, {});
+    handle = impl.sceneSensors.emplace(std::move(name), created).first;
+  }
+  SensorBase* const sensor = impl.botsCtx->GetSensor(handle->second);
+  if (sensor == nullptr) {
+    MOCHI_ERROR_SET(error, "BotScene contains an invalid scene sensor handle");
+    return {};
+  }
+  sensor->SetParentFromSensor(entry.parentFromSensor);
+  return {entry.name, handle->second, sensor, entry.inputs};
+}
+
+/* Bind bot-owned instances, including consumers detached when another bot was removed. */
+void BindLoadedBotSensors(BotScene::Impl& impl, Error& error) {
+  for (auto const& [botName, bot] : impl.bots) {
+    std::vector<SensorGraphNode> nodes;
+    CollectBotSensorNodes(impl, botName, *bot, nodes, error);
+    MOCHI_ERROR_RETURN(error);
+    for (SensorGraphNode const& node : nodes) {
+      impl.sensorGraph.BindNode(node, error);
+      MOCHI_ERROR_RETURN(error);
+    }
+  }
+}
+
+/* Construct ready scene sensors in the graph's declaration order. */
+void BindSceneSensors(BotScene::Impl& impl, Error& error) {
+  for (std::string_view name : impl.sensorGraph.GetDependencyOrder()) {
+    if (!impl.sensorGraph.InputsReady(name) || impl.sensorGraph.Find(name) != nullptr) {
+      continue;
+    }
+    auto const entry = std::ranges::find_if(impl.params.sensors, [&](SceneSensorEntry const& item) {
+      return std::string_view(item.name.c_str(), item.name.size()) == name;
+    });
+    if (entry != impl.params.sensors.end()) {
+      SensorGraphNode const node = GetOrCreateSceneSensorNode(impl, *entry, error);
+      MOCHI_ERROR_RETURN(error);
+      impl.sensorGraph.BindNode(node, error);
+      MOCHI_ERROR_RETURN(error);
+    }
+  }
+}
+
+/* Release scene sensor instances whose graph borrows have been removed. */
+void DestroySceneSensors(BotScene::Impl& impl) {
+  for (auto sensor = impl.sceneSensors.begin(); sensor != impl.sceneSensors.end();) {
+    if (impl.sensorGraph.Find(sensor->first) == nullptr) {
+      impl.botsCtx->DestroySensor(sensor->second);
+      sensor = impl.sceneSensors.erase(sensor);
+    } else {
+      ++sensor;
+    }
+  }
+}
+
+BotEntry const* FindBotEntry(BotScenePrefab const& params, std::string_view name) {
+  for (auto const& botEntry : params.bots) {
+    if (std::string_view(botEntry.name.c_str(), botEntry.name.size()) == name) {
+      return &botEntry;
+    }
+  }
+  return nullptr;
+}
+
+/* Cache the entry-specific prefab shared by graph declaration and bot construction. */
+BotPrefab const* PrepareBotPrefab(
+    BotScene::Impl& impl,
+    BotEntry const& botEntry,
+    Error& error,
+    BotPrefabLookup const& findBotPrefab = {}) {
+  MOCHI_ERROR_RETURN(error, nullptr);
+  std::string const name(botEntry.name);
+  if (auto const cached = impl.preparedBots.find(name); cached != impl.preparedBots.end()) {
+    if (cached->second.path != botEntry.path) {
+      MOCHI_LOG_ERROR("BotScene: path changed after preparing bot '%s'", name.c_str());
+      MOCHI_ERROR_SET(error, "Bot path changed after preparation; load a new BotScene");
+      return nullptr;
+    }
+    return &cached->second.prefab;
+  }
+  std::string_view const botPath(botEntry.path.c_str(), botEntry.path.size());
+  BotPrefab const* const loadedPrefab = findBotPrefab ? findBotPrefab(botPath) : nullptr;
+  BotPrefab botPrefab =
+      loadedPrefab != nullptr ? *loadedPrefab : LoadBotPrefabFromFile(botPath, error);
+  MOCHI_ERROR_RETURN(error, nullptr);
+
+  // The bot is placed at parentFromBot relative to the scene root (identity scene root == world
+  // for now, until scene spawn transforms are supported).
+  botPrefab.worldFromRoot = botEntry.parentFromBot;
+  if (!botEntry.initialPose.empty()) {
+    botPrefab.defaultPose = botEntry.initialPose;
+  }
+  if (!botEntry.hasGravity) {
+    for (BotLinkPrefab& link : botPrefab.links) {
+      link.hasGravity = false;
+    }
+  }
+  if (impl.editBot) {
+    impl.editBot(botEntry, botPrefab, error);
+    MOCHI_ERROR_RETURN(error, nullptr);
+  }
+  return &impl.preparedBots
+              .emplace(name, BotScene::Impl::PreparedBot{botEntry.path, std::move(botPrefab)})
+              .first->second.prefab;
+}
+
 void BuildSensorGraph(BotScene::Impl& impl, Error& error, Span<DynamicString const> outputs = {}) {
-  /* Preserve an incoming error and require a robotics context. */
   MOCHI_ERROR_RETURN(error);
   if (impl.botsCtx == nullptr) {
     MOCHI_ERROR_SET(error, "BotScene sensor graph has no robotics context");
     return;
   }
   /* Start a full reconstruction, releasing the previous graph's sensor borrows. */
+  auto const episodeSeed = impl.sensorGraph.GetEpisodeSeed();
   impl.sensorGraph.Clear();
-  std::vector<SensorGraphNode> nodes;
+  if (episodeSeed) {
+    impl.sensorGraph.SetEpisodeSeed(*episodeSeed);
+  }
 
-  /* Collect declared sensor nodes from the bots currently loaded. */
-  for (BotEntry const& entry : impl.params.bots) {
-    std::string const name(entry.name.c_str(), entry.name.size());
-    auto const bot = impl.bots.find(name);
-    if (bot != impl.bots.end()) {
-      if (bot->second == nullptr) {
-        MOCHI_ERROR_SET(error, "BotScene contains a null bot");
-        return;
+  // Only selected bots contribute declarations; unchosen slot alternatives stay unread.
+  Span<DynamicString const> const selectedBots =
+      impl.selectedBots ? MakeConstSpan(*impl.selectedBots) : Span<DynamicString const>{};
+  for (DynamicString const& selected : selectedBots) {
+    std::string_view const botName(selected.c_str(), selected.size());
+    BotEntry const* const entry = FindBotEntry(impl.params, botName);
+    if (entry == nullptr) {
+      MOCHI_ERROR_SET(error, "Selected bot is no longer declared; load a new BotScene");
+      return;
+    }
+    BotPrefab const* const prefab = PrepareBotPrefab(impl, *entry, error);
+    MOCHI_ERROR_RETURN(error);
+    for (BotLinkPrefab const& link : prefab->links) {
+      for (BotSensorPrefab const& sensor : link.sensors) {
+        if (!impl.botsCtx->IsSensorTypeRegistered(sensor.type)) {
+          continue;
+        }
+        ValidateNodeNamePart("bot", botName, error);
+        ValidateNodeNamePart("link", link.name, error);
+        ValidateNodeNamePart("sensor", sensor.name, error);
+        MOCHI_ERROR_RETURN(error);
+        SensorGraphNode node;
+        node.name = MakeBotSensorNodeName(botName, link.name, sensor.name);
+        for (DynamicString const& input : sensor.inputs) {
+          node.inputs.push_back(ResolveBotSensorInput(botName, link.name, input, error));
+          MOCHI_ERROR_RETURN(error);
+        }
+        impl.sensorGraph.AddNode(node.name, node.inputs, error);
+        MOCHI_ERROR_RETURN(error);
       }
-      CollectBotSensorNodes(impl, name, *bot->second, nodes, error);
+    }
+  }
+  if (impl.selectedBots) {
+    for (SceneSensorEntry const& entry : impl.params.sensors) {
+      /* A scene authored against a build with extra sensor types still loads. */
+      if (!impl.botsCtx->IsSensorTypeRegistered(entry.type)) {
+        MOCHI_LOG_WARNING("BotScene: unknown sensor type '%s'; skipping", entry.type.c_str());
+        continue;
+      }
+      impl.sensorGraph.AddNode(entry.name, entry.inputs, error);
       MOCHI_ERROR_RETURN(error);
     }
   }
-  /* Collect the scene-owned sensor nodes. */
-  for (SceneSensorEntry const& entry : impl.params.sensors) {
-    std::string const name(entry.name.c_str(), entry.name.size());
-    auto const handle = impl.sceneSensors.find(name);
-    if (handle == impl.sceneSensors.end()) {
-      continue;
-    }
-    SensorBase* const sensor = impl.botsCtx->GetSensor(handle->second);
-    if (sensor == nullptr) {
-      MOCHI_ERROR_SET(error, "BotScene contains an invalid scene sensor handle");
-      return;
-    }
-    for (DynamicString const& input : entry.inputs) {
-      std::string_view const inputName(input.c_str(), input.size());
-      if (inputName.empty() || inputName.starts_with('.')) {
-        MOCHI_LOG_ERROR(
-            "Scene sensor '%s' input '%s' must be a nonempty complete node name",
-            entry.name.c_str(),
-            input.c_str());
-        MOCHI_ERROR_SET(error, "Scene sensor inputs must be nonempty complete node names");
-        return;
-      }
-    }
-    nodes.push_back({entry.name, handle->second, sensor, entry.inputs});
-  }
-  /* Add the collected nodes with their canonical names and declared inputs. */
-  for (SensorGraphNode const& node : nodes) {
-    impl.sensorGraph.Add(node, error);
-    MOCHI_ERROR_RETURN(error);
-  }
+
+  // Validate all declaration edges before binding any instances.
+  SensorScope const scope{.scene = impl.ResolveScene(), .robotics = impl.botsCtx};
+  impl.sensorGraph.Build(scope, error);
+  MOCHI_ERROR_RETURN(error);
+  BindLoadedBotSensors(impl, error);
+  MOCHI_ERROR_RETURN(error);
+  BindSceneSensors(impl, error);
+  MOCHI_ERROR_RETURN(error);
   /* Enable only the caller's requested outputs; an empty list is valid. */
   for (DynamicString const& output : outputs) {
-    impl.sensorGraph.SetOutputEnabled(std::string_view(output.c_str(), output.size()), true, error);
+    impl.sensorGraph.SetOutputEnabled(output, true, error);
     MOCHI_ERROR_RETURN(error);
   }
-  /* Validate dependencies, order the graph and initialize its active nodes. */
-  impl.sensorGraph.Build({.scene = impl.ResolveScene(), .robotics = impl.botsCtx}, error);
+  impl.sensorGraph.Build(scope, error);
+}
+
+/* Prepare one complete selection, without constructing its bots. */
+void PrepareSelectedBots(
+    BotScene::Impl& impl,
+    Span<DynamicString const> names,
+    Error& error,
+    BotPrefabLookup const& lookup = {}) {
+  MOCHI_ERROR_RETURN(error);
+  DynamicArray<DynamicString> selection;
+  std::unordered_set<std::string_view> unique;
+  for (std::string_view const name : names) {
+    if (FindBotEntry(impl.params, name) == nullptr || !unique.insert(name).second) {
+      MOCHI_LOG_ERROR(
+          "BotScene: invalid or duplicate selected bot '%.*s'", int(name.size()), name.data());
+      MOCHI_ERROR_SET(error, "BotScene selection requires unique declared bot names");
+      return;
+    }
+    selection.push_back(DynamicString(name));
+  }
+  if (impl.selectedBots && impl.selectedBots->size() == selection.size() &&
+      std::all_of(
+          impl.selectedBots->begin(),
+          impl.selectedBots->end(),
+          [&unique](DynamicString const& name) {
+            return unique.contains(std::string_view(name));
+          })) {
+    for (std::string_view const name : names) {
+      PrepareBotPrefab(impl, *FindBotEntry(impl.params, name), error, lookup);
+      MOCHI_ERROR_RETURN(error);
+    }
+    return;
+  }
+  if (!impl.bots.empty()) {
+    MOCHI_ERROR_SET(error, "Remove loaded bots before changing the bot selection");
+    return;
+  }
+  for (std::string_view const name : names) {
+    PrepareBotPrefab(impl, *FindBotEntry(impl.params, name), error, lookup);
+    MOCHI_ERROR_RETURN(error);
+  }
+  impl.CancelSensorStepCallback();
+  auto const episodeSeed = impl.sensorGraph.GetEpisodeSeed();
+  impl.sensorGraph.Clear();
+  if (episodeSeed) {
+    impl.sensorGraph.SetEpisodeSeed(*episodeSeed);
+  }
+  DestroySceneSensors(impl);
+  impl.selectedBots = std::move(selection);
+  BuildSensorGraph(impl, error);
+  if (!error.IsOK()) {
+    impl.sensorGraph.Clear();
+    DestroySceneSensors(impl);
+    impl.selectedBots.reset();
+    impl.sensorStepError = error.Copy();
+    return;
+  }
+  impl.ResetSensors(error);
 }
 
 } // namespace
+
+void BotScene::PrepareBots(Span<DynamicString const> selectedBotNames, Error& error) {
+  MOCHI_ERROR_RETURN(error);
+  if (!impl_) {
+    MOCHI_ERROR_SET(error, "BotScene is not initialized");
+    return;
+  }
+  PrepareSelectedBots(*impl_, selectedBotNames, error);
+}
 
 void BotScene::RebuildSensorGraph(Span<DynamicString const> outputs, Error& error) {
   MOCHI_ERROR_RETURN(error);
@@ -1542,8 +1752,9 @@ void BotScene::RemoveBot(std::string_view name, Error& error) {
   Scene* const scene = impl_->ResolveScene();
 
   auto const sensorHandles = it->second->GetSensorHandles();
-  impl_->sensorGraph.Remove(sensorHandles, error);
+  impl_->sensorGraph.UnbindNode(sensorHandles, error);
   MOCHI_ERROR_RETURN(error);
+  DestroySceneSensors(*impl_);
 
   /* Destroy this bot's controllers first, mirroring ~Impl's controllers-then-bot
    * teardown order. They are created via RoboticsContext::CreateController and tracked
@@ -1688,15 +1899,6 @@ static ControllerHandle CreateControllerFromEntry(
   return handle;
 }
 
-static BotEntry const* FindBotEntry(BotScenePrefab const& params, std::string_view name) {
-  for (auto const& botEntry : params.bots) {
-    if (std::string_view(botEntry.name.c_str(), botEntry.name.size()) == name) {
-      return &botEntry;
-    }
-  }
-  return nullptr;
-}
-
 /* Instantiate one declared bot and its controllers, registering both under the bot's declared name.
  * A bot registered before a later step fails stays registered, so the caller decides whether to
  * unwind it. */
@@ -1710,30 +1912,10 @@ static Bot* InstantiateBot(
     IBotLoader const* loader = nullptr) {
   MOCHI_ERROR_RETURN(error, nullptr);
 
-  std::string_view const botPath(botEntry.path.c_str(), botEntry.path.size());
-  BotPrefab const* const loadedPrefab = findBotPrefab ? findBotPrefab(botPath) : nullptr;
-  BotPrefab botPrefab =
-      loadedPrefab != nullptr ? *loadedPrefab : LoadBotPrefabFromFile(botPath, error);
+  BotPrefab const* const botPrefab = PrepareBotPrefab(impl, botEntry, error, findBotPrefab);
   MOCHI_ERROR_RETURN(error, nullptr);
-
-  // The bot is placed at parentFromBot relative to the scene root (identity scene root == world
-  // for now, until scene spawn transforms are supported).
-  botPrefab.worldFromRoot = botEntry.parentFromBot;
-  if (!botEntry.initialPose.empty()) {
-    botPrefab.defaultPose = botEntry.initialPose;
-  }
-  if (!botEntry.hasGravity) {
-    for (BotLinkPrefab& link : botPrefab.links) {
-      link.hasGravity = false;
-    }
-  }
-  if (impl.editBot) {
-    impl.editBot(botEntry, botPrefab, error);
-    MOCHI_ERROR_RETURN(error, nullptr);
-  }
-
-  Bot* bot = loader != nullptr ? botsCtx->CreateBot(scene, botPrefab, *loader, error)
-                               : CreateBot(scene, botPrefab, botsCtx, error);
+  Bot* bot = loader != nullptr ? botsCtx->CreateBot(scene, *botPrefab, *loader, error)
+                               : CreateBot(scene, *botPrefab, botsCtx, error);
   MOCHI_ERROR_RETURN(error, nullptr);
   RecordBotRenderModels(*bot, impl.renderModels, impl.skinRenderModels);
 
@@ -1756,7 +1938,7 @@ void BotScene::AddSensorOutputs(Span<DynamicString const> sensor_outputs, Error&
   MOCHI_ERROR_RETURN(error);
   MOCHI_ERROR_IF(!impl_, error, "BotScene is not initialized");
   MOCHI_ERROR_RETURN(error);
-  impl_->sensorGraph.Extend({}, sensor_outputs, error);
+  impl_->sensorGraph.AddOutputs(sensor_outputs, error);
 }
 
 Span<SensorGraphNodeView const> BotScene::GetSensorOutputs() const {
@@ -1782,12 +1964,20 @@ Bot* BotScene::InitializeBot(std::string_view name, Error& error) {
   MOCHI_ERROR_IF(scene == nullptr, error, "BotScene: scene is not available");
   MOCHI_ERROR_RETURN(error, nullptr);
 
+  bool const selected = impl_->selectedBots &&
+      std::any_of(impl_->selectedBots->begin(),
+                  impl_->selectedBots->end(),
+                  [name](DynamicString const& entry) { return std::string_view(entry) == name; });
+  if (!selected) {
+    MOCHI_ERROR_SET(error, "InitializeBot requires a selected bot; call PrepareBots first");
+    return nullptr;
+  }
+
   Bot* const bot = InstantiateBot(*impl_, scene, *botEntry, impl_->botsCtx, error);
   if (error.IsOK()) {
-    std::vector<SensorGraphNode> nodes;
-    CollectBotSensorNodes(*impl_, name, *bot, nodes, error);
+    BindLoadedBotSensors(*impl_, error);
     if (error.IsOK()) {
-      impl_->sensorGraph.Extend(nodes, {}, error);
+      BindSceneSensors(*impl_, error);
     }
   }
   if (!error.IsOK()) {
@@ -1870,7 +2060,24 @@ static void PopulateBotScene(
         std::string(prefabEntry.path.c_str(), prefabEntry.path.size());
   }
 
-  /* 3. Load and instantiate each bot the caller asked for, then its controllers. */
+  /* 3. Validate the selected declarations before constructing any bots. An explicit empty
+   * initialization list leaves selection to the caller, as in the Unreal slot workflow. */
+  DynamicArray<DynamicString> selection;
+  for (BotEntry const& entry : params.bots) {
+    std::string_view const name(entry.name);
+    if (!botsToInitialize || Contains(*botsToInitialize, name)) {
+      selection.push_back(entry.name);
+    }
+  }
+  if (!selection.empty() || params.bots.empty() || !botsToInitialize) {
+    PrepareSelectedBots(impl, MakeConstSpan(selection), error, findBotPrefab);
+  } else {
+    SensorScope const scope{.scene = scene, .robotics = botsCtx};
+    impl.sensorGraph.Build(scope, error);
+  }
+  MOCHI_ERROR_RETURN(error);
+
+  /* 4. Load and instantiate each bot the caller asked for, then its controllers. */
   for (auto const& botEntry : params.bots) {
     std::string_view const botName(botEntry.name.c_str(), botEntry.name.size());
     if (botsToInitialize && !Contains(*botsToInitialize, botName)) {
@@ -1880,32 +2087,13 @@ static void PopulateBotScene(
     MOCHI_ERROR_RETURN(error);
   }
 
-  /* 4. Instantiate the scene-level sensors. These are declared on the scene rather than on a bot,
-   * so they are created with no link actor: they belong to no bot, outlive any individual one, and
-   * are posed relative to the scene root. An unregistered type is skipped with a warning, matching
-   * how CreateControllerFromEntry treats an unknown controller type, so a scene authored against a
-   * build that has extra sensor types still loads. */
-  for (auto const& sensorEntry : params.sensors) {
-    std::string_view const type(sensorEntry.type.c_str(), sensorEntry.type.size());
-    if (!botsCtx->IsSensorTypeRegistered(type)) {
-      MOCHI_LOG_WARNING(
-          "BotScene: unknown sensor type '%s'; skipping", std::string(sensorEntry.type).c_str());
-      continue;
-    }
-    SensorHandle const handle = botsCtx->CreateSensor(
-        type,
-        /*linkActor*/ nullptr,
-        std::string_view(sensorEntry.name.c_str(), sensorEntry.name.size()),
-        std::string_view(sensorEntry.params.c_str(), sensorEntry.params.size()),
-        error);
-    MOCHI_ERROR_RETURN(error);
-    if (SensorBase* const sensor = botsCtx->GetSensor(handle); sensor != nullptr) {
-      sensor->SetParentFromSensor(sensorEntry.parentFromSensor);
-    }
-    impl.sceneSensors[std::string(sensorEntry.name)] = handle;
-  }
-
-  BuildSensorGraph(impl, error);
+  /* 5. Instantiate ready scene-level sensors through the graph. They have no link actor:
+   * they belong to no bot, outlive any individual one, and are posed relative to the scene root.
+   * An unregistered type is skipped with a warning, matching CreateControllerFromEntry, so a scene
+   * authored against a build that has extra sensor types still loads. */
+  BindLoadedBotSensors(impl, error);
+  MOCHI_ERROR_RETURN(error);
+  BindSceneSensors(impl, error);
   MOCHI_ERROR_RETURN(error);
   impl.ResetSensors(error);
   MOCHI_ERROR_RETURN(error);

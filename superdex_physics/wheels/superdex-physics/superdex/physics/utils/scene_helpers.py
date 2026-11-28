@@ -104,8 +104,10 @@ def create_ground_plane(
 def load_bot_scene(
     path: str,
     bots_ctx: sdr.RoboticsContext,
+    *,
+    bots_to_initialize: list[str] | None = None,
 ) -> sdr.BotScene:
-    """Load a .superdex_scene file and instantiate all scene objects.
+    """Load a .superdex_scene file and instantiate its requested bots.
 
     Creates the physics scene from the base_scene, instantiates all bots with
     placement and initial pose, and creates controllers via the provided
@@ -116,6 +118,8 @@ def load_bot_scene(
         bots_ctx: RoboticsContext for controller lifetime management. The caller
             owns this — create before loading, destroy after all scenes are
             closed.
+        bots_to_initialize: Names to prepare and load; None loads all bots.
+            An empty list defers preparation to BotScene.prepare_bots.
 
     Returns:
         The loaded BotScene, which owns the physics scene and provides named
@@ -127,7 +131,10 @@ def load_bot_scene(
         )
     import superdex.robotics as sdr  # @manual
 
-    return sdr.load_bot_scene(_strip_win_extended_prefix(path), bots_ctx)
+    path = _strip_win_extended_prefix(path)
+    if bots_to_initialize is not None:
+        return sdr.load_bot_scene(path, bots_to_initialize, "", bots_ctx)
+    return sdr.load_bot_scene(path, bots_ctx)
 
 
 def load_bot_scene_prefab(path: str):  # noqa: ANN201

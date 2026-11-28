@@ -58,7 +58,10 @@ void SensorGraph::Add(
   }
   if (std::any_of(
           _nodes.begin(), _nodes.end(), [&](Node const& node) { return node.name == nodeName; })) {
-    MOCHI_LOG_WARNING("SensorGraph::Add: duplicate node name '%s'", std::string(nodeName).c_str());
+    MOCHI_LOG_WARNING(
+        "SensorGraph::Add: duplicate node name '%.*s'",
+        static_cast<int>(nodeName.size()),
+        nodeName.data());
     MOCHI_ERROR_SET(
         error, "SensorGraph::Add: duplicate node name; see log for the conflicting name");
     return;
@@ -67,16 +70,137 @@ void SensorGraph::Add(
   node.name = nodeName;
   node.sensor = sensor;
   node.handle = handle;
-  node.inputNames.reserve(inputs.size());
-  for (DynamicString const& input : inputs) {
-    node.inputNames.emplace_back(input.c_str(), input.size());
-  }
+  node.inputNames.assign(inputs.begin(), inputs.end());
   _nodes.push_back(std::move(node));
+  _topologyNeedsRebuild = true;
   // The first graph to hold a sensor names it, until the last graph releases it.
   if (sensor->_graphBorrowCount++ == 0) {
     sensor->_graphName = DynamicString{nodeName};
   }
+  if (_episodeSeed) {
+    sensor->SetEpisodeSeed(*_episodeSeed);
+  }
   _built = false;
+}
+
+void SensorGraph::AddNode(std::string_view name, Span<DynamicString const> inputs, Error& error) {
+  MOCHI_ERROR_RETURN(error);
+  if (name.empty() ||
+      std::ranges::any_of(_nodes, [&](Node const& node) { return node.name == name; })) {
+    MOCHI_ERROR_SET(error, "SensorGraph::AddNode requires a nonempty unique name");
+    return;
+  }
+  Node node;
+  node.name = name;
+  node.inputNames.assign(inputs.begin(), inputs.end());
+  _nodes.push_back(std::move(node));
+  _topologyNeedsRebuild = true;
+  _built = false;
+}
+
+void SensorGraph::BindNode(SensorGraphNode const& binding, Error& error) {
+  MOCHI_ERROR_RETURN(error);
+  auto const found = _byName.find(std::string_view(binding.name));
+  if (!_built || found == _byName.end() || binding.sensor == nullptr) {
+    MOCHI_ERROR_SET(error, "SensorGraph::BindNode requires a built node and a sensor");
+    return;
+  }
+  Node& node = _nodes[found->second];
+  if (!std::ranges::equal(node.inputNames, binding.inputs)) {
+    MOCHI_ERROR_SET(error, "SensorGraph binding changes input names; rebuild required");
+    return;
+  }
+  if (node.sensor == binding.sensor && node.handle == binding.handle) {
+    return;
+  }
+  SensorBase* const sensor = binding.sensor;
+  SensorHandle const handle = binding.handle;
+  if (node.sensor != nullptr || std::ranges::any_of(_nodes, [&](Node const& other) {
+        return other.sensor == sensor || (handle.IsValid() && other.handle == handle);
+      })) {
+    MOCHI_ERROR_SET(error, "SensorGraph::BindNode requires an unbound node and a unique sensor");
+    return;
+  }
+  node.sensor = sensor;
+  node.handle = handle;
+  if (_episodeSeed) {
+    sensor->SetEpisodeSeed(*_episodeSeed);
+  }
+  if (sensor->_graphBorrowCount++ == 0) {
+    sensor->_graphName = binding.name;
+  }
+  if (handle.IsValid()) {
+    _byHandle.emplace(handle, found->second);
+  }
+  ComputeReadiness();
+  RebuildEnabledNodes();
+}
+
+DynamicArray<SensorGraphNodeIdentity> SensorGraph::UnbindNode(
+    Span<SensorHandle const> handles,
+    Error& error) {
+  MOCHI_ERROR_RETURN(error, {});
+  if (!_built) {
+    MOCHI_ERROR_SET(error, "SensorGraph must be built before unbinding nodes");
+    return {};
+  }
+  std::vector<bool> affected(_nodes.size(), false);
+  for (SensorHandle const& handle : handles) {
+    if (!handle.IsValid()) {
+      MOCHI_ERROR_SET(error, "SensorGraph::UnbindNode requires valid handles");
+      return {};
+    }
+    if (auto const node = _byHandle.find(handle); node != _byHandle.end()) {
+      affected[node->second] = true;
+    }
+  }
+  DynamicArray<SensorGraphNodeIdentity> removedOutputs;
+  for (std::size_t const index : _topologicalOrder) {
+    Node& node = _nodes[index];
+    for (std::size_t const input : node.inputIndices) {
+      affected[index] = affected[index] || affected[input];
+    }
+    if (!affected[index]) {
+      continue;
+    }
+    if (node.requestedOutput) {
+      removedOutputs.push_back({DynamicString(node.name), node.handle});
+    }
+    Release(node);
+    _byHandle.erase(node.handle);
+    node.sensor = nullptr;
+    node.handle = {};
+    node.initialized = false;
+    node.requestedOutput = false;
+    node.activeOutput = false;
+    node.active = false;
+  }
+  std::erase_if(
+      _requestedOutputNames, [&](std::string const& name) { return affected[_byName.at(name)]; });
+  ComputeReadiness();
+  RefreshActiveOrder();
+  return removedOutputs;
+}
+
+bool SensorGraph::InputsReady(std::string_view name) const {
+  if (!_built) {
+    return false;
+  }
+  auto const node = _byName.find(name);
+  return node != _byName.end() &&
+      std::ranges::all_of(_nodes[node->second].inputIndices, [&](std::size_t input) {
+           return _nodes[input].ready;
+         });
+}
+
+DynamicArray<std::string_view> SensorGraph::GetDependencyOrder() const {
+  DynamicArray<std::string_view> names;
+  if (_built) {
+    for (std::size_t const index : _topologicalOrder) {
+      names.push_back(_nodes[index].name);
+    }
+  }
+  return names;
 }
 
 void SensorGraph::SetOutputEnabled(std::string_view nodeName, bool enabled, Error& error) {
@@ -95,111 +219,39 @@ void SensorGraph::SetOutputEnabled(std::string_view nodeName, bool enabled, Erro
   _built = false;
 }
 
-void SensorGraph::Extend(
-    Span<SensorGraphNode const> nodes,
-    Span<DynamicString const> enabledNames,
-    Error& error) {
+void SensorGraph::AddOutputs(Span<DynamicString const> names, Error& error) {
   MOCHI_ERROR_RETURN(error);
   if (!_built) {
-    MOCHI_ERROR_SET(error, "SensorGraph must be built before extension");
+    MOCHI_ERROR_SET(error, "SensorGraph must be built before adding outputs");
     return;
   }
-  if (nodes.empty() && enabledNames.empty()) {
+  if (names.empty()) {
     return;
   }
-  std::size_t const previousSize = _nodes.size();
+  for (DynamicString const& name : names) {
+    auto const node = _byName.find(std::string_view(name));
+    if (node == _byName.end()) {
+      MOCHI_ERROR_SET(error, "SensorGraph selected output name does not match any graph node");
+      return;
+    }
+    if (!_nodes[node->second].ready) {
+      MOCHI_ERROR_SET(error, "SensorGraph selected output is waiting for sensor bindings");
+      return;
+    }
+  }
   auto const previousOutputs = _requestedOutputNames;
-  for (SensorGraphNode const& node : nodes) {
-    Add(node, error);
-    if (!error.IsOK()) {
-      break;
-    }
+  for (DynamicString const& name : names) {
+    SetOutputEnabled(std::string_view(name), true, error);
   }
-  for (DynamicString const& name : enabledNames) {
-    SetOutputEnabled(std::string_view(name.c_str(), name.size()), true, error);
-  }
-  if (error.IsOK()) {
-    ResolveTopology(error);
-  }
+  Build(_scope, error);
   if (!error.IsOK()) {
-    /* Failed additions release their borrows; surviving sensors never need a reset. */
-    while (_nodes.size() > previousSize) {
-      Release(_nodes.back());
-      _nodes.pop_back();
-    }
     _requestedOutputNames = previousOutputs;
-    ResolveTopology(ErrorLog{});
+    Build(_scope, ErrorLog{});
   }
-}
-
-DynamicArray<SensorGraphNodeIdentity> SensorGraph::Remove(
-    Span<SensorHandle const> handles,
-    Error& error) {
-  MOCHI_ERROR_RETURN(error, {});
-  if (!_built) {
-    MOCHI_ERROR_SET(error, "SensorGraph must be built before removing nodes");
-    return {};
-  }
-  std::vector<bool> removed(_nodes.size(), false);
-  std::queue<std::size_t> pending;
-  for (SensorHandle const& handle : handles) {
-    if (!handle.IsValid()) {
-      MOCHI_ERROR_SET(error, "SensorGraph::Remove requires valid sensor handles");
-      return {};
-    }
-    auto const node = _byHandle.find(handle);
-    if (node == _byHandle.end()) {
-      continue;
-    }
-    if (!removed[node->second]) {
-      removed[node->second] = true;
-      pending.push(node->second);
-    }
-  }
-  if (pending.empty()) {
-    return {};
-  }
-
-  /* Prune the entire downstream closure before releasing any sensor borrow. */
-  std::vector<std::vector<std::size_t>> consumers(_nodes.size());
-  for (std::size_t i = 0; i < _nodes.size(); ++i) {
-    for (std::size_t const input : _nodes[i].inputIndices) {
-      consumers[input].push_back(i);
-    }
-  }
-  while (!pending.empty()) {
-    std::size_t const index = pending.front();
-    pending.pop();
-    for (std::size_t const consumer : consumers[index]) {
-      if (!removed[consumer]) {
-        removed[consumer] = true;
-        pending.push(consumer);
-      }
-    }
-  }
-
-  std::erase_if(
-      _requestedOutputNames, [&](std::string const& name) { return removed[_byName.at(name)]; });
-  std::vector<Node> surviving;
-  DynamicArray<SensorGraphNodeIdentity> removedOutputs;
-  surviving.reserve(_nodes.size());
-  for (std::size_t i = 0; i < _nodes.size(); ++i) {
-    if (removed[i]) {
-      if (_nodes[i].requestedOutput) {
-        removedOutputs.push_back({DynamicString(_nodes[i].name), _nodes[i].handle});
-      }
-      Release(_nodes[i]);
-    } else {
-      surviving.push_back(std::move(_nodes[i]));
-    }
-  }
-  _nodes = std::move(surviving);
-  ResolveTopology(error);
-  return removedOutputs;
 }
 
 void SensorGraph::Release(Node const& node) {
-  if (--node.sensor->_graphBorrowCount == 0) {
+  if (node.sensor != nullptr && --node.sensor->_graphBorrowCount == 0) {
     node.sensor->_graphName = DynamicString{};
   }
 }
@@ -217,6 +269,8 @@ void SensorGraph::Clear() {
   _byHandle.clear();
   _scope = {};
   _lastStep = {};
+  _episodeSeed.reset();
+  _topologyNeedsRebuild = true;
   _built = false;
   _hasLastStep = false;
   _activeOrderNeedsRebuild = false;
@@ -231,7 +285,33 @@ void SensorGraph::Build(SensorScope const& scope, Error& error) {
     return;
   }
   _scope = scope;
-  ResolveTopology(error);
+  _built = false;
+  if (_topologyNeedsRebuild) {
+    ResolveTopology(error);
+    MOCHI_ERROR_RETURN(error);
+  }
+  ComputeReadiness();
+  for (Node& node : _nodes) {
+    node.requestedOutput = false;
+  }
+  // Resolve the requested output names.
+  for (std::string const& outputName : _requestedOutputNames) {
+    auto const output = _byName.find(outputName);
+    if (output == _byName.end()) {
+      MOCHI_ERROR_SET(error, "SensorGraph selected output name does not match any graph node");
+      return;
+    }
+    if (!_nodes[output->second].ready) {
+      MOCHI_ERROR_SET(error, "SensorGraph selected output is waiting for sensor bindings");
+      return;
+    }
+    _nodes[output->second].requestedOutput = true;
+  }
+  // Activate the selected outputs and their upstream dependencies.
+  RebuildActiveOrder();
+  InitializeActiveSensors(error, _hasLastStep);
+  MOCHI_ERROR_RETURN(error);
+  _built = true;
 }
 
 void SensorGraph::ResolveTopology(Error& error) {
@@ -250,8 +330,8 @@ void SensorGraph::ResolveTopology(Error& error) {
     node.requestedOutput = false;
     node.active = false;
     node.inputIndices.clear();
-    if (node.name.empty() || node.sensor == nullptr) {
-      MOCHI_ERROR_SET(error, "SensorGraph contains an empty name or null sensor");
+    if (node.name.empty()) {
+      MOCHI_ERROR_SET(error, "SensorGraph contains an empty name");
       return;
     }
     if (!_byName.emplace(node.name, i).second) {
@@ -263,7 +343,7 @@ void SensorGraph::ResolveTopology(Error& error) {
       return;
     }
     for (std::size_t previous = 0; previous < i; ++previous) {
-      if (_nodes[previous].sensor == node.sensor) {
+      if (node.sensor != nullptr && _nodes[previous].sensor == node.sensor) {
         MOCHI_ERROR_SET(error, "SensorGraph contains the same sensor under multiple names");
         return;
       }
@@ -275,9 +355,13 @@ void SensorGraph::ResolveTopology(Error& error) {
   std::vector<std::size_t> indegree(_nodes.size(), 0);
   for (std::size_t i = 0; i < _nodes.size(); ++i) {
     Node& node = _nodes[i];
-    for (std::string const& inputName : node.inputNames) {
-      auto const input = _byName.find(inputName);
+    for (DynamicString const& inputName : node.inputNames) {
+      auto const input = _byName.find(std::string_view(inputName));
       if (input == _byName.end()) {
+        MOCHI_LOG_ERROR(
+            "SensorGraph node '%s' references missing input '%s'",
+            node.name.c_str(),
+            inputName.c_str());
         MOCHI_ERROR_SET(error, "SensorGraph input name does not match any graph node");
         return;
       }
@@ -310,20 +394,18 @@ void SensorGraph::ResolveTopology(Error& error) {
     return;
   }
 
-  // Resolve the requested output names.
-  for (std::string const& outputName : _requestedOutputNames) {
-    auto const output = _byName.find(outputName);
-    if (output == _byName.end()) {
-      MOCHI_ERROR_SET(error, "SensorGraph selected output name does not match any graph node");
-      return;
+  _topologyNeedsRebuild = false;
+}
+
+void SensorGraph::ComputeReadiness() {
+  // Binding readiness follows the same dependency order used for sensor initialization.
+  for (std::size_t const index : _topologicalOrder) {
+    Node& node = _nodes[index];
+    node.ready = node.sensor != nullptr;
+    for (std::size_t const input : node.inputIndices) {
+      node.ready = node.ready && _nodes[input].ready;
     }
-    _nodes[output->second].requestedOutput = true;
   }
-  // Activate the selected outputs and their upstream dependencies.
-  RebuildActiveOrder();
-  InitializeActiveSensors(error);
-  MOCHI_ERROR_RETURN(error);
-  _built = true;
 }
 
 void SensorGraph::SetOutputEnabled(SensorHandle const& handle, bool enabled, Error& error) {
@@ -334,6 +416,10 @@ void SensorGraph::SetOutputEnabled(SensorHandle const& handle, bool enabled, Err
       error,
       "SensorGraph::SetOutputEnabled requires a built graph and a member sensor handle");
   MOCHI_ERROR_RETURN(error);
+  if (enabled && !_nodes[node->second].ready) {
+    MOCHI_ERROR_SET(error, "SensorGraph selected output is waiting for sensor bindings");
+    return;
+  }
   if (_nodes[node->second].requestedOutput != enabled) {
     Node& selected = _nodes[node->second];
     auto const output =
@@ -371,7 +457,7 @@ void SensorGraph::RebuildEnabledNodes() {
   _enabledNodes.clear();
   for (std::size_t const index : _topologicalOrder) {
     Node const& node = _nodes[index];
-    if (node.requestedOutput) {
+    if (node.requestedOutput && node.ready) {
       _enabledNodes.push_back({.name = node.name, .handle = node.handle, .sensor = node.sensor});
     }
   }
@@ -379,11 +465,19 @@ void SensorGraph::RebuildEnabledNodes() {
 
 void SensorGraph::RebuildActiveOrder() {
   for (Node& node : _nodes) {
+    node.activeOutput = node.requestedOutput && node.ready;
+  }
+  _activeOrderNeedsRebuild = false;
+  RefreshActiveOrder();
+}
+
+void SensorGraph::RefreshActiveOrder() {
+  for (Node& node : _nodes) {
     node.active = false;
   }
   std::vector<std::size_t> pending;
   for (std::size_t i = 0; i < _nodes.size(); ++i) {
-    if (_nodes[i].requestedOutput) {
+    if (_nodes[i].activeOutput && _nodes[i].ready) {
       pending.push_back(i);
     }
   }
@@ -403,11 +497,10 @@ void SensorGraph::RebuildActiveOrder() {
       _activeOrder.push_back(index);
     }
   }
-  _activeOrderNeedsRebuild = false;
   RebuildEnabledNodes();
 }
 
-void SensorGraph::InitializeActiveSensors(Error& error) {
+void SensorGraph::InitializeActiveSensors(Error& error, bool resetNewSensors) {
   MOCHI_ERROR_RETURN(error);
   // Initialize active sensors in dependency order.
   for (std::size_t const index : _activeOrder) {
@@ -427,7 +520,7 @@ void SensorGraph::InitializeActiveSensors(Error& error) {
     }
     sensor->Init(inputs, _scope, error);
     MOCHI_ERROR_RETURN(error);
-    if (_hasLastStep) {
+    if (resetNewSensors) {
       /* A new node joins the current clock with fresh local history; no catch-up steps. */
       sensor->Reset();
     }
@@ -443,7 +536,7 @@ void SensorGraph::Reset(Error& error) {
   }
   if (_activeOrderNeedsRebuild) {
     RebuildActiveOrder();
-    InitializeActiveSensors(error);
+    InitializeActiveSensors(error, /*resetNewSensors=*/false);
     MOCHI_ERROR_RETURN(error);
   }
   for (Node& node : _nodes) {
@@ -460,8 +553,11 @@ void SensorGraph::Reset(Error& error) {
 }
 
 void SensorGraph::SetEpisodeSeed(uint64_t episodeSeed) {
+  _episodeSeed = episodeSeed;
   for (Node const& node : _nodes) {
-    node.sensor->SetEpisodeSeed(episodeSeed);
+    if (node.sensor != nullptr) {
+      node.sensor->SetEpisodeSeed(episodeSeed);
+    }
   }
 }
 
@@ -512,6 +608,6 @@ SensorBase* SensorGraph::Find(std::string_view nodeName) const {
   if (!_built) {
     return nullptr;
   }
-  auto const it = _byName.find(std::string{nodeName});
+  auto const it = _byName.find(nodeName);
   return it == _byName.end() ? nullptr : _nodes[it->second].sensor;
 }

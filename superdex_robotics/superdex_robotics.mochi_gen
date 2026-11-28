@@ -2081,10 +2081,14 @@ class bots::BotScene [no_init, no_reflection] {
   // @param[in] name Exact declared name of the loaded bot to remove.
   fn RemoveBot(StringView name) -> void [mochi_error];
 
-  // @brief Instantiate a bot the .superdex_scene declares but that is not loaded -- one removed
+  // @brief Prepare selected bot prefabs and validate their sensor DAG before loading bots.
+  // Changing selection requires removing loaded bots first; rebuilds and resets the graph.
+  fn PrepareBots(Span<String const> selectedBotNames) -> void [mochi_error];
+
+  // @brief Instantiate a selected bot that is not loaded -- one removed
   // with RemoveBot, or left out when the scene was loaded -- together with its controllers, at its
   // declared placement and initial pose. Errors, creating nothing, if no bot named `name` is
-  // declared, it is already loaded, or it fails to instantiate.
+  // selected, it is already loaded, or it fails to instantiate.
   //
   // @param[in] name Exact declared name of the bot to initialize.
   // @return The loaded bot, or None on error.

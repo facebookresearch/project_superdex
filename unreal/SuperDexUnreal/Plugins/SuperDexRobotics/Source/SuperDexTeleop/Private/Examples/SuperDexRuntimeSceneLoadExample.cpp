@@ -414,6 +414,9 @@ struct FSuperDexRuntimeSceneLoadExampleState {
   TMap<FString, TArray<mochi::real>> InitialPoses;
   /** Each selected bot of a slot, by slot. */
   TMap<FString, FString> SelectedBots;
+  /** Preparation can succeed even when a selected bot later fails to load. */
+  TSet<FString> PreparedBots;
+  TWeakObjectPtr<UMochiSceneObject> PreparedSceneObject;
   TArray<TPair<mochi::ActorHandle, FString>> SpawnNames;
   TMap<FString, FString> SpawnPrefabs;
 #if WITH_SUPERDEX_RECORDER
@@ -578,6 +581,34 @@ void ASuperDexRuntimeSceneLoadExample::BeginEpisode() {
   TMap<FString, FSlotBot> SlotBotsUp;
   TArray<FString> Messages;
   SceneObject->QueueOrExecuteCommand([&](mochi::Scene*) {
+    // Keep loaded bots when this episode chooses the same prepared set.
+    superdex::Error SelectionError;
+    superdex::DynamicArray<superdex::DynamicString> SelectedNames;
+    for (const sr::BotEntry& Entry : ScenePrefab.bots) {
+      const bool bWanted = Wanted.Contains(ToFString(Entry.name));
+      if (bWanted) {
+        SelectedNames.push_back(Entry.name);
+      }
+    }
+    if (State->PreparedSceneObject.Get() != SceneObject ||
+        State->PreparedBots.Num() != Wanted.Num() || !State->PreparedBots.Includes(Wanted)) {
+      for (const sr::BotEntry& Entry : ScenePrefab.bots) {
+        const std::string_view Name(Entry.name);
+        if (Scene->GetBot(Name)) {
+          Scene->RemoveBot(Name, SelectionError);
+        }
+      }
+    }
+    Scene->PrepareBots(mochi::MakeConstSpan(SelectedNames), SelectionError);
+    if (!SelectionError.IsOK()) {
+      Messages.Add(
+          FString::Printf(
+              TEXT("Bot selection could not be prepared: %s"),
+              UTF8_TO_TCHAR(SelectionError.ToString().c_str())));
+      return;
+    }
+    State->PreparedBots = Wanted;
+    State->PreparedSceneObject = SceneObject;
     for (const sr::BotEntry& Entry : ScenePrefab.bots) {
       const std::string_view Name(Entry.name);
       const FString BotName = ToFString(Entry.name);

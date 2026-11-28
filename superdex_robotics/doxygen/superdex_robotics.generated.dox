@@ -2077,9 +2077,16 @@
 /// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
 ///
 
+/// @fn void superdex::robotics::BotScene::PrepareBots(Span<DynamicString const> selectedBotNames, superdex::Error& error)
+///
+/// @brief Prepare selected bot prefabs and validate their sensor DAG before loading bots. Changing selection requires removing loaded bots first; rebuilds and resets the graph.
+///
+/// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
+///
+
 /// @fn Bot* superdex::robotics::BotScene::InitializeBot(std::string_view name, superdex::Error& error)
 ///
-/// @brief Instantiate a bot the .superdex_scene declares but that is not loaded -- one removed with RemoveBot, or left out when the scene was loaded -- together with its controllers, at its declared placement and initial pose. Errors, creating nothing, if no bot named `name` is declared, it is already loaded, or it fails to instantiate.
+/// @brief Instantiate a selected bot that is not loaded -- one removed with RemoveBot, or left out when the scene was loaded -- together with its controllers, at its declared placement and initial pose. Errors, creating nothing, if no bot named `name` is selected, it is already loaded, or it fails to instantiate.
 ///
 /// @param[in] name Exact declared name of the bot to initialize.
 /// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
